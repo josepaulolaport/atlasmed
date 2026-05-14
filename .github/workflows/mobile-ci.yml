@@ -1,0 +1,128 @@
+name: Mobile CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+  pull_request:
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/mobile-ci.yml'
+
+jobs:
+  test:
+    name: Test Mobile App
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.11.5'
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./mobile
+      
+      - name: Run analyzer
+        run: flutter analyze
+        working-directory: ./mobile
+      
+      - name: Run tests
+        run: flutter test
+        working-directory: ./mobile
+      
+      - name: Build APK (Android)
+        run: flutter build apk --debug
+        working-directory: ./mobile
+
+  build-ios:
+    name: Build iOS App
+    runs-on: macos-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.11.5'
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./mobile
+      
+      - name: Build iOS (no codesign)
+        run: flutter build ios --debug --no-codesign
+        working-directory: ./mobile
+      
+      # Example: Deploy to TestFlight
+      # - name: Build and deploy to TestFlight
+      #   run: |
+      #     flutter build ios --release
+      #     # Add your TestFlight upload commands here
+      #   working-directory: ./mobile
+      #   env:
+      #     MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+      #     FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD }}
+
+  build-android:
+    name: Build Android App
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.11.5'
+          channel: 'stable'
+          cache: true
+      
+      - name: Install dependencies
+        run: flutter pub get
+        working-directory: ./mobile
+      
+      - name: Build APK
+        run: flutter build apk --release
+        working-directory: ./mobile
+      
+      - name: Build App Bundle
+        run: flutter build appbundle --release
+        working-directory: ./mobile
+      
+      # Example: Deploy to Google Play Internal Testing
+      # - name: Upload to Play Store
+      #   uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON }}
+      #     packageName: com.atlasmed.app
+      #     releaseFiles: mobile/build/app/outputs/bundle/release/app-release.aab
+      #     track: internal
+      #     status: completed

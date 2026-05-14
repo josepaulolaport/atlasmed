@@ -1,0 +1,137 @@
+# AtlasMed Monorepo .gitignore
+
+# ============================================
+# Root level
+# ============================================
+node_modules/
+.DS_Store
+*.log
+*.env
+.env.local
+.env.*.local
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+
+# ============================================
+# Backend (Bun + TypeScript + Elysia)
+# ============================================
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/.env
+backend/.env.local
+backend/.env.*.local
+backend/*.log
+
+# ============================================
+# Web (Next.js + React)
+# ============================================
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/dist/
+web/.env
+web/.env.local
+web/.env.*.local
+web/.vercel
+web/*.log
+
+# Next.js specific
+web/.next/
+web/out/
+web/.turbo/
+
+# ============================================
+# Mobile (Flutter)
+# ============================================
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/.idea/
+mobile/*.iml
+mobile/*.ipr
+mobile/*.iws
+
+# iOS
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Flutter/Generated.xcconfig
+mobile/ios/Flutter/app.flx
+mobile/ios/Flutter/app.zip
+mobile/ios/Flutter/flutter_assets/
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/ServiceDefinitions.json
+mobile/ios/Runner/GeneratedPluginRegistrant.*
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/flutter_export_environment.sh
+mobile/ios/.generated/
+
+# Android
+mobile/android/app/debug
+mobile/android/app/profile
+mobile/android/app/release
+mobile/android/.gradle/
+mobile/android/captures/
+mobile/android/local.properties
+mobile/android/**/GeneratedPluginRegistrant.java
+mobile/android/gradlew
+mobile/android/gradlew.bat
+mobile/android/key.properties
+mobile/android/.cxx/
+
+# Flutter/Dart/Pub related
+mobile/**/doc/api/
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+
+# ============================================
+# Shared
+# ============================================
+shared/node_modules/
+shared/dist/
+shared/build/
+
+# ============================================
+# Testing & Coverage
+# ============================================
+coverage/
+*.lcov
+.nyc_output/
+test-results/
+playwright-report/
+
+# ============================================
+# OS
+# ============================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================
+# Temporary files
+# ============================================
+*.tmp
+*.temp
+*.cache
+.temp/
+.cache/

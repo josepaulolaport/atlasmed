@@ -1,0 +1,74 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'shared/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'shared/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  test:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      
+      - name: Install dependencies
+        run: bun install
+        working-directory: ./backend
+      
+      - name: Run linter
+        run: bun run lint
+        working-directory: ./backend
+        continue-on-error: true
+      
+      - name: Run tests
+        run: bun test
+        working-directory: ./backend
+
+  deploy:
+    name: Deploy Backend
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Deploy notification
+        run: |
+          echo "Backend deployment would happen here"
+          echo "Configure your deployment platform (Railway, Fly.io, AWS, etc.)"
+          echo "Uncomment and configure the deployment steps below"
+      
+      # Example: Deploy to Railway
+      # - name: Deploy to Railway
+      #   uses: bervProject/railway-deploy@main
+      #   with:
+      #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
+      #     service: atlasmed-backend
+      
+      # Example: Deploy to Fly.io
+      # - name: Setup Fly.io
+      #   uses: superfly/flyctl-actions/setup-flyctl@master
+      # 
+      # - name: Deploy to Fly.io
+      #   run: flyctl deploy --remote-only
+      #   working-directory: ./backend
+      #   env:
+      #     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
