@@ -158,7 +158,19 @@ Each component deploys independently while sharing the same repository.
 
 The GitHub Actions workflows are set up with placeholders for deployment. Configure your preferred platforms:
 
-#### Backend Deployment Options
+#### Self-Hosted with Uncloud (Recommended)
+- **Uncloud** - Self-host with Docker Compose, automatic HTTPS via Caddy, zero-downtime deployments
+- Full control over infrastructure with PaaS-like simplicity
+- See [UNCLOUD_DEPLOYMENT.md](UNCLOUD_DEPLOYMENT.md) for complete setup guide
+
+```bash
+# Deploy entire stack with automatic HTTPS
+uc compose up
+```
+
+#### Managed Platform Options
+
+**Backend:**
 - Railway
 - Fly.io
 - AWS / Google Cloud / Azure
@@ -166,7 +178,7 @@ The GitHub Actions workflows are set up with placeholders for deployment. Config
 
 Edit `.github/workflows/backend-ci.yml` and uncomment/configure the deployment section.
 
-#### Web Deployment Options
+**Web:**
 - Vercel (recommended for Next.js)
 - Netlify
 - AWS Amplify
@@ -174,7 +186,7 @@ Edit `.github/workflows/backend-ci.yml` and uncomment/configure the deployment s
 
 Edit `.github/workflows/web-ci.yml` and uncomment/configure the deployment section.
 
-#### Mobile Deployment Options
+**Mobile:**
 - TestFlight (iOS)
 - Google Play Internal Testing (Android)
 
