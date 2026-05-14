@@ -46,7 +46,7 @@ jobs:
         continue-on-error: true
 
   deploy:
-    name: Deploy Web App
+    name: Deploy Web App via Uncloud
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -55,13 +55,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Deploy notification
-        run: |
-          echo "Web app deployment would happen here"
-          echo "Configure your deployment platform (Vercel, Netlify, etc.)"
-          echo "Uncomment and configure the deployment steps below"
+      # ============================================
+      # Option 1: Deploy to Uncloud (Self-Hosted)
+      # ============================================
+      - name: Install Uncloud CLI
+        run: curl -fsSL https://uncloud.run/install.sh | sh
       
-      # Example: Deploy to Vercel
+      - name: Setup SSH for Uncloud
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.UNCLOUD_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.UNCLOUD_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Create .env file from secrets
+        working-directory: ./web
+        run: |
+          echo "NODE_ENV=production" > .env.production
+          echo "NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}" >> .env.production
+          echo "API_SECRET_KEY=${{ secrets.API_SECRET_KEY }}" >> .env.production
+      
+      - name: Deploy Web App to Uncloud
+        working-directory: ./web
+        run: |
+          uc run \
+            --name atlasmed-web \
+            --port atlasmed.com:3000/https \
+            --port www.atlasmed.com:3000/https \
+            --env-file .env.production \
+            .
+        env:
+          UNCLOUD_HOST: ${{ secrets.UNCLOUD_HOST }}
+      
+      - name: Verify Deployment
+        run: |
+          echo "✅ Web app deployed to https://atlasmed.com"
+          echo "Caddy will automatically provision SSL certificate"
+      
+      # ============================================
+      # Alternative Options (Uncomment to use)
+      # ============================================
+      
+      # Option 2: Deploy to Vercel (Great for Next.js)
       # - name: Deploy to Vercel
       #   uses: amondnet/vercel-action@v25
       #   with:
@@ -71,7 +106,7 @@ jobs:
       #     working-directory: ./web
       #     vercel-args: '--prod'
       
-      # Example: Deploy to Netlify
+      # Option 3: Deploy to Netlify
       # - name: Setup Bun
       #   uses: oven-sh/setup-bun@v2
       # 

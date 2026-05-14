@@ -41,7 +41,7 @@ jobs:
         working-directory: ./backend
 
   deploy:
-    name: Deploy Backend
+    name: Deploy Backend via Uncloud
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -50,20 +50,56 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Deploy notification
-        run: |
-          echo "Backend deployment would happen here"
-          echo "Configure your deployment platform (Railway, Fly.io, AWS, etc.)"
-          echo "Uncomment and configure the deployment steps below"
+      # ============================================
+      # Option 1: Deploy to Uncloud (Self-Hosted)
+      # ============================================
+      - name: Install Uncloud CLI
+        run: curl -fsSL https://uncloud.run/install.sh | sh
       
-      # Example: Deploy to Railway
+      - name: Setup SSH for Uncloud
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.UNCLOUD_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.UNCLOUD_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Create .env file from secrets
+        working-directory: ./backend
+        run: |
+          echo "NODE_ENV=production" > .env.production
+          echo "PORT=3001" >> .env.production
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env.production
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> .env.production
+          echo "CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}" >> .env.production
+      
+      - name: Deploy Backend to Uncloud
+        working-directory: ./backend
+        run: |
+          uc run \
+            --name atlasmed-backend \
+            --port api.atlasmed.com:3001/https \
+            --env-file .env.production \
+            .
+        env:
+          UNCLOUD_HOST: ${{ secrets.UNCLOUD_HOST }}
+      
+      - name: Verify Deployment
+        run: |
+          echo "✅ Backend deployed to https://api.atlasmed.com"
+          echo "Caddy will automatically provision SSL certificate"
+      
+      # ============================================
+      # Alternative Options (Uncomment to use)
+      # ============================================
+      
+      # Option 2: Deploy to Railway
       # - name: Deploy to Railway
       #   uses: bervProject/railway-deploy@main
       #   with:
       #     railway_token: ${{ secrets.RAILWAY_TOKEN }}
       #     service: atlasmed-backend
       
-      # Example: Deploy to Fly.io
+      # Option 3: Deploy to Fly.io
       # - name: Setup Fly.io
       #   uses: superfly/flyctl-actions/setup-flyctl@master
       # 
