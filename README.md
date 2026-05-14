@@ -246,11 +246,21 @@ git push origin feature/your-feature-name
 
 Each component manages its own environment variables:
 
-- **Backend**: Create `backend/.env`
-- **Web**: Create `web/.env.local`
-- **Mobile**: Configure in `mobile/lib/config/` or use flutter_dotenv
+- **Backend**: Copy `backend/.env.example` to `backend/.env` and configure
+- **Web**: Copy `web/.env.local.example` to `web/.env.local` and configure
+- **Mobile**: Copy `mobile/.env.example` to `mobile/.env` and configure
 
-Never commit `.env` files to the repository.
+**Important:** Never commit `.env` files to the repository. They are gitignored for security.
+
+### Production Secrets Management
+
+For production deployments, use **GitHub Secrets** (for CI/CD) and your deployment platform's secret management (for runtime).
+
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for comprehensive instructions on:**
+- Setting up local development environment variables
+- Configuring GitHub Secrets for CI/CD
+- Managing production secrets in Railway, Vercel, Fly.io, etc.
+- Security best practices for secrets management
 
 ## Contributing
 
