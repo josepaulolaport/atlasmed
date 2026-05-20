@@ -1,5 +1,5 @@
 {
-  "name": "@atlasmed/auth",
+  "name": "@atlasmed/config",
   "version": "0.0.0",
   "private": true,
   "exports": {
@@ -10,8 +10,7 @@
     "build": "bunx tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@casl/ability": "^6.7.1",
-    "zod": "4.1.13"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",

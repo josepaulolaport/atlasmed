@@ -9,8 +9,8 @@
   ],
   "scripts": {
     "dev": "turbo dev",
-    "dev:backend": "turbo dev --filter=@atlas/api",
-    "dev:web": "turbo dev --filter=@atlas/web",
+    "dev:backend": "turbo dev --filter=@atlasmed/api",
+    "dev:web": "turbo dev --filter=@atlasmed/web",
     "dev:mobile": "cd apps/mobile && flutter run",
     "build": "turbo build",
     "build:mobile": "cd apps/mobile && flutter build",
