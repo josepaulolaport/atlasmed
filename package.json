@@ -4,28 +4,21 @@
   "private": true,
   "description": "AtlasMed - Sales Application Monorepo",
   "workspaces": [
-    "backend",
-    "web"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
-    "dev": "echo 'Choose a specific dev command: dev:backend, dev:web, or dev:mobile'",
-    "dev:backend": "bun --cwd backend run dev",
-    "dev:web": "bun --cwd web run dev",
-    "dev:mobile": "cd mobile && flutter run",
-    "build": "bun run build:backend && bun run build:web",
-    "build:backend": "bun --cwd backend run build",
-    "build:web": "bun --cwd web run build",
-    "build:mobile": "cd mobile && flutter build",
-    "test": "bun run test:backend && bun run test:web && bun run test:mobile",
-    "test:backend": "bun --cwd backend run test",
-    "test:web": "bun --cwd web run test",
-    "test:mobile": "cd mobile && flutter test",
-    "lint": "bun run lint:backend && bun run lint:web && bun run lint:mobile",
-    "lint:backend": "bun --cwd backend run lint",
-    "lint:web": "bun --cwd web run lint",
-    "lint:mobile": "cd mobile && flutter analyze",
-    "clean": "rm -rf backend/node_modules web/node_modules backend/.next web/.next mobile/build",
-    "install:all": "bun install && cd mobile && flutter pub get"
+    "dev": "turbo dev",
+    "dev:backend": "turbo dev --filter=@atlas/api",
+    "dev:web": "turbo dev --filter=@atlas/web",
+    "dev:mobile": "cd apps/mobile && flutter run",
+    "build": "turbo build",
+    "build:mobile": "cd apps/mobile && flutter build",
+    "lint": "turbo lint",
+    "lint:mobile": "cd apps/mobile && flutter analyze",
+    "test": "turbo test",
+    "test:mobile": "cd apps/mobile && flutter test",
+    "clean": "rm -rf .turbo"
   },
   "devDependencies": {
     "@types/bun": "latest",

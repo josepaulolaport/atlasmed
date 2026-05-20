@@ -135,3 +135,10 @@ Thumbs.db
 *.cache
 .temp/
 .cache/
+
+node_modules
+.turbo
+dist
+.next
+coverage
+.env
