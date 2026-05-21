@@ -4,10 +4,140 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum AuthSessionDeviceType {
+  DESKTOP
+  MOBILE
+  TABLET
+  UNKNOWN
+}
+
+enum AuthSessionType {
+  WEB
+  MOBILE
+  API
+}
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  username          String     @unique
+  phoneNumber       String?    @unique
+  emailVerified     Boolean    @default(false)
+  phoneVerified     Boolean    @default(false)
+  passwordHash      String
+  firstName         String?
+  lastName          String?
+  avatarUrl         String?
+  status            UserStatus @default(PENDING)
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  deactivatedAt     DateTime?
+  roleId            String
+  role              Role       @relation(fields: [roleId], references: [id])
+  sessions          Session[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([email])
+  @@index([username])
+  @@index([phoneNumber])
+  @@index([status])
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  invitations Invitation[]
+
+  @@map("roles")
+}
+
+model Session {
+  id                  String                @id @default(cuid())
+  userId              String
+  user                User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash    String                @unique
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  revokedReason       String?
+  revokedByUserId     String?
+  replacedBySessionId String?
+  lastSeenAt          DateTime              @default(now())
+  userAgent           String?
+  browserName         String?
+  browserVersion      String?
+  osName              String?
+  deviceType          AuthSessionDeviceType @default(UNKNOWN)
+  sessionType         AuthSessionType       @default(WEB)
+  ipAddress           String?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@index([sessionType])
+  @@map("sessions")
+}
+
+model Invitation {
+  id String @id @default(cuid())
+
+  email String?
+
+  phoneNumber String?
+
+  tokenHash String @unique
+
+  status InvitationStatus @default(PENDING)
+
+  expiresAt DateTime
+
+  acceptedAt DateTime?
+
+  revokedAt DateTime?
+
+  roleId String
+
+  role Role @relation(fields: [roleId], references: [id])
+
+  invitedByUserId String
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([phoneNumber])
+  @@index([tokenHash])
+  @@index([status])
+  @@map("invitations")
 }

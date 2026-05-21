@@ -1,0 +1,7 @@
+export const AUTH_CONSTANTS = {
+  ACCESS_TOKEN_EXPIRATION: "15m",
+
+  REFRESH_TOKEN_EXPIRATION: "7d",
+
+  INVITE_EXPIRATION: "7d",
+} as const;
