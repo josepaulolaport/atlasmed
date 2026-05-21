@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+
+  "compilerOptions": {
+    "baseUrl": ".",
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    "types": ["bun"],
+
+    "noEmit": true,
+
+    "isolatedModules": true
+  },
+
+  "include": ["src"]
+}

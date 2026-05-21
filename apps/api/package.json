@@ -1,0 +1,35 @@
+{
+  "name": "@atlasmed/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/app/server.ts",
+    "start": "bun src/app/server.ts",
+    "build": "bun build ./src/app/server.ts --outdir dist",
+    "test": "bun test",
+    "lint": "eslint src/app",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@atlasmed/config": "workspace:*",
+    "@atlasmed/access": "workspace:*",
+    "@casl/ability": "^6.8.1",
+    "@elysiajs/cookie": "^0.8.0",
+    "@elysiajs/cors": "^1.4.2",
+    "@prisma/client": "^7.8.0",
+    "argon2": "^0.44.0",
+    "elysia": "^1.4.28",
+    "ioredis": "^5.10.1",
+    "jose": "^6.2.3",
+    "pino": "^10.3.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "prisma": "^6",
+    "typescript": "^5"
+  }
+}
