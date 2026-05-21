@@ -1,10 +1,10 @@
 import { randomBytes } from "node:crypto";
 
-import { SignJWT, jwtVerify } from "jose";
-
-import { apiEnv } from "@atlasmed/config";
+import { jwtVerify, SignJWT } from "jose";
 
 import type { AccessTokenPayload } from "@atlasmed/access";
+
+import { apiEnv } from "@atlasmed/config";
 
 const secret = new TextEncoder().encode(apiEnv.JWT_SECRET);
 
