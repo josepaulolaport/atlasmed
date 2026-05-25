@@ -12,7 +12,11 @@
 
     "noEmit": true,
 
-    "isolatedModules": true
+    "isolatedModules": true,
+
+    "jsx": "react-jsx",
+
+    "jsxImportSource": "react"
   },
 
   "include": ["src"]
