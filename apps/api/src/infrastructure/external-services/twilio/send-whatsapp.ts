@@ -12,40 +12,46 @@ export async function sendInviteWhatsApp(
   }
 ): Promise<void> {
   if (!twilioClient) {
-    console.warn("Twilio client not initialized. Skipping WhatsApp message send.");
+    console.warn("⚠️  Twilio client not initialized. Skipping WhatsApp message send.");
+    console.warn("   Check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables");
     return;
   }
 
   try {
     const message = createInviteMessage(token, options);
-
-    await twilioClient.messages.create({
+    
+    console.log(`📱 Sending invite WhatsApp message to ${to}...`);
+    const result = await twilioClient.messages.create({
       from: apiEnv.TWILIO_WHATSAPP_FROM!,
       to: `whatsapp:${to}`,
       body: message,
     });
+    console.log(`✅ WhatsApp message sent successfully! SID: ${result.sid}`);
   } catch (error) {
-    console.error("Failed to send invite WhatsApp message:", error);
-    throw new Error("Failed to send invite WhatsApp message");
+    console.error("❌ Failed to send invite WhatsApp message:", error);
+    // Don't throw - we don't want to block invitation creation if WhatsApp fails
   }
 }
 
 export async function sendPasswordResetWhatsApp(to: string, token: string): Promise<void> {
   if (!twilioClient) {
-    console.warn("Twilio client not initialized. Skipping WhatsApp message send.");
+    console.warn("⚠️  Twilio client not initialized. Skipping WhatsApp message send.");
+    console.warn("   Check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables");
     return;
   }
 
   try {
     const message = createPasswordResetMessage(token);
-
-    await twilioClient.messages.create({
+    
+    console.log(`📱 Sending password reset WhatsApp message to ${to}...`);
+    const result = await twilioClient.messages.create({
       from: apiEnv.TWILIO_WHATSAPP_FROM!,
       to: `whatsapp:${to}`,
       body: message,
     });
+    console.log(`✅ WhatsApp message sent successfully! SID: ${result.sid}`);
   } catch (error) {
-    console.error("Failed to send password reset WhatsApp message:", error);
-    throw new Error("Failed to send password reset WhatsApp message");
+    console.error("❌ Failed to send password reset WhatsApp message:", error);
+    // Don't throw - we don't want to block password reset if WhatsApp fails
   }
 }

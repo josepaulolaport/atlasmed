@@ -1,36 +1,20 @@
 import { Elysia, t } from "elysia";
-
-import { PrismaUserRepository } from "../repositories/prisma/prisma-user.repository";
-import { PrismaPasswordResetRepository } from "../repositories/prisma/prisma-password-reset.repository";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
-
-import { RequestPasswordResetUseCase } from "../../application/use-cases/request-password-reset.use-case";
-import { ResendEmailService } from "../../../../infrastructure/external-services/resend/resend-email.service";
-import { TwilioMessagingService } from "../../../../infrastructure/external-services/twilio/twilio-messaging.service";
-
-const userRepository = new PrismaUserRepository();
-const passwordResetRepository = new PrismaPasswordResetRepository({ prisma });
-const emailService = new ResendEmailService();
-const messagingService = new TwilioMessagingService();
-
-const requestPasswordResetUseCase = new RequestPasswordResetUseCase({
-  userRepository,
-  passwordResetRepository,
-  emailService,
-  messagingService,
-});
+import { accessUseCases } from "../../composition";
+import { passwordResetRateLimit } from "../middleware/rate-limit.middleware";
 
 export const requestPasswordResetRoute = new Elysia({
-  prefix: "/access",
   detail: {
     tags: ["Authentication"],
   },
-}).post(
+})
+  .use(passwordResetRateLimit)
+  .post(
   "/password-reset/request",
-
-  async ({ body }) => {
-    await requestPasswordResetUseCase.execute({
+  async ({ body, request }) => {
+    await accessUseCases.requestPasswordReset().execute({
       identifier: body.identifier,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
+      userAgent: request.headers.get("user-agent") || undefined,
     });
 
     return {

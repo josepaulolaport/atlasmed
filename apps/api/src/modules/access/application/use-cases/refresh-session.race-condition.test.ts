@@ -8,8 +8,22 @@ import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/p
 import { SessionCacheService } from "../../infrastructure/cache/session-cache.service";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
+import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-database";
+import { RefreshTokenReuseDetectedError } from "../../../../shared/errors";
 
+/**
+ * RACE CONDITION TESTS WITH PESSIMISTIC LOCKING
+ * 
+ * These tests verify that concurrent session refresh attempts are handled atomically
+ * using pessimistic locking (SELECT FOR UPDATE).
+ * 
+ * With pessimistic locking:
+ * - The first refresh attempt locks the session row
+ * - Concurrent attempts wait for the lock to be released
+ * - Only one refresh succeeds, others fail with "Session has been revoked"
+ */
 describe("Refresh Session Race Condition Integration Tests", () => {
+  let dbReady = false;
   let sessionRepository: PrismaSessionRepository;
   let userRepository: PrismaUserRepository;
   let sessionCache: SessionCacheService;
@@ -18,21 +32,17 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   let testUser: any;
 
   beforeAll(async () => {
+    dbReady = await isIntegrationDatabaseReady();
+    if (!dbReady) return;
+
     sessionRepository = new PrismaSessionRepository();
     userRepository = new PrismaUserRepository();
     sessionCache = new SessionCacheService();
 
-    refreshSessionUseCase = new RefreshSessionUseCase({
-      sessionRepository,
-      sessionCache,
-    });
+    const { accessUseCases } = await import("../../composition");
 
-    loginUseCase = new LoginUseCase({
-      userRepository,
-      sessionRepository,
-      sessionCache,
-      redis,
-    });
+    refreshSessionUseCase = accessUseCases.refreshSession();
+    loginUseCase = accessUseCases.login();
 
     // Create a dedicated test user for this test suite
     const userRole = await prisma.role.findUnique({
@@ -62,24 +72,30 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    // Clean sessions and cache before each test
+    if (!dbReady || !testUser) return;
     await prisma.session.deleteMany({ where: { userId: testUser.id } });
-    await redis.flushdb(); // Clear Redis cache
+    await redis.flushdb();
   });
 
   afterEach(async () => {
-    // Clean up after each test
+    if (!dbReady || !testUser) return;
     await prisma.session.deleteMany({ where: { userId: testUser.id } });
   });
 
   afterAll(async () => {
-    // Clean up test user
+    if (!dbReady) {
+      await prisma.$disconnect().catch(() => {});
+      return;
+    }
+
     await prisma.session.deleteMany({ where: { userId: testUser.id } });
     await prisma.user.delete({ where: { id: testUser.id } }).catch(() => {});
     await prisma.$disconnect();
   });
 
   test("should handle concurrent refresh attempts atomically", async () => {
+    if (!dbReady) return;
+
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
       password: "Password123!",
@@ -119,7 +135,9 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     expect(successResult.value.refreshToken).not.toBe(refreshToken);
   });
 
-  test("should ensure old session is revoked after successful refresh", async () => {
+  test("should preserve session identity after successful refresh", async () => {
+    if (!dbReady) return;
+
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
       password: "Password123!",
@@ -127,7 +145,8 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const oldSessionId = loginResult.user.sessions?.[0]?.id;
+    const oldSessions = await sessionRepository.findByUserId(testUser.id);
+    const oldSessionId = oldSessions[0]?.id;
     const refreshToken = loginResult.refreshToken;
 
     await refreshSessionUseCase.execute({
@@ -137,12 +156,15 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     });
 
     if (oldSessionId) {
-      const oldSession = await sessionRepository.findById(oldSessionId);
-      expect(oldSession?.revokedAt).not.toBeNull();
+      const session = await sessionRepository.findById(oldSessionId);
+      expect(session?.revokedAt).toBeNull();
+      expect(session?.id).toBe(oldSessionId);
     }
   });
 
   test("should prevent using refresh token after successful refresh", async () => {
+    if (!dbReady) return;
+
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
       password: "Password123!",
@@ -166,10 +188,32 @@ describe("Refresh Session Race Condition Integration Tests", () => {
         ipAddress: "127.0.0.1",
         userAgent: "test-agent",
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(RefreshTokenReuseDetectedError);
+
+    const sessions = await prisma.session.findMany({
+      where: { userId: testUser.id },
+    });
+
+    expect(sessions.length).toBeGreaterThan(0);
+    expect(sessions.every((session) => session.revokedAt !== null)).toBe(true);
+
+    const auditLog = await prisma.auditLog.findFirst({
+      where: {
+        userId: testUser.id,
+        eventType: "SUSPICIOUS_ACTIVITY",
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    expect(auditLog).toBeDefined();
+    expect((auditLog?.details as { reason?: string } | null)?.reason).toBe(
+      "refresh_token_reuse"
+    );
   });
 
   test("should not leave user locked out on refresh failure", async () => {
+    if (!dbReady) return;
+
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
       password: "Password123!",

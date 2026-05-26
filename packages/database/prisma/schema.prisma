@@ -39,43 +39,128 @@ enum AuthSessionType {
   API
 }
 
+enum AuditEventType {
+  USER_LOGIN
+  USER_LOGOUT
+  USER_REGISTER
+  USER_INVITE
+  USER_ACCEPT_INVITE
+  USER_DEACTIVATE
+  USER_ACTIVATE
+  USER_SUSPEND
+  USER_UNSUSPEND
+  USER_MANAGER_ASSIGNED
+  USER_MANAGER_REMOVED
+  USER_TERRITORY_ASSIGNED
+  USER_TERRITORY_REVOKED
+  PASSWORD_CHANGE
+  PASSWORD_RESET_REQUEST
+  PASSWORD_RESET_COMPLETE
+  EMAIL_CHANGE
+  PHONE_CHANGE
+  EMAIL_VERIFY
+  PHONE_VERIFY
+  ROLE_CHANGE
+  SESSION_CREATE
+  SESSION_REVOKE
+  PERMISSION_GRANT
+  PERMISSION_REVOKE
+  TWO_FACTOR_ENABLE
+  TWO_FACTOR_DISABLE
+  SUSPICIOUS_ACTIVITY
+  DATA_ACCESS
+  DATA_EXPORT
+}
+
+enum AuditEventSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  EMAIL_CHANGE
+  PHONE_CHANGE
+}
+
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
-  username          String     @unique
-  phoneNumber       String?    @unique
-  emailVerified     Boolean    @default(false)
-  phoneVerified     Boolean    @default(false)
-  passwordHash      String
-  firstName         String?
-  lastName          String?
-  avatarUrl         String?
-  status            UserStatus @default(PENDING)
-  lastLoginAt       DateTime?
-  passwordChangedAt DateTime?
-  deactivatedAt     DateTime?
-  roleId            String
-  role              Role       @relation(fields: [roleId], references: [id])
-  sessions          Session[]
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  id                  String              @id @default(cuid())
+  email               String              @unique
+  username            String              @unique
+  phoneNumber         String?             @unique
+  emailVerified       Boolean             @default(false)
+  phoneVerified       Boolean             @default(false)
+  emailVerifiedAt     DateTime?
+  phoneVerifiedAt     DateTime?
+  passwordHash        String
+  passwordExpiresAt   DateTime?
+  passwordHistory     String[]            @default([])
+  firstName           String?
+  lastName            String?
+  avatarUrl           String?
+  status              UserStatus          @default(PENDING)
+  tokenVersion        Int                 @default(1)
+  lastLoginAt         DateTime?
+  passwordChangedAt   DateTime?
+  failedLoginAttempts Int                 @default(0)
+  lockedUntil         DateTime?
+  lastFailedLoginAt   DateTime?
+  deactivatedAt       DateTime?
+  suspendedAt         DateTime?
+  twoFactorEnabled    Boolean             @default(false)
+  twoFactorSecret     String?
+  deletedAt           DateTime?
+  metadata            Json?
+  roleId              String
+  role                Role                @relation(fields: [roleId], references: [id])
+  managerId           String?
+  manager             User?               @relation("UserManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports       User[]              @relation("UserManager")
+  territoryAssignments UserTerritoryAssignment[]
+  sessions            Session[]
+  passwordResets      PasswordReset[]
+  auditLogs           AuditLog[]
+  verificationTokens  VerificationToken[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   @@index([email])
   @@index([username])
   @@index([phoneNumber])
   @@index([status])
+  @@index([deletedAt])
+  @@index([managerId])
   @@map("users")
+}
+
+model UserTerritoryAssignment {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territoryId String
+  assignedBy  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, territoryId])
+  @@index([userId])
+  @@index([territoryId])
+  @@map("user_territory_assignments")
 }
 
 model Role {
   id          String       @id @default(cuid())
   name        String       @unique
   description String?
+  priority    Int          @default(0)
   users       User[]
+  invitations Invitation[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
-  invitations Invitation[]
 
+  @@index([priority])
   @@map("roles")
 }
 
@@ -95,8 +180,14 @@ model Session {
   browserVersion      String?
   osName              String?
   deviceType          AuthSessionDeviceType @default(UNKNOWN)
+  deviceName          String?
+  deviceFingerprint   String?
   sessionType         AuthSessionType       @default(WEB)
   ipAddress           String?
+  ipCountry           String?
+  ipCity              String?
+  suspiciousActivity  Boolean               @default(false)
+  lastIpAddress       String?
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
 
@@ -105,39 +196,122 @@ model Session {
   @@index([expiresAt])
   @@index([revokedAt])
   @@index([sessionType])
+  @@index([userId, revokedAt, expiresAt])
+  @@index([deviceFingerprint])
+  @@index([suspiciousActivity])
   @@map("sessions")
 }
 
 model Invitation {
-  id String @id @default(cuid())
-
-  email String?
-
-  phoneNumber String?
-
-  tokenHash String @unique
-
-  status InvitationStatus @default(PENDING)
-
-  expiresAt DateTime
-
-  acceptedAt DateTime?
-
-  revokedAt DateTime?
-
-  roleId String
-
-  role Role @relation(fields: [roleId], references: [id])
-
+  id              String           @id @default(cuid())
+  email           String?
+  phoneNumber     String?
+  tokenHash       String           @unique
+  status          InvitationStatus @default(PENDING)
+  expiresAt       DateTime
+  acceptedAt      DateTime?
+  acceptedByUserId String?
+  revokedAt       DateTime?
+  resendCount     Int              @default(0)
+  lastResendAt    DateTime?
+  roleId          String
+  role            Role             @relation(fields: [roleId], references: [id])
   invitedByUserId String
-
-  createdAt DateTime @default(now())
-
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@index([email])
   @@index([phoneNumber])
   @@index([tokenHash])
   @@index([status])
+  @@index([status, expiresAt])
+  @@index([acceptedByUserId])
   @@map("invitations")
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([expiresAt])
+  @@index([userId, usedAt])
+  @@map("password_resets")
+}
+
+model AuditLog {
+  id             String             @id @default(cuid())
+  userId         String?
+  user           User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  eventType      AuditEventType
+  severity       AuditEventSeverity @default(INFO)
+  actor          String?
+  actorId        String?
+  resource       String?
+  resourceId     String?
+  action         String
+  details        Json?
+  ipAddress      String?
+  userAgent      String?
+  sessionId      String?
+  outcome        String?
+  errorMessage   String?
+  metadata       Json?
+  createdAt      DateTime           @default(now())
+
+  @@index([userId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([createdAt])
+  @@index([actorId])
+  @@index([resourceId])
+  @@index([sessionId])
+  @@map("audit_logs")
+}
+
+model VerificationToken {
+  id         String                @id @default(cuid())
+  userId     String
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       VerificationTokenType
+  tokenHash  String                @unique
+  newValue   String?
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([type])
+  @@index([expiresAt])
+  @@map("verification_tokens")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  userId      String
+  resource    String
+  resourceId  String?
+  action      String
+  conditions  Json?
+  grantedBy   String?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([resource, resourceId])
+  @@index([userId, resource])
+  @@index([expiresAt])
+  @@map("permissions")
 }

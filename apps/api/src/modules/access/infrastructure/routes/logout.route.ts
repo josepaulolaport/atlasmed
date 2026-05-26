@@ -1,25 +1,21 @@
 import { Elysia, t } from "elysia";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
-import { PrismaSessionRepository } from "../repositories/prisma/prisma-session.repository";
-import { LogoutUseCase } from "../../application/use-cases/logout.use-case";
-import { authMiddleware } from "../middleware/auth.middleware";
-
-const sessionRepository = new PrismaSessionRepository();
-
-const logoutUseCase = new LogoutUseCase({
-  sessionRepository,
-});
+import { accessUseCases, auth } from "../../composition";
 
 export const logoutRoute = new Elysia({ 
-  prefix: "/access",
   detail: {
     tags: ["Authentication"],
   },
 })
-  .use(authMiddleware)
-  .post("/logout", async ({ auth, cookie }: any) => {
-    await logoutUseCase.execute({
-      sessionId: auth.sessionId,
+  .use(auth)
+  .post("/logout", async ({ getUserId, getSessionId, cookie, request }: any) => {
+    const userId = await getUserId();
+    const sessionId = await getSessionId();
+    
+    await accessUseCases.logout().execute({
+      sessionId,
+      userId,
+      ipAddress: request.headers.get("x-forwarded-for") || undefined,
     });
 
     // Clear refresh token cookie

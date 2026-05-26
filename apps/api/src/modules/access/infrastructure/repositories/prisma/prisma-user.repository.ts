@@ -1,5 +1,12 @@
 import { prisma } from "../../../../../infrastructure/database/prisma.client";
-import { InvalidInviteError } from "@atlasmed/access";
+import {
+  PasswordReuseError,
+  ResetTokenExpiredError,
+  ResetTokenInvalidError,
+  ResetTokenUsedError,
+} from "../../../../../shared/errors";
+import { PASSWORD_HISTORY_LIMIT } from "../../../application/constants/password.constants";
+import { PasswordService } from "../../../application/services/password.service";
 
 import type {
   UserRepository,
@@ -8,6 +15,7 @@ import type {
   UpdatePasswordParams,
   ResetPasswordTransactionParams,
   ResetPasswordTransactionResult,
+  FindAllUsersParams,
 } from "../../../application/interfaces/user.repository.interface";
 
 export class PrismaUserRepository implements UserRepository {
@@ -43,6 +51,33 @@ export class PrismaUserRepository implements UserRepository {
         role: true,
       },
     });
+  }
+
+  async findUserAuthStatus(id: string) {
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        tokenVersion: true,
+        role: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    return {
+      status: user.status,
+      tokenVersion: user.tokenVersion,
+      roleId: user.role.id,
+      roleName: user.role.name,
+    };
   }
 
   async create(params: CreateUserParams) {
@@ -97,6 +132,7 @@ export class PrismaUserRepository implements UserRepository {
       data: {
         status: "INACTIVE",
         deactivatedAt: new Date(),
+        tokenVersion: { increment: 1 },
       },
     });
   }
@@ -116,6 +152,7 @@ export class PrismaUserRepository implements UserRepository {
       where: { id: userId },
       data: {
         status: "SUSPENDED",
+        tokenVersion: { increment: 1 },
       },
     });
   }
@@ -129,28 +166,104 @@ export class PrismaUserRepository implements UserRepository {
     });
   }
 
+  async updateRole(userId: string, roleId: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { roleId },
+    });
+  }
+
   async delete(userId: string) {
     await prisma.user.delete({
       where: { id: userId },
     });
   }
 
-  async resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult> {
-    return await prisma.$transaction(async (tx) => {
-      const passwordReset = await tx.passwordReset.findUnique({
-        where: {
-          tokenHash: params.tokenHash,
-        },
-      });
+  /**
+   * Increments tokenVersion to invalidate all outstanding JWTs.
+   * Intended for privilege changes (e.g. role change) — call alongside session revocation and cache invalidation.
+   */
+  async incrementTokenVersion(userId: string): Promise<number> {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        tokenVersion: { increment: 1 },
+      },
+      select: {
+        tokenVersion: true,
+      },
+    });
 
-      if (!passwordReset || passwordReset.usedAt || passwordReset.expiresAt < new Date()) {
-        throw new Error("Invalid or expired password reset token");
+    return user.tokenVersion;
+  }
+
+  async resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult> {
+    const passwordService = new PasswordService();
+
+    return await prisma.$transaction(async (tx) => {
+      const lockedReset = await tx.$queryRaw<Array<{
+        id: string;
+        userId: string;
+        expiresAt: Date;
+        usedAt: Date | null;
+      }>>`
+        SELECT id, "userId", "expiresAt", "usedAt"
+        FROM password_resets
+        WHERE "tokenHash" = ${params.tokenHash}
+        FOR UPDATE
+      `;
+
+      if (!lockedReset || lockedReset.length === 0) {
+        throw new ResetTokenInvalidError();
       }
 
+      const passwordReset = lockedReset[0]!;
+
+      if (passwordReset.usedAt) {
+        throw new ResetTokenUsedError();
+      }
+
+      if (passwordReset.expiresAt < new Date()) {
+        throw new ResetTokenExpiredError();
+      }
+
+      const lockedUser = await tx.$queryRaw<Array<{
+        id: string;
+        passwordHash: string;
+        passwordHistory: string[];
+      }>>`
+        SELECT id, "passwordHash", "passwordHistory"
+        FROM users
+        WHERE id = ${passwordReset.userId}
+        FOR UPDATE
+      `;
+
+      if (!lockedUser || lockedUser.length === 0) {
+        throw new ResetTokenInvalidError();
+      }
+
+      const userLock = lockedUser[0]!;
+
+      if (await passwordService.verify(params.newPassword, userLock.passwordHash)) {
+        throw new PasswordReuseError();
+      }
+
+      for (const historicHash of userLock.passwordHistory) {
+        if (await passwordService.verify(params.newPassword, historicHash)) {
+          throw new PasswordReuseError();
+        }
+      }
+
+      const updatedHistory = [userLock.passwordHash, ...userLock.passwordHistory].slice(
+        0,
+        PASSWORD_HISTORY_LIMIT
+      );
+
       const user = await tx.user.update({
-        where: { id: passwordReset.userId },
+        where: { id: userLock.id },
         data: {
           passwordHash: params.newPasswordHash,
+          passwordHistory: updatedHistory,
           passwordChangedAt: new Date(),
           tokenVersion: { increment: 1 },
           failedLoginAttempts: 0,
@@ -179,7 +292,185 @@ export class PrismaUserRepository implements UserRepository {
         },
       });
 
-      return { user, passwordReset };
+      const passwordResetRecord = await tx.passwordReset.findUniqueOrThrow({
+        where: { id: passwordReset.id },
+      });
+
+      return { user, passwordReset: passwordResetRecord };
+    });
+  }
+
+  async findEmailVerificationState(userId: string) {
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        email: true,
+        emailVerified: true,
+      },
+    });
+  }
+
+  async findPhoneVerificationState(userId: string) {
+    return await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        phoneNumber: true,
+        phoneVerified: true,
+      },
+    });
+  }
+
+  async findByEmail(email: string) {
+    return await prisma.user.findUnique({
+      where: { email },
+      select: { id: true },
+    });
+  }
+
+  async findByPhone(phoneNumber: string) {
+    return await prisma.user.findUnique({
+      where: { phoneNumber },
+      select: { id: true },
+    });
+  }
+
+  async markEmailVerified(userId: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+      },
+    });
+  }
+
+  async markPhoneVerified(userId: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phoneVerified: true,
+        phoneVerifiedAt: new Date(),
+      },
+    });
+  }
+
+  async updateEmail(userId: string, newEmail: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        email: newEmail,
+        emailVerified: true,
+        emailVerifiedAt: new Date(),
+      },
+    });
+  }
+
+  async updatePhone(userId: string, newPhone: string) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        phoneNumber: newPhone,
+        phoneVerified: true,
+        phoneVerifiedAt: new Date(),
+      },
+    });
+  }
+
+  async findAll(params: FindAllUsersParams) {
+    const page = params.page;
+    const limit = Math.min(params.limit, 100);
+    const skip = (page - 1) * limit;
+
+    const where: Record<string, unknown> = {
+      deletedAt: null,
+    };
+
+    if (params.status) {
+      where.status = params.status;
+    }
+
+    if (params.search) {
+      where.OR = [
+        { email: { contains: params.search, mode: "insensitive" } },
+        { username: { contains: params.search, mode: "insensitive" } },
+        { firstName: { contains: params.search, mode: "insensitive" } },
+        { lastName: { contains: params.search, mode: "insensitive" } },
+        { phoneNumber: { contains: params.search, mode: "insensitive" } },
+      ];
+    }
+
+    if (params.scope && !params.scope.isGlobal) {
+      const managedUserIds = params.scope.managedUserIds ?? [];
+      const territoryIds = params.scope.territoryIds ?? [];
+
+      if (managedUserIds.length === 0 && territoryIds.length === 0) {
+        return { users: [], total: 0 };
+      }
+
+      const scopeOr: Record<string, unknown>[] = [];
+
+      if (managedUserIds.length > 0) {
+        scopeOr.push({ id: { in: managedUserIds } });
+      }
+
+      if (territoryIds.length > 0) {
+        scopeOr.push({
+          territoryAssignments: {
+            some: {
+              territoryId: { in: territoryIds },
+            },
+          },
+        });
+      }
+
+      where.AND = [
+        ...((where.AND as Record<string, unknown>[]) ?? []),
+        { OR: scopeOr },
+      ];
+    }
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where: where as any,
+        include: {
+          role: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.user.count({ where: where as any }),
+    ]);
+
+    return { users, total };
+  }
+
+  async updateProfile(
+    userId: string,
+    data: { firstName?: string; lastName?: string; avatarUrl?: string }
+  ) {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(data.firstName !== undefined && { firstName: data.firstName }),
+        ...(data.lastName !== undefined && { lastName: data.lastName }),
+        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+      },
+      include: {
+        role: true,
+      },
+    });
+  }
+
+  async updateManagerId(userId: string, managerId: string | null) {
+    return await prisma.user.update({
+      where: { id: userId },
+      data: { managerId },
+      include: {
+        role: true,
+      },
     });
   }
 }

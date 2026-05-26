@@ -1,14 +1,19 @@
 import type { Role, User, Session, Invitation } from "@atlasmed/database";
+import { ROLE_PRIORITY_BY_NAME } from "../application/constants/role-priority.constants";
 
 // Re-export repository and cache mocks for convenience
 export * from "./repository-mocks";
 export * from "./cache-mocks";
+export * from "./audit-mocks";
+export * from "./metrics-mocks";
 
 export function createMockRole(overrides?: Partial<Role>): Role {
+  const name = overrides?.name ?? "USER";
   return {
     id: "role-123",
-    name: "USER",
+    name,
     description: null,
+    priority: ROLE_PRIORITY_BY_NAME[name as keyof typeof ROLE_PRIORITY_BY_NAME] ?? 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -23,6 +28,7 @@ export function createMockUser(overrides?: Partial<User>): User {
     phoneNumber: null,
     passwordHash: "$argon2id$v=19$m=19456,t=2,p=1$test",
     roleId: "role-123",
+    managerId: null,
     firstName: "Test",
     lastName: "User",
     avatarUrl: null,
@@ -30,16 +36,25 @@ export function createMockUser(overrides?: Partial<User>): User {
     tokenVersion: 1,
     emailVerified: true,
     phoneVerified: false,
+    emailVerifiedAt: null,
+    phoneVerifiedAt: null,
     lastLoginAt: null,
     passwordChangedAt: null,
     failedLoginAttempts: 0,
     lastFailedLoginAt: null,
     lockedUntil: null,
+    deactivatedAt: null,
+    suspendedAt: null,
+    twoFactorEnabled: false,
+    twoFactorSecret: null,
+    deletedAt: null,
+    metadata: null,
+    passwordExpiresAt: null,
+    passwordHistory: [],
     createdAt: new Date(),
     updatedAt: new Date(),
-    deactivatedAt: null,
     ...overrides,
-  };
+  } as User;
 }
 
 export function createMockUserWithRole(overrides?: {
@@ -65,10 +80,16 @@ export function createMockSession(overrides?: Partial<Session>): Session {
     browserName: null,
     browserVersion: null,
     osName: null,
+    deviceName: null,
     deviceType: "UNKNOWN",
+    deviceFingerprint: null,
     sessionType: "WEB",
     revokedByUserId: null,
     replacedBySessionId: null,
+    ipCountry: null,
+    ipCity: null,
+    suspiciousActivity: false,
+    lastIpAddress: null,
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -76,7 +97,7 @@ export function createMockSession(overrides?: Partial<Session>): Session {
     revokedAt: null,
     revokedReason: null,
     ...overrides,
-  };
+  } as Session;
 }
 
 export function createMockInvitation(overrides?: Partial<Invitation>): Invitation {
@@ -92,7 +113,10 @@ export function createMockInvitation(overrides?: Partial<Invitation>): Invitatio
     createdAt: new Date(),
     updatedAt: new Date(),
     acceptedAt: null,
+    acceptedByUserId: null,
     revokedAt: null,
+    resendCount: 0,
+    lastResendAt: null,
     ...overrides,
   };
 }

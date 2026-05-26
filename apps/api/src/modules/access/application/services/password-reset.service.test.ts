@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { hashToken } from "../../../../shared/utils/hash-token";
 
 import type { PasswordResetRepository } from "../interfaces/password-reset.repository.interface";
+import {
+  ResetTokenExpiredError,
+  ResetTokenInvalidError,
+  ResetTokenUsedError,
+} from "../../../../shared/errors";
 
 import { PasswordResetService } from "./password-reset.service";
 
@@ -15,6 +20,7 @@ describe("PasswordResetService", () => {
       create: mock(() => Promise.resolve({})),
       findByToken: mock(() => Promise.resolve(null)),
       markAsUsed: mock(() => Promise.resolve()),
+      invalidateUnusedForUser: mock(() => Promise.resolve()),
       deleteExpired: mock(() => Promise.resolve()),
     };
 
@@ -22,6 +28,24 @@ describe("PasswordResetService", () => {
   });
 
   describe("createPasswordReset", () => {
+    it("should invalidate prior unused tokens before creating a new one", async () => {
+      const userId = "user-123";
+      const mockPasswordReset = {
+        id: "reset-123",
+        userId,
+        tokenHash: "hash-123",
+        expiresAt: new Date(),
+        usedAt: null,
+      };
+
+      mockRepository.create = mock(() => Promise.resolve(mockPasswordReset));
+
+      await service.createPasswordReset({ userId });
+
+      expect(mockRepository.invalidateUnusedForUser).toHaveBeenCalledWith(userId);
+      expect(mockRepository.create).toHaveBeenCalled();
+    });
+
     it("should create a password reset with token", async () => {
       const userId = "user-123";
       const mockPasswordReset = {
@@ -78,15 +102,15 @@ describe("PasswordResetService", () => {
       expect(mockRepository.findByToken).toHaveBeenCalledWith({ tokenHash });
     });
 
-    it("should throw error if token not found", async () => {
+    it("should throw ResetTokenInvalidError if token not found", async () => {
       mockRepository.findByToken = mock(() => Promise.resolve(null));
 
       await expect(service.validatePasswordResetToken("invalid-token")).rejects.toThrow(
-        "Invalid or expired password reset token"
+        ResetTokenInvalidError
       );
     });
 
-    it("should throw error if token already used", async () => {
+    it("should throw ResetTokenUsedError if token already used", async () => {
       const token = "used-token";
       const tokenHash = hashToken(token);
 
@@ -101,11 +125,11 @@ describe("PasswordResetService", () => {
       mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset));
 
       await expect(service.validatePasswordResetToken(token)).rejects.toThrow(
-        "Password reset token has already been used"
+        ResetTokenUsedError
       );
     });
 
-    it("should throw error if token expired", async () => {
+    it("should throw ResetTokenExpiredError if token expired", async () => {
       const token = "expired-token";
       const tokenHash = hashToken(token);
 
@@ -120,7 +144,7 @@ describe("PasswordResetService", () => {
       mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset));
 
       await expect(service.validatePasswordResetToken(token)).rejects.toThrow(
-        "Password reset token has expired"
+        ResetTokenExpiredError
       );
     });
   });

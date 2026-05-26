@@ -1,5 +1,5 @@
 import { prisma } from "../../../../../infrastructure/database/prisma.client";
-import { InvalidInviteError } from "@atlasmed/access";
+import { InvalidInviteError } from "../../../../../shared/errors";
 
 import type {
   InviteRepository,
@@ -76,6 +76,44 @@ export class PrismaInviteRepository implements InviteRepository {
     });
   }
 
+  async findAll(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    invitedByUserId?: string;
+  }) {
+    await this.cleanupExpired();
+
+    const page = params?.page ?? 1;
+    const limit = Math.min(params?.limit ?? 20, 100);
+    const skip = (page - 1) * limit;
+
+    const where: Record<string, unknown> = params?.status
+      ? { status: params.status as any }
+      : {};
+
+    if (params?.invitedByUserId) {
+      where.invitedByUserId = params.invitedByUserId;
+    }
+
+    const [invitations, total] = await Promise.all([
+      prisma.invitation.findMany({
+        where,
+        include: {
+          role: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.invitation.count({ where }),
+    ]);
+
+    return { invitations, total };
+  }
+
   async markAccepted(inviteId: string, userId: string) {
     await prisma.invitation.update({
       where: {
@@ -119,31 +157,46 @@ export class PrismaInviteRepository implements InviteRepository {
 
   async acceptInviteTransaction(params: AcceptInviteTransactionParams): Promise<AcceptInviteTransactionResult> {
     return await prisma.$transaction(async (tx) => {
-      const invite = await tx.invitation.findFirst({
-        where: {
-          tokenHash: params.tokenHash,
-          status: "PENDING",
-          expiresAt: {
-            gt: new Date(),
-          },
-        },
-        include: {
-          role: true,
-        },
-      });
+      // Pessimistic locking: Lock the invite row to prevent race conditions
+      const lockedInvite = await tx.$queryRaw<Array<{ 
+        id: string; 
+        status: string; 
+        expiresAt: Date;
+        email: string | null;
+        phoneNumber: string | null;
+        roleId: string;
+      }>>`
+        SELECT id, status, "expiresAt", email, "phoneNumber", "roleId"
+        FROM invitations
+        WHERE "tokenHash" = ${params.tokenHash}
+        FOR UPDATE
+      `;
 
-      if (!invite) {
+      if (!lockedInvite || lockedInvite.length === 0) {
         throw new InvalidInviteError();
       }
 
-      if (invite.email && invite.email !== params.email) {
+      const inviteLock = lockedInvite[0]!;
+
+      // Validate invite status and expiration
+      if (inviteLock.status !== "PENDING") {
+        throw new InvalidInviteError("Invite has already been used");
+      }
+
+      if (inviteLock.expiresAt < new Date()) {
+        throw new InvalidInviteError("Invite has expired");
+      }
+
+      // Validate email/phone matches
+      if (inviteLock.email && inviteLock.email !== params.email) {
         throw new InvalidInviteError("Email does not match invitation");
       }
 
-      if (invite.phoneNumber && invite.phoneNumber !== params.phoneNumber) {
+      if (inviteLock.phoneNumber && inviteLock.phoneNumber !== params.phoneNumber) {
         throw new InvalidInviteError("Phone number does not match invitation");
       }
 
+      // Check for existing user with same credentials
       const existingUser = await tx.user.findFirst({
         where: {
           OR: [
@@ -158,17 +211,18 @@ export class PrismaInviteRepository implements InviteRepository {
         throw new Error("User already exists");
       }
 
+      // Create the user
       const user = await tx.user.create({
         data: {
           email: params.email,
           username: params.username,
           phoneNumber: params.phoneNumber ?? null,
           passwordHash: params.passwordHash,
-          roleId: invite.roleId,
+          roleId: inviteLock.roleId,
           firstName: params.firstName ?? null,
           lastName: params.lastName ?? null,
-          emailVerified: Boolean(invite.email),
-          phoneVerified: Boolean(invite.phoneNumber),
+          emailVerified: Boolean(inviteLock.email),
+          phoneVerified: Boolean(inviteLock.phoneNumber),
           status: "ACTIVE",
         },
         include: {
@@ -176,12 +230,20 @@ export class PrismaInviteRepository implements InviteRepository {
         },
       });
 
+      // Mark invite as accepted
       await tx.invitation.update({
-        where: { id: invite.id },
+        where: { id: inviteLock.id },
         data: {
           status: "ACCEPTED",
           acceptedAt: new Date(),
+          acceptedByUserId: user.id,
         },
+      });
+
+      // Fetch the complete invite with role for the return value
+      const invite = await tx.invitation.findUniqueOrThrow({
+        where: { id: inviteLock.id },
+        include: { role: true },
       });
 
       return { user, invite };

@@ -31,6 +31,7 @@ export interface UpdatePasswordParams {
 
 export interface ResetPasswordTransactionParams {
   tokenHash: string;
+  newPassword: string;
   newPasswordHash: string;
 }
 
@@ -39,10 +40,53 @@ export interface ResetPasswordTransactionResult {
   passwordReset: any;
 }
 
+export interface UserAuthStatus {
+  status: string;
+  tokenVersion: number;
+  roleId: string;
+  roleName: string;
+}
+
+export interface EmailVerificationState {
+  email: string;
+  emailVerified: boolean;
+}
+
+export interface PhoneVerificationState {
+  phoneNumber: string | null;
+  phoneVerified: boolean;
+}
+
+export interface UserIdentifierMatch {
+  id: string;
+}
+
+export interface FindAllUsersParams {
+  page: number;
+  limit: number;
+  status?: string;
+  search?: string;
+  scope?: UserListScopeFilter;
+}
+
+export interface UserListScopeFilter {
+  isGlobal: boolean;
+  territoryIds: string[];
+  managedUserIds?: string[];
+}
+
+export interface UpdateProfileParams {
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+}
+
 export interface UserRepository {
   findByIdentifier(params: FindUserByIdentifierParams): Promise<any>;
 
   findById(id: string): Promise<any>;
+
+  findUserAuthStatus(userId: string): Promise<UserAuthStatus | null>;
 
   create(params: CreateUserParams): Promise<any>;
 
@@ -58,7 +102,33 @@ export interface UserRepository {
 
   unsuspend(userId: string): Promise<void>;
 
+  updateRole(userId: string, roleId: string): Promise<void>;
+
   delete(userId: string): Promise<void>;
 
+  incrementTokenVersion(userId: string): Promise<number>;
+
   resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult>;
+
+  findEmailVerificationState(userId: string): Promise<EmailVerificationState | null>;
+
+  findPhoneVerificationState(userId: string): Promise<PhoneVerificationState | null>;
+
+  findByEmail(email: string): Promise<UserIdentifierMatch | null>;
+
+  findByPhone(phoneNumber: string): Promise<UserIdentifierMatch | null>;
+
+  markEmailVerified(userId: string): Promise<void>;
+
+  markPhoneVerified(userId: string): Promise<void>;
+
+  updateEmail(userId: string, newEmail: string): Promise<void>;
+
+  updatePhone(userId: string, newPhone: string): Promise<void>;
+
+  findAll(params: FindAllUsersParams): Promise<{ users: any[]; total: number }>;
+
+  updateProfile(userId: string, data: UpdateProfileParams): Promise<any>;
+
+  updateManagerId(userId: string, managerId: string | null): Promise<any>;
 }

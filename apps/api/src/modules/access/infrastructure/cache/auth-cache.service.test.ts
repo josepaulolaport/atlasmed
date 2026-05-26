@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach, mock } from "bun:test";
 import { AuthCacheService } from "./auth-cache.service";
+import { RedisCacheError } from "../../../../shared/utils/redis-retry";
 import type { Redis } from "ioredis";
 
 describe("AuthCacheService", () => {
@@ -82,22 +83,30 @@ describe("AuthCacheService", () => {
   });
 
   describe("invalidate", () => {
-    test("should delete auth context from cache", async () => {
+    test("should delete auth context and validation stamp from cache", async () => {
       await cache.invalidate("user-123");
-      expect(mockRedis.del).toHaveBeenCalledWith("auth:user:user-123");
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        "auth:validated:user-123",
+        "auth:user:user-123"
+      );
     });
 
-    test("should handle Redis errors gracefully", async () => {
+    test("should throw after Redis retries are exhausted", async () => {
       mockRedis.del = mock(() => Promise.reject(new Error("Redis error")));
-      await expect(cache.invalidate("user-123")).resolves.toBeUndefined();
+
+      await expect(cache.invalidate("user-123")).rejects.toBeInstanceOf(
+        RedisCacheError
+      );
     });
   });
 
   describe("invalidateMultiple", () => {
-    test("should delete multiple auth contexts", async () => {
+    test("should delete multiple auth contexts and validation stamps", async () => {
       await cache.invalidateMultiple(["user-123", "user-456"]);
       expect(mockRedis.del).toHaveBeenCalledWith(
+        "auth:validated:user-123",
         "auth:user:user-123",
+        "auth:validated:user-456",
         "auth:user:user-456"
       );
     });
@@ -107,11 +116,11 @@ describe("AuthCacheService", () => {
       expect(mockRedis.del).not.toHaveBeenCalled();
     });
 
-    test("should handle Redis errors gracefully", async () => {
+    test("should throw after Redis retries are exhausted", async () => {
       mockRedis.del = mock(() => Promise.reject(new Error("Redis error")));
       await expect(
         cache.invalidateMultiple(["user-123"])
-      ).resolves.toBeUndefined();
+      ).rejects.toBeInstanceOf(RedisCacheError);
     });
   });
 
@@ -131,6 +140,24 @@ describe("AuthCacheService", () => {
       mockRedis.exists = mock(() => Promise.reject(new Error("Redis error")));
       const result = await cache.exists("user-123");
       expect(result).toBe(false);
+    });
+  });
+
+  describe("validation helpers", () => {
+    test("should report recently validated auth context", async () => {
+      mockRedis.exists = mock(() => Promise.resolve(1));
+
+      await expect(cache.isRecentlyValidated("user-123")).resolves.toBe(true);
+    });
+
+    test("should mark auth context as validated", async () => {
+      await cache.markValidated("user-123");
+
+      expect(mockRedis.setex).toHaveBeenCalledWith(
+        "auth:validated:user-123",
+        30,
+        "1"
+      );
     });
   });
 });

@@ -13,16 +13,24 @@ export async function sendInviteEmail(
     invitedByName?: string;
     roleName?: string;
     inviteUrl?: string;
-  }
+  },
 ): Promise<void> {
   if (!resend) {
-    console.warn("Resend client not initialized. Skipping email send.");
+    console.warn("⚠️  Resend client not initialized. Skipping email send.");
+    console.warn("   Set RESEND_API_KEY in your .env file");
+    return;
+  }
+
+  if (!apiEnv.RESEND_FROM_EMAIL) {
+    console.error("❌ RESEND_FROM_EMAIL is not set. Cannot send invite email.");
+    console.error("   Add RESEND_FROM_EMAIL to apps/api/.env (e.g. onboarding@resend.dev for testing)");
     return;
   }
 
   try {
-    await resend.emails.send({
-      from: apiEnv.RESEND_FROM_EMAIL!,
+    console.log(`📧 Sending invite email to ${to}...`);
+    const result = await resend.emails.send({
+      from: apiEnv.RESEND_FROM_EMAIL,
       to,
       subject: "You've been invited to join AtlasMed",
       react: InviteEmail({
@@ -32,9 +40,15 @@ export async function sendInviteEmail(
         roleName: options?.roleName,
       }) as ReactElement,
     });
+
+    if (result.error) {
+      console.error("❌ Failed to send invite email:", result.error);
+      return;
+    }
+
+    console.log(`✅ Invite email sent successfully! ID: ${result.data?.id}`);
   } catch (error) {
-    console.error("Failed to send invite email:", error);
-    throw new Error("Failed to send invite email");
+    console.error("❌ Failed to send invite email:", error);
   }
 }
 
@@ -43,15 +57,17 @@ export async function sendPasswordResetEmail(
   token: string,
   options?: {
     resetUrl?: string;
-  }
+  },
 ): Promise<void> {
   if (!resend) {
-    console.warn("Resend client not initialized. Skipping email send.");
+    console.warn("⚠️  Resend client not initialized. Skipping email send.");
+    console.warn("   Check RESEND_API_KEY environment variable");
     return;
   }
 
   try {
-    await resend.emails.send({
+    console.log(`📧 Sending password reset email to ${to}...`);
+    const result = await resend.emails.send({
       from: apiEnv.RESEND_FROM_EMAIL!,
       to,
       subject: "Reset your password",
@@ -60,8 +76,11 @@ export async function sendPasswordResetEmail(
         resetUrl: options?.resetUrl,
       }) as ReactElement,
     });
+    console.log(
+      `✅ Password reset email sent successfully! ID: ${result.data?.id}`,
+    );
   } catch (error) {
-    console.error("Failed to send password reset email:", error);
-    throw new Error("Failed to send password reset email");
+    console.error("❌ Failed to send password reset email:", error);
+    // Don't throw - we don't want to block password reset if email fails
   }
 }

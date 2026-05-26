@@ -1,17 +1,35 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+
+mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
+  auditLogService: createMockAuditLogService(),
+}));
+
 import { LogoutUseCase } from "./logout.use-case";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
-import { createMockSessionRepository } from "../../test-helpers/fixtures";
+import {
+  createMockSessionRepository,
+  createMockSessionCache,
+  createMockAuthCache,
+} from "../../test-helpers/fixtures";
+import type { ISessionCache } from "../interfaces/session-cache.interface";
+import type { IAuthCache } from "../interfaces/auth-cache.interface";
 
 describe("LogoutUseCase", () => {
   let logoutUseCase: LogoutUseCase;
   let mockSessionRepository: SessionRepository;
+  let mockSessionCache: ISessionCache;
+  let mockAuthCache: IAuthCache;
 
   beforeEach(() => {
     mockSessionRepository = createMockSessionRepository();
+    mockSessionCache = createMockSessionCache();
+    mockAuthCache = createMockAuthCache();
 
     logoutUseCase = new LogoutUseCase({
       sessionRepository: mockSessionRepository,
+      sessionCache: mockSessionCache,
+      authCache: mockAuthCache,
     });
   });
 
@@ -19,21 +37,23 @@ describe("LogoutUseCase", () => {
     it("should revoke session by ID", async () => {
       const sessionId = "session-123";
 
-      await logoutUseCase.execute({ sessionId });
+      await logoutUseCase.execute({ sessionId, userId: "user-123" });
 
       expect(mockSessionRepository.revoke).toHaveBeenCalledTimes(1);
       expect(mockSessionRepository.revoke).toHaveBeenCalledWith(sessionId);
+      expect(mockSessionCache.invalidate).toHaveBeenCalledWith(sessionId);
+      expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
     });
 
     it("should call repository revoke with correct session ID", async () => {
-      await logoutUseCase.execute({ sessionId: "session-abc" });
+      await logoutUseCase.execute({ sessionId: "session-abc", userId: "user-123" });
 
       expect(mockSessionRepository.revoke).toHaveBeenCalledWith("session-abc");
     });
 
     it("should complete successfully when session is revoked", async () => {
       await expect(
-        logoutUseCase.execute({ sessionId: "session-123" })
+        logoutUseCase.execute({ sessionId: "session-123", userId: "user-123" })
       ).resolves.toBeUndefined();
     });
   });
@@ -41,12 +61,12 @@ describe("LogoutUseCase", () => {
   describe("already revoked session", () => {
     it("should not throw error when revoking already revoked session", async () => {
       await expect(
-        logoutUseCase.execute({ sessionId: "already-revoked-session" })
+        logoutUseCase.execute({ sessionId: "already-revoked-session", userId: "user-123" })
       ).resolves.toBeUndefined();
     });
 
     it("should call revoke even if session was already revoked", async () => {
-      await logoutUseCase.execute({ sessionId: "already-revoked" });
+      await logoutUseCase.execute({ sessionId: "already-revoked", userId: "user-123" });
 
       expect(mockSessionRepository.revoke).toHaveBeenCalledWith("already-revoked");
     });
@@ -55,12 +75,12 @@ describe("LogoutUseCase", () => {
   describe("invalid session", () => {
     it("should not throw error when session does not exist", async () => {
       await expect(
-        logoutUseCase.execute({ sessionId: "non-existent-session" })
+        logoutUseCase.execute({ sessionId: "non-existent-session", userId: "user-123" })
       ).resolves.toBeUndefined();
     });
 
     it("should call revoke even if session does not exist", async () => {
-      await logoutUseCase.execute({ sessionId: "non-existent" });
+      await logoutUseCase.execute({ sessionId: "non-existent", userId: "user-123" });
 
       expect(mockSessionRepository.revoke).toHaveBeenCalledWith("non-existent");
     });
@@ -74,7 +94,7 @@ describe("LogoutUseCase", () => {
       });
 
       await expect(
-        logoutUseCase.execute({ sessionId: "session-123" })
+        logoutUseCase.execute({ sessionId: "session-123", userId: "user-123" })
       ).rejects.toThrow("Database error");
     });
 
@@ -84,7 +104,7 @@ describe("LogoutUseCase", () => {
       });
 
       await expect(
-        logoutUseCase.execute({ sessionId: "session-123" })
+        logoutUseCase.execute({ sessionId: "session-123", userId: "user-123" })
       ).rejects.toThrow("Connection timeout");
     });
   });

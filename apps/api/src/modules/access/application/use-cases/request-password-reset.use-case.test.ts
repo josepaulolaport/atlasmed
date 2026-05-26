@@ -1,4 +1,9 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+
+mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
+  auditLogService: createMockAuditLogService(),
+}));
 
 import type { EmailService } from "../interfaces/email.service.interface";
 import type { MessagingService } from "../interfaces/messaging.service.interface";

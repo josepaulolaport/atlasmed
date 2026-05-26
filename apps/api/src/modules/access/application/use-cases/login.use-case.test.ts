@@ -1,7 +1,17 @@
 import { beforeEach, afterEach, describe, expect, it, mock } from "bun:test";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+
+mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
+  auditLogService: createMockAuditLogService(),
+}));
+
 import { LoginUseCase } from "./login.use-case";
-import { InvalidCredentialsError } from "@atlasmed/access";
+import { InvalidCredentialsError } from "../../../../shared/errors";
 import { PasswordService } from "../services/password.service";
+import { TokenService } from "../services/token.service";
+import { SessionService } from "../services/session.service";
+import { RateLimiterService } from "../services/rate-limiter.service";
+import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
@@ -54,20 +64,7 @@ describe("LoginUseCase", () => {
       updateLastLogin: mock(async () => {}),
     });
 
-    mockSessionRepository = createMockSessionRepository({
-      create: mock(async (params) => ({
-        id: params.id,
-        userId: params.userId,
-        refreshTokenHash: params.refreshTokenHash,
-        ipAddress: params.ipAddress,
-        userAgent: params.userAgent,
-        expiresAt: params.expiresAt,
-        createdAt: new Date(),
-        lastSeenAt: new Date(),
-        revokedAt: null,
-        revokedReason: null,
-      })),
-    });
+    mockSessionRepository = createMockSessionRepository();
 
     mockRedis = {
       get: mock(async () => null),
@@ -84,7 +81,13 @@ describe("LoginUseCase", () => {
       userRepository: mockUserRepository,
       sessionRepository: mockSessionRepository,
       sessionCache: mockSessionCache,
-      redis: mockRedis,
+      tokenService: new TokenService(),
+      passwordService,
+      sessionService: new SessionService({
+        sessionRepository: mockSessionRepository,
+        sessionCache: mockSessionCache,
+      }),
+      rateLimiterService: new RateLimiterService({ redis: mockRedis }),
     });
   });
 
@@ -157,7 +160,7 @@ describe("LoginUseCase", () => {
         password: "secure-password",
       });
 
-      expect(mockSessionRepository.create).toHaveBeenCalledTimes(1);
+      expect(mockSessionRepository.createLoginSessionTransaction).toHaveBeenCalledTimes(1);
     });
 
     it("should update last login timestamp", async () => {
@@ -179,7 +182,7 @@ describe("LoginUseCase", () => {
         ipAddress,
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock.calls[0][0];
       expect(createCall.ipAddress).toBe(ipAddress);
     });
 
@@ -192,8 +195,42 @@ describe("LoginUseCase", () => {
         userAgent,
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock.calls[0][0];
       expect(createCall.userAgent).toBe(userAgent);
+    });
+  });
+
+  describe("account status", () => {
+    it("should throw InvalidCredentialsError when user is INACTIVE", async () => {
+      mockUserRepository.findByIdentifier = mock(async () => ({
+        ...createMockUser(),
+        status: "INACTIVE",
+      }));
+
+      await expect(
+        loginUseCase.execute({
+          identifier: "user@example.com",
+          password: "secure-password",
+        })
+      ).rejects.toThrow(InvalidCredentialsError);
+
+      expect(mockSessionRepository.createLoginSessionTransaction).not.toHaveBeenCalled();
+    });
+
+    it("should throw InvalidCredentialsError when user is PENDING", async () => {
+      mockUserRepository.findByIdentifier = mock(async () => ({
+        ...createMockUser(),
+        status: "PENDING",
+      }));
+
+      await expect(
+        loginUseCase.execute({
+          identifier: "user@example.com",
+          password: "secure-password",
+        })
+      ).rejects.toThrow(InvalidCredentialsError);
+
+      expect(mockSessionRepository.createLoginSessionTransaction).not.toHaveBeenCalled();
     });
   });
 
@@ -216,6 +253,14 @@ describe("LoginUseCase", () => {
           password: "wrong-password",
         })
       ).rejects.toThrow(InvalidCredentialsError);
+
+      expect(auditLogService.logFailedLoginAttempt).toHaveBeenCalledWith({
+        identifier: "user@example.com",
+        reason: "invalid_password",
+        ipAddress: undefined,
+        userAgent: undefined,
+        userId: "user-123",
+      });
     });
 
     it("should not create session when user not found", async () => {
@@ -228,7 +273,7 @@ describe("LoginUseCase", () => {
         });
       } catch {}
 
-      expect(mockSessionRepository.create).not.toHaveBeenCalled();
+      expect(mockSessionRepository.createLoginSessionTransaction).not.toHaveBeenCalled();
     });
 
     it("should not create session with wrong password", async () => {
@@ -239,7 +284,7 @@ describe("LoginUseCase", () => {
         });
       } catch {}
 
-      expect(mockSessionRepository.create).not.toHaveBeenCalled();
+      expect(mockSessionRepository.createLoginSessionTransaction).not.toHaveBeenCalled();
     });
 
     it("should not update last login when user not found", async () => {
@@ -298,7 +343,7 @@ describe("LoginUseCase", () => {
 
     it("should propagate error when session creation fails", async () => {
       const repositoryError = new Error("Session creation failed");
-      mockSessionRepository.create = mock(async () => {
+      mockSessionRepository.createLoginSessionTransaction = mock(async () => {
         throw repositoryError;
       });
 

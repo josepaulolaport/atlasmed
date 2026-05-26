@@ -1,5 +1,10 @@
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
+import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import {
+  UserNotFoundError,
+  OperationNotAllowedError,
+} from "../../../../shared/errors";
 
 interface Dependencies {
   userRepository: UserRepository;
@@ -9,19 +14,28 @@ interface Dependencies {
 export class ActivateUserUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: { userId: string }) {
+  async execute(params: { userId: string; activatedBy: string }) {
     const user = await this.deps.userRepository.findById(params.userId);
 
     if (!user) {
-      throw new Error("User not found");
+      throw new UserNotFoundError(params.userId);
     }
 
     if (user.status === "ACTIVE") {
-      throw new Error("User is already active");
+      throw new OperationNotAllowedError("activate_user", "User is already active");
     }
+
+    const oldStatus = user.status;
 
     await this.deps.userRepository.activate(params.userId);
 
     await this.deps.authCache.invalidate(params.userId);
+
+    await auditLogService.logUserStatusChange({
+      userId: params.activatedBy,
+      targetUserId: params.userId,
+      oldStatus,
+      newStatus: "ACTIVE",
+    });
   }
 }

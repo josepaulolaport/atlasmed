@@ -1,7 +1,31 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { jwtVerify } from "jose";
+import { apiEnv } from "@atlasmed/config";
 import { TokenService } from "./token.service";
 import type { AccessTokenPayload } from "@atlasmed/access";
+
+function parseDurationToSeconds(duration: string): number {
+  const match = duration.match(/^(\d+)([smhd])$/i);
+  if (!match) {
+    throw new Error(`Invalid JWT duration format: ${duration}`);
+  }
+
+  const value = Number(match[1]);
+  const unit = match[2]!.toLowerCase();
+
+  switch (unit) {
+    case "s":
+      return value;
+    case "m":
+      return value * 60;
+    case "h":
+      return value * 3600;
+    case "d":
+      return value * 86400;
+    default:
+      throw new Error(`Invalid JWT duration unit: ${unit}`);
+  }
+}
 
 describe("TokenService", () => {
   let tokenService: TokenService;
@@ -56,7 +80,7 @@ describe("TokenService", () => {
       expect(verified.sid).toBe("session-456");
     });
 
-    it("should set expiration time to 15 minutes", async () => {
+    it("should set expiration from configured JWT_EXPIRES_IN", async () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
@@ -67,11 +91,12 @@ describe("TokenService", () => {
 
       const token = await tokenService.signAccessToken(payload);
       const verified = await tokenService.verifyAccessToken(token);
+      const expectedSeconds = parseDurationToSeconds(apiEnv.JWT_EXPIRES_IN);
 
       expect(verified.exp).toBeDefined();
       const expiresIn = verified.exp! - Math.floor(Date.now() / 1000);
-      expect(expiresIn).toBeGreaterThan(14 * 60);
-      expect(expiresIn).toBeLessThanOrEqual(15 * 60);
+      expect(expiresIn).toBeGreaterThan(expectedSeconds - 5);
+      expect(expiresIn).toBeLessThanOrEqual(expectedSeconds);
     });
 
     it("should use HS256 algorithm", async () => {

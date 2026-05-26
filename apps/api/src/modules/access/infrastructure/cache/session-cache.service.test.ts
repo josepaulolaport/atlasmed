@@ -1,5 +1,6 @@
 import { describe, expect, test, beforeEach, mock } from "bun:test";
 import { SessionCacheService } from "./session-cache.service";
+import { RedisCacheError } from "../../../../shared/utils/redis-retry";
 import type { Redis } from "ioredis";
 
 describe("SessionCacheService", () => {
@@ -9,6 +10,9 @@ describe("SessionCacheService", () => {
   beforeEach(() => {
     mockRedis = {
       get: mock(() => Promise.resolve(null)),
+      setex: mock(() => Promise.resolve("OK")),
+      del: mock(() => Promise.resolve(1)),
+      exists: mock(() => Promise.resolve(0)),
       pipeline: mock(() => ({
         setex: mock(),
         sadd: mock(),
@@ -144,12 +148,61 @@ describe("SessionCacheService", () => {
 
       await cache.invalidate("session-123");
 
+      expect(mockRedis.setex).toHaveBeenCalled();
       expect(mockRedis.pipeline).toHaveBeenCalled();
+    });
+
+    test("should set revoked marker even when session is missing from cache", async () => {
+      await cache.invalidate("session-123");
+
+      expect(mockRedis.setex).toHaveBeenCalled();
+      expect(mockRedis.pipeline).not.toHaveBeenCalled();
+    });
+
+    test("should throw after Redis retries are exhausted", async () => {
+      const session = {
+        id: "session-123",
+        userId: "user-123",
+        refreshTokenHash: "hash",
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        revokedAt: null,
+        ipAddress: "127.0.0.1",
+        userAgent: "test",
+        lastSeenAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+
+      mockRedis.get = mock(() => Promise.resolve(JSON.stringify(session)));
+      mockRedis.del = mock(() => Promise.reject(new Error("Redis error")));
+
+      await expect(cache.invalidate("session-123")).rejects.toBeInstanceOf(
+        RedisCacheError
+      );
     });
 
     test("should handle missing session gracefully", async () => {
       await cache.invalidate("session-123");
       expect(mockRedis.pipeline).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("validation helpers", () => {
+    test("should report recently validated sessions", async () => {
+      mockRedis.exists = mock(() => Promise.resolve(1));
+
+      await expect(cache.isRecentlyValidated("session-123")).resolves.toBe(true);
+    });
+
+    test("should mark session as validated", async () => {
+      await cache.markValidated("session-123");
+
+      expect(mockRedis.setex).toHaveBeenCalled();
+    });
+
+    test("should report revoked marker", async () => {
+      mockRedis.exists = mock(() => Promise.resolve(1));
+
+      await expect(cache.isMarkedRevoked("session-123")).resolves.toBe(true);
     });
   });
 

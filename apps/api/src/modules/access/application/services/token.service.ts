@@ -24,7 +24,7 @@ export class TokenService {
 
       .setSubject(payload.sub)
 
-      .setExpirationTime("15m")
+      .setExpirationTime(apiEnv.JWT_EXPIRES_IN)
 
       .sign(secret);
   }

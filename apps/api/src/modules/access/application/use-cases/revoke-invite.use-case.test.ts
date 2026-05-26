@@ -40,7 +40,7 @@ describe("RevokeInviteUseCase", () => {
 
   describe("revoke invite", () => {
     it("should revoke pending invite", async () => {
-      await revokeInviteUseCase.execute({ inviteId: "invite-123" });
+      await revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" });
 
       expect(mockInviteRepository.revoke).toHaveBeenCalledTimes(1);
       expect(mockInviteRepository.revoke).toHaveBeenCalledWith("invite-123");
@@ -48,7 +48,7 @@ describe("RevokeInviteUseCase", () => {
 
     it("should complete successfully when invite is revoked", async () => {
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123" })
+        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
       ).resolves.toBeUndefined();
     });
   });
@@ -58,7 +58,7 @@ describe("RevokeInviteUseCase", () => {
       mockInviteRepository.findById = mock(async () => null);
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "non-existent" })
+        revokeInviteUseCase.execute({ inviteId: "non-existent", revokedByUserId: "admin-456" })
       ).rejects.toThrow("Invite not found");
     });
 
@@ -66,7 +66,7 @@ describe("RevokeInviteUseCase", () => {
       mockInviteRepository.findById = mock(async () => null);
 
       try {
-        await revokeInviteUseCase.execute({ inviteId: "non-existent" });
+        await revokeInviteUseCase.execute({ inviteId: "non-existent", revokedByUserId: "admin-456" });
       } catch {}
 
       expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
@@ -82,7 +82,7 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123" })
+        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
       ).rejects.toThrow("Only pending invites can be revoked");
     });
 
@@ -94,7 +94,7 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123" })
+        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
       ).rejects.toThrow("Only pending invites can be revoked");
     });
 
@@ -105,7 +105,7 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       try {
-        await revokeInviteUseCase.execute({ inviteId: "invite-123" });
+        await revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" });
       } catch {}
 
       expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
@@ -118,7 +118,7 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       try {
-        await revokeInviteUseCase.execute({ inviteId: "invite-123" });
+        await revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" });
       } catch {}
 
       expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
@@ -132,7 +132,7 @@ describe("RevokeInviteUseCase", () => {
       });
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123" })
+        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
       ).rejects.toThrow("Database error");
     });
 
@@ -142,7 +142,7 @@ describe("RevokeInviteUseCase", () => {
       });
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123" })
+        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
       ).rejects.toThrow("Revoke failed");
     });
   });

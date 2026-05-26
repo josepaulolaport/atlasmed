@@ -1,10 +1,31 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
+
+mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
+  auditLogService: createMockAuditLogService(),
+}));
+
+mock.module("../../../../infrastructure/monitoring/metrics.service", () => ({
+  metricsService: createMockMetricsService(),
+}));
+
 import { DeactivateUserUseCase } from "./deactivate-user.use-case";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
-import { createMockUserRepository, createMockSessionRepository, createMockAuthCache, createMockSessionCache } from "../../test-helpers/fixtures";
+import { createMockUserRepository, createMockSessionRepository, createMockAuthCache, createMockSessionCache, createMockScopeService } from "../../test-helpers/fixtures";
+import { createGlobalScopeContext, Role } from "@atlasmed/access";
+
+function adminDeactivateParams(userId: string, deactivatedBy = "admin-123") {
+  return {
+    userId,
+    deactivatedBy,
+    actorRole: Role.ADMIN,
+    scope: createGlobalScopeContext(),
+  };
+}
 
 describe("DeactivateUserUseCase", () => {
   let deactivateUserUseCase: DeactivateUserUseCase;
@@ -12,6 +33,7 @@ describe("DeactivateUserUseCase", () => {
   let mockSessionRepository: SessionRepository;
   let mockAuthCache: IAuthCache;
   let mockSessionCache: ISessionCache;
+  let mockScopeService: ReturnType<typeof createMockScopeService>;
 
   const mockUser = {
     id: "user-123",
@@ -46,25 +68,27 @@ describe("DeactivateUserUseCase", () => {
     mockSessionRepository = createMockSessionRepository();
     mockAuthCache = createMockAuthCache();
     mockSessionCache = createMockSessionCache();
+    mockScopeService = createMockScopeService();
 
     deactivateUserUseCase = new DeactivateUserUseCase({
       userRepository: mockUserRepository,
       sessionRepository: mockSessionRepository,
       authCache: mockAuthCache,
       sessionCache: mockSessionCache,
+      scopeService: mockScopeService,
     });
   });
 
   describe("user deactivation", () => {
     it("should deactivate user", async () => {
-      await deactivateUserUseCase.execute({ userId: "user-123" });
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
 
       expect(mockUserRepository.deactivate).toHaveBeenCalledTimes(1);
       expect(mockUserRepository.deactivate).toHaveBeenCalledWith("user-123");
     });
 
     it("should revoke all user sessions", async () => {
-      await deactivateUserUseCase.execute({ userId: "user-123" });
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
 
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledTimes(1);
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith("user-123", undefined);
@@ -81,15 +105,43 @@ describe("DeactivateUserUseCase", () => {
         callOrder.push("revokeSessions");
       });
 
-      await deactivateUserUseCase.execute({ userId: "user-123" });
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
 
       expect(callOrder).toEqual(["deactivate", "revokeSessions"]);
     });
 
     it("should complete successfully when user is deactivated", async () => {
       await expect(
-        deactivateUserUseCase.execute({ userId: "user-123" })
+        deactivateUserUseCase.execute(adminDeactivateParams("user-123"))
       ).resolves.toBeUndefined();
+    });
+
+    it("should invalidate auth cache", async () => {
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
+
+      expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
+    });
+
+    it("should invalidate scope cache", async () => {
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
+
+      expect(mockScopeService.invalidate).toHaveBeenCalledWith("user-123");
+    });
+
+    it("should invalidate manager scope when user has a manager", async () => {
+      mockUserRepository.findById = mock(async () => ({
+        ...mockUser,
+        managerId: "manager-456",
+      }));
+
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
+
+      expect(mockScopeService.invalidateForManagerChange).toHaveBeenCalledWith({
+        userId: "user-123",
+        previousManagerId: "manager-456",
+        nextManagerId: "manager-456",
+      });
+      expect(mockScopeService.invalidate).not.toHaveBeenCalled();
     });
   });
 
@@ -98,7 +150,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => null);
 
       await expect(
-        deactivateUserUseCase.execute({ userId: "non-existent" })
+        deactivateUserUseCase.execute(adminDeactivateParams("non-existent"))
       ).rejects.toThrow("User not found");
     });
 
@@ -106,7 +158,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => null);
 
       try {
-        await deactivateUserUseCase.execute({ userId: "non-existent" });
+        await deactivateUserUseCase.execute(adminDeactivateParams("non-existent"));
       } catch {}
 
       expect(mockUserRepository.deactivate).not.toHaveBeenCalled();
@@ -116,7 +168,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => null);
 
       try {
-        await deactivateUserUseCase.execute({ userId: "non-existent" });
+        await deactivateUserUseCase.execute(adminDeactivateParams("non-existent"));
       } catch {}
 
       expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
@@ -131,7 +183,7 @@ describe("DeactivateUserUseCase", () => {
       }));
 
       await expect(
-        deactivateUserUseCase.execute({ userId: "user-123" })
+        deactivateUserUseCase.execute(adminDeactivateParams("user-123"))
       ).rejects.toThrow("User is already deactivated");
     });
 
@@ -142,7 +194,7 @@ describe("DeactivateUserUseCase", () => {
       }));
 
       try {
-        await deactivateUserUseCase.execute({ userId: "user-123" });
+        await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
       } catch {}
 
       expect(mockUserRepository.deactivate).not.toHaveBeenCalled();
@@ -155,7 +207,7 @@ describe("DeactivateUserUseCase", () => {
       }));
 
       try {
-        await deactivateUserUseCase.execute({ userId: "user-123" });
+        await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
       } catch {}
 
       expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
@@ -169,7 +221,7 @@ describe("DeactivateUserUseCase", () => {
       });
 
       await expect(
-        deactivateUserUseCase.execute({ userId: "user-123" })
+        deactivateUserUseCase.execute(adminDeactivateParams("user-123"))
       ).rejects.toThrow("Database error");
     });
 
@@ -179,7 +231,7 @@ describe("DeactivateUserUseCase", () => {
       });
 
       await expect(
-        deactivateUserUseCase.execute({ userId: "user-123" })
+        deactivateUserUseCase.execute(adminDeactivateParams("user-123"))
       ).rejects.toThrow("Deactivate failed");
     });
 
@@ -189,20 +241,20 @@ describe("DeactivateUserUseCase", () => {
       });
 
       await expect(
-        deactivateUserUseCase.execute({ userId: "user-123" })
+        deactivateUserUseCase.execute(adminDeactivateParams("user-123"))
       ).rejects.toThrow("Revoke sessions failed");
     });
   });
 
   describe("access immediately invalidated", () => {
     it("should revoke all sessions for the user", async () => {
-      await deactivateUserUseCase.execute({ userId: "user-123" });
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
 
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith("user-123", undefined);
     });
 
     it("should ensure no active sessions remain after deactivation", async () => {
-      await deactivateUserUseCase.execute({ userId: "user-123" });
+      await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
 
       expect(mockUserRepository.deactivate).toHaveBeenCalled();
       expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalled();

@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # QuestDB - High-performance time-series database for logs and metrics
+  questdb:
+    image: questdb/questdb:latest
+    container_name: atlasmed-questdb
+    restart: unless-stopped
+    ports:
+      - "9000:9000"    # Web UI and REST API
+      - "8812:8812"    # PostgreSQL wire protocol
+      - "9009:9009"    # InfluxDB line protocol (fast ingestion)
+    volumes:
+      - questdb_data:/var/lib/questdb
+    environment:
+      - QDB_TELEMETRY_ENABLED=false
+      - QDB_HTTP_ENABLED=true
+      - QDB_PG_ENABLED=true
+      - QDB_LINE_ENABLED=true
+      - QDB_HTTP_MIN_NET_CONNECTION_POOL_SIZE=4
+      - QDB_HTTP_MAX_NET_CONNECTION_POOL_SIZE=32
+    networks:
+      - atlasmed
+
+  # Jaeger - Distributed tracing (optional)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: atlasmed-jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "4318:4318"    # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=memory
+      - LOG_LEVEL=info
+    networks:
+      - atlasmed
+
+  # Grafana - Visualization and dashboards (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: atlasmed-grafana
+    restart: unless-stopped
+    ports:
+      - "3300:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3300
+      - GF_INSTALL_PLUGINS=questdb-questdb-datasource
+    networks:
+      - atlasmed
+
+volumes:
+  questdb_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+networks:
+  atlasmed:
+    name: atlasmed_network
+    driver: bridge

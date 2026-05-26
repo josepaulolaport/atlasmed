@@ -4,6 +4,7 @@ import type { PasswordResetRepository } from "../interfaces/password-reset.repos
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import { PasswordResetService } from "../services/password-reset.service";
 import { PasswordResetEmail } from "../../../../infrastructure/external-services/resend/templates/password-reset.email";
+import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import { createElement } from "react";
 
 interface Dependencies {
@@ -16,6 +17,8 @@ interface Dependencies {
 interface RequestPasswordResetParams {
   identifier: string;
   resetUrl?: string;
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export class RequestPasswordResetUseCase {
@@ -55,6 +58,12 @@ export class RequestPasswordResetUseCase {
         message: `Your password reset code is: ${token}`,
       });
     }
+
+    await auditLogService.logPasswordResetRequest({
+      userId: user.id,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+    });
 
     return {
       passwordReset,

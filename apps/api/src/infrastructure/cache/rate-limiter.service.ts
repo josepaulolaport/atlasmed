@@ -96,8 +96,9 @@ export class RateLimiterService {
         resetAt,
       };
     } catch (error) {
+      // Fail open: allow the request when Redis is unavailable
       console.error("Rate limit check failed:", error);
-      
+
       return {
         allowed: true,
         remaining: config.maxAttempts,

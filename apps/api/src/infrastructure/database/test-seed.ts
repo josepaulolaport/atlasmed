@@ -1,6 +1,7 @@
 import { PrismaClient } from "@atlasmed/database";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hash } from "argon2";
+import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
 
 /**
  * Get Prisma client for test environment
@@ -32,15 +33,30 @@ export async function seedTestDatabase() {
 
     // 1. Create roles
     const roles = [
-      { name: "ADMIN", description: "Administrator" },
-      { name: "MANAGER", description: "Manager" },
-      { name: "USER", description: "Regular user" },
+      {
+        name: "ADMIN",
+        description: "Administrator",
+        priority: ROLE_PRIORITY_BY_NAME.ADMIN,
+      },
+      {
+        name: "MANAGER",
+        description: "Manager",
+        priority: ROLE_PRIORITY_BY_NAME.MANAGER,
+      },
+      {
+        name: "USER",
+        description: "Regular user",
+        priority: ROLE_PRIORITY_BY_NAME.USER,
+      },
     ];
 
     for (const role of roles) {
       await prisma.role.upsert({
         where: { name: role.name },
-        update: {},
+        update: {
+          description: role.description,
+          priority: role.priority,
+        },
         create: role,
       });
     }

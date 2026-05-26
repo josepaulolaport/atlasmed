@@ -1,74 +1,95 @@
 import { Elysia, t } from "elysia";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
+import { UnauthorizedError } from "../../../../shared/errors";
+import { environment } from "../../../../app/config/environment";
 import { accessUseCases } from "../../composition";
+import { refreshRateLimit } from "../middleware/rate-limit.middleware";
+import { getRefreshCookieOptions } from "./refresh-cookie";
 
-export const refreshSessionRoute = new Elysia({ 
-  prefix: "/access",
+export const refreshSessionRoute = new Elysia({
   detail: {
     tags: ["Authentication"],
   },
-}).post(
-  "/refresh",
-  async ({ body, cookie, request }) => {
-    // Try to get refresh token from cookie first, then from body
-    const bodyData = body as any;
-    const refreshToken = cookie[REFRESH_TOKEN_COOKIE_NAME]?.value || bodyData?.refreshToken;
+})
+  .use(refreshRateLimit)
+  .post(
+    "/refresh",
+    async ({ body, cookie, request }) => {
+      const bodyData = body as { refreshToken?: string } | undefined;
+      const cookieToken = cookie[REFRESH_TOKEN_COOKIE_NAME]?.value;
+      const bodyToken = bodyData?.refreshToken;
 
-    if (!refreshToken) {
-      throw new Error("Refresh token is required");
-    }
+      let refreshToken: string | undefined;
 
-    const result = await accessUseCases.refreshSession().execute({
-      refreshToken,
-      ipAddress: request.headers.get("x-forwarded-for") || undefined,
-      userAgent: request.headers.get("user-agent") || undefined,
-    });
+      if (environment.NODE_ENV === "production") {
+        refreshToken = cookieToken as string | undefined;
+        if (bodyToken) {
+          throw new UnauthorizedError(
+            "Refresh token must be sent via httpOnly cookie in production",
+          );
+        }
+      } else {
+        refreshToken =
+          (cookieToken as string | undefined) ||
+          (bodyToken as string | undefined);
+      }
 
-    // Set new refresh token in cookie
-    cookie[REFRESH_TOKEN_COOKIE_NAME]?.set({
-      value: result.refreshToken,
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      path: "/",
-    });
+      if (!refreshToken) {
+        throw new UnauthorizedError("Refresh token is required");
+      }
 
-    return {
-      session: {
-        token: result.accessToken,
+      const result = await accessUseCases.refreshSession().execute({
+        refreshToken,
+        ipAddress: request.headers.get("x-forwarded-for") || undefined,
+        userAgent: request.headers.get("user-agent") || undefined,
+        acceptLanguage: request.headers.get("accept-language") || undefined,
+      });
+
+      cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(
+        getRefreshCookieOptions(result.refreshToken),
+      );
+
+      return {
+        session: {
+          token: result.accessToken,
+        },
+        user: result.user,
+      };
+    },
+    {
+      detail: {
+        summary: "Refresh session",
+        description:
+          "Refresh the access token using the httpOnly refresh cookie (production) or cookie/body (development). SameSite=strict.",
+        tags: ["Authentication"],
       },
-      user: result.user,
-    };
-  },
-  {
-    detail: {
-      summary: "Refresh session",
-      description: "Refresh the access token using the refresh token from cookie or request body. Returns new access token and rotates refresh token.",
-      tags: ["Authentication"],
-    },
-    body: t.Optional(t.Object({
-      refreshToken: t.Optional(t.String({ description: "Refresh token (if not using cookie)" })),
-    })),
-    response: {
-      200: t.Object({
-        session: t.Object({
-          token: t.String({ description: "New JWT access token" }),
+      body: t.Optional(
+        t.Object({
+          refreshToken: t.Optional(
+            t.String({ description: "Refresh token (development only)" }),
+          ),
         }),
-        user: t.Object({
-          id: t.String(),
-          email: t.String(),
-          username: t.String(),
-          firstName: t.Optional(t.String()),
-          lastName: t.Optional(t.String()),
-          status: t.String(),
+      ),
+      response: {
+        200: t.Object({
+          session: t.Object({
+            token: t.String({ description: "New JWT access token" }),
+          }),
+          user: t.Object({
+            id: t.String(),
+            email: t.String(),
+            username: t.String(),
+            firstName: t.Optional(t.String()),
+            lastName: t.Optional(t.String()),
+            status: t.String(),
+          }),
         }),
-      }),
-      400: t.Object({
-        error: t.String({ description: "Refresh token is required" }),
-      }),
-      401: t.Object({
-        error: t.String({ description: "Invalid or expired refresh token" }),
-      }),
+        400: t.Object({
+          error: t.String({ description: "Refresh token is required" }),
+        }),
+        401: t.Object({
+          error: t.String({ description: "Invalid or expired refresh token" }),
+        }),
+      },
     },
-  }
-);
+  );

@@ -31,6 +31,13 @@ export interface InviteRepository {
 
   findByEmailOrPhone(email?: string | undefined, phoneNumber?: string | undefined): Promise<any>;
 
+  findAll(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    invitedByUserId?: string;
+  }): Promise<{ invitations: any[]; total: number }>;
+
   markAccepted(inviteId: string, userId: string): Promise<void>;
 
   revoke(inviteId: string): Promise<void>;

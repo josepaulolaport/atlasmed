@@ -127,15 +127,38 @@ exports.Prisma.UserScalarFieldEnum = {
   phoneNumber: 'phoneNumber',
   emailVerified: 'emailVerified',
   phoneVerified: 'phoneVerified',
+  emailVerifiedAt: 'emailVerifiedAt',
+  phoneVerifiedAt: 'phoneVerifiedAt',
   passwordHash: 'passwordHash',
+  passwordExpiresAt: 'passwordExpiresAt',
+  passwordHistory: 'passwordHistory',
   firstName: 'firstName',
   lastName: 'lastName',
   avatarUrl: 'avatarUrl',
   status: 'status',
+  tokenVersion: 'tokenVersion',
   lastLoginAt: 'lastLoginAt',
   passwordChangedAt: 'passwordChangedAt',
+  failedLoginAttempts: 'failedLoginAttempts',
+  lockedUntil: 'lockedUntil',
+  lastFailedLoginAt: 'lastFailedLoginAt',
   deactivatedAt: 'deactivatedAt',
+  suspendedAt: 'suspendedAt',
+  twoFactorEnabled: 'twoFactorEnabled',
+  twoFactorSecret: 'twoFactorSecret',
+  deletedAt: 'deletedAt',
+  metadata: 'metadata',
   roleId: 'roleId',
+  managerId: 'managerId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.UserTerritoryAssignmentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  territoryId: 'territoryId',
+  assignedBy: 'assignedBy',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -144,6 +167,7 @@ exports.Prisma.RoleScalarFieldEnum = {
   id: 'id',
   name: 'name',
   description: 'description',
+  priority: 'priority',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -163,8 +187,14 @@ exports.Prisma.SessionScalarFieldEnum = {
   browserVersion: 'browserVersion',
   osName: 'osName',
   deviceType: 'deviceType',
+  deviceName: 'deviceName',
+  deviceFingerprint: 'deviceFingerprint',
   sessionType: 'sessionType',
   ipAddress: 'ipAddress',
+  ipCountry: 'ipCountry',
+  ipCity: 'ipCity',
+  suspiciousActivity: 'suspiciousActivity',
+  lastIpAddress: 'lastIpAddress',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -177,9 +207,69 @@ exports.Prisma.InvitationScalarFieldEnum = {
   status: 'status',
   expiresAt: 'expiresAt',
   acceptedAt: 'acceptedAt',
+  acceptedByUserId: 'acceptedByUserId',
   revokedAt: 'revokedAt',
+  resendCount: 'resendCount',
+  lastResendAt: 'lastResendAt',
   roleId: 'roleId',
   invitedByUserId: 'invitedByUserId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PasswordResetScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  tokenHash: 'tokenHash',
+  expiresAt: 'expiresAt',
+  usedAt: 'usedAt',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AuditLogScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  eventType: 'eventType',
+  severity: 'severity',
+  actor: 'actor',
+  actorId: 'actorId',
+  resource: 'resource',
+  resourceId: 'resourceId',
+  action: 'action',
+  details: 'details',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  sessionId: 'sessionId',
+  outcome: 'outcome',
+  errorMessage: 'errorMessage',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.VerificationTokenScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  tokenHash: 'tokenHash',
+  newValue: 'newValue',
+  expiresAt: 'expiresAt',
+  verifiedAt: 'verifiedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PermissionScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  resource: 'resource',
+  resourceId: 'resourceId',
+  action: 'action',
+  conditions: 'conditions',
+  grantedBy: 'grantedBy',
+  expiresAt: 'expiresAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -189,9 +279,20 @@ exports.Prisma.SortOrder = {
   desc: 'desc'
 };
 
+exports.Prisma.NullableJsonNullValueInput = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
 exports.Prisma.QueryMode = {
   default: 'default',
   insensitive: 'insensitive'
+};
+
+exports.Prisma.JsonNullValueFilter = {
+  DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull,
+  AnyNull: Prisma.AnyNull
 };
 
 exports.Prisma.NullsOrder = {
@@ -225,11 +326,62 @@ exports.InvitationStatus = exports.$Enums.InvitationStatus = {
   REVOKED: 'REVOKED'
 };
 
+exports.AuditEventType = exports.$Enums.AuditEventType = {
+  USER_LOGIN: 'USER_LOGIN',
+  USER_LOGOUT: 'USER_LOGOUT',
+  USER_REGISTER: 'USER_REGISTER',
+  USER_INVITE: 'USER_INVITE',
+  USER_ACCEPT_INVITE: 'USER_ACCEPT_INVITE',
+  USER_DEACTIVATE: 'USER_DEACTIVATE',
+  USER_ACTIVATE: 'USER_ACTIVATE',
+  USER_SUSPEND: 'USER_SUSPEND',
+  USER_UNSUSPEND: 'USER_UNSUSPEND',
+  USER_MANAGER_ASSIGNED: 'USER_MANAGER_ASSIGNED',
+  USER_MANAGER_REMOVED: 'USER_MANAGER_REMOVED',
+  USER_TERRITORY_ASSIGNED: 'USER_TERRITORY_ASSIGNED',
+  USER_TERRITORY_REVOKED: 'USER_TERRITORY_REVOKED',
+  PASSWORD_CHANGE: 'PASSWORD_CHANGE',
+  PASSWORD_RESET_REQUEST: 'PASSWORD_RESET_REQUEST',
+  PASSWORD_RESET_COMPLETE: 'PASSWORD_RESET_COMPLETE',
+  EMAIL_CHANGE: 'EMAIL_CHANGE',
+  PHONE_CHANGE: 'PHONE_CHANGE',
+  EMAIL_VERIFY: 'EMAIL_VERIFY',
+  PHONE_VERIFY: 'PHONE_VERIFY',
+  ROLE_CHANGE: 'ROLE_CHANGE',
+  SESSION_CREATE: 'SESSION_CREATE',
+  SESSION_REVOKE: 'SESSION_REVOKE',
+  PERMISSION_GRANT: 'PERMISSION_GRANT',
+  PERMISSION_REVOKE: 'PERMISSION_REVOKE',
+  TWO_FACTOR_ENABLE: 'TWO_FACTOR_ENABLE',
+  TWO_FACTOR_DISABLE: 'TWO_FACTOR_DISABLE',
+  SUSPICIOUS_ACTIVITY: 'SUSPICIOUS_ACTIVITY',
+  DATA_ACCESS: 'DATA_ACCESS',
+  DATA_EXPORT: 'DATA_EXPORT'
+};
+
+exports.AuditEventSeverity = exports.$Enums.AuditEventSeverity = {
+  INFO: 'INFO',
+  WARNING: 'WARNING',
+  CRITICAL: 'CRITICAL'
+};
+
+exports.VerificationTokenType = exports.$Enums.VerificationTokenType = {
+  EMAIL_VERIFICATION: 'EMAIL_VERIFICATION',
+  PHONE_VERIFICATION: 'PHONE_VERIFICATION',
+  EMAIL_CHANGE: 'EMAIL_CHANGE',
+  PHONE_CHANGE: 'PHONE_CHANGE'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
+  UserTerritoryAssignment: 'UserTerritoryAssignment',
   Role: 'Role',
   Session: 'Session',
-  Invitation: 'Invitation'
+  Invitation: 'Invitation',
+  PasswordReset: 'PasswordReset',
+  AuditLog: 'AuditLog',
+  VerificationToken: 'VerificationToken',
+  Permission: 'Permission'
 };
 
 /**

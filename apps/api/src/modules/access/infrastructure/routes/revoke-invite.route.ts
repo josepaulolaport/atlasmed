@@ -1,21 +1,16 @@
 import { Elysia } from "elysia";
-import { PrismaInviteRepository } from "../repositories/prisma/prisma-invite.repository";
-import { RevokeInviteUseCase } from "../../application/use-cases/revoke-invite.use-case";
-import { authMiddleware } from "../middleware/auth.middleware";
+import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
-const inviteRepository = new PrismaInviteRepository();
+export const revokeInviteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("delete", "INVITATION"))
+  .delete("/invites/:id", async ({ params, getUserId }: any) => {
+    const revokedByUserId = await getUserId();
 
-const revokeInviteUseCase = new RevokeInviteUseCase({
-  inviteRepository,
-});
-
-export const revokeInviteRoute = new Elysia({ prefix: "/access" })
-  .use(authMiddleware)
-  .use(requirePermission("manage", "USER"))
-  .delete("/invites/:id", async ({ params }) => {
-    await revokeInviteUseCase.execute({
+    await accessUseCases.revokeInvite().execute({
       inviteId: params.id,
+      revokedByUserId,
     });
 
     return {

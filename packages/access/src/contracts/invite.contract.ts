@@ -1,4 +1,4 @@
-import type { InviteStatus } from "../enums/invite-status.enum";
+import type { InvitationStatus as InviteStatus } from "@atlasmed/database";
 
 import type { RoleContract } from "./role.contract";
 

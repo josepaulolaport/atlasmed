@@ -1,4 +1,4 @@
-import type { UserStatus } from "../enums/user-status.enum";
+import type { UserStatus } from "@atlasmed/database";
 
 import type { RoleContract } from "./role.contract";
 

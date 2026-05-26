@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type Redis from "ioredis";
+import { TooManyLoginAttemptsError } from "../../../../shared/errors";
 import { RateLimiterService } from "./rate-limiter.service";
 
 describe("RateLimiterService", () => {
@@ -41,7 +42,7 @@ describe("RateLimiterService", () => {
       mockRedis.ttl = mock(() => Promise.resolve(600));
 
       await expect(rateLimiterService.checkLoginAttempts("user@example.com")).rejects.toThrow(
-        "Account temporarily locked"
+        TooManyLoginAttemptsError
       );
     });
 
@@ -52,7 +53,7 @@ describe("RateLimiterService", () => {
       });
 
       await expect(rateLimiterService.checkLoginAttempts("user@example.com")).rejects.toThrow(
-        "Too many failed login attempts"
+        TooManyLoginAttemptsError
       );
 
       expect(mockRedis.setex).toHaveBeenCalledWith("account_locked:user@example.com", 900, "1");

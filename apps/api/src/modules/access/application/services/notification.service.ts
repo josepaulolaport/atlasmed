@@ -1,4 +1,5 @@
-import { sendInviteEmail, sendPasswordResetEmail } from "../../infrastructure/email/send-email";
+import { apiEnv } from "@atlasmed/config";
+import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
 import { sendPasswordResetWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
 
 interface SendPasswordChangedNotificationParams {
@@ -9,7 +10,9 @@ interface SendPasswordChangedNotificationParams {
 }
 
 export class NotificationService {
-  async sendPasswordChangedNotification(params: SendPasswordChangedNotificationParams): Promise<void> {
+  async sendPasswordChangedNotification(
+    params: SendPasswordChangedNotificationParams
+  ): Promise<void> {
     const notifications: Promise<void>[] = [];
 
     const formattedTimestamp = params.timestamp.toLocaleString("en-US", {
@@ -17,20 +20,35 @@ export class NotificationService {
       timeStyle: "short",
     });
 
-    if (params.email) {
-      // For now, we'll use a simple text-based approach
-      // In production, create a proper PasswordChangedEmail React component
+    const emailBody = `Your AtlasMed password was changed on ${formattedTimestamp}${
+      params.ipAddress ? ` from IP ${params.ipAddress}` : ""
+    }. If this was not you, contact support immediately.`;
+
+    if (params.email && resend && apiEnv.RESEND_FROM_EMAIL) {
       notifications.push(
-        Promise.resolve().then(() => {
-          console.log(`Would send password changed email to ${params.email}`);
-          // TODO: Implement proper email template
-        })
+        resend.emails
+          .send({
+            from: apiEnv.RESEND_FROM_EMAIL,
+            to: params.email,
+            subject: "Your AtlasMed password was changed",
+            text: emailBody,
+          })
+          .then(() => undefined)
+          .catch((error) => {
+            console.error("Failed to send password changed email:", error);
+          })
       );
+    } else if (params.email) {
+      console.warn("Password changed email skipped — Resend not configured", {
+        email: params.email,
+      });
     }
 
     if (params.phoneNumber) {
-      const message = `🔐 Security Alert: Your password was changed on ${formattedTimestamp}${params.ipAddress ? ` from IP ${params.ipAddress}` : ""}. If this wasn't you, contact support immediately. - AtlasMed`;
-      
+      const message = `Security Alert: Your password was changed on ${formattedTimestamp}${
+        params.ipAddress ? ` from IP ${params.ipAddress}` : ""
+      }. If this wasn't you, contact support immediately. - AtlasMed`;
+
       notifications.push(
         sendPasswordResetWhatsApp(params.phoneNumber, message).catch((error) => {
           console.error("Failed to send password changed WhatsApp:", error);

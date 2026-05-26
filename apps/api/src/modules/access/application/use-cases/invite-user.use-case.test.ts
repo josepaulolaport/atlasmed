@@ -1,13 +1,39 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+
+const mockLogInviteUser = mock(async () => {});
+
+mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
+  auditLogService: createMockAuditLogService({
+    logInviteUser: mockLogInviteUser,
+  }),
+}));
+
 import { InviteUserUseCase } from "./invite-user.use-case";
+import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
-import { createMockInviteRepository, createMockUserRepository } from "../../test-helpers/fixtures";
+import type { RoleRepository } from "../interfaces/role.repository.interface";
+import {
+  ValidationError,
+  RoleNotFoundError,
+  EmailAlreadyExistsError,
+  ResourceConflictError,
+  InsufficientPermissionsError,
+} from "../../../../shared/errors";
+import { ROLE_PRIORITY_BY_NAME } from "../constants/role-priority.constants";
+import { 
+  createMockInviteRepository, 
+  createMockUserRepository,
+  createMockRoleRepository,
+  createMockUserWithRole,
+} from "../../test-helpers/fixtures";
 
 describe("InviteUserUseCase", () => {
   let inviteUserUseCase: InviteUserUseCase;
   let mockInviteRepository: InviteRepository;
   let mockUserRepository: UserRepository;
+  let mockRoleRepository: RoleRepository;
 
   const mockInvite = {
     id: "invite-123",
@@ -35,11 +61,21 @@ describe("InviteUserUseCase", () => {
       create: mock(async () => mockInvite),
     });
 
-    mockUserRepository = createMockUserRepository();
+    mockUserRepository = createMockUserRepository({
+      findById: mock(async () =>
+        createMockUserWithRole({
+          user: { id: "admin-456" },
+          role: { id: "role-admin", name: "ADMIN" },
+        })
+      ),
+    });
+
+    mockRoleRepository = createMockRoleRepository();
 
     inviteUserUseCase = new InviteUserUseCase({
       inviteRepository: mockInviteRepository,
       userRepository: mockUserRepository,
+      roleRepository: mockRoleRepository,
     });
   });
 
@@ -55,6 +91,13 @@ describe("InviteUserUseCase", () => {
 
       expect(result).toHaveProperty("invite");
       expect(result).toHaveProperty("token");
+      expect(auditLogService.logInviteUser).toHaveBeenCalledWith({
+        invitedByUserId: "admin-456",
+        inviteId: "invite-123",
+        email: "newuser@example.com",
+        phoneNumber: undefined,
+        roleId: "role-123",
+      });
     });
 
     it("should create invite with phone number", async () => {
@@ -123,7 +166,35 @@ describe("InviteUserUseCase", () => {
           roleId: "role-123",
           invitedByUserId: "admin-456",
         } as any)
-      ).rejects.toThrow("Either email or phone number is required");
+      ).rejects.toThrow(ValidationError);
+    });
+
+    it("should throw error when roleId does not exist", async () => {
+      mockRoleRepository.findById = mock(async () => null);
+
+      await expect(
+        inviteUserUseCase.execute({
+          email: "user@example.com",
+          roleId: "invalid-role-id",
+          invitedByUserId: "admin-456",
+        })
+      ).rejects.toThrow(RoleNotFoundError);
+    });
+
+    it("should validate roleId before checking user existence", async () => {
+      mockRoleRepository.findById = mock(async () => null);
+
+      try {
+        await inviteUserUseCase.execute({
+          email: "user@example.com",
+          roleId: "invalid-role-id",
+          invitedByUserId: "admin-456",
+        });
+      } catch {}
+
+      expect(mockRoleRepository.findById).toHaveBeenCalledWith("invalid-role-id");
+      expect(mockUserRepository.findById).not.toHaveBeenCalled();
+      expect(mockUserRepository.findByIdentifier).not.toHaveBeenCalled();
     });
 
     it("should allow both email and phoneNumber", async () => {
@@ -150,7 +221,7 @@ describe("InviteUserUseCase", () => {
           roleId: "role-123",
           invitedByUserId: "admin-456",
         })
-      ).rejects.toThrow("User already exists");
+      ).rejects.toThrow(EmailAlreadyExistsError);
     });
 
     it("should throw error when user already exists with phone number", async () => {
@@ -164,7 +235,7 @@ describe("InviteUserUseCase", () => {
           roleId: "role-123",
           invitedByUserId: "admin-456",
         })
-      ).rejects.toThrow("User already exists");
+      ).rejects.toThrow(ResourceConflictError);
     });
 
     it("should check user existence by email", async () => {
@@ -222,7 +293,7 @@ describe("InviteUserUseCase", () => {
           roleId: "role-123",
           invitedByUserId: "admin-456",
         })
-      ).rejects.toThrow("An active invite already exists for this user");
+      ).rejects.toThrow(ResourceConflictError);
     });
 
     it("should throw error when active invite already exists for phone", async () => {
@@ -234,7 +305,7 @@ describe("InviteUserUseCase", () => {
           roleId: "role-123",
           invitedByUserId: "admin-456",
         })
-      ).rejects.toThrow("An active invite already exists for this user");
+      ).rejects.toThrow(ResourceConflictError);
     });
 
     it("should check for existing invite by email", async () => {
@@ -276,6 +347,82 @@ describe("InviteUserUseCase", () => {
           roleId: "role-123",
           invitedByUserId: "admin-456",
         });
+      } catch {}
+
+      expect(mockInviteRepository.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("role assignment ceiling", () => {
+    const inviteParams = {
+      email: "newuser@example.com",
+      roleId: "role-target",
+      invitedByUserId: "manager-123",
+    };
+
+    function setupInviter(roleName: keyof typeof ROLE_PRIORITY_BY_NAME) {
+      mockUserRepository.findById = mock(async () =>
+        createMockUserWithRole({
+          user: { id: "manager-123" },
+          role: {
+            name: roleName,
+            priority: ROLE_PRIORITY_BY_NAME[roleName],
+          },
+        })
+      );
+    }
+
+    function setupTargetRole(roleName: keyof typeof ROLE_PRIORITY_BY_NAME) {
+      mockRoleRepository.findById = mock(async () => ({
+        id: "role-target",
+        name: roleName,
+        priority: ROLE_PRIORITY_BY_NAME[roleName],
+      }));
+    }
+
+    it("should allow MANAGER to invite USER", async () => {
+      setupInviter("MANAGER");
+      setupTargetRole("USER");
+
+      await expect(inviteUserUseCase.execute(inviteParams)).resolves.toBeDefined();
+    });
+
+    it("should reject MANAGER inviting MANAGER", async () => {
+      setupInviter("MANAGER");
+      setupTargetRole("MANAGER");
+
+      await expect(inviteUserUseCase.execute(inviteParams)).rejects.toThrow(
+        InsufficientPermissionsError
+      );
+    });
+
+    it("should reject MANAGER inviting ADMIN", async () => {
+      setupInviter("MANAGER");
+      setupTargetRole("ADMIN");
+
+      await expect(inviteUserUseCase.execute(inviteParams)).rejects.toThrow(
+        InsufficientPermissionsError
+      );
+    });
+
+    it("should allow ADMIN to invite ADMIN", async () => {
+      setupInviter("ADMIN");
+      setupTargetRole("ADMIN");
+
+      await expect(
+        inviteUserUseCase.execute({
+          ...inviteParams,
+          invitedByUserId: "admin-456",
+        })
+      ).resolves.toBeDefined();
+    });
+
+    it("should not create invite when role rank exceeds inviter", async () => {
+      setupInviter("MANAGER");
+      setupTargetRole("ADMIN");
+
+      try {
+        await inviteUserUseCase.execute(inviteParams);
       } catch {}
 
       expect(mockInviteRepository.create).not.toHaveBeenCalled();

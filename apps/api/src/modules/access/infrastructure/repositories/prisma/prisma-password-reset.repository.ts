@@ -41,6 +41,18 @@ export class PrismaPasswordResetRepository implements PasswordResetRepository {
     });
   }
 
+  async invalidateUnusedForUser(userId: string): Promise<void> {
+    await this.deps.prisma.passwordReset.updateMany({
+      where: {
+        userId,
+        usedAt: null,
+      },
+      data: {
+        usedAt: new Date(),
+      },
+    });
+  }
+
   async deleteExpired(): Promise<void> {
     await this.deps.prisma.passwordReset.deleteMany({
       where: {

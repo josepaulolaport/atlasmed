@@ -1,12 +1,14 @@
 import { Elysia, t } from "elysia";
 import { accessUseCases } from "../../composition";
+import { passwordResetConfirmRateLimit } from "../middleware/rate-limit.middleware";
 
 export const resetPasswordRoute = new Elysia({
-  prefix: "/access",
   detail: {
     tags: ["Authentication"],
   },
-}).post(
+})
+  .use(passwordResetConfirmRateLimit)
+  .post(
   "/password-reset/confirm",
 
   async ({ body, request }) => {

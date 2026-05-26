@@ -1,72 +1,48 @@
 import { Elysia, t } from "elysia";
 import { loginSchema, REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
+import { accessUseCases } from "../../composition";
+import { loginRateLimit } from "../middleware/rate-limit.middleware";
+import { getRefreshCookieOptions } from "./refresh-cookie";
 
-import { redis } from "../../../../infrastructure/cache/redis.client";
-
-import { PrismaUserRepository } from "../repositories/prisma/prisma-user.repository";
-
-import { PrismaSessionRepository } from "../repositories/prisma/prisma-session.repository";
-
-import { SessionCacheService } from "../cache/session-cache.service";
-
-import { LoginUseCase } from "../../application/use-cases/login.use-case";
-
-const userRepository = new PrismaUserRepository();
-
-const sessionRepository = new PrismaSessionRepository();
-
-const sessionCache = new SessionCacheService();
-
-const loginUseCase = new LoginUseCase({
-  userRepository,
-
-  sessionRepository,
-
-  sessionCache,
-
-  redis,
-});
-
+/**
+ * Login rate limiting uses two layers:
+ * 1. loginRateLimit (route): caps total login requests per identifier/IP (credential stuffing)
+ * 2. RateLimiterService in login.use-case.ts: failed attempts only, locks after 5 failures, clears on success
+ */
 export const loginRoute = new Elysia({
-  prefix: "/access",
   detail: {
     tags: ["Authentication"],
   },
-}).post(
-  "/password",
-
+})
+  .use(loginRateLimit)
+  .post(
+  "/login",
   async ({ body, request, cookie }) => {
-    const parsed = loginSchema.parse(body);
+    try {
+      const parsed = loginSchema.parse(body);
 
-    const result = await loginUseCase.execute({
-      identifier: parsed.identifier,
+      const result = await accessUseCases.login().execute({
+        identifier: parsed.identifier,
+        password: parsed.password,
+        ipAddress: request.headers.get("x-forwarded-for") || undefined,
+        userAgent: request.headers.get("user-agent") || undefined,
+        acceptLanguage: request.headers.get("accept-language") || undefined,
+      });
 
-      password: parsed.password,
+      cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(
+        getRefreshCookieOptions(result.refreshToken)
+      );
 
-      ipAddress: request.headers.get("x-forwarded-for") || undefined,
-
-      userAgent: request.headers.get("user-agent") || undefined,
-    });
-
-    cookie[REFRESH_TOKEN_COOKIE_NAME]?.set({
-      value: result.refreshToken,
-
-      httpOnly: true,
-
-      secure: true,
-
-      sameSite: "strict",
-
-      path: "/",
-    });
-
-    return {
-      session: {
-        token: result.accessToken,
-      },
-
-      user: result.user,
-    };
+      return {
+        session: {
+          token: result.accessToken,
+        },
+        user: result.user,
+      };
+    } catch (error) {
+      console.error("[LoginRoute] Error:", error);
+      throw error;
+    }
   },
   {
     detail: {
@@ -90,6 +66,13 @@ export const loginRoute = new Elysia({
           firstName: t.Optional(t.String()),
           lastName: t.Optional(t.String()),
           status: t.String(),
+          emailVerified: t.Boolean(),
+          phoneVerified: t.Boolean(),
+          role: t.Object({
+            id: t.String(),
+            name: t.String(),
+            description: t.Optional(t.String()),
+          }),
         }),
       }),
       400: t.Object({

@@ -1,6 +1,4 @@
-import type { SessionType } from "../enums/session-type.enum";
-
-import type { DeviceType } from "../enums/device-type.enum";
+import type { AuthSessionType as SessionType, AuthSessionDeviceType as DeviceType } from "@atlasmed/database";
 
 export interface SessionContract {
   id: string;

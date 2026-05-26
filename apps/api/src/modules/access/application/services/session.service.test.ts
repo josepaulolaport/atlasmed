@@ -12,22 +12,23 @@ describe("SessionService", () => {
   let mockSessionCache: ISessionCache;
 
   beforeEach(() => {
-    // Restore any global mocks that might have been set by other tests
     mock.restore();
-    
-    // Create fresh mocks for each test
+
     mockSessionRepository = createMockSessionRepository({
-      create: mock(async (params) => ({
-        id: params.id,
-        userId: params.userId,
-        refreshTokenHash: params.refreshTokenHash,
-        ipAddress: params.ipAddress,
-        userAgent: params.userAgent,
-        expiresAt: params.expiresAt,
-        createdAt: new Date(),
-        lastSeenAt: new Date(),
-        revokedAt: null,
-        revokedReason: null,
+      createLoginSessionTransaction: mock(async (params) => ({
+        session: {
+          id: params.id,
+          userId: params.userId,
+          refreshTokenHash: params.refreshTokenHash,
+          ipAddress: params.ipAddress,
+          userAgent: params.userAgent,
+          expiresAt: params.expiresAt,
+          createdAt: new Date(),
+          lastSeenAt: new Date(),
+          revokedAt: null,
+          revokedReason: null,
+        },
+        revokedSessionIds: [],
       })),
     });
 
@@ -40,7 +41,6 @@ describe("SessionService", () => {
   });
 
   afterEach(() => {
-    // Clean up mocks after each test
     resetAllMocks(mockSessionRepository, mockSessionCache);
     mock.restore();
   });
@@ -49,11 +49,50 @@ describe("SessionService", () => {
     it("should create a session with userId", async () => {
       const userId = "user-123";
 
-      const result = await sessionService.create({ userId, userRole: "USER" });
+      await sessionService.create({ userId, userRole: "USER" });
 
-      expect(mockSessionRepository.create).toHaveBeenCalledTimes(1);
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      expect(mockSessionRepository.createLoginSessionTransaction).toHaveBeenCalledTimes(1);
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.userId).toBe(userId);
+    });
+
+    it("should call createLoginSessionTransaction once per login", async () => {
+      await sessionService.create({ userId: "user-123", userRole: "USER" });
+
+      expect(mockSessionRepository.createLoginSessionTransaction).toHaveBeenCalledTimes(1);
+      expect(mockSessionRepository.revokeAllActiveForDevice).not.toHaveBeenCalled();
+      expect(mockSessionRepository.create).not.toHaveBeenCalled();
+    });
+
+    it("should invalidate cache for revoked session IDs", async () => {
+      mockSessionRepository.createLoginSessionTransaction = mock(async (params) => ({
+        session: {
+          id: params.id,
+          userId: params.userId,
+          refreshTokenHash: params.refreshTokenHash,
+          expiresAt: params.expiresAt,
+          createdAt: new Date(),
+          lastSeenAt: new Date(),
+          revokedAt: null,
+        },
+        revokedSessionIds: ["old-session-1", "old-session-2"],
+      }));
+
+      await sessionService.create({ userId: "user-123", userRole: "USER" });
+
+      expect(mockSessionCache.invalidate).toHaveBeenCalledTimes(2);
+      expect(mockSessionCache.invalidate).toHaveBeenCalledWith("old-session-1");
+      expect(mockSessionCache.invalidate).toHaveBeenCalledWith("old-session-2");
+    });
+
+    it("should set cache for the new session", async () => {
+      await sessionService.create({ userId: "user-123", userRole: "USER" });
+
+      expect(mockSessionCache.set).toHaveBeenCalledTimes(1);
+      const setCall = (mockSessionCache.set as any).mock.calls[0][0];
+      expect(setCall.userId).toBe("user-123");
+      expect(setCall.revokedAt).toBeNull();
     });
 
     it("should generate a refresh token", async () => {
@@ -66,7 +105,8 @@ describe("SessionService", () => {
     it("should store HASHED refresh token only", async () => {
       const result = await sessionService.create({ userId: "user-123", userRole: "USER" });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.refreshTokenHash).not.toBe(result.refreshToken);
       expect(createCall.refreshTokenHash).toBe(hashToken(result.refreshToken));
     });
@@ -76,7 +116,8 @@ describe("SessionService", () => {
       await sessionService.create({ userId: "user-123", userRole: "USER" });
       const afterCreate = Date.now();
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       const expiresAt = createCall.expiresAt.getTime();
 
       const expectedMin = beforeCreate + 24 * 60 * 60 * 1000;
@@ -95,7 +136,8 @@ describe("SessionService", () => {
         ipAddress,
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.ipAddress).toBe(ipAddress);
     });
 
@@ -108,7 +150,8 @@ describe("SessionService", () => {
         userAgent,
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.userAgent).toBe(userAgent);
     });
 
@@ -119,7 +162,8 @@ describe("SessionService", () => {
         ipAddress: undefined,
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.ipAddress).toBeUndefined();
     });
 
@@ -130,7 +174,8 @@ describe("SessionService", () => {
         userAgent: undefined,
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.userAgent).toBeUndefined();
     });
 
@@ -165,7 +210,8 @@ describe("SessionService", () => {
         ipAddress: "",
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.ipAddress).toBeUndefined();
     });
 
@@ -176,7 +222,8 @@ describe("SessionService", () => {
         userAgent: "",
       });
 
-      const createCall = (mockSessionRepository.create as any).mock.calls[0][0];
+      const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
+        .calls[0][0];
       expect(createCall.userAgent).toBeUndefined();
     });
   });

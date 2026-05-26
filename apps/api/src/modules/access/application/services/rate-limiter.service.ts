@@ -1,4 +1,5 @@
 import type Redis from "ioredis";
+import { TooManyLoginAttemptsError } from "../../../../shared/errors";
 
 interface Dependencies {
   redis: Redis;
@@ -19,10 +20,7 @@ export class RateLimiterService {
     const isLocked = await this.deps.redis.get(lockKey);
     if (isLocked) {
       const ttl = await this.deps.redis.ttl(lockKey);
-      const minutes = Math.ceil(ttl / 60);
-      throw new Error(
-        `Account temporarily locked due to too many failed login attempts. Try again in ${minutes} minute${minutes > 1 ? "s" : ""}.`
-      );
+      throw new TooManyLoginAttemptsError(Math.max(ttl, 1) * 1000);
     }
 
     // Check current attempts
@@ -33,9 +31,7 @@ export class RateLimiterService {
       // Lock the account
       await this.deps.redis.setex(lockKey, this.LOCKOUT_DURATION, "1");
       await this.deps.redis.del(attemptKey);
-      throw new Error(
-        `Too many failed login attempts. Account locked for ${Math.ceil(this.LOCKOUT_DURATION / 60)} minutes.`
-      );
+      throw new TooManyLoginAttemptsError(this.LOCKOUT_DURATION * 1000);
     }
   }
 

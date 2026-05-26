@@ -1,66 +1,81 @@
 import { Elysia, t } from "elysia";
 import { inviteUserSchema } from "@atlasmed/access";
-import { PrismaUserRepository } from "../repositories/prisma/prisma-user.repository";
-import { PrismaInviteRepository } from "../repositories/prisma/prisma-invite.repository";
-import { InviteUserUseCase } from "../../application/use-cases/invite-user.use-case";
-import { authMiddleware } from "../middleware/auth.middleware";
+import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
-import { inviteRateLimitMiddleware } from "../middleware/rate-limit.middleware";
+import { inviteRateLimit } from "../middleware/rate-limit.middleware";
 import { sendInviteEmail } from "../email/send-email";
 import { sendInviteWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
-
-const userRepository = new PrismaUserRepository();
-const inviteRepository = new PrismaInviteRepository();
-
-const inviteUserUseCase = new InviteUserUseCase({
-  userRepository,
-  inviteRepository,
-});
+import { environment } from "../../../../app/config/environment";
 
 export const inviteUserRoute = new Elysia({ 
-  prefix: "/access",
   detail: {
     tags: ["Users"],
   },
 })
-  .use(authMiddleware)
-  .use(requirePermission("create", "USER"))
-  .post("/invites", async ({ body, auth }: any) => {
-    await inviteRateLimitMiddleware({ body, auth, request: { headers: new Map() }, set: { headers: {}, status: 200 } } as any);
+  .use(auth)
+  .use(requirePermission("create", "INVITATION"))
+  .use(inviteRateLimit)
+  .post("/invite", async ({ body, getUser, request, status }: any) => {
+    const user = await getUser();
 
     const parsed = inviteUserSchema.parse(body);
 
-    const result = await inviteUserUseCase.execute({
-      email: parsed.email || undefined,
-      phoneNumber: parsed.phoneNumber || undefined,
-      roleId: parsed.roleId,
-      invitedByUserId: auth.user.id,
-    });
+    try {
+      const result = await accessUseCases.inviteUser().execute({
+        email: parsed.email || undefined,
+        phoneNumber: parsed.phoneNumber || undefined,
+        roleId: parsed.roleId,
+        invitedByUserId: user.id,
+      });
 
-    if (parsed.email) {
-      await sendInviteEmail(parsed.email, result.token, {
-        invitedByName: auth.user.firstName
-          ? `${auth.user.firstName} ${auth.user.lastName || ""}`.trim()
-          : auth.user.username,
-        roleName: result.invite.role?.name,
-      });
-    } else if (parsed.phoneNumber) {
-      await sendInviteWhatsApp(parsed.phoneNumber, result.token, {
-        invitedByName: auth.user.firstName
-          ? `${auth.user.firstName} ${auth.user.lastName || ""}`.trim()
-          : auth.user.username,
-        roleName: result.invite.role?.name,
-      });
+      if (parsed.email) {
+        await sendInviteEmail(parsed.email, result.token, {
+          invitedByName: user.firstName
+            ? `${user.firstName} ${user.lastName || ""}`.trim()
+            : user.username,
+          roleName: result.invite.role?.name,
+          inviteUrl: `${environment.FRONTEND_URL}/register`,
+        });
+      } else if (parsed.phoneNumber) {
+        await sendInviteWhatsApp(parsed.phoneNumber, result.token, {
+          invitedByName: user.firstName
+            ? `${user.firstName} ${user.lastName || ""}`.trim()
+            : user.username,
+          roleName: result.invite.role?.name,
+        });
+      }
+
+      return {
+        invite: {
+          id: result.invite.id,
+          email: result.invite.email ?? undefined,
+          phoneNumber: result.invite.phoneNumber ?? undefined,
+          status: result.invite.status,
+          expiresAt: result.invite.expiresAt.toISOString(),
+        },
+        message: "Invitation sent successfully",
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("Invalid roleId")) {
+          return status(400, {
+            code: "INVALID_ROLE",
+            error: error.message,
+          });
+        }
+        if (error.message.includes("already exists")) {
+          return status(409, {
+            code: "CONFLICT",
+            error: error.message,
+          });
+        }
+      }
+      throw error;
     }
-
-    return {
-      invite: result.invite,
-      token: result.token,
-    };
   }, {
     detail: {
       summary: "Invite a new user",
-      description: "Create an invitation for a new user. Requires admin permissions. Either email or phone number must be provided.",
+      description: "Create an invitation for a new user and deliver the invite token via email or WhatsApp. Requires admin permissions. Either email or phone number must be provided.",
       tags: ["Users"],
       security: [{ bearerAuth: [] }],
     },
@@ -78,7 +93,7 @@ export const inviteUserRoute = new Elysia({
           status: t.String(),
           expiresAt: t.String(),
         }),
-        token: t.String({ description: "Invite token to be sent to the user" }),
+        message: t.String({ description: "Confirmation that the invitation was sent" }),
       }),
       400: t.Object({
         error: t.String({ description: "Validation error or user already exists" }),

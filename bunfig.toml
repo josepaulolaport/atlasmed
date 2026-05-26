@@ -1,0 +1,11 @@
+[test]
+# Load test environment FIRST, then test setup
+preload = [
+  "./apps/api/src/test-env-loader.ts",
+  "./apps/api/src/test-setup.ts"
+]
+
+# Run tests serially to avoid race conditions
+# This is important for integration tests that share database/redis
+bail = false
+timeout = 10000

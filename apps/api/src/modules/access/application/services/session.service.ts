@@ -7,7 +7,13 @@ import { hashToken } from "../../../../shared/utils/hash-token";
 
 import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
 
-import { getSessionExpiry } from "../constants/session.constants";
+import {
+  getSessionExpiresAt,
+} from "../constants/session.constants";
+
+import { parseUserAgent } from "../../../../shared/utils/parse-user-agent";
+
+import { generateDeviceFingerprint } from "../../../../shared/utils/device-fingerprint";
 
 import type { Role } from "@atlasmed/access";
 
@@ -21,31 +27,98 @@ interface CreateSessionInput {
   userRole: Role;
   ipAddress?: string | undefined;
   userAgent?: string | undefined;
+  acceptLanguage?: string | undefined;
+}
+
+export interface GeneratedSessionData {
+  id: string;
+  refreshToken: string;
+  refreshTokenHash: string;
+  expiresAt: Date;
+}
+
+export interface GeneratedRefreshCredentials {
+  refreshToken: string;
+  refreshTokenHash: string;
+  expiresAt: Date;
 }
 
 export class SessionService {
   constructor(private readonly deps: Dependencies) {}
 
-  async create(params: CreateSessionInput) {
+  buildRefreshCredentials(params: {
+    userRole: Role;
+    from?: Date;
+  }): GeneratedRefreshCredentials {
     const refreshToken = generateRandomToken();
 
-    const refreshTokenHash = hashToken(refreshToken);
+    return {
+      refreshToken,
+      refreshTokenHash: hashToken(refreshToken),
+      expiresAt: getSessionExpiresAt(params.userRole, params.from),
+    };
+  }
 
-    const expiryDuration = getSessionExpiry(params.userRole);
+  /**
+   * Generate session data for a new authentication event (login).
+   */
+  generateSessionData(params: CreateSessionInput): GeneratedSessionData {
+    const credentials = this.buildRefreshCredentials({ userRole: params.userRole });
 
-    const session = await this.deps.sessionRepository.create({
+    return {
       id: randomUUID(),
+      ...credentials,
+    };
+  }
 
-      userId: params.userId,
-
-      refreshTokenHash,
-
-      ipAddress: params.ipAddress || undefined,
-
-      userAgent: params.userAgent || undefined,
-
-      expiresAt: new Date(Date.now() + expiryDuration),
+  async create(params: CreateSessionInput) {
+    const parsed = parseUserAgent(params.userAgent);
+    const deviceFingerprint = generateDeviceFingerprint({
+      userAgent: params.userAgent,
+      acceptLanguage: params.acceptLanguage,
     });
+
+    const { id, refreshToken, refreshTokenHash, expiresAt } =
+      this.generateSessionData(params);
+
+    const { session, revokedSessionIds } =
+      await this.deps.sessionRepository.createLoginSessionTransaction({
+        id,
+
+        userId: params.userId,
+
+        refreshTokenHash,
+
+        ipAddress: params.ipAddress || undefined,
+
+        userAgent: params.userAgent || undefined,
+
+        browserName: parsed.browserName,
+
+        browserVersion: parsed.browserVersion,
+
+        osName: parsed.osName,
+
+        deviceType: parsed.deviceType,
+
+        deviceFingerprint,
+
+        expiresAt,
+
+        deviceMatch: {
+          deviceFingerprint,
+          userAgent: params.userAgent ?? null,
+          deviceType: parsed.deviceType,
+        },
+
+        revokeReason: "Replaced by new session on same device",
+      });
+
+    await Promise.all(
+      revokedSessionIds.map((sessionId) =>
+        this.deps.sessionCache.invalidate(sessionId)
+      )
+    );
 
     await this.deps.sessionCache.set({
       id: session.id,
@@ -68,6 +141,11 @@ export class SessionService {
 
   async revoke(sessionId: string) {
     await this.deps.sessionRepository.revoke(sessionId);
+    await this.deps.sessionCache.invalidate(sessionId);
+  }
+
+  async revokeForSecurityViolation(sessionId: string) {
+    await this.deps.sessionRepository.revokeForSecurityViolation(sessionId);
     await this.deps.sessionCache.invalidate(sessionId);
   }
 

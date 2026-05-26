@@ -14,6 +14,7 @@ describe("PrismaPasswordResetRepository", () => {
         create: mock(() => Promise.resolve({})),
         findUnique: mock(() => Promise.resolve(null)),
         update: mock(() => Promise.resolve({})),
+        updateMany: mock(() => Promise.resolve({ count: 0 })),
         deleteMany: mock(() => Promise.resolve({ count: 0 })),
       },
     } as unknown as PrismaClient;
@@ -85,13 +86,30 @@ describe("PrismaPasswordResetRepository", () => {
   describe("markAsUsed", () => {
     it("should mark a password reset as used", async () => {
       const id = "reset-123";
-      const usedAt = new Date();
 
       await repository.markAsUsed(id);
 
       expect(mockPrisma.passwordReset.update).toHaveBeenCalledWith({
         where: { id },
         data: { usedAt: expect.any(Date) },
+      });
+    });
+  });
+
+  describe("invalidateUnusedForUser", () => {
+    it("should mark prior unused tokens as used", async () => {
+      mockPrisma.passwordReset.updateMany.mockResolvedValue({ count: 2 });
+
+      await repository.invalidateUnusedForUser("user-123");
+
+      expect(mockPrisma.passwordReset.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: "user-123",
+          usedAt: null,
+        },
+        data: {
+          usedAt: expect.any(Date),
+        },
       });
     });
   });

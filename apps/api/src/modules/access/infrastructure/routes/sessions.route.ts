@@ -1,49 +1,69 @@
-import { Elysia } from "elysia";
-import { PrismaSessionRepository } from "../repositories/prisma/prisma-session.repository";
-import { authMiddleware } from "../middleware/auth.middleware";
-import type { Session } from "@atlasmed/database";
+import { Elysia, t } from "elysia";
+import { accessUseCases, auth } from "../../composition";
+import { sessionRevokeRateLimit } from "../middleware/rate-limit.middleware";
 
-const sessionRepository = new PrismaSessionRepository();
+export const sessionsRoute = new Elysia()
+  .use(auth)
+  .use(sessionRevokeRateLimit)
+  .get("/sessions", async ({ getUserId, getSessionId }: any) => {
+    const userId = await getUserId();
+    const currentSessionId = await getSessionId();
+    
+    const result = await accessUseCases.getUserSessions().execute({
+      userId,
+      currentSessionId,
+    });
 
-export const sessionsRoute = new Elysia({ prefix: "/access" })
-  .use(authMiddleware)
-  .get("/sessions", async ({ auth }: any) => {
-    const sessions = await sessionRepository.findByUserId(auth.user.id);
-
-    return {
-      sessions: sessions.map((session: Session) => ({
-        id: session.id,
-        deviceType: session.deviceType,
-        browserName: session.browserName,
-        browserVersion: session.browserVersion,
-        osName: session.osName,
-        ipAddress: session.ipAddress,
-        lastSeenAt: session.lastSeenAt,
-        createdAt: session.createdAt,
-        isCurrent: session.id === auth.sessionId,
-      })),
-    };
+    return result;
   })
-  .delete("/sessions/:id", async ({ auth, params }: any) => {
-    const session = await sessionRepository.findById(params.id);
+  .delete("/sessions/:id", async ({ getUserId, getSessionId, params, status }: any) => {
+    const userId = await getUserId();
+    const currentSessionId = await getSessionId();
+    
+    const result = await accessUseCases.revokeSession().execute({
+      sessionId: params.id,
+      userId,
+      currentSessionId,
+    });
 
-    if (!session) {
-      throw new Error("Session not found");
+    if (!result.success) {
+      if (result.error === "not-found") {
+        return status(404, { 
+          code: "NOT_FOUND",
+          message: "Session not found" 
+        });
+      }
+      
+      if (result.error === "unauthorized") {
+        return status(403, { 
+          code: "FORBIDDEN",
+          message: "You can only revoke your own sessions" 
+        });
+      }
+      
+      if (result.error === "cannot-revoke-current") {
+        return status(400, { 
+          code: "INVALID_OPERATION",
+          message: "Cannot revoke current session. Use logout instead." 
+        });
+      }
     }
-
-    // Users can only revoke their own sessions
-    if (session.userId !== auth.user.id) {
-      throw new Error("You can only revoke your own sessions");
-    }
-
-    // Prevent revoking current session
-    if (session.id === auth.sessionId) {
-      throw new Error("Cannot revoke current session. Use logout instead.");
-    }
-
-    await sessionRepository.revoke(params.id);
 
     return {
       message: "Session revoked successfully",
+    };
+  })
+  .post("/sessions/revoke-others", async ({ getUserId, getSessionId }: any) => {
+    const userId = await getUserId();
+    const currentSessionId = await getSessionId();
+
+    const result = await accessUseCases.revokeOtherSessions().execute({
+      userId,
+      currentSessionId,
+    });
+
+    return {
+      message: "Other sessions revoked successfully",
+      revokedCount: result.revokedCount,
     };
   });

@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.client";
 import { hash } from "argon2";
+import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
 
 interface SeedConfig {
   adminEmail: string;
@@ -14,30 +15,32 @@ async function createRoles() {
     {
       name: "ADMIN",
       description: "Full system access - can manage all resources and users",
+      priority: ROLE_PRIORITY_BY_NAME.ADMIN,
     },
     {
       name: "MANAGER",
       description: "Can manage clinics, visits, and view users",
+      priority: ROLE_PRIORITY_BY_NAME.MANAGER,
     },
     {
       name: "USER",
       description: "Basic access - can view clinics and visits",
+      priority: ROLE_PRIORITY_BY_NAME.USER,
     },
   ];
 
   console.log("📦 Creating roles...");
 
   for (const role of roles) {
-    const existing = await prisma.role.findUnique({
+    await prisma.role.upsert({
       where: { name: role.name },
+      update: {
+        description: role.description,
+        priority: role.priority,
+      },
+      create: role,
     });
-
-    if (existing) {
-      console.log(`   ✓ Role "${role.name}" already exists`);
-    } else {
-      await prisma.role.create({ data: role });
-      console.log(`   ✓ Created role "${role.name}"`);
-    }
+    console.log(`   ✓ Role "${role.name}" (priority ${role.priority})`);
   }
 }
 

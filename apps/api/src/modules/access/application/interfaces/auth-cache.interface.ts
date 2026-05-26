@@ -12,4 +12,6 @@ export interface IAuthCache {
   invalidate(userId: string): Promise<void>;
   invalidateMultiple(userIds: string[]): Promise<void>;
   exists(userId: string): Promise<boolean>;
+  isRecentlyValidated(userId: string): Promise<boolean>;
+  markValidated(userId: string): Promise<void>;
 }

@@ -4,20 +4,38 @@ import { prisma } from "../../../../infrastructure/database/prisma.client";
 import { AcceptInviteUseCase } from "./accept-invite.use-case";
 import { PrismaInviteRepository } from "../../infrastructure/repositories/prisma/prisma-invite.repository";
 import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
+import { PrismaRoleRepository } from "../../infrastructure/repositories/prisma/prisma-role.repository";
 import { InviteUserUseCase } from "./invite-user.use-case";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
+import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-database";
 
+/**
+ * RACE CONDITION TESTS WITH PESSIMISTIC LOCKING
+ * 
+ * These tests verify that concurrent invite acceptances with duplicate usernames/emails
+ * are properly handled using pessimistic locking (SELECT FOR UPDATE).
+ * 
+ * The acceptInviteTransaction locks the invite row, ensuring only one concurrent
+ * request can process each invite. Other requests will wait for the lock and then
+ * fail when they see the invite status is no longer PENDING.
+ */
 describe("Accept Invite Race Condition Integration Tests", () => {
+  let dbReady = false;
   let inviteRepository: PrismaInviteRepository;
   let userRepository: PrismaUserRepository;
+  let roleRepository: PrismaRoleRepository;
   let acceptInviteUseCase: AcceptInviteUseCase;
   let inviteUserUseCase: InviteUserUseCase;
   let adminUserId: string;
   let roleId: string;
 
   beforeAll(async () => {
+    dbReady = await isIntegrationDatabaseReady();
+    if (!dbReady) return;
+
     inviteRepository = new PrismaInviteRepository();
     userRepository = new PrismaUserRepository();
+    roleRepository = new PrismaRoleRepository();
 
     acceptInviteUseCase = new AcceptInviteUseCase({
       inviteRepository,
@@ -26,6 +44,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     inviteUserUseCase = new InviteUserUseCase({
       inviteRepository,
       userRepository,
+      roleRepository,
     });
 
     const role = await prisma.role.findFirst({
@@ -59,7 +78,11 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   afterAll(async () => {
-    // Clean up test data
+    if (!dbReady) {
+      await prisma.$disconnect().catch(() => {});
+      return;
+    }
+
     await prisma.invitation.deleteMany({ where: { invitedByUserId: adminUserId } });
     await prisma.user.deleteMany({
       where: {
@@ -73,6 +96,8 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   test("should prevent race condition when accepting invite with same username", async () => {
+    if (!dbReady) return;
+
     const email = `race-test-${Date.now()}@example.com`;
     const username = `raceuser${Date.now()}`;
 
@@ -111,47 +136,55 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   test("should prevent race condition with same email", async () => {
-    const email = `race-email-${Date.now()}@example.com`;
+    if (!dbReady) return;
+    const phone1 = `+1555${Date.now()}1`;
+    const phone2 = `+1555${Date.now()}2`;
+    const phone3 = `+1555${Date.now()}3`;
     const username1 = `user1-${Date.now()}`;
     const username2 = `user2-${Date.now()}`;
     const username3 = `user3-${Date.now()}`;
 
+    // Create invites with phone numbers (no email) so users can choose any email during acceptance
     const invite1 = await inviteUserUseCase.execute({
-      email: `${email}1`,
+      phoneNumber: phone1,
       roleId,
       invitedByUserId: adminUserId,
     });
 
     const invite2 = await inviteUserUseCase.execute({
-      email: `${email}2`,
+      phoneNumber: phone2,
       roleId,
       invitedByUserId: adminUserId,
     });
 
     const invite3 = await inviteUserUseCase.execute({
-      email: `${email}3`,
+      phoneNumber: phone3,
       roleId,
       invitedByUserId: adminUserId,
     });
 
     const sharedEmail = `shared-${Date.now()}@example.com`;
 
+    // All 3 try to accept with the same email - race condition
     const results = await Promise.allSettled([
       acceptInviteUseCase.execute({
         token: invite1.token,
         email: sharedEmail,
+        phoneNumber: phone1,
         username: username1,
         password: "Password123!",
       }),
       acceptInviteUseCase.execute({
         token: invite2.token,
         email: sharedEmail,
+        phoneNumber: phone2,
         username: username2,
         password: "Password123!",
       }),
       acceptInviteUseCase.execute({
         token: invite3.token,
         email: sharedEmail,
+        phoneNumber: phone3,
         username: username3,
         password: "Password123!",
       }),
@@ -169,6 +202,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   test("should allow sequential accept invites with different credentials", async () => {
+    if (!dbReady) return;
     const email1 = `seq1-${Date.now()}@example.com`;
     const email2 = `seq2-${Date.now()}@example.com`;
     const username1 = `sequser1-${Date.now()}`;

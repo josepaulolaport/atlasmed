@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { AcceptInviteUseCase } from "./accept-invite.use-case";
-import { InvalidInviteError } from "@atlasmed/access";
+import { InvalidInviteError } from "../../../../shared/errors";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import { createMockInviteRepository } from "../../test-helpers/fixtures";
 
@@ -67,7 +67,7 @@ describe("AcceptInviteUseCase", () => {
         token: "valid-token",
         email: "newuser@example.com",
         username: "newusername",
-        password: "secure-password",
+        password: "SecurePass1",
         firstName: "Test",
         lastName: "User",
       };
@@ -83,7 +83,7 @@ describe("AcceptInviteUseCase", () => {
         token: "valid-token",
         email: "newuser@example.com",
         username: "newusername",
-        password: "secure-password",
+        password: "SecurePass1",
       });
 
       expect(mockInviteRepository.acceptInviteTransaction).toHaveBeenCalledTimes(1);
@@ -98,11 +98,11 @@ describe("AcceptInviteUseCase", () => {
         token: "valid-token",
         email: "newuser@example.com",
         username: "newusername",
-        password: "plain-text-password",
+        password: "PlainText1",
       });
 
       const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
-      expect(callArgs.passwordHash).not.toBe("plain-text-password");
+      expect(callArgs.passwordHash).not.toBe("PlainText1");
       expect(callArgs.passwordHash).toStartWith("$argon2id");
     });
 
@@ -111,7 +111,7 @@ describe("AcceptInviteUseCase", () => {
         token: "valid-token",
         email: "newuser@example.com",
         username: "newusername",
-        password: "secure-password",
+        password: "SecurePass1",
         firstName: "John",
       });
 
@@ -124,7 +124,7 @@ describe("AcceptInviteUseCase", () => {
         token: "valid-token",
         email: "newuser@example.com",
         username: "newusername",
-        password: "secure-password",
+        password: "SecurePass1",
         lastName: "Doe",
       });
 
@@ -138,7 +138,7 @@ describe("AcceptInviteUseCase", () => {
         email: "newuser@example.com",
         phoneNumber: "+1234567890",
         username: "newusername",
-        password: "secure-password",
+        password: "SecurePass1",
       });
 
       const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
@@ -150,7 +150,7 @@ describe("AcceptInviteUseCase", () => {
         token: "valid-token",
         email: "newuser@example.com",
         username: "newusername",
-        password: "secure-password",
+        password: "SecurePass1",
       });
 
       expect(result).toEqual(mockUser);
@@ -168,7 +168,7 @@ describe("AcceptInviteUseCase", () => {
           token: "invalid-token",
           email: "newuser@example.com",
           username: "newusername",
-          password: "secure-password",
+          password: "SecurePass1",
         })
       ).rejects.toThrow(InvalidInviteError);
     });
@@ -183,7 +183,7 @@ describe("AcceptInviteUseCase", () => {
           token: "valid-token",
           email: "wrong@example.com",
           username: "newusername",
-          password: "secure-password",
+          password: "SecurePass1",
         })
       ).rejects.toThrow(InvalidInviteError);
     });
@@ -199,7 +199,7 @@ describe("AcceptInviteUseCase", () => {
           email: "user@example.com",
           phoneNumber: "+9999999999",
           username: "newusername",
-          password: "secure-password",
+          password: "SecurePass1",
         })
       ).rejects.toThrow(InvalidInviteError);
     });
@@ -216,7 +216,7 @@ describe("AcceptInviteUseCase", () => {
           token: "valid-token",
           email: "newuser@example.com",
           username: "existingusername",
-          password: "secure-password",
+          password: "SecurePass1",
         })
       ).rejects.toThrow("User already exists");
     });
@@ -233,7 +233,7 @@ describe("AcceptInviteUseCase", () => {
           token: "valid-token",
           email: "newuser@example.com",
           username: "newusername",
-          password: "secure-password",
+          password: "SecurePass1",
         })
       ).rejects.toThrow("Database error");
     });
@@ -248,7 +248,7 @@ describe("AcceptInviteUseCase", () => {
           token: "valid-token",
           email: "newuser@example.com",
           username: "newusername",
-          password: "secure-password",
+          password: "SecurePass1",
         })
       ).rejects.toThrow("Create user failed");
     });

@@ -1,6 +1,10 @@
 import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
-
 import { hashToken } from "../../../../shared/utils/hash-token";
+import {
+  ResetTokenExpiredError,
+  ResetTokenInvalidError,
+  ResetTokenUsedError,
+} from "../../../../shared/errors";
 
 import type { PasswordResetRepository } from "../interfaces/password-reset.repository.interface";
 
@@ -16,8 +20,9 @@ export class PasswordResetService {
   constructor(private readonly deps: Dependencies) {}
 
   async createPasswordReset(params: CreatePasswordResetParams) {
-    const token = generateRandomToken();
+    await this.deps.passwordResetRepository.invalidateUnusedForUser(params.userId);
 
+    const token = generateRandomToken();
     const tokenHash = hashToken(token);
 
     const passwordReset = await this.deps.passwordResetRepository.create({
@@ -40,15 +45,15 @@ export class PasswordResetService {
     });
 
     if (!passwordReset) {
-      throw new Error("Invalid or expired password reset token");
+      throw new ResetTokenInvalidError();
     }
 
     if (passwordReset.usedAt) {
-      throw new Error("Password reset token has already been used");
+      throw new ResetTokenUsedError();
     }
 
     if (passwordReset.expiresAt < new Date()) {
-      throw new Error("Password reset token has expired");
+      throw new ResetTokenExpiredError();
     }
 
     return passwordReset;

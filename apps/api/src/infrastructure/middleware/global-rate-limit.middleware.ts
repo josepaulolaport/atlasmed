@@ -1,25 +1,28 @@
-import type { Context } from "elysia";
+import { Elysia } from "elysia";
 import { rateLimiterService, type RateLimitConfig } from "../cache/rate-limiter.service";
+import { RateLimitExceededError } from "../../shared/errors";
 
 export interface RateLimitOptions extends RateLimitConfig {
-  keyGenerator?: (context: any) => string;
+  keyGenerator?: (context: any) => string | Promise<string>;
   skipSuccessfulAttempts?: boolean;
   message?: string;
+  createError?: (retryAfterMs: number) => Error;
+}
+
+export function getClientIp(context: { request: Request }): string {
+  const forwarded = context.request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0]?.trim() || "unknown";
+  }
+
+  return context.request.headers.get("x-real-ip") || "unknown";
 }
 
 /**
  * Generic rate limiting middleware factory.
- * 
- * This is framework-level infrastructure that knows nothing about business concepts.
- * Use this to create specific rate limiters in your modules.
- * 
- * @example
- * // In your module
- * const loginRateLimit = createRateLimitMiddleware("login", {
- *   maxAttempts: 5,
- *   windowMs: 15 * 60 * 1000,
- *   keyGenerator: (ctx) => ctx.body?.email || "anonymous"
- * });
+ *
+ * Uses infrastructure RateLimiterService which fails open on Redis errors
+ * (allows the request through when Redis is unavailable).
  */
 export function createRateLimitMiddleware(
   namespace: string,
@@ -27,15 +30,15 @@ export function createRateLimitMiddleware(
 ) {
   return async (context: any) => {
     const identifier = options.keyGenerator
-      ? options.keyGenerator(context)
-      : context.request.headers.get("x-forwarded-for") ||
-        context.request.headers.get("x-real-ip") ||
-        "unknown";
+      ? await options.keyGenerator(context)
+      : getClientIp(context);
 
     const result = await rateLimiterService.check(namespace, identifier, {
       maxAttempts: options.maxAttempts,
       windowMs: options.windowMs,
-      ...(options.blockDurationMs !== undefined && { blockDurationMs: options.blockDurationMs }),
+      ...(options.blockDurationMs !== undefined && {
+        blockDurationMs: options.blockDurationMs,
+      }),
     });
 
     context.set.headers["x-ratelimit-limit"] = options.maxAttempts.toString();
@@ -43,19 +46,25 @@ export function createRateLimitMiddleware(
     context.set.headers["x-ratelimit-reset"] = result.resetAt.toISOString();
 
     if (!result.allowed) {
-      if (result.blockedUntil) {
-        context.set.headers["retry-after"] = Math.ceil(
-          (result.blockedUntil.getTime() - Date.now()) / 1000
-        ).toString();
-      }
+      const retryAfterMs = result.blockedUntil
+        ? Math.max(result.blockedUntil.getTime() - Date.now(), 1000)
+        : Math.max(result.resetAt.getTime() - Date.now(), 1000);
 
-      context.set.status = 429;
-      return {
-        error:
-          options.message ||
-          "Too many requests. Please try again later.",
-        retryAfter: result.resetAt.toISOString(),
-      };
+      context.set.headers["retry-after"] = Math.ceil(
+        retryAfterMs / 1000
+      ).toString();
+
+      const createError =
+        options.createError ??
+        ((retryAfter: number) => new RateLimitExceededError(retryAfter));
+
+      throw createError(retryAfterMs);
     }
   };
+}
+
+export function asRateLimitPlugin(namespace: string, options: RateLimitOptions) {
+  return new Elysia({ name: `rate-limit:${namespace}` }).onBeforeHandle(
+    createRateLimitMiddleware(namespace, options)
+  );
 }

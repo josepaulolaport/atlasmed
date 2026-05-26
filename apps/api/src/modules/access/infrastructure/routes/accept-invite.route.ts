@@ -1,13 +1,14 @@
 import { Elysia, t } from "elysia";
-import { acceptInviteSchema, InvalidInviteError } from "@atlasmed/access";
+import { acceptInviteSchema } from "@atlasmed/access";
 import { accessUseCases } from "../../composition";
+import { registerRateLimit } from "../middleware/rate-limit.middleware";
 
 export const acceptInviteRoute = new Elysia({ 
-  prefix: "/access",
   detail: {
     tags: ["Authentication"],
   },
 })
+  .use(registerRateLimit)
   .post("/register", async ({ body }) => {
     const parsed = acceptInviteSchema.parse(body);
 
@@ -82,15 +83,6 @@ export const acceptInviteRoute = new Elysia({
     },
   })
   .onError(({ error, set }) => {
-    if (error instanceof InvalidInviteError) {
-      set.status = 400;
-      return {
-        error: error.message,
-        code: "INVALID_INVITE",
-        hint: "Please request a new invitation from your administrator or check if the invite has expired",
-      };
-    }
-
     if (error instanceof Error && error.message.includes("already taken")) {
       set.status = 409;
       return {

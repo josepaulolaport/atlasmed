@@ -2,11 +2,24 @@ import type { EmailService } from "../interfaces/email.service.interface";
 import type { MessagingService } from "../interfaces/messaging.service.interface";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
+import type { RoleRepository } from "../interfaces/role.repository.interface";
 import { InviteService } from "../services/invite.service";
+import { 
+  ValidationError,
+  EmailAlreadyExistsError,
+  RoleNotFoundError,
+  ResourceConflictError,
+  InsufficientPermissionsError,
+  UserNotFoundError,
+} from "../../../../shared/errors";
+import { Role } from "@atlasmed/access";
+import { canAssignRole } from "../constants/role-priority.constants";
+import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
   userRepository: UserRepository;
+  roleRepository: RoleRepository;
   emailService?: EmailService;
   messagingService?: MessagingService;
 }
@@ -27,14 +40,48 @@ export class InviteUserUseCase {
 
   async execute(params: InviteUserParams) {
     if (!params.email && !params.phoneNumber) {
-      throw new Error("Either email or phone number is required");
+      throw new ValidationError([
+        { field: 'email', message: 'Either email or phone number is required' }
+      ]);
+    }
+
+    const role = await this.deps.roleRepository.findById(params.roleId);
+
+    if (!role) {
+      throw new RoleNotFoundError(params.roleId);
+    }
+
+    const inviter = await this.deps.userRepository.findById(params.invitedByUserId);
+
+    if (!inviter) {
+      throw new UserNotFoundError(params.invitedByUserId);
+    }
+
+    const inviterRole = inviter.role as
+      | { name: string; priority?: number | null }
+      | undefined;
+
+    if (!inviterRole?.name || !canAssignRole(inviterRole, role)) {
+      throw new InsufficientPermissionsError(
+        [`role:${role.name}`],
+        [`role:${inviterRole?.name ?? "unknown"}`]
+      );
+    }
+
+    if (inviterRole.name === Role.MANAGER && role.name !== Role.USER) {
+      throw new InsufficientPermissionsError(
+        [`role:${role.name}`],
+        [`role:${Role.MANAGER}`]
+      );
     }
 
     const identifier = params.email || params.phoneNumber!;
     const existingUser = await this.deps.userRepository.findByIdentifier({ identifier });
 
-    if (existingUser) {
-      throw new Error("User already exists");
+    if (existingUser && params.email) {
+      throw new EmailAlreadyExistsError(params.email);
+    } else if (existingUser) {
+      throw new ResourceConflictError("User", "User already exists with this phone number");
     }
 
     const existingInvite = await this.deps.inviteRepository.findByEmailOrPhone(
@@ -43,7 +90,10 @@ export class InviteUserUseCase {
     );
 
     if (existingInvite) {
-      throw new Error("An active invite already exists for this user");
+      throw new ResourceConflictError(
+        "Invitation",
+        "A pending invitation already exists for this user"
+      );
     }
 
     const { invite, token } = await this.inviteService.createInvite({
@@ -51,6 +101,14 @@ export class InviteUserUseCase {
       phoneNumber: params.phoneNumber || undefined,
       roleId: params.roleId,
       invitedByUserId: params.invitedByUserId,
+    });
+
+    await auditLogService.logInviteUser({
+      invitedByUserId: params.invitedByUserId,
+      inviteId: invite.id,
+      email: params.email,
+      phoneNumber: params.phoneNumber,
+      roleId: params.roleId,
     });
 
     return {

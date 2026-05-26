@@ -225,12 +225,59 @@ describe("PrismaSessionRepository (Integration)", () => {
     });
   });
 
+  describe("findSessionStatus", () => {
+    it("should return session status fields only", async () => {
+      const sessionId = randomUUID();
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      await sessionRepository.create({
+        id: sessionId,
+        userId: testUserId,
+        refreshTokenHash: "hashed-token",
+        expiresAt,
+      });
+
+      const status = await sessionRepository.findSessionStatus(sessionId);
+
+      expect(status).toEqual({
+        userId: testUserId,
+        revokedAt: null,
+        expiresAt,
+      });
+    });
+
+    it("should reflect revoked session status", async () => {
+      const sessionId = randomUUID();
+
+      const created = await sessionRepository.create({
+        id: sessionId,
+        userId: testUserId,
+        refreshTokenHash: "hashed-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      await sessionRepository.revoke(created.id);
+
+      const status = await sessionRepository.findSessionStatus(sessionId);
+
+      expect(status?.userId).toBe(testUserId);
+      expect(status?.revokedAt).toBeInstanceOf(Date);
+    });
+
+    it("should return null when session not found", async () => {
+      const status = await sessionRepository.findSessionStatus("non-existent-id");
+
+      expect(status).toBeNull();
+    });
+  });
+
   describe("findByUserId", () => {
-    it("should find all active sessions for user", async () => {
+    it("should find active sessions for distinct devices", async () => {
       await sessionRepository.create({
         id: randomUUID(),
         userId: testUserId,
         refreshTokenHash: "token-1",
+        deviceFingerprint: "device-a",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
@@ -238,12 +285,39 @@ describe("PrismaSessionRepository (Integration)", () => {
         id: randomUUID(),
         userId: testUserId,
         refreshTokenHash: "token-2",
+        deviceFingerprint: "device-b",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
       const sessions = await sessionRepository.findByUserId(testUserId);
 
       expect(sessions).toHaveLength(2);
+    });
+
+    it("should return only the most recent session per device fingerprint", async () => {
+      const olderSession = await sessionRepository.create({
+        id: randomUUID(),
+        userId: testUserId,
+        refreshTokenHash: "token-older",
+        deviceFingerprint: "shared-device",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      const newerSession = await sessionRepository.create({
+        id: randomUUID(),
+        userId: testUserId,
+        refreshTokenHash: "token-newer",
+        deviceFingerprint: "shared-device",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      });
+
+      const sessions = await sessionRepository.findByUserId(testUserId);
+
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0]!.id).toBe(newerSession.id);
+      expect(sessions[0]!.id).not.toBe(olderSession.id);
     });
 
     it("should exclude revoked sessions", async () => {
@@ -288,11 +362,12 @@ describe("PrismaSessionRepository (Integration)", () => {
       expect(sessions).toHaveLength(1);
     });
 
-    it("should order sessions by created date descending", async () => {
+    it("should order sessions by most recently seen first", async () => {
       const session1 = await sessionRepository.create({
         id: randomUUID(),
         userId: testUserId,
         refreshTokenHash: "token-1",
+        deviceFingerprint: "device-a",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
@@ -302,6 +377,7 @@ describe("PrismaSessionRepository (Integration)", () => {
         id: randomUUID(),
         userId: testUserId,
         refreshTokenHash: "token-2",
+        deviceFingerprint: "device-b",
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 

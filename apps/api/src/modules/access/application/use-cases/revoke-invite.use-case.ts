@@ -1,4 +1,5 @@
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
+import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -7,7 +8,7 @@ interface Dependencies {
 export class RevokeInviteUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: { inviteId: string }) {
+  async execute(params: { inviteId: string; revokedByUserId: string }) {
     const invite = await this.deps.inviteRepository.findById(params.inviteId);
 
     if (!invite) {
@@ -19,5 +20,12 @@ export class RevokeInviteUseCase {
     }
 
     await this.deps.inviteRepository.revoke(params.inviteId);
+
+    await auditLogService.logRevokeInvite({
+      revokedByUserId: params.revokedByUserId,
+      inviteId: params.inviteId,
+      email: invite.email || undefined,
+      phoneNumber: invite.phoneNumber || undefined,
+    });
   }
 }

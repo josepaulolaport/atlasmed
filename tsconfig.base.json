@@ -10,17 +10,17 @@
   
       "moduleDetection": "force",
   
-      "strict": true,
-  
-      "skipLibCheck": true,
-  
-      "verbatimModuleSyntax": true,
-  
-      "allowImportingTsExtensions": true,
-  
-      "resolveJsonModule": true,
-  
-      "exactOptionalPropertyTypes": true,
+    "strict": true,
+
+    "skipLibCheck": true,
+
+    "verbatimModuleSyntax": true,
+
+    "allowImportingTsExtensions": true,
+
+    "resolveJsonModule": true,
+
+    "exactOptionalPropertyTypes": false,
   
       "noUncheckedIndexedAccess": true,
   

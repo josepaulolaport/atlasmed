@@ -17,5 +17,7 @@ export interface PasswordResetRepository {
 
   markAsUsed(id: string): Promise<void>;
 
+  invalidateUnusedForUser(userId: string): Promise<void>;
+
   deleteExpired(): Promise<void>;
 }
