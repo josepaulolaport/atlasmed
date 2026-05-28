@@ -1,6 +1,8 @@
 import { Elysia, t } from "elysia";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
+import { getRefreshCookieRemoveOptions } from "./refresh-cookie";
+import { getClientIp } from "../../../../shared/utils/client-ip";
 
 export const logoutRoute = new Elysia({ 
   detail: {
@@ -15,11 +17,10 @@ export const logoutRoute = new Elysia({
     await accessUseCases.logout().execute({
       sessionId,
       userId,
-      ipAddress: request.headers.get("x-forwarded-for") || undefined,
+      ipAddress: getClientIp(request),
     });
 
-    // Clear refresh token cookie
-    cookie[REFRESH_TOKEN_COOKIE_NAME]?.remove();
+    cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(getRefreshCookieRemoveOptions());
 
     return {
       message: "Logged out successfully",

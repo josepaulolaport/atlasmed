@@ -1,6 +1,14 @@
 import type { AccessGrantService } from "../services/access-grant.service";
-import { Role } from "@atlasmed/access";
-import { InsufficientPermissionsError, UserNotFoundError } from "../../../../shared/errors";
+import {
+  Role,
+  isValidGrantAction,
+  isValidGrantResource,
+} from "@atlasmed/access";
+import {
+  InsufficientPermissionsError,
+  UserNotFoundError,
+  ValidationError,
+} from "../../../../shared/errors";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 
 interface Dependencies {
@@ -31,6 +39,24 @@ export class GrantPermissionUseCase {
 
     if (!target) {
       throw new UserNotFoundError(params.targetUserId);
+    }
+
+    if (!isValidGrantResource(params.resource)) {
+      throw new ValidationError([
+        {
+          field: "resource",
+          message: `Invalid grant resource: ${params.resource}`,
+        },
+      ]);
+    }
+
+    if (!isValidGrantAction(params.action)) {
+      throw new ValidationError([
+        {
+          field: "action",
+          message: `Invalid grant action: ${params.action}`,
+        },
+      ]);
     }
 
     return await this.deps.accessGrantService.grantPermission({

@@ -38,6 +38,7 @@ describe("VerificationService", () => {
     service = new VerificationService({
       verificationTokenRepository,
       userRepository,
+      auditLog: createMockAuditLogService(),
     });
   });
 

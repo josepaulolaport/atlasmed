@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 
 const mockLogInviteUser = mock(async () => {});
 
@@ -10,7 +11,6 @@ mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
 }));
 
 import { InviteUserUseCase } from "./invite-user.use-case";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { RoleRepository } from "../interfaces/role.repository.interface";
@@ -76,6 +76,10 @@ describe("InviteUserUseCase", () => {
       inviteRepository: mockInviteRepository,
       userRepository: mockUserRepository,
       roleRepository: mockRoleRepository,
+      auditLog: createMockAuditLogService({
+        logInviteUser: mockLogInviteUser,
+      }),
+      metrics: createMockMetricsService(),
     });
   });
 
@@ -91,7 +95,7 @@ describe("InviteUserUseCase", () => {
 
       expect(result).toHaveProperty("invite");
       expect(result).toHaveProperty("token");
-      expect(auditLogService.logInviteUser).toHaveBeenCalledWith({
+      expect(mockLogInviteUser).toHaveBeenCalledWith({
         invitedByUserId: "admin-456",
         inviteId: "invite-123",
         email: "newuser@example.com",

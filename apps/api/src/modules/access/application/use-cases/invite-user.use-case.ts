@@ -14,7 +14,8 @@ import {
 } from "../../../../shared/errors";
 import { Role } from "@atlasmed/access";
 import { canAssignRole } from "../constants/role-priority.constants";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -22,6 +23,8 @@ interface Dependencies {
   roleRepository: RoleRepository;
   emailService?: EmailService;
   messagingService?: MessagingService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
 }
 
 interface InviteUserParams {
@@ -103,13 +106,18 @@ export class InviteUserUseCase {
       invitedByUserId: params.invitedByUserId,
     });
 
-    await auditLogService.logInviteUser({
+    await this.deps.auditLog.logInviteUser({
       invitedByUserId: params.invitedByUserId,
       inviteId: invite.id,
       email: params.email,
       phoneNumber: params.phoneNumber,
       roleId: params.roleId,
     });
+
+    this.deps.metrics.recordInvite(
+      params.email ? "email" : "phone",
+      "create"
+    );
 
     return {
       invite,

@@ -1,12 +1,10 @@
 import { prisma } from "../../../../../infrastructure/database/prisma.client";
 import {
-  PasswordReuseError,
   ResetTokenExpiredError,
   ResetTokenInvalidError,
   ResetTokenUsedError,
 } from "../../../../../shared/errors";
 import { PASSWORD_HISTORY_LIMIT } from "../../../application/constants/password.constants";
-import { PasswordService } from "../../../application/services/password.service";
 
 import type {
   UserRepository,
@@ -22,6 +20,7 @@ export class PrismaUserRepository implements UserRepository {
   async findByIdentifier(params: FindUserByIdentifierParams) {
     return await prisma.user.findFirst({
       where: {
+        deletedAt: null,
         OR: [
           {
             email: params.identifier,
@@ -173,9 +172,91 @@ export class PrismaUserRepository implements UserRepository {
     });
   }
 
-  async delete(userId: string) {
-    await prisma.user.delete({
+  async changeRoleTransaction(params: {
+    userId: string;
+    newRoleId: string;
+  }): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: params.userId },
+        data: {
+          roleId: params.newRoleId,
+          tokenVersion: { increment: 1 },
+        },
+      });
+
+      await tx.session.updateMany({
+        where: {
+          userId: params.userId,
+          revokedAt: null,
+        },
+        data: {
+          revokedAt: new Date(),
+          revokedReason: "Role changed",
+        },
+      });
+    });
+  }
+
+  async changePasswordTransaction(params: {
+    userId: string;
+    newPasswordHash: string;
+    previousPasswordHash: string;
+    passwordHistory: string[];
+    revokeOtherSessions: boolean;
+    keepSessionId?: string;
+  }) {
+    return await prisma.$transaction(async (tx) => {
+      const user = await tx.user.update({
+        where: { id: params.userId },
+        data: {
+          passwordHash: params.newPasswordHash,
+          passwordHistory: params.passwordHistory,
+          passwordChangedAt: new Date(),
+          tokenVersion: { increment: 1 },
+        },
+        include: { role: true },
+      });
+
+      if (params.revokeOtherSessions) {
+        await tx.session.updateMany({
+          where: {
+            userId: params.userId,
+            revokedAt: null,
+            ...(params.keepSessionId
+              ? { id: { not: params.keepSessionId } }
+              : {}),
+          },
+          data: {
+            revokedAt: new Date(),
+            revokedReason: "Password changed",
+          },
+        });
+      }
+
+      return { user };
+    });
+  }
+
+  async enableTwoFactor(params: { userId: string; encryptedSecret: string }) {
+    await prisma.user.update({
+      where: { id: params.userId },
+      data: {
+        twoFactorEnabled: true,
+        twoFactorSecret: params.encryptedSecret,
+        tokenVersion: { increment: 1 },
+      },
+    });
+  }
+
+  async disableTwoFactor(userId: string) {
+    await prisma.user.update({
       where: { id: userId },
+      data: {
+        twoFactorEnabled: false,
+        twoFactorSecret: null,
+        tokenVersion: { increment: 1 },
+      },
     });
   }
 
@@ -198,8 +279,6 @@ export class PrismaUserRepository implements UserRepository {
   }
 
   async resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult> {
-    const passwordService = new PasswordService();
-
     return await prisma.$transaction(async (tx) => {
       const lockedReset = await tx.$queryRaw<Array<{
         id: string;
@@ -244,16 +323,6 @@ export class PrismaUserRepository implements UserRepository {
 
       const userLock = lockedUser[0]!;
 
-      if (await passwordService.verify(params.newPassword, userLock.passwordHash)) {
-        throw new PasswordReuseError();
-      }
-
-      for (const historicHash of userLock.passwordHistory) {
-        if (await passwordService.verify(params.newPassword, historicHash)) {
-          throw new PasswordReuseError();
-        }
-      }
-
       const updatedHistory = [userLock.passwordHash, ...userLock.passwordHistory].slice(
         0,
         PASSWORD_HISTORY_LIMIT
@@ -266,8 +335,6 @@ export class PrismaUserRepository implements UserRepository {
           passwordHistory: updatedHistory,
           passwordChangedAt: new Date(),
           tokenVersion: { increment: 1 },
-          failedLoginAttempts: 0,
-          lockedUntil: null,
         },
         include: {
           role: true,
@@ -401,31 +468,14 @@ export class PrismaUserRepository implements UserRepository {
 
     if (params.scope && !params.scope.isGlobal) {
       const managedUserIds = params.scope.managedUserIds ?? [];
-      const territoryIds = params.scope.territoryIds ?? [];
 
-      if (managedUserIds.length === 0 && territoryIds.length === 0) {
+      if (managedUserIds.length === 0) {
         return { users: [], total: 0 };
-      }
-
-      const scopeOr: Record<string, unknown>[] = [];
-
-      if (managedUserIds.length > 0) {
-        scopeOr.push({ id: { in: managedUserIds } });
-      }
-
-      if (territoryIds.length > 0) {
-        scopeOr.push({
-          territoryAssignments: {
-            some: {
-              territoryId: { in: territoryIds },
-            },
-          },
-        });
       }
 
       where.AND = [
         ...((where.AND as Record<string, unknown>[]) ?? []),
-        { OR: scopeOr },
+        { id: { in: managedUserIds } },
       ];
     }
 

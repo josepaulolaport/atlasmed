@@ -15,6 +15,7 @@ export interface AccessGrantRecord {
 export const GRANT_RESOURCE_TO_SUBJECT: Record<string, Subject> = {
   USER: "USER",
   CLINIC: "CLINIC",
+  DOCTOR: "DOCTOR",
   VISIT: "VISIT",
   TERRITORY: "TERRITORY",
   INVITATION: "INVITATION",

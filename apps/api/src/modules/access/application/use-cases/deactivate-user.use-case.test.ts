@@ -76,6 +76,8 @@ describe("DeactivateUserUseCase", () => {
       authCache: mockAuthCache,
       sessionCache: mockSessionCache,
       scopeService: mockScopeService,
+      auditLog: createMockAuditLogService(),
+      metrics: createMockMetricsService(),
     });
   });
 

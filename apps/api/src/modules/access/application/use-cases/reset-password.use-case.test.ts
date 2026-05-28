@@ -1,10 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { hash } from "argon2";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
-
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
+import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { PasswordResetRepository } from "../interfaces/password-reset.repository.interface";
@@ -25,7 +22,8 @@ import {
 import { hashToken } from "../../../../shared/utils/hash-token";
 
 import { ResetPasswordUseCase } from "./reset-password.use-case";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import { PasswordService } from "../services/password.service";
+import { NotificationService } from "../services/notification.service";
 
 describe("ResetPasswordUseCase", () => {
   let useCase: ResetPasswordUseCase;
@@ -33,6 +31,7 @@ describe("ResetPasswordUseCase", () => {
   let mockPasswordResetRepository: PasswordResetRepository;
   let mockAuthCache: IAuthCache;
   let mockSessionCache: ISessionCache;
+  let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
 
   let currentPasswordHash: string;
 
@@ -64,6 +63,7 @@ describe("ResetPasswordUseCase", () => {
 
   beforeEach(async () => {
     currentPasswordHash = await hash("ExistingPassword1!");
+    mockAuditLog = createMockAuditLogService();
     mockUserRepository = createMockUserRepository({
       resetPasswordTransaction: mock(() => Promise.resolve({
         user: mockUser,
@@ -88,6 +88,10 @@ describe("ResetPasswordUseCase", () => {
       passwordResetRepository: mockPasswordResetRepository,
       authCache: mockAuthCache,
       sessionCache: mockSessionCache,
+      passwordService: new PasswordService(),
+      notificationService: new NotificationService(),
+      auditLog: mockAuditLog,
+      metrics: createMockMetricsService(),
     });
   });
 
@@ -103,7 +107,7 @@ describe("ResetPasswordUseCase", () => {
       expect(mockUserRepository.resetPasswordTransaction).toHaveBeenCalledTimes(1);
       expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
       expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith("user-123");
-      expect(auditLogService.logPasswordChange).toHaveBeenCalledWith({
+      expect(mockAuditLog.logPasswordChange).toHaveBeenCalledWith({
         userId: "user-123",
         method: "reset",
         ipAddress: "192.168.1.1",

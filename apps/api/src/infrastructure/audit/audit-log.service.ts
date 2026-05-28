@@ -1,5 +1,6 @@
 import { prisma } from "../database/prisma.client";
 import { metricsService } from "../monitoring/metrics.service";
+import { environment } from "../../app/config/environment";
 import type { AuditEventType, AuditEventSeverity } from "@atlasmed/database";
 
 export interface AuditLogEntry {
@@ -48,6 +49,10 @@ export class AuditLogService {
   }
 
   async log(entry: AuditLogEntry): Promise<void> {
+    if (!environment.ENABLE_AUDIT_LOG) {
+      return;
+    }
+
     try {
       await this.writeLog(entry);
     } catch (error) {
@@ -205,6 +210,28 @@ export class AuditLogService {
     });
   }
 
+  async logResendInvite(params: {
+    resentByUserId: string;
+    inviteId: string;
+    email?: string;
+    phoneNumber?: string;
+    resendCount: number;
+  }): Promise<void> {
+    await this.log({
+      userId: params.resentByUserId,
+      eventType: "USER_INVITE",
+      action: "resend_invite",
+      resource: "invitation",
+      resourceId: params.inviteId,
+      actorId: params.resentByUserId,
+      details: {
+        email: params.email,
+        phoneNumber: params.phoneNumber,
+        resendCount: params.resendCount,
+      },
+    });
+  }
+
   async logAcceptInvite(params: {
     userId: string;
     inviteId: string;
@@ -350,6 +377,42 @@ export class AuditLogService {
       resource: "user",
       resourceId: params.userId,
       details: { phoneNumber: params.phoneNumber },
+    });
+  }
+
+  async logSessionCreate(params: {
+    userId: string;
+    sessionId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    await this.log({
+      userId: params.userId,
+      eventType: "SESSION_CREATE",
+      action: "create_session",
+      resource: "session",
+      resourceId: params.sessionId,
+      sessionId: params.sessionId,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+    });
+  }
+
+  async log2FARequired(params: {
+    userId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    await this.log({
+      userId: params.userId,
+      eventType: "USER_LOGIN",
+      severity: "INFO",
+      action: "2fa_required",
+      resource: "user",
+      resourceId: params.userId,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+      outcome: "PENDING",
     });
   }
 

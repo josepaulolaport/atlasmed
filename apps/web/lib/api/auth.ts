@@ -8,6 +8,7 @@ import type {
   PasswordResetConfirm,
   User,
   Session,
+  CapabilitiesResponse,
 } from "@/types/auth";
 
 export const authApi = {
@@ -68,8 +69,63 @@ export const authApi = {
     return response.data;
   },
 
-  validateInviteToken: async (token: string): Promise<{ email?: string; phoneNumber?: string }> => {
-    const response = await apiClient.get(`/access/invite/${token}`);
+  validateInviteToken: async (token: string): Promise<{
+    email?: string;
+    phoneNumber?: string;
+    role: { id: string; name: string };
+    expiresAt: string;
+  }> => {
+    const response = await apiClient.get(`/access/invite/${encodeURIComponent(token)}`);
+    return response.data;
+  },
+
+  verify2FALogin: async (data: {
+    pendingToken: string;
+    code: string;
+  }): Promise<LoginResponse> => {
+    const response = await apiClient.post<LoginResponse>("/access/login/2fa", data);
+    return response.data;
+  },
+
+  changePassword: async (data: {
+    currentPassword: string;
+    newPassword: string;
+    revokeOtherSessions?: boolean;
+  }): Promise<{ success: boolean }> => {
+    const response = await apiClient.patch<{ success: boolean }>("/access/password", data);
+    return response.data;
+  },
+
+  getCapabilities: async (): Promise<CapabilitiesResponse> => {
+    const response = await apiClient.get<CapabilitiesResponse>(
+      "/access/me/capabilities"
+    );
+    return response.data;
+  },
+
+  setup2FA: async (): Promise<{ secret: string; otpauthUrl: string }> => {
+    const response = await apiClient.post<{ secret: string; otpauthUrl: string }>(
+      "/access/2fa/setup"
+    );
+    return response.data;
+  },
+
+  confirm2FA: async (data: { code: string }): Promise<{ success: boolean }> => {
+    const response = await apiClient.post<{ success: boolean }>(
+      "/access/2fa/confirm",
+      data
+    );
+    return response.data;
+  },
+
+  disable2FA: async (data: {
+    password: string;
+    code: string;
+  }): Promise<{ success: boolean }> => {
+    const response = await apiClient.post<{ success: boolean }>(
+      "/access/2fa/disable",
+      data
+    );
     return response.data;
   },
 };

@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
+import { sessionSecurityAdapter } from "../../infrastructure/adapters/session-security.adapter";
 
 const mockLogSuspiciousActivity = mock(async () => {});
 const mockRecordSuspiciousActivity = mock(() => {});
+const mockRecordRefresh = mock(() => {});
 
 mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
   auditLogService: createMockAuditLogService({
@@ -14,6 +16,7 @@ mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
 mock.module("../../../../infrastructure/monitoring/metrics.service", () => ({
   metricsService: createMockMetricsService({
     recordSuspiciousActivity: mockRecordSuspiciousActivity,
+    recordRefresh: mockRecordRefresh,
   }),
 }));
 
@@ -92,9 +95,12 @@ describe("RefreshSessionUseCase", () => {
       findActiveByTokenHash: mock(async () => mockOldSession),
       findById: mock(async () => mockOldSession),
       rotateRefreshTokenTransaction: mock(async () => ({
-        ...mockOldSession,
-        refreshTokenHash: "new-hashed-token",
-        lastSeenAt: new Date(),
+        status: "rotated" as const,
+        session: {
+          ...mockOldSession,
+          refreshTokenHash: "new-hashed-token",
+          lastSeenAt: new Date(),
+        },
       })),
     });
 
@@ -114,6 +120,14 @@ describe("RefreshSessionUseCase", () => {
         sessionRepository: mockSessionRepository,
         sessionCache: mockSessionCache,
       }),
+      auditLog: createMockAuditLogService({
+        logSuspiciousActivity: mockLogSuspiciousActivity,
+      }),
+      metrics: createMockMetricsService({
+        recordSuspiciousActivity: mockRecordSuspiciousActivity,
+        recordRefresh: mockRecordRefresh,
+      }),
+      sessionSecurity: sessionSecurityAdapter,
     });
   });
 
@@ -126,6 +140,7 @@ describe("RefreshSessionUseCase", () => {
       expect(result).toHaveProperty("accessToken");
       expect(result).toHaveProperty("refreshToken");
       expect(result).toHaveProperty("user");
+      expect(mockRecordRefresh).toHaveBeenCalledWith(true);
     });
 
     it("should return new access token", async () => {
@@ -180,6 +195,7 @@ describe("RefreshSessionUseCase", () => {
   describe("invalid refresh token", () => {
     it("should throw TokenInvalidError when token not found", async () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => null);
+      mockSessionRepository.findActiveByPreviousRefreshTokenHash = mock(async () => null);
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => null);
 
@@ -192,6 +208,7 @@ describe("RefreshSessionUseCase", () => {
 
     it("should not rotate session when token invalid", async () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => null);
+      mockSessionRepository.findActiveByPreviousRefreshTokenHash = mock(async () => null);
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => null);
 
@@ -206,13 +223,33 @@ describe("RefreshSessionUseCase", () => {
   });
 
   describe("refresh token reuse detection", () => {
-    it("should revoke all sessions when rotate detects hash mismatch (Path A)", async () => {
-      mockSessionRepository.rotateRefreshTokenTransaction = mock(async () => {
-        throw new RefreshTokenReuseDetectedError({
-          userId: "user-123",
-          sessionId: "session-123",
-        });
-      });
+    it("should propagate already-rotated result without use-case-level revocation (concurrent refresh)", async () => {
+      mockSessionRepository.rotateRefreshTokenTransaction = mock(async () => ({
+        status: "already_rotated" as const,
+        userId: "user-123",
+        sessionId: "session-123",
+      }));
+
+      await expect(
+        refreshSessionUseCase.execute({
+          refreshToken: "valid-refresh-token",
+          ipAddress: "192.168.1.1",
+          userAgent: CHROME_UA,
+        })
+      ).rejects.toThrow(TokenInvalidError);
+
+      expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
+      expect(mockSessionCache.invalidateByUserId).not.toHaveBeenCalled();
+      expect(mockLogSuspiciousActivity).not.toHaveBeenCalled();
+      expect(mockRecordSuspiciousActivity).not.toHaveBeenCalled();
+    });
+
+    it("should revoke all sessions when previous refresh hash is replayed (DB Path A reuse)", async () => {
+      mockSessionRepository.rotateRefreshTokenTransaction = mock(async () => ({
+        status: "reuse_detected" as const,
+        userId: "user-123",
+        sessionId: "session-123",
+      }));
 
       await expect(
         refreshSessionUseCase.execute({
@@ -226,24 +263,16 @@ describe("RefreshSessionUseCase", () => {
         "user-123",
         undefined
       );
-      expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith(
-        "user-123",
-        undefined
-      );
-      expect(mockLogSuspiciousActivity).toHaveBeenCalledWith({
-        userId: "user-123",
-        sessionId: "session-123",
-        reason: "refresh_token_reuse",
-        ipAddress: "192.168.1.1",
-        userAgent: CHROME_UA,
-      });
-      expect(mockRecordSuspiciousActivity).toHaveBeenCalledWith(
-        "refresh_token_reuse"
-      );
+      expect(mockLogSuspiciousActivity).toHaveBeenCalled();
     });
 
     it("should revoke all sessions when superseded hash is replayed (Path B)", async () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => null);
+      mockSessionRepository.findActiveByPreviousRefreshTokenHash = mock(async () => null);
+      mockSessionRepository.findById = mock(async () => ({
+        ...mockOldSession,
+        updatedAt: new Date(Date.now() - 11_000),
+      }));
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => ({
         sessionId: "session-123",
@@ -277,6 +306,55 @@ describe("RefreshSessionUseCase", () => {
       expect(mockRecordSuspiciousActivity).toHaveBeenCalledWith(
         "refresh_token_reuse"
       );
+    });
+
+    it("should reject superseded hash replay within grace window without revoking all sessions", async () => {
+      mockSessionRepository.findActiveByTokenHash = mock(async () => null);
+      mockSessionRepository.findActiveByPreviousRefreshTokenHash = mock(async () => null);
+      mockSessionRepository.findById = mock(async () => ({
+        ...mockOldSession,
+        updatedAt: new Date(),
+      }));
+      mockSessionCache.getByTokenHash = mock(async () => null);
+      mockSessionCache.getSupersededSession = mock(async () => ({
+        sessionId: "session-123",
+        userId: "user-123",
+      }));
+
+      await expect(
+        refreshSessionUseCase.execute({
+          refreshToken: "superseded-refresh-token",
+        })
+      ).rejects.toThrow(TokenInvalidError);
+
+      expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
+      expect(mockLogSuspiciousActivity).not.toHaveBeenCalled();
+    });
+
+    it("should revoke all sessions when previous hash replayed via DB fallback (no Redis)", async () => {
+      mockSessionRepository.findActiveByTokenHash = mock(async () => null);
+      mockSessionRepository.findActiveByPreviousRefreshTokenHash = mock(async () => ({
+        id: "session-123",
+        userId: "user-123",
+        updatedAt: new Date(Date.now() - 11_000),
+      }));
+      mockSessionCache.getByTokenHash = mock(async () => null);
+      mockSessionCache.getSupersededSession = mock(async () => null);
+
+      await expect(
+        refreshSessionUseCase.execute({
+          refreshToken: "old-rotated-token",
+          ipAddress: "10.0.0.2",
+          userAgent: "test-agent",
+        })
+      ).rejects.toThrow(RefreshTokenReuseDetectedError);
+
+      expect(mockSessionRepository.rotateRefreshTokenTransaction).not.toHaveBeenCalled();
+      expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith(
+        "user-123",
+        undefined
+      );
+      expect(mockLogSuspiciousActivity).toHaveBeenCalled();
     });
   });
 

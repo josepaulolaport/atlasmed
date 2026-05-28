@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
-
 import { LogoutUseCase } from "./logout.use-case";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import {
@@ -30,6 +26,7 @@ describe("LogoutUseCase", () => {
       sessionRepository: mockSessionRepository,
       sessionCache: mockSessionCache,
       authCache: mockAuthCache,
+      auditLog: createMockAuditLogService(),
     });
   });
 

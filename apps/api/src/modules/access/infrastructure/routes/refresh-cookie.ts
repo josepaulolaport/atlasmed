@@ -17,3 +17,13 @@ export function getRefreshCookieOptions(value: string) {
     maxAge: getRefreshCookieMaxAgeSeconds(),
   };
 }
+
+export function getRefreshCookieRemoveOptions() {
+  return {
+    httpOnly: true,
+    secure: environment.NODE_ENV === "production",
+    sameSite: "strict" as const,
+    path: "/",
+    maxAge: 0,
+  };
+}

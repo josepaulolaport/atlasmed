@@ -15,6 +15,7 @@ import type { ScopeService } from "../../application/services/scope.service";
 import type { AccessGrantService } from "../../application/services/access-grant.service";
 import type { Redis } from "ioredis";
 import { logger } from "../../../../infrastructure/logging/logger";
+import { getClientIp } from "../../../../shared/utils/client-ip";
 
 const LAST_SEEN_THRESHOLD = 5 * 60 * 1000;
 
@@ -383,7 +384,7 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
   return new Elysia({ name: "auth" })
     .derive({ as: "scoped" }, async ({ request }) => {
       const authHeader = request.headers.get("authorization");
-      const ipAddress = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "unknown";
+      const ipAddress = getClientIp(request);
 
       if (!authHeader?.startsWith("Bearer ")) {
         logger.warn({ ipAddress }, "Missing or invalid authorization header");

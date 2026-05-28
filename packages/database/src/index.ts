@@ -5,6 +5,7 @@ export type {
   Session,
   Invitation,
   PasswordReset,
+  AuditLog,
   Prisma,
 } from "./generated/prisma";
 

@@ -2,7 +2,7 @@ import { Role } from "@atlasmed/access";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { ScopeRepository } from "../interfaces/scope.repository.interface";
 import type { ScopeService } from "../services/scope.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 import {
   UserNotFoundError,
   OperationNotAllowedError,
@@ -13,6 +13,7 @@ interface Dependencies {
   userRepository: UserRepository;
   scopeRepository: ScopeRepository;
   scopeService: ScopeService;
+  auditLog: IAuditLog;
 }
 
 export class AssignUserManagerUseCase {
@@ -73,7 +74,7 @@ export class AssignUserManagerUseCase {
       nextManagerId,
     });
 
-    await auditLogService.log({
+    await this.deps.auditLog.log({
       userId: params.assignedBy,
       eventType: nextManagerId ? "USER_MANAGER_ASSIGNED" : "USER_MANAGER_REMOVED",
       severity: "INFO",

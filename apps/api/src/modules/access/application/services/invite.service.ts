@@ -2,6 +2,8 @@ import { generateRandomToken } from "../../../../shared/utils/generate-random-to
 
 import { hashToken } from "../../../../shared/utils/hash-token";
 
+import { environment } from "../../../../app/config/environment";
+
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 
 interface Dependencies {
@@ -37,5 +39,26 @@ export class InviteService {
 
       token,
     };
+  }
+
+  buildRotatedInviteCredentials() {
+    const token = generateRandomToken();
+    const tokenHash = hashToken(token);
+    const expiresAt = new Date(
+      Date.now() + environment.INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+    );
+
+    return { token, tokenHash, expiresAt };
+  }
+
+  async rotateInviteToken(inviteId: string) {
+    const { token, tokenHash, expiresAt } = this.buildRotatedInviteCredentials();
+
+    const invite = await this.deps.inviteRepository.regenerateToken(inviteId, {
+      tokenHash,
+      expiresAt,
+    });
+
+    return { invite, token };
   }
 }

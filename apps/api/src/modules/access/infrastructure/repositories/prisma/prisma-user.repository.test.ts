@@ -6,7 +6,6 @@ import { createTestUserParams } from "../../../../../test-utils/user-test-helper
 import { cleanTestData, getUniqueTestId } from "../../../../../test-utils/database-helpers";
 import { hashToken } from "../../../../../shared/utils/hash-token";
 import {
-  PasswordReuseError,
   ResetTokenExpiredError,
   ResetTokenInvalidError,
   ResetTokenUsedError,
@@ -491,7 +490,7 @@ describe("PrismaUserRepository (Integration)", () => {
         roleId: testRoleId,
       });
 
-      await userRepository.delete(user.id);
+      await prisma.user.delete({ where: { id: user.id } });
 
       const deleted = await userRepository.findById(user.id);
 
@@ -536,7 +535,6 @@ describe("PrismaUserRepository (Integration)", () => {
 
       const result = await userRepository.resetPasswordTransaction({
         tokenHash,
-        newPassword,
         newPasswordHash,
       });
 
@@ -551,14 +549,12 @@ describe("PrismaUserRepository (Integration)", () => {
 
       await userRepository.resetPasswordTransaction({
         tokenHash,
-        newPassword,
         newPasswordHash,
       });
 
       await expect(
         userRepository.resetPasswordTransaction({
           tokenHash,
-          newPassword: "AnotherPass1!",
           newPasswordHash: await hash("AnotherPass1!"),
         })
       ).rejects.toThrow(ResetTokenUsedError);
@@ -570,7 +566,6 @@ describe("PrismaUserRepository (Integration)", () => {
 
       await userRepository.resetPasswordTransaction({
         tokenHash,
-        newPassword,
         newPasswordHash,
       });
 
@@ -579,44 +574,25 @@ describe("PrismaUserRepository (Integration)", () => {
       expect(sessions.every((session) => session.revokedReason === "Password reset")).toBe(true);
     });
 
-    it("should update password history and reject reused password", async () => {
+    it("should update password history", async () => {
       const firstNewPassword = "FirstNewPass1!";
       const firstNewPasswordHash = await hash(firstNewPassword);
       const originalHash = user.passwordHash;
 
       await userRepository.resetPasswordTransaction({
         tokenHash,
-        newPassword: firstNewPassword,
         newPasswordHash: firstNewPasswordHash,
       });
 
       const updatedUser = await userRepository.findById(user.id);
       expect(updatedUser?.passwordHistory).toHaveLength(1);
       expect(updatedUser?.passwordHistory[0]).toBe(originalHash);
-
-      const secondTokenHash = hashToken(`reset2_${getUniqueTestId()}`);
-      await prisma.passwordReset.create({
-        data: {
-          userId: user.id,
-          tokenHash: secondTokenHash,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        },
-      });
-
-      await expect(
-        userRepository.resetPasswordTransaction({
-          tokenHash: secondTokenHash,
-          newPassword: originalPassword,
-          newPasswordHash: await hash(originalPassword),
-        })
-      ).rejects.toThrow(PasswordReuseError);
     });
 
     it("should throw ResetTokenInvalidError for unknown token", async () => {
       await expect(
         userRepository.resetPasswordTransaction({
           tokenHash: hashToken("unknown-token"),
-          newPassword: "NewSecurePass1!",
           newPasswordHash: await hash("NewSecurePass1!"),
         })
       ).rejects.toThrow(ResetTokenInvalidError);
@@ -635,7 +611,6 @@ describe("PrismaUserRepository (Integration)", () => {
       await expect(
         userRepository.resetPasswordTransaction({
           tokenHash: expiredTokenHash,
-          newPassword: "NewSecurePass1!",
           newPasswordHash: await hash("NewSecurePass1!"),
         })
       ).rejects.toThrow(ResetTokenExpiredError);
@@ -652,7 +627,6 @@ describe("PrismaUserRepository (Integration)", () => {
         const nextPasswordHash = await hash(nextPassword);
         await userRepository.resetPasswordTransaction({
           tokenHash: currentTokenHash,
-          newPassword: nextPassword,
           newPasswordHash: nextPasswordHash,
         });
 

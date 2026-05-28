@@ -1,6 +1,7 @@
 import { Elysia, t } from "elysia";
 import { accessUseCases } from "../../composition";
 import { passwordResetRateLimit } from "../middleware/rate-limit.middleware";
+import { getClientIp } from "../../../../shared/utils/client-ip";
 
 export const requestPasswordResetRoute = new Elysia({
   detail: {
@@ -13,7 +14,7 @@ export const requestPasswordResetRoute = new Elysia({
   async ({ body, request }) => {
     await accessUseCases.requestPasswordReset().execute({
       identifier: body.identifier,
-      ipAddress: request.headers.get("x-forwarded-for") || undefined,
+      ipAddress: getClientIp(request),
       userAgent: request.headers.get("user-agent") || undefined,
     });
 

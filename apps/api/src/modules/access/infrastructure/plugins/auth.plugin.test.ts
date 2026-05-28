@@ -18,7 +18,7 @@ function createTestApp() {
   return new Elysia().onError(({ error, set }) => {
     if (error instanceof AppError) {
       set.status = error.statusCode;
-      return { error: error.toJSON() };
+      return { error: error.toClientJSON() };
     }
     set.status = 500;
     return { error: String(error) };
@@ -53,14 +53,10 @@ describe("Auth Plugin", () => {
     phoneVerifiedAt: null,
     lastLoginAt: new Date(),
     passwordChangedAt: null,
-    passwordExpiresAt: null,
     passwordHistory: [],
-    failedLoginAttempts: 0,
-    lastFailedLoginAt: null,
-    lockedUntil: null,
+    deactivatedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    deactivatedAt: null,
     role: {
       id: "role-123",
       name: "USER",

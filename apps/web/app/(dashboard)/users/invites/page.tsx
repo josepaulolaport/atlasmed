@@ -24,6 +24,7 @@ import {
   Phone,
   ArrowLeft,
   Users,
+  RefreshCw,
 } from "lucide-react";
 import type { Invitation, InviteStatus } from "@/types/auth";
 import { canManageUsers } from "@/lib/permissions";
@@ -56,6 +57,7 @@ export default function InvitationsPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser && !canManageUsers(currentUser.role.name)) {
@@ -120,6 +122,35 @@ export default function InvitationsPage() {
       });
     } finally {
       setRevokingId(null);
+    }
+  };
+
+  const handleResend = async (inviteId: string) => {
+    setResendingId(inviteId);
+
+    try {
+      await usersApi.resendInvite(inviteId);
+      toast({
+        title: "Success",
+        description: "Invitation resent successfully",
+        variant: "success",
+      });
+
+      const response = await usersApi.getInvitations({
+        page,
+        limit: 10,
+        status: statusFilter,
+      });
+      setInvitations(response.data);
+      setTotalPages(response.pagination.totalPages);
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to resend invitation",
+        variant: "destructive",
+      });
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -254,15 +285,26 @@ export default function InvitationsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         {invitation.status === "PENDING" && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRevoke(invitation.id)}
-                            disabled={revokingId === invitation.id}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            {revokingId === invitation.id ? "Revoking..." : "Revoke"}
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResend(invitation.id)}
+                              disabled={resendingId === invitation.id}
+                            >
+                              <RefreshCw className="mr-2 h-4 w-4" />
+                              {resendingId === invitation.id ? "Sending..." : "Resend"}
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleRevoke(invitation.id)}
+                              disabled={revokingId === invitation.id}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              {revokingId === invitation.id ? "Revoking..." : "Revoke"}
+                            </Button>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>

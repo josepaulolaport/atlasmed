@@ -1,12 +1,14 @@
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
-import { PasswordService } from "../services/password.service";
+import type { PasswordService } from "../services/password.service";
 import { hashToken } from "../../../../shared/utils/hash-token";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 import { validatePassword } from "@atlasmed/access";
 import { InvalidPasswordError } from "../../../../shared/errors";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
+  passwordService: PasswordService;
+  auditLog: IAuditLog;
 }
 
 interface AcceptInviteParams {
@@ -20,8 +22,6 @@ interface AcceptInviteParams {
 }
 
 export class AcceptInviteUseCase {
-  private readonly passwordService = new PasswordService();
-
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: AcceptInviteParams) {
@@ -31,7 +31,7 @@ export class AcceptInviteUseCase {
     }
 
     const tokenHash = hashToken(params.token);
-    const passwordHash = await this.passwordService.hash(params.password);
+    const passwordHash = await this.deps.passwordService.hash(params.password);
 
     const result = await this.deps.inviteRepository.acceptInviteTransaction({
       tokenHash,
@@ -43,13 +43,13 @@ export class AcceptInviteUseCase {
       lastName: params.lastName,
     });
 
-    await auditLogService.logUserRegister({
+    await this.deps.auditLog.logUserRegister({
       userId: result.user.id,
       username: result.user.username,
       email: result.user.email,
     });
 
-    await auditLogService.logAcceptInvite({
+    await this.deps.auditLog.logAcceptInvite({
       userId: result.user.id,
       inviteId: result.invite.id,
       username: result.user.username,

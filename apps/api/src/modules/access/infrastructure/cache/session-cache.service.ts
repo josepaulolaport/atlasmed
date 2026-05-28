@@ -243,14 +243,14 @@ export class SessionCacheService implements ISessionCache {
       });
 
       const pipeline = this.redis.pipeline();
-      pipeline.del(oldTokenKey);
-      pipeline.setex(sessionKey, ttl, JSON.stringify(session));
-      pipeline.setex(newTokenKey, ttl, session.id);
       pipeline.setex(
         this.getSupersededKey(previousRefreshTokenHash),
         ttl,
         supersededPayload
       );
+      pipeline.del(oldTokenKey);
+      pipeline.setex(sessionKey, ttl, JSON.stringify(session));
+      pipeline.setex(newTokenKey, ttl, session.id);
       pipeline.sadd(userSessionsKey, session.id);
       pipeline.expire(userSessionsKey, ttl);
 

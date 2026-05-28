@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { UserStatus, AuthSessionDeviceType, AuthSessionType } from "@atlasmed/database";
+import type { Role } from "@atlasmed/access";
 import { TokenService } from "../../application/services/token.service";
 import { createAuthPlugin } from "./auth.plugin";
 import type { SessionRepository } from "../../application/interfaces/session.repository.interface";
@@ -44,14 +45,10 @@ describe("Auth Plugin Scope", () => {
     phoneVerifiedAt: null,
     lastLoginAt: new Date(),
     passwordChangedAt: null,
-    passwordExpiresAt: null,
     passwordHistory: [],
-    failedLoginAttempts: 0,
-    lastFailedLoginAt: null,
-    lockedUntil: null,
+    deactivatedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    deactivatedAt: null,
     role: {
       id: "role-123",
       name: "USER",
@@ -90,7 +87,7 @@ describe("Auth Plugin Scope", () => {
     mockSessionRepository = {
       findById: mock(async () => mockSession),
       updateLastSeen: mock(async () => {}),
-    } as SessionRepository;
+    } as unknown as SessionRepository;
 
     mockUserRepository = {
       findById: mock(async () => mockUser),
@@ -100,7 +97,7 @@ describe("Auth Plugin Scope", () => {
         roleId: "role-123",
         roleName: "USER",
       })),
-    } as UserRepository;
+    } as unknown as UserRepository;
 
     mockAuthCacheService = {
       get: mock(async () => null),
@@ -108,7 +105,7 @@ describe("Auth Plugin Scope", () => {
       invalidate: mock(async () => {}),
       isRecentlyValidated: mock(async () => false),
       markValidated: mock(async () => {}),
-    } as AuthCacheService;
+    } as unknown as AuthCacheService;
 
     mockSessionCacheService = {
       getById: mock(async () => null),
@@ -118,21 +115,21 @@ describe("Auth Plugin Scope", () => {
       isMarkedRevoked: mock(async () => false),
       isRecentlyValidated: mock(async () => false),
       markValidated: mock(async () => {}),
-    } as SessionCacheService;
+    } as unknown as SessionCacheService;
 
     mockRedis = {
       get: mock(async () => null),
       setex: mock(async () => {}),
-    } as Redis;
+    } as unknown as Redis;
 
     mockScopeService = createMockScopeService();
 
     mockAccessGrantService = {
       getActiveGrants: mock(async () => []),
-    } as AccessGrantService;
+    } as unknown as AccessGrantService;
   });
 
-  async function signToken(role = "USER") {
+  async function signToken(role: Role = "USER") {
     return tokenService.signAccessToken({
       sub: "user-123",
       sid: "session-123",
@@ -192,7 +189,10 @@ describe("Auth Plugin Scope", () => {
       })
     );
 
-    const body = (await response.json()) as { isOperationallyActive: boolean };
+    const body = (await response.json()) as {
+      isOperationallyActive: boolean;
+      territoryIds: string[];
+    };
     expect(body.isOperationallyActive).toBe(false);
     expect(body.territoryIds).toEqual([]);
   });

@@ -58,6 +58,21 @@ export type VerificationToken = $Result.DefaultSelection<Prisma.$VerificationTok
  * 
  */
 export type Permission = $Result.DefaultSelection<Prisma.$PermissionPayload>
+/**
+ * Model Clinic
+ * 
+ */
+export type Clinic = $Result.DefaultSelection<Prisma.$ClinicPayload>
+/**
+ * Model Doctor
+ * 
+ */
+export type Doctor = $Result.DefaultSelection<Prisma.$DoctorPayload>
+/**
+ * Model DoctorClinic
+ * 
+ */
+export type DoctorClinic = $Result.DefaultSelection<Prisma.$DoctorClinicPayload>
 
 /**
  * Enums
@@ -396,6 +411,36 @@ export class PrismaClient<
     * ```
     */
   get permission(): Prisma.PermissionDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.clinic`: Exposes CRUD operations for the **Clinic** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Clinics
+    * const clinics = await prisma.clinic.findMany()
+    * ```
+    */
+  get clinic(): Prisma.ClinicDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.doctor`: Exposes CRUD operations for the **Doctor** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Doctors
+    * const doctors = await prisma.doctor.findMany()
+    * ```
+    */
+  get doctor(): Prisma.DoctorDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.doctorClinic`: Exposes CRUD operations for the **DoctorClinic** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more DoctorClinics
+    * const doctorClinics = await prisma.doctorClinic.findMany()
+    * ```
+    */
+  get doctorClinic(): Prisma.DoctorClinicDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -838,7 +883,10 @@ export namespace Prisma {
     PasswordReset: 'PasswordReset',
     AuditLog: 'AuditLog',
     VerificationToken: 'VerificationToken',
-    Permission: 'Permission'
+    Permission: 'Permission',
+    Clinic: 'Clinic',
+    Doctor: 'Doctor',
+    DoctorClinic: 'DoctorClinic'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -854,7 +902,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userTerritoryAssignment" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission"
+      modelProps: "user" | "userTerritoryAssignment" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "clinic" | "doctor" | "doctorClinic"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1524,6 +1572,228 @@ export namespace Prisma {
           }
         }
       }
+      Clinic: {
+        payload: Prisma.$ClinicPayload<ExtArgs>
+        fields: Prisma.ClinicFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.ClinicFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.ClinicFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>
+          }
+          findFirst: {
+            args: Prisma.ClinicFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.ClinicFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>
+          }
+          findMany: {
+            args: Prisma.ClinicFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>[]
+          }
+          create: {
+            args: Prisma.ClinicCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>
+          }
+          createMany: {
+            args: Prisma.ClinicCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.ClinicCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>[]
+          }
+          delete: {
+            args: Prisma.ClinicDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>
+          }
+          update: {
+            args: Prisma.ClinicUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>
+          }
+          deleteMany: {
+            args: Prisma.ClinicDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.ClinicUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.ClinicUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>[]
+          }
+          upsert: {
+            args: Prisma.ClinicUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$ClinicPayload>
+          }
+          aggregate: {
+            args: Prisma.ClinicAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateClinic>
+          }
+          groupBy: {
+            args: Prisma.ClinicGroupByArgs<ExtArgs>
+            result: $Utils.Optional<ClinicGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.ClinicCountArgs<ExtArgs>
+            result: $Utils.Optional<ClinicCountAggregateOutputType> | number
+          }
+        }
+      }
+      Doctor: {
+        payload: Prisma.$DoctorPayload<ExtArgs>
+        fields: Prisma.DoctorFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DoctorFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DoctorFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>
+          }
+          findFirst: {
+            args: Prisma.DoctorFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DoctorFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>
+          }
+          findMany: {
+            args: Prisma.DoctorFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>[]
+          }
+          create: {
+            args: Prisma.DoctorCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>
+          }
+          createMany: {
+            args: Prisma.DoctorCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DoctorCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>[]
+          }
+          delete: {
+            args: Prisma.DoctorDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>
+          }
+          update: {
+            args: Prisma.DoctorUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>
+          }
+          deleteMany: {
+            args: Prisma.DoctorDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DoctorUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DoctorUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>[]
+          }
+          upsert: {
+            args: Prisma.DoctorUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorPayload>
+          }
+          aggregate: {
+            args: Prisma.DoctorAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDoctor>
+          }
+          groupBy: {
+            args: Prisma.DoctorGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DoctorGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DoctorCountArgs<ExtArgs>
+            result: $Utils.Optional<DoctorCountAggregateOutputType> | number
+          }
+        }
+      }
+      DoctorClinic: {
+        payload: Prisma.$DoctorClinicPayload<ExtArgs>
+        fields: Prisma.DoctorClinicFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.DoctorClinicFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.DoctorClinicFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+          }
+          findFirst: {
+            args: Prisma.DoctorClinicFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.DoctorClinicFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+          }
+          findMany: {
+            args: Prisma.DoctorClinicFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>[]
+          }
+          create: {
+            args: Prisma.DoctorClinicCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+          }
+          createMany: {
+            args: Prisma.DoctorClinicCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.DoctorClinicCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>[]
+          }
+          delete: {
+            args: Prisma.DoctorClinicDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+          }
+          update: {
+            args: Prisma.DoctorClinicUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+          }
+          deleteMany: {
+            args: Prisma.DoctorClinicDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.DoctorClinicUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.DoctorClinicUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>[]
+          }
+          upsert: {
+            args: Prisma.DoctorClinicUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+          }
+          aggregate: {
+            args: Prisma.DoctorClinicAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDoctorClinic>
+          }
+          groupBy: {
+            args: Prisma.DoctorClinicGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DoctorClinicGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.DoctorClinicCountArgs<ExtArgs>
+            result: $Utils.Optional<DoctorClinicCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -1641,6 +1911,9 @@ export namespace Prisma {
     auditLog?: AuditLogOmit
     verificationToken?: VerificationTokenOmit
     permission?: PermissionOmit
+    clinic?: ClinicOmit
+    doctor?: DoctorOmit
+    doctorClinic?: DoctorClinicOmit
   }
 
   /* Types for Logging */
@@ -1727,6 +2000,8 @@ export namespace Prisma {
     passwordResets: number
     auditLogs: number
     verificationTokens: number
+    sentInvitations: number
+    permissions: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -1736,6 +2011,8 @@ export namespace Prisma {
     passwordResets?: boolean | UserCountOutputTypeCountPasswordResetsArgs
     auditLogs?: boolean | UserCountOutputTypeCountAuditLogsArgs
     verificationTokens?: boolean | UserCountOutputTypeCountVerificationTokensArgs
+    sentInvitations?: boolean | UserCountOutputTypeCountSentInvitationsArgs
+    permissions?: boolean | UserCountOutputTypeCountPermissionsArgs
   }
 
   // Custom InputTypes
@@ -1791,6 +2068,20 @@ export namespace Prisma {
     where?: VerificationTokenWhereInput
   }
 
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountSentInvitationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: InvitationWhereInput
+  }
+
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountPermissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PermissionWhereInput
+  }
+
 
   /**
    * Count Type RoleCountOutputType
@@ -1833,6 +2124,68 @@ export namespace Prisma {
 
 
   /**
+   * Count Type ClinicCountOutputType
+   */
+
+  export type ClinicCountOutputType = {
+    doctorClinics: number
+  }
+
+  export type ClinicCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctorClinics?: boolean | ClinicCountOutputTypeCountDoctorClinicsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * ClinicCountOutputType without action
+   */
+  export type ClinicCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ClinicCountOutputType
+     */
+    select?: ClinicCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * ClinicCountOutputType without action
+   */
+  export type ClinicCountOutputTypeCountDoctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorClinicWhereInput
+  }
+
+
+  /**
+   * Count Type DoctorCountOutputType
+   */
+
+  export type DoctorCountOutputType = {
+    doctorClinics: number
+  }
+
+  export type DoctorCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctorClinics?: boolean | DoctorCountOutputTypeCountDoctorClinicsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * DoctorCountOutputType without action
+   */
+  export type DoctorCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorCountOutputType
+     */
+    select?: DoctorCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * DoctorCountOutputType without action
+   */
+  export type DoctorCountOutputTypeCountDoctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorClinicWhereInput
+  }
+
+
+  /**
    * Models
    */
 
@@ -1850,12 +2203,10 @@ export namespace Prisma {
 
   export type UserAvgAggregateOutputType = {
     tokenVersion: number | null
-    failedLoginAttempts: number | null
   }
 
   export type UserSumAggregateOutputType = {
     tokenVersion: number | null
-    failedLoginAttempts: number | null
   }
 
   export type UserMinAggregateOutputType = {
@@ -1868,7 +2219,6 @@ export namespace Prisma {
     emailVerifiedAt: Date | null
     phoneVerifiedAt: Date | null
     passwordHash: string | null
-    passwordExpiresAt: Date | null
     firstName: string | null
     lastName: string | null
     avatarUrl: string | null
@@ -1876,9 +2226,6 @@ export namespace Prisma {
     tokenVersion: number | null
     lastLoginAt: Date | null
     passwordChangedAt: Date | null
-    failedLoginAttempts: number | null
-    lockedUntil: Date | null
-    lastFailedLoginAt: Date | null
     deactivatedAt: Date | null
     suspendedAt: Date | null
     twoFactorEnabled: boolean | null
@@ -1900,7 +2247,6 @@ export namespace Prisma {
     emailVerifiedAt: Date | null
     phoneVerifiedAt: Date | null
     passwordHash: string | null
-    passwordExpiresAt: Date | null
     firstName: string | null
     lastName: string | null
     avatarUrl: string | null
@@ -1908,9 +2254,6 @@ export namespace Prisma {
     tokenVersion: number | null
     lastLoginAt: Date | null
     passwordChangedAt: Date | null
-    failedLoginAttempts: number | null
-    lockedUntil: Date | null
-    lastFailedLoginAt: Date | null
     deactivatedAt: Date | null
     suspendedAt: Date | null
     twoFactorEnabled: boolean | null
@@ -1932,7 +2275,6 @@ export namespace Prisma {
     emailVerifiedAt: number
     phoneVerifiedAt: number
     passwordHash: number
-    passwordExpiresAt: number
     passwordHistory: number
     firstName: number
     lastName: number
@@ -1941,9 +2283,6 @@ export namespace Prisma {
     tokenVersion: number
     lastLoginAt: number
     passwordChangedAt: number
-    failedLoginAttempts: number
-    lockedUntil: number
-    lastFailedLoginAt: number
     deactivatedAt: number
     suspendedAt: number
     twoFactorEnabled: number
@@ -1960,12 +2299,10 @@ export namespace Prisma {
 
   export type UserAvgAggregateInputType = {
     tokenVersion?: true
-    failedLoginAttempts?: true
   }
 
   export type UserSumAggregateInputType = {
     tokenVersion?: true
-    failedLoginAttempts?: true
   }
 
   export type UserMinAggregateInputType = {
@@ -1978,7 +2315,6 @@ export namespace Prisma {
     emailVerifiedAt?: true
     phoneVerifiedAt?: true
     passwordHash?: true
-    passwordExpiresAt?: true
     firstName?: true
     lastName?: true
     avatarUrl?: true
@@ -1986,9 +2322,6 @@ export namespace Prisma {
     tokenVersion?: true
     lastLoginAt?: true
     passwordChangedAt?: true
-    failedLoginAttempts?: true
-    lockedUntil?: true
-    lastFailedLoginAt?: true
     deactivatedAt?: true
     suspendedAt?: true
     twoFactorEnabled?: true
@@ -2010,7 +2343,6 @@ export namespace Prisma {
     emailVerifiedAt?: true
     phoneVerifiedAt?: true
     passwordHash?: true
-    passwordExpiresAt?: true
     firstName?: true
     lastName?: true
     avatarUrl?: true
@@ -2018,9 +2350,6 @@ export namespace Prisma {
     tokenVersion?: true
     lastLoginAt?: true
     passwordChangedAt?: true
-    failedLoginAttempts?: true
-    lockedUntil?: true
-    lastFailedLoginAt?: true
     deactivatedAt?: true
     suspendedAt?: true
     twoFactorEnabled?: true
@@ -2042,7 +2371,6 @@ export namespace Prisma {
     emailVerifiedAt?: true
     phoneVerifiedAt?: true
     passwordHash?: true
-    passwordExpiresAt?: true
     passwordHistory?: true
     firstName?: true
     lastName?: true
@@ -2051,9 +2379,6 @@ export namespace Prisma {
     tokenVersion?: true
     lastLoginAt?: true
     passwordChangedAt?: true
-    failedLoginAttempts?: true
-    lockedUntil?: true
-    lastFailedLoginAt?: true
     deactivatedAt?: true
     suspendedAt?: true
     twoFactorEnabled?: true
@@ -2163,7 +2488,6 @@ export namespace Prisma {
     emailVerifiedAt: Date | null
     phoneVerifiedAt: Date | null
     passwordHash: string
-    passwordExpiresAt: Date | null
     passwordHistory: string[]
     firstName: string | null
     lastName: string | null
@@ -2172,9 +2496,6 @@ export namespace Prisma {
     tokenVersion: number
     lastLoginAt: Date | null
     passwordChangedAt: Date | null
-    failedLoginAttempts: number
-    lockedUntil: Date | null
-    lastFailedLoginAt: Date | null
     deactivatedAt: Date | null
     suspendedAt: Date | null
     twoFactorEnabled: boolean
@@ -2216,7 +2537,6 @@ export namespace Prisma {
     emailVerifiedAt?: boolean
     phoneVerifiedAt?: boolean
     passwordHash?: boolean
-    passwordExpiresAt?: boolean
     passwordHistory?: boolean
     firstName?: boolean
     lastName?: boolean
@@ -2225,9 +2545,6 @@ export namespace Prisma {
     tokenVersion?: boolean
     lastLoginAt?: boolean
     passwordChangedAt?: boolean
-    failedLoginAttempts?: boolean
-    lockedUntil?: boolean
-    lastFailedLoginAt?: boolean
     deactivatedAt?: boolean
     suspendedAt?: boolean
     twoFactorEnabled?: boolean
@@ -2246,6 +2563,8 @@ export namespace Prisma {
     passwordResets?: boolean | User$passwordResetsArgs<ExtArgs>
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     verificationTokens?: boolean | User$verificationTokensArgs<ExtArgs>
+    sentInvitations?: boolean | User$sentInvitationsArgs<ExtArgs>
+    permissions?: boolean | User$permissionsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -2259,7 +2578,6 @@ export namespace Prisma {
     emailVerifiedAt?: boolean
     phoneVerifiedAt?: boolean
     passwordHash?: boolean
-    passwordExpiresAt?: boolean
     passwordHistory?: boolean
     firstName?: boolean
     lastName?: boolean
@@ -2268,9 +2586,6 @@ export namespace Prisma {
     tokenVersion?: boolean
     lastLoginAt?: boolean
     passwordChangedAt?: boolean
-    failedLoginAttempts?: boolean
-    lockedUntil?: boolean
-    lastFailedLoginAt?: boolean
     deactivatedAt?: boolean
     suspendedAt?: boolean
     twoFactorEnabled?: boolean
@@ -2295,7 +2610,6 @@ export namespace Prisma {
     emailVerifiedAt?: boolean
     phoneVerifiedAt?: boolean
     passwordHash?: boolean
-    passwordExpiresAt?: boolean
     passwordHistory?: boolean
     firstName?: boolean
     lastName?: boolean
@@ -2304,9 +2618,6 @@ export namespace Prisma {
     tokenVersion?: boolean
     lastLoginAt?: boolean
     passwordChangedAt?: boolean
-    failedLoginAttempts?: boolean
-    lockedUntil?: boolean
-    lastFailedLoginAt?: boolean
     deactivatedAt?: boolean
     suspendedAt?: boolean
     twoFactorEnabled?: boolean
@@ -2331,7 +2642,6 @@ export namespace Prisma {
     emailVerifiedAt?: boolean
     phoneVerifiedAt?: boolean
     passwordHash?: boolean
-    passwordExpiresAt?: boolean
     passwordHistory?: boolean
     firstName?: boolean
     lastName?: boolean
@@ -2340,9 +2650,6 @@ export namespace Prisma {
     tokenVersion?: boolean
     lastLoginAt?: boolean
     passwordChangedAt?: boolean
-    failedLoginAttempts?: boolean
-    lockedUntil?: boolean
-    lastFailedLoginAt?: boolean
     deactivatedAt?: boolean
     suspendedAt?: boolean
     twoFactorEnabled?: boolean
@@ -2355,7 +2662,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "username" | "phoneNumber" | "emailVerified" | "phoneVerified" | "emailVerifiedAt" | "phoneVerifiedAt" | "passwordHash" | "passwordExpiresAt" | "passwordHistory" | "firstName" | "lastName" | "avatarUrl" | "status" | "tokenVersion" | "lastLoginAt" | "passwordChangedAt" | "failedLoginAttempts" | "lockedUntil" | "lastFailedLoginAt" | "deactivatedAt" | "suspendedAt" | "twoFactorEnabled" | "twoFactorSecret" | "deletedAt" | "metadata" | "roleId" | "managerId" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
+  export type UserOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "username" | "phoneNumber" | "emailVerified" | "phoneVerified" | "emailVerifiedAt" | "phoneVerifiedAt" | "passwordHash" | "passwordHistory" | "firstName" | "lastName" | "avatarUrl" | "status" | "tokenVersion" | "lastLoginAt" | "passwordChangedAt" | "deactivatedAt" | "suspendedAt" | "twoFactorEnabled" | "twoFactorSecret" | "deletedAt" | "metadata" | "roleId" | "managerId" | "createdAt" | "updatedAt", ExtArgs["result"]["user"]>
   export type UserInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     role?: boolean | RoleDefaultArgs<ExtArgs>
     manager?: boolean | User$managerArgs<ExtArgs>
@@ -2365,6 +2672,8 @@ export namespace Prisma {
     passwordResets?: boolean | User$passwordResetsArgs<ExtArgs>
     auditLogs?: boolean | User$auditLogsArgs<ExtArgs>
     verificationTokens?: boolean | User$verificationTokensArgs<ExtArgs>
+    sentInvitations?: boolean | User$sentInvitationsArgs<ExtArgs>
+    permissions?: boolean | User$permissionsArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2387,6 +2696,8 @@ export namespace Prisma {
       passwordResets: Prisma.$PasswordResetPayload<ExtArgs>[]
       auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
       verificationTokens: Prisma.$VerificationTokenPayload<ExtArgs>[]
+      sentInvitations: Prisma.$InvitationPayload<ExtArgs>[]
+      permissions: Prisma.$PermissionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2398,7 +2709,6 @@ export namespace Prisma {
       emailVerifiedAt: Date | null
       phoneVerifiedAt: Date | null
       passwordHash: string
-      passwordExpiresAt: Date | null
       passwordHistory: string[]
       firstName: string | null
       lastName: string | null
@@ -2407,9 +2717,6 @@ export namespace Prisma {
       tokenVersion: number
       lastLoginAt: Date | null
       passwordChangedAt: Date | null
-      failedLoginAttempts: number
-      lockedUntil: Date | null
-      lastFailedLoginAt: Date | null
       deactivatedAt: Date | null
       suspendedAt: Date | null
       twoFactorEnabled: boolean
@@ -2822,6 +3129,8 @@ export namespace Prisma {
     passwordResets<T extends User$passwordResetsArgs<ExtArgs> = {}>(args?: Subset<T, User$passwordResetsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PasswordResetPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     auditLogs<T extends User$auditLogsArgs<ExtArgs> = {}>(args?: Subset<T, User$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     verificationTokens<T extends User$verificationTokensArgs<ExtArgs> = {}>(args?: Subset<T, User$verificationTokensArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$VerificationTokenPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    sentInvitations<T extends User$sentInvitationsArgs<ExtArgs> = {}>(args?: Subset<T, User$sentInvitationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$InvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    permissions<T extends User$permissionsArgs<ExtArgs> = {}>(args?: Subset<T, User$permissionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PermissionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2860,7 +3169,6 @@ export namespace Prisma {
     readonly emailVerifiedAt: FieldRef<"User", 'DateTime'>
     readonly phoneVerifiedAt: FieldRef<"User", 'DateTime'>
     readonly passwordHash: FieldRef<"User", 'String'>
-    readonly passwordExpiresAt: FieldRef<"User", 'DateTime'>
     readonly passwordHistory: FieldRef<"User", 'String[]'>
     readonly firstName: FieldRef<"User", 'String'>
     readonly lastName: FieldRef<"User", 'String'>
@@ -2869,9 +3177,6 @@ export namespace Prisma {
     readonly tokenVersion: FieldRef<"User", 'Int'>
     readonly lastLoginAt: FieldRef<"User", 'DateTime'>
     readonly passwordChangedAt: FieldRef<"User", 'DateTime'>
-    readonly failedLoginAttempts: FieldRef<"User", 'Int'>
-    readonly lockedUntil: FieldRef<"User", 'DateTime'>
-    readonly lastFailedLoginAt: FieldRef<"User", 'DateTime'>
     readonly deactivatedAt: FieldRef<"User", 'DateTime'>
     readonly suspendedAt: FieldRef<"User", 'DateTime'>
     readonly twoFactorEnabled: FieldRef<"User", 'Boolean'>
@@ -3443,6 +3748,54 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: VerificationTokenScalarFieldEnum | VerificationTokenScalarFieldEnum[]
+  }
+
+  /**
+   * User.sentInvitations
+   */
+  export type User$sentInvitationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Invitation
+     */
+    select?: InvitationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Invitation
+     */
+    omit?: InvitationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: InvitationInclude<ExtArgs> | null
+    where?: InvitationWhereInput
+    orderBy?: InvitationOrderByWithRelationInput | InvitationOrderByWithRelationInput[]
+    cursor?: InvitationWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: InvitationScalarFieldEnum | InvitationScalarFieldEnum[]
+  }
+
+  /**
+   * User.permissions
+   */
+  export type User$permissionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Permission
+     */
+    select?: PermissionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Permission
+     */
+    omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
+    where?: PermissionWhereInput
+    orderBy?: PermissionOrderByWithRelationInput | PermissionOrderByWithRelationInput[]
+    cursor?: PermissionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: PermissionScalarFieldEnum | PermissionScalarFieldEnum[]
   }
 
   /**
@@ -5709,6 +6062,7 @@ export namespace Prisma {
     revokedReason: string | null
     revokedByUserId: string | null
     replacedBySessionId: string | null
+    previousRefreshTokenHash: string | null
     lastSeenAt: Date | null
     userAgent: string | null
     browserName: string | null
@@ -5736,6 +6090,7 @@ export namespace Prisma {
     revokedReason: string | null
     revokedByUserId: string | null
     replacedBySessionId: string | null
+    previousRefreshTokenHash: string | null
     lastSeenAt: Date | null
     userAgent: string | null
     browserName: string | null
@@ -5763,6 +6118,7 @@ export namespace Prisma {
     revokedReason: number
     revokedByUserId: number
     replacedBySessionId: number
+    previousRefreshTokenHash: number
     lastSeenAt: number
     userAgent: number
     browserName: number
@@ -5792,6 +6148,7 @@ export namespace Prisma {
     revokedReason?: true
     revokedByUserId?: true
     replacedBySessionId?: true
+    previousRefreshTokenHash?: true
     lastSeenAt?: true
     userAgent?: true
     browserName?: true
@@ -5819,6 +6176,7 @@ export namespace Prisma {
     revokedReason?: true
     revokedByUserId?: true
     replacedBySessionId?: true
+    previousRefreshTokenHash?: true
     lastSeenAt?: true
     userAgent?: true
     browserName?: true
@@ -5846,6 +6204,7 @@ export namespace Prisma {
     revokedReason?: true
     revokedByUserId?: true
     replacedBySessionId?: true
+    previousRefreshTokenHash?: true
     lastSeenAt?: true
     userAgent?: true
     browserName?: true
@@ -5946,6 +6305,7 @@ export namespace Prisma {
     revokedReason: string | null
     revokedByUserId: string | null
     replacedBySessionId: string | null
+    previousRefreshTokenHash: string | null
     lastSeenAt: Date
     userAgent: string | null
     browserName: string | null
@@ -5990,6 +6350,7 @@ export namespace Prisma {
     revokedReason?: boolean
     revokedByUserId?: boolean
     replacedBySessionId?: boolean
+    previousRefreshTokenHash?: boolean
     lastSeenAt?: boolean
     userAgent?: boolean
     browserName?: boolean
@@ -6018,6 +6379,7 @@ export namespace Prisma {
     revokedReason?: boolean
     revokedByUserId?: boolean
     replacedBySessionId?: boolean
+    previousRefreshTokenHash?: boolean
     lastSeenAt?: boolean
     userAgent?: boolean
     browserName?: boolean
@@ -6046,6 +6408,7 @@ export namespace Prisma {
     revokedReason?: boolean
     revokedByUserId?: boolean
     replacedBySessionId?: boolean
+    previousRefreshTokenHash?: boolean
     lastSeenAt?: boolean
     userAgent?: boolean
     browserName?: boolean
@@ -6074,6 +6437,7 @@ export namespace Prisma {
     revokedReason?: boolean
     revokedByUserId?: boolean
     replacedBySessionId?: boolean
+    previousRefreshTokenHash?: boolean
     lastSeenAt?: boolean
     userAgent?: boolean
     browserName?: boolean
@@ -6092,7 +6456,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type SessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "refreshTokenHash" | "expiresAt" | "revokedAt" | "revokedReason" | "revokedByUserId" | "replacedBySessionId" | "lastSeenAt" | "userAgent" | "browserName" | "browserVersion" | "osName" | "deviceType" | "deviceName" | "deviceFingerprint" | "sessionType" | "ipAddress" | "ipCountry" | "ipCity" | "suspiciousActivity" | "lastIpAddress" | "createdAt" | "updatedAt", ExtArgs["result"]["session"]>
+  export type SessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "refreshTokenHash" | "expiresAt" | "revokedAt" | "revokedReason" | "revokedByUserId" | "replacedBySessionId" | "previousRefreshTokenHash" | "lastSeenAt" | "userAgent" | "browserName" | "browserVersion" | "osName" | "deviceType" | "deviceName" | "deviceFingerprint" | "sessionType" | "ipAddress" | "ipCountry" | "ipCity" | "suspiciousActivity" | "lastIpAddress" | "createdAt" | "updatedAt", ExtArgs["result"]["session"]>
   export type SessionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
   }
@@ -6117,6 +6481,7 @@ export namespace Prisma {
       revokedReason: string | null
       revokedByUserId: string | null
       replacedBySessionId: string | null
+      previousRefreshTokenHash: string | null
       lastSeenAt: Date
       userAgent: string | null
       browserName: string | null
@@ -6565,6 +6930,7 @@ export namespace Prisma {
     readonly revokedReason: FieldRef<"Session", 'String'>
     readonly revokedByUserId: FieldRef<"Session", 'String'>
     readonly replacedBySessionId: FieldRef<"Session", 'String'>
+    readonly previousRefreshTokenHash: FieldRef<"Session", 'String'>
     readonly lastSeenAt: FieldRef<"Session", 'DateTime'>
     readonly userAgent: FieldRef<"Session", 'String'>
     readonly browserName: FieldRef<"Session", 'String'>
@@ -7279,6 +7645,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     role?: boolean | RoleDefaultArgs<ExtArgs>
+    invitedBy?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["invitation"]>
 
   export type InvitationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -7298,6 +7665,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     role?: boolean | RoleDefaultArgs<ExtArgs>
+    invitedBy?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["invitation"]>
 
   export type InvitationSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -7317,6 +7685,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     role?: boolean | RoleDefaultArgs<ExtArgs>
+    invitedBy?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["invitation"]>
 
   export type InvitationSelectScalar = {
@@ -7340,18 +7709,22 @@ export namespace Prisma {
   export type InvitationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "email" | "phoneNumber" | "tokenHash" | "status" | "expiresAt" | "acceptedAt" | "acceptedByUserId" | "revokedAt" | "resendCount" | "lastResendAt" | "roleId" | "invitedByUserId" | "createdAt" | "updatedAt", ExtArgs["result"]["invitation"]>
   export type InvitationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     role?: boolean | RoleDefaultArgs<ExtArgs>
+    invitedBy?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type InvitationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     role?: boolean | RoleDefaultArgs<ExtArgs>
+    invitedBy?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type InvitationIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     role?: boolean | RoleDefaultArgs<ExtArgs>
+    invitedBy?: boolean | UserDefaultArgs<ExtArgs>
   }
 
   export type $InvitationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Invitation"
     objects: {
       role: Prisma.$RolePayload<ExtArgs>
+      invitedBy: Prisma.$UserPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -7764,6 +8137,7 @@ export namespace Prisma {
   export interface Prisma__InvitationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     role<T extends RoleDefaultArgs<ExtArgs> = {}>(args?: Subset<T, RoleDefaultArgs<ExtArgs>>): Prisma__RoleClient<$Result.GetResult<Prisma.$RolePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    invitedBy<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -11887,6 +12261,7 @@ export namespace Prisma {
     expiresAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["permission"]>
 
   export type PermissionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -11900,6 +12275,7 @@ export namespace Prisma {
     expiresAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["permission"]>
 
   export type PermissionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -11913,6 +12289,7 @@ export namespace Prisma {
     expiresAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    user?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["permission"]>
 
   export type PermissionSelectScalar = {
@@ -11929,10 +12306,21 @@ export namespace Prisma {
   }
 
   export type PermissionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "resource" | "resourceId" | "action" | "conditions" | "grantedBy" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["permission"]>
+  export type PermissionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type PermissionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
+  export type PermissionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    user?: boolean | UserDefaultArgs<ExtArgs>
+  }
 
   export type $PermissionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Permission"
-    objects: {}
+    objects: {
+      user: Prisma.$UserPayload<ExtArgs>
+    }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       userId: string
@@ -12338,6 +12726,7 @@ export namespace Prisma {
    */
   export interface Prisma__PermissionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
+    user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -12394,6 +12783,10 @@ export namespace Prisma {
      */
     omit?: PermissionOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
+    /**
      * Filter, which Permission to fetch.
      */
     where: PermissionWhereUniqueInput
@@ -12412,6 +12805,10 @@ export namespace Prisma {
      */
     omit?: PermissionOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
+    /**
      * Filter, which Permission to fetch.
      */
     where: PermissionWhereUniqueInput
@@ -12429,6 +12826,10 @@ export namespace Prisma {
      * Omit specific fields from the Permission
      */
     omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
     /**
      * Filter, which Permission to fetch.
      */
@@ -12478,6 +12879,10 @@ export namespace Prisma {
      */
     omit?: PermissionOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
+    /**
      * Filter, which Permission to fetch.
      */
     where?: PermissionWhereInput
@@ -12525,6 +12930,10 @@ export namespace Prisma {
      * Omit specific fields from the Permission
      */
     omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
     /**
      * Filter, which Permissions to fetch.
      */
@@ -12574,6 +12983,10 @@ export namespace Prisma {
      */
     omit?: PermissionOmit<ExtArgs> | null
     /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
+    /**
      * The data needed to create a Permission.
      */
     data: XOR<PermissionCreateInput, PermissionUncheckedCreateInput>
@@ -12607,6 +13020,10 @@ export namespace Prisma {
      */
     data: PermissionCreateManyInput | PermissionCreateManyInput[]
     skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -12621,6 +13038,10 @@ export namespace Prisma {
      * Omit specific fields from the Permission
      */
     omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
     /**
      * The data needed to update a Permission.
      */
@@ -12673,6 +13094,10 @@ export namespace Prisma {
      * Limit how many Permissions to update.
      */
     limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -12687,6 +13112,10 @@ export namespace Prisma {
      * Omit specific fields from the Permission
      */
     omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
     /**
      * The filter to search for the Permission to update in case it exists.
      */
@@ -12713,6 +13142,10 @@ export namespace Prisma {
      * Omit specific fields from the Permission
      */
     omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
     /**
      * Filter which Permission to delete.
      */
@@ -12745,6 +13178,3270 @@ export namespace Prisma {
      * Omit specific fields from the Permission
      */
     omit?: PermissionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PermissionInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Clinic
+   */
+
+  export type AggregateClinic = {
+    _count: ClinicCountAggregateOutputType | null
+    _min: ClinicMinAggregateOutputType | null
+    _max: ClinicMaxAggregateOutputType | null
+  }
+
+  export type ClinicMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    address: string | null
+    territoryId: string | null
+    deletedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ClinicMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    address: string | null
+    territoryId: string | null
+    deletedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type ClinicCountAggregateOutputType = {
+    id: number
+    name: number
+    address: number
+    territoryId: number
+    deletedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type ClinicMinAggregateInputType = {
+    id?: true
+    name?: true
+    address?: true
+    territoryId?: true
+    deletedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ClinicMaxAggregateInputType = {
+    id?: true
+    name?: true
+    address?: true
+    territoryId?: true
+    deletedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type ClinicCountAggregateInputType = {
+    id?: true
+    name?: true
+    address?: true
+    territoryId?: true
+    deletedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type ClinicAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Clinic to aggregate.
+     */
+    where?: ClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Clinics to fetch.
+     */
+    orderBy?: ClinicOrderByWithRelationInput | ClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: ClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Clinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Clinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Clinics
+    **/
+    _count?: true | ClinicCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: ClinicMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: ClinicMaxAggregateInputType
+  }
+
+  export type GetClinicAggregateType<T extends ClinicAggregateArgs> = {
+        [P in keyof T & keyof AggregateClinic]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateClinic[P]>
+      : GetScalarType<T[P], AggregateClinic[P]>
+  }
+
+
+
+
+  export type ClinicGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ClinicWhereInput
+    orderBy?: ClinicOrderByWithAggregationInput | ClinicOrderByWithAggregationInput[]
+    by: ClinicScalarFieldEnum[] | ClinicScalarFieldEnum
+    having?: ClinicScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: ClinicCountAggregateInputType | true
+    _min?: ClinicMinAggregateInputType
+    _max?: ClinicMaxAggregateInputType
+  }
+
+  export type ClinicGroupByOutputType = {
+    id: string
+    name: string
+    address: string | null
+    territoryId: string | null
+    deletedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: ClinicCountAggregateOutputType | null
+    _min: ClinicMinAggregateOutputType | null
+    _max: ClinicMaxAggregateOutputType | null
+  }
+
+  type GetClinicGroupByPayload<T extends ClinicGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<ClinicGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof ClinicGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], ClinicGroupByOutputType[P]>
+            : GetScalarType<T[P], ClinicGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type ClinicSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    address?: boolean
+    territoryId?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    doctorClinics?: boolean | Clinic$doctorClinicsArgs<ExtArgs>
+    _count?: boolean | ClinicCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["clinic"]>
+
+  export type ClinicSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    address?: boolean
+    territoryId?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["clinic"]>
+
+  export type ClinicSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    address?: boolean
+    territoryId?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["clinic"]>
+
+  export type ClinicSelectScalar = {
+    id?: boolean
+    name?: boolean
+    address?: boolean
+    territoryId?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type ClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "address" | "territoryId" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clinic"]>
+  export type ClinicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctorClinics?: boolean | Clinic$doctorClinicsArgs<ExtArgs>
+    _count?: boolean | ClinicCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type ClinicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type ClinicIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $ClinicPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Clinic"
+    objects: {
+      doctorClinics: Prisma.$DoctorClinicPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      address: string | null
+      territoryId: string | null
+      deletedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["clinic"]>
+    composites: {}
+  }
+
+  type ClinicGetPayload<S extends boolean | null | undefined | ClinicDefaultArgs> = $Result.GetResult<Prisma.$ClinicPayload, S>
+
+  type ClinicCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<ClinicFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: ClinicCountAggregateInputType | true
+    }
+
+  export interface ClinicDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Clinic'], meta: { name: 'Clinic' } }
+    /**
+     * Find zero or one Clinic that matches the filter.
+     * @param {ClinicFindUniqueArgs} args - Arguments to find a Clinic
+     * @example
+     * // Get one Clinic
+     * const clinic = await prisma.clinic.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends ClinicFindUniqueArgs>(args: SelectSubset<T, ClinicFindUniqueArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Clinic that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {ClinicFindUniqueOrThrowArgs} args - Arguments to find a Clinic
+     * @example
+     * // Get one Clinic
+     * const clinic = await prisma.clinic.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends ClinicFindUniqueOrThrowArgs>(args: SelectSubset<T, ClinicFindUniqueOrThrowArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Clinic that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicFindFirstArgs} args - Arguments to find a Clinic
+     * @example
+     * // Get one Clinic
+     * const clinic = await prisma.clinic.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends ClinicFindFirstArgs>(args?: SelectSubset<T, ClinicFindFirstArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Clinic that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicFindFirstOrThrowArgs} args - Arguments to find a Clinic
+     * @example
+     * // Get one Clinic
+     * const clinic = await prisma.clinic.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends ClinicFindFirstOrThrowArgs>(args?: SelectSubset<T, ClinicFindFirstOrThrowArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Clinics that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Clinics
+     * const clinics = await prisma.clinic.findMany()
+     * 
+     * // Get first 10 Clinics
+     * const clinics = await prisma.clinic.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const clinicWithIdOnly = await prisma.clinic.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends ClinicFindManyArgs>(args?: SelectSubset<T, ClinicFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Clinic.
+     * @param {ClinicCreateArgs} args - Arguments to create a Clinic.
+     * @example
+     * // Create one Clinic
+     * const Clinic = await prisma.clinic.create({
+     *   data: {
+     *     // ... data to create a Clinic
+     *   }
+     * })
+     * 
+     */
+    create<T extends ClinicCreateArgs>(args: SelectSubset<T, ClinicCreateArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Clinics.
+     * @param {ClinicCreateManyArgs} args - Arguments to create many Clinics.
+     * @example
+     * // Create many Clinics
+     * const clinic = await prisma.clinic.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends ClinicCreateManyArgs>(args?: SelectSubset<T, ClinicCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Clinics and returns the data saved in the database.
+     * @param {ClinicCreateManyAndReturnArgs} args - Arguments to create many Clinics.
+     * @example
+     * // Create many Clinics
+     * const clinic = await prisma.clinic.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Clinics and only return the `id`
+     * const clinicWithIdOnly = await prisma.clinic.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends ClinicCreateManyAndReturnArgs>(args?: SelectSubset<T, ClinicCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Clinic.
+     * @param {ClinicDeleteArgs} args - Arguments to delete one Clinic.
+     * @example
+     * // Delete one Clinic
+     * const Clinic = await prisma.clinic.delete({
+     *   where: {
+     *     // ... filter to delete one Clinic
+     *   }
+     * })
+     * 
+     */
+    delete<T extends ClinicDeleteArgs>(args: SelectSubset<T, ClinicDeleteArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Clinic.
+     * @param {ClinicUpdateArgs} args - Arguments to update one Clinic.
+     * @example
+     * // Update one Clinic
+     * const clinic = await prisma.clinic.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends ClinicUpdateArgs>(args: SelectSubset<T, ClinicUpdateArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Clinics.
+     * @param {ClinicDeleteManyArgs} args - Arguments to filter Clinics to delete.
+     * @example
+     * // Delete a few Clinics
+     * const { count } = await prisma.clinic.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends ClinicDeleteManyArgs>(args?: SelectSubset<T, ClinicDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Clinics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Clinics
+     * const clinic = await prisma.clinic.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends ClinicUpdateManyArgs>(args: SelectSubset<T, ClinicUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Clinics and returns the data updated in the database.
+     * @param {ClinicUpdateManyAndReturnArgs} args - Arguments to update many Clinics.
+     * @example
+     * // Update many Clinics
+     * const clinic = await prisma.clinic.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Clinics and only return the `id`
+     * const clinicWithIdOnly = await prisma.clinic.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends ClinicUpdateManyAndReturnArgs>(args: SelectSubset<T, ClinicUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Clinic.
+     * @param {ClinicUpsertArgs} args - Arguments to update or create a Clinic.
+     * @example
+     * // Update or create a Clinic
+     * const clinic = await prisma.clinic.upsert({
+     *   create: {
+     *     // ... data to create a Clinic
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Clinic we want to update
+     *   }
+     * })
+     */
+    upsert<T extends ClinicUpsertArgs>(args: SelectSubset<T, ClinicUpsertArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Clinics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicCountArgs} args - Arguments to filter Clinics to count.
+     * @example
+     * // Count the number of Clinics
+     * const count = await prisma.clinic.count({
+     *   where: {
+     *     // ... the filter for the Clinics we want to count
+     *   }
+     * })
+    **/
+    count<T extends ClinicCountArgs>(
+      args?: Subset<T, ClinicCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], ClinicCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Clinic.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends ClinicAggregateArgs>(args: Subset<T, ClinicAggregateArgs>): Prisma.PrismaPromise<GetClinicAggregateType<T>>
+
+    /**
+     * Group by Clinic.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {ClinicGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends ClinicGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: ClinicGroupByArgs['orderBy'] }
+        : { orderBy?: ClinicGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, ClinicGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetClinicGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Clinic model
+   */
+  readonly fields: ClinicFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Clinic.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__ClinicClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    doctorClinics<T extends Clinic$doctorClinicsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$doctorClinicsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Clinic model
+   */
+  interface ClinicFieldRefs {
+    readonly id: FieldRef<"Clinic", 'String'>
+    readonly name: FieldRef<"Clinic", 'String'>
+    readonly address: FieldRef<"Clinic", 'String'>
+    readonly territoryId: FieldRef<"Clinic", 'String'>
+    readonly deletedAt: FieldRef<"Clinic", 'DateTime'>
+    readonly createdAt: FieldRef<"Clinic", 'DateTime'>
+    readonly updatedAt: FieldRef<"Clinic", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Clinic findUnique
+   */
+  export type ClinicFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which Clinic to fetch.
+     */
+    where: ClinicWhereUniqueInput
+  }
+
+  /**
+   * Clinic findUniqueOrThrow
+   */
+  export type ClinicFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which Clinic to fetch.
+     */
+    where: ClinicWhereUniqueInput
+  }
+
+  /**
+   * Clinic findFirst
+   */
+  export type ClinicFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which Clinic to fetch.
+     */
+    where?: ClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Clinics to fetch.
+     */
+    orderBy?: ClinicOrderByWithRelationInput | ClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Clinics.
+     */
+    cursor?: ClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Clinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Clinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Clinics.
+     */
+    distinct?: ClinicScalarFieldEnum | ClinicScalarFieldEnum[]
+  }
+
+  /**
+   * Clinic findFirstOrThrow
+   */
+  export type ClinicFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which Clinic to fetch.
+     */
+    where?: ClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Clinics to fetch.
+     */
+    orderBy?: ClinicOrderByWithRelationInput | ClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Clinics.
+     */
+    cursor?: ClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Clinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Clinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Clinics.
+     */
+    distinct?: ClinicScalarFieldEnum | ClinicScalarFieldEnum[]
+  }
+
+  /**
+   * Clinic findMany
+   */
+  export type ClinicFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which Clinics to fetch.
+     */
+    where?: ClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Clinics to fetch.
+     */
+    orderBy?: ClinicOrderByWithRelationInput | ClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Clinics.
+     */
+    cursor?: ClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Clinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Clinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Clinics.
+     */
+    distinct?: ClinicScalarFieldEnum | ClinicScalarFieldEnum[]
+  }
+
+  /**
+   * Clinic create
+   */
+  export type ClinicCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Clinic.
+     */
+    data: XOR<ClinicCreateInput, ClinicUncheckedCreateInput>
+  }
+
+  /**
+   * Clinic createMany
+   */
+  export type ClinicCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Clinics.
+     */
+    data: ClinicCreateManyInput | ClinicCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Clinic createManyAndReturn
+   */
+  export type ClinicCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * The data used to create many Clinics.
+     */
+    data: ClinicCreateManyInput | ClinicCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Clinic update
+   */
+  export type ClinicUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Clinic.
+     */
+    data: XOR<ClinicUpdateInput, ClinicUncheckedUpdateInput>
+    /**
+     * Choose, which Clinic to update.
+     */
+    where: ClinicWhereUniqueInput
+  }
+
+  /**
+   * Clinic updateMany
+   */
+  export type ClinicUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Clinics.
+     */
+    data: XOR<ClinicUpdateManyMutationInput, ClinicUncheckedUpdateManyInput>
+    /**
+     * Filter which Clinics to update
+     */
+    where?: ClinicWhereInput
+    /**
+     * Limit how many Clinics to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Clinic updateManyAndReturn
+   */
+  export type ClinicUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * The data used to update Clinics.
+     */
+    data: XOR<ClinicUpdateManyMutationInput, ClinicUncheckedUpdateManyInput>
+    /**
+     * Filter which Clinics to update
+     */
+    where?: ClinicWhereInput
+    /**
+     * Limit how many Clinics to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Clinic upsert
+   */
+  export type ClinicUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Clinic to update in case it exists.
+     */
+    where: ClinicWhereUniqueInput
+    /**
+     * In case the Clinic found by the `where` argument doesn't exist, create a new Clinic with this data.
+     */
+    create: XOR<ClinicCreateInput, ClinicUncheckedCreateInput>
+    /**
+     * In case the Clinic was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<ClinicUpdateInput, ClinicUncheckedUpdateInput>
+  }
+
+  /**
+   * Clinic delete
+   */
+  export type ClinicDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    /**
+     * Filter which Clinic to delete.
+     */
+    where: ClinicWhereUniqueInput
+  }
+
+  /**
+   * Clinic deleteMany
+   */
+  export type ClinicDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Clinics to delete
+     */
+    where?: ClinicWhereInput
+    /**
+     * Limit how many Clinics to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Clinic.doctorClinics
+   */
+  export type Clinic$doctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    where?: DoctorClinicWhereInput
+    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    cursor?: DoctorClinicWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+  }
+
+  /**
+   * Clinic without action
+   */
+  export type ClinicDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Doctor
+   */
+
+  export type AggregateDoctor = {
+    _count: DoctorCountAggregateOutputType | null
+    _min: DoctorMinAggregateOutputType | null
+    _max: DoctorMaxAggregateOutputType | null
+  }
+
+  export type DoctorMinAggregateOutputType = {
+    id: string | null
+    firstName: string | null
+    lastName: string | null
+    specialty: string | null
+    deletedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DoctorMaxAggregateOutputType = {
+    id: string | null
+    firstName: string | null
+    lastName: string | null
+    specialty: string | null
+    deletedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type DoctorCountAggregateOutputType = {
+    id: number
+    firstName: number
+    lastName: number
+    specialty: number
+    deletedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type DoctorMinAggregateInputType = {
+    id?: true
+    firstName?: true
+    lastName?: true
+    specialty?: true
+    deletedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DoctorMaxAggregateInputType = {
+    id?: true
+    firstName?: true
+    lastName?: true
+    specialty?: true
+    deletedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type DoctorCountAggregateInputType = {
+    id?: true
+    firstName?: true
+    lastName?: true
+    specialty?: true
+    deletedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type DoctorAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Doctor to aggregate.
+     */
+    where?: DoctorWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Doctors to fetch.
+     */
+    orderBy?: DoctorOrderByWithRelationInput | DoctorOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DoctorWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Doctors from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Doctors.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Doctors
+    **/
+    _count?: true | DoctorCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DoctorMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DoctorMaxAggregateInputType
+  }
+
+  export type GetDoctorAggregateType<T extends DoctorAggregateArgs> = {
+        [P in keyof T & keyof AggregateDoctor]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDoctor[P]>
+      : GetScalarType<T[P], AggregateDoctor[P]>
+  }
+
+
+
+
+  export type DoctorGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorWhereInput
+    orderBy?: DoctorOrderByWithAggregationInput | DoctorOrderByWithAggregationInput[]
+    by: DoctorScalarFieldEnum[] | DoctorScalarFieldEnum
+    having?: DoctorScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DoctorCountAggregateInputType | true
+    _min?: DoctorMinAggregateInputType
+    _max?: DoctorMaxAggregateInputType
+  }
+
+  export type DoctorGroupByOutputType = {
+    id: string
+    firstName: string
+    lastName: string
+    specialty: string | null
+    deletedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: DoctorCountAggregateOutputType | null
+    _min: DoctorMinAggregateOutputType | null
+    _max: DoctorMaxAggregateOutputType | null
+  }
+
+  type GetDoctorGroupByPayload<T extends DoctorGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DoctorGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DoctorGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DoctorGroupByOutputType[P]>
+            : GetScalarType<T[P], DoctorGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DoctorSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    firstName?: boolean
+    lastName?: boolean
+    specialty?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    doctorClinics?: boolean | Doctor$doctorClinicsArgs<ExtArgs>
+    _count?: boolean | DoctorCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["doctor"]>
+
+  export type DoctorSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    firstName?: boolean
+    lastName?: boolean
+    specialty?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["doctor"]>
+
+  export type DoctorSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    firstName?: boolean
+    lastName?: boolean
+    specialty?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }, ExtArgs["result"]["doctor"]>
+
+  export type DoctorSelectScalar = {
+    id?: boolean
+    firstName?: boolean
+    lastName?: boolean
+    specialty?: boolean
+    deletedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type DoctorOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "firstName" | "lastName" | "specialty" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["doctor"]>
+  export type DoctorInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctorClinics?: boolean | Doctor$doctorClinicsArgs<ExtArgs>
+    _count?: boolean | DoctorCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type DoctorIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type DoctorIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $DoctorPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Doctor"
+    objects: {
+      doctorClinics: Prisma.$DoctorClinicPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      firstName: string
+      lastName: string
+      specialty: string | null
+      deletedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["doctor"]>
+    composites: {}
+  }
+
+  type DoctorGetPayload<S extends boolean | null | undefined | DoctorDefaultArgs> = $Result.GetResult<Prisma.$DoctorPayload, S>
+
+  type DoctorCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DoctorFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DoctorCountAggregateInputType | true
+    }
+
+  export interface DoctorDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Doctor'], meta: { name: 'Doctor' } }
+    /**
+     * Find zero or one Doctor that matches the filter.
+     * @param {DoctorFindUniqueArgs} args - Arguments to find a Doctor
+     * @example
+     * // Get one Doctor
+     * const doctor = await prisma.doctor.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DoctorFindUniqueArgs>(args: SelectSubset<T, DoctorFindUniqueArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Doctor that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DoctorFindUniqueOrThrowArgs} args - Arguments to find a Doctor
+     * @example
+     * // Get one Doctor
+     * const doctor = await prisma.doctor.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DoctorFindUniqueOrThrowArgs>(args: SelectSubset<T, DoctorFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Doctor that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorFindFirstArgs} args - Arguments to find a Doctor
+     * @example
+     * // Get one Doctor
+     * const doctor = await prisma.doctor.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DoctorFindFirstArgs>(args?: SelectSubset<T, DoctorFindFirstArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Doctor that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorFindFirstOrThrowArgs} args - Arguments to find a Doctor
+     * @example
+     * // Get one Doctor
+     * const doctor = await prisma.doctor.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DoctorFindFirstOrThrowArgs>(args?: SelectSubset<T, DoctorFindFirstOrThrowArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Doctors that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Doctors
+     * const doctors = await prisma.doctor.findMany()
+     * 
+     * // Get first 10 Doctors
+     * const doctors = await prisma.doctor.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const doctorWithIdOnly = await prisma.doctor.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DoctorFindManyArgs>(args?: SelectSubset<T, DoctorFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Doctor.
+     * @param {DoctorCreateArgs} args - Arguments to create a Doctor.
+     * @example
+     * // Create one Doctor
+     * const Doctor = await prisma.doctor.create({
+     *   data: {
+     *     // ... data to create a Doctor
+     *   }
+     * })
+     * 
+     */
+    create<T extends DoctorCreateArgs>(args: SelectSubset<T, DoctorCreateArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Doctors.
+     * @param {DoctorCreateManyArgs} args - Arguments to create many Doctors.
+     * @example
+     * // Create many Doctors
+     * const doctor = await prisma.doctor.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DoctorCreateManyArgs>(args?: SelectSubset<T, DoctorCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Doctors and returns the data saved in the database.
+     * @param {DoctorCreateManyAndReturnArgs} args - Arguments to create many Doctors.
+     * @example
+     * // Create many Doctors
+     * const doctor = await prisma.doctor.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Doctors and only return the `id`
+     * const doctorWithIdOnly = await prisma.doctor.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DoctorCreateManyAndReturnArgs>(args?: SelectSubset<T, DoctorCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Doctor.
+     * @param {DoctorDeleteArgs} args - Arguments to delete one Doctor.
+     * @example
+     * // Delete one Doctor
+     * const Doctor = await prisma.doctor.delete({
+     *   where: {
+     *     // ... filter to delete one Doctor
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DoctorDeleteArgs>(args: SelectSubset<T, DoctorDeleteArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Doctor.
+     * @param {DoctorUpdateArgs} args - Arguments to update one Doctor.
+     * @example
+     * // Update one Doctor
+     * const doctor = await prisma.doctor.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DoctorUpdateArgs>(args: SelectSubset<T, DoctorUpdateArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Doctors.
+     * @param {DoctorDeleteManyArgs} args - Arguments to filter Doctors to delete.
+     * @example
+     * // Delete a few Doctors
+     * const { count } = await prisma.doctor.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DoctorDeleteManyArgs>(args?: SelectSubset<T, DoctorDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Doctors.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Doctors
+     * const doctor = await prisma.doctor.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DoctorUpdateManyArgs>(args: SelectSubset<T, DoctorUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Doctors and returns the data updated in the database.
+     * @param {DoctorUpdateManyAndReturnArgs} args - Arguments to update many Doctors.
+     * @example
+     * // Update many Doctors
+     * const doctor = await prisma.doctor.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Doctors and only return the `id`
+     * const doctorWithIdOnly = await prisma.doctor.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DoctorUpdateManyAndReturnArgs>(args: SelectSubset<T, DoctorUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Doctor.
+     * @param {DoctorUpsertArgs} args - Arguments to update or create a Doctor.
+     * @example
+     * // Update or create a Doctor
+     * const doctor = await prisma.doctor.upsert({
+     *   create: {
+     *     // ... data to create a Doctor
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Doctor we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DoctorUpsertArgs>(args: SelectSubset<T, DoctorUpsertArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Doctors.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorCountArgs} args - Arguments to filter Doctors to count.
+     * @example
+     * // Count the number of Doctors
+     * const count = await prisma.doctor.count({
+     *   where: {
+     *     // ... the filter for the Doctors we want to count
+     *   }
+     * })
+    **/
+    count<T extends DoctorCountArgs>(
+      args?: Subset<T, DoctorCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DoctorCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Doctor.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DoctorAggregateArgs>(args: Subset<T, DoctorAggregateArgs>): Prisma.PrismaPromise<GetDoctorAggregateType<T>>
+
+    /**
+     * Group by Doctor.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DoctorGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DoctorGroupByArgs['orderBy'] }
+        : { orderBy?: DoctorGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DoctorGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDoctorGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Doctor model
+   */
+  readonly fields: DoctorFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Doctor.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DoctorClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    doctorClinics<T extends Doctor$doctorClinicsArgs<ExtArgs> = {}>(args?: Subset<T, Doctor$doctorClinicsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Doctor model
+   */
+  interface DoctorFieldRefs {
+    readonly id: FieldRef<"Doctor", 'String'>
+    readonly firstName: FieldRef<"Doctor", 'String'>
+    readonly lastName: FieldRef<"Doctor", 'String'>
+    readonly specialty: FieldRef<"Doctor", 'String'>
+    readonly deletedAt: FieldRef<"Doctor", 'DateTime'>
+    readonly createdAt: FieldRef<"Doctor", 'DateTime'>
+    readonly updatedAt: FieldRef<"Doctor", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Doctor findUnique
+   */
+  export type DoctorFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * Filter, which Doctor to fetch.
+     */
+    where: DoctorWhereUniqueInput
+  }
+
+  /**
+   * Doctor findUniqueOrThrow
+   */
+  export type DoctorFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * Filter, which Doctor to fetch.
+     */
+    where: DoctorWhereUniqueInput
+  }
+
+  /**
+   * Doctor findFirst
+   */
+  export type DoctorFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * Filter, which Doctor to fetch.
+     */
+    where?: DoctorWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Doctors to fetch.
+     */
+    orderBy?: DoctorOrderByWithRelationInput | DoctorOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Doctors.
+     */
+    cursor?: DoctorWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Doctors from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Doctors.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Doctors.
+     */
+    distinct?: DoctorScalarFieldEnum | DoctorScalarFieldEnum[]
+  }
+
+  /**
+   * Doctor findFirstOrThrow
+   */
+  export type DoctorFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * Filter, which Doctor to fetch.
+     */
+    where?: DoctorWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Doctors to fetch.
+     */
+    orderBy?: DoctorOrderByWithRelationInput | DoctorOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Doctors.
+     */
+    cursor?: DoctorWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Doctors from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Doctors.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Doctors.
+     */
+    distinct?: DoctorScalarFieldEnum | DoctorScalarFieldEnum[]
+  }
+
+  /**
+   * Doctor findMany
+   */
+  export type DoctorFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * Filter, which Doctors to fetch.
+     */
+    where?: DoctorWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Doctors to fetch.
+     */
+    orderBy?: DoctorOrderByWithRelationInput | DoctorOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Doctors.
+     */
+    cursor?: DoctorWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Doctors from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Doctors.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Doctors.
+     */
+    distinct?: DoctorScalarFieldEnum | DoctorScalarFieldEnum[]
+  }
+
+  /**
+   * Doctor create
+   */
+  export type DoctorCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Doctor.
+     */
+    data: XOR<DoctorCreateInput, DoctorUncheckedCreateInput>
+  }
+
+  /**
+   * Doctor createMany
+   */
+  export type DoctorCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Doctors.
+     */
+    data: DoctorCreateManyInput | DoctorCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Doctor createManyAndReturn
+   */
+  export type DoctorCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * The data used to create many Doctors.
+     */
+    data: DoctorCreateManyInput | DoctorCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Doctor update
+   */
+  export type DoctorUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Doctor.
+     */
+    data: XOR<DoctorUpdateInput, DoctorUncheckedUpdateInput>
+    /**
+     * Choose, which Doctor to update.
+     */
+    where: DoctorWhereUniqueInput
+  }
+
+  /**
+   * Doctor updateMany
+   */
+  export type DoctorUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Doctors.
+     */
+    data: XOR<DoctorUpdateManyMutationInput, DoctorUncheckedUpdateManyInput>
+    /**
+     * Filter which Doctors to update
+     */
+    where?: DoctorWhereInput
+    /**
+     * Limit how many Doctors to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Doctor updateManyAndReturn
+   */
+  export type DoctorUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * The data used to update Doctors.
+     */
+    data: XOR<DoctorUpdateManyMutationInput, DoctorUncheckedUpdateManyInput>
+    /**
+     * Filter which Doctors to update
+     */
+    where?: DoctorWhereInput
+    /**
+     * Limit how many Doctors to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Doctor upsert
+   */
+  export type DoctorUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Doctor to update in case it exists.
+     */
+    where: DoctorWhereUniqueInput
+    /**
+     * In case the Doctor found by the `where` argument doesn't exist, create a new Doctor with this data.
+     */
+    create: XOR<DoctorCreateInput, DoctorUncheckedCreateInput>
+    /**
+     * In case the Doctor was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DoctorUpdateInput, DoctorUncheckedUpdateInput>
+  }
+
+  /**
+   * Doctor delete
+   */
+  export type DoctorDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    /**
+     * Filter which Doctor to delete.
+     */
+    where: DoctorWhereUniqueInput
+  }
+
+  /**
+   * Doctor deleteMany
+   */
+  export type DoctorDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Doctors to delete
+     */
+    where?: DoctorWhereInput
+    /**
+     * Limit how many Doctors to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Doctor.doctorClinics
+   */
+  export type Doctor$doctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    where?: DoctorClinicWhereInput
+    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    cursor?: DoctorClinicWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+  }
+
+  /**
+   * Doctor without action
+   */
+  export type DoctorDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model DoctorClinic
+   */
+
+  export type AggregateDoctorClinic = {
+    _count: DoctorClinicCountAggregateOutputType | null
+    _min: DoctorClinicMinAggregateOutputType | null
+    _max: DoctorClinicMaxAggregateOutputType | null
+  }
+
+  export type DoctorClinicMinAggregateOutputType = {
+    id: string | null
+    doctorId: string | null
+    clinicId: string | null
+    createdAt: Date | null
+  }
+
+  export type DoctorClinicMaxAggregateOutputType = {
+    id: string | null
+    doctorId: string | null
+    clinicId: string | null
+    createdAt: Date | null
+  }
+
+  export type DoctorClinicCountAggregateOutputType = {
+    id: number
+    doctorId: number
+    clinicId: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type DoctorClinicMinAggregateInputType = {
+    id?: true
+    doctorId?: true
+    clinicId?: true
+    createdAt?: true
+  }
+
+  export type DoctorClinicMaxAggregateInputType = {
+    id?: true
+    doctorId?: true
+    clinicId?: true
+    createdAt?: true
+  }
+
+  export type DoctorClinicCountAggregateInputType = {
+    id?: true
+    doctorId?: true
+    clinicId?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type DoctorClinicAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DoctorClinic to aggregate.
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DoctorClinics to fetch.
+     */
+    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: DoctorClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DoctorClinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DoctorClinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned DoctorClinics
+    **/
+    _count?: true | DoctorClinicCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: DoctorClinicMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: DoctorClinicMaxAggregateInputType
+  }
+
+  export type GetDoctorClinicAggregateType<T extends DoctorClinicAggregateArgs> = {
+        [P in keyof T & keyof AggregateDoctorClinic]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateDoctorClinic[P]>
+      : GetScalarType<T[P], AggregateDoctorClinic[P]>
+  }
+
+
+
+
+  export type DoctorClinicGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorClinicWhereInput
+    orderBy?: DoctorClinicOrderByWithAggregationInput | DoctorClinicOrderByWithAggregationInput[]
+    by: DoctorClinicScalarFieldEnum[] | DoctorClinicScalarFieldEnum
+    having?: DoctorClinicScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: DoctorClinicCountAggregateInputType | true
+    _min?: DoctorClinicMinAggregateInputType
+    _max?: DoctorClinicMaxAggregateInputType
+  }
+
+  export type DoctorClinicGroupByOutputType = {
+    id: string
+    doctorId: string
+    clinicId: string
+    createdAt: Date
+    _count: DoctorClinicCountAggregateOutputType | null
+    _min: DoctorClinicMinAggregateOutputType | null
+    _max: DoctorClinicMaxAggregateOutputType | null
+  }
+
+  type GetDoctorClinicGroupByPayload<T extends DoctorClinicGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<DoctorClinicGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof DoctorClinicGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], DoctorClinicGroupByOutputType[P]>
+            : GetScalarType<T[P], DoctorClinicGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type DoctorClinicSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    doctorId?: boolean
+    clinicId?: boolean
+    createdAt?: boolean
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["doctorClinic"]>
+
+  export type DoctorClinicSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    doctorId?: boolean
+    clinicId?: boolean
+    createdAt?: boolean
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["doctorClinic"]>
+
+  export type DoctorClinicSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    doctorId?: boolean
+    clinicId?: boolean
+    createdAt?: boolean
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["doctorClinic"]>
+
+  export type DoctorClinicSelectScalar = {
+    id?: boolean
+    doctorId?: boolean
+    clinicId?: boolean
+    createdAt?: boolean
+  }
+
+  export type DoctorClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "doctorId" | "clinicId" | "createdAt", ExtArgs["result"]["doctorClinic"]>
+  export type DoctorClinicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+  }
+  export type DoctorClinicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+  }
+  export type DoctorClinicIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+  }
+
+  export type $DoctorClinicPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DoctorClinic"
+    objects: {
+      doctor: Prisma.$DoctorPayload<ExtArgs>
+      clinic: Prisma.$ClinicPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      doctorId: string
+      clinicId: string
+      createdAt: Date
+    }, ExtArgs["result"]["doctorClinic"]>
+    composites: {}
+  }
+
+  type DoctorClinicGetPayload<S extends boolean | null | undefined | DoctorClinicDefaultArgs> = $Result.GetResult<Prisma.$DoctorClinicPayload, S>
+
+  type DoctorClinicCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DoctorClinicFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DoctorClinicCountAggregateInputType | true
+    }
+
+  export interface DoctorClinicDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DoctorClinic'], meta: { name: 'DoctorClinic' } }
+    /**
+     * Find zero or one DoctorClinic that matches the filter.
+     * @param {DoctorClinicFindUniqueArgs} args - Arguments to find a DoctorClinic
+     * @example
+     * // Get one DoctorClinic
+     * const doctorClinic = await prisma.doctorClinic.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends DoctorClinicFindUniqueArgs>(args: SelectSubset<T, DoctorClinicFindUniqueArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one DoctorClinic that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {DoctorClinicFindUniqueOrThrowArgs} args - Arguments to find a DoctorClinic
+     * @example
+     * // Get one DoctorClinic
+     * const doctorClinic = await prisma.doctorClinic.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends DoctorClinicFindUniqueOrThrowArgs>(args: SelectSubset<T, DoctorClinicFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DoctorClinic that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicFindFirstArgs} args - Arguments to find a DoctorClinic
+     * @example
+     * // Get one DoctorClinic
+     * const doctorClinic = await prisma.doctorClinic.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends DoctorClinicFindFirstArgs>(args?: SelectSubset<T, DoctorClinicFindFirstArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first DoctorClinic that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicFindFirstOrThrowArgs} args - Arguments to find a DoctorClinic
+     * @example
+     * // Get one DoctorClinic
+     * const doctorClinic = await prisma.doctorClinic.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends DoctorClinicFindFirstOrThrowArgs>(args?: SelectSubset<T, DoctorClinicFindFirstOrThrowArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more DoctorClinics that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all DoctorClinics
+     * const doctorClinics = await prisma.doctorClinic.findMany()
+     * 
+     * // Get first 10 DoctorClinics
+     * const doctorClinics = await prisma.doctorClinic.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const doctorClinicWithIdOnly = await prisma.doctorClinic.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends DoctorClinicFindManyArgs>(args?: SelectSubset<T, DoctorClinicFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a DoctorClinic.
+     * @param {DoctorClinicCreateArgs} args - Arguments to create a DoctorClinic.
+     * @example
+     * // Create one DoctorClinic
+     * const DoctorClinic = await prisma.doctorClinic.create({
+     *   data: {
+     *     // ... data to create a DoctorClinic
+     *   }
+     * })
+     * 
+     */
+    create<T extends DoctorClinicCreateArgs>(args: SelectSubset<T, DoctorClinicCreateArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many DoctorClinics.
+     * @param {DoctorClinicCreateManyArgs} args - Arguments to create many DoctorClinics.
+     * @example
+     * // Create many DoctorClinics
+     * const doctorClinic = await prisma.doctorClinic.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends DoctorClinicCreateManyArgs>(args?: SelectSubset<T, DoctorClinicCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many DoctorClinics and returns the data saved in the database.
+     * @param {DoctorClinicCreateManyAndReturnArgs} args - Arguments to create many DoctorClinics.
+     * @example
+     * // Create many DoctorClinics
+     * const doctorClinic = await prisma.doctorClinic.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many DoctorClinics and only return the `id`
+     * const doctorClinicWithIdOnly = await prisma.doctorClinic.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends DoctorClinicCreateManyAndReturnArgs>(args?: SelectSubset<T, DoctorClinicCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a DoctorClinic.
+     * @param {DoctorClinicDeleteArgs} args - Arguments to delete one DoctorClinic.
+     * @example
+     * // Delete one DoctorClinic
+     * const DoctorClinic = await prisma.doctorClinic.delete({
+     *   where: {
+     *     // ... filter to delete one DoctorClinic
+     *   }
+     * })
+     * 
+     */
+    delete<T extends DoctorClinicDeleteArgs>(args: SelectSubset<T, DoctorClinicDeleteArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one DoctorClinic.
+     * @param {DoctorClinicUpdateArgs} args - Arguments to update one DoctorClinic.
+     * @example
+     * // Update one DoctorClinic
+     * const doctorClinic = await prisma.doctorClinic.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends DoctorClinicUpdateArgs>(args: SelectSubset<T, DoctorClinicUpdateArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more DoctorClinics.
+     * @param {DoctorClinicDeleteManyArgs} args - Arguments to filter DoctorClinics to delete.
+     * @example
+     * // Delete a few DoctorClinics
+     * const { count } = await prisma.doctorClinic.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends DoctorClinicDeleteManyArgs>(args?: SelectSubset<T, DoctorClinicDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DoctorClinics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many DoctorClinics
+     * const doctorClinic = await prisma.doctorClinic.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends DoctorClinicUpdateManyArgs>(args: SelectSubset<T, DoctorClinicUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more DoctorClinics and returns the data updated in the database.
+     * @param {DoctorClinicUpdateManyAndReturnArgs} args - Arguments to update many DoctorClinics.
+     * @example
+     * // Update many DoctorClinics
+     * const doctorClinic = await prisma.doctorClinic.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more DoctorClinics and only return the `id`
+     * const doctorClinicWithIdOnly = await prisma.doctorClinic.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends DoctorClinicUpdateManyAndReturnArgs>(args: SelectSubset<T, DoctorClinicUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one DoctorClinic.
+     * @param {DoctorClinicUpsertArgs} args - Arguments to update or create a DoctorClinic.
+     * @example
+     * // Update or create a DoctorClinic
+     * const doctorClinic = await prisma.doctorClinic.upsert({
+     *   create: {
+     *     // ... data to create a DoctorClinic
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the DoctorClinic we want to update
+     *   }
+     * })
+     */
+    upsert<T extends DoctorClinicUpsertArgs>(args: SelectSubset<T, DoctorClinicUpsertArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of DoctorClinics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicCountArgs} args - Arguments to filter DoctorClinics to count.
+     * @example
+     * // Count the number of DoctorClinics
+     * const count = await prisma.doctorClinic.count({
+     *   where: {
+     *     // ... the filter for the DoctorClinics we want to count
+     *   }
+     * })
+    **/
+    count<T extends DoctorClinicCountArgs>(
+      args?: Subset<T, DoctorClinicCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], DoctorClinicCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a DoctorClinic.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends DoctorClinicAggregateArgs>(args: Subset<T, DoctorClinicAggregateArgs>): Prisma.PrismaPromise<GetDoctorClinicAggregateType<T>>
+
+    /**
+     * Group by DoctorClinic.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {DoctorClinicGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends DoctorClinicGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: DoctorClinicGroupByArgs['orderBy'] }
+        : { orderBy?: DoctorClinicGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, DoctorClinicGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDoctorClinicGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the DoctorClinic model
+   */
+  readonly fields: DoctorClinicFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for DoctorClinic.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__DoctorClinicClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    doctor<T extends DoctorDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DoctorDefaultArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    clinic<T extends ClinicDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ClinicDefaultArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the DoctorClinic model
+   */
+  interface DoctorClinicFieldRefs {
+    readonly id: FieldRef<"DoctorClinic", 'String'>
+    readonly doctorId: FieldRef<"DoctorClinic", 'String'>
+    readonly clinicId: FieldRef<"DoctorClinic", 'String'>
+    readonly createdAt: FieldRef<"DoctorClinic", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * DoctorClinic findUnique
+   */
+  export type DoctorClinicFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which DoctorClinic to fetch.
+     */
+    where: DoctorClinicWhereUniqueInput
+  }
+
+  /**
+   * DoctorClinic findUniqueOrThrow
+   */
+  export type DoctorClinicFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which DoctorClinic to fetch.
+     */
+    where: DoctorClinicWhereUniqueInput
+  }
+
+  /**
+   * DoctorClinic findFirst
+   */
+  export type DoctorClinicFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which DoctorClinic to fetch.
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DoctorClinics to fetch.
+     */
+    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DoctorClinics.
+     */
+    cursor?: DoctorClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DoctorClinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DoctorClinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DoctorClinics.
+     */
+    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+  }
+
+  /**
+   * DoctorClinic findFirstOrThrow
+   */
+  export type DoctorClinicFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which DoctorClinic to fetch.
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DoctorClinics to fetch.
+     */
+    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for DoctorClinics.
+     */
+    cursor?: DoctorClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DoctorClinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DoctorClinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DoctorClinics.
+     */
+    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+  }
+
+  /**
+   * DoctorClinic findMany
+   */
+  export type DoctorClinicFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * Filter, which DoctorClinics to fetch.
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of DoctorClinics to fetch.
+     */
+    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing DoctorClinics.
+     */
+    cursor?: DoctorClinicWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` DoctorClinics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` DoctorClinics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of DoctorClinics.
+     */
+    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+  }
+
+  /**
+   * DoctorClinic create
+   */
+  export type DoctorClinicCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * The data needed to create a DoctorClinic.
+     */
+    data: XOR<DoctorClinicCreateInput, DoctorClinicUncheckedCreateInput>
+  }
+
+  /**
+   * DoctorClinic createMany
+   */
+  export type DoctorClinicCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many DoctorClinics.
+     */
+    data: DoctorClinicCreateManyInput | DoctorClinicCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * DoctorClinic createManyAndReturn
+   */
+  export type DoctorClinicCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * The data used to create many DoctorClinics.
+     */
+    data: DoctorClinicCreateManyInput | DoctorClinicCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DoctorClinic update
+   */
+  export type DoctorClinicUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * The data needed to update a DoctorClinic.
+     */
+    data: XOR<DoctorClinicUpdateInput, DoctorClinicUncheckedUpdateInput>
+    /**
+     * Choose, which DoctorClinic to update.
+     */
+    where: DoctorClinicWhereUniqueInput
+  }
+
+  /**
+   * DoctorClinic updateMany
+   */
+  export type DoctorClinicUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update DoctorClinics.
+     */
+    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyInput>
+    /**
+     * Filter which DoctorClinics to update
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * Limit how many DoctorClinics to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * DoctorClinic updateManyAndReturn
+   */
+  export type DoctorClinicUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * The data used to update DoctorClinics.
+     */
+    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyInput>
+    /**
+     * Filter which DoctorClinics to update
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * Limit how many DoctorClinics to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * DoctorClinic upsert
+   */
+  export type DoctorClinicUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * The filter to search for the DoctorClinic to update in case it exists.
+     */
+    where: DoctorClinicWhereUniqueInput
+    /**
+     * In case the DoctorClinic found by the `where` argument doesn't exist, create a new DoctorClinic with this data.
+     */
+    create: XOR<DoctorClinicCreateInput, DoctorClinicUncheckedCreateInput>
+    /**
+     * In case the DoctorClinic was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<DoctorClinicUpdateInput, DoctorClinicUncheckedUpdateInput>
+  }
+
+  /**
+   * DoctorClinic delete
+   */
+  export type DoctorClinicDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
+    /**
+     * Filter which DoctorClinic to delete.
+     */
+    where: DoctorClinicWhereUniqueInput
+  }
+
+  /**
+   * DoctorClinic deleteMany
+   */
+  export type DoctorClinicDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which DoctorClinics to delete
+     */
+    where?: DoctorClinicWhereInput
+    /**
+     * Limit how many DoctorClinics to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * DoctorClinic without action
+   */
+  export type DoctorClinicDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinic
+     */
+    select?: DoctorClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinic
+     */
+    omit?: DoctorClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicInclude<ExtArgs> | null
   }
 
 
@@ -12772,7 +16469,6 @@ export namespace Prisma {
     emailVerifiedAt: 'emailVerifiedAt',
     phoneVerifiedAt: 'phoneVerifiedAt',
     passwordHash: 'passwordHash',
-    passwordExpiresAt: 'passwordExpiresAt',
     passwordHistory: 'passwordHistory',
     firstName: 'firstName',
     lastName: 'lastName',
@@ -12781,9 +16477,6 @@ export namespace Prisma {
     tokenVersion: 'tokenVersion',
     lastLoginAt: 'lastLoginAt',
     passwordChangedAt: 'passwordChangedAt',
-    failedLoginAttempts: 'failedLoginAttempts',
-    lockedUntil: 'lockedUntil',
-    lastFailedLoginAt: 'lastFailedLoginAt',
     deactivatedAt: 'deactivatedAt',
     suspendedAt: 'suspendedAt',
     twoFactorEnabled: 'twoFactorEnabled',
@@ -12832,6 +16525,7 @@ export namespace Prisma {
     revokedReason: 'revokedReason',
     revokedByUserId: 'revokedByUserId',
     replacedBySessionId: 'replacedBySessionId',
+    previousRefreshTokenHash: 'previousRefreshTokenHash',
     lastSeenAt: 'lastSeenAt',
     userAgent: 'userAgent',
     browserName: 'browserName',
@@ -12941,6 +16635,42 @@ export namespace Prisma {
   };
 
   export type PermissionScalarFieldEnum = (typeof PermissionScalarFieldEnum)[keyof typeof PermissionScalarFieldEnum]
+
+
+  export const ClinicScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    address: 'address',
+    territoryId: 'territoryId',
+    deletedAt: 'deletedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type ClinicScalarFieldEnum = (typeof ClinicScalarFieldEnum)[keyof typeof ClinicScalarFieldEnum]
+
+
+  export const DoctorScalarFieldEnum: {
+    id: 'id',
+    firstName: 'firstName',
+    lastName: 'lastName',
+    specialty: 'specialty',
+    deletedAt: 'deletedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type DoctorScalarFieldEnum = (typeof DoctorScalarFieldEnum)[keyof typeof DoctorScalarFieldEnum]
+
+
+  export const DoctorClinicScalarFieldEnum: {
+    id: 'id',
+    doctorId: 'doctorId',
+    clinicId: 'clinicId',
+    createdAt: 'createdAt'
+  };
+
+  export type DoctorClinicScalarFieldEnum = (typeof DoctorClinicScalarFieldEnum)[keyof typeof DoctorClinicScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -13180,7 +16910,6 @@ export namespace Prisma {
     emailVerifiedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     phoneVerifiedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordHash?: StringFilter<"User"> | string
-    passwordExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordHistory?: StringNullableListFilter<"User">
     firstName?: StringNullableFilter<"User"> | string | null
     lastName?: StringNullableFilter<"User"> | string | null
@@ -13189,9 +16918,6 @@ export namespace Prisma {
     tokenVersion?: IntFilter<"User"> | number
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordChangedAt?: DateTimeNullableFilter<"User"> | Date | string | null
-    failedLoginAttempts?: IntFilter<"User"> | number
-    lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
-    lastFailedLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     deactivatedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     suspendedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     twoFactorEnabled?: BoolFilter<"User"> | boolean
@@ -13210,6 +16936,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetListRelationFilter
     auditLogs?: AuditLogListRelationFilter
     verificationTokens?: VerificationTokenListRelationFilter
+    sentInvitations?: InvitationListRelationFilter
+    permissions?: PermissionListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -13222,7 +16950,6 @@ export namespace Prisma {
     emailVerifiedAt?: SortOrderInput | SortOrder
     phoneVerifiedAt?: SortOrderInput | SortOrder
     passwordHash?: SortOrder
-    passwordExpiresAt?: SortOrderInput | SortOrder
     passwordHistory?: SortOrder
     firstName?: SortOrderInput | SortOrder
     lastName?: SortOrderInput | SortOrder
@@ -13231,9 +16958,6 @@ export namespace Prisma {
     tokenVersion?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     passwordChangedAt?: SortOrderInput | SortOrder
-    failedLoginAttempts?: SortOrder
-    lockedUntil?: SortOrderInput | SortOrder
-    lastFailedLoginAt?: SortOrderInput | SortOrder
     deactivatedAt?: SortOrderInput | SortOrder
     suspendedAt?: SortOrderInput | SortOrder
     twoFactorEnabled?: SortOrder
@@ -13252,6 +16976,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetOrderByRelationAggregateInput
     auditLogs?: AuditLogOrderByRelationAggregateInput
     verificationTokens?: VerificationTokenOrderByRelationAggregateInput
+    sentInvitations?: InvitationOrderByRelationAggregateInput
+    permissions?: PermissionOrderByRelationAggregateInput
   }
 
   export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -13267,7 +16993,6 @@ export namespace Prisma {
     emailVerifiedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     phoneVerifiedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordHash?: StringFilter<"User"> | string
-    passwordExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordHistory?: StringNullableListFilter<"User">
     firstName?: StringNullableFilter<"User"> | string | null
     lastName?: StringNullableFilter<"User"> | string | null
@@ -13276,9 +17001,6 @@ export namespace Prisma {
     tokenVersion?: IntFilter<"User"> | number
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordChangedAt?: DateTimeNullableFilter<"User"> | Date | string | null
-    failedLoginAttempts?: IntFilter<"User"> | number
-    lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
-    lastFailedLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     deactivatedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     suspendedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     twoFactorEnabled?: BoolFilter<"User"> | boolean
@@ -13297,6 +17019,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetListRelationFilter
     auditLogs?: AuditLogListRelationFilter
     verificationTokens?: VerificationTokenListRelationFilter
+    sentInvitations?: InvitationListRelationFilter
+    permissions?: PermissionListRelationFilter
   }, "id" | "email" | "username" | "phoneNumber">
 
   export type UserOrderByWithAggregationInput = {
@@ -13309,7 +17033,6 @@ export namespace Prisma {
     emailVerifiedAt?: SortOrderInput | SortOrder
     phoneVerifiedAt?: SortOrderInput | SortOrder
     passwordHash?: SortOrder
-    passwordExpiresAt?: SortOrderInput | SortOrder
     passwordHistory?: SortOrder
     firstName?: SortOrderInput | SortOrder
     lastName?: SortOrderInput | SortOrder
@@ -13318,9 +17041,6 @@ export namespace Prisma {
     tokenVersion?: SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     passwordChangedAt?: SortOrderInput | SortOrder
-    failedLoginAttempts?: SortOrder
-    lockedUntil?: SortOrderInput | SortOrder
-    lastFailedLoginAt?: SortOrderInput | SortOrder
     deactivatedAt?: SortOrderInput | SortOrder
     suspendedAt?: SortOrderInput | SortOrder
     twoFactorEnabled?: SortOrder
@@ -13351,7 +17071,6 @@ export namespace Prisma {
     emailVerifiedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     phoneVerifiedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     passwordHash?: StringWithAggregatesFilter<"User"> | string
-    passwordExpiresAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     passwordHistory?: StringNullableListFilter<"User">
     firstName?: StringNullableWithAggregatesFilter<"User"> | string | null
     lastName?: StringNullableWithAggregatesFilter<"User"> | string | null
@@ -13360,9 +17079,6 @@ export namespace Prisma {
     tokenVersion?: IntWithAggregatesFilter<"User"> | number
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     passwordChangedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
-    failedLoginAttempts?: IntWithAggregatesFilter<"User"> | number
-    lockedUntil?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
-    lastFailedLoginAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     deactivatedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     suspendedAt?: DateTimeNullableWithAggregatesFilter<"User"> | Date | string | null
     twoFactorEnabled?: BoolWithAggregatesFilter<"User"> | boolean
@@ -13513,6 +17229,7 @@ export namespace Prisma {
     revokedReason?: StringNullableFilter<"Session"> | string | null
     revokedByUserId?: StringNullableFilter<"Session"> | string | null
     replacedBySessionId?: StringNullableFilter<"Session"> | string | null
+    previousRefreshTokenHash?: StringNullableFilter<"Session"> | string | null
     lastSeenAt?: DateTimeFilter<"Session"> | Date | string
     userAgent?: StringNullableFilter<"Session"> | string | null
     browserName?: StringNullableFilter<"Session"> | string | null
@@ -13541,6 +17258,7 @@ export namespace Prisma {
     revokedReason?: SortOrderInput | SortOrder
     revokedByUserId?: SortOrderInput | SortOrder
     replacedBySessionId?: SortOrderInput | SortOrder
+    previousRefreshTokenHash?: SortOrderInput | SortOrder
     lastSeenAt?: SortOrder
     userAgent?: SortOrderInput | SortOrder
     browserName?: SortOrderInput | SortOrder
@@ -13572,6 +17290,7 @@ export namespace Prisma {
     revokedReason?: StringNullableFilter<"Session"> | string | null
     revokedByUserId?: StringNullableFilter<"Session"> | string | null
     replacedBySessionId?: StringNullableFilter<"Session"> | string | null
+    previousRefreshTokenHash?: StringNullableFilter<"Session"> | string | null
     lastSeenAt?: DateTimeFilter<"Session"> | Date | string
     userAgent?: StringNullableFilter<"Session"> | string | null
     browserName?: StringNullableFilter<"Session"> | string | null
@@ -13600,6 +17319,7 @@ export namespace Prisma {
     revokedReason?: SortOrderInput | SortOrder
     revokedByUserId?: SortOrderInput | SortOrder
     replacedBySessionId?: SortOrderInput | SortOrder
+    previousRefreshTokenHash?: SortOrderInput | SortOrder
     lastSeenAt?: SortOrder
     userAgent?: SortOrderInput | SortOrder
     browserName?: SortOrderInput | SortOrder
@@ -13633,6 +17353,7 @@ export namespace Prisma {
     revokedReason?: StringNullableWithAggregatesFilter<"Session"> | string | null
     revokedByUserId?: StringNullableWithAggregatesFilter<"Session"> | string | null
     replacedBySessionId?: StringNullableWithAggregatesFilter<"Session"> | string | null
+    previousRefreshTokenHash?: StringNullableWithAggregatesFilter<"Session"> | string | null
     lastSeenAt?: DateTimeWithAggregatesFilter<"Session"> | Date | string
     userAgent?: StringNullableWithAggregatesFilter<"Session"> | string | null
     browserName?: StringNullableWithAggregatesFilter<"Session"> | string | null
@@ -13671,6 +17392,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Invitation"> | Date | string
     updatedAt?: DateTimeFilter<"Invitation"> | Date | string
     role?: XOR<RoleScalarRelationFilter, RoleWhereInput>
+    invitedBy?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type InvitationOrderByWithRelationInput = {
@@ -13690,6 +17412,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     role?: RoleOrderByWithRelationInput
+    invitedBy?: UserOrderByWithRelationInput
   }
 
   export type InvitationWhereUniqueInput = Prisma.AtLeast<{
@@ -13712,6 +17435,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"Invitation"> | Date | string
     updatedAt?: DateTimeFilter<"Invitation"> | Date | string
     role?: XOR<RoleScalarRelationFilter, RoleWhereInput>
+    invitedBy?: XOR<UserScalarRelationFilter, UserWhereInput>
   }, "id" | "tokenHash">
 
   export type InvitationOrderByWithAggregationInput = {
@@ -14037,6 +17761,7 @@ export namespace Prisma {
     expiresAt?: DateTimeNullableFilter<"Permission"> | Date | string | null
     createdAt?: DateTimeFilter<"Permission"> | Date | string
     updatedAt?: DateTimeFilter<"Permission"> | Date | string
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
   }
 
   export type PermissionOrderByWithRelationInput = {
@@ -14050,10 +17775,12 @@ export namespace Prisma {
     expiresAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    user?: UserOrderByWithRelationInput
   }
 
   export type PermissionWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    userId_resource_resourceId_action?: PermissionUserIdResourceResourceIdActionCompoundUniqueInput
     AND?: PermissionWhereInput | PermissionWhereInput[]
     OR?: PermissionWhereInput[]
     NOT?: PermissionWhereInput | PermissionWhereInput[]
@@ -14066,7 +17793,8 @@ export namespace Prisma {
     expiresAt?: DateTimeNullableFilter<"Permission"> | Date | string | null
     createdAt?: DateTimeFilter<"Permission"> | Date | string
     updatedAt?: DateTimeFilter<"Permission"> | Date | string
-  }, "id">
+    user?: XOR<UserScalarRelationFilter, UserWhereInput>
+  }, "id" | "userId_resource_resourceId_action">
 
   export type PermissionOrderByWithAggregationInput = {
     id?: SortOrder
@@ -14100,6 +17828,190 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"Permission"> | Date | string
   }
 
+  export type ClinicWhereInput = {
+    AND?: ClinicWhereInput | ClinicWhereInput[]
+    OR?: ClinicWhereInput[]
+    NOT?: ClinicWhereInput | ClinicWhereInput[]
+    id?: StringFilter<"Clinic"> | string
+    name?: StringFilter<"Clinic"> | string
+    address?: StringNullableFilter<"Clinic"> | string | null
+    territoryId?: StringNullableFilter<"Clinic"> | string | null
+    deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    createdAt?: DateTimeFilter<"Clinic"> | Date | string
+    updatedAt?: DateTimeFilter<"Clinic"> | Date | string
+    doctorClinics?: DoctorClinicListRelationFilter
+  }
+
+  export type ClinicOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    address?: SortOrderInput | SortOrder
+    territoryId?: SortOrderInput | SortOrder
+    deletedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    doctorClinics?: DoctorClinicOrderByRelationAggregateInput
+  }
+
+  export type ClinicWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: ClinicWhereInput | ClinicWhereInput[]
+    OR?: ClinicWhereInput[]
+    NOT?: ClinicWhereInput | ClinicWhereInput[]
+    name?: StringFilter<"Clinic"> | string
+    address?: StringNullableFilter<"Clinic"> | string | null
+    territoryId?: StringNullableFilter<"Clinic"> | string | null
+    deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    createdAt?: DateTimeFilter<"Clinic"> | Date | string
+    updatedAt?: DateTimeFilter<"Clinic"> | Date | string
+    doctorClinics?: DoctorClinicListRelationFilter
+  }, "id">
+
+  export type ClinicOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    address?: SortOrderInput | SortOrder
+    territoryId?: SortOrderInput | SortOrder
+    deletedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: ClinicCountOrderByAggregateInput
+    _max?: ClinicMaxOrderByAggregateInput
+    _min?: ClinicMinOrderByAggregateInput
+  }
+
+  export type ClinicScalarWhereWithAggregatesInput = {
+    AND?: ClinicScalarWhereWithAggregatesInput | ClinicScalarWhereWithAggregatesInput[]
+    OR?: ClinicScalarWhereWithAggregatesInput[]
+    NOT?: ClinicScalarWhereWithAggregatesInput | ClinicScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Clinic"> | string
+    name?: StringWithAggregatesFilter<"Clinic"> | string
+    address?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    territoryId?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    deletedAt?: DateTimeNullableWithAggregatesFilter<"Clinic"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"Clinic"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Clinic"> | Date | string
+  }
+
+  export type DoctorWhereInput = {
+    AND?: DoctorWhereInput | DoctorWhereInput[]
+    OR?: DoctorWhereInput[]
+    NOT?: DoctorWhereInput | DoctorWhereInput[]
+    id?: StringFilter<"Doctor"> | string
+    firstName?: StringFilter<"Doctor"> | string
+    lastName?: StringFilter<"Doctor"> | string
+    specialty?: StringNullableFilter<"Doctor"> | string | null
+    deletedAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
+    createdAt?: DateTimeFilter<"Doctor"> | Date | string
+    updatedAt?: DateTimeFilter<"Doctor"> | Date | string
+    doctorClinics?: DoctorClinicListRelationFilter
+  }
+
+  export type DoctorOrderByWithRelationInput = {
+    id?: SortOrder
+    firstName?: SortOrder
+    lastName?: SortOrder
+    specialty?: SortOrderInput | SortOrder
+    deletedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    doctorClinics?: DoctorClinicOrderByRelationAggregateInput
+  }
+
+  export type DoctorWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: DoctorWhereInput | DoctorWhereInput[]
+    OR?: DoctorWhereInput[]
+    NOT?: DoctorWhereInput | DoctorWhereInput[]
+    firstName?: StringFilter<"Doctor"> | string
+    lastName?: StringFilter<"Doctor"> | string
+    specialty?: StringNullableFilter<"Doctor"> | string | null
+    deletedAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
+    createdAt?: DateTimeFilter<"Doctor"> | Date | string
+    updatedAt?: DateTimeFilter<"Doctor"> | Date | string
+    doctorClinics?: DoctorClinicListRelationFilter
+  }, "id">
+
+  export type DoctorOrderByWithAggregationInput = {
+    id?: SortOrder
+    firstName?: SortOrder
+    lastName?: SortOrder
+    specialty?: SortOrderInput | SortOrder
+    deletedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: DoctorCountOrderByAggregateInput
+    _max?: DoctorMaxOrderByAggregateInput
+    _min?: DoctorMinOrderByAggregateInput
+  }
+
+  export type DoctorScalarWhereWithAggregatesInput = {
+    AND?: DoctorScalarWhereWithAggregatesInput | DoctorScalarWhereWithAggregatesInput[]
+    OR?: DoctorScalarWhereWithAggregatesInput[]
+    NOT?: DoctorScalarWhereWithAggregatesInput | DoctorScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Doctor"> | string
+    firstName?: StringWithAggregatesFilter<"Doctor"> | string
+    lastName?: StringWithAggregatesFilter<"Doctor"> | string
+    specialty?: StringNullableWithAggregatesFilter<"Doctor"> | string | null
+    deletedAt?: DateTimeNullableWithAggregatesFilter<"Doctor"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"Doctor"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Doctor"> | Date | string
+  }
+
+  export type DoctorClinicWhereInput = {
+    AND?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
+    OR?: DoctorClinicWhereInput[]
+    NOT?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
+    id?: StringFilter<"DoctorClinic"> | string
+    doctorId?: StringFilter<"DoctorClinic"> | string
+    clinicId?: StringFilter<"DoctorClinic"> | string
+    createdAt?: DateTimeFilter<"DoctorClinic"> | Date | string
+    doctor?: XOR<DoctorScalarRelationFilter, DoctorWhereInput>
+    clinic?: XOR<ClinicScalarRelationFilter, ClinicWhereInput>
+  }
+
+  export type DoctorClinicOrderByWithRelationInput = {
+    id?: SortOrder
+    doctorId?: SortOrder
+    clinicId?: SortOrder
+    createdAt?: SortOrder
+    doctor?: DoctorOrderByWithRelationInput
+    clinic?: ClinicOrderByWithRelationInput
+  }
+
+  export type DoctorClinicWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    doctorId_clinicId?: DoctorClinicDoctorIdClinicIdCompoundUniqueInput
+    AND?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
+    OR?: DoctorClinicWhereInput[]
+    NOT?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
+    doctorId?: StringFilter<"DoctorClinic"> | string
+    clinicId?: StringFilter<"DoctorClinic"> | string
+    createdAt?: DateTimeFilter<"DoctorClinic"> | Date | string
+    doctor?: XOR<DoctorScalarRelationFilter, DoctorWhereInput>
+    clinic?: XOR<ClinicScalarRelationFilter, ClinicWhereInput>
+  }, "id" | "doctorId_clinicId">
+
+  export type DoctorClinicOrderByWithAggregationInput = {
+    id?: SortOrder
+    doctorId?: SortOrder
+    clinicId?: SortOrder
+    createdAt?: SortOrder
+    _count?: DoctorClinicCountOrderByAggregateInput
+    _max?: DoctorClinicMaxOrderByAggregateInput
+    _min?: DoctorClinicMinOrderByAggregateInput
+  }
+
+  export type DoctorClinicScalarWhereWithAggregatesInput = {
+    AND?: DoctorClinicScalarWhereWithAggregatesInput | DoctorClinicScalarWhereWithAggregatesInput[]
+    OR?: DoctorClinicScalarWhereWithAggregatesInput[]
+    NOT?: DoctorClinicScalarWhereWithAggregatesInput | DoctorClinicScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DoctorClinic"> | string
+    doctorId?: StringWithAggregatesFilter<"DoctorClinic"> | string
+    clinicId?: StringWithAggregatesFilter<"DoctorClinic"> | string
+    createdAt?: DateTimeWithAggregatesFilter<"DoctorClinic"> | Date | string
+  }
+
   export type UserCreateInput = {
     id?: string
     email: string
@@ -14110,7 +18022,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -14119,9 +18030,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -14138,6 +18046,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -14150,7 +18060,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -14159,9 +18068,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -14178,6 +18084,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserUpdateInput = {
@@ -14190,7 +18098,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14199,9 +18106,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -14218,6 +18122,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -14230,7 +18136,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14239,9 +18144,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -14258,6 +18160,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -14270,7 +18174,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -14279,9 +18182,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -14304,7 +18204,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14313,9 +18212,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -14336,7 +18232,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14345,9 +18240,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -14501,6 +18393,7 @@ export namespace Prisma {
     revokedReason?: string | null
     revokedByUserId?: string | null
     replacedBySessionId?: string | null
+    previousRefreshTokenHash?: string | null
     lastSeenAt?: Date | string
     userAgent?: string | null
     browserName?: string | null
@@ -14529,6 +18422,7 @@ export namespace Prisma {
     revokedReason?: string | null
     revokedByUserId?: string | null
     replacedBySessionId?: string | null
+    previousRefreshTokenHash?: string | null
     lastSeenAt?: Date | string
     userAgent?: string | null
     browserName?: string | null
@@ -14555,6 +18449,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14583,6 +18478,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14610,6 +18506,7 @@ export namespace Prisma {
     revokedReason?: string | null
     revokedByUserId?: string | null
     replacedBySessionId?: string | null
+    previousRefreshTokenHash?: string | null
     lastSeenAt?: Date | string
     userAgent?: string | null
     browserName?: string | null
@@ -14636,6 +18533,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14663,6 +18561,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14693,10 +18592,10 @@ export namespace Prisma {
     revokedAt?: Date | string | null
     resendCount?: number
     lastResendAt?: Date | string | null
-    invitedByUserId: string
     createdAt?: Date | string
     updatedAt?: Date | string
     role: RoleCreateNestedOneWithoutInvitationsInput
+    invitedBy: UserCreateNestedOneWithoutSentInvitationsInput
   }
 
   export type InvitationUncheckedCreateInput = {
@@ -14729,10 +18628,10 @@ export namespace Prisma {
     revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     resendCount?: IntFieldUpdateOperationsInput | number
     lastResendAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    invitedByUserId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     role?: RoleUpdateOneRequiredWithoutInvitationsNestedInput
+    invitedBy?: UserUpdateOneRequiredWithoutSentInvitationsNestedInput
   }
 
   export type InvitationUncheckedUpdateInput = {
@@ -14783,7 +18682,6 @@ export namespace Prisma {
     revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     resendCount?: IntFieldUpdateOperationsInput | number
     lastResendAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    invitedByUserId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -15113,7 +19011,6 @@ export namespace Prisma {
 
   export type PermissionCreateInput = {
     id?: string
-    userId: string
     resource: string
     resourceId?: string | null
     action: string
@@ -15122,6 +19019,7 @@ export namespace Prisma {
     expiresAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutPermissionsInput
   }
 
   export type PermissionUncheckedCreateInput = {
@@ -15139,7 +19037,6 @@ export namespace Prisma {
 
   export type PermissionUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     resource?: StringFieldUpdateOperationsInput | string
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     action?: StringFieldUpdateOperationsInput | string
@@ -15148,6 +19045,7 @@ export namespace Prisma {
     expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutPermissionsNestedInput
   }
 
   export type PermissionUncheckedUpdateInput = {
@@ -15178,7 +19076,6 @@ export namespace Prisma {
 
   export type PermissionUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    userId?: StringFieldUpdateOperationsInput | string
     resource?: StringFieldUpdateOperationsInput | string
     resourceId?: NullableStringFieldUpdateOperationsInput | string | null
     action?: StringFieldUpdateOperationsInput | string
@@ -15200,6 +19097,201 @@ export namespace Prisma {
     expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ClinicCreateInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorClinics?: DoctorClinicCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicUncheckedCreateInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorClinics?: DoctorClinicUncheckedCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorClinics?: DoctorClinicUpdateManyWithoutClinicNestedInput
+  }
+
+  export type ClinicUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorClinics?: DoctorClinicUncheckedUpdateManyWithoutClinicNestedInput
+  }
+
+  export type ClinicCreateManyInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ClinicUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ClinicUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorCreateInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorClinics?: DoctorClinicCreateNestedManyWithoutDoctorInput
+  }
+
+  export type DoctorUncheckedCreateInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorClinics?: DoctorClinicUncheckedCreateNestedManyWithoutDoctorInput
+  }
+
+  export type DoctorUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorClinics?: DoctorClinicUpdateManyWithoutDoctorNestedInput
+  }
+
+  export type DoctorUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorClinics?: DoctorClinicUncheckedUpdateManyWithoutDoctorNestedInput
+  }
+
+  export type DoctorCreateManyInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DoctorUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicCreateInput = {
+    id?: string
+    createdAt?: Date | string
+    doctor: DoctorCreateNestedOneWithoutDoctorClinicsInput
+    clinic: ClinicCreateNestedOneWithoutDoctorClinicsInput
+  }
+
+  export type DoctorClinicUncheckedCreateInput = {
+    id?: string
+    doctorId: string
+    clinicId: string
+    createdAt?: Date | string
+  }
+
+  export type DoctorClinicUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctor?: DoctorUpdateOneRequiredWithoutDoctorClinicsNestedInput
+    clinic?: ClinicUpdateOneRequiredWithoutDoctorClinicsNestedInput
+  }
+
+  export type DoctorClinicUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    doctorId?: StringFieldUpdateOperationsInput | string
+    clinicId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicCreateManyInput = {
+    id?: string
+    doctorId: string
+    clinicId: string
+    createdAt?: Date | string
+  }
+
+  export type DoctorClinicUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    doctorId?: StringFieldUpdateOperationsInput | string
+    clinicId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -15354,6 +19446,18 @@ export namespace Prisma {
     none?: VerificationTokenWhereInput
   }
 
+  export type InvitationListRelationFilter = {
+    every?: InvitationWhereInput
+    some?: InvitationWhereInput
+    none?: InvitationWhereInput
+  }
+
+  export type PermissionListRelationFilter = {
+    every?: PermissionWhereInput
+    some?: PermissionWhereInput
+    none?: PermissionWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -15383,6 +19487,14 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type InvitationOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type PermissionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type UserCountOrderByAggregateInput = {
     id?: SortOrder
     email?: SortOrder
@@ -15393,7 +19505,6 @@ export namespace Prisma {
     emailVerifiedAt?: SortOrder
     phoneVerifiedAt?: SortOrder
     passwordHash?: SortOrder
-    passwordExpiresAt?: SortOrder
     passwordHistory?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
@@ -15402,9 +19513,6 @@ export namespace Prisma {
     tokenVersion?: SortOrder
     lastLoginAt?: SortOrder
     passwordChangedAt?: SortOrder
-    failedLoginAttempts?: SortOrder
-    lockedUntil?: SortOrder
-    lastFailedLoginAt?: SortOrder
     deactivatedAt?: SortOrder
     suspendedAt?: SortOrder
     twoFactorEnabled?: SortOrder
@@ -15419,7 +19527,6 @@ export namespace Prisma {
 
   export type UserAvgOrderByAggregateInput = {
     tokenVersion?: SortOrder
-    failedLoginAttempts?: SortOrder
   }
 
   export type UserMaxOrderByAggregateInput = {
@@ -15432,7 +19539,6 @@ export namespace Prisma {
     emailVerifiedAt?: SortOrder
     phoneVerifiedAt?: SortOrder
     passwordHash?: SortOrder
-    passwordExpiresAt?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
     avatarUrl?: SortOrder
@@ -15440,9 +19546,6 @@ export namespace Prisma {
     tokenVersion?: SortOrder
     lastLoginAt?: SortOrder
     passwordChangedAt?: SortOrder
-    failedLoginAttempts?: SortOrder
-    lockedUntil?: SortOrder
-    lastFailedLoginAt?: SortOrder
     deactivatedAt?: SortOrder
     suspendedAt?: SortOrder
     twoFactorEnabled?: SortOrder
@@ -15464,7 +19567,6 @@ export namespace Prisma {
     emailVerifiedAt?: SortOrder
     phoneVerifiedAt?: SortOrder
     passwordHash?: SortOrder
-    passwordExpiresAt?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
     avatarUrl?: SortOrder
@@ -15472,9 +19574,6 @@ export namespace Prisma {
     tokenVersion?: SortOrder
     lastLoginAt?: SortOrder
     passwordChangedAt?: SortOrder
-    failedLoginAttempts?: SortOrder
-    lockedUntil?: SortOrder
-    lastFailedLoginAt?: SortOrder
     deactivatedAt?: SortOrder
     suspendedAt?: SortOrder
     twoFactorEnabled?: SortOrder
@@ -15488,7 +19587,6 @@ export namespace Prisma {
 
   export type UserSumOrderByAggregateInput = {
     tokenVersion?: SortOrder
-    failedLoginAttempts?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -15652,16 +19750,6 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
-  export type InvitationListRelationFilter = {
-    every?: InvitationWhereInput
-    some?: InvitationWhereInput
-    none?: InvitationWhereInput
-  }
-
-  export type InvitationOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
   export type RoleCountOrderByAggregateInput = {
     id?: SortOrder
     name?: SortOrder
@@ -15720,6 +19808,7 @@ export namespace Prisma {
     revokedReason?: SortOrder
     revokedByUserId?: SortOrder
     replacedBySessionId?: SortOrder
+    previousRefreshTokenHash?: SortOrder
     lastSeenAt?: SortOrder
     userAgent?: SortOrder
     browserName?: SortOrder
@@ -15747,6 +19836,7 @@ export namespace Prisma {
     revokedReason?: SortOrder
     revokedByUserId?: SortOrder
     replacedBySessionId?: SortOrder
+    previousRefreshTokenHash?: SortOrder
     lastSeenAt?: SortOrder
     userAgent?: SortOrder
     browserName?: SortOrder
@@ -15774,6 +19864,7 @@ export namespace Prisma {
     revokedReason?: SortOrder
     revokedByUserId?: SortOrder
     replacedBySessionId?: SortOrder
+    previousRefreshTokenHash?: SortOrder
     lastSeenAt?: SortOrder
     userAgent?: SortOrder
     browserName?: SortOrder
@@ -16070,6 +20161,13 @@ export namespace Prisma {
     _max?: NestedEnumVerificationTokenTypeFilter<$PrismaModel>
   }
 
+  export type PermissionUserIdResourceResourceIdActionCompoundUniqueInput = {
+    userId: string
+    resource: string
+    resourceId: string
+    action: string
+  }
+
   export type PermissionCountOrderByAggregateInput = {
     id?: SortOrder
     userId?: SortOrder
@@ -16105,6 +20203,112 @@ export namespace Prisma {
     expiresAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type DoctorClinicListRelationFilter = {
+    every?: DoctorClinicWhereInput
+    some?: DoctorClinicWhereInput
+    none?: DoctorClinicWhereInput
+  }
+
+  export type DoctorClinicOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ClinicCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    address?: SortOrder
+    territoryId?: SortOrder
+    deletedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ClinicMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    address?: SortOrder
+    territoryId?: SortOrder
+    deletedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type ClinicMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    address?: SortOrder
+    territoryId?: SortOrder
+    deletedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DoctorCountOrderByAggregateInput = {
+    id?: SortOrder
+    firstName?: SortOrder
+    lastName?: SortOrder
+    specialty?: SortOrder
+    deletedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DoctorMaxOrderByAggregateInput = {
+    id?: SortOrder
+    firstName?: SortOrder
+    lastName?: SortOrder
+    specialty?: SortOrder
+    deletedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DoctorMinOrderByAggregateInput = {
+    id?: SortOrder
+    firstName?: SortOrder
+    lastName?: SortOrder
+    specialty?: SortOrder
+    deletedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type DoctorScalarRelationFilter = {
+    is?: DoctorWhereInput
+    isNot?: DoctorWhereInput
+  }
+
+  export type ClinicScalarRelationFilter = {
+    is?: ClinicWhereInput
+    isNot?: ClinicWhereInput
+  }
+
+  export type DoctorClinicDoctorIdClinicIdCompoundUniqueInput = {
+    doctorId: string
+    clinicId: string
+  }
+
+  export type DoctorClinicCountOrderByAggregateInput = {
+    id?: SortOrder
+    doctorId?: SortOrder
+    clinicId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DoctorClinicMaxOrderByAggregateInput = {
+    id?: SortOrder
+    doctorId?: SortOrder
+    clinicId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type DoctorClinicMinOrderByAggregateInput = {
+    id?: SortOrder
+    doctorId?: SortOrder
+    clinicId?: SortOrder
+    createdAt?: SortOrder
   }
 
   export type UserCreatepasswordHistoryInput = {
@@ -16165,6 +20369,20 @@ export namespace Prisma {
     connect?: VerificationTokenWhereUniqueInput | VerificationTokenWhereUniqueInput[]
   }
 
+  export type InvitationCreateNestedManyWithoutInvitedByInput = {
+    create?: XOR<InvitationCreateWithoutInvitedByInput, InvitationUncheckedCreateWithoutInvitedByInput> | InvitationCreateWithoutInvitedByInput[] | InvitationUncheckedCreateWithoutInvitedByInput[]
+    connectOrCreate?: InvitationCreateOrConnectWithoutInvitedByInput | InvitationCreateOrConnectWithoutInvitedByInput[]
+    createMany?: InvitationCreateManyInvitedByInputEnvelope
+    connect?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+  }
+
+  export type PermissionCreateNestedManyWithoutUserInput = {
+    create?: XOR<PermissionCreateWithoutUserInput, PermissionUncheckedCreateWithoutUserInput> | PermissionCreateWithoutUserInput[] | PermissionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: PermissionCreateOrConnectWithoutUserInput | PermissionCreateOrConnectWithoutUserInput[]
+    createMany?: PermissionCreateManyUserInputEnvelope
+    connect?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+  }
+
   export type UserUncheckedCreateNestedManyWithoutManagerInput = {
     create?: XOR<UserCreateWithoutManagerInput, UserUncheckedCreateWithoutManagerInput> | UserCreateWithoutManagerInput[] | UserUncheckedCreateWithoutManagerInput[]
     connectOrCreate?: UserCreateOrConnectWithoutManagerInput | UserCreateOrConnectWithoutManagerInput[]
@@ -16205,6 +20423,20 @@ export namespace Prisma {
     connectOrCreate?: VerificationTokenCreateOrConnectWithoutUserInput | VerificationTokenCreateOrConnectWithoutUserInput[]
     createMany?: VerificationTokenCreateManyUserInputEnvelope
     connect?: VerificationTokenWhereUniqueInput | VerificationTokenWhereUniqueInput[]
+  }
+
+  export type InvitationUncheckedCreateNestedManyWithoutInvitedByInput = {
+    create?: XOR<InvitationCreateWithoutInvitedByInput, InvitationUncheckedCreateWithoutInvitedByInput> | InvitationCreateWithoutInvitedByInput[] | InvitationUncheckedCreateWithoutInvitedByInput[]
+    connectOrCreate?: InvitationCreateOrConnectWithoutInvitedByInput | InvitationCreateOrConnectWithoutInvitedByInput[]
+    createMany?: InvitationCreateManyInvitedByInputEnvelope
+    connect?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+  }
+
+  export type PermissionUncheckedCreateNestedManyWithoutUserInput = {
+    create?: XOR<PermissionCreateWithoutUserInput, PermissionUncheckedCreateWithoutUserInput> | PermissionCreateWithoutUserInput[] | PermissionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: PermissionCreateOrConnectWithoutUserInput | PermissionCreateOrConnectWithoutUserInput[]
+    createMany?: PermissionCreateManyUserInputEnvelope
+    connect?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
   }
 
   export type StringFieldUpdateOperationsInput = {
@@ -16346,6 +20578,34 @@ export namespace Prisma {
     deleteMany?: VerificationTokenScalarWhereInput | VerificationTokenScalarWhereInput[]
   }
 
+  export type InvitationUpdateManyWithoutInvitedByNestedInput = {
+    create?: XOR<InvitationCreateWithoutInvitedByInput, InvitationUncheckedCreateWithoutInvitedByInput> | InvitationCreateWithoutInvitedByInput[] | InvitationUncheckedCreateWithoutInvitedByInput[]
+    connectOrCreate?: InvitationCreateOrConnectWithoutInvitedByInput | InvitationCreateOrConnectWithoutInvitedByInput[]
+    upsert?: InvitationUpsertWithWhereUniqueWithoutInvitedByInput | InvitationUpsertWithWhereUniqueWithoutInvitedByInput[]
+    createMany?: InvitationCreateManyInvitedByInputEnvelope
+    set?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    disconnect?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    delete?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    connect?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    update?: InvitationUpdateWithWhereUniqueWithoutInvitedByInput | InvitationUpdateWithWhereUniqueWithoutInvitedByInput[]
+    updateMany?: InvitationUpdateManyWithWhereWithoutInvitedByInput | InvitationUpdateManyWithWhereWithoutInvitedByInput[]
+    deleteMany?: InvitationScalarWhereInput | InvitationScalarWhereInput[]
+  }
+
+  export type PermissionUpdateManyWithoutUserNestedInput = {
+    create?: XOR<PermissionCreateWithoutUserInput, PermissionUncheckedCreateWithoutUserInput> | PermissionCreateWithoutUserInput[] | PermissionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: PermissionCreateOrConnectWithoutUserInput | PermissionCreateOrConnectWithoutUserInput[]
+    upsert?: PermissionUpsertWithWhereUniqueWithoutUserInput | PermissionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: PermissionCreateManyUserInputEnvelope
+    set?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    disconnect?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    delete?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    connect?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    update?: PermissionUpdateWithWhereUniqueWithoutUserInput | PermissionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: PermissionUpdateManyWithWhereWithoutUserInput | PermissionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: PermissionScalarWhereInput | PermissionScalarWhereInput[]
+  }
+
   export type UserUncheckedUpdateManyWithoutManagerNestedInput = {
     create?: XOR<UserCreateWithoutManagerInput, UserUncheckedCreateWithoutManagerInput> | UserCreateWithoutManagerInput[] | UserUncheckedCreateWithoutManagerInput[]
     connectOrCreate?: UserCreateOrConnectWithoutManagerInput | UserCreateOrConnectWithoutManagerInput[]
@@ -16428,6 +20688,34 @@ export namespace Prisma {
     update?: VerificationTokenUpdateWithWhereUniqueWithoutUserInput | VerificationTokenUpdateWithWhereUniqueWithoutUserInput[]
     updateMany?: VerificationTokenUpdateManyWithWhereWithoutUserInput | VerificationTokenUpdateManyWithWhereWithoutUserInput[]
     deleteMany?: VerificationTokenScalarWhereInput | VerificationTokenScalarWhereInput[]
+  }
+
+  export type InvitationUncheckedUpdateManyWithoutInvitedByNestedInput = {
+    create?: XOR<InvitationCreateWithoutInvitedByInput, InvitationUncheckedCreateWithoutInvitedByInput> | InvitationCreateWithoutInvitedByInput[] | InvitationUncheckedCreateWithoutInvitedByInput[]
+    connectOrCreate?: InvitationCreateOrConnectWithoutInvitedByInput | InvitationCreateOrConnectWithoutInvitedByInput[]
+    upsert?: InvitationUpsertWithWhereUniqueWithoutInvitedByInput | InvitationUpsertWithWhereUniqueWithoutInvitedByInput[]
+    createMany?: InvitationCreateManyInvitedByInputEnvelope
+    set?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    disconnect?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    delete?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    connect?: InvitationWhereUniqueInput | InvitationWhereUniqueInput[]
+    update?: InvitationUpdateWithWhereUniqueWithoutInvitedByInput | InvitationUpdateWithWhereUniqueWithoutInvitedByInput[]
+    updateMany?: InvitationUpdateManyWithWhereWithoutInvitedByInput | InvitationUpdateManyWithWhereWithoutInvitedByInput[]
+    deleteMany?: InvitationScalarWhereInput | InvitationScalarWhereInput[]
+  }
+
+  export type PermissionUncheckedUpdateManyWithoutUserNestedInput = {
+    create?: XOR<PermissionCreateWithoutUserInput, PermissionUncheckedCreateWithoutUserInput> | PermissionCreateWithoutUserInput[] | PermissionUncheckedCreateWithoutUserInput[]
+    connectOrCreate?: PermissionCreateOrConnectWithoutUserInput | PermissionCreateOrConnectWithoutUserInput[]
+    upsert?: PermissionUpsertWithWhereUniqueWithoutUserInput | PermissionUpsertWithWhereUniqueWithoutUserInput[]
+    createMany?: PermissionCreateManyUserInputEnvelope
+    set?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    disconnect?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    delete?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    connect?: PermissionWhereUniqueInput | PermissionWhereUniqueInput[]
+    update?: PermissionUpdateWithWhereUniqueWithoutUserInput | PermissionUpdateWithWhereUniqueWithoutUserInput[]
+    updateMany?: PermissionUpdateManyWithWhereWithoutUserInput | PermissionUpdateManyWithWhereWithoutUserInput[]
+    deleteMany?: PermissionScalarWhereInput | PermissionScalarWhereInput[]
   }
 
   export type UserCreateNestedOneWithoutTerritoryAssignmentsInput = {
@@ -16556,6 +20844,12 @@ export namespace Prisma {
     connect?: RoleWhereUniqueInput
   }
 
+  export type UserCreateNestedOneWithoutSentInvitationsInput = {
+    create?: XOR<UserCreateWithoutSentInvitationsInput, UserUncheckedCreateWithoutSentInvitationsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutSentInvitationsInput
+    connect?: UserWhereUniqueInput
+  }
+
   export type EnumInvitationStatusFieldUpdateOperationsInput = {
     set?: $Enums.InvitationStatus
   }
@@ -16566,6 +20860,14 @@ export namespace Prisma {
     upsert?: RoleUpsertWithoutInvitationsInput
     connect?: RoleWhereUniqueInput
     update?: XOR<XOR<RoleUpdateToOneWithWhereWithoutInvitationsInput, RoleUpdateWithoutInvitationsInput>, RoleUncheckedUpdateWithoutInvitationsInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutSentInvitationsNestedInput = {
+    create?: XOR<UserCreateWithoutSentInvitationsInput, UserUncheckedCreateWithoutSentInvitationsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutSentInvitationsInput
+    upsert?: UserUpsertWithoutSentInvitationsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutSentInvitationsInput, UserUpdateWithoutSentInvitationsInput>, UserUncheckedUpdateWithoutSentInvitationsInput>
   }
 
   export type UserCreateNestedOneWithoutPasswordResetsInput = {
@@ -16622,6 +20924,132 @@ export namespace Prisma {
     upsert?: UserUpsertWithoutVerificationTokensInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutVerificationTokensInput, UserUpdateWithoutVerificationTokensInput>, UserUncheckedUpdateWithoutVerificationTokensInput>
+  }
+
+  export type UserCreateNestedOneWithoutPermissionsInput = {
+    create?: XOR<UserCreateWithoutPermissionsInput, UserUncheckedCreateWithoutPermissionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutPermissionsInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UserUpdateOneRequiredWithoutPermissionsNestedInput = {
+    create?: XOR<UserCreateWithoutPermissionsInput, UserUncheckedCreateWithoutPermissionsInput>
+    connectOrCreate?: UserCreateOrConnectWithoutPermissionsInput
+    upsert?: UserUpsertWithoutPermissionsInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutPermissionsInput, UserUpdateWithoutPermissionsInput>, UserUncheckedUpdateWithoutPermissionsInput>
+  }
+
+  export type DoctorClinicCreateNestedManyWithoutClinicInput = {
+    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
+    createMany?: DoctorClinicCreateManyClinicInputEnvelope
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  }
+
+  export type DoctorClinicUncheckedCreateNestedManyWithoutClinicInput = {
+    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
+    createMany?: DoctorClinicCreateManyClinicInputEnvelope
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  }
+
+  export type DoctorClinicUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
+    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutClinicInput | DoctorClinicUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: DoctorClinicCreateManyClinicInputEnvelope
+    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    update?: DoctorClinicUpdateWithWhereUniqueWithoutClinicInput | DoctorClinicUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: DoctorClinicUpdateManyWithWhereWithoutClinicInput | DoctorClinicUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  }
+
+  export type DoctorClinicUncheckedUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
+    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutClinicInput | DoctorClinicUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: DoctorClinicCreateManyClinicInputEnvelope
+    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    update?: DoctorClinicUpdateWithWhereUniqueWithoutClinicInput | DoctorClinicUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: DoctorClinicUpdateManyWithWhereWithoutClinicInput | DoctorClinicUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  }
+
+  export type DoctorClinicCreateNestedManyWithoutDoctorInput = {
+    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
+    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  }
+
+  export type DoctorClinicUncheckedCreateNestedManyWithoutDoctorInput = {
+    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
+    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  }
+
+  export type DoctorClinicUpdateManyWithoutDoctorNestedInput = {
+    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
+    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput | DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput[]
+    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
+    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    update?: DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput | DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput[]
+    updateMany?: DoctorClinicUpdateManyWithWhereWithoutDoctorInput | DoctorClinicUpdateManyWithWhereWithoutDoctorInput[]
+    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  }
+
+  export type DoctorClinicUncheckedUpdateManyWithoutDoctorNestedInput = {
+    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
+    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput | DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput[]
+    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
+    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+    update?: DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput | DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput[]
+    updateMany?: DoctorClinicUpdateManyWithWhereWithoutDoctorInput | DoctorClinicUpdateManyWithWhereWithoutDoctorInput[]
+    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  }
+
+  export type DoctorCreateNestedOneWithoutDoctorClinicsInput = {
+    create?: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
+    connectOrCreate?: DoctorCreateOrConnectWithoutDoctorClinicsInput
+    connect?: DoctorWhereUniqueInput
+  }
+
+  export type ClinicCreateNestedOneWithoutDoctorClinicsInput = {
+    create?: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutDoctorClinicsInput
+    connect?: ClinicWhereUniqueInput
+  }
+
+  export type DoctorUpdateOneRequiredWithoutDoctorClinicsNestedInput = {
+    create?: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
+    connectOrCreate?: DoctorCreateOrConnectWithoutDoctorClinicsInput
+    upsert?: DoctorUpsertWithoutDoctorClinicsInput
+    connect?: DoctorWhereUniqueInput
+    update?: XOR<XOR<DoctorUpdateToOneWithWhereWithoutDoctorClinicsInput, DoctorUpdateWithoutDoctorClinicsInput>, DoctorUncheckedUpdateWithoutDoctorClinicsInput>
+  }
+
+  export type ClinicUpdateOneRequiredWithoutDoctorClinicsNestedInput = {
+    create?: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutDoctorClinicsInput
+    upsert?: ClinicUpsertWithoutDoctorClinicsInput
+    connect?: ClinicWhereUniqueInput
+    update?: XOR<XOR<ClinicUpdateToOneWithWhereWithoutDoctorClinicsInput, ClinicUpdateWithoutDoctorClinicsInput>, ClinicUncheckedUpdateWithoutDoctorClinicsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -16975,7 +21403,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -16984,9 +21411,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17002,6 +21426,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutDirectReportsInput = {
@@ -17014,7 +21440,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17023,9 +21448,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17041,6 +21463,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutDirectReportsInput = {
@@ -17058,7 +21482,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17067,9 +21490,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17085,6 +21505,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutManagerInput = {
@@ -17097,7 +21519,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17106,9 +21527,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17124,6 +21542,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutManagerInput = {
@@ -17170,6 +21590,7 @@ export namespace Prisma {
     revokedReason?: string | null
     revokedByUserId?: string | null
     replacedBySessionId?: string | null
+    previousRefreshTokenHash?: string | null
     lastSeenAt?: Date | string
     userAgent?: string | null
     browserName?: string | null
@@ -17196,6 +21617,7 @@ export namespace Prisma {
     revokedReason?: string | null
     revokedByUserId?: string | null
     replacedBySessionId?: string | null
+    previousRefreshTokenHash?: string | null
     lastSeenAt?: Date | string
     userAgent?: string | null
     browserName?: string | null
@@ -17336,6 +21758,84 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type InvitationCreateWithoutInvitedByInput = {
+    id?: string
+    email?: string | null
+    phoneNumber?: string | null
+    tokenHash: string
+    status?: $Enums.InvitationStatus
+    expiresAt: Date | string
+    acceptedAt?: Date | string | null
+    acceptedByUserId?: string | null
+    revokedAt?: Date | string | null
+    resendCount?: number
+    lastResendAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    role: RoleCreateNestedOneWithoutInvitationsInput
+  }
+
+  export type InvitationUncheckedCreateWithoutInvitedByInput = {
+    id?: string
+    email?: string | null
+    phoneNumber?: string | null
+    tokenHash: string
+    status?: $Enums.InvitationStatus
+    expiresAt: Date | string
+    acceptedAt?: Date | string | null
+    acceptedByUserId?: string | null
+    revokedAt?: Date | string | null
+    resendCount?: number
+    lastResendAt?: Date | string | null
+    roleId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type InvitationCreateOrConnectWithoutInvitedByInput = {
+    where: InvitationWhereUniqueInput
+    create: XOR<InvitationCreateWithoutInvitedByInput, InvitationUncheckedCreateWithoutInvitedByInput>
+  }
+
+  export type InvitationCreateManyInvitedByInputEnvelope = {
+    data: InvitationCreateManyInvitedByInput | InvitationCreateManyInvitedByInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type PermissionCreateWithoutUserInput = {
+    id?: string
+    resource: string
+    resourceId?: string | null
+    action: string
+    conditions?: NullableJsonNullValueInput | InputJsonValue
+    grantedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PermissionUncheckedCreateWithoutUserInput = {
+    id?: string
+    resource: string
+    resourceId?: string | null
+    action: string
+    conditions?: NullableJsonNullValueInput | InputJsonValue
+    grantedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PermissionCreateOrConnectWithoutUserInput = {
+    where: PermissionWhereUniqueInput
+    create: XOR<PermissionCreateWithoutUserInput, PermissionUncheckedCreateWithoutUserInput>
+  }
+
+  export type PermissionCreateManyUserInputEnvelope = {
+    data: PermissionCreateManyUserInput | PermissionCreateManyUserInput[]
+    skipDuplicates?: boolean
+  }
+
   export type RoleUpsertWithoutUsersInput = {
     update: XOR<RoleUpdateWithoutUsersInput, RoleUncheckedUpdateWithoutUsersInput>
     create: XOR<RoleCreateWithoutUsersInput, RoleUncheckedCreateWithoutUsersInput>
@@ -17388,7 +21888,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17397,9 +21896,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -17415,6 +21911,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutDirectReportsInput = {
@@ -17427,7 +21925,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17436,9 +21933,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -17454,6 +21948,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserUpsertWithWhereUniqueWithoutManagerInput = {
@@ -17485,7 +21981,6 @@ export namespace Prisma {
     emailVerifiedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     phoneVerifiedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordHash?: StringFilter<"User"> | string
-    passwordExpiresAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordHistory?: StringNullableListFilter<"User">
     firstName?: StringNullableFilter<"User"> | string | null
     lastName?: StringNullableFilter<"User"> | string | null
@@ -17494,9 +21989,6 @@ export namespace Prisma {
     tokenVersion?: IntFilter<"User"> | number
     lastLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     passwordChangedAt?: DateTimeNullableFilter<"User"> | Date | string | null
-    failedLoginAttempts?: IntFilter<"User"> | number
-    lockedUntil?: DateTimeNullableFilter<"User"> | Date | string | null
-    lastFailedLoginAt?: DateTimeNullableFilter<"User"> | Date | string | null
     deactivatedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     suspendedAt?: DateTimeNullableFilter<"User"> | Date | string | null
     twoFactorEnabled?: BoolFilter<"User"> | boolean
@@ -17565,6 +22057,7 @@ export namespace Prisma {
     revokedReason?: StringNullableFilter<"Session"> | string | null
     revokedByUserId?: StringNullableFilter<"Session"> | string | null
     replacedBySessionId?: StringNullableFilter<"Session"> | string | null
+    previousRefreshTokenHash?: StringNullableFilter<"Session"> | string | null
     lastSeenAt?: DateTimeFilter<"Session"> | Date | string
     userAgent?: StringNullableFilter<"Session"> | string | null
     browserName?: StringNullableFilter<"Session"> | string | null
@@ -17684,6 +22177,75 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"VerificationToken"> | Date | string
   }
 
+  export type InvitationUpsertWithWhereUniqueWithoutInvitedByInput = {
+    where: InvitationWhereUniqueInput
+    update: XOR<InvitationUpdateWithoutInvitedByInput, InvitationUncheckedUpdateWithoutInvitedByInput>
+    create: XOR<InvitationCreateWithoutInvitedByInput, InvitationUncheckedCreateWithoutInvitedByInput>
+  }
+
+  export type InvitationUpdateWithWhereUniqueWithoutInvitedByInput = {
+    where: InvitationWhereUniqueInput
+    data: XOR<InvitationUpdateWithoutInvitedByInput, InvitationUncheckedUpdateWithoutInvitedByInput>
+  }
+
+  export type InvitationUpdateManyWithWhereWithoutInvitedByInput = {
+    where: InvitationScalarWhereInput
+    data: XOR<InvitationUpdateManyMutationInput, InvitationUncheckedUpdateManyWithoutInvitedByInput>
+  }
+
+  export type InvitationScalarWhereInput = {
+    AND?: InvitationScalarWhereInput | InvitationScalarWhereInput[]
+    OR?: InvitationScalarWhereInput[]
+    NOT?: InvitationScalarWhereInput | InvitationScalarWhereInput[]
+    id?: StringFilter<"Invitation"> | string
+    email?: StringNullableFilter<"Invitation"> | string | null
+    phoneNumber?: StringNullableFilter<"Invitation"> | string | null
+    tokenHash?: StringFilter<"Invitation"> | string
+    status?: EnumInvitationStatusFilter<"Invitation"> | $Enums.InvitationStatus
+    expiresAt?: DateTimeFilter<"Invitation"> | Date | string
+    acceptedAt?: DateTimeNullableFilter<"Invitation"> | Date | string | null
+    acceptedByUserId?: StringNullableFilter<"Invitation"> | string | null
+    revokedAt?: DateTimeNullableFilter<"Invitation"> | Date | string | null
+    resendCount?: IntFilter<"Invitation"> | number
+    lastResendAt?: DateTimeNullableFilter<"Invitation"> | Date | string | null
+    roleId?: StringFilter<"Invitation"> | string
+    invitedByUserId?: StringFilter<"Invitation"> | string
+    createdAt?: DateTimeFilter<"Invitation"> | Date | string
+    updatedAt?: DateTimeFilter<"Invitation"> | Date | string
+  }
+
+  export type PermissionUpsertWithWhereUniqueWithoutUserInput = {
+    where: PermissionWhereUniqueInput
+    update: XOR<PermissionUpdateWithoutUserInput, PermissionUncheckedUpdateWithoutUserInput>
+    create: XOR<PermissionCreateWithoutUserInput, PermissionUncheckedCreateWithoutUserInput>
+  }
+
+  export type PermissionUpdateWithWhereUniqueWithoutUserInput = {
+    where: PermissionWhereUniqueInput
+    data: XOR<PermissionUpdateWithoutUserInput, PermissionUncheckedUpdateWithoutUserInput>
+  }
+
+  export type PermissionUpdateManyWithWhereWithoutUserInput = {
+    where: PermissionScalarWhereInput
+    data: XOR<PermissionUpdateManyMutationInput, PermissionUncheckedUpdateManyWithoutUserInput>
+  }
+
+  export type PermissionScalarWhereInput = {
+    AND?: PermissionScalarWhereInput | PermissionScalarWhereInput[]
+    OR?: PermissionScalarWhereInput[]
+    NOT?: PermissionScalarWhereInput | PermissionScalarWhereInput[]
+    id?: StringFilter<"Permission"> | string
+    userId?: StringFilter<"Permission"> | string
+    resource?: StringFilter<"Permission"> | string
+    resourceId?: StringNullableFilter<"Permission"> | string | null
+    action?: StringFilter<"Permission"> | string
+    conditions?: JsonNullableFilter<"Permission">
+    grantedBy?: StringNullableFilter<"Permission"> | string | null
+    expiresAt?: DateTimeNullableFilter<"Permission"> | Date | string | null
+    createdAt?: DateTimeFilter<"Permission"> | Date | string
+    updatedAt?: DateTimeFilter<"Permission"> | Date | string
+  }
+
   export type UserCreateWithoutTerritoryAssignmentsInput = {
     id?: string
     email: string
@@ -17694,7 +22256,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17703,9 +22264,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17721,6 +22279,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutTerritoryAssignmentsInput = {
@@ -17733,7 +22293,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17742,9 +22301,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17760,6 +22316,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutTerritoryAssignmentsInput = {
@@ -17788,7 +22346,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17797,9 +22354,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -17815,6 +22369,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutTerritoryAssignmentsInput = {
@@ -17827,7 +22383,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17836,9 +22391,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -17854,6 +22406,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutRoleInput = {
@@ -17866,7 +22420,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17875,9 +22428,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17893,6 +22443,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutRoleInput = {
@@ -17905,7 +22457,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -17914,9 +22465,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -17932,6 +22480,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutRoleInput = {
@@ -17956,9 +22506,9 @@ export namespace Prisma {
     revokedAt?: Date | string | null
     resendCount?: number
     lastResendAt?: Date | string | null
-    invitedByUserId: string
     createdAt?: Date | string
     updatedAt?: Date | string
+    invitedBy: UserCreateNestedOneWithoutSentInvitationsInput
   }
 
   export type InvitationUncheckedCreateWithoutRoleInput = {
@@ -18020,27 +22570,6 @@ export namespace Prisma {
     data: XOR<InvitationUpdateManyMutationInput, InvitationUncheckedUpdateManyWithoutRoleInput>
   }
 
-  export type InvitationScalarWhereInput = {
-    AND?: InvitationScalarWhereInput | InvitationScalarWhereInput[]
-    OR?: InvitationScalarWhereInput[]
-    NOT?: InvitationScalarWhereInput | InvitationScalarWhereInput[]
-    id?: StringFilter<"Invitation"> | string
-    email?: StringNullableFilter<"Invitation"> | string | null
-    phoneNumber?: StringNullableFilter<"Invitation"> | string | null
-    tokenHash?: StringFilter<"Invitation"> | string
-    status?: EnumInvitationStatusFilter<"Invitation"> | $Enums.InvitationStatus
-    expiresAt?: DateTimeFilter<"Invitation"> | Date | string
-    acceptedAt?: DateTimeNullableFilter<"Invitation"> | Date | string | null
-    acceptedByUserId?: StringNullableFilter<"Invitation"> | string | null
-    revokedAt?: DateTimeNullableFilter<"Invitation"> | Date | string | null
-    resendCount?: IntFilter<"Invitation"> | number
-    lastResendAt?: DateTimeNullableFilter<"Invitation"> | Date | string | null
-    roleId?: StringFilter<"Invitation"> | string
-    invitedByUserId?: StringFilter<"Invitation"> | string
-    createdAt?: DateTimeFilter<"Invitation"> | Date | string
-    updatedAt?: DateTimeFilter<"Invitation"> | Date | string
-  }
-
   export type UserCreateWithoutSessionsInput = {
     id?: string
     email: string
@@ -18051,7 +22580,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18060,9 +22588,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18078,6 +22603,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutSessionsInput = {
@@ -18090,7 +22617,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18099,9 +22625,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18117,6 +22640,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutSessionsInput = {
@@ -18145,7 +22670,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18154,9 +22678,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18172,6 +22693,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -18184,7 +22707,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18193,9 +22715,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18211,6 +22730,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type RoleCreateWithoutInvitationsInput = {
@@ -18236,6 +22757,85 @@ export namespace Prisma {
   export type RoleCreateOrConnectWithoutInvitationsInput = {
     where: RoleWhereUniqueInput
     create: XOR<RoleCreateWithoutInvitationsInput, RoleUncheckedCreateWithoutInvitationsInput>
+  }
+
+  export type UserCreateWithoutSentInvitationsInput = {
+    id?: string
+    email: string
+    username: string
+    phoneNumber?: string | null
+    emailVerified?: boolean
+    phoneVerified?: boolean
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    passwordHash: string
+    passwordHistory?: UserCreatepasswordHistoryInput | string[]
+    firstName?: string | null
+    lastName?: string | null
+    avatarUrl?: string | null
+    status?: $Enums.UserStatus
+    tokenVersion?: number
+    lastLoginAt?: Date | string | null
+    passwordChangedAt?: Date | string | null
+    deactivatedAt?: Date | string | null
+    suspendedAt?: Date | string | null
+    twoFactorEnabled?: boolean
+    twoFactorSecret?: string | null
+    deletedAt?: Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    role: RoleCreateNestedOneWithoutUsersInput
+    manager?: UserCreateNestedOneWithoutDirectReportsInput
+    directReports?: UserCreateNestedManyWithoutManagerInput
+    territoryAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutUserInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
+  }
+
+  export type UserUncheckedCreateWithoutSentInvitationsInput = {
+    id?: string
+    email: string
+    username: string
+    phoneNumber?: string | null
+    emailVerified?: boolean
+    phoneVerified?: boolean
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    passwordHash: string
+    passwordHistory?: UserCreatepasswordHistoryInput | string[]
+    firstName?: string | null
+    lastName?: string | null
+    avatarUrl?: string | null
+    status?: $Enums.UserStatus
+    tokenVersion?: number
+    lastLoginAt?: Date | string | null
+    passwordChangedAt?: Date | string | null
+    deactivatedAt?: Date | string | null
+    suspendedAt?: Date | string | null
+    twoFactorEnabled?: boolean
+    twoFactorSecret?: string | null
+    deletedAt?: Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    roleId: string
+    managerId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    directReports?: UserUncheckedCreateNestedManyWithoutManagerInput
+    territoryAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutUserInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
+  }
+
+  export type UserCreateOrConnectWithoutSentInvitationsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutSentInvitationsInput, UserUncheckedCreateWithoutSentInvitationsInput>
   }
 
   export type RoleUpsertWithoutInvitationsInput = {
@@ -18269,6 +22869,91 @@ export namespace Prisma {
     users?: UserUncheckedUpdateManyWithoutRoleNestedInput
   }
 
+  export type UserUpsertWithoutSentInvitationsInput = {
+    update: XOR<UserUpdateWithoutSentInvitationsInput, UserUncheckedUpdateWithoutSentInvitationsInput>
+    create: XOR<UserCreateWithoutSentInvitationsInput, UserUncheckedCreateWithoutSentInvitationsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutSentInvitationsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutSentInvitationsInput, UserUncheckedUpdateWithoutSentInvitationsInput>
+  }
+
+  export type UserUpdateWithoutSentInvitationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    phoneVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    passwordHistory?: UserUpdatepasswordHistoryInput | string[]
+    firstName?: NullableStringFieldUpdateOperationsInput | string | null
+    lastName?: NullableStringFieldUpdateOperationsInput | string | null
+    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+    tokenVersion?: IntFieldUpdateOperationsInput | number
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
+    twoFactorSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    role?: RoleUpdateOneRequiredWithoutUsersNestedInput
+    manager?: UserUpdateOneWithoutDirectReportsNestedInput
+    directReports?: UserUpdateManyWithoutManagerNestedInput
+    territoryAssignments?: UserTerritoryAssignmentUpdateManyWithoutUserNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutSentInvitationsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    phoneVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    passwordHistory?: UserUpdatepasswordHistoryInput | string[]
+    firstName?: NullableStringFieldUpdateOperationsInput | string | null
+    lastName?: NullableStringFieldUpdateOperationsInput | string | null
+    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+    tokenVersion?: IntFieldUpdateOperationsInput | number
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
+    twoFactorSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    roleId?: StringFieldUpdateOperationsInput | string
+    managerId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    directReports?: UserUncheckedUpdateManyWithoutManagerNestedInput
+    territoryAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
+  }
+
   export type UserCreateWithoutPasswordResetsInput = {
     id?: string
     email: string
@@ -18279,7 +22964,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18288,9 +22972,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18306,6 +22987,8 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutPasswordResetsInput = {
@@ -18318,7 +23001,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18327,9 +23009,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18345,6 +23024,8 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutPasswordResetsInput = {
@@ -18373,7 +23054,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18382,9 +23062,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18400,6 +23077,8 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutPasswordResetsInput = {
@@ -18412,7 +23091,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18421,9 +23099,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18439,6 +23114,8 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutAuditLogsInput = {
@@ -18451,7 +23128,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18460,9 +23136,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18478,6 +23151,8 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutAuditLogsInput = {
@@ -18490,7 +23165,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18499,9 +23173,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18517,6 +23188,8 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutAuditLogsInput = {
@@ -18545,7 +23218,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18554,9 +23226,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18572,6 +23241,8 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAuditLogsInput = {
@@ -18584,7 +23255,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18593,9 +23263,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18611,6 +23278,8 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserCreateWithoutVerificationTokensInput = {
@@ -18623,7 +23292,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18632,9 +23300,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18650,6 +23315,8 @@ export namespace Prisma {
     sessions?: SessionCreateNestedManyWithoutUserInput
     passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionCreateNestedManyWithoutUserInput
   }
 
   export type UserUncheckedCreateWithoutVerificationTokensInput = {
@@ -18662,7 +23329,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18671,9 +23337,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18689,6 +23352,8 @@ export namespace Prisma {
     sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
     passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+    permissions?: PermissionUncheckedCreateNestedManyWithoutUserInput
   }
 
   export type UserCreateOrConnectWithoutVerificationTokensInput = {
@@ -18717,7 +23382,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18726,9 +23390,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18744,6 +23405,8 @@ export namespace Prisma {
     sessions?: SessionUpdateManyWithoutUserNestedInput
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutVerificationTokensInput = {
@@ -18756,7 +23419,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18765,9 +23427,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18783,6 +23442,370 @@ export namespace Prisma {
     sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type UserCreateWithoutPermissionsInput = {
+    id?: string
+    email: string
+    username: string
+    phoneNumber?: string | null
+    emailVerified?: boolean
+    phoneVerified?: boolean
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    passwordHash: string
+    passwordHistory?: UserCreatepasswordHistoryInput | string[]
+    firstName?: string | null
+    lastName?: string | null
+    avatarUrl?: string | null
+    status?: $Enums.UserStatus
+    tokenVersion?: number
+    lastLoginAt?: Date | string | null
+    passwordChangedAt?: Date | string | null
+    deactivatedAt?: Date | string | null
+    suspendedAt?: Date | string | null
+    twoFactorEnabled?: boolean
+    twoFactorSecret?: string | null
+    deletedAt?: Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    role: RoleCreateNestedOneWithoutUsersInput
+    manager?: UserCreateNestedOneWithoutDirectReportsInput
+    directReports?: UserCreateNestedManyWithoutManagerInput
+    territoryAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutUserInput
+    sessions?: SessionCreateNestedManyWithoutUserInput
+    passwordResets?: PasswordResetCreateNestedManyWithoutUserInput
+    auditLogs?: AuditLogCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationCreateNestedManyWithoutInvitedByInput
+  }
+
+  export type UserUncheckedCreateWithoutPermissionsInput = {
+    id?: string
+    email: string
+    username: string
+    phoneNumber?: string | null
+    emailVerified?: boolean
+    phoneVerified?: boolean
+    emailVerifiedAt?: Date | string | null
+    phoneVerifiedAt?: Date | string | null
+    passwordHash: string
+    passwordHistory?: UserCreatepasswordHistoryInput | string[]
+    firstName?: string | null
+    lastName?: string | null
+    avatarUrl?: string | null
+    status?: $Enums.UserStatus
+    tokenVersion?: number
+    lastLoginAt?: Date | string | null
+    passwordChangedAt?: Date | string | null
+    deactivatedAt?: Date | string | null
+    suspendedAt?: Date | string | null
+    twoFactorEnabled?: boolean
+    twoFactorSecret?: string | null
+    deletedAt?: Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    roleId: string
+    managerId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    directReports?: UserUncheckedCreateNestedManyWithoutManagerInput
+    territoryAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutUserInput
+    sessions?: SessionUncheckedCreateNestedManyWithoutUserInput
+    passwordResets?: PasswordResetUncheckedCreateNestedManyWithoutUserInput
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUserInput
+    verificationTokens?: VerificationTokenUncheckedCreateNestedManyWithoutUserInput
+    sentInvitations?: InvitationUncheckedCreateNestedManyWithoutInvitedByInput
+  }
+
+  export type UserCreateOrConnectWithoutPermissionsInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutPermissionsInput, UserUncheckedCreateWithoutPermissionsInput>
+  }
+
+  export type UserUpsertWithoutPermissionsInput = {
+    update: XOR<UserUpdateWithoutPermissionsInput, UserUncheckedUpdateWithoutPermissionsInput>
+    create: XOR<UserCreateWithoutPermissionsInput, UserUncheckedCreateWithoutPermissionsInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutPermissionsInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutPermissionsInput, UserUncheckedUpdateWithoutPermissionsInput>
+  }
+
+  export type UserUpdateWithoutPermissionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    phoneVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    passwordHistory?: UserUpdatepasswordHistoryInput | string[]
+    firstName?: NullableStringFieldUpdateOperationsInput | string | null
+    lastName?: NullableStringFieldUpdateOperationsInput | string | null
+    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+    tokenVersion?: IntFieldUpdateOperationsInput | number
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
+    twoFactorSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    role?: RoleUpdateOneRequiredWithoutUsersNestedInput
+    manager?: UserUpdateOneWithoutDirectReportsNestedInput
+    directReports?: UserUpdateManyWithoutManagerNestedInput
+    territoryAssignments?: UserTerritoryAssignmentUpdateManyWithoutUserNestedInput
+    sessions?: SessionUpdateManyWithoutUserNestedInput
+    passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
+    auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutPermissionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    emailVerified?: BoolFieldUpdateOperationsInput | boolean
+    phoneVerified?: BoolFieldUpdateOperationsInput | boolean
+    emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    passwordHistory?: UserUpdatepasswordHistoryInput | string[]
+    firstName?: NullableStringFieldUpdateOperationsInput | string | null
+    lastName?: NullableStringFieldUpdateOperationsInput | string | null
+    avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    status?: EnumUserStatusFieldUpdateOperationsInput | $Enums.UserStatus
+    tokenVersion?: IntFieldUpdateOperationsInput | number
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
+    twoFactorSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    metadata?: NullableJsonNullValueInput | InputJsonValue
+    roleId?: StringFieldUpdateOperationsInput | string
+    managerId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    directReports?: UserUncheckedUpdateManyWithoutManagerNestedInput
+    territoryAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutUserNestedInput
+    sessions?: SessionUncheckedUpdateManyWithoutUserNestedInput
+    passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
+    verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+  }
+
+  export type DoctorClinicCreateWithoutClinicInput = {
+    id?: string
+    createdAt?: Date | string
+    doctor: DoctorCreateNestedOneWithoutDoctorClinicsInput
+  }
+
+  export type DoctorClinicUncheckedCreateWithoutClinicInput = {
+    id?: string
+    doctorId: string
+    createdAt?: Date | string
+  }
+
+  export type DoctorClinicCreateOrConnectWithoutClinicInput = {
+    where: DoctorClinicWhereUniqueInput
+    create: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput>
+  }
+
+  export type DoctorClinicCreateManyClinicInputEnvelope = {
+    data: DoctorClinicCreateManyClinicInput | DoctorClinicCreateManyClinicInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DoctorClinicUpsertWithWhereUniqueWithoutClinicInput = {
+    where: DoctorClinicWhereUniqueInput
+    update: XOR<DoctorClinicUpdateWithoutClinicInput, DoctorClinicUncheckedUpdateWithoutClinicInput>
+    create: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput>
+  }
+
+  export type DoctorClinicUpdateWithWhereUniqueWithoutClinicInput = {
+    where: DoctorClinicWhereUniqueInput
+    data: XOR<DoctorClinicUpdateWithoutClinicInput, DoctorClinicUncheckedUpdateWithoutClinicInput>
+  }
+
+  export type DoctorClinicUpdateManyWithWhereWithoutClinicInput = {
+    where: DoctorClinicScalarWhereInput
+    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyWithoutClinicInput>
+  }
+
+  export type DoctorClinicScalarWhereInput = {
+    AND?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+    OR?: DoctorClinicScalarWhereInput[]
+    NOT?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+    id?: StringFilter<"DoctorClinic"> | string
+    doctorId?: StringFilter<"DoctorClinic"> | string
+    clinicId?: StringFilter<"DoctorClinic"> | string
+    createdAt?: DateTimeFilter<"DoctorClinic"> | Date | string
+  }
+
+  export type DoctorClinicCreateWithoutDoctorInput = {
+    id?: string
+    createdAt?: Date | string
+    clinic: ClinicCreateNestedOneWithoutDoctorClinicsInput
+  }
+
+  export type DoctorClinicUncheckedCreateWithoutDoctorInput = {
+    id?: string
+    clinicId: string
+    createdAt?: Date | string
+  }
+
+  export type DoctorClinicCreateOrConnectWithoutDoctorInput = {
+    where: DoctorClinicWhereUniqueInput
+    create: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput>
+  }
+
+  export type DoctorClinicCreateManyDoctorInputEnvelope = {
+    data: DoctorClinicCreateManyDoctorInput | DoctorClinicCreateManyDoctorInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput = {
+    where: DoctorClinicWhereUniqueInput
+    update: XOR<DoctorClinicUpdateWithoutDoctorInput, DoctorClinicUncheckedUpdateWithoutDoctorInput>
+    create: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput>
+  }
+
+  export type DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput = {
+    where: DoctorClinicWhereUniqueInput
+    data: XOR<DoctorClinicUpdateWithoutDoctorInput, DoctorClinicUncheckedUpdateWithoutDoctorInput>
+  }
+
+  export type DoctorClinicUpdateManyWithWhereWithoutDoctorInput = {
+    where: DoctorClinicScalarWhereInput
+    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyWithoutDoctorInput>
+  }
+
+  export type DoctorCreateWithoutDoctorClinicsInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DoctorUncheckedCreateWithoutDoctorClinicsInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DoctorCreateOrConnectWithoutDoctorClinicsInput = {
+    where: DoctorWhereUniqueInput
+    create: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
+  }
+
+  export type ClinicCreateWithoutDoctorClinicsInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ClinicUncheckedCreateWithoutDoctorClinicsInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ClinicCreateOrConnectWithoutDoctorClinicsInput = {
+    where: ClinicWhereUniqueInput
+    create: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
+  }
+
+  export type DoctorUpsertWithoutDoctorClinicsInput = {
+    update: XOR<DoctorUpdateWithoutDoctorClinicsInput, DoctorUncheckedUpdateWithoutDoctorClinicsInput>
+    create: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
+    where?: DoctorWhereInput
+  }
+
+  export type DoctorUpdateToOneWithWhereWithoutDoctorClinicsInput = {
+    where?: DoctorWhereInput
+    data: XOR<DoctorUpdateWithoutDoctorClinicsInput, DoctorUncheckedUpdateWithoutDoctorClinicsInput>
+  }
+
+  export type DoctorUpdateWithoutDoctorClinicsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorUncheckedUpdateWithoutDoctorClinicsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ClinicUpsertWithoutDoctorClinicsInput = {
+    update: XOR<ClinicUpdateWithoutDoctorClinicsInput, ClinicUncheckedUpdateWithoutDoctorClinicsInput>
+    create: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
+    where?: ClinicWhereInput
+  }
+
+  export type ClinicUpdateToOneWithWhereWithoutDoctorClinicsInput = {
+    where?: ClinicWhereInput
+    data: XOR<ClinicUpdateWithoutDoctorClinicsInput, ClinicUncheckedUpdateWithoutDoctorClinicsInput>
+  }
+
+  export type ClinicUpdateWithoutDoctorClinicsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ClinicUncheckedUpdateWithoutDoctorClinicsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type UserCreateManyManagerInput = {
@@ -18795,7 +23818,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -18804,9 +23826,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -18834,6 +23853,7 @@ export namespace Prisma {
     revokedReason?: string | null
     revokedByUserId?: string | null
     replacedBySessionId?: string | null
+    previousRefreshTokenHash?: string | null
     lastSeenAt?: Date | string
     userAgent?: string | null
     browserName?: string | null
@@ -18893,6 +23913,35 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
+  export type InvitationCreateManyInvitedByInput = {
+    id?: string
+    email?: string | null
+    phoneNumber?: string | null
+    tokenHash: string
+    status?: $Enums.InvitationStatus
+    expiresAt: Date | string
+    acceptedAt?: Date | string | null
+    acceptedByUserId?: string | null
+    revokedAt?: Date | string | null
+    resendCount?: number
+    lastResendAt?: Date | string | null
+    roleId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PermissionCreateManyUserInput = {
+    id?: string
+    resource: string
+    resourceId?: string | null
+    action: string
+    conditions?: NullableJsonNullValueInput | InputJsonValue
+    grantedBy?: string | null
+    expiresAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type UserUpdateWithoutManagerInput = {
     id?: StringFieldUpdateOperationsInput | string
     email?: StringFieldUpdateOperationsInput | string
@@ -18903,7 +23952,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18912,9 +23960,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18930,6 +23975,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutManagerInput = {
@@ -18942,7 +23989,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18951,9 +23997,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -18969,6 +24012,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateManyWithoutManagerInput = {
@@ -18981,7 +24026,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18990,9 +24034,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -19036,6 +24077,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19062,6 +24104,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19088,6 +24131,7 @@ export namespace Prisma {
     revokedReason?: NullableStringFieldUpdateOperationsInput | string | null
     revokedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     replacedBySessionId?: NullableStringFieldUpdateOperationsInput | string | null
+    previousRefreshTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     lastSeenAt?: DateTimeFieldUpdateOperationsInput | Date | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
     browserName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19229,6 +24273,93 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type InvitationUpdateWithoutInvitedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    status?: EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    acceptedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resendCount?: IntFieldUpdateOperationsInput | number
+    lastResendAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    role?: RoleUpdateOneRequiredWithoutInvitationsNestedInput
+  }
+
+  export type InvitationUncheckedUpdateWithoutInvitedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    status?: EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    acceptedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resendCount?: IntFieldUpdateOperationsInput | number
+    lastResendAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    roleId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type InvitationUncheckedUpdateManyWithoutInvitedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    phoneNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    tokenHash?: StringFieldUpdateOperationsInput | string
+    status?: EnumInvitationStatusFieldUpdateOperationsInput | $Enums.InvitationStatus
+    expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    acceptedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resendCount?: IntFieldUpdateOperationsInput | number
+    lastResendAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    roleId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PermissionUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    resource?: StringFieldUpdateOperationsInput | string
+    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    action?: StringFieldUpdateOperationsInput | string
+    conditions?: NullableJsonNullValueInput | InputJsonValue
+    grantedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PermissionUncheckedUpdateWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    resource?: StringFieldUpdateOperationsInput | string
+    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    action?: StringFieldUpdateOperationsInput | string
+    conditions?: NullableJsonNullValueInput | InputJsonValue
+    grantedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PermissionUncheckedUpdateManyWithoutUserInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    resource?: StringFieldUpdateOperationsInput | string
+    resourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    action?: StringFieldUpdateOperationsInput | string
+    conditions?: NullableJsonNullValueInput | InputJsonValue
+    grantedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type UserCreateManyRoleInput = {
     id?: string
     email: string
@@ -19239,7 +24370,6 @@ export namespace Prisma {
     emailVerifiedAt?: Date | string | null
     phoneVerifiedAt?: Date | string | null
     passwordHash: string
-    passwordExpiresAt?: Date | string | null
     passwordHistory?: UserCreatepasswordHistoryInput | string[]
     firstName?: string | null
     lastName?: string | null
@@ -19248,9 +24378,6 @@ export namespace Prisma {
     tokenVersion?: number
     lastLoginAt?: Date | string | null
     passwordChangedAt?: Date | string | null
-    failedLoginAttempts?: number
-    lockedUntil?: Date | string | null
-    lastFailedLoginAt?: Date | string | null
     deactivatedAt?: Date | string | null
     suspendedAt?: Date | string | null
     twoFactorEnabled?: boolean
@@ -19289,7 +24416,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19298,9 +24424,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -19316,6 +24439,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateWithoutRoleInput = {
@@ -19328,7 +24453,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19337,9 +24461,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -19355,6 +24476,8 @@ export namespace Prisma {
     passwordResets?: PasswordResetUncheckedUpdateManyWithoutUserNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUserNestedInput
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
+    sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
+    permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
   }
 
   export type UserUncheckedUpdateManyWithoutRoleInput = {
@@ -19367,7 +24490,6 @@ export namespace Prisma {
     emailVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     phoneVerifiedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHash?: StringFieldUpdateOperationsInput | string
-    passwordExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordHistory?: UserUpdatepasswordHistoryInput | string[]
     firstName?: NullableStringFieldUpdateOperationsInput | string | null
     lastName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -19376,9 +24498,6 @@ export namespace Prisma {
     tokenVersion?: IntFieldUpdateOperationsInput | number
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     passwordChangedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    failedLoginAttempts?: IntFieldUpdateOperationsInput | number
-    lockedUntil?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    lastFailedLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deactivatedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     suspendedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     twoFactorEnabled?: BoolFieldUpdateOperationsInput | boolean
@@ -19402,9 +24521,9 @@ export namespace Prisma {
     revokedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     resendCount?: IntFieldUpdateOperationsInput | number
     lastResendAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    invitedByUserId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    invitedBy?: UserUpdateOneRequiredWithoutSentInvitationsNestedInput
   }
 
   export type InvitationUncheckedUpdateWithoutRoleInput = {
@@ -19439,6 +24558,54 @@ export namespace Prisma {
     invitedByUserId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicCreateManyClinicInput = {
+    id?: string
+    doctorId: string
+    createdAt?: Date | string
+  }
+
+  export type DoctorClinicUpdateWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctor?: DoctorUpdateOneRequiredWithoutDoctorClinicsNestedInput
+  }
+
+  export type DoctorClinicUncheckedUpdateWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    doctorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicUncheckedUpdateManyWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    doctorId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicCreateManyDoctorInput = {
+    id?: string
+    clinicId: string
+    createdAt?: Date | string
+  }
+
+  export type DoctorClinicUpdateWithoutDoctorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    clinic?: ClinicUpdateOneRequiredWithoutDoctorClinicsNestedInput
+  }
+
+  export type DoctorClinicUncheckedUpdateWithoutDoctorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    clinicId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicUncheckedUpdateManyWithoutDoctorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    clinicId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
 

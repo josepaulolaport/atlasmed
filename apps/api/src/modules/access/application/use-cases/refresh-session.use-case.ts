@@ -2,11 +2,12 @@ import type { ISessionCache } from "../interfaces/session-cache.interface";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import { TokenService } from "../services/token.service";
 import { SessionService } from "../services/session.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
-import { metricsService } from "../../../../infrastructure/monitoring/metrics.service";
-import { sessionSecurityService } from "../../../../infrastructure/security/session-security.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
+import type { ISessionSecurityService } from "../interfaces/session-security.interface";
 import { hashToken } from "../../../../shared/utils/hash-token";
 import { generateDeviceFingerprint } from "../../../../shared/utils/device-fingerprint";
+import { isWithinRefreshRotationGrace } from "../constants/refresh-token.constants";
 import {
   AccountSuspendedError,
   AccountDeactivatedError,
@@ -21,6 +22,9 @@ interface Dependencies {
   sessionCache: ISessionCache;
   tokenService: TokenService;
   sessionService: SessionService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
+  sessionSecurity: ISessionSecurityService;
 }
 
 interface RefreshSessionParams {
@@ -46,19 +50,11 @@ export class RefreshSessionUseCase {
         await this.deps.sessionRepository.findActiveByTokenHash(tokenHash);
 
       if (!dbSessionRecord) {
-        const superseded =
-          await this.deps.sessionCache.getSupersededSession(tokenHash);
-
-        if (superseded) {
-          await this.handleRefreshTokenReuse({
-            userId: superseded.userId,
-            sessionId: superseded.sessionId,
-            ipAddress: params.ipAddress,
-            userAgent: params.userAgent,
-          });
-        }
-
-        throw new TokenInvalidError("Refresh token not found or expired");
+        await this.handleSupersededRefreshToken({
+          tokenHash,
+          ipAddress: params.ipAddress,
+          userAgent: params.userAgent,
+        });
       }
 
       oldSession = {
@@ -123,30 +119,32 @@ export class RefreshSessionUseCase {
       userRole: oldSession.user.role.name as any,
     });
 
-    let updatedSession;
+    const rotationResult =
+      await this.deps.sessionRepository.rotateRefreshTokenTransaction({
+        sessionId: oldSession.id,
+        expectedRefreshTokenHash: tokenHash,
+        newRefreshTokenHash: refreshCredentials.refreshTokenHash,
+        newExpiresAt: refreshCredentials.expiresAt,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
 
-    try {
-      updatedSession =
-        await this.deps.sessionRepository.rotateRefreshTokenTransaction({
-          sessionId: oldSession.id,
-          expectedRefreshTokenHash: tokenHash,
-          newRefreshTokenHash: refreshCredentials.refreshTokenHash,
-          newExpiresAt: refreshCredentials.expiresAt,
-          ipAddress: params.ipAddress,
-          userAgent: params.userAgent,
-        });
-    } catch (error) {
-      if (error instanceof RefreshTokenReuseDetectedError) {
-        await this.handleRefreshTokenReuse({
-          userId: error.context?.userId as string,
-          sessionId: error.context?.sessionId as string,
-          ipAddress: params.ipAddress,
-          userAgent: params.userAgent,
-        });
-      }
-
-      throw error;
+    if (rotationResult.status === "reuse_detected") {
+      return await this.handleTrueRefreshTokenTheft({
+        userId: rotationResult.userId,
+        sessionId: rotationResult.sessionId,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
     }
+
+    if (rotationResult.status === "already_rotated") {
+      throw new TokenInvalidError(
+        "Refresh token was already rotated; retry with the latest refresh token"
+      );
+    }
+
+    const updatedSession = rotationResult.session;
 
     const cachedSession = {
       id: updatedSession.id,
@@ -180,6 +178,8 @@ export class RefreshSessionUseCase {
       tokenVersion: updatedSession.user.tokenVersion,
       iat: Math.floor(Date.now() / 1000),
     });
+
+    this.deps.metrics.recordRefresh(true);
 
     return {
       accessToken,
@@ -216,7 +216,7 @@ export class RefreshSessionUseCase {
           })
         : undefined;
 
-    const securityResult = await sessionSecurityService.validateSessionSecurity({
+    const securityResult = await this.deps.sessionSecurity.validateSessionSecurity({
       userId: params.userId,
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
@@ -233,7 +233,68 @@ export class RefreshSessionUseCase {
     }
   }
 
-  private async handleRefreshTokenReuse(params: {
+  private async handleSupersededRefreshToken(params: {
+    tokenHash: string;
+    ipAddress?: string | undefined;
+    userAgent?: string | undefined;
+  }): Promise<never> {
+    const superseded =
+      await this.deps.sessionCache.getSupersededSession(params.tokenHash);
+
+    if (superseded) {
+      const session = await this.deps.sessionRepository.findById(
+        superseded.sessionId
+      );
+
+      await this.handleRefreshTokenReplay({
+        userId: superseded.userId,
+        sessionId: superseded.sessionId,
+        sessionUpdatedAt: session?.updatedAt ?? new Date(0),
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
+    }
+
+    const previousSession =
+      await this.deps.sessionRepository.findActiveByPreviousRefreshTokenHash(
+        params.tokenHash
+      );
+
+    if (previousSession) {
+      await this.handleRefreshTokenReplay({
+        userId: previousSession.userId,
+        sessionId: previousSession.id,
+        sessionUpdatedAt: previousSession.updatedAt,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
+    }
+
+    throw new TokenInvalidError("Refresh token not found or expired");
+  }
+
+  private async handleRefreshTokenReplay(params: {
+    userId: string;
+    sessionId: string;
+    sessionUpdatedAt: Date;
+    ipAddress?: string | undefined;
+    userAgent?: string | undefined;
+  }): Promise<never> {
+    if (isWithinRefreshRotationGrace(params.sessionUpdatedAt)) {
+      throw new TokenInvalidError(
+        "Refresh token was already rotated; retry with the latest refresh token"
+      );
+    }
+
+    return await this.handleTrueRefreshTokenTheft({
+      userId: params.userId,
+      sessionId: params.sessionId,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+    });
+  }
+
+  private async handleTrueRefreshTokenTheft(params: {
     userId: string;
     sessionId: string;
     ipAddress?: string | undefined;
@@ -241,7 +302,7 @@ export class RefreshSessionUseCase {
   }): Promise<never> {
     await this.deps.sessionService.revokeAllByUserId(params.userId);
 
-    await auditLogService.logSuspiciousActivity({
+    await this.deps.auditLog.logSuspiciousActivity({
       userId: params.userId,
       sessionId: params.sessionId,
       reason: "refresh_token_reuse",
@@ -249,7 +310,8 @@ export class RefreshSessionUseCase {
       userAgent: params.userAgent,
     });
 
-    metricsService.recordSuspiciousActivity("refresh_token_reuse");
+    this.deps.metrics.recordSuspiciousActivity("refresh_token_reuse");
+    this.deps.metrics.recordRefresh(false, "refresh_token_reuse");
 
     throw new RefreshTokenReuseDetectedError({
       userId: params.userId,

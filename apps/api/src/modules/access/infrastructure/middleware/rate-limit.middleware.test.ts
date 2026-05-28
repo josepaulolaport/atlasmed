@@ -30,7 +30,7 @@ function createTestApp(handler: ReturnType<typeof createRateLimitMiddleware>) {
     .onError(({ error, set }) => {
       if (error instanceof AppError) {
         set.status = error.statusCode;
-        return { error: error.toJSON() };
+        return { error: error.toClientJSON() };
       }
       throw error;
     });
@@ -58,7 +58,7 @@ describe("rate-limit.middleware", () => {
       expect(key).toBe("user@example.com");
     });
 
-    it("login key falls back to IP when identifier is missing", () => {
+    it("login key falls back to client IP when identifier is missing and TRUST_PROXY is false", () => {
       const key = getLoginRateLimitKey({
         body: {},
         request: new Request("http://localhost/login", {
@@ -66,10 +66,10 @@ describe("rate-limit.middleware", () => {
         }),
       });
 
-      expect(key).toBe("203.0.113.10");
+      expect(key).toBe("unknown");
     });
 
-    it("login key does not use email or username fields", () => {
+    it("login key does not use email or username fields when TRUST_PROXY is false", () => {
       const key = getLoginRateLimitKey({
         body: { email: "user@example.com", username: "testuser" } as any,
         request: new Request("http://localhost/login", {
@@ -77,7 +77,7 @@ describe("rate-limit.middleware", () => {
         }),
       });
 
-      expect(key).toBe("203.0.113.20");
+      expect(key).toBe("unknown");
     });
 
     it("password reset key uses body.identifier", () => {
@@ -89,7 +89,7 @@ describe("rate-limit.middleware", () => {
       expect(key).toBe("+15551234567");
     });
 
-    it("password reset confirm key uses IP and token prefix", () => {
+    it("password reset confirm key uses client IP and token prefix when TRUST_PROXY is false", () => {
       const key = getPasswordResetConfirmRateLimitKey({
         body: { token: "abcdefgh1234567890" },
         request: new Request("http://localhost/password-reset/confirm", {
@@ -97,7 +97,7 @@ describe("rate-limit.middleware", () => {
         }),
       });
 
-      expect(key).toBe("203.0.113.30:abcdefgh");
+      expect(key).toBe("unknown:abcdefgh");
     });
   });
 
@@ -151,6 +151,51 @@ describe("rate-limit.middleware", () => {
       expect(context.set.headers["retry-after"]).toBeTruthy();
       expect(context.set.headers["x-ratelimit-limit"]).toBe("3");
       expect(context.set.headers["x-ratelimit-remaining"]).toBe("0");
+    });
+
+    it("rejects request when failClosed check simulates Redis unavailability", async () => {
+      (mockCheck as ReturnType<typeof mock>).mockImplementation(
+        (
+          _namespace: string,
+          _identifier: string,
+          config: { failClosed?: boolean }
+        ) => {
+          if (config.failClosed) {
+            return Promise.resolve({
+              allowed: false,
+              remaining: 0,
+              resetAt: new Date(Date.now() + 60_000),
+              blockedUntil: new Date(Date.now() + 60_000),
+            });
+          }
+
+          return Promise.resolve({
+            allowed: true,
+            remaining: 4,
+            resetAt: new Date(Date.now() + 60_000),
+          });
+        }
+      );
+
+      const middleware = createRateLimitMiddleware("invite", {
+        maxAttempts: 10,
+        windowMs: 60 * 60 * 1000,
+        failClosed: true,
+        keyGenerator: () => "admin-user",
+      });
+
+      const context = {
+        body: {},
+        request: new Request("http://localhost/test"),
+        set: { headers: {} as Record<string, string>, status: 200 },
+      };
+
+      await expect(middleware(context)).rejects.toThrow(RateLimitExceededError);
+      expect(mockCheck).toHaveBeenCalledWith(
+        "invite",
+        "admin-user",
+        expect.objectContaining({ failClosed: true })
+      );
     });
   });
 });

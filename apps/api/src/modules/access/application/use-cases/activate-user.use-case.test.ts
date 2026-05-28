@@ -1,6 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import { ActivateUserUseCase } from "./activate-user.use-case";
 import { createMockUserRepository, createMockAuthCache } from "../../test-helpers/fixtures";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 import {
   UserNotFoundError,
   OperationNotAllowedError,
@@ -20,6 +21,7 @@ describe("ActivateUserUseCase", () => {
     const useCase = new ActivateUserUseCase({
       userRepository,
       authCache: createMockAuthCache(),
+      auditLog: createMockAuditLogService(),
     });
 
     await useCase.execute({ userId: "user-1", activatedBy: "admin-1" });
@@ -33,6 +35,7 @@ describe("ActivateUserUseCase", () => {
         findById: mock(async () => null),
       }),
       authCache: createMockAuthCache(),
+      auditLog: createMockAuditLogService(),
     });
 
     await expect(
@@ -46,6 +49,7 @@ describe("ActivateUserUseCase", () => {
         findById: mock(async () => ({ id: "user-1", status: "ACTIVE" })),
       }),
       authCache: createMockAuthCache(),
+      auditLog: createMockAuditLogService(),
     });
 
     await expect(

@@ -51,6 +51,7 @@ describe("AssignUserManagerUseCase", () => {
       userRepository,
       scopeRepository,
       scopeService,
+      auditLog: createMockAuditLogService(),
     });
   });
 

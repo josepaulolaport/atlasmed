@@ -8,6 +8,23 @@ export const userPermissionsRoute = new Elysia({
 })
   .use(auth)
   .use(requirePermission("manage", "USER"))
+  .get("/users/:id/capabilities", async ({ params }: any) => {
+    const result = await accessUseCases.getCapabilities().execute({
+      userId: params.id,
+    });
+
+    return {
+      role: result.role,
+      grants: result.grants.map((grant) => ({
+        id: grant.id,
+        resource: grant.resource,
+        resourceId: grant.resourceId ?? undefined,
+        action: grant.action,
+        conditions: grant.conditions,
+        expiresAt: grant.expiresAt?.toISOString(),
+      })),
+    };
+  })
   .post("/users/:id/permissions", async ({ params, body, getUserId, getUser }: any) => {
     const actor = await getUser();
     const parsed = grantPermissionSchema.parse(body);

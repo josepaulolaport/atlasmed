@@ -130,7 +130,6 @@ exports.Prisma.UserScalarFieldEnum = {
   emailVerifiedAt: 'emailVerifiedAt',
   phoneVerifiedAt: 'phoneVerifiedAt',
   passwordHash: 'passwordHash',
-  passwordExpiresAt: 'passwordExpiresAt',
   passwordHistory: 'passwordHistory',
   firstName: 'firstName',
   lastName: 'lastName',
@@ -139,9 +138,6 @@ exports.Prisma.UserScalarFieldEnum = {
   tokenVersion: 'tokenVersion',
   lastLoginAt: 'lastLoginAt',
   passwordChangedAt: 'passwordChangedAt',
-  failedLoginAttempts: 'failedLoginAttempts',
-  lockedUntil: 'lockedUntil',
-  lastFailedLoginAt: 'lastFailedLoginAt',
   deactivatedAt: 'deactivatedAt',
   suspendedAt: 'suspendedAt',
   twoFactorEnabled: 'twoFactorEnabled',
@@ -181,6 +177,7 @@ exports.Prisma.SessionScalarFieldEnum = {
   revokedReason: 'revokedReason',
   revokedByUserId: 'revokedByUserId',
   replacedBySessionId: 'replacedBySessionId',
+  previousRefreshTokenHash: 'previousRefreshTokenHash',
   lastSeenAt: 'lastSeenAt',
   userAgent: 'userAgent',
   browserName: 'browserName',
@@ -272,6 +269,33 @@ exports.Prisma.PermissionScalarFieldEnum = {
   expiresAt: 'expiresAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ClinicScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  address: 'address',
+  territoryId: 'territoryId',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DoctorScalarFieldEnum = {
+  id: 'id',
+  firstName: 'firstName',
+  lastName: 'lastName',
+  specialty: 'specialty',
+  deletedAt: 'deletedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DoctorClinicScalarFieldEnum = {
+  id: 'id',
+  doctorId: 'doctorId',
+  clinicId: 'clinicId',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -381,7 +405,10 @@ exports.Prisma.ModelName = {
   PasswordReset: 'PasswordReset',
   AuditLog: 'AuditLog',
   VerificationToken: 'VerificationToken',
-  Permission: 'Permission'
+  Permission: 'Permission',
+  Clinic: 'Clinic',
+  Doctor: 'Doctor',
+  DoctorClinic: 'DoctorClinic'
 };
 
 /**

@@ -10,7 +10,6 @@ All requested security and infrastructure enhancements have been successfully im
 - **AuditLog table** - Comprehensive audit trail for all security events
 - **User enhancements:**
   - `emailVerifiedAt`, `phoneVerifiedAt` (timestamps)
-  - `passwordExpiresAt` (password rotation policy)
   - `passwordHistory` (prevent password reuse)
   - `twoFactorEnabled`, `twoFactorSecret` (2FA support)
   - `suspendedAt` (track suspension date)

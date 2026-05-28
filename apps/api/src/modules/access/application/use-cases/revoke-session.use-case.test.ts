@@ -1,12 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
-
 import { RevokeSessionUseCase } from "./revoke-session.use-case";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
 import {
@@ -18,6 +13,8 @@ describe("RevokeSessionUseCase", () => {
   let useCase: RevokeSessionUseCase;
   let mockSessionRepository: SessionRepository;
   let mockSessionCache: ISessionCache;
+
+  let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
 
   const targetSession = {
     id: "session-target",
@@ -50,6 +47,7 @@ describe("RevokeSessionUseCase", () => {
   };
 
   beforeEach(() => {
+    mockAuditLog = createMockAuditLogService();
     mockSessionRepository = createMockSessionRepository({
       findById: mock(async (id: string) => {
         if (id === "session-target") return targetSession;
@@ -66,6 +64,7 @@ describe("RevokeSessionUseCase", () => {
     useCase = new RevokeSessionUseCase({
       sessionRepository: mockSessionRepository,
       sessionCache: mockSessionCache,
+      auditLog: mockAuditLog,
     });
   });
 
@@ -77,14 +76,14 @@ describe("RevokeSessionUseCase", () => {
     });
 
     expect(result).toEqual({ success: true });
-    expect(auditLogService.logSessionRevoke).toHaveBeenCalledTimes(2);
-    expect(auditLogService.logSessionRevoke).toHaveBeenCalledWith({
+    expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledTimes(2);
+    expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledWith({
       userId: "user-123",
       sessionId: "session-target",
       reason: "Revoked by user",
       revokedByUserId: "user-123",
     });
-    expect(auditLogService.logSessionRevoke).toHaveBeenCalledWith({
+    expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledWith({
       userId: "user-123",
       sessionId: "session-target-2",
       reason: "Revoked by user",

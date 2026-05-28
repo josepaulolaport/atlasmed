@@ -4,7 +4,6 @@ import { apiEnv } from "@atlasmed/config";
 
 import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
 import { InviteEmail } from "./templates/invite.email";
-import { PasswordResetEmail } from "./templates/password-reset.email";
 
 export async function sendInviteEmail(
   to: string,
@@ -49,38 +48,5 @@ export async function sendInviteEmail(
     console.log(`✅ Invite email sent successfully! ID: ${result.data?.id}`);
   } catch (error) {
     console.error("❌ Failed to send invite email:", error);
-  }
-}
-
-export async function sendPasswordResetEmail(
-  to: string,
-  token: string,
-  options?: {
-    resetUrl?: string;
-  },
-): Promise<void> {
-  if (!resend) {
-    console.warn("⚠️  Resend client not initialized. Skipping email send.");
-    console.warn("   Check RESEND_API_KEY environment variable");
-    return;
-  }
-
-  try {
-    console.log(`📧 Sending password reset email to ${to}...`);
-    const result = await resend.emails.send({
-      from: apiEnv.RESEND_FROM_EMAIL!,
-      to,
-      subject: "Reset your password",
-      react: PasswordResetEmail({
-        token,
-        resetUrl: options?.resetUrl,
-      }) as ReactElement,
-    });
-    console.log(
-      `✅ Password reset email sent successfully! ID: ${result.data?.id}`,
-    );
-  } catch (error) {
-    console.error("❌ Failed to send password reset email:", error);
-    // Don't throw - we don't want to block password reset if email fails
   }
 }

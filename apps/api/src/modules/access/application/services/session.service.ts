@@ -16,6 +16,7 @@ import { parseUserAgent } from "../../../../shared/utils/parse-user-agent";
 import { generateDeviceFingerprint } from "../../../../shared/utils/device-fingerprint";
 
 import type { Role } from "@atlasmed/access";
+import { environment } from "../../../../app/config/environment";
 
 interface Dependencies {
   sessionRepository: SessionRepository;
@@ -112,6 +113,8 @@ export class SessionService {
         },
 
         revokeReason: "Replaced by new session on same device",
+
+        maxActiveSessions: environment.MAX_ACTIVE_SESSIONS_PER_USER,
       });
 
     await Promise.all(

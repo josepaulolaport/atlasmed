@@ -2,7 +2,7 @@ import { Role } from "@atlasmed/access";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { ScopeRepository } from "../interfaces/scope.repository.interface";
 import type { ScopeService } from "../services/scope.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 import {
   UserNotFoundError,
   InsufficientPermissionsError,
@@ -13,6 +13,7 @@ interface Dependencies {
   userRepository: UserRepository;
   scopeRepository: ScopeRepository;
   scopeService: ScopeService;
+  auditLog: IAuditLog;
 }
 
 export class RevokeUserTerritoryUseCase {
@@ -51,7 +52,7 @@ export class RevokeUserTerritoryUseCase {
 
     await this.deps.scopeService.invalidateForTerritoryAssignmentChange(params.targetUserId);
 
-    await auditLogService.log({
+    await this.deps.auditLog.log({
       userId: params.revokedBy,
       eventType: "USER_TERRITORY_REVOKED",
       severity: "INFO",

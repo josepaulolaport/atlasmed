@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { Role } from "@atlasmed/access";
 import { RevokeInviteUseCase } from "./revoke-invite.use-case";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import { createMockInviteRepository } from "../../test-helpers/fixtures";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { ForbiddenError } from "../../../../shared/errors";
 
 describe("RevokeInviteUseCase", () => {
   let revokeInviteUseCase: RevokeInviteUseCase;
@@ -35,12 +38,17 @@ describe("RevokeInviteUseCase", () => {
 
     revokeInviteUseCase = new RevokeInviteUseCase({
       inviteRepository: mockInviteRepository,
+      auditLog: createMockAuditLogService(),
     });
   });
 
   describe("revoke invite", () => {
     it("should revoke pending invite", async () => {
-      await revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" });
+      await revokeInviteUseCase.execute({
+        inviteId: "invite-123",
+        revokedByUserId: "admin-456",
+        actorRole: Role.ADMIN,
+      });
 
       expect(mockInviteRepository.revoke).toHaveBeenCalledTimes(1);
       expect(mockInviteRepository.revoke).toHaveBeenCalledWith("invite-123");
@@ -48,7 +56,11 @@ describe("RevokeInviteUseCase", () => {
 
     it("should complete successfully when invite is revoked", async () => {
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
+        revokeInviteUseCase.execute({
+          inviteId: "invite-123",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        })
       ).resolves.toBeUndefined();
     });
   });
@@ -58,7 +70,11 @@ describe("RevokeInviteUseCase", () => {
       mockInviteRepository.findById = mock(async () => null);
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "non-existent", revokedByUserId: "admin-456" })
+        revokeInviteUseCase.execute({
+          inviteId: "non-existent",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        })
       ).rejects.toThrow("Invite not found");
     });
 
@@ -66,7 +82,11 @@ describe("RevokeInviteUseCase", () => {
       mockInviteRepository.findById = mock(async () => null);
 
       try {
-        await revokeInviteUseCase.execute({ inviteId: "non-existent", revokedByUserId: "admin-456" });
+        await revokeInviteUseCase.execute({
+          inviteId: "non-existent",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        });
       } catch {}
 
       expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
@@ -82,7 +102,11 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
+        revokeInviteUseCase.execute({
+          inviteId: "invite-123",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        })
       ).rejects.toThrow("Only pending invites can be revoked");
     });
 
@@ -94,7 +118,11 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
+        revokeInviteUseCase.execute({
+          inviteId: "invite-123",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        })
       ).rejects.toThrow("Only pending invites can be revoked");
     });
 
@@ -105,7 +133,11 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       try {
-        await revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" });
+        await revokeInviteUseCase.execute({
+        inviteId: "invite-123",
+        revokedByUserId: "admin-456",
+        actorRole: Role.ADMIN,
+      });
       } catch {}
 
       expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
@@ -118,10 +150,38 @@ describe("RevokeInviteUseCase", () => {
       }));
 
       try {
-        await revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" });
+        await revokeInviteUseCase.execute({
+        inviteId: "invite-123",
+        revokedByUserId: "admin-456",
+        actorRole: Role.ADMIN,
+      });
       } catch {}
 
       expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("manager ownership", () => {
+    it("should reject when manager revokes another manager invite", async () => {
+      await expect(
+        revokeInviteUseCase.execute({
+          inviteId: "invite-123",
+          revokedByUserId: "other-manager",
+          actorRole: Role.MANAGER,
+        })
+      ).rejects.toThrow(ForbiddenError);
+
+      expect(mockInviteRepository.revoke).not.toHaveBeenCalled();
+    });
+
+    it("should allow manager to revoke own invite", async () => {
+      await revokeInviteUseCase.execute({
+        inviteId: "invite-123",
+        revokedByUserId: "admin-456",
+        actorRole: Role.MANAGER,
+      });
+
+      expect(mockInviteRepository.revoke).toHaveBeenCalledWith("invite-123");
     });
   });
 
@@ -132,7 +192,11 @@ describe("RevokeInviteUseCase", () => {
       });
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
+        revokeInviteUseCase.execute({
+          inviteId: "invite-123",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        })
       ).rejects.toThrow("Database error");
     });
 
@@ -142,7 +206,11 @@ describe("RevokeInviteUseCase", () => {
       });
 
       await expect(
-        revokeInviteUseCase.execute({ inviteId: "invite-123", revokedByUserId: "admin-456" })
+        revokeInviteUseCase.execute({
+          inviteId: "invite-123",
+          revokedByUserId: "admin-456",
+          actorRole: Role.ADMIN,
+        })
       ).rejects.toThrow("Revoke failed");
     });
   });

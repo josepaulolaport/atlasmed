@@ -13,8 +13,11 @@ export * from "./schemas/login.schema";
 export * from "./schemas/refresh-token.schema";
 export * from "./schemas/list-users.schema";
 export * from "./schemas/update-profile.schema";
+export * from "./schemas/change-password.schema";
 export * from "./schemas/user-assignment.schema";
 export * from "./schemas/user-permission.schema";
+export * from "./schemas/clinic.schema";
+export * from "./schemas/doctor.schema";
 
 // Re-export Prisma enums as single source of truth
 export {
@@ -38,8 +41,14 @@ export * from "./errors/unauthorized.error";
 export * from "./errors/rate-limit.error";
 
 export { defineAbilitiesFor } from "./permissions/role.permissions";
-export type { Action, AppAbility } from "./permissions/role.permissions";
+export type { Action, AppAbility, Subject } from "./permissions/role.permissions";
 export { defineAbilitiesForUser } from "./permissions/grant.permissions";
+export {
+  canAccessRoute,
+  canAccessResource,
+  isValidGrantResource,
+  isValidGrantAction,
+} from "./permissions/route.permissions";
 export type { AccessGrantRecord } from "./contracts/access-grant.contract";
 export {
   GRANT_RESOURCE_TO_SUBJECT,
@@ -47,6 +56,10 @@ export {
 } from "./contracts/access-grant.contract";
 export {
   canManageUsers,
+  canReadClinics,
+  canManageClinics,
+  canReadDoctors,
+  canManageDoctors,
   canViewHealth,
   hasMinimumRole,
   isAdmin,

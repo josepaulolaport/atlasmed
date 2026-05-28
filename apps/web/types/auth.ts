@@ -20,6 +20,7 @@ export interface User {
   status: UserStatus;
   emailVerified: boolean;
   phoneVerified: boolean;
+  twoFactorEnabled?: boolean;
   emailVerifiedAt?: string;
   phoneVerifiedAt?: string;
   role: {
@@ -72,10 +73,12 @@ export interface LoginRequest {
 }
 
 export interface LoginResponse {
-  session: {
+  session?: {
     token: string;
   };
-  user: User;
+  user?: User;
+  requires2FA?: boolean;
+  pendingToken?: string;
 }
 
 export interface RegisterRequest {
@@ -112,6 +115,20 @@ export interface InviteUserRequest {
   email?: string;
   phoneNumber?: string;
   roleId: string;
+}
+
+export interface AccessGrant {
+  id: string;
+  resource: string;
+  resourceId?: string;
+  action: string;
+  conditions?: Record<string, unknown>;
+  expiresAt?: string;
+}
+
+export interface CapabilitiesResponse {
+  role: string;
+  grants: AccessGrant[];
 }
 
 export interface UpdateProfileRequest {

@@ -1,7 +1,7 @@
 import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
 import { hashToken } from "../../../../shared/utils/hash-token";
 import type { VerificationTokenType } from "@atlasmed/database";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 import { notificationQueue } from "../../../../infrastructure/jobs/notification.queue";
 import {
   ResourceConflictError,
@@ -16,6 +16,7 @@ import type { UserRepository } from "../interfaces/user.repository.interface";
 interface Dependencies {
   verificationTokenRepository: VerificationTokenRepository;
   userRepository: UserRepository;
+  auditLog: IAuditLog;
 }
 
 export class VerificationService {
@@ -88,7 +89,7 @@ export class VerificationService {
     const user = await this.deps.userRepository.findEmailVerificationState(params.userId);
 
     if (user) {
-      await auditLogService.logEmailVerification({
+      await this.deps.auditLog.logEmailVerification({
         userId: params.userId,
         email: user.email,
       });
@@ -111,7 +112,7 @@ export class VerificationService {
     const user = await this.deps.userRepository.findPhoneVerificationState(params.userId);
 
     if (user?.phoneNumber) {
-      await auditLogService.logPhoneVerification({
+      await this.deps.auditLog.logPhoneVerification({
         userId: params.userId,
         phoneNumber: user.phoneNumber,
       });
@@ -135,7 +136,7 @@ export class VerificationService {
 
     await this.deps.userRepository.updateEmail(params.userId, params.newEmail);
 
-    await auditLogService.log({
+    await this.deps.auditLog.log({
       userId: params.userId,
       eventType: "EMAIL_CHANGE",
       severity: "WARNING",
@@ -163,7 +164,7 @@ export class VerificationService {
 
     await this.deps.userRepository.updatePhone(params.userId, params.newPhone);
 
-    await auditLogService.log({
+    await this.deps.auditLog.log({
       userId: params.userId,
       eventType: "PHONE_CHANGE",
       severity: "WARNING",

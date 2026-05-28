@@ -31,7 +31,6 @@ export interface UpdatePasswordParams {
 
 export interface ResetPasswordTransactionParams {
   tokenHash: string;
-  newPassword: string;
   newPasswordHash: string;
 }
 
@@ -81,6 +80,29 @@ export interface UpdateProfileParams {
   avatarUrl?: string;
 }
 
+export interface ChangeRoleTransactionParams {
+  userId: string;
+  newRoleId: string;
+}
+
+export interface ChangePasswordTransactionParams {
+  userId: string;
+  newPasswordHash: string;
+  previousPasswordHash: string;
+  passwordHistory: string[];
+  revokeOtherSessions: boolean;
+  keepSessionId?: string;
+}
+
+export interface ChangePasswordTransactionResult {
+  user: any;
+}
+
+export interface EnableTwoFactorParams {
+  userId: string;
+  encryptedSecret: string;
+}
+
 export interface UserRepository {
   findByIdentifier(params: FindUserByIdentifierParams): Promise<any>;
 
@@ -104,7 +126,15 @@ export interface UserRepository {
 
   updateRole(userId: string, roleId: string): Promise<void>;
 
-  delete(userId: string): Promise<void>;
+  changeRoleTransaction(params: ChangeRoleTransactionParams): Promise<void>;
+
+  changePasswordTransaction(
+    params: ChangePasswordTransactionParams
+  ): Promise<ChangePasswordTransactionResult>;
+
+  enableTwoFactor(params: EnableTwoFactorParams): Promise<void>;
+
+  disableTwoFactor(userId: string): Promise<void>;
 
   incrementTokenVersion(userId: string): Promise<number>;
 

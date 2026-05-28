@@ -1,4 +1,5 @@
 import type { ScopeContext } from "../contracts/scope-context.contract";
+import { ForbiddenError } from "../errors/forbidden.error";
 
 export type ScopedResourceType = "territory" | "clinic" | "user";
 
@@ -18,17 +19,17 @@ export function assertResourceInScope(
   switch (resourceType) {
     case "territory":
       if (!scope.territoryIds.includes(resourceId)) {
-        throw new Error("Resource outside scope: territory");
+        throw new ForbiddenError("Resource outside scope: territory");
       }
       return;
     case "clinic":
       if (!scope.clinicIds.includes(resourceId)) {
-        throw new Error("Resource outside scope: clinic");
+        throw new ForbiddenError("Resource outside scope: clinic");
       }
       return;
     case "user":
       if (!scope.managedUserIds.includes(resourceId)) {
-        throw new Error("Resource outside scope: user");
+        throw new ForbiddenError("Resource outside scope: user");
       }
       return;
     default:

@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { Role } from "@atlasmed/access";
 import { inviteUserSchema } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
@@ -29,20 +30,44 @@ export const inviteUserRoute = new Elysia({
       });
 
       if (parsed.email) {
-        await sendInviteEmail(parsed.email, result.token, {
-          invitedByName: user.firstName
-            ? `${user.firstName} ${user.lastName || ""}`.trim()
-            : user.username,
-          roleName: result.invite.role?.name,
-          inviteUrl: `${environment.FRONTEND_URL}/register`,
-        });
+        try {
+          await sendInviteEmail(parsed.email, result.token, {
+            invitedByName: user.firstName
+              ? `${user.firstName} ${user.lastName || ""}`.trim()
+              : user.username,
+            roleName: result.invite.role?.name,
+            inviteUrl: `${environment.FRONTEND_URL}/register`,
+          });
+        } catch {
+          await accessUseCases.revokeInvite().execute({
+            inviteId: result.invite.id,
+            revokedByUserId: user.id,
+            actorRole: user.role.name as Role,
+          });
+          return status(502, {
+            code: "DELIVERY_FAILED",
+            error: "Invitation created but delivery failed; invite was revoked",
+          });
+        }
       } else if (parsed.phoneNumber) {
-        await sendInviteWhatsApp(parsed.phoneNumber, result.token, {
-          invitedByName: user.firstName
-            ? `${user.firstName} ${user.lastName || ""}`.trim()
-            : user.username,
-          roleName: result.invite.role?.name,
-        });
+        try {
+          await sendInviteWhatsApp(parsed.phoneNumber, result.token, {
+            invitedByName: user.firstName
+              ? `${user.firstName} ${user.lastName || ""}`.trim()
+              : user.username,
+            roleName: result.invite.role?.name,
+          });
+        } catch {
+          await accessUseCases.revokeInvite().execute({
+            inviteId: result.invite.id,
+            revokedByUserId: user.id,
+            actorRole: user.role.name as Role,
+          });
+          return status(502, {
+            code: "DELIVERY_FAILED",
+            error: "Invitation created but delivery failed; invite was revoked",
+          });
+        }
       }
 
       return {

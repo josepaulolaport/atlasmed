@@ -1,9 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, mock } from "bun:test";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
-
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
+import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 
 import { LoginUseCase } from "./login.use-case";
 import { InvalidCredentialsError } from "../../../../shared/errors";
@@ -11,7 +8,6 @@ import { PasswordService } from "../services/password.service";
 import { TokenService } from "../services/token.service";
 import { SessionService } from "../services/session.service";
 import { RateLimiterService } from "../services/rate-limiter.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
@@ -20,6 +16,7 @@ import { resetAllMocks } from "../../../../test-utils/mock-reset";
 
 describe("LoginUseCase", () => {
   let loginUseCase: LoginUseCase;
+  let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
   let mockUserRepository: UserRepository;
   let mockSessionRepository: SessionRepository;
   let mockSessionCache: ISessionCache;
@@ -43,6 +40,8 @@ describe("LoginUseCase", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     deactivatedAt: null,
+    twoFactorEnabled: false,
+    twoFactorSecret: null,
     role: {
       id: "role-123",
       name: "USER",
@@ -76,6 +75,7 @@ describe("LoginUseCase", () => {
     };
 
     mockSessionCache = createMockSessionCache();
+    mockAuditLog = createMockAuditLogService();
 
     loginUseCase = new LoginUseCase({
       userRepository: mockUserRepository,
@@ -88,6 +88,11 @@ describe("LoginUseCase", () => {
         sessionCache: mockSessionCache,
       }),
       rateLimiterService: new RateLimiterService({ redis: mockRedis }),
+      auditLog: mockAuditLog,
+      metrics: createMockMetricsService(),
+      pending2faLoginService: {
+        store: mock(async () => "pending-token"),
+      } as any,
     });
   });
 
@@ -129,7 +134,7 @@ describe("LoginUseCase", () => {
       });
 
       expect(result.accessToken).toBeString();
-      expect(result.accessToken.split(".")).toHaveLength(3);
+      expect(result.accessToken!.split(".")).toHaveLength(3);
     });
 
     it("should return refresh token as string", async () => {
@@ -254,7 +259,7 @@ describe("LoginUseCase", () => {
         })
       ).rejects.toThrow(InvalidCredentialsError);
 
-      expect(auditLogService.logFailedLoginAttempt).toHaveBeenCalledWith({
+      expect(mockAuditLog.logFailedLoginAttempt).toHaveBeenCalledWith({
         identifier: "user@example.com",
         reason: "invalid_password",
         ipAddress: undefined,

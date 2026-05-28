@@ -1,5 +1,11 @@
 import apiClient from "./client";
-import type { VerificationConfirm, ChangeEmailRequest, ChangePhoneRequest } from "@/types/api";
+import type {
+  VerificationConfirm,
+  ChangeEmailRequest,
+  ChangeEmailConfirmRequest,
+  ChangePhoneRequest,
+  ChangePhoneConfirmRequest,
+} from "@/types/api";
 
 export const verificationApi = {
   requestEmailVerification: async (): Promise<{ message: string }> => {
@@ -27,7 +33,7 @@ export const verificationApi = {
     return response.data;
   },
 
-  confirmEmailChange: async (data: VerificationConfirm): Promise<{ message: string }> => {
+  confirmEmailChange: async (data: ChangeEmailConfirmRequest): Promise<{ message: string }> => {
     const response = await apiClient.post("/access/verification/email/change/confirm", data);
     return response.data;
   },
@@ -37,7 +43,7 @@ export const verificationApi = {
     return response.data;
   },
 
-  confirmPhoneChange: async (data: VerificationConfirm): Promise<{ message: string }> => {
+  confirmPhoneChange: async (data: ChangePhoneConfirmRequest): Promise<{ message: string }> => {
     const response = await apiClient.post("/access/verification/phone/change/confirm", data);
     return response.data;
   },

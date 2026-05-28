@@ -3,6 +3,8 @@ import { loginSchema, REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
 import { accessUseCases } from "../../composition";
 import { loginRateLimit } from "../middleware/rate-limit.middleware";
 import { getRefreshCookieOptions } from "./refresh-cookie";
+import { serializeAuthUser } from "./user.serializer";
+import { getClientIp } from "../../../../shared/utils/client-ip";
 
 /**
  * Login rate limiting uses two layers:
@@ -18,31 +20,33 @@ export const loginRoute = new Elysia({
   .post(
   "/login",
   async ({ body, request, cookie }) => {
-    try {
-      const parsed = loginSchema.parse(body);
+    const parsed = loginSchema.parse(body);
 
-      const result = await accessUseCases.login().execute({
-        identifier: parsed.identifier,
-        password: parsed.password,
-        ipAddress: request.headers.get("x-forwarded-for") || undefined,
-        userAgent: request.headers.get("user-agent") || undefined,
-        acceptLanguage: request.headers.get("accept-language") || undefined,
-      });
+    const result = await accessUseCases.login().execute({
+      identifier: parsed.identifier,
+      password: parsed.password,
+      ipAddress: getClientIp(request),
+      userAgent: request.headers.get("user-agent") || undefined,
+      acceptLanguage: request.headers.get("accept-language") || undefined,
+    });
 
-      cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(
-        getRefreshCookieOptions(result.refreshToken)
-      );
-
+    if ("requires2FA" in result && result.requires2FA) {
       return {
-        session: {
-          token: result.accessToken,
-        },
-        user: result.user,
+        requires2FA: true,
+        pendingToken: result.pendingToken,
       };
-    } catch (error) {
-      console.error("[LoginRoute] Error:", error);
-      throw error;
     }
+
+    cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(
+      getRefreshCookieOptions(result.refreshToken)
+    );
+
+    return {
+      session: {
+        token: result.accessToken,
+      },
+      user: serializeAuthUser(result.user),
+    };
   },
   {
     detail: {
@@ -55,26 +59,34 @@ export const loginRoute = new Elysia({
       password: t.String({ description: "User password (min 8 characters)", minLength: 8 }),
     }),
     response: {
-      200: t.Object({
-        session: t.Object({
-          token: t.String({ description: "JWT access token" }),
-        }),
-        user: t.Object({
-          id: t.String(),
-          email: t.String(),
-          username: t.String(),
-          firstName: t.Optional(t.String()),
-          lastName: t.Optional(t.String()),
-          status: t.String(),
-          emailVerified: t.Boolean(),
-          phoneVerified: t.Boolean(),
-          role: t.Object({
+      200: t.Union([
+        t.Object({
+          session: t.Object({
+            token: t.String({ description: "JWT access token" }),
+          }),
+          user: t.Object({
             id: t.String(),
-            name: t.String(),
-            description: t.Optional(t.String()),
+            email: t.String(),
+            username: t.String(),
+            firstName: t.Optional(t.String()),
+            lastName: t.Optional(t.String()),
+            status: t.String(),
+            emailVerified: t.Boolean(),
+            phoneVerified: t.Boolean(),
+            role: t.Object({
+              id: t.String(),
+              name: t.String(),
+              description: t.Optional(t.String()),
+            }),
           }),
         }),
-      }),
+        t.Object({
+          requires2FA: t.Literal(true),
+          pendingToken: t.String({
+            description: "Token to complete login via POST /login/2fa",
+          }),
+        }),
+      ]),
       400: t.Object({
         error: t.String({ description: "Validation error" }),
       }),

@@ -1,7 +1,7 @@
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
 import { sessionsMatchSameDevice } from "../../../../shared/utils/device-fingerprint";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 
 interface RevokeSessionInput {
   sessionId: string;
@@ -16,6 +16,7 @@ type RevokeSessionOutput =
 interface RevokeSessionDependencies {
   sessionRepository: SessionRepository;
   sessionCache: ISessionCache;
+  auditLog: IAuditLog;
 }
 
 export class RevokeSessionUseCase {
@@ -67,7 +68,7 @@ export class RevokeSessionUseCase {
 
     await Promise.all(
       revokedSessionIds.map((sessionId) =>
-        auditLogService.logSessionRevoke({
+        this.dependencies.auditLog.logSessionRevoke({
           userId: input.userId,
           sessionId,
           reason: "Revoked by user",

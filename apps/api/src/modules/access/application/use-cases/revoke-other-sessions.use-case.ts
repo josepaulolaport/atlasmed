@@ -1,6 +1,6 @@
 import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 
 interface RevokeOtherSessionsInput {
   userId: string;
@@ -10,6 +10,7 @@ interface RevokeOtherSessionsInput {
 interface RevokeOtherSessionsDependencies {
   sessionRepository: SessionRepository;
   sessionCache: ISessionCache;
+  auditLog: IAuditLog;
 }
 
 export class RevokeOtherSessionsUseCase {
@@ -44,7 +45,7 @@ export class RevokeOtherSessionsUseCase {
 
     await Promise.all(
       revokedSessionIds.map((sessionId) =>
-        auditLogService.logSessionRevoke({
+        this.dependencies.auditLog.logSessionRevoke({
           userId: input.userId,
           sessionId,
           reason: "Logout from other devices",

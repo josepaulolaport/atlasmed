@@ -4,7 +4,8 @@ import type { PasswordResetRepository } from "../interfaces/password-reset.repos
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import { PasswordResetService } from "../services/password-reset.service";
 import { PasswordResetEmail } from "../../../../infrastructure/external-services/resend/templates/password-reset.email";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
 import { createElement } from "react";
 
 interface Dependencies {
@@ -12,6 +13,8 @@ interface Dependencies {
   passwordResetRepository: PasswordResetRepository;
   emailService?: EmailService;
   messagingService?: MessagingService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
 }
 
 interface RequestPasswordResetParams {
@@ -59,11 +62,13 @@ export class RequestPasswordResetUseCase {
       });
     }
 
-    await auditLogService.logPasswordResetRequest({
+    await this.deps.auditLog.logPasswordResetRequest({
       userId: user.id,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
     });
+
+    this.deps.metrics.recordPasswordReset("request");
 
     return {
       passwordReset,

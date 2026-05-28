@@ -1,8 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { authApi } from "@/lib/api/auth";
+import { setAccessToken, getAccessToken } from "@/lib/api/client";
+import { isRefreshTokenReuseError } from "@/lib/api/errors";
+import { isPublicAuthPath } from "@/lib/auth-routes";
 import type { User, LoginRequest, RegisterRequest, UpdateProfileRequest } from "@/types/auth";
 import { toast } from "@/hooks/use-toast";
 
@@ -11,6 +14,7 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   login: (data: LoginRequest) => Promise<void>;
+  complete2FALogin: (data: { pendingToken: string; code: string }) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (data: UpdateProfileRequest) => Promise<void>;
@@ -21,39 +25,70 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  const loadUser = useCallback(async () => {
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
-        setLoading(false);
-        return;
-      }
-
-      const userData = await authApi.getProfile();
-      setUser(userData);
-    } catch {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const pathname = usePathname();
+  const isPublicAuth = isPublicAuthPath(pathname);
+  const [bootstrappedPath, setBootstrappedPath] = useState<string | null>(null);
+  const loading = !isPublicAuth && bootstrappedPath !== pathname;
 
   useEffect(() => {
-    loadUser();
-  }, []);
+    if (isPublicAuth) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function bootstrapSession() {
+      try {
+        if (!getAccessToken()) {
+          const refreshed = await authApi.refreshToken();
+          if (!mounted) return;
+          setAccessToken(refreshed.session.token);
+        }
+
+        const userData = await authApi.getProfile();
+        if (!mounted) return;
+        setUser(userData);
+      } catch (error) {
+        if (!mounted) return;
+        setAccessToken(null);
+        setUser(null);
+
+        if (
+          isRefreshTokenReuseError(error) &&
+          typeof window !== "undefined" &&
+          !isPublicAuthPath(pathname)
+        ) {
+          router.replace("/login?reason=refresh_reuse");
+        }
+      } finally {
+        if (mounted) {
+          setBootstrappedPath(pathname);
+        }
+      }
+    }
+
+    void bootstrapSession();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isPublicAuth, pathname, router]);
 
   const login = async (data: LoginRequest) => {
     try {
       const response = await authApi.login(data);
-      
-      localStorage.setItem("accessToken", response.session.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
-      
+
+      if ("requires2FA" in response && response.requires2FA && response.pendingToken) {
+        router.push(`/login/2fa?pending=${encodeURIComponent(response.pendingToken)}`);
+        return;
+      }
+
+      if (!response.session?.token || !response.user) {
+        throw new Error("Invalid login response");
+      }
+
+      setAccessToken(response.session.token);
       setUser(response.user);
 
       toast({
@@ -64,8 +99,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       router.push("/dashboard");
     } catch (err) {
-      const error = err as { response?: { data?: { error?: string } } };
-      const message = error.response?.data?.error || "Invalid credentials";
+      const error = err as { response?: { data?: { error?: { message?: string; code?: string } } } };
+      const message = error.response?.data?.error?.message || "Invalid credentials";
       toast({
         title: "Error",
         description: message,
@@ -73,6 +108,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       throw error;
     }
+  };
+
+  const complete2FALogin = async (data: { pendingToken: string; code: string }) => {
+    const response = await authApi.verify2FALogin(data);
+
+    if (!response.session?.token || !response.user) {
+      throw new Error("Invalid verification response");
+    }
+
+    setAccessToken(response.session.token);
+    setUser(response.user);
+
+    toast({
+      title: "Success",
+      description: "Logged in successfully",
+      variant: "success",
+    });
+
+    router.push("/dashboard");
   };
 
   const register = async (data: RegisterRequest) => {
@@ -100,25 +154,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      // Backend gets the current session from auth context
       await authApi.logout();
-
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      
-      setUser(null);
-
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-
-      router.push("/login");
-    } catch (error) {
-      // Even if API call fails, clear local state
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("user");
-      
+    } finally {
+      setAccessToken(null);
       setUser(null);
       router.push("/login");
     }
@@ -128,7 +166,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const updatedUser = await authApi.updateProfile(data);
       setUser(updatedUser);
-      localStorage.setItem("user", JSON.stringify(updatedUser));
 
       toast({
         title: "Success",
@@ -151,7 +188,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userData = await authApi.getProfile();
       setUser(userData);
-      localStorage.setItem("user", JSON.stringify(userData));
     } catch {
       // Silently fail refresh
     }
@@ -162,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     isAuthenticated: !!user,
     login,
+    complete2FALogin,
     register,
     logout,
     updateProfile,

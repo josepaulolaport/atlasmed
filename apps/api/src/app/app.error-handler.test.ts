@@ -16,7 +16,7 @@ function createErrorHandlerApp() {
   return new Elysia().onError(({ error, set }) => {
     if (error instanceof AppError) {
       set.status = error.statusCode;
-      return { error: error.toJSON() };
+      return { error: error.toClientJSON() };
     }
 
     set.status = 500;
@@ -70,7 +70,9 @@ describe("global error handler", () => {
     });
 
     const response = await app.handle(new Request("http://localhost/test"));
-    const body = await response.json();
+    const body = (await response.json()) as {
+      error: { code: string; message: string };
+    };
 
     expect(response.status).toBe(418);
     expect(body.error.code).toBe("TEST_ERROR");

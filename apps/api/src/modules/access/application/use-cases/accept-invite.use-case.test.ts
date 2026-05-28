@@ -3,6 +3,8 @@ import { AcceptInviteUseCase } from "./accept-invite.use-case";
 import { InvalidInviteError } from "../../../../shared/errors";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import { createMockInviteRepository } from "../../test-helpers/fixtures";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { PasswordService } from "../services/password.service";
 
 describe("AcceptInviteUseCase", () => {
   let acceptInviteUseCase: AcceptInviteUseCase;
@@ -58,6 +60,8 @@ describe("AcceptInviteUseCase", () => {
 
     acceptInviteUseCase = new AcceptInviteUseCase({
       inviteRepository: mockInviteRepository,
+      passwordService: new PasswordService(),
+      auditLog: createMockAuditLogService(),
     });
   });
 

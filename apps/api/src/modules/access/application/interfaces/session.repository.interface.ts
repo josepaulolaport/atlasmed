@@ -38,6 +38,7 @@ export interface CreateLoginSessionParams extends CreateSessionParams {
     deviceType?: string | null;
   };
   revokeReason?: string;
+  maxActiveSessions?: number;
 }
 
 export interface CreateLoginSessionResult {
@@ -51,10 +52,29 @@ export interface SessionStatus {
   expiresAt: Date;
 }
 
+export interface PreviousRefreshTokenSession {
+  id: string;
+  userId: string;
+  updatedAt: Date;
+}
+
+export interface RotateRefreshTokenResult {
+  session: any;
+}
+
+export type RotateRefreshTokenTransactionResult =
+  | { status: "rotated"; session: any }
+  | { status: "reuse_detected"; userId: string; sessionId: string }
+  | { status: "already_rotated"; userId: string; sessionId: string };
+
 export interface SessionRepository {
   create(params: CreateSessionParams): Promise<any>;
 
   findActiveByTokenHash(tokenHash: string): Promise<any>;
+
+  findActiveByPreviousRefreshTokenHash(
+    tokenHash: string
+  ): Promise<PreviousRefreshTokenSession | null>;
 
   findById(sessionId: string): Promise<any>;
 
@@ -92,7 +112,9 @@ export interface SessionRepository {
 
   updateLastSeen(sessionId: string): Promise<void>;
 
-  rotateRefreshTokenTransaction(params: RotateRefreshTokenParams): Promise<any>;
+  rotateRefreshTokenTransaction(
+    params: RotateRefreshTokenParams
+  ): Promise<RotateRefreshTokenTransactionResult>;
 
   createLoginSessionTransaction(
     params: CreateLoginSessionParams

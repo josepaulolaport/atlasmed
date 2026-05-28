@@ -3,6 +3,8 @@ export const Subjects = {
 
   CLINIC: "CLINIC",
 
+  DOCTOR: "DOCTOR",
+
   VISIT: "VISIT",
 
   TERRITORY: "TERRITORY",

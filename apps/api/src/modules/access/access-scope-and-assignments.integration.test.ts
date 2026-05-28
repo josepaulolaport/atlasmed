@@ -25,7 +25,7 @@ function createIntegrationApp() {
     .onError(({ error, set }) => {
       if (error instanceof AppError) {
         set.status = error.statusCode;
-        return { error: error.toJSON() };
+        return { error: error.toClientJSON() };
       }
 
       set.status = 500;
@@ -63,11 +63,16 @@ describe("Access Scope and Assignments Integration Tests", () => {
     await cleanupScopeIntegrationFixtures(fixtures.uniqueId);
   });
 
-  async function loginToken(email: string) {
+  async function loginToken(email: string): Promise<string> {
     const result = await loginUseCase.execute({
       identifier: email,
       password: fixtures.password,
     });
+
+    if (!result.accessToken) {
+      throw new Error("Expected access token from login");
+    }
+
     return result.accessToken;
   }
 
@@ -191,7 +196,8 @@ describe("Access Scope and Assignments Integration Tests", () => {
     );
     expect(response.status).toBe(200);
     let assignments = (await response.json()) as {
-      isOperationallyActive: boolean;
+      isOperationallyActive?: boolean;
+      managerId?: string | null;
       territories: Array<{ territoryId: string }>;
     };
     expect(assignments.isOperationallyActive).toBe(true);
@@ -225,10 +231,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
       `http://localhost/access/users/${fixtures.fieldUser.id}/assignments`,
       token
     );
-    assignments = (await response.json()) as {
-      managerId: string | null;
-      territories: Array<{ territoryId: string }>;
-    };
+    assignments = (await response.json()) as typeof assignments;
     expect(assignments.managerId).toBe(fixtures.otherManager.id);
     expect(assignments.territories.some((t) => t.territoryId === newTerritory)).toBe(true);
 

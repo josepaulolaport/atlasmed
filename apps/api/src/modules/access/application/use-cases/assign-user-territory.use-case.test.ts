@@ -42,6 +42,7 @@ describe("AssignUserTerritoryUseCase", () => {
       userRepository,
       scopeRepository,
       scopeService,
+      auditLog: createMockAuditLogService(),
     });
   });
 

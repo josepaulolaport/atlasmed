@@ -42,6 +42,11 @@ export interface InviteRepository {
 
   revoke(inviteId: string): Promise<void>;
 
+  regenerateToken(
+    inviteId: string,
+    params: { tokenHash: string; expiresAt: Date }
+  ): Promise<any>;
+
   cleanupExpired(): Promise<number>;
 
   acceptInviteTransaction(params: AcceptInviteTransactionParams): Promise<AcceptInviteTransactionResult>;

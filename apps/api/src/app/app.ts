@@ -4,16 +4,20 @@ import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { healthRoute } from "../infrastructure/health/health.route";
 import { access } from "../modules/access";
+import { clinic } from "../modules/clinic";
+import { doctor } from "../modules/doctor";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
 import { observabilityPlugin } from "../infrastructure/plugins/observability.plugin";
+import { securityHeadersPlugin } from "../infrastructure/middleware/security-headers.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 
 const app = new Elysia()
   // Observability MUST come first to track all requests
   .use(observabilityPlugin)
+  .use(securityHeadersPlugin)
   
   // Apply global error handler
   .onError(({ code, error, set, request }) => {
@@ -39,7 +43,7 @@ const app = new Elysia()
     if (error instanceof AppError) {
       set.status = error.statusCode;
       return {
-        error: error.toJSON()
+        error: error.toClientJSON()
       };
     }
 
@@ -103,6 +107,6 @@ const app = new Elysia()
   .use(healthRoute)
 
   // Versioned API routes
-  .group('/api/v1', (app) => app.use(access));
+  .group('/api/v1', (app) => app.use(access).use(clinic).use(doctor));
 
 export default app;

@@ -42,6 +42,7 @@ describe("RevokeUserTerritoryUseCase", () => {
       userRepository,
       scopeRepository,
       scopeService,
+      auditLog: createMockAuditLogService(),
     });
   });
 

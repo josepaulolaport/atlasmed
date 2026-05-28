@@ -97,58 +97,41 @@ describe("ChangeUserRoleUseCase", () => {
     changeUserRoleUseCase = new ChangeUserRoleUseCase({
       userRepository: mockUserRepository,
       roleRepository: mockRoleRepository,
-      sessionRepository: mockSessionRepository,
       authCache: mockAuthCache,
       sessionCache: mockSessionCache,
       scopeService: mockScopeService,
+      auditLog: createMockAuditLogService(),
+      metrics: createMockMetricsService(),
     });
   });
 
   describe("successful role change", () => {
-    it("should update role and invalidate tokens", async () => {
+    it("should change role via transaction and invalidate caches", async () => {
       await changeUserRoleUseCase.execute({
         targetUserId: "user-123",
         newRoleId: "role-manager",
         changedBy: "admin-456",
       });
 
-      expect(mockUserRepository.updateRole).toHaveBeenCalledWith("user-123", "role-manager");
-      expect(mockUserRepository.incrementTokenVersion).toHaveBeenCalledWith("user-123");
-    });
-
-    it("should revoke all sessions and invalidate caches", async () => {
-      await changeUserRoleUseCase.execute({
-        targetUserId: "user-123",
+      expect(mockUserRepository.changeRoleTransaction).toHaveBeenCalledWith({
+        userId: "user-123",
         newRoleId: "role-manager",
-        changedBy: "admin-456",
       });
-
-      expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalledWith("user-123", undefined);
+      expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith("user-123");
       expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
       expect(mockScopeService.invalidate).toHaveBeenCalledWith("user-123");
     });
 
-    it("should update role before revoking sessions", async () => {
-      const callOrder: string[] = [];
-
-      mockUserRepository.updateRole = mock(async () => {
-        callOrder.push("updateRole");
-      });
-      mockUserRepository.incrementTokenVersion = mock(async () => {
-        callOrder.push("incrementTokenVersion");
-        return 2;
-      });
-      mockSessionRepository.revokeAllByUserId = mock(async () => {
-        callOrder.push("revokeSessions");
-      });
-
+    it("should not call legacy updateRole or session revoke paths", async () => {
       await changeUserRoleUseCase.execute({
         targetUserId: "user-123",
         newRoleId: "role-manager",
         changedBy: "admin-456",
       });
 
-      expect(callOrder).toEqual(["updateRole", "incrementTokenVersion", "revokeSessions"]);
+      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.incrementTokenVersion).not.toHaveBeenCalled();
+      expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
     });
   });
 
@@ -162,7 +145,7 @@ describe("ChangeUserRoleUseCase", () => {
         })
       ).rejects.toThrow(UserNotFoundError);
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
     });
 
     it("should throw when actor not found", async () => {
@@ -174,7 +157,7 @@ describe("ChangeUserRoleUseCase", () => {
         })
       ).rejects.toThrow(UserNotFoundError);
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
     });
 
     it("should throw when role is unchanged", async () => {
@@ -186,7 +169,7 @@ describe("ChangeUserRoleUseCase", () => {
         })
       ).rejects.toThrow(OperationNotAllowedError);
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
     });
 
     it("should throw when new role not found", async () => {
@@ -198,7 +181,7 @@ describe("ChangeUserRoleUseCase", () => {
         })
       ).rejects.toThrow(RoleNotFoundError);
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
     });
   });
 
@@ -232,7 +215,7 @@ describe("ChangeUserRoleUseCase", () => {
         })
       ).rejects.toThrow(InsufficientPermissionsError);
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
     });
 
     it("should reject changing role of a user above the actor", async () => {
@@ -273,7 +256,7 @@ describe("ChangeUserRoleUseCase", () => {
         })
       ).rejects.toThrow(InsufficientPermissionsError);
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
     });
 
     it("should allow admin to change user to manager", async () => {
@@ -288,9 +271,9 @@ describe("ChangeUserRoleUseCase", () => {
   });
 
   describe("repository failures", () => {
-    it("should propagate error when updateRole fails", async () => {
-      mockUserRepository.updateRole = mock(async () => {
-        throw new Error("Update failed");
+    it("should propagate error when changeRoleTransaction fails", async () => {
+      mockUserRepository.changeRoleTransaction = mock(async () => {
+        throw new Error("Role change failed");
       });
 
       await expect(
@@ -299,21 +282,7 @@ describe("ChangeUserRoleUseCase", () => {
           newRoleId: "role-manager",
           changedBy: "admin-456",
         })
-      ).rejects.toThrow("Update failed");
-    });
-
-    it("should propagate error when incrementTokenVersion fails", async () => {
-      mockUserRepository.incrementTokenVersion = mock(async () => {
-        throw new Error("Token version bump failed");
-      });
-
-      await expect(
-        changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "role-manager",
-          changedBy: "admin-456",
-        })
-      ).rejects.toThrow("Token version bump failed");
+      ).rejects.toThrow("Role change failed");
     });
   });
 });

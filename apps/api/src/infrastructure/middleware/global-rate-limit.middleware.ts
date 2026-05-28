@@ -1,6 +1,9 @@
 import { Elysia } from "elysia";
 import { rateLimiterService, type RateLimitConfig } from "../cache/rate-limiter.service";
 import { RateLimitExceededError } from "../../shared/errors";
+import { getClientIp } from "../../shared/utils/client-ip";
+
+export type { RateLimitConfig };
 
 export interface RateLimitOptions extends RateLimitConfig {
   keyGenerator?: (context: any) => string | Promise<string>;
@@ -9,14 +12,7 @@ export interface RateLimitOptions extends RateLimitConfig {
   createError?: (retryAfterMs: number) => Error;
 }
 
-export function getClientIp(context: { request: Request }): string {
-  const forwarded = context.request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    return forwarded.split(",")[0]?.trim() || "unknown";
-  }
-
-  return context.request.headers.get("x-real-ip") || "unknown";
-}
+export { getClientIp };
 
 /**
  * Generic rate limiting middleware factory.
@@ -38,6 +34,9 @@ export function createRateLimitMiddleware(
       windowMs: options.windowMs,
       ...(options.blockDurationMs !== undefined && {
         blockDurationMs: options.blockDurationMs,
+      }),
+      ...(options.failClosed !== undefined && {
+        failClosed: options.failClosed,
       }),
     });
 

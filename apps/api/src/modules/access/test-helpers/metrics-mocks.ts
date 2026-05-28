@@ -1,4 +1,5 @@
 import { mock } from "bun:test";
+import type { IMetrics } from "../application/interfaces/metrics.interface";
 
 const noop = () => mock(() => {});
 
@@ -6,22 +7,19 @@ const noop = () => mock(() => {});
  * Full metrics mock — prevents partial mock.module from breaking other tests.
  */
 export function createMockMetricsService(
-  overrides: Record<string, ReturnType<typeof mock>> = {}
-) {
+  overrides: Partial<Record<keyof IMetrics, ReturnType<typeof mock>>> = {}
+): IMetrics {
   return {
-    recordHttpRequest: noop(),
     recordLoginAttempt: noop(),
+    recordRefresh: noop(),
     recordPasswordReset: noop(),
     recordInvite: noop(),
     recordAuditLog: noop(),
+    recordAuditLogFailure: noop(),
     recordSessionRevoked: noop(),
     recordSuspiciousActivity: noop(),
-    recordDbQuery: noop(),
-    recordRedisOperation: noop(),
-    recordNotificationSent: noop(),
-    recordNotificationFailed: noop(),
-    updateActiveMetrics: mock(async () => {}),
-    getMetrics: mock(async () => ""),
+    recordScopeClinicResolutionStub: noop(),
+    recordSiemExportBatch: noop(),
     ...overrides,
   };
 }

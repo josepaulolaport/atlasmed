@@ -139,6 +139,22 @@ export class PrismaInviteRepository implements InviteRepository {
     });
   }
 
+  async regenerateToken(
+    inviteId: string,
+    params: { tokenHash: string; expiresAt: Date }
+  ) {
+    return await prisma.invitation.update({
+      where: { id: inviteId },
+      data: {
+        tokenHash: params.tokenHash,
+        expiresAt: params.expiresAt,
+        resendCount: { increment: 1 },
+        lastResendAt: new Date(),
+      },
+      include: { role: true },
+    });
+  }
+
   async cleanupExpired(): Promise<number> {
     const result = await prisma.invitation.updateMany({
       where: {

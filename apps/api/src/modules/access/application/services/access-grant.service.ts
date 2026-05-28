@@ -1,7 +1,7 @@
 import type { AccessGrantRecord } from "@atlasmed/access";
 import type { AccessGrantRepository } from "../interfaces/access-grant.repository.interface";
 import type { AccessGrantCacheService } from "../../infrastructure/cache/access-grant-cache.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 
 export interface GrantPermissionParams {
   userId: string;
@@ -18,6 +18,7 @@ export class AccessGrantService {
     private readonly deps: {
       accessGrantRepository: AccessGrantRepository;
       accessGrantCache: AccessGrantCacheService;
+      auditLog: IAuditLog;
     }
   ) {}
 
@@ -37,7 +38,7 @@ export class AccessGrantService {
     const grant = await this.deps.accessGrantRepository.create(params);
     await this.deps.accessGrantCache.invalidate(params.userId);
 
-    await auditLogService.log({
+    await this.deps.auditLog.log({
       userId: params.grantedBy,
       eventType: "PERMISSION_GRANT",
       severity: "WARNING",
@@ -71,7 +72,7 @@ export class AccessGrantService {
 
     await this.deps.accessGrantCache.invalidate(params.userId);
 
-    await auditLogService.log({
+    await this.deps.auditLog.log({
       userId: params.revokedBy,
       eventType: "PERMISSION_REVOKE",
       severity: "WARNING",

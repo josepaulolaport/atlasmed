@@ -57,16 +57,23 @@ export interface VerificationRequest {
 }
 
 export interface VerificationConfirm {
-  token?: string;
-  code?: string;
+  token: string;
 }
 
 export interface ChangeEmailRequest {
   newEmail: string;
-  password: string;
+}
+
+export interface ChangeEmailConfirmRequest {
+  newEmail: string;
+  token: string;
 }
 
 export interface ChangePhoneRequest {
-  newPhoneNumber: string;
-  password: string;
+  newPhone: string;
+}
+
+export interface ChangePhoneConfirmRequest {
+  newPhone: string;
+  token: string;
 }

@@ -35,6 +35,13 @@ export const usersApi = {
     await apiClient.delete(`/access/invites/${inviteId}`);
   },
 
+  resendInvite: async (inviteId: string): Promise<Invitation> => {
+    const response = await apiClient.post<{ invite: Invitation }>(
+      `/access/invites/${inviteId}/resend`
+    );
+    return response.data.invite;
+  },
+
   getInvitations: async (params?: {
     status?: string;
     page?: number;
@@ -114,6 +121,41 @@ export const usersApi = {
     const response = await apiClient.delete<{ message: string }>(
       `/access/users/${userId}/territories/${encodeURIComponent(territoryId)}`
     );
+    return response.data;
+  },
+
+  getUserCapabilities: async (userId: string): Promise<{
+    role: string;
+    grants: import("@/types/auth").AccessGrant[];
+  }> => {
+    const response = await apiClient.get(`/access/users/${userId}/capabilities`);
+    return response.data;
+  },
+
+  grantPermission: async (
+    userId: string,
+    data: {
+      resource: string;
+      action: string;
+      resourceId?: string;
+      expiresAt?: string;
+    }
+  ): Promise<{ grant: import("@/types/auth").AccessGrant; message: string }> => {
+    const response = await apiClient.post(`/access/users/${userId}/permissions`, data);
+    return response.data;
+  },
+
+  revokePermission: async (
+    userId: string,
+    data: {
+      resource: string;
+      action: string;
+      resourceId?: string;
+    }
+  ): Promise<{ message: string }> => {
+    const response = await apiClient.delete(`/access/users/${userId}/permissions`, {
+      data,
+    });
     return response.data;
   },
 };

@@ -3,7 +3,7 @@ import type { AccessGrantRecord } from "@atlasmed/access";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 
 const CACHE_KEY_PREFIX = "permissions:user:";
-const CACHE_TTL_SECONDS = 3600;
+const CACHE_TTL_SECONDS = 300;
 
 export class AccessGrantCacheService {
   private readonly redis: Redis;

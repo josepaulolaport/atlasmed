@@ -5,7 +5,7 @@ import { AcceptInviteUseCase } from "./accept-invite.use-case";
 import { PrismaInviteRepository } from "../../infrastructure/repositories/prisma/prisma-invite.repository";
 import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
 import { PrismaRoleRepository } from "../../infrastructure/repositories/prisma/prisma-role.repository";
-import { InviteUserUseCase } from "./invite-user.use-case";
+import { accessUseCases } from "../../composition";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-database";
 
@@ -25,7 +25,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   let userRepository: PrismaUserRepository;
   let roleRepository: PrismaRoleRepository;
   let acceptInviteUseCase: AcceptInviteUseCase;
-  let inviteUserUseCase: InviteUserUseCase;
+  let inviteUser: ReturnType<typeof accessUseCases.inviteUser>;
   let adminUserId: string;
   let roleId: string;
 
@@ -37,15 +37,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     userRepository = new PrismaUserRepository();
     roleRepository = new PrismaRoleRepository();
 
-    acceptInviteUseCase = new AcceptInviteUseCase({
-      inviteRepository,
-    });
+    acceptInviteUseCase = accessUseCases.acceptInvite();
 
-    inviteUserUseCase = new InviteUserUseCase({
-      inviteRepository,
-      userRepository,
-      roleRepository,
-    });
+    inviteUser = accessUseCases.inviteUser();
 
     const role = await prisma.role.findFirst({
       where: { name: "USER" },
@@ -101,7 +95,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     const email = `race-test-${Date.now()}@example.com`;
     const username = `raceuser${Date.now()}`;
 
-    const invite = await inviteUserUseCase.execute({
+    const invite = await inviteUser.execute({
       email,
       roleId,
       invitedByUserId: adminUserId,
@@ -145,19 +139,19 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     const username3 = `user3-${Date.now()}`;
 
     // Create invites with phone numbers (no email) so users can choose any email during acceptance
-    const invite1 = await inviteUserUseCase.execute({
+    const invite1 = await inviteUser.execute({
       phoneNumber: phone1,
       roleId,
       invitedByUserId: adminUserId,
     });
 
-    const invite2 = await inviteUserUseCase.execute({
+    const invite2 = await inviteUser.execute({
       phoneNumber: phone2,
       roleId,
       invitedByUserId: adminUserId,
     });
 
-    const invite3 = await inviteUserUseCase.execute({
+    const invite3 = await inviteUser.execute({
       phoneNumber: phone3,
       roleId,
       invitedByUserId: adminUserId,
@@ -208,13 +202,13 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     const username1 = `sequser1-${Date.now()}`;
     const username2 = `sequser2-${Date.now()}`;
 
-    const invite1 = await inviteUserUseCase.execute({
+    const invite1 = await inviteUser.execute({
       email: email1,
       roleId,
       invitedByUserId: adminUserId,
     });
 
-    const invite2 = await inviteUserUseCase.execute({
+    const invite2 = await inviteUser.execute({
       email: email2,
       roleId,
       invitedByUserId: adminUserId,

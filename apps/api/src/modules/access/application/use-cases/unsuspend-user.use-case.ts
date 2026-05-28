@@ -2,12 +2,13 @@ import type { Role, ScopeContext } from "@atlasmed/access";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
 import { assertCanMutateUser } from "../services/managed-user-authorization.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 import { UserNotFoundError, OperationNotAllowedError } from "../../../../shared/errors";
 
 interface Dependencies {
   userRepository: UserRepository;
   authCache: IAuthCache;
+  auditLog: IAuditLog;
 }
 
 export class UnsuspendUserUseCase {
@@ -46,7 +47,7 @@ export class UnsuspendUserUseCase {
 
     await this.deps.authCache.invalidate(params.userId);
 
-    await auditLogService.logUserStatusChange({
+    await this.deps.auditLog.logUserStatusChange({
       userId: params.unsuspendedBy,
       targetUserId: params.userId,
       oldStatus,

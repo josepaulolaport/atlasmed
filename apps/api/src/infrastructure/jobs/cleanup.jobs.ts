@@ -1,5 +1,14 @@
 import { createQueue, createWorker, type JobOptions } from "./queue.client";
+import { redis } from "../cache/redis.client";
 import { prisma } from "../database/prisma.client";
+import { environment } from "../../app/config/environment";
+import {
+  formatAuditLogForSiem,
+  postSiemBatch,
+} from "../audit/siem-export.helper";
+import { metricsService } from "../monitoring/metrics.service";
+
+const SIEM_CURSOR_KEY = "siem:lastExportAt";
 
 const cleanupQueue = createQueue("cleanup");
 
@@ -66,7 +75,9 @@ export class CleanupJobs {
     );
   }
 
-  async scheduleOldAuditLogsCleanup(retentionDays: number = 90): Promise<void> {
+  async scheduleOldAuditLogsCleanup(
+    retentionDays: number = environment.AUDIT_LOG_RETENTION_DAYS
+  ): Promise<void> {
     await cleanupQueue.add(
       "cleanup-old-audit-logs",
       { retentionDays },
@@ -79,13 +90,45 @@ export class CleanupJobs {
     );
   }
 
+  async scheduleSiemAuditExport(): Promise<void> {
+    if (!environment.SIEM_EXPORT_ENABLED || !environment.SIEM_WEBHOOK_URL) {
+      return;
+    }
+
+    await cleanupQueue.add(
+      "export-audit-logs-siem",
+      {},
+      {
+        ...defaultJobOptions,
+        repeat: {
+          pattern: "*/15 * * * *",
+        },
+      }
+    );
+  }
+
+  async scheduleExpiredPermissionsCleanup(): Promise<void> {
+    await cleanupQueue.add(
+      "cleanup-expired-permissions",
+      {},
+      {
+        ...defaultJobOptions,
+        repeat: {
+          pattern: "0 3 * * *",
+        },
+      }
+    );
+  }
+
   async initializeAllJobs(): Promise<void> {
     await Promise.all([
       this.scheduleExpiredSessionsCleanup(),
       this.scheduleExpiredInvitesCleanup(),
       this.scheduleExpiredPasswordResetsCleanup(),
       this.scheduleExpiredVerificationTokensCleanup(),
+      this.scheduleExpiredPermissionsCleanup(),
       this.scheduleOldAuditLogsCleanup(),
+      this.scheduleSiemAuditExport(),
     ]);
 
     console.log("✅ All cleanup jobs scheduled successfully");
@@ -154,8 +197,56 @@ const cleanupWorker = createWorker<any>(
           break;
         }
 
+        case "cleanup-expired-permissions": {
+          const { accessGrantService } = await import(
+            "../../modules/access/composition"
+          );
+          const removed = await accessGrantService.cleanupExpiredPermissions();
+          console.log(`Cleaned up ${removed} expired permission grants`);
+          break;
+        }
+
+        case "export-audit-logs-siem": {
+          const webhookUrl = environment.SIEM_WEBHOOK_URL;
+          if (!environment.SIEM_EXPORT_ENABLED || !webhookUrl) {
+            break;
+          }
+
+          const cursorRaw = await redis.get(SIEM_CURSOR_KEY);
+          const since = cursorRaw
+            ? new Date(cursorRaw)
+            : new Date(Date.now() - 15 * 60 * 1000);
+
+          const logs = await prisma.auditLog.findMany({
+            where: { createdAt: { gt: since } },
+            orderBy: { createdAt: "asc" },
+            take: 500,
+          });
+
+          if (logs.length === 0) {
+            metricsService.recordSiemExportBatch(true);
+            break;
+          }
+
+          try {
+            const events = logs.map(formatAuditLogForSiem);
+            await postSiemBatch(events, {
+              webhookUrl,
+              secret: environment.SIEM_WEBHOOK_SECRET,
+            });
+            const lastExported = logs[logs.length - 1]!.createdAt.toISOString();
+            await redis.set(SIEM_CURSOR_KEY, lastExported);
+            metricsService.recordSiemExportBatch(true);
+            console.log(`Exported ${logs.length} audit events to SIEM webhook`);
+          } catch (error) {
+            metricsService.recordSiemExportBatch(false);
+            throw error;
+          }
+          break;
+        }
+
         case "cleanup-old-audit-logs": {
-          const retentionDays = data.retentionDays || 90;
+          const retentionDays = data.retentionDays || environment.AUDIT_LOG_RETENTION_DAYS;
           const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
 
           const result = await prisma.auditLog.deleteMany({

@@ -143,6 +143,41 @@ describe("ListUsersUseCase", () => {
     });
   });
 
+  it("should scope manager listing to managedUserIds only, not territory peers", async () => {
+    const userRepository = createMockUserRepository({
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
+    });
+
+    const scope = {
+      isGlobal: false,
+      territoryIds: ["territory-shared"],
+      clinicIds: [],
+      managedUserIds: ["direct-report-1"],
+      isOperationallyActive: true,
+    };
+
+    const useCase = new ListUsersUseCase({ userRepository });
+    await useCase.execute({ scope });
+
+    expect(userRepository.findAll).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      status: undefined,
+      search: undefined,
+      scope: {
+        isGlobal: false,
+        territoryIds: ["territory-shared"],
+        managedUserIds: ["direct-report-1"],
+      },
+    });
+
+    const firstCall = (userRepository.findAll as ReturnType<typeof mock>).mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const callScope = firstCall![0].scope;
+    expect(callScope.managedUserIds).toEqual(["direct-report-1"]);
+    expect(callScope.isGlobal).toBe(false);
+  });
+
   it("should pass empty managedUserIds when scope has none", async () => {
     const userRepository = createMockUserRepository({
       findAll: mock(() => Promise.resolve({ users: [], total: 0 })),

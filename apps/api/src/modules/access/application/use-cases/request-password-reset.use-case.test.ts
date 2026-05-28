@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
-
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
+import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 
 import type { EmailService } from "../interfaces/email.service.interface";
 import type { MessagingService } from "../interfaces/messaging.service.interface";
@@ -20,7 +17,12 @@ describe("RequestPasswordResetUseCase", () => {
   let mockEmailService: EmailService;
   let mockMessagingService: MessagingService;
 
+  let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
+  let mockMetrics: ReturnType<typeof createMockMetricsService>;
+
   beforeEach(() => {
+    mockAuditLog = createMockAuditLogService();
+    mockMetrics = createMockMetricsService();
     mockUserRepository = createMockUserRepository();
 
     mockPasswordResetRepository = createMockPasswordResetRepository();
@@ -39,6 +41,8 @@ describe("RequestPasswordResetUseCase", () => {
       useCase = new RequestPasswordResetUseCase({
         userRepository: mockUserRepository,
         passwordResetRepository: mockPasswordResetRepository,
+        auditLog: mockAuditLog,
+        metrics: mockMetrics,
       });
 
       mockUserRepository.findByIdentifier = mock(() => Promise.resolve(null));
@@ -53,6 +57,8 @@ describe("RequestPasswordResetUseCase", () => {
       useCase = new RequestPasswordResetUseCase({
         userRepository: mockUserRepository,
         passwordResetRepository: mockPasswordResetRepository,
+        auditLog: mockAuditLog,
+        metrics: mockMetrics,
         emailService: mockEmailService,
       });
 
@@ -88,6 +94,8 @@ describe("RequestPasswordResetUseCase", () => {
       useCase = new RequestPasswordResetUseCase({
         userRepository: mockUserRepository,
         passwordResetRepository: mockPasswordResetRepository,
+        auditLog: mockAuditLog,
+        metrics: mockMetrics,
         messagingService: mockMessagingService,
       });
 
@@ -122,6 +130,8 @@ describe("RequestPasswordResetUseCase", () => {
       useCase = new RequestPasswordResetUseCase({
         userRepository: mockUserRepository,
         passwordResetRepository: mockPasswordResetRepository,
+        auditLog: mockAuditLog,
+        metrics: mockMetrics,
         emailService: mockEmailService,
         messagingService: mockMessagingService,
       });

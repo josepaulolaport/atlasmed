@@ -4,6 +4,10 @@ import { prisma } from "../../../../infrastructure/database/prisma.client";
 import { ResetPasswordUseCase } from "./reset-password.use-case";
 import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
 import { PrismaPasswordResetRepository } from "../../infrastructure/repositories/prisma/prisma-password-reset.repository";
+import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
+import { PasswordService } from "../services/password.service";
+import { NotificationService } from "../services/notification.service";
 import { createMockAuthCache, createMockSessionCache } from "../../test-helpers/fixtures";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-database";
@@ -39,6 +43,10 @@ describe("Reset Password Race Condition Integration Tests", () => {
       passwordResetRepository,
       authCache: createMockAuthCache(),
       sessionCache: createMockSessionCache(),
+      passwordService: new PasswordService(),
+      notificationService: new NotificationService(),
+      auditLog: createMockAuditLogService(),
+      metrics: createMockMetricsService(),
     });
 
     const userRole = await prisma.role.findUnique({

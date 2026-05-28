@@ -1,14 +1,12 @@
 import { canChangeUserRole, Role } from "@atlasmed/access";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { RoleRepository } from "../interfaces/role.repository.interface";
-import type { SessionRepository } from "../interfaces/session.repository.interface";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
-import { SessionService } from "../services/session.service";
 import type { ScopeService } from "../services/scope.service";
 import { canAssignRole } from "../constants/role-priority.constants";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
-import { metricsService } from "../../../../infrastructure/monitoring/metrics.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
 import {
   UserNotFoundError,
   RoleNotFoundError,
@@ -19,21 +17,15 @@ import {
 interface Dependencies {
   userRepository: UserRepository;
   roleRepository: RoleRepository;
-  sessionRepository: SessionRepository;
   authCache: IAuthCache;
   sessionCache: ISessionCache;
   scopeService: ScopeService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
 }
 
 export class ChangeUserRoleUseCase {
-  private readonly sessionService: SessionService;
-
-  constructor(private readonly deps: Dependencies) {
-    this.sessionService = new SessionService({
-      sessionRepository: deps.sessionRepository,
-      sessionCache: deps.sessionCache,
-    });
-  }
+  constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
     targetUserId: string;
@@ -92,21 +84,22 @@ export class ChangeUserRoleUseCase {
 
     const oldRoleId = target.roleId;
 
-    await this.deps.userRepository.updateRole(params.targetUserId, params.newRoleId);
-    await this.deps.userRepository.incrementTokenVersion(params.targetUserId);
+    await this.deps.userRepository.changeRoleTransaction({
+      userId: params.targetUserId,
+      newRoleId: params.newRoleId,
+    });
 
-    await this.sessionService.revokeAllByUserId(params.targetUserId);
-
+    await this.deps.sessionCache.invalidateByUserId(params.targetUserId);
     await this.deps.authCache.invalidate(params.targetUserId);
     await this.deps.scopeService.invalidate(params.targetUserId);
 
-    await auditLogService.logRoleChange({
+    await this.deps.auditLog.logRoleChange({
       userId: params.changedBy,
       targetUserId: params.targetUserId,
       oldRoleId,
       newRoleId: params.newRoleId,
     });
 
-    metricsService.recordSessionRevoked("role_changed");
+    this.deps.metrics.recordSessionRevoked("role_changed");
   }
 }

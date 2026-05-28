@@ -1,20 +1,36 @@
 import type Redis from "ioredis";
 import { TooManyLoginAttemptsError } from "../../../../shared/errors";
+import { environment } from "../../../../app/config/environment";
 
 interface Dependencies {
   redis: Redis;
 }
 
 export class RateLimiterService {
-  private readonly ATTEMPT_WINDOW = 900; // 15 minutes in seconds
-  private readonly MAX_ATTEMPTS = 5;
-  private readonly LOCKOUT_DURATION = 900; // 15 minutes lockout
+  private readonly attemptWindowSeconds: number;
+  private readonly maxAttempts: number;
+  private readonly lockoutDurationSeconds: number;
 
-  constructor(private readonly deps: Dependencies) {}
+  private readonly keyPrefix: string;
+
+  constructor(private readonly deps: Dependencies) {
+    this.maxAttempts = environment.MAX_LOGIN_ATTEMPTS;
+    this.lockoutDurationSeconds = environment.LOGIN_LOCKOUT_MINUTES * 60;
+    this.attemptWindowSeconds = this.lockoutDurationSeconds;
+    this.keyPrefix = environment.REDIS_KEY_PREFIX;
+  }
+
+  private lockKey(identifier: string): string {
+    return `${this.keyPrefix}account_locked:${identifier}`;
+  }
+
+  private attemptKey(identifier: string): string {
+    return `${this.keyPrefix}login_attempts:${identifier}`;
+  }
 
   async checkLoginAttempts(identifier: string): Promise<void> {
-    const lockKey = `account_locked:${identifier}`;
-    const attemptKey = `login_attempts:${identifier}`;
+    const lockKey = this.lockKey(identifier);
+    const attemptKey = this.attemptKey(identifier);
 
     // Check if account is locked
     const isLocked = await this.deps.redis.get(lockKey);
@@ -27,38 +43,37 @@ export class RateLimiterService {
     const attempts = await this.deps.redis.get(attemptKey);
     const attemptCount = attempts ? parseInt(attempts, 10) : 0;
 
-    if (attemptCount >= this.MAX_ATTEMPTS) {
-      // Lock the account
-      await this.deps.redis.setex(lockKey, this.LOCKOUT_DURATION, "1");
+    if (attemptCount >= this.maxAttempts) {
+      await this.deps.redis.setex(lockKey, this.lockoutDurationSeconds, "1");
       await this.deps.redis.del(attemptKey);
-      throw new TooManyLoginAttemptsError(this.LOCKOUT_DURATION * 1000);
+      throw new TooManyLoginAttemptsError(this.lockoutDurationSeconds * 1000);
     }
   }
 
   async recordFailedAttempt(identifier: string): Promise<void> {
-    const attemptKey = `login_attempts:${identifier}`;
+    const attemptKey = this.attemptKey(identifier);
     const current = await this.deps.redis.incr(attemptKey);
 
     // Set expiry on first attempt
     if (current === 1) {
-      await this.deps.redis.expire(attemptKey, this.ATTEMPT_WINDOW);
+      await this.deps.redis.expire(attemptKey, this.attemptWindowSeconds);
     }
 
-    const remaining = this.MAX_ATTEMPTS - current;
+    const remaining = this.maxAttempts - current;
     if (remaining > 0 && remaining <= 2) {
       console.warn(`User ${identifier} has ${remaining} login attempt(s) remaining`);
     }
   }
 
   async clearAttempts(identifier: string): Promise<void> {
-    const attemptKey = `login_attempts:${identifier}`;
+    const attemptKey = this.attemptKey(identifier);
     await this.deps.redis.del(attemptKey);
   }
 
   async getRemainingAttempts(identifier: string): Promise<number> {
-    const attemptKey = `login_attempts:${identifier}`;
+    const attemptKey = this.attemptKey(identifier);
     const attempts = await this.deps.redis.get(attemptKey);
     const attemptCount = attempts ? parseInt(attempts, 10) : 0;
-    return Math.max(0, this.MAX_ATTEMPTS - attemptCount);
+    return Math.max(0, this.maxAttempts - attemptCount);
   }
 }

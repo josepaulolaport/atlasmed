@@ -9,6 +9,7 @@ export class MetricsService {
   public readonly activeSessions: Gauge;
   public readonly loginAttempts: Counter;
   public readonly loginFailures: Counter;
+  public readonly refreshAttempts: Counter;
   public readonly passwordResets: Counter;
   public readonly invitesSent: Counter;
   public readonly auditLogWrites: Counter;
@@ -21,6 +22,8 @@ export class MetricsService {
   public readonly notificationsFailed: Counter;
   public readonly scopeClinicStubCounter: Counter;
   public readonly auditLogFailureCounter: Counter;
+  public readonly auditSiemExportBatchesCounter: Counter;
+  public readonly auditSiemExportFailuresCounter: Counter;
 
   private constructor() {
     this.httpRequestDuration = new Histogram({
@@ -58,6 +61,12 @@ export class MetricsService {
       labelNames: ["reason"],
     });
 
+    this.refreshAttempts = new Counter({
+      name: "refresh_attempts_total",
+      help: "Total number of refresh token attempts",
+      labelNames: ["status", "reason"],
+    });
+
     this.passwordResets = new Counter({
       name: "password_resets_total",
       help: "Total number of password resets",
@@ -67,7 +76,7 @@ export class MetricsService {
     this.invitesSent = new Counter({
       name: "invites_sent_total",
       help: "Total number of invites sent",
-      labelNames: ["channel"],
+      labelNames: ["channel", "type"],
     });
 
     this.auditLogWrites = new Counter({
@@ -131,6 +140,17 @@ export class MetricsService {
       help: "Audit log writes that failed after retry",
       labelNames: ["event_type"],
     });
+
+    this.auditSiemExportBatchesCounter = new Counter({
+      name: "audit_siem_export_batches_total",
+      help: "SIEM audit export batches completed",
+      labelNames: ["status"],
+    });
+
+    this.auditSiemExportFailuresCounter = new Counter({
+      name: "audit_siem_export_failures_total",
+      help: "SIEM audit export batch failures",
+    });
   }
 
   public static getInstance(): MetricsService {
@@ -156,12 +176,29 @@ export class MetricsService {
     }
   }
 
+  public recordRefresh(success: boolean, reason?: string): void {
+    this.refreshAttempts.inc({
+      status: success ? "success" : "failure",
+      reason: reason ?? "none",
+    });
+  }
+
   public recordPasswordReset(method: "request" | "complete"): void {
     this.passwordResets.inc({ method });
   }
 
-  public recordInvite(channel: "email" | "phone"): void {
-    this.invitesSent.inc({ channel });
+  public recordInvite(
+    channel: "email" | "phone",
+    type: "create" | "resend" = "create"
+  ): void {
+    this.invitesSent.inc({ channel, type });
+  }
+
+  public recordSiemExportBatch(success: boolean): void {
+    this.auditSiemExportBatchesCounter.inc({ status: success ? "success" : "failure" });
+    if (!success) {
+      this.auditSiemExportFailuresCounter.inc();
+    }
   }
 
   public recordAuditLog(eventType: string, severity: string): void {

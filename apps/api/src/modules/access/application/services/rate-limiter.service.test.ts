@@ -56,7 +56,7 @@ describe("RateLimiterService", () => {
         TooManyLoginAttemptsError
       );
 
-      expect(mockRedis.setex).toHaveBeenCalledWith("account_locked:user@example.com", 900, "1");
+      expect(mockRedis.setex).toHaveBeenCalledWith("atlasmed:account_locked:user@example.com", 900, "1");
     });
   });
 
@@ -66,8 +66,8 @@ describe("RateLimiterService", () => {
 
       await rateLimiterService.recordFailedAttempt("user@example.com");
 
-      expect(mockRedis.incr).toHaveBeenCalledWith("login_attempts:user@example.com");
-      expect(mockRedis.expire).toHaveBeenCalledWith("login_attempts:user@example.com", 900);
+      expect(mockRedis.incr).toHaveBeenCalledWith("atlasmed:login_attempts:user@example.com");
+      expect(mockRedis.expire).toHaveBeenCalledWith("atlasmed:login_attempts:user@example.com", 900);
     });
 
     it("should not reset expiry on subsequent attempts", async () => {
@@ -83,7 +83,7 @@ describe("RateLimiterService", () => {
     it("should delete attempt counter", async () => {
       await rateLimiterService.clearAttempts("user@example.com");
 
-      expect(mockRedis.del).toHaveBeenCalledWith("login_attempts:user@example.com");
+      expect(mockRedis.del).toHaveBeenCalledWith("atlasmed:login_attempts:user@example.com");
     });
   });
 

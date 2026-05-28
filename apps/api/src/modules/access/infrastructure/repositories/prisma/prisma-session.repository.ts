@@ -1,6 +1,5 @@
 import { prisma } from "../../../../../infrastructure/database/prisma.client";
 import {
-  RefreshTokenReuseDetectedError,
   UnauthorizedError,
 } from "../../../../../shared/errors";
 import { sessionsMatchSameDevice } from "../../../../../shared/utils/device-fingerprint";
@@ -11,6 +10,7 @@ import type {
   CreateLoginSessionParams,
   RotateRefreshTokenParams,
 } from "../../../application/interfaces/session.repository.interface";
+import { REFRESH_ROTATION_GRACE_MS } from "../../../application/constants/refresh-token.constants";
 
 export class PrismaSessionRepository implements SessionRepository {
   async create(params: CreateSessionParams) {
@@ -49,6 +49,23 @@ export class PrismaSessionRepository implements SessionRepository {
             role: true,
           },
         },
+      },
+    });
+  }
+
+  async findActiveByPreviousRefreshTokenHash(tokenHash: string) {
+    return await prisma.session.findFirst({
+      where: {
+        previousRefreshTokenHash: tokenHash,
+        revokedAt: null,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        userId: true,
+        updatedAt: true,
       },
     });
   }
@@ -354,6 +371,39 @@ export class PrismaSessionRepository implements SessionRepository {
         });
       }
 
+      const maxActiveSessions = params.maxActiveSessions ?? Number.MAX_SAFE_INTEGER;
+      const remainingAfterSameDeviceRevoke = lockedSessions.filter(
+        (session) => !revokedSessionIds.includes(session.id)
+      );
+
+      if (remainingAfterSameDeviceRevoke.length >= maxActiveSessions) {
+        const toRevokeCount =
+          remainingAfterSameDeviceRevoke.length - maxActiveSessions + 1;
+        const oldestSessions = await tx.session.findMany({
+          where: {
+            userId: params.userId,
+            revokedAt: null,
+            expiresAt: { gt: now },
+            id: { notIn: revokedSessionIds },
+          },
+          orderBy: [{ lastSeenAt: "asc" }, { createdAt: "asc" }],
+          take: toRevokeCount,
+          select: { id: true },
+        });
+
+        const capRevokedIds = oldestSessions.map((session) => session.id);
+        if (capRevokedIds.length > 0) {
+          await tx.session.updateMany({
+            where: { id: { in: capRevokedIds } },
+            data: {
+              revokedAt: new Date(),
+              revokedReason: "Session cap exceeded",
+            },
+          });
+          revokedSessionIds.push(...capRevokedIds);
+        }
+      }
+
       const session = await tx.session.create({
         data: {
           id: params.id,
@@ -381,11 +431,13 @@ export class PrismaSessionRepository implements SessionRepository {
           id: string;
           userId: string;
           refreshTokenHash: string;
+          previousRefreshTokenHash: string | null;
           revokedAt: Date | null;
           expiresAt: Date;
+          updatedAt: Date;
         }>
       >`
-        SELECT id, "userId", "refreshTokenHash", "revokedAt", "expiresAt"
+        SELECT id, "userId", "refreshTokenHash", "previousRefreshTokenHash", "revokedAt", "expiresAt", "updatedAt"
         FROM sessions
         WHERE id = ${params.sessionId}
         FOR UPDATE
@@ -406,17 +458,22 @@ export class PrismaSessionRepository implements SessionRepository {
       }
 
       if (sessionLock.refreshTokenHash !== params.expectedRefreshTokenHash) {
-        await tx.session.update({
-          where: { id: params.sessionId },
-          data: {
-            revokedAt: new Date(),
-            revokedReason: "Refresh token reuse detected",
-            suspiciousActivity: true,
-          },
-        });
+        const isPreviousHashReuse =
+          sessionLock.previousRefreshTokenHash &&
+          sessionLock.previousRefreshTokenHash === params.expectedRefreshTokenHash;
+        const rotatedRecently =
+          Date.now() - sessionLock.updatedAt.getTime() < REFRESH_ROTATION_GRACE_MS;
+
+        if (isPreviousHashReuse && !rotatedRecently) {
+          return {
+            status: "reuse_detected" as const,
+            userId: sessionLock.userId,
+            sessionId: sessionLock.id,
+          };
+        }
 
         return {
-          reuseDetected: true as const,
+          status: "already_rotated" as const,
           userId: sessionLock.userId,
           sessionId: sessionLock.id,
         };
@@ -425,6 +482,7 @@ export class PrismaSessionRepository implements SessionRepository {
       const session = await tx.session.update({
         where: { id: params.sessionId },
         data: {
+          previousRefreshTokenHash: sessionLock.refreshTokenHash,
           refreshTokenHash: params.newRefreshTokenHash,
           expiresAt: params.newExpiresAt,
           lastSeenAt: new Date(),
@@ -442,18 +500,11 @@ export class PrismaSessionRepository implements SessionRepository {
       });
 
       return {
-        reuseDetected: false as const,
+        status: "rotated" as const,
         session,
       };
     });
 
-    if (result.reuseDetected) {
-      throw new RefreshTokenReuseDetectedError({
-        userId: result.userId,
-        sessionId: result.sessionId,
-      });
-    }
-
-    return result.session;
+    return result;
   }
 }

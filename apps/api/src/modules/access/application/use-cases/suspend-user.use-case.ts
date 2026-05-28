@@ -6,8 +6,8 @@ import type { ISessionCache } from "../interfaces/session-cache.interface";
 import { SessionService } from "../services/session.service";
 import type { ScopeService } from "../services/scope.service";
 import { assertCanMutateUser } from "../services/managed-user-authorization.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
-import { metricsService } from "../../../../infrastructure/monitoring/metrics.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
 import { UserNotFoundError, OperationNotAllowedError } from "../../../../shared/errors";
 
 interface Dependencies {
@@ -16,6 +16,8 @@ interface Dependencies {
   authCache: IAuthCache;
   sessionCache: ISessionCache;
   scopeService: ScopeService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
 }
 
 export class SuspendUserUseCase {
@@ -74,7 +76,7 @@ export class SuspendUserUseCase {
       await this.deps.scopeService.invalidate(params.userId);
     }
 
-    await auditLogService.logUserStatusChange({
+    await this.deps.auditLog.logUserStatusChange({
       userId: params.suspendedBy,
       targetUserId: params.userId,
       oldStatus,
@@ -82,6 +84,6 @@ export class SuspendUserUseCase {
       reason: params.reason,
     });
 
-    metricsService.recordSessionRevoked("user_suspended");
+    this.deps.metrics.recordSessionRevoked("user_suspended");
   }
 }

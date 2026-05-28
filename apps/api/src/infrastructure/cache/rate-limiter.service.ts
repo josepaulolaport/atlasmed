@@ -5,6 +5,7 @@ export interface RateLimitConfig {
   maxAttempts: number;
   windowMs: number;
   blockDurationMs?: number;
+  failClosed?: boolean;
 }
 
 export interface RateLimitResult {
@@ -96,8 +97,16 @@ export class RateLimiterService {
         resetAt,
       };
     } catch (error) {
-      // Fail open: allow the request when Redis is unavailable
       console.error("Rate limit check failed:", error);
+
+      if (config.failClosed) {
+        return {
+          allowed: false,
+          remaining: 0,
+          resetAt: new Date(now + config.windowMs),
+          blockedUntil: new Date(now + config.windowMs),
+        };
+      }
 
       return {
         allowed: true,

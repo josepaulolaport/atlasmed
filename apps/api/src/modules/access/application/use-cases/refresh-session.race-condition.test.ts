@@ -9,7 +9,7 @@ import { SessionCacheService } from "../../infrastructure/cache/session-cache.se
 import { redis } from "../../../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-database";
-import { RefreshTokenReuseDetectedError } from "../../../../shared/errors";
+import { RefreshTokenReuseDetectedError, TokenInvalidError } from "../../../../shared/errors";
 
 /**
  * RACE CONDITION TESTS WITH PESSIMISTIC LOCKING
@@ -133,6 +133,16 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     expect(successResult.value.accessToken).toBeDefined();
     expect(successResult.value.refreshToken).toBeDefined();
     expect(successResult.value.refreshToken).not.toBe(refreshToken);
+
+    const failedResults = results.filter((r) => r.status === "rejected") as PromiseRejectedResult[];
+    for (const failure of failedResults) {
+      expect(failure.reason).toBeInstanceOf(TokenInvalidError);
+    }
+
+    const activeSessions = await prisma.session.findMany({
+      where: { userId: testUser.id, revokedAt: null },
+    });
+    expect(activeSessions.length).toBe(1);
   });
 
   test("should preserve session identity after successful refresh", async () => {
@@ -162,7 +172,40 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     }
   });
 
-  test("should prevent using refresh token after successful refresh", async () => {
+  test("should reject old refresh token within grace window without revoking sessions", async () => {
+    if (!dbReady) return;
+
+    const loginResult = await loginUseCase.execute({
+      identifier: testUser.email,
+      password: "Password123!",
+      ipAddress: "127.0.0.1",
+      userAgent: "test-agent",
+    });
+
+    const refreshToken = loginResult.refreshToken;
+
+    await refreshSessionUseCase.execute({
+      refreshToken,
+      ipAddress: "127.0.0.1",
+      userAgent: "test-agent",
+    });
+
+    await expect(
+      refreshSessionUseCase.execute({
+        refreshToken,
+        ipAddress: "127.0.0.1",
+        userAgent: "test-agent",
+      })
+    ).rejects.toThrow(TokenInvalidError);
+
+    const activeSessions = await prisma.session.findMany({
+      where: { userId: testUser.id, revokedAt: null },
+    });
+
+    expect(activeSessions.length).toBe(1);
+  });
+
+  test("should detect refresh token reuse after grace window via DB fallback", async () => {
     if (!dbReady) return;
 
     const loginResult = await loginUseCase.execute({
@@ -181,6 +224,19 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     });
 
     expect(firstRefresh.accessToken).toBeDefined();
+
+    const activeSession = await prisma.session.findFirst({
+      where: { userId: testUser.id, revokedAt: null },
+    });
+
+    expect(activeSession).toBeDefined();
+
+    await redis.flushdb();
+
+    await prisma.session.update({
+      where: { id: activeSession!.id },
+      data: { updatedAt: new Date(Date.now() - 11_000) },
+    });
 
     await expect(
       refreshSessionUseCase.execute({

@@ -5,6 +5,8 @@ import { environment } from "../../../../app/config/environment";
 import { accessUseCases } from "../../composition";
 import { refreshRateLimit } from "../middleware/rate-limit.middleware";
 import { getRefreshCookieOptions } from "./refresh-cookie";
+import { serializeAuthUser } from "./user.serializer";
+import { getClientIp } from "../../../../shared/utils/client-ip";
 
 export const refreshSessionRoute = new Elysia({
   detail: {
@@ -40,7 +42,7 @@ export const refreshSessionRoute = new Elysia({
 
       const result = await accessUseCases.refreshSession().execute({
         refreshToken,
-        ipAddress: request.headers.get("x-forwarded-for") || undefined,
+        ipAddress: getClientIp(request),
         userAgent: request.headers.get("user-agent") || undefined,
         acceptLanguage: request.headers.get("accept-language") || undefined,
       });
@@ -53,7 +55,7 @@ export const refreshSessionRoute = new Elysia({
         session: {
           token: result.accessToken,
         },
-        user: result.user,
+        user: serializeAuthUser(result.user),
       };
     },
     {

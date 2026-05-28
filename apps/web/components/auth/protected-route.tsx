@@ -18,12 +18,12 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        router.push("/login");
+        router.replace("/login");
         return;
       }
 
       if (requiredRole && user && !hasRole(user.role.name, requiredRole)) {
-        router.push("/unauthorized");
+        router.replace("/unauthorized");
       }
     }
   }, [user, loading, isAuthenticated, requiredRole, router]);

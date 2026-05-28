@@ -71,10 +71,13 @@ const EnvironmentSchema = Type.Object({
     description: 'Secret for signing access tokens (minimum 32 characters)'
   }),
   
-  JWT_REFRESH_SECRET: Type.String({ 
-    minLength: 32,
-    description: 'Secret for signing refresh tokens (minimum 32 characters)'
-  }),
+  JWT_REFRESH_SECRET: Type.Optional(
+    Type.String({
+      minLength: 32,
+      description:
+        'Legacy/unused: refresh tokens are opaque random bytes, not JWTs. Kept for backward-compatible env files.',
+    })
+  ),
   
   JWT_EXPIRATION: Type.String({ 
     default: '15m', 
@@ -139,6 +142,18 @@ const EnvironmentSchema = Type.Object({
     default: 7, 
     minimum: 1,
     description: 'Invitation expiry in days'
+  }),
+
+  INVITE_MAX_RESENDS: Type.Number({
+    default: 5,
+    minimum: 1,
+    description: 'Maximum resends per invitation',
+  }),
+
+  INVITE_RESEND_COOLDOWN_MINUTES: Type.Number({
+    default: 15,
+    minimum: 1,
+    description: 'Minimum minutes between invitation resends',
   }),
   
   MAX_LOGIN_ATTEMPTS: Type.Number({ 
@@ -215,6 +230,12 @@ const EnvironmentSchema = Type.Object({
     { default: 'strict', description: 'strict blocks refresh on fingerprint/IP drift; audit_only logs only' }
   ),
 
+  TRUST_PROXY: Type.Boolean({
+    default: false,
+    description:
+      'When true, trust X-Forwarded-For / X-Real-IP from the reverse proxy for client IP',
+  }),
+
   REQUIRE_EMAIL_VERIFIED_FOR_LOGIN: Type.Boolean({
     default: false,
     description: 'When true, users must verify email before password login',
@@ -222,7 +243,61 @@ const EnvironmentSchema = Type.Object({
 
   TWO_FACTOR_ENABLED: Type.Boolean({
     default: false,
-    description: 'Feature flag stub — 2FA not implemented yet',
+    description: 'Feature flag for TOTP two-factor authentication',
+  }),
+
+  TWO_FACTOR_ENCRYPTION_KEY: Type.Optional(
+    Type.String({
+      minLength: 64,
+      maxLength: 64,
+      pattern: '^[0-9a-fA-F]{64}$',
+      description:
+        '32-byte AES-256 key as 64-char hex; required when TWO_FACTOR_ENABLED in production',
+    })
+  ),
+
+  MAX_ACTIVE_SESSIONS_PER_USER: Type.Number({
+    default: 10,
+    minimum: 1,
+    description: 'Max concurrent active sessions; oldest revoked silently on login',
+  }),
+
+  JWT_ISSUER: Type.String({
+    default: 'atlasmed-api',
+    minLength: 1,
+    description: 'JWT issuer (iss) claim',
+  }),
+
+  JWT_AUDIENCE: Type.String({
+    default: 'atlasmed',
+    minLength: 1,
+    description: 'JWT audience (aud) claim',
+  }),
+
+  SIEM_EXPORT_ENABLED: Type.Boolean({
+    default: false,
+    description: 'Enable batch SIEM audit export via webhook',
+  }),
+
+  SIEM_WEBHOOK_URL: Type.Optional(
+    Type.String({
+      minLength: 1,
+      pattern: URL_PATTERN,
+      description: 'HTTP endpoint for SIEM audit log batches',
+    })
+  ),
+
+  SIEM_WEBHOOK_SECRET: Type.Optional(
+    Type.String({
+      minLength: 8,
+      description: 'Optional shared secret sent as X-SIEM-Secret header',
+    })
+  ),
+
+  AUDIT_LOG_RETENTION_DAYS: Type.Number({
+    default: 90,
+    minimum: 1,
+    description: 'Days to retain INFO audit logs before cleanup',
   }),
 });
 
@@ -254,6 +329,10 @@ const processEnv = {
   SESSION_MAX_AGE_HOURS: Number(process.env.SESSION_MAX_AGE_HOURS ?? 24),
   PASSWORD_RESET_TOKEN_EXPIRY_MINUTES: Number(process.env.PASSWORD_RESET_TOKEN_EXPIRY_MINUTES ?? 60),
   INVITE_EXPIRY_DAYS: Number(process.env.INVITE_EXPIRY_DAYS ?? 7),
+  INVITE_MAX_RESENDS: Number(process.env.INVITE_MAX_RESENDS ?? 5),
+  INVITE_RESEND_COOLDOWN_MINUTES: Number(
+    process.env.INVITE_RESEND_COOLDOWN_MINUTES ?? 15
+  ),
   MAX_LOGIN_ATTEMPTS: Number(process.env.MAX_LOGIN_ATTEMPTS ?? 5),
   LOGIN_LOCKOUT_MINUTES: Number(process.env.LOGIN_LOCKOUT_MINUTES ?? 15),
   
@@ -274,9 +353,19 @@ const processEnv = {
   SESSION_SECURITY_MODE: (process.env.SESSION_SECURITY_MODE === 'audit_only'
     ? 'audit_only'
     : 'strict') as 'strict' | 'audit_only',
+  TRUST_PROXY: process.env.TRUST_PROXY === 'true',
   REQUIRE_EMAIL_VERIFIED_FOR_LOGIN:
     process.env.REQUIRE_EMAIL_VERIFIED_FOR_LOGIN === 'true',
   TWO_FACTOR_ENABLED: process.env.TWO_FACTOR_ENABLED === 'true',
+  TWO_FACTOR_ENCRYPTION_KEY: process.env.TWO_FACTOR_ENCRYPTION_KEY,
+
+  MAX_ACTIVE_SESSIONS_PER_USER: Number(process.env.MAX_ACTIVE_SESSIONS_PER_USER ?? 10),
+  JWT_ISSUER: process.env.JWT_ISSUER ?? 'atlasmed-api',
+  JWT_AUDIENCE: process.env.JWT_AUDIENCE ?? 'atlasmed',
+  SIEM_EXPORT_ENABLED: process.env.SIEM_EXPORT_ENABLED === 'true',
+  SIEM_WEBHOOK_URL: process.env.SIEM_WEBHOOK_URL,
+  SIEM_WEBHOOK_SECRET: process.env.SIEM_WEBHOOK_SECRET,
+  AUDIT_LOG_RETENTION_DAYS: Number(process.env.AUDIT_LOG_RETENTION_DAYS ?? 90),
 };
 
 // Validate environment at startup
@@ -300,6 +389,27 @@ if (!Value.Check(EnvironmentSchema, processEnv)) {
  * Safe to use throughout the application with full type safety.
  */
 export const environment = Value.Decode(EnvironmentSchema, processEnv);
+
+if (environment.NODE_ENV === 'production' && !environment.TOKEN_HASH_PEPPER) {
+  throw new Error('TOKEN_HASH_PEPPER is required in production');
+}
+
+if (
+  environment.NODE_ENV === 'production' &&
+  environment.SESSION_SECURITY_MODE !== 'strict'
+) {
+  throw new Error('SESSION_SECURITY_MODE must be strict in production');
+}
+
+if (
+  environment.NODE_ENV === 'production' &&
+  environment.TWO_FACTOR_ENABLED &&
+  !environment.TWO_FACTOR_ENCRYPTION_KEY
+) {
+  throw new Error(
+    'TWO_FACTOR_ENCRYPTION_KEY is required when TWO_FACTOR_ENABLED is true in production'
+  );
+}
 
 /**
  * Type definition for the environment

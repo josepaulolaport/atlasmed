@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/auth-context";
@@ -20,10 +21,37 @@ import {
 import { AlertCircle } from "lucide-react";
 import type { LoginRequest } from "@/types/auth";
 
+function getLoginErrorMessage(err: unknown): { message: string; code?: string } {
+  const error = err as {
+    response?: { data?: { error?: { message?: string; code?: string } } };
+  };
+  return {
+    message: error.response?.data?.error?.message || "Invalid credentials",
+    code: error.response?.data?.error?.code,
+  };
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const { login } = useAuth();
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get("reason") === "refresh_reuse") {
+      setError(
+        "Your session was ended due to suspicious activity. Please sign in again."
+      );
+    }
+  }, [searchParams]);
 
   const {
     register,
@@ -40,8 +68,8 @@ export default function LoginPage() {
     try {
       await login(data);
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Invalid credentials");
+      const { message } = getLoginErrorMessage(err);
+      setError(message);
     } finally {
       setIsLoading(false);
     }
@@ -127,7 +155,7 @@ export default function LoginPage() {
             <p className="text-center text-sm text-gray-600">
               New to AtlasMed?{" "}
               <Link href="/register" className="text-blue-600 hover:underline">
-                Register with invite
+                Register with token
               </Link>
             </p>
           </CardFooter>

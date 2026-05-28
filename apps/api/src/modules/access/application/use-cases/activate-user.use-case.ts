@@ -1,6 +1,6 @@
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
 import {
   UserNotFoundError,
   OperationNotAllowedError,
@@ -9,6 +9,7 @@ import {
 interface Dependencies {
   userRepository: UserRepository;
   authCache: IAuthCache;
+  auditLog: IAuditLog;
 }
 
 export class ActivateUserUseCase {
@@ -31,7 +32,7 @@ export class ActivateUserUseCase {
 
     await this.deps.authCache.invalidate(params.userId);
 
-    await auditLogService.logUserStatusChange({
+    await this.deps.auditLog.logUserStatusChange({
       userId: params.activatedBy,
       targetUserId: params.userId,
       oldStatus,

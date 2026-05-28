@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/auth-context";
-import { registerSchema } from "@/lib/validators";
+import { inviteTokenSchema, registerSchema } from "@/lib/validators";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,33 +21,39 @@ import {
 } from "@/components/ui/card";
 import { AlertCircle, CheckCircle2, X } from "lucide-react";
 import type { RegisterRequest } from "@/types/auth";
+import { z } from "zod";
+
+type InviteTokenForm = z.infer<typeof inviteTokenSchema>;
+
+interface ValidatedInvite {
+  email?: string;
+  phoneNumber?: string;
+  role: { id: string; name: string };
+  expiresAt: string;
+}
 
 function RegisterForm() {
   const { register: registerUser } = useAuth();
   const searchParams = useSearchParams();
-  const token = searchParams.get("token") || "";
+  const initialToken = searchParams.get("token") || "";
 
+  const [validatedInvite, setValidatedInvite] = useState<ValidatedInvite | null>(null);
+  const [registrationToken, setRegistrationToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inviteData, setInviteData] = useState<{
-    email?: string;
-    phoneNumber?: string;
-  } | null>(null);
-  const [validatingToken, setValidatingToken] = useState(true);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<RegisterRequest>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      token,
-    },
+  const tokenForm = useForm<InviteTokenForm>({
+    resolver: zodResolver(inviteTokenSchema),
+    defaultValues: { token: initialToken },
   });
 
-  const password = watch("password");
+  const registerForm = useForm<RegisterRequest>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { token: "" },
+  });
+
+  const password = registerForm.watch("password");
+  const canShowRegistrationForm = validatedInvite !== null && registrationToken.length > 0;
 
   const passwordRequirements = [
     { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -60,66 +66,115 @@ function RegisterForm() {
     },
   ];
 
-  useEffect(() => {
-    if (token) {
-      authApi
-        .validateInviteToken(token)
-        .then((data) => {
-          setInviteData(data);
-          setValidatingToken(false);
-        })
-      .catch(() => {
-        setError("Invalid or expired invitation token");
-        setValidatingToken(false);
-      });
-    } else {
-      setError("No invitation token provided");
-      setValidatingToken(false);
-    }
-  }, [token]);
+  const resetToTokenStep = () => {
+    setValidatedInvite(null);
+    setRegistrationToken("");
+    setError(null);
+    registerForm.reset({ token: "" });
+  };
 
-  const onSubmit = async (data: RegisterRequest) => {
+  const handleValidateToken = async (data: InviteTokenForm) => {
+    const token = data.token.trim();
     setIsLoading(true);
     setError(null);
+    resetToTokenStep();
 
     try {
-      await registerUser(data);
-    } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
-      setError(error.response?.data?.message || "Registration failed");
+      const validated = await authApi.validateInviteToken(token);
+      setRegistrationToken(token);
+      setValidatedInvite(validated);
+      registerForm.reset({
+        token,
+        email: validated.email || "",
+        phoneNumber: validated.phoneNumber || "",
+      });
+    } catch {
+      setError("Invalid, expired, or already used registration token");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (validatingToken) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Validating invitation...</p>
-        </div>
-      </div>
-    );
-  }
+  const onSubmitRegistration = async (data: RegisterRequest) => {
+    if (!canShowRegistrationForm) {
+      setError("Validate your registration token before continuing");
+      return;
+    }
 
-  if (!inviteData) {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await authApi.validateInviteToken(registrationToken);
+      await registerUser({ ...data, token: registrationToken });
+    } catch (err) {
+      const apiError = err as { response?: { data?: { error?: { message?: string } } } };
+      const message =
+        apiError.response?.data?.error?.message ||
+        "Registration failed. Your token may have expired — validate it again.";
+
+      if (
+        message.toLowerCase().includes("invite") ||
+        message.toLowerCase().includes("token")
+      ) {
+        resetToTokenStep();
+      }
+
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (!canShowRegistrationForm) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="flex min-h-screen items-center justify-center px-4 py-12">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">Invalid Invitation</CardTitle>
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl font-bold">Join AtlasMed</CardTitle>
             <CardDescription>
-              The invitation link is invalid or has expired.
+              Enter your registration token to continue. You received this token by
+              email or SMS when you were invited.
             </CardDescription>
           </CardHeader>
-          <CardFooter>
-            <Link href="/login" className="w-full">
-              <Button variant="outline" className="w-full">
-                Back to Login
+          <form onSubmit={tokenForm.handleSubmit(handleValidateToken)}>
+            <CardContent className="space-y-4">
+              {error && (
+                <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <p>{error}</p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="token">Registration token</Label>
+                <Input
+                  id="token"
+                  type="text"
+                  placeholder="Paste your invite token"
+                  autoComplete="off"
+                  {...tokenForm.register("token")}
+                  disabled={isLoading}
+                />
+                {tokenForm.formState.errors.token && (
+                  <p className="text-sm text-red-600">
+                    {tokenForm.formState.errors.token.message}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col space-y-4">
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Validating..." : "Continue"}
               </Button>
-            </Link>
-          </CardFooter>
+              <p className="text-center text-sm text-gray-600">
+                Already have an account?{" "}
+                <Link href="/login" className="text-blue-600 hover:underline">
+                  Sign in
+                </Link>
+              </p>
+            </CardFooter>
+          </form>
         </Card>
       </div>
     );
@@ -131,29 +186,35 @@ function RegisterForm() {
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">Create your account</CardTitle>
           <CardDescription>
-            Complete your registration to get started
+            Complete registration for the {validatedInvite.role.name} role
           </CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={registerForm.handleSubmit(onSubmitRegistration)}>
           <CardContent className="space-y-4">
             {error && (
               <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="h-4 w-4 shrink-0" />
                 <p>{error}</p>
               </div>
             )}
+
+            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+              Registration token verified. Token expires{" "}
+              {new Date(validatedInvite.expiresAt).toLocaleString()}.
+            </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
-                defaultValue={inviteData.email || ""}
-                {...register("email")}
-                disabled={isLoading}
+                {...registerForm.register("email")}
+                disabled={isLoading || Boolean(validatedInvite.email)}
               />
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email.message}</p>
+              {registerForm.formState.errors.email && (
+                <p className="text-sm text-red-600">
+                  {registerForm.formState.errors.email.message}
+                </p>
               )}
             </div>
 
@@ -163,11 +224,13 @@ function RegisterForm() {
                 id="username"
                 type="text"
                 placeholder="Choose a username"
-                {...register("username")}
+                {...registerForm.register("username")}
                 disabled={isLoading}
               />
-              {errors.username && (
-                <p className="text-sm text-red-600">{errors.username.message}</p>
+              {registerForm.formState.errors.username && (
+                <p className="text-sm text-red-600">
+                  {registerForm.formState.errors.username.message}
+                </p>
               )}
             </div>
 
@@ -177,11 +240,13 @@ function RegisterForm() {
                 id="password"
                 type="password"
                 placeholder="Choose a strong password"
-                {...register("password")}
+                {...registerForm.register("password")}
                 disabled={isLoading}
               />
-              {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+              {registerForm.formState.errors.password && (
+                <p className="text-sm text-red-600">
+                  {registerForm.formState.errors.password.message}
+                </p>
               )}
 
               {password && (
@@ -224,7 +289,7 @@ function RegisterForm() {
                   id="firstName"
                   type="text"
                   placeholder="Optional"
-                  {...register("firstName")}
+                  {...registerForm.register("firstName")}
                   disabled={isLoading}
                 />
               </div>
@@ -235,7 +300,7 @@ function RegisterForm() {
                   id="lastName"
                   type="text"
                   placeholder="Optional"
-                  {...register("lastName")}
+                  {...registerForm.register("lastName")}
                   disabled={isLoading}
                 />
               </div>
@@ -246,10 +311,9 @@ function RegisterForm() {
               <Input
                 id="phoneNumber"
                 type="tel"
-                placeholder="Optional"
-                defaultValue={inviteData.phoneNumber || ""}
-                {...register("phoneNumber")}
-                disabled={isLoading}
+                placeholder={validatedInvite.phoneNumber ? undefined : "Optional"}
+                {...registerForm.register("phoneNumber")}
+                disabled={isLoading || Boolean(validatedInvite.phoneNumber)}
               />
             </div>
           </CardContent>
@@ -257,6 +321,16 @@ function RegisterForm() {
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account..." : "Create account"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={resetToTokenStep}
+              disabled={isLoading}
+            >
+              Use a different token
             </Button>
 
             <p className="text-center text-sm text-gray-600">
@@ -274,7 +348,13 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+        </div>
+      }
+    >
       <RegisterForm />
     </Suspense>
   );

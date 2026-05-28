@@ -9,6 +9,46 @@ export const acceptInviteRoute = new Elysia({
   },
 })
   .use(registerRateLimit)
+  .get(
+    "/invite/:token",
+    async ({ params }) => {
+      const result = await accessUseCases.validateInvite().execute({
+        token: params.token,
+      });
+
+      return {
+        email: result.email,
+        phoneNumber: result.phoneNumber,
+        role: result.role,
+        expiresAt: result.expiresAt,
+      };
+    },
+    {
+      detail: {
+        summary: "Validate invite token",
+        description:
+          "Check that an invite token exists, is pending, and has not expired before registration.",
+        tags: ["Authentication"],
+      },
+      params: t.Object({
+        token: t.String({ description: "Invite token from email or SMS" }),
+      }),
+      response: {
+        200: t.Object({
+          email: t.Optional(t.String()),
+          phoneNumber: t.Optional(t.String()),
+          role: t.Object({
+            id: t.String(),
+            name: t.String(),
+          }),
+          expiresAt: t.String(),
+        }),
+        400: t.Object({
+          error: t.String(),
+        }),
+      },
+    }
+  )
   .post("/register", async ({ body }) => {
     const parsed = acceptInviteSchema.parse(body);
 

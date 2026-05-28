@@ -5,13 +5,15 @@ import { PasswordService } from "../services/password.service";
 import { SessionService } from "../services/session.service";
 import { TokenService } from "../services/token.service";
 import { RateLimiterService } from "../services/rate-limiter.service";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
-import { metricsService } from "../../../../infrastructure/monitoring/metrics.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
+import type { Pending2FALoginService } from "../services/pending-2fa-login.service";
 import {
   InvalidCredentialsError,
   TooManyLoginAttemptsError,
 } from "../../../../shared/errors";
 import { environment } from "../../../../app/config/environment";
+import { DUMMY_PASSWORD_HASH } from "../constants/password.constants";
 
 interface Dependencies {
   userRepository: UserRepository;
@@ -21,6 +23,9 @@ interface Dependencies {
   passwordService: PasswordService;
   sessionService: SessionService;
   rateLimiterService: RateLimiterService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
+  pending2faLoginService: Pending2FALoginService;
 }
 
 interface LoginParams {
@@ -39,7 +44,7 @@ export class LoginUseCase {
       await this.deps.rateLimiterService.checkLoginAttempts(params.identifier);
     } catch (error) {
       if (error instanceof TooManyLoginAttemptsError) {
-        await auditLogService.logFailedLoginAttempt({
+        await this.deps.auditLog.logFailedLoginAttempt({
           identifier: params.identifier,
           reason: "rate_limited",
           ipAddress: params.ipAddress,
@@ -54,9 +59,10 @@ export class LoginUseCase {
     });
 
     if (!user) {
+      await this.deps.passwordService.verify(params.password, DUMMY_PASSWORD_HASH);
       await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
-      metricsService.recordLoginAttempt(false, "user_not_found");
-      await auditLogService.logFailedLoginAttempt({
+      this.deps.metrics.recordLoginAttempt(false, "user_not_found");
+      await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
         reason: "user_not_found",
         ipAddress: params.ipAddress,
@@ -66,6 +72,8 @@ export class LoginUseCase {
     }
 
     if (user.status !== "ACTIVE") {
+      await this.deps.passwordService.verify(params.password, user.passwordHash);
+      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
       const reason =
         user.status === "SUSPENDED"
           ? "account_suspended"
@@ -75,8 +83,8 @@ export class LoginUseCase {
               ? "account_pending"
               : "account_inactive";
 
-      metricsService.recordLoginAttempt(false, reason);
-      await auditLogService.logFailedLoginAttempt({
+      this.deps.metrics.recordLoginAttempt(false, reason);
+      await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
         reason,
         ipAddress: params.ipAddress,
@@ -87,8 +95,10 @@ export class LoginUseCase {
     }
 
     if (environment.REQUIRE_EMAIL_VERIFIED_FOR_LOGIN && !user.emailVerified) {
-      metricsService.recordLoginAttempt(false, "email_not_verified");
-      await auditLogService.logFailedLoginAttempt({
+      await this.deps.passwordService.verify(params.password, DUMMY_PASSWORD_HASH);
+      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
+      this.deps.metrics.recordLoginAttempt(false, "email_not_verified");
+      await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
         reason: "email_not_verified",
         ipAddress: params.ipAddress,
@@ -105,8 +115,8 @@ export class LoginUseCase {
 
     if (!validPassword) {
       await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
-      metricsService.recordLoginAttempt(false, "invalid_password");
-      await auditLogService.logFailedLoginAttempt({
+      this.deps.metrics.recordLoginAttempt(false, "invalid_password");
+      await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
         reason: "invalid_password",
         ipAddress: params.ipAddress,
@@ -117,6 +127,26 @@ export class LoginUseCase {
     }
 
     await this.deps.rateLimiterService.clearAttempts(params.identifier);
+
+    if (user.twoFactorEnabled && environment.TWO_FACTOR_ENABLED) {
+      const pendingToken = await this.deps.pending2faLoginService.store({
+        userId: user.id,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        acceptLanguage: params.acceptLanguage,
+      });
+
+      await this.deps.auditLog.log2FARequired({
+        userId: user.id,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
+
+      return {
+        requires2FA: true as const,
+        pendingToken,
+      };
+    }
 
     await this.deps.userRepository.updateLastLogin(user.id);
 
@@ -168,7 +198,14 @@ export class LoginUseCase {
       iat: Math.floor(Date.now() / 1000),
     });
 
-    await auditLogService.logUserLogin({
+    await this.deps.auditLog.logSessionCreate({
+      userId: user.id,
+      sessionId: session.id,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+    });
+
+    await this.deps.auditLog.logUserLogin({
       userId: user.id,
       sessionId: session.id,
       ipAddress: params.ipAddress,
@@ -176,7 +213,7 @@ export class LoginUseCase {
       success: true,
     });
 
-    metricsService.recordLoginAttempt(true);
+    this.deps.metrics.recordLoginAttempt(true);
 
     return {
       accessToken,

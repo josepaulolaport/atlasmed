@@ -22,9 +22,16 @@ import {
   Users,
   Activity,
   Menu,
+  Building2,
+  Stethoscope,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
-import { canManageUsers, canViewHealth } from "@/lib/permissions";
+import {
+  canManageUsers,
+  canReadClinics,
+  canReadDoctors,
+  canViewHealth,
+} from "@/lib/permissions";
 
 export function Navbar() {
   const { user, logout } = useAuth();
@@ -38,6 +45,12 @@ export function Navbar() {
     { name: "Sessions", href: "/sessions", icon: Shield },
     ...(canManageUsers(user.role.name)
       ? [{ name: "Users", href: "/users", icon: Users }]
+      : []),
+    ...(canReadClinics(user.role.name)
+      ? [{ name: "Clinics", href: "/clinics", icon: Building2 }]
+      : []),
+    ...(canReadDoctors(user.role.name)
+      ? [{ name: "Doctors", href: "/doctors", icon: Stethoscope }]
       : []),
     ...(canViewHealth(user.role.name)
       ? [{ name: "Health", href: "/health", icon: Activity }]

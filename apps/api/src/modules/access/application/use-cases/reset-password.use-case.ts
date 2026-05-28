@@ -2,8 +2,8 @@ import type { IAuthCache } from "../interfaces/auth-cache.interface";
 import type { ISessionCache } from "../interfaces/session-cache.interface";
 import type { PasswordResetRepository } from "../interfaces/password-reset.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
-import { PasswordService } from "../services/password.service";
-import { NotificationService } from "../services/notification.service";
+import type { PasswordService } from "../services/password.service";
+import type { NotificationService } from "../services/notification.service";
 import { hashToken } from "../../../../shared/utils/hash-token";
 import {
   InvalidPasswordError,
@@ -13,13 +13,18 @@ import {
   ResetTokenUsedError,
 } from "../../../../shared/errors";
 import { validatePassword } from "@atlasmed/access";
-import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
 
 interface Dependencies {
   userRepository: UserRepository;
   passwordResetRepository: PasswordResetRepository;
   authCache: IAuthCache;
   sessionCache: ISessionCache;
+  passwordService: PasswordService;
+  notificationService: NotificationService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
 }
 
 interface ResetPasswordParams {
@@ -29,13 +34,7 @@ interface ResetPasswordParams {
 }
 
 export class ResetPasswordUseCase {
-  private readonly passwordService: PasswordService;
-  private readonly notificationService: NotificationService;
-
-  constructor(private readonly deps: Dependencies) {
-    this.passwordService = new PasswordService();
-    this.notificationService = new NotificationService();
-  }
+  constructor(private readonly deps: Dependencies) {}
 
   async execute(params: ResetPasswordParams) {
     const passwordCheck = validatePassword(params.newPassword);
@@ -63,29 +62,30 @@ export class ResetPasswordUseCase {
       throw new PasswordReuseError();
     }
 
-    const passwordHash = await this.passwordService.hash(params.newPassword);
+    const passwordHash = await this.deps.passwordService.hash(params.newPassword);
 
     const result = await this.deps.userRepository.resetPasswordTransaction({
       tokenHash,
-      newPassword: params.newPassword,
       newPasswordHash: passwordHash,
     });
 
     await this.deps.authCache.invalidate(result.user.id);
     await this.deps.sessionCache.invalidateByUserId(result.user.id);
 
-    await this.notificationService.sendPasswordChangedNotification({
+    await this.deps.notificationService.sendPasswordChangedNotification({
       email: result.user.email,
       phoneNumber: result.user.phoneNumber || undefined,
       timestamp: new Date(),
       ipAddress: params.ipAddress,
     });
 
-    await auditLogService.logPasswordChange({
+    await this.deps.auditLog.logPasswordChange({
       userId: result.user.id,
       method: "reset",
       ipAddress: params.ipAddress,
     });
+
+    this.deps.metrics.recordPasswordReset("complete");
 
     return {
       success: true,
@@ -97,12 +97,12 @@ export class ResetPasswordUseCase {
     currentHash: string,
     passwordHistory: string[]
   ): Promise<boolean> {
-    if (await this.passwordService.verify(password, currentHash)) {
+    if (await this.deps.passwordService.verify(password, currentHash)) {
       return true;
     }
 
     for (const historicHash of passwordHistory) {
-      if (await this.passwordService.verify(password, historicHash)) {
+      if (await this.deps.passwordService.verify(password, historicHash)) {
         return true;
       }
     }

@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { defineAbilitiesForUser } from "./grant.permissions";
 import { defineAbilitiesFor } from "./role.permissions";
 import { Role } from "../enums/role.enum";
+import { canAccessRoute, canAccessResource } from "./route.permissions";
+import { canOnResource } from "./casl-scoped.helpers";
 
 describe("defineAbilitiesForUser", () => {
   it("should match base role abilities when no grants", () => {
@@ -12,7 +14,23 @@ describe("defineAbilitiesForUser", () => {
     expect(merged.can("create", "USER")).toBe(base.can("create", "USER"));
   });
 
-  it("should add grant abilities on top of role", () => {
+  it("does not grant route-level update via canAccessRoute for scoped grant alone", () => {
+    const grants = [
+      {
+        id: "grant-1",
+        resource: "CLINIC",
+        resourceId: "clinic-1",
+        action: "update",
+      },
+    ];
+
+    expect(canAccessRoute(Role.USER, grants, "update", "CLINIC")).toBe(false);
+    expect(canAccessResource(Role.USER, grants, "update", "CLINIC", "clinic-1")).toBe(
+      true
+    );
+  });
+
+  it("should scope grant abilities to a specific resource id", () => {
     const merged = defineAbilitiesForUser(Role.USER, [
       {
         id: "grant-1",
@@ -22,7 +40,44 @@ describe("defineAbilitiesForUser", () => {
       },
     ]);
 
-    expect(merged.can("read", "CLINIC")).toBe(true);
-    expect(merged.can("update", "CLINIC")).toBe(true);
+    expect(
+      canOnResource(merged, "update", "CLINIC", "clinic-1")
+    ).toBe(true);
+    expect(
+      canOnResource(merged, "update", "CLINIC", "clinic-2")
+    ).toBe(false);
+  });
+});
+
+describe("route permission helpers", () => {
+  it("canAccessRoute ignores resource-scoped grants", () => {
+    const grants = [
+      {
+        id: "grant-1",
+        resource: "CLINIC",
+        resourceId: "clinic-1",
+        action: "update",
+      },
+    ];
+
+    expect(canAccessRoute(Role.USER, grants, "update", "CLINIC")).toBe(false);
+  });
+
+  it("canAccessResource allows scoped grant for matching id", () => {
+    const grants = [
+      {
+        id: "grant-1",
+        resource: "CLINIC",
+        resourceId: "clinic-1",
+        action: "update",
+      },
+    ];
+
+    expect(canAccessResource(Role.USER, grants, "update", "CLINIC", "clinic-1")).toBe(
+      true
+    );
+    expect(canAccessResource(Role.USER, grants, "update", "CLINIC", "clinic-2")).toBe(
+      false
+    );
   });
 });

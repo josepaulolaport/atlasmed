@@ -1,7 +1,13 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { isPublicAuthPath } from "@/lib/auth-routes";
+import { isRefreshTokenReuseError } from "@/lib/api/errors";
 
-// API v1 endpoint (versioned)
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+
+function isRefreshRequest(config: InternalAxiosRequestConfig): boolean {
+  const url = config.url ?? "";
+  return url.includes("/access/refresh");
+}
 
 export const apiClient = axios.create({
   baseURL: API_URL,
@@ -10,6 +16,16 @@ export const apiClient = axios.create({
   },
   withCredentials: true,
 });
+
+let accessToken: string | null = null;
+
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
+export function getAccessToken(): string | null {
+  return accessToken;
+}
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
@@ -25,17 +41,13 @@ function onRefreshed(token: string) {
 
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("accessToken");
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+    const token = getAccessToken();
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 apiClient.interceptors.response.use(
@@ -50,6 +62,12 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshRequest(originalRequest)) {
+        isRefreshing = false;
+        setAccessToken(null);
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         return new Promise((resolve) => {
           subscribeTokenRefresh((token: string) => {
@@ -65,38 +83,38 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Backend uses HTTP-only cookies for refresh tokens
-        // Just call the refresh endpoint and let the cookie be sent automatically
         const response = await axios.post(
-          `${API_URL}/access/refresh`, // API_URL already includes /api/v1
+          `${API_URL}/access/refresh`,
           {},
-          {
-            withCredentials: true,
-          }
+          { withCredentials: true }
         );
 
         const { session } = response.data;
-        const accessToken = session.token;
-
-        localStorage.setItem("accessToken", accessToken);
+        const newAccessToken = session.token as string;
+        setAccessToken(newAccessToken);
 
         if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         }
 
-        onRefreshed(accessToken);
+        onRefreshed(newAccessToken);
         isRefreshing = false;
 
         return apiClient(originalRequest);
       } catch (refreshError) {
         isRefreshing = false;
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-        
+        setAccessToken(null);
+
         if (typeof window !== "undefined") {
-          window.location.href = "/login";
+          const loginUrl = isRefreshTokenReuseError(refreshError)
+            ? "/login?reason=refresh_reuse"
+            : "/login";
+
+          if (!isPublicAuthPath(window.location.pathname)) {
+            window.location.replace(loginUrl);
+          }
         }
-        
+
         return Promise.reject(refreshError);
       }
     }

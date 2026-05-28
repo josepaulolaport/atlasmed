@@ -1,5 +1,9 @@
 import { z } from "zod";
 
+export const inviteTokenSchema = z.object({
+  token: z.string().min(1, "Registration token is required"),
+});
+
 export const loginSchema = z.object({
   identifier: z.string().min(1, "Username, email or phone is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
@@ -61,10 +65,59 @@ export const verifyPhoneSchema = z.object({
 
 export const changeEmailSchema = z.object({
   newEmail: z.string().email("Invalid email address"),
-  password: z.string().min(1, "Password is required"),
+});
+
+export const changeEmailConfirmSchema = z.object({
+  newEmail: z.string().email("Invalid email address"),
+  token: z.string().min(1, "Confirmation token is required"),
 });
 
 export const changePhoneSchema = z.object({
-  newPhoneNumber: z.string().min(1, "Phone number is required"),
+  newPhone: z.string().min(1, "Phone number is required"),
+});
+
+export const changePhoneConfirmSchema = z.object({
+  newPhone: z.string().min(1, "Phone number is required"),
+  token: z.string().min(1, "Verification code is required"),
+});
+
+export const passwordFieldSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+  .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+  .regex(/[0-9]/, "Password must contain at least one number")
+  .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character");
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: passwordFieldSchema,
+    confirmPassword: z.string().min(1, "Please confirm your new password"),
+    revokeOtherSessions: z.boolean().optional(),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const totpCodeSchema = z
+  .string()
+  .length(6, "Enter the 6-digit code from your authenticator app")
+  .regex(/^\d+$/, "Code must contain only digits");
+
+export const disable2FASchema = z.object({
   password: z.string().min(1, "Password is required"),
+  code: totpCodeSchema,
+});
+
+export const grantPermissionSchema = z.object({
+  resource: z.enum(["USER", "CLINIC", "VISIT", "TERRITORY", "INVITATION"]),
+  action: z.enum(["create", "read", "update", "delete", "manage"]),
+  resourceId: z.string().optional(),
+  expiresAt: z.string().datetime().optional(),
+});
+
+export const changeUserRoleSchema = z.object({
+  roleId: z.string().min(1, "Role is required"),
 });

@@ -328,7 +328,7 @@ describe("PermissionMiddleware", () => {
         .onError(({ error, set }) => {
           if (error instanceof AppError) {
             set.status = error.statusCode;
-            return { error: error.toJSON() };
+            return { error: error.toClientJSON() };
           }
           throw error;
         })

@@ -95,7 +95,6 @@ model User {
   emailVerifiedAt     DateTime?
   phoneVerifiedAt     DateTime?
   passwordHash        String
-  passwordExpiresAt   DateTime?
   passwordHistory     String[]            @default([])
   firstName           String?
   lastName            String?
@@ -104,9 +103,6 @@ model User {
   tokenVersion        Int                 @default(1)
   lastLoginAt         DateTime?
   passwordChangedAt   DateTime?
-  failedLoginAttempts Int                 @default(0)
-  lockedUntil         DateTime?
-  lastFailedLoginAt   DateTime?
   deactivatedAt       DateTime?
   suspendedAt         DateTime?
   twoFactorEnabled    Boolean             @default(false)
@@ -123,6 +119,8 @@ model User {
   passwordResets      PasswordReset[]
   auditLogs           AuditLog[]
   verificationTokens  VerificationToken[]
+  sentInvitations     Invitation[]        @relation("InvitedByUser")
+  permissions         Permission[]
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
@@ -174,6 +172,7 @@ model Session {
   revokedReason       String?
   revokedByUserId     String?
   replacedBySessionId String?
+  previousRefreshTokenHash String?
   lastSeenAt          DateTime              @default(now())
   userAgent           String?
   browserName         String?
@@ -193,6 +192,7 @@ model Session {
 
   @@index([userId])
   @@index([refreshTokenHash])
+  @@index([previousRefreshTokenHash])
   @@index([expiresAt])
   @@index([revokedAt])
   @@index([sessionType])
@@ -217,6 +217,7 @@ model Invitation {
   roleId          String
   role            Role             @relation(fields: [roleId], references: [id])
   invitedByUserId String
+  invitedBy       User             @relation("InvitedByUser", fields: [invitedByUserId], references: [id], onDelete: Restrict)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -226,6 +227,7 @@ model Invitation {
   @@index([status])
   @@index([status, expiresAt])
   @@index([acceptedByUserId])
+  @@index([invitedByUserId])
   @@map("invitations")
 }
 
@@ -275,6 +277,7 @@ model AuditLog {
   @@index([actorId])
   @@index([resourceId])
   @@index([sessionId])
+  @@index([severity, createdAt])
   @@map("audit_logs")
 }
 
@@ -294,12 +297,14 @@ model VerificationToken {
   @@index([tokenHash])
   @@index([type])
   @@index([expiresAt])
+  @@index([userId, type, verifiedAt])
   @@map("verification_tokens")
 }
 
 model Permission {
   id          String   @id @default(cuid())
   userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   resource    String
   resourceId  String?
   action      String
@@ -313,5 +318,51 @@ model Permission {
   @@index([resource, resourceId])
   @@index([userId, resource])
   @@index([expiresAt])
+  @@unique([userId, resource, resourceId, action])
   @@map("permissions")
+}
+
+model Clinic {
+  id            String         @id @default(cuid())
+  name          String
+  address       String?
+  territoryId   String?
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  doctorClinics DoctorClinic[]
+
+  @@index([territoryId])
+  @@index([deletedAt])
+  @@index([name])
+  @@map("clinics")
+}
+
+model Doctor {
+  id            String         @id @default(cuid())
+  firstName     String
+  lastName      String
+  specialty     String?
+  deletedAt     DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  doctorClinics DoctorClinic[]
+
+  @@index([deletedAt])
+  @@index([lastName, firstName])
+  @@map("doctors")
+}
+
+model DoctorClinic {
+  id        String   @id @default(cuid())
+  doctorId  String
+  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinicId  String
+  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([doctorId, clinicId])
+  @@index([doctorId])
+  @@index([clinicId])
+  @@map("doctor_clinics")
 }

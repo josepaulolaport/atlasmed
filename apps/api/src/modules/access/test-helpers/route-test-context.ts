@@ -31,7 +31,7 @@ export const routeTestContext = {
   } satisfies RouteTestUser,
   scope: createGlobalScopeContext() as ScopeContext,
   mocks: {
-    getUserAssignmentsExecute: mock(() =>
+    getUserAssignmentsExecute: mock(async (_params?: unknown) =>
       Promise.resolve({
         userId: "target-user",
         managerId: null,
@@ -40,10 +40,10 @@ export const routeTestContext = {
         isOperationallyActive: false,
       })
     ),
-    assignUserManagerExecute: mock(() => Promise.resolve()),
-    assignUserTerritoryExecute: mock(() => Promise.resolve()),
-    revokeUserTerritoryExecute: mock(() => Promise.resolve()),
-    listUsersExecute: mock(() =>
+    assignUserManagerExecute: mock(async (_params?: unknown) => Promise.resolve()),
+    assignUserTerritoryExecute: mock(async (_params?: unknown) => Promise.resolve()),
+    revokeUserTerritoryExecute: mock(async (_params?: unknown) => Promise.resolve()),
+    listUsersExecute: mock(async (_params?: unknown) =>
       Promise.resolve({
         data: [],
         pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },

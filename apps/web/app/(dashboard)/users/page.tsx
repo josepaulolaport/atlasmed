@@ -34,12 +34,16 @@ import {
   PlayCircle,
   Pause,
   MapPin,
+  Shield,
+  UserCog,
 } from "lucide-react";
 import type { User } from "@/types/auth";
 import { canManageUsers, isAdmin } from "@/lib/permissions";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ManageAssignmentsDialog } from "@/components/users/manage-assignments-dialog";
+import { ChangeRoleDialog } from "@/components/users/change-role-dialog";
+import { ManagePermissionsDialog } from "@/components/users/manage-permissions-dialog";
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -51,6 +55,11 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [assignmentsUser, setAssignmentsUser] = useState<User | null>(null);
   const [assignmentsOpen, setAssignmentsOpen] = useState(false);
+  const [roleUser, setRoleUser] = useState<User | null>(null);
+  const [roleOpen, setRoleOpen] = useState(false);
+  const [permissionsUser, setPermissionsUser] = useState<User | null>(null);
+  const [permissionsOpen, setPermissionsOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const userIsAdmin = currentUser ? isAdmin(currentUser.role.name) : false;
 
@@ -84,7 +93,7 @@ export default function UsersPage() {
     };
     
     loadUsers();
-  }, [page, search]);
+  }, [page, search, refreshKey]);
 
   const handleUserAction = async (
     userId: string,
@@ -141,6 +150,23 @@ export default function UsersPage() {
       onOpenChange={(open) => {
         setAssignmentsOpen(open);
         if (!open) setAssignmentsUser(null);
+      }}
+    />
+    <ChangeRoleDialog
+      user={roleUser}
+      open={roleOpen}
+      onOpenChange={(open) => {
+        setRoleOpen(open);
+        if (!open) setRoleUser(null);
+      }}
+      onUpdated={() => setRefreshKey((k) => k + 1)}
+    />
+    <ManagePermissionsDialog
+      user={permissionsUser}
+      open={permissionsOpen}
+      onOpenChange={(open) => {
+        setPermissionsOpen(open);
+        if (!open) setPermissionsUser(null);
       }}
     />
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -257,15 +283,35 @@ export default function UsersPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             {userIsAdmin && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setAssignmentsUser(user);
-                                  setAssignmentsOpen(true);
-                                }}
-                              >
-                                <MapPin className="mr-2 h-4 w-4" />
-                                Manage assignments
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setRoleUser(user);
+                                    setRoleOpen(true);
+                                  }}
+                                >
+                                  <UserCog className="mr-2 h-4 w-4" />
+                                  Change role
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setPermissionsUser(user);
+                                    setPermissionsOpen(true);
+                                  }}
+                                >
+                                  <Shield className="mr-2 h-4 w-4" />
+                                  Manage permissions
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setAssignmentsUser(user);
+                                    setAssignmentsOpen(true);
+                                  }}
+                                >
+                                  <MapPin className="mr-2 h-4 w-4" />
+                                  Manage assignments
+                                </DropdownMenuItem>
+                              </>
                             )}
                             {userIsAdmin && user.status === "INACTIVE" && (
                               <DropdownMenuItem

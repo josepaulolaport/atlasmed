@@ -82,6 +82,8 @@ describe("SuspendUserUseCase", () => {
       authCache: mockAuthCache,
       sessionCache: mockSessionCache,
       scopeService: mockScopeService,
+      auditLog: createMockAuditLogService(),
+      metrics: createMockMetricsService(),
     });
   });
 

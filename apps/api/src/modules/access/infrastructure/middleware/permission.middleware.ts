@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 import {
-  defineAbilitiesForUser,
+  canAccessResource,
+  canAccessRoute,
   type Action,
   type Role,
   type Subject,
@@ -17,10 +18,16 @@ type PermissionContextUser = {
 type GetUserFn = () => Promise<PermissionContextUser>;
 type GetAccessGrantsFn = () => Promise<AccessGrantRecord[]>;
 
+type PermissionOptions = {
+  /** Elysia param name containing the resource id (e.g. "id"). */
+  resourceIdParam?: string;
+};
+
 async function assertPermission(
   context: Record<string, unknown>,
   action: Action,
   subject: Subject,
+  options?: PermissionOptions
 ): Promise<void> {
   const getUser = context.getUser;
 
@@ -36,9 +43,26 @@ async function assertPermission(
     grants = await (getAccessGrants as GetAccessGrantsFn)();
   }
 
-  const ability = defineAbilitiesForUser(user.role.name, grants);
+  const resourceIdParam = options?.resourceIdParam;
+  const params = context.params as Record<string, string> | undefined;
 
-  if (!ability.can(action, subject)) {
+  if (resourceIdParam && params?.[resourceIdParam]) {
+    const allowed = canAccessResource(
+      user.role.name,
+      grants,
+      action,
+      subject,
+      params[resourceIdParam]
+    );
+
+    if (!allowed) {
+      throw new ForbiddenError();
+    }
+
+    return;
+  }
+
+  if (!canAccessRoute(user.role.name, grants, action, subject)) {
     throw new ForbiddenError();
   }
 }
@@ -46,16 +70,26 @@ async function assertPermission(
 /**
  * Enforces CASL permissions on routes that also use the auth plugin.
  *
+ * Resource-scoped grants only apply when `resourceIdParam` is set.
+ * Type-level routes ignore scoped grants (prevents grant escalation).
+ *
  * Must use `{ as: 'scoped' }` so the hook runs on the parent route instance
  * (e.g. `.use(auth).use(requirePermission(...)).get(...)`) and can read
  * scoped values like `getUser` and `getAccessGrants` from auth.
  */
-export const requirePermission = (action: Action, subject: Subject) => {
+export const requirePermission = (
+  action: Action,
+  subject: Subject,
+  options?: PermissionOptions
+) => {
   const pluginId = ++permissionPluginSeq;
+  const resourceSuffix = options?.resourceIdParam
+    ? `:res:${options.resourceIdParam}`
+    : "";
 
   return new Elysia({
-    name: `permission:${action}:${subject}:${pluginId}`,
+    name: `permission:${action}:${subject}${resourceSuffix}:${pluginId}`,
   }).onBeforeHandle({ as: "scoped" }, async (context) => {
-    await assertPermission(context, action, subject);
+    await assertPermission(context, action, subject, options);
   });
 };
