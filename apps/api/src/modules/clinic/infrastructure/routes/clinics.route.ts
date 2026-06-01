@@ -141,9 +141,129 @@ const deleteClinicRoute = new Elysia()
     }
   );
 
+const listClinicDoctorsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "CLINIC", { resourceIdParam: "id" }))
+  .get(
+    "/clinics/:id/doctors",
+    async ({ params, query, getScope }) => {
+      const scope = await getScope();
+      return clinicUseCases.listClinicDoctors().execute({
+        clinicId: params.id,
+        scope,
+        view: query.view as "source" | "confirmed" | "pending" | "all" | undefined,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+        search: query.search,
+      });
+    },
+    {
+      detail: {
+        summary: "List doctors for a clinic by association view",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        view: t.Optional(
+          t.Union([
+            t.Literal("source"),
+            t.Literal("confirmed"),
+            t.Literal("pending"),
+            t.Literal("all"),
+          ])
+        ),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+      }),
+    }
+  );
+
+const confirmDoctorRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CLINIC", { resourceIdParam: "id" }))
+  .post(
+    "/clinics/:id/doctors/:doctorId/confirm",
+    async ({ params, getUserId, getScope }) => {
+      const scope = await getScope();
+      const userId = await getUserId();
+      return clinicUseCases.confirmDoctorAtClinic().execute({
+        clinicId: params.id,
+        doctorId: params.doctorId,
+        userId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Confirm a source-listed doctor at a clinic",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const associateDoctorRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CLINIC", { resourceIdParam: "id" }))
+  .post(
+    "/clinics/:id/doctors/:doctorId/associate",
+    async ({ params, getUserId, getScope }) => {
+      const scope = await getScope();
+      const userId = await getUserId();
+      return clinicUseCases.manuallyAssociateDoctor().execute({
+        clinicId: params.id,
+        doctorId: params.doctorId,
+        userId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Manually associate a doctor with a clinic",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const endDoctorAssociationRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "CLINIC", { resourceIdParam: "id" }))
+  .delete(
+    "/clinics/:id/doctors/:doctorId",
+    async ({ params, getUserId, getScope }) => {
+      const scope = await getScope();
+      const userId = await getUserId();
+      const result = await clinicUseCases.endDoctorClinicAssociation().execute({
+        clinicId: params.id,
+        doctorId: params.doctorId,
+        userId,
+        scope,
+      });
+
+      if (!result) {
+        throw new ResourceNotFoundError("DoctorClinicAssociation", params.doctorId);
+      }
+
+      return result;
+    },
+    {
+      detail: {
+        summary: "End doctor-clinic association",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
 export const clinicsRoute = new Elysia()
   .use(listClinicsRoute)
   .use(createClinicRoute)
   .use(getClinicRoute)
   .use(updateClinicRoute)
-  .use(deleteClinicRoute);
+  .use(deleteClinicRoute)
+  .use(listClinicDoctorsRoute)
+  .use(confirmDoctorRoute)
+  .use(associateDoctorRoute)
+  .use(endDoctorAssociationRoute);

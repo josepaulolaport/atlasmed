@@ -112,6 +112,7 @@ export class UpdateClinicUseCase {
       name: input.name,
       address: input.address,
       territoryId: input.territoryId,
+      manuallyEditedAt: new Date(),
     });
 
     return serializeClinic(clinic);

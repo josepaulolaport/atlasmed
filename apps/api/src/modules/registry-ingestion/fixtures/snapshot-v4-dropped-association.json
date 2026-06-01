@@ -1,0 +1,34 @@
+{
+  "clinics": [
+    {
+      "externalSourceId": "mock-clinic-001",
+      "name": "Alpha Medical Center",
+      "address": "100 Main Street"
+    },
+    {
+      "externalSourceId": "mock-clinic-002",
+      "name": "Beta Health Clinic",
+      "address": "200 Oak Avenue"
+    }
+  ],
+  "doctors": [
+    {
+      "externalSourceId": "mock-doctor-001",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "specialty": "Cardiology"
+    },
+    {
+      "externalSourceId": "mock-doctor-002",
+      "firstName": "John",
+      "lastName": "Doe",
+      "specialty": "Pediatrics"
+    }
+  ],
+  "associations": [
+    {
+      "doctorExternalId": "mock-doctor-001",
+      "clinicExternalId": "mock-clinic-001"
+    }
+  ]
+}

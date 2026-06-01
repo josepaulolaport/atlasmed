@@ -6,6 +6,7 @@ import { healthRoute } from "../infrastructure/health/health.route";
 import { access } from "../modules/access";
 import { clinic } from "../modules/clinic";
 import { doctor } from "../modules/doctor";
+import { registryIngestion } from "../modules/registry-ingestion";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
@@ -107,6 +108,8 @@ const app = new Elysia()
   .use(healthRoute)
 
   // Versioned API routes
-  .group('/api/v1', (app) => app.use(access).use(clinic).use(doctor));
+  .group('/api/v1', (app) =>
+    app.use(access).use(clinic).use(doctor).use(registryIngestion)
+  );
 
 export default app;

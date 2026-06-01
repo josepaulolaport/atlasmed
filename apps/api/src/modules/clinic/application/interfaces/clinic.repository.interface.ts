@@ -3,6 +3,14 @@ export interface ClinicRecord {
   name: string;
   address: string | null;
   territoryId: string | null;
+  sourceProvider: string | null;
+  externalSourceId: string | null;
+  sourceContentHash: string | null;
+  sourceFirstSeenAt: Date | null;
+  sourceLastSeenAt: Date | null;
+  sourcePresent: boolean;
+  sourceTracked: boolean;
+  manuallyEditedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -11,6 +19,16 @@ export interface ClinicRecord {
 export interface ClinicListScopeFilter {
   isGlobal: boolean;
   clinicIds?: string[];
+}
+
+export interface ClinicSourceUpsertInput {
+  sourceProvider: string;
+  externalSourceId: string;
+  name: string;
+  address: string | null;
+  territoryId: string | null;
+  sourceContentHash: string;
+  sourceLastSeenAt: Date;
 }
 
 export interface ClinicRepository {
@@ -22,6 +40,13 @@ export interface ClinicRepository {
   }): Promise<{ clinics: ClinicRecord[]; total: number }>;
 
   findById(id: string): Promise<ClinicRecord | null>;
+
+  findByExternalId(
+    sourceProvider: string,
+    externalSourceId: string
+  ): Promise<ClinicRecord | null>;
+
+  findSourceTrackedByProvider(sourceProvider: string): Promise<ClinicRecord[]>;
 
   create(data: {
     name: string;
@@ -35,10 +60,21 @@ export interface ClinicRepository {
       name?: string;
       address?: string | null;
       territoryId?: string | null;
+      manuallyEditedAt?: Date;
     }
   ): Promise<ClinicRecord>;
 
   softDelete(id: string): Promise<void>;
+
+  reactivate(id: string): Promise<ClinicRecord>;
+
+  markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void>;
+
+  upsertFromSource(input: ClinicSourceUpsertInput): Promise<{
+    clinic: ClinicRecord;
+    created: boolean;
+    updated: boolean;
+  }>;
 
   findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]>;
 }

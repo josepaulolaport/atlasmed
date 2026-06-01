@@ -299,6 +299,16 @@ const EnvironmentSchema = Type.Object({
     minimum: 1,
     description: 'Days to retain INFO audit logs before cleanup',
   }),
+
+  REGISTRY_SOURCE: Type.String({
+    default: 'mock',
+    description: 'Registry ingestion source adapter (mock only for now)',
+  }),
+
+  REGISTRY_MOCK_FIXTURE: Type.String({
+    default: 'snapshot-v1.json',
+    description: 'Mock registry fixture filename under registry-ingestion/fixtures',
+  }),
 });
 
 /**
@@ -366,6 +376,8 @@ const processEnv = {
   SIEM_WEBHOOK_URL: process.env.SIEM_WEBHOOK_URL,
   SIEM_WEBHOOK_SECRET: process.env.SIEM_WEBHOOK_SECRET,
   AUDIT_LOG_RETENTION_DAYS: Number(process.env.AUDIT_LOG_RETENTION_DAYS ?? 90),
+  REGISTRY_SOURCE: process.env.REGISTRY_SOURCE ?? 'mock',
+  REGISTRY_MOCK_FIXTURE: process.env.REGISTRY_MOCK_FIXTURE ?? 'snapshot-v1.json',
 };
 
 // Validate environment at startup

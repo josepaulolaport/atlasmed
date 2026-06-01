@@ -157,22 +157,20 @@ export class UpdateDoctorUseCase {
     assertDoctorAccessible(input.scope, existing.clinicIds);
 
     if (input.clinicIds) {
-      assertClinicIdsInScope(input.scope, input.clinicIds);
-
-      const existingClinicIds = await this.deps.doctorRepository.findExistingClinicIds(
-        input.clinicIds
-      );
-
-      if (existingClinicIds.length !== input.clinicIds.length) {
-        throw new ResourceNotFoundError("Clinic", "one or more clinicIds");
-      }
+      throw new ValidationError([
+        {
+          field: "clinicIds",
+          message:
+            "Use clinic association endpoints to manage doctor-clinic links",
+        },
+      ]);
     }
 
     const doctor = await this.deps.doctorRepository.update(input.doctorId, {
       firstName: input.firstName,
       lastName: input.lastName,
       specialty: input.specialty,
-      clinicIds: input.clinicIds,
+      manuallyEditedAt: new Date(),
     });
 
     return serializeDoctor(doctor);
