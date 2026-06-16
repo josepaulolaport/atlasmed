@@ -19,6 +19,8 @@ export const GRANT_RESOURCE_TO_SUBJECT: Record<string, Subject> = {
   VISIT: "VISIT",
   TERRITORY: "TERRITORY",
   INVITATION: "INVITATION",
+  REGISTRY_INGESTION: "REGISTRY_INGESTION",
+  REGISTRY_SUGGESTION: "REGISTRY_SUGGESTION",
 };
 
 export function grantActionToCaslAction(action: string): Action | null {

@@ -1,6 +1,6 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import { ForbiddenError, ResourceNotFoundError } from "../../../../shared/errors";
+import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type { DoctorRepository } from "../interfaces/doctor.repository.interface";
 
 function serializeDoctor(doctor: {
@@ -113,24 +113,28 @@ export class CreateDoctorUseCase {
     firstName: string;
     lastName: string;
     specialty?: string;
-    clinicIds: string[];
+    clinicIds?: string[];
     scope: ScopeContext;
   }) {
-    assertClinicIdsInScope(input.scope, input.clinicIds);
+    const clinicIds = input.clinicIds ?? [];
 
-    const existingClinicIds = await this.deps.doctorRepository.findExistingClinicIds(
-      input.clinicIds
-    );
+    if (clinicIds.length > 0) {
+      assertClinicIdsInScope(input.scope, clinicIds);
 
-    if (existingClinicIds.length !== input.clinicIds.length) {
-      throw new ResourceNotFoundError("Clinic", "one or more clinicIds");
+      const existingClinicIds = await this.deps.doctorRepository.findExistingClinicIds(
+        clinicIds
+      );
+
+      if (existingClinicIds.length !== clinicIds.length) {
+        throw new ResourceNotFoundError("Clinic", "one or more clinicIds");
+      }
     }
 
     const doctor = await this.deps.doctorRepository.create({
       firstName: input.firstName,
       lastName: input.lastName,
       specialty: input.specialty ?? null,
-      clinicIds: input.clinicIds,
+      clinicIds,
     });
 
     return serializeDoctor(doctor);

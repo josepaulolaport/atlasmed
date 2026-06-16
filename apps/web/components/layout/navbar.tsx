@@ -31,6 +31,7 @@ import {
   canReadClinics,
   canReadDoctors,
   canViewHealth,
+  hasMinimumRole,
 } from "@/lib/permissions";
 
 export function Navbar() {
@@ -51,6 +52,9 @@ export function Navbar() {
       : []),
     ...(canReadDoctors(user.role.name)
       ? [{ name: "Doctors", href: "/doctors", icon: Stethoscope }]
+      : []),
+    ...(hasMinimumRole(user.role.name, "MANAGER")
+      ? [{ name: "Registry", href: "/registry-suggestions", icon: Shield }]
       : []),
     ...(canViewHealth(user.role.name)
       ? [{ name: "Health", href: "/health", icon: Activity }]

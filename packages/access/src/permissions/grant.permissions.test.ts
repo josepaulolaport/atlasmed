@@ -11,10 +11,11 @@ describe("defineAbilitiesForUser", () => {
     const merged = defineAbilitiesForUser(Role.USER, []);
 
     expect(merged.can("read", "CLINIC")).toBe(base.can("read", "CLINIC"));
+    expect(merged.can("update", "CLINIC")).toBe(base.can("update", "CLINIC"));
     expect(merged.can("create", "USER")).toBe(base.can("create", "USER"));
   });
 
-  it("does not grant route-level update via canAccessRoute for scoped grant alone", () => {
+  it("allows route-level clinic update for USER via role permissions", () => {
     const grants = [
       {
         id: "grant-1",
@@ -24,13 +25,13 @@ describe("defineAbilitiesForUser", () => {
       },
     ];
 
-    expect(canAccessRoute(Role.USER, grants, "update", "CLINIC")).toBe(false);
+    expect(canAccessRoute(Role.USER, grants, "update", "CLINIC")).toBe(true);
     expect(canAccessResource(Role.USER, grants, "update", "CLINIC", "clinic-1")).toBe(
       true
     );
   });
 
-  it("should scope grant abilities to a specific resource id", () => {
+  it("should allow role-wide clinic update for any clinic id", () => {
     const merged = defineAbilitiesForUser(Role.USER, [
       {
         id: "grant-1",
@@ -40,17 +41,13 @@ describe("defineAbilitiesForUser", () => {
       },
     ]);
 
-    expect(
-      canOnResource(merged, "update", "CLINIC", "clinic-1")
-    ).toBe(true);
-    expect(
-      canOnResource(merged, "update", "CLINIC", "clinic-2")
-    ).toBe(false);
+    expect(canOnResource(merged, "update", "CLINIC", "clinic-1")).toBe(true);
+    expect(canOnResource(merged, "update", "CLINIC", "clinic-2")).toBe(true);
   });
 });
 
 describe("route permission helpers", () => {
-  it("canAccessRoute ignores resource-scoped grants", () => {
+  it("canAccessRoute uses role-wide clinic update for USER", () => {
     const grants = [
       {
         id: "grant-1",
@@ -60,10 +57,10 @@ describe("route permission helpers", () => {
       },
     ];
 
-    expect(canAccessRoute(Role.USER, grants, "update", "CLINIC")).toBe(false);
+    expect(canAccessRoute(Role.USER, grants, "update", "CLINIC")).toBe(true);
   });
 
-  it("canAccessResource allows scoped grant for matching id", () => {
+  it("canAccessResource allows USER clinic update for matching and other ids", () => {
     const grants = [
       {
         id: "grant-1",
@@ -77,7 +74,7 @@ describe("route permission helpers", () => {
       true
     );
     expect(canAccessResource(Role.USER, grants, "update", "CLINIC", "clinic-2")).toBe(
-      false
+      true
     );
   });
 });

@@ -69,10 +69,20 @@ export type Clinic = $Result.DefaultSelection<Prisma.$ClinicPayload>
  */
 export type Doctor = $Result.DefaultSelection<Prisma.$DoctorPayload>
 /**
- * Model DoctorClinic
+ * Model DoctorClinicAssociation
  * 
  */
-export type DoctorClinic = $Result.DefaultSelection<Prisma.$DoctorClinicPayload>
+export type DoctorClinicAssociation = $Result.DefaultSelection<Prisma.$DoctorClinicAssociationPayload>
+/**
+ * Model IngestionRun
+ * 
+ */
+export type IngestionRun = $Result.DefaultSelection<Prisma.$IngestionRunPayload>
+/**
+ * Model IngestionSuggestion
+ * 
+ */
+export type IngestionSuggestion = $Result.DefaultSelection<Prisma.$IngestionSuggestionPayload>
 
 /**
  * Enums
@@ -147,10 +157,46 @@ export const AuditEventType: {
   TWO_FACTOR_DISABLE: 'TWO_FACTOR_DISABLE',
   SUSPICIOUS_ACTIVITY: 'SUSPICIOUS_ACTIVITY',
   DATA_ACCESS: 'DATA_ACCESS',
-  DATA_EXPORT: 'DATA_EXPORT'
+  DATA_EXPORT: 'DATA_EXPORT',
+  REGISTRY_INGESTION_COMPLETED: 'REGISTRY_INGESTION_COMPLETED',
+  REGISTRY_SUGGESTION_APPROVED: 'REGISTRY_SUGGESTION_APPROVED',
+  REGISTRY_SUGGESTION_REJECTED: 'REGISTRY_SUGGESTION_REJECTED',
+  DOCTOR_CLINIC_CONFIRMED: 'DOCTOR_CLINIC_CONFIRMED',
+  DOCTOR_CLINIC_ASSOCIATION_ENDED: 'DOCTOR_CLINIC_ASSOCIATION_ENDED',
+  DOCTOR_CLINIC_MANUAL_ASSOCIATED: 'DOCTOR_CLINIC_MANUAL_ASSOCIATED',
+  CLINIC_REACTIVATED: 'CLINIC_REACTIVATED'
 };
 
 export type AuditEventType = (typeof AuditEventType)[keyof typeof AuditEventType]
+
+
+export const IngestionRunStatus: {
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+};
+
+export type IngestionRunStatus = (typeof IngestionRunStatus)[keyof typeof IngestionRunStatus]
+
+
+export const IngestionSuggestionType: {
+  CLINIC_REMOVAL: 'CLINIC_REMOVAL',
+  CLINIC_REACTIVATION: 'CLINIC_REACTIVATION',
+  DOCTOR_CLINIC_REMOVAL: 'DOCTOR_CLINIC_REMOVAL'
+};
+
+export type IngestionSuggestionType = (typeof IngestionSuggestionType)[keyof typeof IngestionSuggestionType]
+
+
+export const IngestionSuggestionStatus: {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  EXPIRED: 'EXPIRED',
+  SUPERSEDED: 'SUPERSEDED'
+};
+
+export type IngestionSuggestionStatus = (typeof IngestionSuggestionStatus)[keyof typeof IngestionSuggestionStatus]
 
 
 export const AuditEventSeverity: {
@@ -192,6 +238,18 @@ export const AuthSessionType: typeof $Enums.AuthSessionType
 export type AuditEventType = $Enums.AuditEventType
 
 export const AuditEventType: typeof $Enums.AuditEventType
+
+export type IngestionRunStatus = $Enums.IngestionRunStatus
+
+export const IngestionRunStatus: typeof $Enums.IngestionRunStatus
+
+export type IngestionSuggestionType = $Enums.IngestionSuggestionType
+
+export const IngestionSuggestionType: typeof $Enums.IngestionSuggestionType
+
+export type IngestionSuggestionStatus = $Enums.IngestionSuggestionStatus
+
+export const IngestionSuggestionStatus: typeof $Enums.IngestionSuggestionStatus
 
 export type AuditEventSeverity = $Enums.AuditEventSeverity
 
@@ -433,14 +491,34 @@ export class PrismaClient<
   get doctor(): Prisma.DoctorDelegate<ExtArgs, ClientOptions>;
 
   /**
-   * `prisma.doctorClinic`: Exposes CRUD operations for the **DoctorClinic** model.
+   * `prisma.doctorClinicAssociation`: Exposes CRUD operations for the **DoctorClinicAssociation** model.
     * Example usage:
     * ```ts
-    * // Fetch zero or more DoctorClinics
-    * const doctorClinics = await prisma.doctorClinic.findMany()
+    * // Fetch zero or more DoctorClinicAssociations
+    * const doctorClinicAssociations = await prisma.doctorClinicAssociation.findMany()
     * ```
     */
-  get doctorClinic(): Prisma.DoctorClinicDelegate<ExtArgs, ClientOptions>;
+  get doctorClinicAssociation(): Prisma.DoctorClinicAssociationDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.ingestionRun`: Exposes CRUD operations for the **IngestionRun** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more IngestionRuns
+    * const ingestionRuns = await prisma.ingestionRun.findMany()
+    * ```
+    */
+  get ingestionRun(): Prisma.IngestionRunDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.ingestionSuggestion`: Exposes CRUD operations for the **IngestionSuggestion** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more IngestionSuggestions
+    * const ingestionSuggestions = await prisma.ingestionSuggestion.findMany()
+    * ```
+    */
+  get ingestionSuggestion(): Prisma.IngestionSuggestionDelegate<ExtArgs, ClientOptions>;
 }
 
 export namespace Prisma {
@@ -886,7 +964,9 @@ export namespace Prisma {
     Permission: 'Permission',
     Clinic: 'Clinic',
     Doctor: 'Doctor',
-    DoctorClinic: 'DoctorClinic'
+    DoctorClinicAssociation: 'DoctorClinicAssociation',
+    IngestionRun: 'IngestionRun',
+    IngestionSuggestion: 'IngestionSuggestion'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -902,7 +982,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userTerritoryAssignment" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "clinic" | "doctor" | "doctorClinic"
+      modelProps: "user" | "userTerritoryAssignment" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "clinic" | "doctor" | "doctorClinicAssociation" | "ingestionRun" | "ingestionSuggestion"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1720,77 +1800,225 @@ export namespace Prisma {
           }
         }
       }
-      DoctorClinic: {
-        payload: Prisma.$DoctorClinicPayload<ExtArgs>
-        fields: Prisma.DoctorClinicFieldRefs
+      DoctorClinicAssociation: {
+        payload: Prisma.$DoctorClinicAssociationPayload<ExtArgs>
+        fields: Prisma.DoctorClinicAssociationFieldRefs
         operations: {
           findUnique: {
-            args: Prisma.DoctorClinicFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload> | null
+            args: Prisma.DoctorClinicAssociationFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload> | null
           }
           findUniqueOrThrow: {
-            args: Prisma.DoctorClinicFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+            args: Prisma.DoctorClinicAssociationFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>
           }
           findFirst: {
-            args: Prisma.DoctorClinicFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload> | null
+            args: Prisma.DoctorClinicAssociationFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload> | null
           }
           findFirstOrThrow: {
-            args: Prisma.DoctorClinicFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+            args: Prisma.DoctorClinicAssociationFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>
           }
           findMany: {
-            args: Prisma.DoctorClinicFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>[]
+            args: Prisma.DoctorClinicAssociationFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>[]
           }
           create: {
-            args: Prisma.DoctorClinicCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+            args: Prisma.DoctorClinicAssociationCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>
           }
           createMany: {
-            args: Prisma.DoctorClinicCreateManyArgs<ExtArgs>
+            args: Prisma.DoctorClinicAssociationCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
           createManyAndReturn: {
-            args: Prisma.DoctorClinicCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>[]
+            args: Prisma.DoctorClinicAssociationCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>[]
           }
           delete: {
-            args: Prisma.DoctorClinicDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+            args: Prisma.DoctorClinicAssociationDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>
           }
           update: {
-            args: Prisma.DoctorClinicUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+            args: Prisma.DoctorClinicAssociationUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>
           }
           deleteMany: {
-            args: Prisma.DoctorClinicDeleteManyArgs<ExtArgs>
+            args: Prisma.DoctorClinicAssociationDeleteManyArgs<ExtArgs>
             result: BatchPayload
           }
           updateMany: {
-            args: Prisma.DoctorClinicUpdateManyArgs<ExtArgs>
+            args: Prisma.DoctorClinicAssociationUpdateManyArgs<ExtArgs>
             result: BatchPayload
           }
           updateManyAndReturn: {
-            args: Prisma.DoctorClinicUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>[]
+            args: Prisma.DoctorClinicAssociationUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>[]
           }
           upsert: {
-            args: Prisma.DoctorClinicUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$DoctorClinicPayload>
+            args: Prisma.DoctorClinicAssociationUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$DoctorClinicAssociationPayload>
           }
           aggregate: {
-            args: Prisma.DoctorClinicAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateDoctorClinic>
+            args: Prisma.DoctorClinicAssociationAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateDoctorClinicAssociation>
           }
           groupBy: {
-            args: Prisma.DoctorClinicGroupByArgs<ExtArgs>
-            result: $Utils.Optional<DoctorClinicGroupByOutputType>[]
+            args: Prisma.DoctorClinicAssociationGroupByArgs<ExtArgs>
+            result: $Utils.Optional<DoctorClinicAssociationGroupByOutputType>[]
           }
           count: {
-            args: Prisma.DoctorClinicCountArgs<ExtArgs>
-            result: $Utils.Optional<DoctorClinicCountAggregateOutputType> | number
+            args: Prisma.DoctorClinicAssociationCountArgs<ExtArgs>
+            result: $Utils.Optional<DoctorClinicAssociationCountAggregateOutputType> | number
+          }
+        }
+      }
+      IngestionRun: {
+        payload: Prisma.$IngestionRunPayload<ExtArgs>
+        fields: Prisma.IngestionRunFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.IngestionRunFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.IngestionRunFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>
+          }
+          findFirst: {
+            args: Prisma.IngestionRunFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.IngestionRunFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>
+          }
+          findMany: {
+            args: Prisma.IngestionRunFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>[]
+          }
+          create: {
+            args: Prisma.IngestionRunCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>
+          }
+          createMany: {
+            args: Prisma.IngestionRunCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.IngestionRunCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>[]
+          }
+          delete: {
+            args: Prisma.IngestionRunDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>
+          }
+          update: {
+            args: Prisma.IngestionRunUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>
+          }
+          deleteMany: {
+            args: Prisma.IngestionRunDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.IngestionRunUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.IngestionRunUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>[]
+          }
+          upsert: {
+            args: Prisma.IngestionRunUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionRunPayload>
+          }
+          aggregate: {
+            args: Prisma.IngestionRunAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateIngestionRun>
+          }
+          groupBy: {
+            args: Prisma.IngestionRunGroupByArgs<ExtArgs>
+            result: $Utils.Optional<IngestionRunGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.IngestionRunCountArgs<ExtArgs>
+            result: $Utils.Optional<IngestionRunCountAggregateOutputType> | number
+          }
+        }
+      }
+      IngestionSuggestion: {
+        payload: Prisma.$IngestionSuggestionPayload<ExtArgs>
+        fields: Prisma.IngestionSuggestionFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.IngestionSuggestionFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.IngestionSuggestionFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>
+          }
+          findFirst: {
+            args: Prisma.IngestionSuggestionFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.IngestionSuggestionFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>
+          }
+          findMany: {
+            args: Prisma.IngestionSuggestionFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>[]
+          }
+          create: {
+            args: Prisma.IngestionSuggestionCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>
+          }
+          createMany: {
+            args: Prisma.IngestionSuggestionCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.IngestionSuggestionCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>[]
+          }
+          delete: {
+            args: Prisma.IngestionSuggestionDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>
+          }
+          update: {
+            args: Prisma.IngestionSuggestionUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>
+          }
+          deleteMany: {
+            args: Prisma.IngestionSuggestionDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.IngestionSuggestionUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.IngestionSuggestionUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>[]
+          }
+          upsert: {
+            args: Prisma.IngestionSuggestionUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionSuggestionPayload>
+          }
+          aggregate: {
+            args: Prisma.IngestionSuggestionAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateIngestionSuggestion>
+          }
+          groupBy: {
+            args: Prisma.IngestionSuggestionGroupByArgs<ExtArgs>
+            result: $Utils.Optional<IngestionSuggestionGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.IngestionSuggestionCountArgs<ExtArgs>
+            result: $Utils.Optional<IngestionSuggestionCountAggregateOutputType> | number
           }
         }
       }
@@ -1913,7 +2141,9 @@ export namespace Prisma {
     permission?: PermissionOmit
     clinic?: ClinicOmit
     doctor?: DoctorOmit
-    doctorClinic?: DoctorClinicOmit
+    doctorClinicAssociation?: DoctorClinicAssociationOmit
+    ingestionRun?: IngestionRunOmit
+    ingestionSuggestion?: IngestionSuggestionOmit
   }
 
   /* Types for Logging */
@@ -2128,11 +2358,13 @@ export namespace Prisma {
    */
 
   export type ClinicCountOutputType = {
-    doctorClinics: number
+    doctorAssociations: number
+    ingestionSuggestions: number
   }
 
   export type ClinicCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    doctorClinics?: boolean | ClinicCountOutputTypeCountDoctorClinicsArgs
+    doctorAssociations?: boolean | ClinicCountOutputTypeCountDoctorAssociationsArgs
+    ingestionSuggestions?: boolean | ClinicCountOutputTypeCountIngestionSuggestionsArgs
   }
 
   // Custom InputTypes
@@ -2149,8 +2381,15 @@ export namespace Prisma {
   /**
    * ClinicCountOutputType without action
    */
-  export type ClinicCountOutputTypeCountDoctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DoctorClinicWhereInput
+  export type ClinicCountOutputTypeCountDoctorAssociationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorClinicAssociationWhereInput
+  }
+
+  /**
+   * ClinicCountOutputType without action
+   */
+  export type ClinicCountOutputTypeCountIngestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionSuggestionWhereInput
   }
 
 
@@ -2159,11 +2398,13 @@ export namespace Prisma {
    */
 
   export type DoctorCountOutputType = {
-    doctorClinics: number
+    clinicAssociations: number
+    ingestionSuggestions: number
   }
 
   export type DoctorCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    doctorClinics?: boolean | DoctorCountOutputTypeCountDoctorClinicsArgs
+    clinicAssociations?: boolean | DoctorCountOutputTypeCountClinicAssociationsArgs
+    ingestionSuggestions?: boolean | DoctorCountOutputTypeCountIngestionSuggestionsArgs
   }
 
   // Custom InputTypes
@@ -2180,8 +2421,77 @@ export namespace Prisma {
   /**
    * DoctorCountOutputType without action
    */
-  export type DoctorCountOutputTypeCountDoctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DoctorClinicWhereInput
+  export type DoctorCountOutputTypeCountClinicAssociationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorClinicAssociationWhereInput
+  }
+
+  /**
+   * DoctorCountOutputType without action
+   */
+  export type DoctorCountOutputTypeCountIngestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionSuggestionWhereInput
+  }
+
+
+  /**
+   * Count Type DoctorClinicAssociationCountOutputType
+   */
+
+  export type DoctorClinicAssociationCountOutputType = {
+    ingestionSuggestions: number
+  }
+
+  export type DoctorClinicAssociationCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionSuggestions?: boolean | DoctorClinicAssociationCountOutputTypeCountIngestionSuggestionsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * DoctorClinicAssociationCountOutputType without action
+   */
+  export type DoctorClinicAssociationCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinicAssociationCountOutputType
+     */
+    select?: DoctorClinicAssociationCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * DoctorClinicAssociationCountOutputType without action
+   */
+  export type DoctorClinicAssociationCountOutputTypeCountIngestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionSuggestionWhereInput
+  }
+
+
+  /**
+   * Count Type IngestionRunCountOutputType
+   */
+
+  export type IngestionRunCountOutputType = {
+    suggestions: number
+  }
+
+  export type IngestionRunCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    suggestions?: boolean | IngestionRunCountOutputTypeCountSuggestionsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * IngestionRunCountOutputType without action
+   */
+  export type IngestionRunCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRunCountOutputType
+     */
+    select?: IngestionRunCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * IngestionRunCountOutputType without action
+   */
+  export type IngestionRunCountOutputTypeCountSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionSuggestionWhereInput
   }
 
 
@@ -13200,6 +13510,14 @@ export namespace Prisma {
     name: string | null
     address: string | null
     territoryId: string | null
+    sourceProvider: string | null
+    externalSourceId: string | null
+    sourceContentHash: string | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    sourcePresent: boolean | null
+    sourceTracked: boolean | null
+    manuallyEditedAt: Date | null
     deletedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -13210,6 +13528,14 @@ export namespace Prisma {
     name: string | null
     address: string | null
     territoryId: string | null
+    sourceProvider: string | null
+    externalSourceId: string | null
+    sourceContentHash: string | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    sourcePresent: boolean | null
+    sourceTracked: boolean | null
+    manuallyEditedAt: Date | null
     deletedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -13220,6 +13546,14 @@ export namespace Prisma {
     name: number
     address: number
     territoryId: number
+    sourceProvider: number
+    externalSourceId: number
+    sourceContentHash: number
+    sourceFirstSeenAt: number
+    sourceLastSeenAt: number
+    sourcePresent: number
+    sourceTracked: number
+    manuallyEditedAt: number
     deletedAt: number
     createdAt: number
     updatedAt: number
@@ -13232,6 +13566,14 @@ export namespace Prisma {
     name?: true
     address?: true
     territoryId?: true
+    sourceProvider?: true
+    externalSourceId?: true
+    sourceContentHash?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    sourcePresent?: true
+    sourceTracked?: true
+    manuallyEditedAt?: true
     deletedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -13242,6 +13584,14 @@ export namespace Prisma {
     name?: true
     address?: true
     territoryId?: true
+    sourceProvider?: true
+    externalSourceId?: true
+    sourceContentHash?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    sourcePresent?: true
+    sourceTracked?: true
+    manuallyEditedAt?: true
     deletedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -13252,6 +13602,14 @@ export namespace Prisma {
     name?: true
     address?: true
     territoryId?: true
+    sourceProvider?: true
+    externalSourceId?: true
+    sourceContentHash?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    sourcePresent?: true
+    sourceTracked?: true
+    manuallyEditedAt?: true
     deletedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -13335,6 +13693,14 @@ export namespace Prisma {
     name: string
     address: string | null
     territoryId: string | null
+    sourceProvider: string | null
+    externalSourceId: string | null
+    sourceContentHash: string | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    sourcePresent: boolean
+    sourceTracked: boolean
+    manuallyEditedAt: Date | null
     deletedAt: Date | null
     createdAt: Date
     updatedAt: Date
@@ -13362,10 +13728,19 @@ export namespace Prisma {
     name?: boolean
     address?: boolean
     territoryId?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    doctorClinics?: boolean | Clinic$doctorClinicsArgs<ExtArgs>
+    doctorAssociations?: boolean | Clinic$doctorAssociationsArgs<ExtArgs>
+    ingestionSuggestions?: boolean | Clinic$ingestionSuggestionsArgs<ExtArgs>
     _count?: boolean | ClinicCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["clinic"]>
 
@@ -13374,6 +13749,14 @@ export namespace Prisma {
     name?: boolean
     address?: boolean
     territoryId?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -13384,6 +13767,14 @@ export namespace Prisma {
     name?: boolean
     address?: boolean
     territoryId?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -13394,14 +13785,23 @@ export namespace Prisma {
     name?: boolean
     address?: boolean
     territoryId?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type ClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "address" | "territoryId" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clinic"]>
+  export type ClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "address" | "territoryId" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clinic"]>
   export type ClinicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    doctorClinics?: boolean | Clinic$doctorClinicsArgs<ExtArgs>
+    doctorAssociations?: boolean | Clinic$doctorAssociationsArgs<ExtArgs>
+    ingestionSuggestions?: boolean | Clinic$ingestionSuggestionsArgs<ExtArgs>
     _count?: boolean | ClinicCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ClinicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -13410,13 +13810,22 @@ export namespace Prisma {
   export type $ClinicPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Clinic"
     objects: {
-      doctorClinics: Prisma.$DoctorClinicPayload<ExtArgs>[]
+      doctorAssociations: Prisma.$DoctorClinicAssociationPayload<ExtArgs>[]
+      ingestionSuggestions: Prisma.$IngestionSuggestionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       name: string
       address: string | null
       territoryId: string | null
+      sourceProvider: string | null
+      externalSourceId: string | null
+      sourceContentHash: string | null
+      sourceFirstSeenAt: Date | null
+      sourceLastSeenAt: Date | null
+      sourcePresent: boolean
+      sourceTracked: boolean
+      manuallyEditedAt: Date | null
       deletedAt: Date | null
       createdAt: Date
       updatedAt: Date
@@ -13814,7 +14223,8 @@ export namespace Prisma {
    */
   export interface Prisma__ClinicClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    doctorClinics<T extends Clinic$doctorClinicsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$doctorClinicsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    doctorAssociations<T extends Clinic$doctorAssociationsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$doctorAssociationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    ingestionSuggestions<T extends Clinic$ingestionSuggestionsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$ingestionSuggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -13848,6 +14258,14 @@ export namespace Prisma {
     readonly name: FieldRef<"Clinic", 'String'>
     readonly address: FieldRef<"Clinic", 'String'>
     readonly territoryId: FieldRef<"Clinic", 'String'>
+    readonly sourceProvider: FieldRef<"Clinic", 'String'>
+    readonly externalSourceId: FieldRef<"Clinic", 'String'>
+    readonly sourceContentHash: FieldRef<"Clinic", 'String'>
+    readonly sourceFirstSeenAt: FieldRef<"Clinic", 'DateTime'>
+    readonly sourceLastSeenAt: FieldRef<"Clinic", 'DateTime'>
+    readonly sourcePresent: FieldRef<"Clinic", 'Boolean'>
+    readonly sourceTracked: FieldRef<"Clinic", 'Boolean'>
+    readonly manuallyEditedAt: FieldRef<"Clinic", 'DateTime'>
     readonly deletedAt: FieldRef<"Clinic", 'DateTime'>
     readonly createdAt: FieldRef<"Clinic", 'DateTime'>
     readonly updatedAt: FieldRef<"Clinic", 'DateTime'>
@@ -14244,27 +14662,51 @@ export namespace Prisma {
   }
 
   /**
-   * Clinic.doctorClinics
+   * Clinic.doctorAssociations
    */
-  export type Clinic$doctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type Clinic$doctorAssociationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
-    where?: DoctorClinicWhereInput
-    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
-    cursor?: DoctorClinicWhereUniqueInput
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
+    where?: DoctorClinicAssociationWhereInput
+    orderBy?: DoctorClinicAssociationOrderByWithRelationInput | DoctorClinicAssociationOrderByWithRelationInput[]
+    cursor?: DoctorClinicAssociationWhereUniqueInput
     take?: number
     skip?: number
-    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+    distinct?: DoctorClinicAssociationScalarFieldEnum | DoctorClinicAssociationScalarFieldEnum[]
+  }
+
+  /**
+   * Clinic.ingestionSuggestions
+   */
+  export type Clinic$ingestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    where?: IngestionSuggestionWhereInput
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    cursor?: IngestionSuggestionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
   }
 
   /**
@@ -14301,6 +14743,14 @@ export namespace Prisma {
     firstName: string | null
     lastName: string | null
     specialty: string | null
+    sourceProvider: string | null
+    externalSourceId: string | null
+    sourceContentHash: string | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    sourcePresent: boolean | null
+    sourceTracked: boolean | null
+    manuallyEditedAt: Date | null
     deletedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -14311,6 +14761,14 @@ export namespace Prisma {
     firstName: string | null
     lastName: string | null
     specialty: string | null
+    sourceProvider: string | null
+    externalSourceId: string | null
+    sourceContentHash: string | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    sourcePresent: boolean | null
+    sourceTracked: boolean | null
+    manuallyEditedAt: Date | null
     deletedAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
@@ -14321,6 +14779,14 @@ export namespace Prisma {
     firstName: number
     lastName: number
     specialty: number
+    sourceProvider: number
+    externalSourceId: number
+    sourceContentHash: number
+    sourceFirstSeenAt: number
+    sourceLastSeenAt: number
+    sourcePresent: number
+    sourceTracked: number
+    manuallyEditedAt: number
     deletedAt: number
     createdAt: number
     updatedAt: number
@@ -14333,6 +14799,14 @@ export namespace Prisma {
     firstName?: true
     lastName?: true
     specialty?: true
+    sourceProvider?: true
+    externalSourceId?: true
+    sourceContentHash?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    sourcePresent?: true
+    sourceTracked?: true
+    manuallyEditedAt?: true
     deletedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -14343,6 +14817,14 @@ export namespace Prisma {
     firstName?: true
     lastName?: true
     specialty?: true
+    sourceProvider?: true
+    externalSourceId?: true
+    sourceContentHash?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    sourcePresent?: true
+    sourceTracked?: true
+    manuallyEditedAt?: true
     deletedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -14353,6 +14835,14 @@ export namespace Prisma {
     firstName?: true
     lastName?: true
     specialty?: true
+    sourceProvider?: true
+    externalSourceId?: true
+    sourceContentHash?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    sourcePresent?: true
+    sourceTracked?: true
+    manuallyEditedAt?: true
     deletedAt?: true
     createdAt?: true
     updatedAt?: true
@@ -14436,6 +14926,14 @@ export namespace Prisma {
     firstName: string
     lastName: string
     specialty: string | null
+    sourceProvider: string | null
+    externalSourceId: string | null
+    sourceContentHash: string | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    sourcePresent: boolean
+    sourceTracked: boolean
+    manuallyEditedAt: Date | null
     deletedAt: Date | null
     createdAt: Date
     updatedAt: Date
@@ -14463,10 +14961,19 @@ export namespace Prisma {
     firstName?: boolean
     lastName?: boolean
     specialty?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
-    doctorClinics?: boolean | Doctor$doctorClinicsArgs<ExtArgs>
+    clinicAssociations?: boolean | Doctor$clinicAssociationsArgs<ExtArgs>
+    ingestionSuggestions?: boolean | Doctor$ingestionSuggestionsArgs<ExtArgs>
     _count?: boolean | DoctorCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["doctor"]>
 
@@ -14475,6 +14982,14 @@ export namespace Prisma {
     firstName?: boolean
     lastName?: boolean
     specialty?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -14485,6 +15000,14 @@ export namespace Prisma {
     firstName?: boolean
     lastName?: boolean
     specialty?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
@@ -14495,14 +15018,23 @@ export namespace Prisma {
     firstName?: boolean
     lastName?: boolean
     specialty?: boolean
+    sourceProvider?: boolean
+    externalSourceId?: boolean
+    sourceContentHash?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: boolean
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type DoctorOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "firstName" | "lastName" | "specialty" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["doctor"]>
+  export type DoctorOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "firstName" | "lastName" | "specialty" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["doctor"]>
   export type DoctorInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    doctorClinics?: boolean | Doctor$doctorClinicsArgs<ExtArgs>
+    clinicAssociations?: boolean | Doctor$clinicAssociationsArgs<ExtArgs>
+    ingestionSuggestions?: boolean | Doctor$ingestionSuggestionsArgs<ExtArgs>
     _count?: boolean | DoctorCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type DoctorIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -14511,13 +15043,22 @@ export namespace Prisma {
   export type $DoctorPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Doctor"
     objects: {
-      doctorClinics: Prisma.$DoctorClinicPayload<ExtArgs>[]
+      clinicAssociations: Prisma.$DoctorClinicAssociationPayload<ExtArgs>[]
+      ingestionSuggestions: Prisma.$IngestionSuggestionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       firstName: string
       lastName: string
       specialty: string | null
+      sourceProvider: string | null
+      externalSourceId: string | null
+      sourceContentHash: string | null
+      sourceFirstSeenAt: Date | null
+      sourceLastSeenAt: Date | null
+      sourcePresent: boolean
+      sourceTracked: boolean
+      manuallyEditedAt: Date | null
       deletedAt: Date | null
       createdAt: Date
       updatedAt: Date
@@ -14915,7 +15456,8 @@ export namespace Prisma {
    */
   export interface Prisma__DoctorClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
-    doctorClinics<T extends Doctor$doctorClinicsArgs<ExtArgs> = {}>(args?: Subset<T, Doctor$doctorClinicsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    clinicAssociations<T extends Doctor$clinicAssociationsArgs<ExtArgs> = {}>(args?: Subset<T, Doctor$clinicAssociationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    ingestionSuggestions<T extends Doctor$ingestionSuggestionsArgs<ExtArgs> = {}>(args?: Subset<T, Doctor$ingestionSuggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -14949,6 +15491,14 @@ export namespace Prisma {
     readonly firstName: FieldRef<"Doctor", 'String'>
     readonly lastName: FieldRef<"Doctor", 'String'>
     readonly specialty: FieldRef<"Doctor", 'String'>
+    readonly sourceProvider: FieldRef<"Doctor", 'String'>
+    readonly externalSourceId: FieldRef<"Doctor", 'String'>
+    readonly sourceContentHash: FieldRef<"Doctor", 'String'>
+    readonly sourceFirstSeenAt: FieldRef<"Doctor", 'DateTime'>
+    readonly sourceLastSeenAt: FieldRef<"Doctor", 'DateTime'>
+    readonly sourcePresent: FieldRef<"Doctor", 'Boolean'>
+    readonly sourceTracked: FieldRef<"Doctor", 'Boolean'>
+    readonly manuallyEditedAt: FieldRef<"Doctor", 'DateTime'>
     readonly deletedAt: FieldRef<"Doctor", 'DateTime'>
     readonly createdAt: FieldRef<"Doctor", 'DateTime'>
     readonly updatedAt: FieldRef<"Doctor", 'DateTime'>
@@ -15345,27 +15895,51 @@ export namespace Prisma {
   }
 
   /**
-   * Doctor.doctorClinics
+   * Doctor.clinicAssociations
    */
-  export type Doctor$doctorClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type Doctor$clinicAssociationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
-    where?: DoctorClinicWhereInput
-    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
-    cursor?: DoctorClinicWhereUniqueInput
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
+    where?: DoctorClinicAssociationWhereInput
+    orderBy?: DoctorClinicAssociationOrderByWithRelationInput | DoctorClinicAssociationOrderByWithRelationInput[]
+    cursor?: DoctorClinicAssociationWhereUniqueInput
     take?: number
     skip?: number
-    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+    distinct?: DoctorClinicAssociationScalarFieldEnum | DoctorClinicAssociationScalarFieldEnum[]
+  }
+
+  /**
+   * Doctor.ingestionSuggestions
+   */
+  export type Doctor$ingestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    where?: IngestionSuggestionWhereInput
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    cursor?: IngestionSuggestionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
   }
 
   /**
@@ -15388,345 +15962,458 @@ export namespace Prisma {
 
 
   /**
-   * Model DoctorClinic
+   * Model DoctorClinicAssociation
    */
 
-  export type AggregateDoctorClinic = {
-    _count: DoctorClinicCountAggregateOutputType | null
-    _min: DoctorClinicMinAggregateOutputType | null
-    _max: DoctorClinicMaxAggregateOutputType | null
+  export type AggregateDoctorClinicAssociation = {
+    _count: DoctorClinicAssociationCountAggregateOutputType | null
+    _min: DoctorClinicAssociationMinAggregateOutputType | null
+    _max: DoctorClinicAssociationMaxAggregateOutputType | null
   }
 
-  export type DoctorClinicMinAggregateOutputType = {
+  export type DoctorClinicAssociationMinAggregateOutputType = {
     id: string | null
     doctorId: string | null
     clinicId: string | null
+    sourceActive: boolean | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    confirmedAt: Date | null
+    confirmedByUserId: string | null
+    endedAt: Date | null
+    endedByUserId: string | null
+    endReason: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
-  export type DoctorClinicMaxAggregateOutputType = {
+  export type DoctorClinicAssociationMaxAggregateOutputType = {
     id: string | null
     doctorId: string | null
     clinicId: string | null
+    sourceActive: boolean | null
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    confirmedAt: Date | null
+    confirmedByUserId: string | null
+    endedAt: Date | null
+    endedByUserId: string | null
+    endReason: string | null
     createdAt: Date | null
+    updatedAt: Date | null
   }
 
-  export type DoctorClinicCountAggregateOutputType = {
+  export type DoctorClinicAssociationCountAggregateOutputType = {
     id: number
     doctorId: number
     clinicId: number
+    sourceActive: number
+    sourceFirstSeenAt: number
+    sourceLastSeenAt: number
+    confirmedAt: number
+    confirmedByUserId: number
+    endedAt: number
+    endedByUserId: number
+    endReason: number
     createdAt: number
+    updatedAt: number
     _all: number
   }
 
 
-  export type DoctorClinicMinAggregateInputType = {
+  export type DoctorClinicAssociationMinAggregateInputType = {
     id?: true
     doctorId?: true
     clinicId?: true
+    sourceActive?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    confirmedAt?: true
+    confirmedByUserId?: true
+    endedAt?: true
+    endedByUserId?: true
+    endReason?: true
     createdAt?: true
+    updatedAt?: true
   }
 
-  export type DoctorClinicMaxAggregateInputType = {
+  export type DoctorClinicAssociationMaxAggregateInputType = {
     id?: true
     doctorId?: true
     clinicId?: true
+    sourceActive?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    confirmedAt?: true
+    confirmedByUserId?: true
+    endedAt?: true
+    endedByUserId?: true
+    endReason?: true
     createdAt?: true
+    updatedAt?: true
   }
 
-  export type DoctorClinicCountAggregateInputType = {
+  export type DoctorClinicAssociationCountAggregateInputType = {
     id?: true
     doctorId?: true
     clinicId?: true
+    sourceActive?: true
+    sourceFirstSeenAt?: true
+    sourceLastSeenAt?: true
+    confirmedAt?: true
+    confirmedByUserId?: true
+    endedAt?: true
+    endedByUserId?: true
+    endReason?: true
     createdAt?: true
+    updatedAt?: true
     _all?: true
   }
 
-  export type DoctorClinicAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Filter which DoctorClinic to aggregate.
+     * Filter which DoctorClinicAssociation to aggregate.
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of DoctorClinics to fetch.
+     * Determine the order of DoctorClinicAssociations to fetch.
      */
-    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    orderBy?: DoctorClinicAssociationOrderByWithRelationInput | DoctorClinicAssociationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
      * Sets the start position
      */
-    cursor?: DoctorClinicWhereUniqueInput
+    cursor?: DoctorClinicAssociationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` DoctorClinics from the position of the cursor.
+     * Take `±n` DoctorClinicAssociations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` DoctorClinics.
+     * Skip the first `n` DoctorClinicAssociations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
-     * Count returned DoctorClinics
+     * Count returned DoctorClinicAssociations
     **/
-    _count?: true | DoctorClinicCountAggregateInputType
+    _count?: true | DoctorClinicAssociationCountAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to find the minimum value
     **/
-    _min?: DoctorClinicMinAggregateInputType
+    _min?: DoctorClinicAssociationMinAggregateInputType
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
      * Select which fields to find the maximum value
     **/
-    _max?: DoctorClinicMaxAggregateInputType
+    _max?: DoctorClinicAssociationMaxAggregateInputType
   }
 
-  export type GetDoctorClinicAggregateType<T extends DoctorClinicAggregateArgs> = {
-        [P in keyof T & keyof AggregateDoctorClinic]: P extends '_count' | 'count'
+  export type GetDoctorClinicAssociationAggregateType<T extends DoctorClinicAssociationAggregateArgs> = {
+        [P in keyof T & keyof AggregateDoctorClinicAssociation]: P extends '_count' | 'count'
       ? T[P] extends true
         ? number
-        : GetScalarType<T[P], AggregateDoctorClinic[P]>
-      : GetScalarType<T[P], AggregateDoctorClinic[P]>
+        : GetScalarType<T[P], AggregateDoctorClinicAssociation[P]>
+      : GetScalarType<T[P], AggregateDoctorClinicAssociation[P]>
   }
 
 
 
 
-  export type DoctorClinicGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: DoctorClinicWhereInput
-    orderBy?: DoctorClinicOrderByWithAggregationInput | DoctorClinicOrderByWithAggregationInput[]
-    by: DoctorClinicScalarFieldEnum[] | DoctorClinicScalarFieldEnum
-    having?: DoctorClinicScalarWhereWithAggregatesInput
+  export type DoctorClinicAssociationGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: DoctorClinicAssociationWhereInput
+    orderBy?: DoctorClinicAssociationOrderByWithAggregationInput | DoctorClinicAssociationOrderByWithAggregationInput[]
+    by: DoctorClinicAssociationScalarFieldEnum[] | DoctorClinicAssociationScalarFieldEnum
+    having?: DoctorClinicAssociationScalarWhereWithAggregatesInput
     take?: number
     skip?: number
-    _count?: DoctorClinicCountAggregateInputType | true
-    _min?: DoctorClinicMinAggregateInputType
-    _max?: DoctorClinicMaxAggregateInputType
+    _count?: DoctorClinicAssociationCountAggregateInputType | true
+    _min?: DoctorClinicAssociationMinAggregateInputType
+    _max?: DoctorClinicAssociationMaxAggregateInputType
   }
 
-  export type DoctorClinicGroupByOutputType = {
+  export type DoctorClinicAssociationGroupByOutputType = {
     id: string
     doctorId: string
     clinicId: string
+    sourceActive: boolean
+    sourceFirstSeenAt: Date | null
+    sourceLastSeenAt: Date | null
+    confirmedAt: Date | null
+    confirmedByUserId: string | null
+    endedAt: Date | null
+    endedByUserId: string | null
+    endReason: string | null
     createdAt: Date
-    _count: DoctorClinicCountAggregateOutputType | null
-    _min: DoctorClinicMinAggregateOutputType | null
-    _max: DoctorClinicMaxAggregateOutputType | null
+    updatedAt: Date
+    _count: DoctorClinicAssociationCountAggregateOutputType | null
+    _min: DoctorClinicAssociationMinAggregateOutputType | null
+    _max: DoctorClinicAssociationMaxAggregateOutputType | null
   }
 
-  type GetDoctorClinicGroupByPayload<T extends DoctorClinicGroupByArgs> = Prisma.PrismaPromise<
+  type GetDoctorClinicAssociationGroupByPayload<T extends DoctorClinicAssociationGroupByArgs> = Prisma.PrismaPromise<
     Array<
-      PickEnumerable<DoctorClinicGroupByOutputType, T['by']> &
+      PickEnumerable<DoctorClinicAssociationGroupByOutputType, T['by']> &
         {
-          [P in ((keyof T) & (keyof DoctorClinicGroupByOutputType))]: P extends '_count'
+          [P in ((keyof T) & (keyof DoctorClinicAssociationGroupByOutputType))]: P extends '_count'
             ? T[P] extends boolean
               ? number
-              : GetScalarType<T[P], DoctorClinicGroupByOutputType[P]>
-            : GetScalarType<T[P], DoctorClinicGroupByOutputType[P]>
+              : GetScalarType<T[P], DoctorClinicAssociationGroupByOutputType[P]>
+            : GetScalarType<T[P], DoctorClinicAssociationGroupByOutputType[P]>
         }
       >
     >
 
 
-  export type DoctorClinicSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type DoctorClinicAssociationSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     doctorId?: boolean
     clinicId?: boolean
+    sourceActive?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    confirmedAt?: boolean
+    confirmedByUserId?: boolean
+    endedAt?: boolean
+    endedByUserId?: boolean
+    endReason?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     doctor?: boolean | DoctorDefaultArgs<ExtArgs>
     clinic?: boolean | ClinicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["doctorClinic"]>
+    ingestionSuggestions?: boolean | DoctorClinicAssociation$ingestionSuggestionsArgs<ExtArgs>
+    _count?: boolean | DoctorClinicAssociationCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["doctorClinicAssociation"]>
 
-  export type DoctorClinicSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type DoctorClinicAssociationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     doctorId?: boolean
     clinicId?: boolean
+    sourceActive?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    confirmedAt?: boolean
+    confirmedByUserId?: boolean
+    endedAt?: boolean
+    endedByUserId?: boolean
+    endReason?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     doctor?: boolean | DoctorDefaultArgs<ExtArgs>
     clinic?: boolean | ClinicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["doctorClinic"]>
+  }, ExtArgs["result"]["doctorClinicAssociation"]>
 
-  export type DoctorClinicSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+  export type DoctorClinicAssociationSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     doctorId?: boolean
     clinicId?: boolean
+    sourceActive?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    confirmedAt?: boolean
+    confirmedByUserId?: boolean
+    endedAt?: boolean
+    endedByUserId?: boolean
+    endReason?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
     doctor?: boolean | DoctorDefaultArgs<ExtArgs>
     clinic?: boolean | ClinicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["doctorClinic"]>
+  }, ExtArgs["result"]["doctorClinicAssociation"]>
 
-  export type DoctorClinicSelectScalar = {
+  export type DoctorClinicAssociationSelectScalar = {
     id?: boolean
     doctorId?: boolean
     clinicId?: boolean
+    sourceActive?: boolean
+    sourceFirstSeenAt?: boolean
+    sourceLastSeenAt?: boolean
+    confirmedAt?: boolean
+    confirmedByUserId?: boolean
+    endedAt?: boolean
+    endedByUserId?: boolean
+    endReason?: boolean
     createdAt?: boolean
+    updatedAt?: boolean
   }
 
-  export type DoctorClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "doctorId" | "clinicId" | "createdAt", ExtArgs["result"]["doctorClinic"]>
-  export type DoctorClinicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "doctorId" | "clinicId" | "sourceActive" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "confirmedAt" | "confirmedByUserId" | "endedAt" | "endedByUserId" | "endReason" | "createdAt" | "updatedAt", ExtArgs["result"]["doctorClinicAssociation"]>
+  export type DoctorClinicAssociationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
+    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
+    ingestionSuggestions?: boolean | DoctorClinicAssociation$ingestionSuggestionsArgs<ExtArgs>
+    _count?: boolean | DoctorClinicAssociationCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type DoctorClinicAssociationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     doctor?: boolean | DoctorDefaultArgs<ExtArgs>
     clinic?: boolean | ClinicDefaultArgs<ExtArgs>
   }
-  export type DoctorClinicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    doctor?: boolean | DoctorDefaultArgs<ExtArgs>
-    clinic?: boolean | ClinicDefaultArgs<ExtArgs>
-  }
-  export type DoctorClinicIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     doctor?: boolean | DoctorDefaultArgs<ExtArgs>
     clinic?: boolean | ClinicDefaultArgs<ExtArgs>
   }
 
-  export type $DoctorClinicPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "DoctorClinic"
+  export type $DoctorClinicAssociationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "DoctorClinicAssociation"
     objects: {
       doctor: Prisma.$DoctorPayload<ExtArgs>
       clinic: Prisma.$ClinicPayload<ExtArgs>
+      ingestionSuggestions: Prisma.$IngestionSuggestionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       doctorId: string
       clinicId: string
+      sourceActive: boolean
+      sourceFirstSeenAt: Date | null
+      sourceLastSeenAt: Date | null
+      confirmedAt: Date | null
+      confirmedByUserId: string | null
+      endedAt: Date | null
+      endedByUserId: string | null
+      endReason: string | null
       createdAt: Date
-    }, ExtArgs["result"]["doctorClinic"]>
+      updatedAt: Date
+    }, ExtArgs["result"]["doctorClinicAssociation"]>
     composites: {}
   }
 
-  type DoctorClinicGetPayload<S extends boolean | null | undefined | DoctorClinicDefaultArgs> = $Result.GetResult<Prisma.$DoctorClinicPayload, S>
+  type DoctorClinicAssociationGetPayload<S extends boolean | null | undefined | DoctorClinicAssociationDefaultArgs> = $Result.GetResult<Prisma.$DoctorClinicAssociationPayload, S>
 
-  type DoctorClinicCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<DoctorClinicFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: DoctorClinicCountAggregateInputType | true
+  type DoctorClinicAssociationCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<DoctorClinicAssociationFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: DoctorClinicAssociationCountAggregateInputType | true
     }
 
-  export interface DoctorClinicDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DoctorClinic'], meta: { name: 'DoctorClinic' } }
+  export interface DoctorClinicAssociationDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['DoctorClinicAssociation'], meta: { name: 'DoctorClinicAssociation' } }
     /**
-     * Find zero or one DoctorClinic that matches the filter.
-     * @param {DoctorClinicFindUniqueArgs} args - Arguments to find a DoctorClinic
+     * Find zero or one DoctorClinicAssociation that matches the filter.
+     * @param {DoctorClinicAssociationFindUniqueArgs} args - Arguments to find a DoctorClinicAssociation
      * @example
-     * // Get one DoctorClinic
-     * const doctorClinic = await prisma.doctorClinic.findUnique({
+     * // Get one DoctorClinicAssociation
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.findUnique({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findUnique<T extends DoctorClinicFindUniqueArgs>(args: SelectSubset<T, DoctorClinicFindUniqueArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findUnique<T extends DoctorClinicAssociationFindUniqueArgs>(args: SelectSubset<T, DoctorClinicAssociationFindUniqueArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find one DoctorClinic that matches the filter or throw an error with `error.code='P2025'`
+     * Find one DoctorClinicAssociation that matches the filter or throw an error with `error.code='P2025'`
      * if no matches were found.
-     * @param {DoctorClinicFindUniqueOrThrowArgs} args - Arguments to find a DoctorClinic
+     * @param {DoctorClinicAssociationFindUniqueOrThrowArgs} args - Arguments to find a DoctorClinicAssociation
      * @example
-     * // Get one DoctorClinic
-     * const doctorClinic = await prisma.doctorClinic.findUniqueOrThrow({
+     * // Get one DoctorClinicAssociation
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.findUniqueOrThrow({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findUniqueOrThrow<T extends DoctorClinicFindUniqueOrThrowArgs>(args: SelectSubset<T, DoctorClinicFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findUniqueOrThrow<T extends DoctorClinicAssociationFindUniqueOrThrowArgs>(args: SelectSubset<T, DoctorClinicAssociationFindUniqueOrThrowArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find the first DoctorClinic that matches the filter.
+     * Find the first DoctorClinicAssociation that matches the filter.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicFindFirstArgs} args - Arguments to find a DoctorClinic
+     * @param {DoctorClinicAssociationFindFirstArgs} args - Arguments to find a DoctorClinicAssociation
      * @example
-     * // Get one DoctorClinic
-     * const doctorClinic = await prisma.doctorClinic.findFirst({
+     * // Get one DoctorClinicAssociation
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.findFirst({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findFirst<T extends DoctorClinicFindFirstArgs>(args?: SelectSubset<T, DoctorClinicFindFirstArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    findFirst<T extends DoctorClinicAssociationFindFirstArgs>(args?: SelectSubset<T, DoctorClinicAssociationFindFirstArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find the first DoctorClinic that matches the filter or
+     * Find the first DoctorClinicAssociation that matches the filter or
      * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicFindFirstOrThrowArgs} args - Arguments to find a DoctorClinic
+     * @param {DoctorClinicAssociationFindFirstOrThrowArgs} args - Arguments to find a DoctorClinicAssociation
      * @example
-     * // Get one DoctorClinic
-     * const doctorClinic = await prisma.doctorClinic.findFirstOrThrow({
+     * // Get one DoctorClinicAssociation
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.findFirstOrThrow({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      */
-    findFirstOrThrow<T extends DoctorClinicFindFirstOrThrowArgs>(args?: SelectSubset<T, DoctorClinicFindFirstOrThrowArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    findFirstOrThrow<T extends DoctorClinicAssociationFindFirstOrThrowArgs>(args?: SelectSubset<T, DoctorClinicAssociationFindFirstOrThrowArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Find zero or more DoctorClinics that matches the filter.
+     * Find zero or more DoctorClinicAssociations that matches the filter.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @param {DoctorClinicAssociationFindManyArgs} args - Arguments to filter and select certain fields only.
      * @example
-     * // Get all DoctorClinics
-     * const doctorClinics = await prisma.doctorClinic.findMany()
+     * // Get all DoctorClinicAssociations
+     * const doctorClinicAssociations = await prisma.doctorClinicAssociation.findMany()
      * 
-     * // Get first 10 DoctorClinics
-     * const doctorClinics = await prisma.doctorClinic.findMany({ take: 10 })
+     * // Get first 10 DoctorClinicAssociations
+     * const doctorClinicAssociations = await prisma.doctorClinicAssociation.findMany({ take: 10 })
      * 
      * // Only select the `id`
-     * const doctorClinicWithIdOnly = await prisma.doctorClinic.findMany({ select: { id: true } })
+     * const doctorClinicAssociationWithIdOnly = await prisma.doctorClinicAssociation.findMany({ select: { id: true } })
      * 
      */
-    findMany<T extends DoctorClinicFindManyArgs>(args?: SelectSubset<T, DoctorClinicFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+    findMany<T extends DoctorClinicAssociationFindManyArgs>(args?: SelectSubset<T, DoctorClinicAssociationFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
 
     /**
-     * Create a DoctorClinic.
-     * @param {DoctorClinicCreateArgs} args - Arguments to create a DoctorClinic.
+     * Create a DoctorClinicAssociation.
+     * @param {DoctorClinicAssociationCreateArgs} args - Arguments to create a DoctorClinicAssociation.
      * @example
-     * // Create one DoctorClinic
-     * const DoctorClinic = await prisma.doctorClinic.create({
+     * // Create one DoctorClinicAssociation
+     * const DoctorClinicAssociation = await prisma.doctorClinicAssociation.create({
      *   data: {
-     *     // ... data to create a DoctorClinic
+     *     // ... data to create a DoctorClinicAssociation
      *   }
      * })
      * 
      */
-    create<T extends DoctorClinicCreateArgs>(args: SelectSubset<T, DoctorClinicCreateArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    create<T extends DoctorClinicAssociationCreateArgs>(args: SelectSubset<T, DoctorClinicAssociationCreateArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Create many DoctorClinics.
-     * @param {DoctorClinicCreateManyArgs} args - Arguments to create many DoctorClinics.
+     * Create many DoctorClinicAssociations.
+     * @param {DoctorClinicAssociationCreateManyArgs} args - Arguments to create many DoctorClinicAssociations.
      * @example
-     * // Create many DoctorClinics
-     * const doctorClinic = await prisma.doctorClinic.createMany({
+     * // Create many DoctorClinicAssociations
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.createMany({
      *   data: [
      *     // ... provide data here
      *   ]
      * })
      *     
      */
-    createMany<T extends DoctorClinicCreateManyArgs>(args?: SelectSubset<T, DoctorClinicCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    createMany<T extends DoctorClinicAssociationCreateManyArgs>(args?: SelectSubset<T, DoctorClinicAssociationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many DoctorClinics and returns the data saved in the database.
-     * @param {DoctorClinicCreateManyAndReturnArgs} args - Arguments to create many DoctorClinics.
+     * Create many DoctorClinicAssociations and returns the data saved in the database.
+     * @param {DoctorClinicAssociationCreateManyAndReturnArgs} args - Arguments to create many DoctorClinicAssociations.
      * @example
-     * // Create many DoctorClinics
-     * const doctorClinic = await prisma.doctorClinic.createManyAndReturn({
+     * // Create many DoctorClinicAssociations
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.createManyAndReturn({
      *   data: [
      *     // ... provide data here
      *   ]
      * })
      * 
-     * // Create many DoctorClinics and only return the `id`
-     * const doctorClinicWithIdOnly = await prisma.doctorClinic.createManyAndReturn({
+     * // Create many DoctorClinicAssociations and only return the `id`
+     * const doctorClinicAssociationWithIdOnly = await prisma.doctorClinicAssociation.createManyAndReturn({
      *   select: { id: true },
      *   data: [
      *     // ... provide data here
@@ -15736,28 +16423,28 @@ export namespace Prisma {
      * Read more here: https://pris.ly/d/null-undefined
      * 
      */
-    createManyAndReturn<T extends DoctorClinicCreateManyAndReturnArgs>(args?: SelectSubset<T, DoctorClinicCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+    createManyAndReturn<T extends DoctorClinicAssociationCreateManyAndReturnArgs>(args?: SelectSubset<T, DoctorClinicAssociationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
 
     /**
-     * Delete a DoctorClinic.
-     * @param {DoctorClinicDeleteArgs} args - Arguments to delete one DoctorClinic.
+     * Delete a DoctorClinicAssociation.
+     * @param {DoctorClinicAssociationDeleteArgs} args - Arguments to delete one DoctorClinicAssociation.
      * @example
-     * // Delete one DoctorClinic
-     * const DoctorClinic = await prisma.doctorClinic.delete({
+     * // Delete one DoctorClinicAssociation
+     * const DoctorClinicAssociation = await prisma.doctorClinicAssociation.delete({
      *   where: {
-     *     // ... filter to delete one DoctorClinic
+     *     // ... filter to delete one DoctorClinicAssociation
      *   }
      * })
      * 
      */
-    delete<T extends DoctorClinicDeleteArgs>(args: SelectSubset<T, DoctorClinicDeleteArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    delete<T extends DoctorClinicAssociationDeleteArgs>(args: SelectSubset<T, DoctorClinicAssociationDeleteArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Update one DoctorClinic.
-     * @param {DoctorClinicUpdateArgs} args - Arguments to update one DoctorClinic.
+     * Update one DoctorClinicAssociation.
+     * @param {DoctorClinicAssociationUpdateArgs} args - Arguments to update one DoctorClinicAssociation.
      * @example
-     * // Update one DoctorClinic
-     * const doctorClinic = await prisma.doctorClinic.update({
+     * // Update one DoctorClinicAssociation
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.update({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -15767,30 +16454,30 @@ export namespace Prisma {
      * })
      * 
      */
-    update<T extends DoctorClinicUpdateArgs>(args: SelectSubset<T, DoctorClinicUpdateArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    update<T extends DoctorClinicAssociationUpdateArgs>(args: SelectSubset<T, DoctorClinicAssociationUpdateArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
     /**
-     * Delete zero or more DoctorClinics.
-     * @param {DoctorClinicDeleteManyArgs} args - Arguments to filter DoctorClinics to delete.
+     * Delete zero or more DoctorClinicAssociations.
+     * @param {DoctorClinicAssociationDeleteManyArgs} args - Arguments to filter DoctorClinicAssociations to delete.
      * @example
-     * // Delete a few DoctorClinics
-     * const { count } = await prisma.doctorClinic.deleteMany({
+     * // Delete a few DoctorClinicAssociations
+     * const { count } = await prisma.doctorClinicAssociation.deleteMany({
      *   where: {
      *     // ... provide filter here
      *   }
      * })
      * 
      */
-    deleteMany<T extends DoctorClinicDeleteManyArgs>(args?: SelectSubset<T, DoctorClinicDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    deleteMany<T extends DoctorClinicAssociationDeleteManyArgs>(args?: SelectSubset<T, DoctorClinicAssociationDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Update zero or more DoctorClinics.
+     * Update zero or more DoctorClinicAssociations.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicUpdateManyArgs} args - Arguments to update one or more rows.
+     * @param {DoctorClinicAssociationUpdateManyArgs} args - Arguments to update one or more rows.
      * @example
-     * // Update many DoctorClinics
-     * const doctorClinic = await prisma.doctorClinic.updateMany({
+     * // Update many DoctorClinicAssociations
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.updateMany({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -15800,14 +16487,14 @@ export namespace Prisma {
      * })
      * 
      */
-    updateMany<T extends DoctorClinicUpdateManyArgs>(args: SelectSubset<T, DoctorClinicUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+    updateMany<T extends DoctorClinicAssociationUpdateManyArgs>(args: SelectSubset<T, DoctorClinicAssociationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Update zero or more DoctorClinics and returns the data updated in the database.
-     * @param {DoctorClinicUpdateManyAndReturnArgs} args - Arguments to update many DoctorClinics.
+     * Update zero or more DoctorClinicAssociations and returns the data updated in the database.
+     * @param {DoctorClinicAssociationUpdateManyAndReturnArgs} args - Arguments to update many DoctorClinicAssociations.
      * @example
-     * // Update many DoctorClinics
-     * const doctorClinic = await prisma.doctorClinic.updateManyAndReturn({
+     * // Update many DoctorClinicAssociations
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.updateManyAndReturn({
      *   where: {
      *     // ... provide filter here
      *   },
@@ -15816,8 +16503,8 @@ export namespace Prisma {
      *   ]
      * })
      * 
-     * // Update zero or more DoctorClinics and only return the `id`
-     * const doctorClinicWithIdOnly = await prisma.doctorClinic.updateManyAndReturn({
+     * // Update zero or more DoctorClinicAssociations and only return the `id`
+     * const doctorClinicAssociationWithIdOnly = await prisma.doctorClinicAssociation.updateManyAndReturn({
      *   select: { id: true },
      *   where: {
      *     // ... provide filter here
@@ -15830,56 +16517,56 @@ export namespace Prisma {
      * Read more here: https://pris.ly/d/null-undefined
      * 
      */
-    updateManyAndReturn<T extends DoctorClinicUpdateManyAndReturnArgs>(args: SelectSubset<T, DoctorClinicUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+    updateManyAndReturn<T extends DoctorClinicAssociationUpdateManyAndReturnArgs>(args: SelectSubset<T, DoctorClinicAssociationUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
-     * Create or update one DoctorClinic.
-     * @param {DoctorClinicUpsertArgs} args - Arguments to update or create a DoctorClinic.
+     * Create or update one DoctorClinicAssociation.
+     * @param {DoctorClinicAssociationUpsertArgs} args - Arguments to update or create a DoctorClinicAssociation.
      * @example
-     * // Update or create a DoctorClinic
-     * const doctorClinic = await prisma.doctorClinic.upsert({
+     * // Update or create a DoctorClinicAssociation
+     * const doctorClinicAssociation = await prisma.doctorClinicAssociation.upsert({
      *   create: {
-     *     // ... data to create a DoctorClinic
+     *     // ... data to create a DoctorClinicAssociation
      *   },
      *   update: {
      *     // ... in case it already exists, update
      *   },
      *   where: {
-     *     // ... the filter for the DoctorClinic we want to update
+     *     // ... the filter for the DoctorClinicAssociation we want to update
      *   }
      * })
      */
-    upsert<T extends DoctorClinicUpsertArgs>(args: SelectSubset<T, DoctorClinicUpsertArgs<ExtArgs>>): Prisma__DoctorClinicClient<$Result.GetResult<Prisma.$DoctorClinicPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+    upsert<T extends DoctorClinicAssociationUpsertArgs>(args: SelectSubset<T, DoctorClinicAssociationUpsertArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
 
 
     /**
-     * Count the number of DoctorClinics.
+     * Count the number of DoctorClinicAssociations.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicCountArgs} args - Arguments to filter DoctorClinics to count.
+     * @param {DoctorClinicAssociationCountArgs} args - Arguments to filter DoctorClinicAssociations to count.
      * @example
-     * // Count the number of DoctorClinics
-     * const count = await prisma.doctorClinic.count({
+     * // Count the number of DoctorClinicAssociations
+     * const count = await prisma.doctorClinicAssociation.count({
      *   where: {
-     *     // ... the filter for the DoctorClinics we want to count
+     *     // ... the filter for the DoctorClinicAssociations we want to count
      *   }
      * })
     **/
-    count<T extends DoctorClinicCountArgs>(
-      args?: Subset<T, DoctorClinicCountArgs>,
+    count<T extends DoctorClinicAssociationCountArgs>(
+      args?: Subset<T, DoctorClinicAssociationCountArgs>,
     ): Prisma.PrismaPromise<
       T extends $Utils.Record<'select', any>
         ? T['select'] extends true
           ? number
-          : GetScalarType<T['select'], DoctorClinicCountAggregateOutputType>
+          : GetScalarType<T['select'], DoctorClinicAssociationCountAggregateOutputType>
         : number
     >
 
     /**
-     * Allows you to perform aggregations operations on a DoctorClinic.
+     * Allows you to perform aggregations operations on a DoctorClinicAssociation.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @param {DoctorClinicAssociationAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
      * @example
      * // Ordered by age ascending
      * // Where email contains prisma.io
@@ -15899,13 +16586,13 @@ export namespace Prisma {
      *   take: 10,
      * })
     **/
-    aggregate<T extends DoctorClinicAggregateArgs>(args: Subset<T, DoctorClinicAggregateArgs>): Prisma.PrismaPromise<GetDoctorClinicAggregateType<T>>
+    aggregate<T extends DoctorClinicAssociationAggregateArgs>(args: Subset<T, DoctorClinicAssociationAggregateArgs>): Prisma.PrismaPromise<GetDoctorClinicAssociationAggregateType<T>>
 
     /**
-     * Group by DoctorClinic.
+     * Group by DoctorClinicAssociation.
      * Note, that providing `undefined` is treated as the value not being there.
      * Read more here: https://pris.ly/d/null-undefined
-     * @param {DoctorClinicGroupByArgs} args - Group by arguments.
+     * @param {DoctorClinicAssociationGroupByArgs} args - Group by arguments.
      * @example
      * // Group by city, order by createdAt, get count
      * const result = await prisma.user.groupBy({
@@ -15920,14 +16607,14 @@ export namespace Prisma {
      * 
     **/
     groupBy<
-      T extends DoctorClinicGroupByArgs,
+      T extends DoctorClinicAssociationGroupByArgs,
       HasSelectOrTake extends Or<
         Extends<'skip', Keys<T>>,
         Extends<'take', Keys<T>>
       >,
       OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: DoctorClinicGroupByArgs['orderBy'] }
-        : { orderBy?: DoctorClinicGroupByArgs['orderBy'] },
+        ? { orderBy: DoctorClinicAssociationGroupByArgs['orderBy'] }
+        : { orderBy?: DoctorClinicAssociationGroupByArgs['orderBy'] },
       OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
       ByFields extends MaybeTupleToUnion<T['by']>,
       ByValid extends Has<ByFields, OrderFields>,
@@ -15976,23 +16663,24 @@ export namespace Prisma {
             ? never
             : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
         }[OrderFields]
-    >(args: SubsetIntersection<T, DoctorClinicGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDoctorClinicGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+    >(args: SubsetIntersection<T, DoctorClinicAssociationGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetDoctorClinicAssociationGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
   /**
-   * Fields of the DoctorClinic model
+   * Fields of the DoctorClinicAssociation model
    */
-  readonly fields: DoctorClinicFieldRefs;
+  readonly fields: DoctorClinicAssociationFieldRefs;
   }
 
   /**
-   * The delegate class that acts as a "Promise-like" for DoctorClinic.
+   * The delegate class that acts as a "Promise-like" for DoctorClinicAssociation.
    * Why is this prefixed with `Prisma__`?
    * Because we want to prevent naming conflicts as mentioned in
    * https://github.com/prisma/prisma-client-js/issues/707
    */
-  export interface Prisma__DoctorClinicClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+  export interface Prisma__DoctorClinicAssociationClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     doctor<T extends DoctorDefaultArgs<ExtArgs> = {}>(args?: Subset<T, DoctorDefaultArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     clinic<T extends ClinicDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ClinicDefaultArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    ingestionSuggestions<T extends DoctorClinicAssociation$ingestionSuggestionsArgs<ExtArgs> = {}>(args?: Subset<T, DoctorClinicAssociation$ingestionSuggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -16019,429 +16707,2803 @@ export namespace Prisma {
 
 
   /**
-   * Fields of the DoctorClinic model
+   * Fields of the DoctorClinicAssociation model
    */
-  interface DoctorClinicFieldRefs {
-    readonly id: FieldRef<"DoctorClinic", 'String'>
-    readonly doctorId: FieldRef<"DoctorClinic", 'String'>
-    readonly clinicId: FieldRef<"DoctorClinic", 'String'>
-    readonly createdAt: FieldRef<"DoctorClinic", 'DateTime'>
+  interface DoctorClinicAssociationFieldRefs {
+    readonly id: FieldRef<"DoctorClinicAssociation", 'String'>
+    readonly doctorId: FieldRef<"DoctorClinicAssociation", 'String'>
+    readonly clinicId: FieldRef<"DoctorClinicAssociation", 'String'>
+    readonly sourceActive: FieldRef<"DoctorClinicAssociation", 'Boolean'>
+    readonly sourceFirstSeenAt: FieldRef<"DoctorClinicAssociation", 'DateTime'>
+    readonly sourceLastSeenAt: FieldRef<"DoctorClinicAssociation", 'DateTime'>
+    readonly confirmedAt: FieldRef<"DoctorClinicAssociation", 'DateTime'>
+    readonly confirmedByUserId: FieldRef<"DoctorClinicAssociation", 'String'>
+    readonly endedAt: FieldRef<"DoctorClinicAssociation", 'DateTime'>
+    readonly endedByUserId: FieldRef<"DoctorClinicAssociation", 'String'>
+    readonly endReason: FieldRef<"DoctorClinicAssociation", 'String'>
+    readonly createdAt: FieldRef<"DoctorClinicAssociation", 'DateTime'>
+    readonly updatedAt: FieldRef<"DoctorClinicAssociation", 'DateTime'>
   }
     
 
   // Custom InputTypes
   /**
-   * DoctorClinic findUnique
+   * DoctorClinicAssociation findUnique
    */
-  export type DoctorClinicFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * Filter, which DoctorClinic to fetch.
+     * Filter, which DoctorClinicAssociation to fetch.
      */
-    where: DoctorClinicWhereUniqueInput
+    where: DoctorClinicAssociationWhereUniqueInput
   }
 
   /**
-   * DoctorClinic findUniqueOrThrow
+   * DoctorClinicAssociation findUniqueOrThrow
    */
-  export type DoctorClinicFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * Filter, which DoctorClinic to fetch.
+     * Filter, which DoctorClinicAssociation to fetch.
      */
-    where: DoctorClinicWhereUniqueInput
+    where: DoctorClinicAssociationWhereUniqueInput
   }
 
   /**
-   * DoctorClinic findFirst
+   * DoctorClinicAssociation findFirst
    */
-  export type DoctorClinicFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * Filter, which DoctorClinic to fetch.
+     * Filter, which DoctorClinicAssociation to fetch.
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of DoctorClinics to fetch.
+     * Determine the order of DoctorClinicAssociations to fetch.
      */
-    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    orderBy?: DoctorClinicAssociationOrderByWithRelationInput | DoctorClinicAssociationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for searching for DoctorClinics.
+     * Sets the position for searching for DoctorClinicAssociations.
      */
-    cursor?: DoctorClinicWhereUniqueInput
+    cursor?: DoctorClinicAssociationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` DoctorClinics from the position of the cursor.
+     * Take `±n` DoctorClinicAssociations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` DoctorClinics.
+     * Skip the first `n` DoctorClinicAssociations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of DoctorClinics.
+     * Filter by unique combinations of DoctorClinicAssociations.
      */
-    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+    distinct?: DoctorClinicAssociationScalarFieldEnum | DoctorClinicAssociationScalarFieldEnum[]
   }
 
   /**
-   * DoctorClinic findFirstOrThrow
+   * DoctorClinicAssociation findFirstOrThrow
    */
-  export type DoctorClinicFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * Filter, which DoctorClinic to fetch.
+     * Filter, which DoctorClinicAssociation to fetch.
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of DoctorClinics to fetch.
+     * Determine the order of DoctorClinicAssociations to fetch.
      */
-    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    orderBy?: DoctorClinicAssociationOrderByWithRelationInput | DoctorClinicAssociationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for searching for DoctorClinics.
+     * Sets the position for searching for DoctorClinicAssociations.
      */
-    cursor?: DoctorClinicWhereUniqueInput
+    cursor?: DoctorClinicAssociationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` DoctorClinics from the position of the cursor.
+     * Take `±n` DoctorClinicAssociations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` DoctorClinics.
+     * Skip the first `n` DoctorClinicAssociations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of DoctorClinics.
+     * Filter by unique combinations of DoctorClinicAssociations.
      */
-    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+    distinct?: DoctorClinicAssociationScalarFieldEnum | DoctorClinicAssociationScalarFieldEnum[]
   }
 
   /**
-   * DoctorClinic findMany
+   * DoctorClinicAssociation findMany
    */
-  export type DoctorClinicFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * Filter, which DoctorClinics to fetch.
+     * Filter, which DoctorClinicAssociations to fetch.
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
      * 
-     * Determine the order of DoctorClinics to fetch.
+     * Determine the order of DoctorClinicAssociations to fetch.
      */
-    orderBy?: DoctorClinicOrderByWithRelationInput | DoctorClinicOrderByWithRelationInput[]
+    orderBy?: DoctorClinicAssociationOrderByWithRelationInput | DoctorClinicAssociationOrderByWithRelationInput[]
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
      * 
-     * Sets the position for listing DoctorClinics.
+     * Sets the position for listing DoctorClinicAssociations.
      */
-    cursor?: DoctorClinicWhereUniqueInput
+    cursor?: DoctorClinicAssociationWhereUniqueInput
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Take `±n` DoctorClinics from the position of the cursor.
+     * Take `±n` DoctorClinicAssociations from the position of the cursor.
      */
     take?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
      * 
-     * Skip the first `n` DoctorClinics.
+     * Skip the first `n` DoctorClinicAssociations.
      */
     skip?: number
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
      * 
-     * Filter by unique combinations of DoctorClinics.
+     * Filter by unique combinations of DoctorClinicAssociations.
      */
-    distinct?: DoctorClinicScalarFieldEnum | DoctorClinicScalarFieldEnum[]
+    distinct?: DoctorClinicAssociationScalarFieldEnum | DoctorClinicAssociationScalarFieldEnum[]
   }
 
   /**
-   * DoctorClinic create
+   * DoctorClinicAssociation create
    */
-  export type DoctorClinicCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * The data needed to create a DoctorClinic.
+     * The data needed to create a DoctorClinicAssociation.
      */
-    data: XOR<DoctorClinicCreateInput, DoctorClinicUncheckedCreateInput>
+    data: XOR<DoctorClinicAssociationCreateInput, DoctorClinicAssociationUncheckedCreateInput>
   }
 
   /**
-   * DoctorClinic createMany
+   * DoctorClinicAssociation createMany
    */
-  export type DoctorClinicCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * The data used to create many DoctorClinics.
+     * The data used to create many DoctorClinicAssociations.
      */
-    data: DoctorClinicCreateManyInput | DoctorClinicCreateManyInput[]
+    data: DoctorClinicAssociationCreateManyInput | DoctorClinicAssociationCreateManyInput[]
     skipDuplicates?: boolean
   }
 
   /**
-   * DoctorClinic createManyAndReturn
+   * DoctorClinicAssociation createManyAndReturn
    */
-  export type DoctorClinicCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelectCreateManyAndReturn<ExtArgs> | null
+    select?: DoctorClinicAssociationSelectCreateManyAndReturn<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
-     * The data used to create many DoctorClinics.
+     * The data used to create many DoctorClinicAssociations.
      */
-    data: DoctorClinicCreateManyInput | DoctorClinicCreateManyInput[]
+    data: DoctorClinicAssociationCreateManyInput | DoctorClinicAssociationCreateManyInput[]
     skipDuplicates?: boolean
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicIncludeCreateManyAndReturn<ExtArgs> | null
+    include?: DoctorClinicAssociationIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
-   * DoctorClinic update
+   * DoctorClinicAssociation update
    */
-  export type DoctorClinicUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * The data needed to update a DoctorClinic.
+     * The data needed to update a DoctorClinicAssociation.
      */
-    data: XOR<DoctorClinicUpdateInput, DoctorClinicUncheckedUpdateInput>
+    data: XOR<DoctorClinicAssociationUpdateInput, DoctorClinicAssociationUncheckedUpdateInput>
     /**
-     * Choose, which DoctorClinic to update.
+     * Choose, which DoctorClinicAssociation to update.
      */
-    where: DoctorClinicWhereUniqueInput
+    where: DoctorClinicAssociationWhereUniqueInput
   }
 
   /**
-   * DoctorClinic updateMany
+   * DoctorClinicAssociation updateMany
    */
-  export type DoctorClinicUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * The data used to update DoctorClinics.
+     * The data used to update DoctorClinicAssociations.
      */
-    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyInput>
+    data: XOR<DoctorClinicAssociationUpdateManyMutationInput, DoctorClinicAssociationUncheckedUpdateManyInput>
     /**
-     * Filter which DoctorClinics to update
+     * Filter which DoctorClinicAssociations to update
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
-     * Limit how many DoctorClinics to update.
+     * Limit how many DoctorClinicAssociations to update.
      */
     limit?: number
   }
 
   /**
-   * DoctorClinic updateManyAndReturn
+   * DoctorClinicAssociation updateManyAndReturn
    */
-  export type DoctorClinicUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelectUpdateManyAndReturn<ExtArgs> | null
+    select?: DoctorClinicAssociationSelectUpdateManyAndReturn<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
-     * The data used to update DoctorClinics.
+     * The data used to update DoctorClinicAssociations.
      */
-    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyInput>
+    data: XOR<DoctorClinicAssociationUpdateManyMutationInput, DoctorClinicAssociationUncheckedUpdateManyInput>
     /**
-     * Filter which DoctorClinics to update
+     * Filter which DoctorClinicAssociations to update
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
-     * Limit how many DoctorClinics to update.
+     * Limit how many DoctorClinicAssociations to update.
      */
     limit?: number
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicIncludeUpdateManyAndReturn<ExtArgs> | null
+    include?: DoctorClinicAssociationIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
-   * DoctorClinic upsert
+   * DoctorClinicAssociation upsert
    */
-  export type DoctorClinicUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * The filter to search for the DoctorClinic to update in case it exists.
+     * The filter to search for the DoctorClinicAssociation to update in case it exists.
      */
-    where: DoctorClinicWhereUniqueInput
+    where: DoctorClinicAssociationWhereUniqueInput
     /**
-     * In case the DoctorClinic found by the `where` argument doesn't exist, create a new DoctorClinic with this data.
+     * In case the DoctorClinicAssociation found by the `where` argument doesn't exist, create a new DoctorClinicAssociation with this data.
      */
-    create: XOR<DoctorClinicCreateInput, DoctorClinicUncheckedCreateInput>
+    create: XOR<DoctorClinicAssociationCreateInput, DoctorClinicAssociationUncheckedCreateInput>
     /**
-     * In case the DoctorClinic was found with the provided `where` argument, update it with this data.
+     * In case the DoctorClinicAssociation was found with the provided `where` argument, update it with this data.
      */
-    update: XOR<DoctorClinicUpdateInput, DoctorClinicUncheckedUpdateInput>
+    update: XOR<DoctorClinicAssociationUpdateInput, DoctorClinicAssociationUncheckedUpdateInput>
   }
 
   /**
-   * DoctorClinic delete
+   * DoctorClinicAssociation delete
    */
-  export type DoctorClinicDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the DoctorClinicAssociation
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the DoctorClinicAssociation
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
     /**
-     * Filter which DoctorClinic to delete.
+     * Filter which DoctorClinicAssociation to delete.
      */
-    where: DoctorClinicWhereUniqueInput
+    where: DoctorClinicAssociationWhereUniqueInput
   }
 
   /**
-   * DoctorClinic deleteMany
+   * DoctorClinicAssociation deleteMany
    */
-  export type DoctorClinicDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociationDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Filter which DoctorClinics to delete
+     * Filter which DoctorClinicAssociations to delete
      */
-    where?: DoctorClinicWhereInput
+    where?: DoctorClinicAssociationWhereInput
     /**
-     * Limit how many DoctorClinics to delete.
+     * Limit how many DoctorClinicAssociations to delete.
      */
     limit?: number
   }
 
   /**
-   * DoctorClinic without action
+   * DoctorClinicAssociation.ingestionSuggestions
    */
-  export type DoctorClinicDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+  export type DoctorClinicAssociation$ingestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     /**
-     * Select specific fields to fetch from the DoctorClinic
+     * Select specific fields to fetch from the IngestionSuggestion
      */
-    select?: DoctorClinicSelect<ExtArgs> | null
+    select?: IngestionSuggestionSelect<ExtArgs> | null
     /**
-     * Omit specific fields from the DoctorClinic
+     * Omit specific fields from the IngestionSuggestion
      */
-    omit?: DoctorClinicOmit<ExtArgs> | null
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
     /**
      * Choose, which related nodes to fetch as well
      */
-    include?: DoctorClinicInclude<ExtArgs> | null
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    where?: IngestionSuggestionWhereInput
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    cursor?: IngestionSuggestionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
+  }
+
+  /**
+   * DoctorClinicAssociation without action
+   */
+  export type DoctorClinicAssociationDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinicAssociation
+     */
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinicAssociation
+     */
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model IngestionRun
+   */
+
+  export type AggregateIngestionRun = {
+    _count: IngestionRunCountAggregateOutputType | null
+    _min: IngestionRunMinAggregateOutputType | null
+    _max: IngestionRunMaxAggregateOutputType | null
+  }
+
+  export type IngestionRunMinAggregateOutputType = {
+    id: string | null
+    sourceProvider: string | null
+    status: $Enums.IngestionRunStatus | null
+    startedAt: Date | null
+    completedAt: Date | null
+    error: string | null
+  }
+
+  export type IngestionRunMaxAggregateOutputType = {
+    id: string | null
+    sourceProvider: string | null
+    status: $Enums.IngestionRunStatus | null
+    startedAt: Date | null
+    completedAt: Date | null
+    error: string | null
+  }
+
+  export type IngestionRunCountAggregateOutputType = {
+    id: number
+    sourceProvider: number
+    status: number
+    startedAt: number
+    completedAt: number
+    stats: number
+    error: number
+    _all: number
+  }
+
+
+  export type IngestionRunMinAggregateInputType = {
+    id?: true
+    sourceProvider?: true
+    status?: true
+    startedAt?: true
+    completedAt?: true
+    error?: true
+  }
+
+  export type IngestionRunMaxAggregateInputType = {
+    id?: true
+    sourceProvider?: true
+    status?: true
+    startedAt?: true
+    completedAt?: true
+    error?: true
+  }
+
+  export type IngestionRunCountAggregateInputType = {
+    id?: true
+    sourceProvider?: true
+    status?: true
+    startedAt?: true
+    completedAt?: true
+    stats?: true
+    error?: true
+    _all?: true
+  }
+
+  export type IngestionRunAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IngestionRun to aggregate.
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionRuns to fetch.
+     */
+    orderBy?: IngestionRunOrderByWithRelationInput | IngestionRunOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: IngestionRunWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionRuns from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionRuns.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned IngestionRuns
+    **/
+    _count?: true | IngestionRunCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: IngestionRunMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: IngestionRunMaxAggregateInputType
+  }
+
+  export type GetIngestionRunAggregateType<T extends IngestionRunAggregateArgs> = {
+        [P in keyof T & keyof AggregateIngestionRun]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateIngestionRun[P]>
+      : GetScalarType<T[P], AggregateIngestionRun[P]>
+  }
+
+
+
+
+  export type IngestionRunGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionRunWhereInput
+    orderBy?: IngestionRunOrderByWithAggregationInput | IngestionRunOrderByWithAggregationInput[]
+    by: IngestionRunScalarFieldEnum[] | IngestionRunScalarFieldEnum
+    having?: IngestionRunScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: IngestionRunCountAggregateInputType | true
+    _min?: IngestionRunMinAggregateInputType
+    _max?: IngestionRunMaxAggregateInputType
+  }
+
+  export type IngestionRunGroupByOutputType = {
+    id: string
+    sourceProvider: string
+    status: $Enums.IngestionRunStatus
+    startedAt: Date
+    completedAt: Date | null
+    stats: JsonValue | null
+    error: string | null
+    _count: IngestionRunCountAggregateOutputType | null
+    _min: IngestionRunMinAggregateOutputType | null
+    _max: IngestionRunMaxAggregateOutputType | null
+  }
+
+  type GetIngestionRunGroupByPayload<T extends IngestionRunGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<IngestionRunGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof IngestionRunGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], IngestionRunGroupByOutputType[P]>
+            : GetScalarType<T[P], IngestionRunGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type IngestionRunSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceProvider?: boolean
+    status?: boolean
+    startedAt?: boolean
+    completedAt?: boolean
+    stats?: boolean
+    error?: boolean
+    suggestions?: boolean | IngestionRun$suggestionsArgs<ExtArgs>
+    _count?: boolean | IngestionRunCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionRun"]>
+
+  export type IngestionRunSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceProvider?: boolean
+    status?: boolean
+    startedAt?: boolean
+    completedAt?: boolean
+    stats?: boolean
+    error?: boolean
+  }, ExtArgs["result"]["ingestionRun"]>
+
+  export type IngestionRunSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    sourceProvider?: boolean
+    status?: boolean
+    startedAt?: boolean
+    completedAt?: boolean
+    stats?: boolean
+    error?: boolean
+  }, ExtArgs["result"]["ingestionRun"]>
+
+  export type IngestionRunSelectScalar = {
+    id?: boolean
+    sourceProvider?: boolean
+    status?: boolean
+    startedAt?: boolean
+    completedAt?: boolean
+    stats?: boolean
+    error?: boolean
+  }
+
+  export type IngestionRunOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sourceProvider" | "status" | "startedAt" | "completedAt" | "stats" | "error", ExtArgs["result"]["ingestionRun"]>
+  export type IngestionRunInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    suggestions?: boolean | IngestionRun$suggestionsArgs<ExtArgs>
+    _count?: boolean | IngestionRunCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type IngestionRunIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type IngestionRunIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+
+  export type $IngestionRunPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "IngestionRun"
+    objects: {
+      suggestions: Prisma.$IngestionSuggestionPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      sourceProvider: string
+      status: $Enums.IngestionRunStatus
+      startedAt: Date
+      completedAt: Date | null
+      stats: Prisma.JsonValue | null
+      error: string | null
+    }, ExtArgs["result"]["ingestionRun"]>
+    composites: {}
+  }
+
+  type IngestionRunGetPayload<S extends boolean | null | undefined | IngestionRunDefaultArgs> = $Result.GetResult<Prisma.$IngestionRunPayload, S>
+
+  type IngestionRunCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<IngestionRunFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: IngestionRunCountAggregateInputType | true
+    }
+
+  export interface IngestionRunDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['IngestionRun'], meta: { name: 'IngestionRun' } }
+    /**
+     * Find zero or one IngestionRun that matches the filter.
+     * @param {IngestionRunFindUniqueArgs} args - Arguments to find a IngestionRun
+     * @example
+     * // Get one IngestionRun
+     * const ingestionRun = await prisma.ingestionRun.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends IngestionRunFindUniqueArgs>(args: SelectSubset<T, IngestionRunFindUniqueArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one IngestionRun that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {IngestionRunFindUniqueOrThrowArgs} args - Arguments to find a IngestionRun
+     * @example
+     * // Get one IngestionRun
+     * const ingestionRun = await prisma.ingestionRun.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends IngestionRunFindUniqueOrThrowArgs>(args: SelectSubset<T, IngestionRunFindUniqueOrThrowArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first IngestionRun that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunFindFirstArgs} args - Arguments to find a IngestionRun
+     * @example
+     * // Get one IngestionRun
+     * const ingestionRun = await prisma.ingestionRun.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends IngestionRunFindFirstArgs>(args?: SelectSubset<T, IngestionRunFindFirstArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first IngestionRun that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunFindFirstOrThrowArgs} args - Arguments to find a IngestionRun
+     * @example
+     * // Get one IngestionRun
+     * const ingestionRun = await prisma.ingestionRun.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends IngestionRunFindFirstOrThrowArgs>(args?: SelectSubset<T, IngestionRunFindFirstOrThrowArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more IngestionRuns that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all IngestionRuns
+     * const ingestionRuns = await prisma.ingestionRun.findMany()
+     * 
+     * // Get first 10 IngestionRuns
+     * const ingestionRuns = await prisma.ingestionRun.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const ingestionRunWithIdOnly = await prisma.ingestionRun.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends IngestionRunFindManyArgs>(args?: SelectSubset<T, IngestionRunFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a IngestionRun.
+     * @param {IngestionRunCreateArgs} args - Arguments to create a IngestionRun.
+     * @example
+     * // Create one IngestionRun
+     * const IngestionRun = await prisma.ingestionRun.create({
+     *   data: {
+     *     // ... data to create a IngestionRun
+     *   }
+     * })
+     * 
+     */
+    create<T extends IngestionRunCreateArgs>(args: SelectSubset<T, IngestionRunCreateArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many IngestionRuns.
+     * @param {IngestionRunCreateManyArgs} args - Arguments to create many IngestionRuns.
+     * @example
+     * // Create many IngestionRuns
+     * const ingestionRun = await prisma.ingestionRun.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends IngestionRunCreateManyArgs>(args?: SelectSubset<T, IngestionRunCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many IngestionRuns and returns the data saved in the database.
+     * @param {IngestionRunCreateManyAndReturnArgs} args - Arguments to create many IngestionRuns.
+     * @example
+     * // Create many IngestionRuns
+     * const ingestionRun = await prisma.ingestionRun.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many IngestionRuns and only return the `id`
+     * const ingestionRunWithIdOnly = await prisma.ingestionRun.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends IngestionRunCreateManyAndReturnArgs>(args?: SelectSubset<T, IngestionRunCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a IngestionRun.
+     * @param {IngestionRunDeleteArgs} args - Arguments to delete one IngestionRun.
+     * @example
+     * // Delete one IngestionRun
+     * const IngestionRun = await prisma.ingestionRun.delete({
+     *   where: {
+     *     // ... filter to delete one IngestionRun
+     *   }
+     * })
+     * 
+     */
+    delete<T extends IngestionRunDeleteArgs>(args: SelectSubset<T, IngestionRunDeleteArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one IngestionRun.
+     * @param {IngestionRunUpdateArgs} args - Arguments to update one IngestionRun.
+     * @example
+     * // Update one IngestionRun
+     * const ingestionRun = await prisma.ingestionRun.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends IngestionRunUpdateArgs>(args: SelectSubset<T, IngestionRunUpdateArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more IngestionRuns.
+     * @param {IngestionRunDeleteManyArgs} args - Arguments to filter IngestionRuns to delete.
+     * @example
+     * // Delete a few IngestionRuns
+     * const { count } = await prisma.ingestionRun.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends IngestionRunDeleteManyArgs>(args?: SelectSubset<T, IngestionRunDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IngestionRuns.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many IngestionRuns
+     * const ingestionRun = await prisma.ingestionRun.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends IngestionRunUpdateManyArgs>(args: SelectSubset<T, IngestionRunUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IngestionRuns and returns the data updated in the database.
+     * @param {IngestionRunUpdateManyAndReturnArgs} args - Arguments to update many IngestionRuns.
+     * @example
+     * // Update many IngestionRuns
+     * const ingestionRun = await prisma.ingestionRun.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more IngestionRuns and only return the `id`
+     * const ingestionRunWithIdOnly = await prisma.ingestionRun.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends IngestionRunUpdateManyAndReturnArgs>(args: SelectSubset<T, IngestionRunUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one IngestionRun.
+     * @param {IngestionRunUpsertArgs} args - Arguments to update or create a IngestionRun.
+     * @example
+     * // Update or create a IngestionRun
+     * const ingestionRun = await prisma.ingestionRun.upsert({
+     *   create: {
+     *     // ... data to create a IngestionRun
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the IngestionRun we want to update
+     *   }
+     * })
+     */
+    upsert<T extends IngestionRunUpsertArgs>(args: SelectSubset<T, IngestionRunUpsertArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of IngestionRuns.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunCountArgs} args - Arguments to filter IngestionRuns to count.
+     * @example
+     * // Count the number of IngestionRuns
+     * const count = await prisma.ingestionRun.count({
+     *   where: {
+     *     // ... the filter for the IngestionRuns we want to count
+     *   }
+     * })
+    **/
+    count<T extends IngestionRunCountArgs>(
+      args?: Subset<T, IngestionRunCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], IngestionRunCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a IngestionRun.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends IngestionRunAggregateArgs>(args: Subset<T, IngestionRunAggregateArgs>): Prisma.PrismaPromise<GetIngestionRunAggregateType<T>>
+
+    /**
+     * Group by IngestionRun.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionRunGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends IngestionRunGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: IngestionRunGroupByArgs['orderBy'] }
+        : { orderBy?: IngestionRunGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, IngestionRunGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetIngestionRunGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the IngestionRun model
+   */
+  readonly fields: IngestionRunFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for IngestionRun.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__IngestionRunClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    suggestions<T extends IngestionRun$suggestionsArgs<ExtArgs> = {}>(args?: Subset<T, IngestionRun$suggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the IngestionRun model
+   */
+  interface IngestionRunFieldRefs {
+    readonly id: FieldRef<"IngestionRun", 'String'>
+    readonly sourceProvider: FieldRef<"IngestionRun", 'String'>
+    readonly status: FieldRef<"IngestionRun", 'IngestionRunStatus'>
+    readonly startedAt: FieldRef<"IngestionRun", 'DateTime'>
+    readonly completedAt: FieldRef<"IngestionRun", 'DateTime'>
+    readonly stats: FieldRef<"IngestionRun", 'Json'>
+    readonly error: FieldRef<"IngestionRun", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * IngestionRun findUnique
+   */
+  export type IngestionRunFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionRun to fetch.
+     */
+    where: IngestionRunWhereUniqueInput
+  }
+
+  /**
+   * IngestionRun findUniqueOrThrow
+   */
+  export type IngestionRunFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionRun to fetch.
+     */
+    where: IngestionRunWhereUniqueInput
+  }
+
+  /**
+   * IngestionRun findFirst
+   */
+  export type IngestionRunFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionRun to fetch.
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionRuns to fetch.
+     */
+    orderBy?: IngestionRunOrderByWithRelationInput | IngestionRunOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IngestionRuns.
+     */
+    cursor?: IngestionRunWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionRuns from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionRuns.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionRuns.
+     */
+    distinct?: IngestionRunScalarFieldEnum | IngestionRunScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionRun findFirstOrThrow
+   */
+  export type IngestionRunFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionRun to fetch.
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionRuns to fetch.
+     */
+    orderBy?: IngestionRunOrderByWithRelationInput | IngestionRunOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IngestionRuns.
+     */
+    cursor?: IngestionRunWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionRuns from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionRuns.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionRuns.
+     */
+    distinct?: IngestionRunScalarFieldEnum | IngestionRunScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionRun findMany
+   */
+  export type IngestionRunFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionRuns to fetch.
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionRuns to fetch.
+     */
+    orderBy?: IngestionRunOrderByWithRelationInput | IngestionRunOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing IngestionRuns.
+     */
+    cursor?: IngestionRunWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionRuns from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionRuns.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionRuns.
+     */
+    distinct?: IngestionRunScalarFieldEnum | IngestionRunScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionRun create
+   */
+  export type IngestionRunCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * The data needed to create a IngestionRun.
+     */
+    data: XOR<IngestionRunCreateInput, IngestionRunUncheckedCreateInput>
+  }
+
+  /**
+   * IngestionRun createMany
+   */
+  export type IngestionRunCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many IngestionRuns.
+     */
+    data: IngestionRunCreateManyInput | IngestionRunCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * IngestionRun createManyAndReturn
+   */
+  export type IngestionRunCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * The data used to create many IngestionRuns.
+     */
+    data: IngestionRunCreateManyInput | IngestionRunCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * IngestionRun update
+   */
+  export type IngestionRunUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * The data needed to update a IngestionRun.
+     */
+    data: XOR<IngestionRunUpdateInput, IngestionRunUncheckedUpdateInput>
+    /**
+     * Choose, which IngestionRun to update.
+     */
+    where: IngestionRunWhereUniqueInput
+  }
+
+  /**
+   * IngestionRun updateMany
+   */
+  export type IngestionRunUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update IngestionRuns.
+     */
+    data: XOR<IngestionRunUpdateManyMutationInput, IngestionRunUncheckedUpdateManyInput>
+    /**
+     * Filter which IngestionRuns to update
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * Limit how many IngestionRuns to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionRun updateManyAndReturn
+   */
+  export type IngestionRunUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * The data used to update IngestionRuns.
+     */
+    data: XOR<IngestionRunUpdateManyMutationInput, IngestionRunUncheckedUpdateManyInput>
+    /**
+     * Filter which IngestionRuns to update
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * Limit how many IngestionRuns to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionRun upsert
+   */
+  export type IngestionRunUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * The filter to search for the IngestionRun to update in case it exists.
+     */
+    where: IngestionRunWhereUniqueInput
+    /**
+     * In case the IngestionRun found by the `where` argument doesn't exist, create a new IngestionRun with this data.
+     */
+    create: XOR<IngestionRunCreateInput, IngestionRunUncheckedCreateInput>
+    /**
+     * In case the IngestionRun was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<IngestionRunUpdateInput, IngestionRunUncheckedUpdateInput>
+  }
+
+  /**
+   * IngestionRun delete
+   */
+  export type IngestionRunDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+    /**
+     * Filter which IngestionRun to delete.
+     */
+    where: IngestionRunWhereUniqueInput
+  }
+
+  /**
+   * IngestionRun deleteMany
+   */
+  export type IngestionRunDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IngestionRuns to delete
+     */
+    where?: IngestionRunWhereInput
+    /**
+     * Limit how many IngestionRuns to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionRun.suggestions
+   */
+  export type IngestionRun$suggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    where?: IngestionSuggestionWhereInput
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    cursor?: IngestionSuggestionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionRun without action
+   */
+  export type IngestionRunDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionRun
+     */
+    select?: IngestionRunSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionRun
+     */
+    omit?: IngestionRunOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionRunInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model IngestionSuggestion
+   */
+
+  export type AggregateIngestionSuggestion = {
+    _count: IngestionSuggestionCountAggregateOutputType | null
+    _min: IngestionSuggestionMinAggregateOutputType | null
+    _max: IngestionSuggestionMaxAggregateOutputType | null
+  }
+
+  export type IngestionSuggestionMinAggregateOutputType = {
+    id: string | null
+    ingestionRunId: string | null
+    type: $Enums.IngestionSuggestionType | null
+    status: $Enums.IngestionSuggestionStatus | null
+    clinicId: string | null
+    doctorId: string | null
+    associationId: string | null
+    reason: string | null
+    suggestedAt: Date | null
+    resolvedAt: Date | null
+    resolvedByUserId: string | null
+    resolutionNote: string | null
+  }
+
+  export type IngestionSuggestionMaxAggregateOutputType = {
+    id: string | null
+    ingestionRunId: string | null
+    type: $Enums.IngestionSuggestionType | null
+    status: $Enums.IngestionSuggestionStatus | null
+    clinicId: string | null
+    doctorId: string | null
+    associationId: string | null
+    reason: string | null
+    suggestedAt: Date | null
+    resolvedAt: Date | null
+    resolvedByUserId: string | null
+    resolutionNote: string | null
+  }
+
+  export type IngestionSuggestionCountAggregateOutputType = {
+    id: number
+    ingestionRunId: number
+    type: number
+    status: number
+    clinicId: number
+    doctorId: number
+    associationId: number
+    reason: number
+    payload: number
+    suggestedAt: number
+    resolvedAt: number
+    resolvedByUserId: number
+    resolutionNote: number
+    _all: number
+  }
+
+
+  export type IngestionSuggestionMinAggregateInputType = {
+    id?: true
+    ingestionRunId?: true
+    type?: true
+    status?: true
+    clinicId?: true
+    doctorId?: true
+    associationId?: true
+    reason?: true
+    suggestedAt?: true
+    resolvedAt?: true
+    resolvedByUserId?: true
+    resolutionNote?: true
+  }
+
+  export type IngestionSuggestionMaxAggregateInputType = {
+    id?: true
+    ingestionRunId?: true
+    type?: true
+    status?: true
+    clinicId?: true
+    doctorId?: true
+    associationId?: true
+    reason?: true
+    suggestedAt?: true
+    resolvedAt?: true
+    resolvedByUserId?: true
+    resolutionNote?: true
+  }
+
+  export type IngestionSuggestionCountAggregateInputType = {
+    id?: true
+    ingestionRunId?: true
+    type?: true
+    status?: true
+    clinicId?: true
+    doctorId?: true
+    associationId?: true
+    reason?: true
+    payload?: true
+    suggestedAt?: true
+    resolvedAt?: true
+    resolvedByUserId?: true
+    resolutionNote?: true
+    _all?: true
+  }
+
+  export type IngestionSuggestionAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IngestionSuggestion to aggregate.
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionSuggestions to fetch.
+     */
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: IngestionSuggestionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionSuggestions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionSuggestions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned IngestionSuggestions
+    **/
+    _count?: true | IngestionSuggestionCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: IngestionSuggestionMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: IngestionSuggestionMaxAggregateInputType
+  }
+
+  export type GetIngestionSuggestionAggregateType<T extends IngestionSuggestionAggregateArgs> = {
+        [P in keyof T & keyof AggregateIngestionSuggestion]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateIngestionSuggestion[P]>
+      : GetScalarType<T[P], AggregateIngestionSuggestion[P]>
+  }
+
+
+
+
+  export type IngestionSuggestionGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionSuggestionWhereInput
+    orderBy?: IngestionSuggestionOrderByWithAggregationInput | IngestionSuggestionOrderByWithAggregationInput[]
+    by: IngestionSuggestionScalarFieldEnum[] | IngestionSuggestionScalarFieldEnum
+    having?: IngestionSuggestionScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: IngestionSuggestionCountAggregateInputType | true
+    _min?: IngestionSuggestionMinAggregateInputType
+    _max?: IngestionSuggestionMaxAggregateInputType
+  }
+
+  export type IngestionSuggestionGroupByOutputType = {
+    id: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status: $Enums.IngestionSuggestionStatus
+    clinicId: string | null
+    doctorId: string | null
+    associationId: string | null
+    reason: string | null
+    payload: JsonValue
+    suggestedAt: Date
+    resolvedAt: Date | null
+    resolvedByUserId: string | null
+    resolutionNote: string | null
+    _count: IngestionSuggestionCountAggregateOutputType | null
+    _min: IngestionSuggestionMinAggregateOutputType | null
+    _max: IngestionSuggestionMaxAggregateOutputType | null
+  }
+
+  type GetIngestionSuggestionGroupByPayload<T extends IngestionSuggestionGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<IngestionSuggestionGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof IngestionSuggestionGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], IngestionSuggestionGroupByOutputType[P]>
+            : GetScalarType<T[P], IngestionSuggestionGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type IngestionSuggestionSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ingestionRunId?: boolean
+    type?: boolean
+    status?: boolean
+    clinicId?: boolean
+    doctorId?: boolean
+    associationId?: boolean
+    reason?: boolean
+    payload?: boolean
+    suggestedAt?: boolean
+    resolvedAt?: boolean
+    resolvedByUserId?: boolean
+    resolutionNote?: boolean
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+    clinic?: boolean | IngestionSuggestion$clinicArgs<ExtArgs>
+    doctor?: boolean | IngestionSuggestion$doctorArgs<ExtArgs>
+    association?: boolean | IngestionSuggestion$associationArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionSuggestion"]>
+
+  export type IngestionSuggestionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ingestionRunId?: boolean
+    type?: boolean
+    status?: boolean
+    clinicId?: boolean
+    doctorId?: boolean
+    associationId?: boolean
+    reason?: boolean
+    payload?: boolean
+    suggestedAt?: boolean
+    resolvedAt?: boolean
+    resolvedByUserId?: boolean
+    resolutionNote?: boolean
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+    clinic?: boolean | IngestionSuggestion$clinicArgs<ExtArgs>
+    doctor?: boolean | IngestionSuggestion$doctorArgs<ExtArgs>
+    association?: boolean | IngestionSuggestion$associationArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionSuggestion"]>
+
+  export type IngestionSuggestionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ingestionRunId?: boolean
+    type?: boolean
+    status?: boolean
+    clinicId?: boolean
+    doctorId?: boolean
+    associationId?: boolean
+    reason?: boolean
+    payload?: boolean
+    suggestedAt?: boolean
+    resolvedAt?: boolean
+    resolvedByUserId?: boolean
+    resolutionNote?: boolean
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+    clinic?: boolean | IngestionSuggestion$clinicArgs<ExtArgs>
+    doctor?: boolean | IngestionSuggestion$doctorArgs<ExtArgs>
+    association?: boolean | IngestionSuggestion$associationArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionSuggestion"]>
+
+  export type IngestionSuggestionSelectScalar = {
+    id?: boolean
+    ingestionRunId?: boolean
+    type?: boolean
+    status?: boolean
+    clinicId?: boolean
+    doctorId?: boolean
+    associationId?: boolean
+    reason?: boolean
+    payload?: boolean
+    suggestedAt?: boolean
+    resolvedAt?: boolean
+    resolvedByUserId?: boolean
+    resolutionNote?: boolean
+  }
+
+  export type IngestionSuggestionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "ingestionRunId" | "type" | "status" | "clinicId" | "doctorId" | "associationId" | "reason" | "payload" | "suggestedAt" | "resolvedAt" | "resolvedByUserId" | "resolutionNote", ExtArgs["result"]["ingestionSuggestion"]>
+  export type IngestionSuggestionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+    clinic?: boolean | IngestionSuggestion$clinicArgs<ExtArgs>
+    doctor?: boolean | IngestionSuggestion$doctorArgs<ExtArgs>
+    association?: boolean | IngestionSuggestion$associationArgs<ExtArgs>
+  }
+  export type IngestionSuggestionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+    clinic?: boolean | IngestionSuggestion$clinicArgs<ExtArgs>
+    doctor?: boolean | IngestionSuggestion$doctorArgs<ExtArgs>
+    association?: boolean | IngestionSuggestion$associationArgs<ExtArgs>
+  }
+  export type IngestionSuggestionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+    clinic?: boolean | IngestionSuggestion$clinicArgs<ExtArgs>
+    doctor?: boolean | IngestionSuggestion$doctorArgs<ExtArgs>
+    association?: boolean | IngestionSuggestion$associationArgs<ExtArgs>
+  }
+
+  export type $IngestionSuggestionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "IngestionSuggestion"
+    objects: {
+      ingestionRun: Prisma.$IngestionRunPayload<ExtArgs>
+      clinic: Prisma.$ClinicPayload<ExtArgs> | null
+      doctor: Prisma.$DoctorPayload<ExtArgs> | null
+      association: Prisma.$DoctorClinicAssociationPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      ingestionRunId: string
+      type: $Enums.IngestionSuggestionType
+      status: $Enums.IngestionSuggestionStatus
+      clinicId: string | null
+      doctorId: string | null
+      associationId: string | null
+      reason: string | null
+      payload: Prisma.JsonValue
+      suggestedAt: Date
+      resolvedAt: Date | null
+      resolvedByUserId: string | null
+      resolutionNote: string | null
+    }, ExtArgs["result"]["ingestionSuggestion"]>
+    composites: {}
+  }
+
+  type IngestionSuggestionGetPayload<S extends boolean | null | undefined | IngestionSuggestionDefaultArgs> = $Result.GetResult<Prisma.$IngestionSuggestionPayload, S>
+
+  type IngestionSuggestionCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<IngestionSuggestionFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: IngestionSuggestionCountAggregateInputType | true
+    }
+
+  export interface IngestionSuggestionDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['IngestionSuggestion'], meta: { name: 'IngestionSuggestion' } }
+    /**
+     * Find zero or one IngestionSuggestion that matches the filter.
+     * @param {IngestionSuggestionFindUniqueArgs} args - Arguments to find a IngestionSuggestion
+     * @example
+     * // Get one IngestionSuggestion
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends IngestionSuggestionFindUniqueArgs>(args: SelectSubset<T, IngestionSuggestionFindUniqueArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one IngestionSuggestion that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {IngestionSuggestionFindUniqueOrThrowArgs} args - Arguments to find a IngestionSuggestion
+     * @example
+     * // Get one IngestionSuggestion
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends IngestionSuggestionFindUniqueOrThrowArgs>(args: SelectSubset<T, IngestionSuggestionFindUniqueOrThrowArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first IngestionSuggestion that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionFindFirstArgs} args - Arguments to find a IngestionSuggestion
+     * @example
+     * // Get one IngestionSuggestion
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends IngestionSuggestionFindFirstArgs>(args?: SelectSubset<T, IngestionSuggestionFindFirstArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first IngestionSuggestion that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionFindFirstOrThrowArgs} args - Arguments to find a IngestionSuggestion
+     * @example
+     * // Get one IngestionSuggestion
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends IngestionSuggestionFindFirstOrThrowArgs>(args?: SelectSubset<T, IngestionSuggestionFindFirstOrThrowArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more IngestionSuggestions that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all IngestionSuggestions
+     * const ingestionSuggestions = await prisma.ingestionSuggestion.findMany()
+     * 
+     * // Get first 10 IngestionSuggestions
+     * const ingestionSuggestions = await prisma.ingestionSuggestion.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const ingestionSuggestionWithIdOnly = await prisma.ingestionSuggestion.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends IngestionSuggestionFindManyArgs>(args?: SelectSubset<T, IngestionSuggestionFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a IngestionSuggestion.
+     * @param {IngestionSuggestionCreateArgs} args - Arguments to create a IngestionSuggestion.
+     * @example
+     * // Create one IngestionSuggestion
+     * const IngestionSuggestion = await prisma.ingestionSuggestion.create({
+     *   data: {
+     *     // ... data to create a IngestionSuggestion
+     *   }
+     * })
+     * 
+     */
+    create<T extends IngestionSuggestionCreateArgs>(args: SelectSubset<T, IngestionSuggestionCreateArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many IngestionSuggestions.
+     * @param {IngestionSuggestionCreateManyArgs} args - Arguments to create many IngestionSuggestions.
+     * @example
+     * // Create many IngestionSuggestions
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends IngestionSuggestionCreateManyArgs>(args?: SelectSubset<T, IngestionSuggestionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many IngestionSuggestions and returns the data saved in the database.
+     * @param {IngestionSuggestionCreateManyAndReturnArgs} args - Arguments to create many IngestionSuggestions.
+     * @example
+     * // Create many IngestionSuggestions
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many IngestionSuggestions and only return the `id`
+     * const ingestionSuggestionWithIdOnly = await prisma.ingestionSuggestion.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends IngestionSuggestionCreateManyAndReturnArgs>(args?: SelectSubset<T, IngestionSuggestionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a IngestionSuggestion.
+     * @param {IngestionSuggestionDeleteArgs} args - Arguments to delete one IngestionSuggestion.
+     * @example
+     * // Delete one IngestionSuggestion
+     * const IngestionSuggestion = await prisma.ingestionSuggestion.delete({
+     *   where: {
+     *     // ... filter to delete one IngestionSuggestion
+     *   }
+     * })
+     * 
+     */
+    delete<T extends IngestionSuggestionDeleteArgs>(args: SelectSubset<T, IngestionSuggestionDeleteArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one IngestionSuggestion.
+     * @param {IngestionSuggestionUpdateArgs} args - Arguments to update one IngestionSuggestion.
+     * @example
+     * // Update one IngestionSuggestion
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends IngestionSuggestionUpdateArgs>(args: SelectSubset<T, IngestionSuggestionUpdateArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more IngestionSuggestions.
+     * @param {IngestionSuggestionDeleteManyArgs} args - Arguments to filter IngestionSuggestions to delete.
+     * @example
+     * // Delete a few IngestionSuggestions
+     * const { count } = await prisma.ingestionSuggestion.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends IngestionSuggestionDeleteManyArgs>(args?: SelectSubset<T, IngestionSuggestionDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IngestionSuggestions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many IngestionSuggestions
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends IngestionSuggestionUpdateManyArgs>(args: SelectSubset<T, IngestionSuggestionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IngestionSuggestions and returns the data updated in the database.
+     * @param {IngestionSuggestionUpdateManyAndReturnArgs} args - Arguments to update many IngestionSuggestions.
+     * @example
+     * // Update many IngestionSuggestions
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more IngestionSuggestions and only return the `id`
+     * const ingestionSuggestionWithIdOnly = await prisma.ingestionSuggestion.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends IngestionSuggestionUpdateManyAndReturnArgs>(args: SelectSubset<T, IngestionSuggestionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one IngestionSuggestion.
+     * @param {IngestionSuggestionUpsertArgs} args - Arguments to update or create a IngestionSuggestion.
+     * @example
+     * // Update or create a IngestionSuggestion
+     * const ingestionSuggestion = await prisma.ingestionSuggestion.upsert({
+     *   create: {
+     *     // ... data to create a IngestionSuggestion
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the IngestionSuggestion we want to update
+     *   }
+     * })
+     */
+    upsert<T extends IngestionSuggestionUpsertArgs>(args: SelectSubset<T, IngestionSuggestionUpsertArgs<ExtArgs>>): Prisma__IngestionSuggestionClient<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of IngestionSuggestions.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionCountArgs} args - Arguments to filter IngestionSuggestions to count.
+     * @example
+     * // Count the number of IngestionSuggestions
+     * const count = await prisma.ingestionSuggestion.count({
+     *   where: {
+     *     // ... the filter for the IngestionSuggestions we want to count
+     *   }
+     * })
+    **/
+    count<T extends IngestionSuggestionCountArgs>(
+      args?: Subset<T, IngestionSuggestionCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], IngestionSuggestionCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a IngestionSuggestion.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends IngestionSuggestionAggregateArgs>(args: Subset<T, IngestionSuggestionAggregateArgs>): Prisma.PrismaPromise<GetIngestionSuggestionAggregateType<T>>
+
+    /**
+     * Group by IngestionSuggestion.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionSuggestionGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends IngestionSuggestionGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: IngestionSuggestionGroupByArgs['orderBy'] }
+        : { orderBy?: IngestionSuggestionGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, IngestionSuggestionGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetIngestionSuggestionGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the IngestionSuggestion model
+   */
+  readonly fields: IngestionSuggestionFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for IngestionSuggestion.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__IngestionSuggestionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    ingestionRun<T extends IngestionRunDefaultArgs<ExtArgs> = {}>(args?: Subset<T, IngestionRunDefaultArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    clinic<T extends IngestionSuggestion$clinicArgs<ExtArgs> = {}>(args?: Subset<T, IngestionSuggestion$clinicArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    doctor<T extends IngestionSuggestion$doctorArgs<ExtArgs> = {}>(args?: Subset<T, IngestionSuggestion$doctorArgs<ExtArgs>>): Prisma__DoctorClient<$Result.GetResult<Prisma.$DoctorPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    association<T extends IngestionSuggestion$associationArgs<ExtArgs> = {}>(args?: Subset<T, IngestionSuggestion$associationArgs<ExtArgs>>): Prisma__DoctorClinicAssociationClient<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the IngestionSuggestion model
+   */
+  interface IngestionSuggestionFieldRefs {
+    readonly id: FieldRef<"IngestionSuggestion", 'String'>
+    readonly ingestionRunId: FieldRef<"IngestionSuggestion", 'String'>
+    readonly type: FieldRef<"IngestionSuggestion", 'IngestionSuggestionType'>
+    readonly status: FieldRef<"IngestionSuggestion", 'IngestionSuggestionStatus'>
+    readonly clinicId: FieldRef<"IngestionSuggestion", 'String'>
+    readonly doctorId: FieldRef<"IngestionSuggestion", 'String'>
+    readonly associationId: FieldRef<"IngestionSuggestion", 'String'>
+    readonly reason: FieldRef<"IngestionSuggestion", 'String'>
+    readonly payload: FieldRef<"IngestionSuggestion", 'Json'>
+    readonly suggestedAt: FieldRef<"IngestionSuggestion", 'DateTime'>
+    readonly resolvedAt: FieldRef<"IngestionSuggestion", 'DateTime'>
+    readonly resolvedByUserId: FieldRef<"IngestionSuggestion", 'String'>
+    readonly resolutionNote: FieldRef<"IngestionSuggestion", 'String'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * IngestionSuggestion findUnique
+   */
+  export type IngestionSuggestionFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionSuggestion to fetch.
+     */
+    where: IngestionSuggestionWhereUniqueInput
+  }
+
+  /**
+   * IngestionSuggestion findUniqueOrThrow
+   */
+  export type IngestionSuggestionFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionSuggestion to fetch.
+     */
+    where: IngestionSuggestionWhereUniqueInput
+  }
+
+  /**
+   * IngestionSuggestion findFirst
+   */
+  export type IngestionSuggestionFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionSuggestion to fetch.
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionSuggestions to fetch.
+     */
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IngestionSuggestions.
+     */
+    cursor?: IngestionSuggestionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionSuggestions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionSuggestions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionSuggestions.
+     */
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionSuggestion findFirstOrThrow
+   */
+  export type IngestionSuggestionFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionSuggestion to fetch.
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionSuggestions to fetch.
+     */
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IngestionSuggestions.
+     */
+    cursor?: IngestionSuggestionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionSuggestions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionSuggestions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionSuggestions.
+     */
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionSuggestion findMany
+   */
+  export type IngestionSuggestionFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionSuggestions to fetch.
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionSuggestions to fetch.
+     */
+    orderBy?: IngestionSuggestionOrderByWithRelationInput | IngestionSuggestionOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing IngestionSuggestions.
+     */
+    cursor?: IngestionSuggestionWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionSuggestions from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionSuggestions.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionSuggestions.
+     */
+    distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionSuggestion create
+   */
+  export type IngestionSuggestionCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * The data needed to create a IngestionSuggestion.
+     */
+    data: XOR<IngestionSuggestionCreateInput, IngestionSuggestionUncheckedCreateInput>
+  }
+
+  /**
+   * IngestionSuggestion createMany
+   */
+  export type IngestionSuggestionCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many IngestionSuggestions.
+     */
+    data: IngestionSuggestionCreateManyInput | IngestionSuggestionCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * IngestionSuggestion createManyAndReturn
+   */
+  export type IngestionSuggestionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * The data used to create many IngestionSuggestions.
+     */
+    data: IngestionSuggestionCreateManyInput | IngestionSuggestionCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * IngestionSuggestion update
+   */
+  export type IngestionSuggestionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * The data needed to update a IngestionSuggestion.
+     */
+    data: XOR<IngestionSuggestionUpdateInput, IngestionSuggestionUncheckedUpdateInput>
+    /**
+     * Choose, which IngestionSuggestion to update.
+     */
+    where: IngestionSuggestionWhereUniqueInput
+  }
+
+  /**
+   * IngestionSuggestion updateMany
+   */
+  export type IngestionSuggestionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update IngestionSuggestions.
+     */
+    data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyInput>
+    /**
+     * Filter which IngestionSuggestions to update
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * Limit how many IngestionSuggestions to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionSuggestion updateManyAndReturn
+   */
+  export type IngestionSuggestionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * The data used to update IngestionSuggestions.
+     */
+    data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyInput>
+    /**
+     * Filter which IngestionSuggestions to update
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * Limit how many IngestionSuggestions to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * IngestionSuggestion upsert
+   */
+  export type IngestionSuggestionUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * The filter to search for the IngestionSuggestion to update in case it exists.
+     */
+    where: IngestionSuggestionWhereUniqueInput
+    /**
+     * In case the IngestionSuggestion found by the `where` argument doesn't exist, create a new IngestionSuggestion with this data.
+     */
+    create: XOR<IngestionSuggestionCreateInput, IngestionSuggestionUncheckedCreateInput>
+    /**
+     * In case the IngestionSuggestion was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<IngestionSuggestionUpdateInput, IngestionSuggestionUncheckedUpdateInput>
+  }
+
+  /**
+   * IngestionSuggestion delete
+   */
+  export type IngestionSuggestionDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
+    /**
+     * Filter which IngestionSuggestion to delete.
+     */
+    where: IngestionSuggestionWhereUniqueInput
+  }
+
+  /**
+   * IngestionSuggestion deleteMany
+   */
+  export type IngestionSuggestionDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IngestionSuggestions to delete
+     */
+    where?: IngestionSuggestionWhereInput
+    /**
+     * Limit how many IngestionSuggestions to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionSuggestion.clinic
+   */
+  export type IngestionSuggestion$clinicArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    where?: ClinicWhereInput
+  }
+
+  /**
+   * IngestionSuggestion.doctor
+   */
+  export type IngestionSuggestion$doctorArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Doctor
+     */
+    select?: DoctorSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Doctor
+     */
+    omit?: DoctorOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorInclude<ExtArgs> | null
+    where?: DoctorWhereInput
+  }
+
+  /**
+   * IngestionSuggestion.association
+   */
+  export type IngestionSuggestion$associationArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the DoctorClinicAssociation
+     */
+    select?: DoctorClinicAssociationSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the DoctorClinicAssociation
+     */
+    omit?: DoctorClinicAssociationOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: DoctorClinicAssociationInclude<ExtArgs> | null
+    where?: DoctorClinicAssociationWhereInput
+  }
+
+  /**
+   * IngestionSuggestion without action
+   */
+  export type IngestionSuggestionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionSuggestion
+     */
+    select?: IngestionSuggestionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionSuggestion
+     */
+    omit?: IngestionSuggestionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionSuggestionInclude<ExtArgs> | null
   }
 
 
@@ -16642,6 +19704,14 @@ export namespace Prisma {
     name: 'name',
     address: 'address',
     territoryId: 'territoryId',
+    sourceProvider: 'sourceProvider',
+    externalSourceId: 'externalSourceId',
+    sourceContentHash: 'sourceContentHash',
+    sourceFirstSeenAt: 'sourceFirstSeenAt',
+    sourceLastSeenAt: 'sourceLastSeenAt',
+    sourcePresent: 'sourcePresent',
+    sourceTracked: 'sourceTracked',
+    manuallyEditedAt: 'manuallyEditedAt',
     deletedAt: 'deletedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -16655,6 +19725,14 @@ export namespace Prisma {
     firstName: 'firstName',
     lastName: 'lastName',
     specialty: 'specialty',
+    sourceProvider: 'sourceProvider',
+    externalSourceId: 'externalSourceId',
+    sourceContentHash: 'sourceContentHash',
+    sourceFirstSeenAt: 'sourceFirstSeenAt',
+    sourceLastSeenAt: 'sourceLastSeenAt',
+    sourcePresent: 'sourcePresent',
+    sourceTracked: 'sourceTracked',
+    manuallyEditedAt: 'manuallyEditedAt',
     deletedAt: 'deletedAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
@@ -16663,14 +19741,55 @@ export namespace Prisma {
   export type DoctorScalarFieldEnum = (typeof DoctorScalarFieldEnum)[keyof typeof DoctorScalarFieldEnum]
 
 
-  export const DoctorClinicScalarFieldEnum: {
+  export const DoctorClinicAssociationScalarFieldEnum: {
     id: 'id',
     doctorId: 'doctorId',
     clinicId: 'clinicId',
-    createdAt: 'createdAt'
+    sourceActive: 'sourceActive',
+    sourceFirstSeenAt: 'sourceFirstSeenAt',
+    sourceLastSeenAt: 'sourceLastSeenAt',
+    confirmedAt: 'confirmedAt',
+    confirmedByUserId: 'confirmedByUserId',
+    endedAt: 'endedAt',
+    endedByUserId: 'endedByUserId',
+    endReason: 'endReason',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
   };
 
-  export type DoctorClinicScalarFieldEnum = (typeof DoctorClinicScalarFieldEnum)[keyof typeof DoctorClinicScalarFieldEnum]
+  export type DoctorClinicAssociationScalarFieldEnum = (typeof DoctorClinicAssociationScalarFieldEnum)[keyof typeof DoctorClinicAssociationScalarFieldEnum]
+
+
+  export const IngestionRunScalarFieldEnum: {
+    id: 'id',
+    sourceProvider: 'sourceProvider',
+    status: 'status',
+    startedAt: 'startedAt',
+    completedAt: 'completedAt',
+    stats: 'stats',
+    error: 'error'
+  };
+
+  export type IngestionRunScalarFieldEnum = (typeof IngestionRunScalarFieldEnum)[keyof typeof IngestionRunScalarFieldEnum]
+
+
+  export const IngestionSuggestionScalarFieldEnum: {
+    id: 'id',
+    ingestionRunId: 'ingestionRunId',
+    type: 'type',
+    status: 'status',
+    clinicId: 'clinicId',
+    doctorId: 'doctorId',
+    associationId: 'associationId',
+    reason: 'reason',
+    payload: 'payload',
+    suggestedAt: 'suggestedAt',
+    resolvedAt: 'resolvedAt',
+    resolvedByUserId: 'resolvedByUserId',
+    resolutionNote: 'resolutionNote'
+  };
+
+  export type IngestionSuggestionScalarFieldEnum = (typeof IngestionSuggestionScalarFieldEnum)[keyof typeof IngestionSuggestionScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -16687,6 +19806,13 @@ export namespace Prisma {
   };
 
   export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
+  export const JsonNullValueInput: {
+    JsonNull: typeof JsonNull
+  };
+
+  export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
 
 
   export const QueryMode: {
@@ -16877,6 +20003,48 @@ export namespace Prisma {
    * Reference to a field of type 'VerificationTokenType[]'
    */
   export type ListEnumVerificationTokenTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'VerificationTokenType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionRunStatus'
+   */
+  export type EnumIngestionRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionRunStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionRunStatus[]'
+   */
+  export type ListEnumIngestionRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionRunStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionSuggestionType'
+   */
+  export type EnumIngestionSuggestionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionSuggestionType'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionSuggestionType[]'
+   */
+  export type ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionSuggestionType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionSuggestionStatus'
+   */
+  export type EnumIngestionSuggestionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionSuggestionStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionSuggestionStatus[]'
+   */
+  export type ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionSuggestionStatus[]'>
     
 
 
@@ -17836,10 +21004,19 @@ export namespace Prisma {
     name?: StringFilter<"Clinic"> | string
     address?: StringNullableFilter<"Clinic"> | string | null
     territoryId?: StringNullableFilter<"Clinic"> | string | null
+    sourceProvider?: StringNullableFilter<"Clinic"> | string | null
+    externalSourceId?: StringNullableFilter<"Clinic"> | string | null
+    sourceContentHash?: StringNullableFilter<"Clinic"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    sourcePresent?: BoolFilter<"Clinic"> | boolean
+    sourceTracked?: BoolFilter<"Clinic"> | boolean
+    manuallyEditedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
     createdAt?: DateTimeFilter<"Clinic"> | Date | string
     updatedAt?: DateTimeFilter<"Clinic"> | Date | string
-    doctorClinics?: DoctorClinicListRelationFilter
+    doctorAssociations?: DoctorClinicAssociationListRelationFilter
+    ingestionSuggestions?: IngestionSuggestionListRelationFilter
   }
 
   export type ClinicOrderByWithRelationInput = {
@@ -17847,31 +21024,58 @@ export namespace Prisma {
     name?: SortOrder
     address?: SortOrderInput | SortOrder
     territoryId?: SortOrderInput | SortOrder
+    sourceProvider?: SortOrderInput | SortOrder
+    externalSourceId?: SortOrderInput | SortOrder
+    sourceContentHash?: SortOrderInput | SortOrder
+    sourceFirstSeenAt?: SortOrderInput | SortOrder
+    sourceLastSeenAt?: SortOrderInput | SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    doctorClinics?: DoctorClinicOrderByRelationAggregateInput
+    doctorAssociations?: DoctorClinicAssociationOrderByRelationAggregateInput
+    ingestionSuggestions?: IngestionSuggestionOrderByRelationAggregateInput
   }
 
   export type ClinicWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    sourceProvider_externalSourceId?: ClinicSourceProviderExternalSourceIdCompoundUniqueInput
     AND?: ClinicWhereInput | ClinicWhereInput[]
     OR?: ClinicWhereInput[]
     NOT?: ClinicWhereInput | ClinicWhereInput[]
     name?: StringFilter<"Clinic"> | string
     address?: StringNullableFilter<"Clinic"> | string | null
     territoryId?: StringNullableFilter<"Clinic"> | string | null
+    sourceProvider?: StringNullableFilter<"Clinic"> | string | null
+    externalSourceId?: StringNullableFilter<"Clinic"> | string | null
+    sourceContentHash?: StringNullableFilter<"Clinic"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    sourcePresent?: BoolFilter<"Clinic"> | boolean
+    sourceTracked?: BoolFilter<"Clinic"> | boolean
+    manuallyEditedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
     createdAt?: DateTimeFilter<"Clinic"> | Date | string
     updatedAt?: DateTimeFilter<"Clinic"> | Date | string
-    doctorClinics?: DoctorClinicListRelationFilter
-  }, "id">
+    doctorAssociations?: DoctorClinicAssociationListRelationFilter
+    ingestionSuggestions?: IngestionSuggestionListRelationFilter
+  }, "id" | "sourceProvider_externalSourceId">
 
   export type ClinicOrderByWithAggregationInput = {
     id?: SortOrder
     name?: SortOrder
     address?: SortOrderInput | SortOrder
     territoryId?: SortOrderInput | SortOrder
+    sourceProvider?: SortOrderInput | SortOrder
+    externalSourceId?: SortOrderInput | SortOrder
+    sourceContentHash?: SortOrderInput | SortOrder
+    sourceFirstSeenAt?: SortOrderInput | SortOrder
+    sourceLastSeenAt?: SortOrderInput | SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -17888,6 +21092,14 @@ export namespace Prisma {
     name?: StringWithAggregatesFilter<"Clinic"> | string
     address?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
     territoryId?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    sourceProvider?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    externalSourceId?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    sourceContentHash?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableWithAggregatesFilter<"Clinic"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableWithAggregatesFilter<"Clinic"> | Date | string | null
+    sourcePresent?: BoolWithAggregatesFilter<"Clinic"> | boolean
+    sourceTracked?: BoolWithAggregatesFilter<"Clinic"> | boolean
+    manuallyEditedAt?: DateTimeNullableWithAggregatesFilter<"Clinic"> | Date | string | null
     deletedAt?: DateTimeNullableWithAggregatesFilter<"Clinic"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Clinic"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Clinic"> | Date | string
@@ -17901,10 +21113,19 @@ export namespace Prisma {
     firstName?: StringFilter<"Doctor"> | string
     lastName?: StringFilter<"Doctor"> | string
     specialty?: StringNullableFilter<"Doctor"> | string | null
+    sourceProvider?: StringNullableFilter<"Doctor"> | string | null
+    externalSourceId?: StringNullableFilter<"Doctor"> | string | null
+    sourceContentHash?: StringNullableFilter<"Doctor"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
+    sourcePresent?: BoolFilter<"Doctor"> | boolean
+    sourceTracked?: BoolFilter<"Doctor"> | boolean
+    manuallyEditedAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
     createdAt?: DateTimeFilter<"Doctor"> | Date | string
     updatedAt?: DateTimeFilter<"Doctor"> | Date | string
-    doctorClinics?: DoctorClinicListRelationFilter
+    clinicAssociations?: DoctorClinicAssociationListRelationFilter
+    ingestionSuggestions?: IngestionSuggestionListRelationFilter
   }
 
   export type DoctorOrderByWithRelationInput = {
@@ -17912,31 +21133,58 @@ export namespace Prisma {
     firstName?: SortOrder
     lastName?: SortOrder
     specialty?: SortOrderInput | SortOrder
+    sourceProvider?: SortOrderInput | SortOrder
+    externalSourceId?: SortOrderInput | SortOrder
+    sourceContentHash?: SortOrderInput | SortOrder
+    sourceFirstSeenAt?: SortOrderInput | SortOrder
+    sourceLastSeenAt?: SortOrderInput | SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
-    doctorClinics?: DoctorClinicOrderByRelationAggregateInput
+    clinicAssociations?: DoctorClinicAssociationOrderByRelationAggregateInput
+    ingestionSuggestions?: IngestionSuggestionOrderByRelationAggregateInput
   }
 
   export type DoctorWhereUniqueInput = Prisma.AtLeast<{
     id?: string
+    sourceProvider_externalSourceId?: DoctorSourceProviderExternalSourceIdCompoundUniqueInput
     AND?: DoctorWhereInput | DoctorWhereInput[]
     OR?: DoctorWhereInput[]
     NOT?: DoctorWhereInput | DoctorWhereInput[]
     firstName?: StringFilter<"Doctor"> | string
     lastName?: StringFilter<"Doctor"> | string
     specialty?: StringNullableFilter<"Doctor"> | string | null
+    sourceProvider?: StringNullableFilter<"Doctor"> | string | null
+    externalSourceId?: StringNullableFilter<"Doctor"> | string | null
+    sourceContentHash?: StringNullableFilter<"Doctor"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
+    sourcePresent?: BoolFilter<"Doctor"> | boolean
+    sourceTracked?: BoolFilter<"Doctor"> | boolean
+    manuallyEditedAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Doctor"> | Date | string | null
     createdAt?: DateTimeFilter<"Doctor"> | Date | string
     updatedAt?: DateTimeFilter<"Doctor"> | Date | string
-    doctorClinics?: DoctorClinicListRelationFilter
-  }, "id">
+    clinicAssociations?: DoctorClinicAssociationListRelationFilter
+    ingestionSuggestions?: IngestionSuggestionListRelationFilter
+  }, "id" | "sourceProvider_externalSourceId">
 
   export type DoctorOrderByWithAggregationInput = {
     id?: SortOrder
     firstName?: SortOrder
     lastName?: SortOrder
     specialty?: SortOrderInput | SortOrder
+    sourceProvider?: SortOrderInput | SortOrder
+    externalSourceId?: SortOrderInput | SortOrder
+    sourceContentHash?: SortOrderInput | SortOrder
+    sourceFirstSeenAt?: SortOrderInput | SortOrder
+    sourceLastSeenAt?: SortOrderInput | SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -17953,63 +21201,288 @@ export namespace Prisma {
     firstName?: StringWithAggregatesFilter<"Doctor"> | string
     lastName?: StringWithAggregatesFilter<"Doctor"> | string
     specialty?: StringNullableWithAggregatesFilter<"Doctor"> | string | null
+    sourceProvider?: StringNullableWithAggregatesFilter<"Doctor"> | string | null
+    externalSourceId?: StringNullableWithAggregatesFilter<"Doctor"> | string | null
+    sourceContentHash?: StringNullableWithAggregatesFilter<"Doctor"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableWithAggregatesFilter<"Doctor"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableWithAggregatesFilter<"Doctor"> | Date | string | null
+    sourcePresent?: BoolWithAggregatesFilter<"Doctor"> | boolean
+    sourceTracked?: BoolWithAggregatesFilter<"Doctor"> | boolean
+    manuallyEditedAt?: DateTimeNullableWithAggregatesFilter<"Doctor"> | Date | string | null
     deletedAt?: DateTimeNullableWithAggregatesFilter<"Doctor"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Doctor"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Doctor"> | Date | string
   }
 
-  export type DoctorClinicWhereInput = {
-    AND?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
-    OR?: DoctorClinicWhereInput[]
-    NOT?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
-    id?: StringFilter<"DoctorClinic"> | string
-    doctorId?: StringFilter<"DoctorClinic"> | string
-    clinicId?: StringFilter<"DoctorClinic"> | string
-    createdAt?: DateTimeFilter<"DoctorClinic"> | Date | string
+  export type DoctorClinicAssociationWhereInput = {
+    AND?: DoctorClinicAssociationWhereInput | DoctorClinicAssociationWhereInput[]
+    OR?: DoctorClinicAssociationWhereInput[]
+    NOT?: DoctorClinicAssociationWhereInput | DoctorClinicAssociationWhereInput[]
+    id?: StringFilter<"DoctorClinicAssociation"> | string
+    doctorId?: StringFilter<"DoctorClinicAssociation"> | string
+    clinicId?: StringFilter<"DoctorClinicAssociation"> | string
+    sourceActive?: BoolFilter<"DoctorClinicAssociation"> | boolean
+    sourceFirstSeenAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedByUserId?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    endedAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    endedByUserId?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    endReason?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    createdAt?: DateTimeFilter<"DoctorClinicAssociation"> | Date | string
+    updatedAt?: DateTimeFilter<"DoctorClinicAssociation"> | Date | string
     doctor?: XOR<DoctorScalarRelationFilter, DoctorWhereInput>
     clinic?: XOR<ClinicScalarRelationFilter, ClinicWhereInput>
+    ingestionSuggestions?: IngestionSuggestionListRelationFilter
   }
 
-  export type DoctorClinicOrderByWithRelationInput = {
+  export type DoctorClinicAssociationOrderByWithRelationInput = {
     id?: SortOrder
     doctorId?: SortOrder
     clinicId?: SortOrder
+    sourceActive?: SortOrder
+    sourceFirstSeenAt?: SortOrderInput | SortOrder
+    sourceLastSeenAt?: SortOrderInput | SortOrder
+    confirmedAt?: SortOrderInput | SortOrder
+    confirmedByUserId?: SortOrderInput | SortOrder
+    endedAt?: SortOrderInput | SortOrder
+    endedByUserId?: SortOrderInput | SortOrder
+    endReason?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
     doctor?: DoctorOrderByWithRelationInput
     clinic?: ClinicOrderByWithRelationInput
+    ingestionSuggestions?: IngestionSuggestionOrderByRelationAggregateInput
   }
 
-  export type DoctorClinicWhereUniqueInput = Prisma.AtLeast<{
+  export type DoctorClinicAssociationWhereUniqueInput = Prisma.AtLeast<{
     id?: string
-    doctorId_clinicId?: DoctorClinicDoctorIdClinicIdCompoundUniqueInput
-    AND?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
-    OR?: DoctorClinicWhereInput[]
-    NOT?: DoctorClinicWhereInput | DoctorClinicWhereInput[]
-    doctorId?: StringFilter<"DoctorClinic"> | string
-    clinicId?: StringFilter<"DoctorClinic"> | string
-    createdAt?: DateTimeFilter<"DoctorClinic"> | Date | string
+    doctorId_clinicId?: DoctorClinicAssociationDoctorIdClinicIdCompoundUniqueInput
+    AND?: DoctorClinicAssociationWhereInput | DoctorClinicAssociationWhereInput[]
+    OR?: DoctorClinicAssociationWhereInput[]
+    NOT?: DoctorClinicAssociationWhereInput | DoctorClinicAssociationWhereInput[]
+    doctorId?: StringFilter<"DoctorClinicAssociation"> | string
+    clinicId?: StringFilter<"DoctorClinicAssociation"> | string
+    sourceActive?: BoolFilter<"DoctorClinicAssociation"> | boolean
+    sourceFirstSeenAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedByUserId?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    endedAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    endedByUserId?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    endReason?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    createdAt?: DateTimeFilter<"DoctorClinicAssociation"> | Date | string
+    updatedAt?: DateTimeFilter<"DoctorClinicAssociation"> | Date | string
     doctor?: XOR<DoctorScalarRelationFilter, DoctorWhereInput>
     clinic?: XOR<ClinicScalarRelationFilter, ClinicWhereInput>
+    ingestionSuggestions?: IngestionSuggestionListRelationFilter
   }, "id" | "doctorId_clinicId">
 
-  export type DoctorClinicOrderByWithAggregationInput = {
+  export type DoctorClinicAssociationOrderByWithAggregationInput = {
     id?: SortOrder
     doctorId?: SortOrder
     clinicId?: SortOrder
+    sourceActive?: SortOrder
+    sourceFirstSeenAt?: SortOrderInput | SortOrder
+    sourceLastSeenAt?: SortOrderInput | SortOrder
+    confirmedAt?: SortOrderInput | SortOrder
+    confirmedByUserId?: SortOrderInput | SortOrder
+    endedAt?: SortOrderInput | SortOrder
+    endedByUserId?: SortOrderInput | SortOrder
+    endReason?: SortOrderInput | SortOrder
     createdAt?: SortOrder
-    _count?: DoctorClinicCountOrderByAggregateInput
-    _max?: DoctorClinicMaxOrderByAggregateInput
-    _min?: DoctorClinicMinOrderByAggregateInput
+    updatedAt?: SortOrder
+    _count?: DoctorClinicAssociationCountOrderByAggregateInput
+    _max?: DoctorClinicAssociationMaxOrderByAggregateInput
+    _min?: DoctorClinicAssociationMinOrderByAggregateInput
   }
 
-  export type DoctorClinicScalarWhereWithAggregatesInput = {
-    AND?: DoctorClinicScalarWhereWithAggregatesInput | DoctorClinicScalarWhereWithAggregatesInput[]
-    OR?: DoctorClinicScalarWhereWithAggregatesInput[]
-    NOT?: DoctorClinicScalarWhereWithAggregatesInput | DoctorClinicScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"DoctorClinic"> | string
-    doctorId?: StringWithAggregatesFilter<"DoctorClinic"> | string
-    clinicId?: StringWithAggregatesFilter<"DoctorClinic"> | string
-    createdAt?: DateTimeWithAggregatesFilter<"DoctorClinic"> | Date | string
+  export type DoctorClinicAssociationScalarWhereWithAggregatesInput = {
+    AND?: DoctorClinicAssociationScalarWhereWithAggregatesInput | DoctorClinicAssociationScalarWhereWithAggregatesInput[]
+    OR?: DoctorClinicAssociationScalarWhereWithAggregatesInput[]
+    NOT?: DoctorClinicAssociationScalarWhereWithAggregatesInput | DoctorClinicAssociationScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"DoctorClinicAssociation"> | string
+    doctorId?: StringWithAggregatesFilter<"DoctorClinicAssociation"> | string
+    clinicId?: StringWithAggregatesFilter<"DoctorClinicAssociation"> | string
+    sourceActive?: BoolWithAggregatesFilter<"DoctorClinicAssociation"> | boolean
+    sourceFirstSeenAt?: DateTimeNullableWithAggregatesFilter<"DoctorClinicAssociation"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableWithAggregatesFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedAt?: DateTimeNullableWithAggregatesFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedByUserId?: StringNullableWithAggregatesFilter<"DoctorClinicAssociation"> | string | null
+    endedAt?: DateTimeNullableWithAggregatesFilter<"DoctorClinicAssociation"> | Date | string | null
+    endedByUserId?: StringNullableWithAggregatesFilter<"DoctorClinicAssociation"> | string | null
+    endReason?: StringNullableWithAggregatesFilter<"DoctorClinicAssociation"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"DoctorClinicAssociation"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"DoctorClinicAssociation"> | Date | string
+  }
+
+  export type IngestionRunWhereInput = {
+    AND?: IngestionRunWhereInput | IngestionRunWhereInput[]
+    OR?: IngestionRunWhereInput[]
+    NOT?: IngestionRunWhereInput | IngestionRunWhereInput[]
+    id?: StringFilter<"IngestionRun"> | string
+    sourceProvider?: StringFilter<"IngestionRun"> | string
+    status?: EnumIngestionRunStatusFilter<"IngestionRun"> | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFilter<"IngestionRun"> | Date | string
+    completedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
+    stats?: JsonNullableFilter<"IngestionRun">
+    error?: StringNullableFilter<"IngestionRun"> | string | null
+    suggestions?: IngestionSuggestionListRelationFilter
+  }
+
+  export type IngestionRunOrderByWithRelationInput = {
+    id?: SortOrder
+    sourceProvider?: SortOrder
+    status?: SortOrder
+    startedAt?: SortOrder
+    completedAt?: SortOrderInput | SortOrder
+    stats?: SortOrderInput | SortOrder
+    error?: SortOrderInput | SortOrder
+    suggestions?: IngestionSuggestionOrderByRelationAggregateInput
+  }
+
+  export type IngestionRunWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: IngestionRunWhereInput | IngestionRunWhereInput[]
+    OR?: IngestionRunWhereInput[]
+    NOT?: IngestionRunWhereInput | IngestionRunWhereInput[]
+    sourceProvider?: StringFilter<"IngestionRun"> | string
+    status?: EnumIngestionRunStatusFilter<"IngestionRun"> | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFilter<"IngestionRun"> | Date | string
+    completedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
+    stats?: JsonNullableFilter<"IngestionRun">
+    error?: StringNullableFilter<"IngestionRun"> | string | null
+    suggestions?: IngestionSuggestionListRelationFilter
+  }, "id">
+
+  export type IngestionRunOrderByWithAggregationInput = {
+    id?: SortOrder
+    sourceProvider?: SortOrder
+    status?: SortOrder
+    startedAt?: SortOrder
+    completedAt?: SortOrderInput | SortOrder
+    stats?: SortOrderInput | SortOrder
+    error?: SortOrderInput | SortOrder
+    _count?: IngestionRunCountOrderByAggregateInput
+    _max?: IngestionRunMaxOrderByAggregateInput
+    _min?: IngestionRunMinOrderByAggregateInput
+  }
+
+  export type IngestionRunScalarWhereWithAggregatesInput = {
+    AND?: IngestionRunScalarWhereWithAggregatesInput | IngestionRunScalarWhereWithAggregatesInput[]
+    OR?: IngestionRunScalarWhereWithAggregatesInput[]
+    NOT?: IngestionRunScalarWhereWithAggregatesInput | IngestionRunScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"IngestionRun"> | string
+    sourceProvider?: StringWithAggregatesFilter<"IngestionRun"> | string
+    status?: EnumIngestionRunStatusWithAggregatesFilter<"IngestionRun"> | $Enums.IngestionRunStatus
+    startedAt?: DateTimeWithAggregatesFilter<"IngestionRun"> | Date | string
+    completedAt?: DateTimeNullableWithAggregatesFilter<"IngestionRun"> | Date | string | null
+    stats?: JsonNullableWithAggregatesFilter<"IngestionRun">
+    error?: StringNullableWithAggregatesFilter<"IngestionRun"> | string | null
+  }
+
+  export type IngestionSuggestionWhereInput = {
+    AND?: IngestionSuggestionWhereInput | IngestionSuggestionWhereInput[]
+    OR?: IngestionSuggestionWhereInput[]
+    NOT?: IngestionSuggestionWhereInput | IngestionSuggestionWhereInput[]
+    id?: StringFilter<"IngestionSuggestion"> | string
+    ingestionRunId?: StringFilter<"IngestionSuggestion"> | string
+    type?: EnumIngestionSuggestionTypeFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionStatus
+    clinicId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    doctorId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    associationId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    reason?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    payload?: JsonFilter<"IngestionSuggestion">
+    suggestedAt?: DateTimeFilter<"IngestionSuggestion"> | Date | string
+    resolvedAt?: DateTimeNullableFilter<"IngestionSuggestion"> | Date | string | null
+    resolvedByUserId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    resolutionNote?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    ingestionRun?: XOR<IngestionRunScalarRelationFilter, IngestionRunWhereInput>
+    clinic?: XOR<ClinicNullableScalarRelationFilter, ClinicWhereInput> | null
+    doctor?: XOR<DoctorNullableScalarRelationFilter, DoctorWhereInput> | null
+    association?: XOR<DoctorClinicAssociationNullableScalarRelationFilter, DoctorClinicAssociationWhereInput> | null
+  }
+
+  export type IngestionSuggestionOrderByWithRelationInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    clinicId?: SortOrderInput | SortOrder
+    doctorId?: SortOrderInput | SortOrder
+    associationId?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    payload?: SortOrder
+    suggestedAt?: SortOrder
+    resolvedAt?: SortOrderInput | SortOrder
+    resolvedByUserId?: SortOrderInput | SortOrder
+    resolutionNote?: SortOrderInput | SortOrder
+    ingestionRun?: IngestionRunOrderByWithRelationInput
+    clinic?: ClinicOrderByWithRelationInput
+    doctor?: DoctorOrderByWithRelationInput
+    association?: DoctorClinicAssociationOrderByWithRelationInput
+  }
+
+  export type IngestionSuggestionWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: IngestionSuggestionWhereInput | IngestionSuggestionWhereInput[]
+    OR?: IngestionSuggestionWhereInput[]
+    NOT?: IngestionSuggestionWhereInput | IngestionSuggestionWhereInput[]
+    ingestionRunId?: StringFilter<"IngestionSuggestion"> | string
+    type?: EnumIngestionSuggestionTypeFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionStatus
+    clinicId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    doctorId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    associationId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    reason?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    payload?: JsonFilter<"IngestionSuggestion">
+    suggestedAt?: DateTimeFilter<"IngestionSuggestion"> | Date | string
+    resolvedAt?: DateTimeNullableFilter<"IngestionSuggestion"> | Date | string | null
+    resolvedByUserId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    resolutionNote?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    ingestionRun?: XOR<IngestionRunScalarRelationFilter, IngestionRunWhereInput>
+    clinic?: XOR<ClinicNullableScalarRelationFilter, ClinicWhereInput> | null
+    doctor?: XOR<DoctorNullableScalarRelationFilter, DoctorWhereInput> | null
+    association?: XOR<DoctorClinicAssociationNullableScalarRelationFilter, DoctorClinicAssociationWhereInput> | null
+  }, "id">
+
+  export type IngestionSuggestionOrderByWithAggregationInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    clinicId?: SortOrderInput | SortOrder
+    doctorId?: SortOrderInput | SortOrder
+    associationId?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    payload?: SortOrder
+    suggestedAt?: SortOrder
+    resolvedAt?: SortOrderInput | SortOrder
+    resolvedByUserId?: SortOrderInput | SortOrder
+    resolutionNote?: SortOrderInput | SortOrder
+    _count?: IngestionSuggestionCountOrderByAggregateInput
+    _max?: IngestionSuggestionMaxOrderByAggregateInput
+    _min?: IngestionSuggestionMinOrderByAggregateInput
+  }
+
+  export type IngestionSuggestionScalarWhereWithAggregatesInput = {
+    AND?: IngestionSuggestionScalarWhereWithAggregatesInput | IngestionSuggestionScalarWhereWithAggregatesInput[]
+    OR?: IngestionSuggestionScalarWhereWithAggregatesInput[]
+    NOT?: IngestionSuggestionScalarWhereWithAggregatesInput | IngestionSuggestionScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"IngestionSuggestion"> | string
+    ingestionRunId?: StringWithAggregatesFilter<"IngestionSuggestion"> | string
+    type?: EnumIngestionSuggestionTypeWithAggregatesFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusWithAggregatesFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionStatus
+    clinicId?: StringNullableWithAggregatesFilter<"IngestionSuggestion"> | string | null
+    doctorId?: StringNullableWithAggregatesFilter<"IngestionSuggestion"> | string | null
+    associationId?: StringNullableWithAggregatesFilter<"IngestionSuggestion"> | string | null
+    reason?: StringNullableWithAggregatesFilter<"IngestionSuggestion"> | string | null
+    payload?: JsonWithAggregatesFilter<"IngestionSuggestion">
+    suggestedAt?: DateTimeWithAggregatesFilter<"IngestionSuggestion"> | Date | string
+    resolvedAt?: DateTimeNullableWithAggregatesFilter<"IngestionSuggestion"> | Date | string | null
+    resolvedByUserId?: StringNullableWithAggregatesFilter<"IngestionSuggestion"> | string | null
+    resolutionNote?: StringNullableWithAggregatesFilter<"IngestionSuggestion"> | string | null
   }
 
   export type UserCreateInput = {
@@ -19104,10 +22577,19 @@ export namespace Prisma {
     name: string
     address?: string | null
     territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    doctorClinics?: DoctorClinicCreateNestedManyWithoutClinicInput
+    doctorAssociations?: DoctorClinicAssociationCreateNestedManyWithoutClinicInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicUncheckedCreateInput = {
@@ -19115,10 +22597,19 @@ export namespace Prisma {
     name: string
     address?: string | null
     territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    doctorClinics?: DoctorClinicUncheckedCreateNestedManyWithoutClinicInput
+    doctorAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicUpdateInput = {
@@ -19126,10 +22617,19 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    doctorClinics?: DoctorClinicUpdateManyWithoutClinicNestedInput
+    doctorAssociations?: DoctorClinicAssociationUpdateManyWithoutClinicNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutClinicNestedInput
   }
 
   export type ClinicUncheckedUpdateInput = {
@@ -19137,10 +22637,19 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    doctorClinics?: DoctorClinicUncheckedUpdateManyWithoutClinicNestedInput
+    doctorAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput
   }
 
   export type ClinicCreateManyInput = {
@@ -19148,6 +22657,14 @@ export namespace Prisma {
     name: string
     address?: string | null
     territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19158,6 +22675,14 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19168,6 +22693,14 @@ export namespace Prisma {
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19178,10 +22711,19 @@ export namespace Prisma {
     firstName: string
     lastName: string
     specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    doctorClinics?: DoctorClinicCreateNestedManyWithoutDoctorInput
+    clinicAssociations?: DoctorClinicAssociationCreateNestedManyWithoutDoctorInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutDoctorInput
   }
 
   export type DoctorUncheckedCreateInput = {
@@ -19189,10 +22731,19 @@ export namespace Prisma {
     firstName: string
     lastName: string
     specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
-    doctorClinics?: DoctorClinicUncheckedCreateNestedManyWithoutDoctorInput
+    clinicAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutDoctorInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutDoctorInput
   }
 
   export type DoctorUpdateInput = {
@@ -19200,10 +22751,19 @@ export namespace Prisma {
     firstName?: StringFieldUpdateOperationsInput | string
     lastName?: StringFieldUpdateOperationsInput | string
     specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    doctorClinics?: DoctorClinicUpdateManyWithoutDoctorNestedInput
+    clinicAssociations?: DoctorClinicAssociationUpdateManyWithoutDoctorNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutDoctorNestedInput
   }
 
   export type DoctorUncheckedUpdateInput = {
@@ -19211,10 +22771,19 @@ export namespace Prisma {
     firstName?: StringFieldUpdateOperationsInput | string
     lastName?: StringFieldUpdateOperationsInput | string
     specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    doctorClinics?: DoctorClinicUncheckedUpdateManyWithoutDoctorNestedInput
+    clinicAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutDoctorNestedInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutDoctorNestedInput
   }
 
   export type DoctorCreateManyInput = {
@@ -19222,6 +22791,14 @@ export namespace Prisma {
     firstName: string
     lastName: string
     specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -19232,6 +22809,14 @@ export namespace Prisma {
     firstName?: StringFieldUpdateOperationsInput | string
     lastName?: StringFieldUpdateOperationsInput | string
     specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19242,56 +22827,313 @@ export namespace Prisma {
     firstName?: StringFieldUpdateOperationsInput | string
     lastName?: StringFieldUpdateOperationsInput | string
     specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type DoctorClinicCreateInput = {
+  export type DoctorClinicAssociationCreateInput = {
     id?: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
-    doctor: DoctorCreateNestedOneWithoutDoctorClinicsInput
-    clinic: ClinicCreateNestedOneWithoutDoctorClinicsInput
+    updatedAt?: Date | string
+    doctor: DoctorCreateNestedOneWithoutClinicAssociationsInput
+    clinic: ClinicCreateNestedOneWithoutDoctorAssociationsInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutAssociationInput
   }
 
-  export type DoctorClinicUncheckedCreateInput = {
-    id?: string
-    doctorId: string
-    clinicId: string
-    createdAt?: Date | string
-  }
-
-  export type DoctorClinicUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    doctor?: DoctorUpdateOneRequiredWithoutDoctorClinicsNestedInput
-    clinic?: ClinicUpdateOneRequiredWithoutDoctorClinicsNestedInput
-  }
-
-  export type DoctorClinicUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    doctorId?: StringFieldUpdateOperationsInput | string
-    clinicId?: StringFieldUpdateOperationsInput | string
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type DoctorClinicCreateManyInput = {
+  export type DoctorClinicAssociationUncheckedCreateInput = {
     id?: string
     doctorId: string
     clinicId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutAssociationInput
   }
 
-  export type DoctorClinicUpdateManyMutationInput = {
+  export type DoctorClinicAssociationUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctor?: DoctorUpdateOneRequiredWithoutClinicAssociationsNestedInput
+    clinic?: ClinicUpdateOneRequiredWithoutDoctorAssociationsNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutAssociationNestedInput
   }
 
-  export type DoctorClinicUncheckedUpdateManyInput = {
+  export type DoctorClinicAssociationUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     doctorId?: StringFieldUpdateOperationsInput | string
     clinicId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutAssociationNestedInput
+  }
+
+  export type DoctorClinicAssociationCreateManyInput = {
+    id?: string
+    doctorId: string
+    clinicId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DoctorClinicAssociationUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type DoctorClinicAssociationUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    doctorId?: StringFieldUpdateOperationsInput | string
+    clinicId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IngestionRunCreateInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+    suggestions?: IngestionSuggestionCreateNestedManyWithoutIngestionRunInput
+  }
+
+  export type IngestionRunUncheckedCreateInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+    suggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutIngestionRunInput
+  }
+
+  export type IngestionRunUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestions?: IngestionSuggestionUpdateManyWithoutIngestionRunNestedInput
+  }
+
+  export type IngestionRunUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestions?: IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunNestedInput
+  }
+
+  export type IngestionRunCreateManyInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+  }
+
+  export type IngestionRunUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionRunUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionCreateInput = {
+    id?: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+    ingestionRun: IngestionRunCreateNestedOneWithoutSuggestionsInput
+    clinic?: ClinicCreateNestedOneWithoutIngestionSuggestionsInput
+    doctor?: DoctorCreateNestedOneWithoutIngestionSuggestionsInput
+    association?: DoctorClinicAssociationCreateNestedOneWithoutIngestionSuggestionsInput
+  }
+
+  export type IngestionSuggestionUncheckedCreateInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    doctorId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    ingestionRun?: IngestionRunUpdateOneRequiredWithoutSuggestionsNestedInput
+    clinic?: ClinicUpdateOneWithoutIngestionSuggestionsNestedInput
+    doctor?: DoctorUpdateOneWithoutIngestionSuggestionsNestedInput
+    association?: DoctorClinicAssociationUpdateOneWithoutIngestionSuggestionsNestedInput
+  }
+
+  export type IngestionSuggestionUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionCreateManyInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    doctorId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type StringFilter<$PrismaModel = never> = {
@@ -20205,14 +24047,29 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
-  export type DoctorClinicListRelationFilter = {
-    every?: DoctorClinicWhereInput
-    some?: DoctorClinicWhereInput
-    none?: DoctorClinicWhereInput
+  export type DoctorClinicAssociationListRelationFilter = {
+    every?: DoctorClinicAssociationWhereInput
+    some?: DoctorClinicAssociationWhereInput
+    none?: DoctorClinicAssociationWhereInput
   }
 
-  export type DoctorClinicOrderByRelationAggregateInput = {
+  export type IngestionSuggestionListRelationFilter = {
+    every?: IngestionSuggestionWhereInput
+    some?: IngestionSuggestionWhereInput
+    none?: IngestionSuggestionWhereInput
+  }
+
+  export type DoctorClinicAssociationOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type IngestionSuggestionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ClinicSourceProviderExternalSourceIdCompoundUniqueInput = {
+    sourceProvider: string
+    externalSourceId: string
   }
 
   export type ClinicCountOrderByAggregateInput = {
@@ -20220,6 +24077,14 @@ export namespace Prisma {
     name?: SortOrder
     address?: SortOrder
     territoryId?: SortOrder
+    sourceProvider?: SortOrder
+    externalSourceId?: SortOrder
+    sourceContentHash?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -20230,6 +24095,14 @@ export namespace Prisma {
     name?: SortOrder
     address?: SortOrder
     territoryId?: SortOrder
+    sourceProvider?: SortOrder
+    externalSourceId?: SortOrder
+    sourceContentHash?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -20240,9 +24113,22 @@ export namespace Prisma {
     name?: SortOrder
     address?: SortOrder
     territoryId?: SortOrder
+    sourceProvider?: SortOrder
+    externalSourceId?: SortOrder
+    sourceContentHash?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type DoctorSourceProviderExternalSourceIdCompoundUniqueInput = {
+    sourceProvider: string
+    externalSourceId: string
   }
 
   export type DoctorCountOrderByAggregateInput = {
@@ -20250,6 +24136,14 @@ export namespace Prisma {
     firstName?: SortOrder
     lastName?: SortOrder
     specialty?: SortOrder
+    sourceProvider?: SortOrder
+    externalSourceId?: SortOrder
+    sourceContentHash?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -20260,6 +24154,14 @@ export namespace Prisma {
     firstName?: SortOrder
     lastName?: SortOrder
     specialty?: SortOrder
+    sourceProvider?: SortOrder
+    externalSourceId?: SortOrder
+    sourceContentHash?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -20270,6 +24172,14 @@ export namespace Prisma {
     firstName?: SortOrder
     lastName?: SortOrder
     specialty?: SortOrder
+    sourceProvider?: SortOrder
+    externalSourceId?: SortOrder
+    sourceContentHash?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    sourcePresent?: SortOrder
+    sourceTracked?: SortOrder
+    manuallyEditedAt?: SortOrder
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
@@ -20285,30 +24195,251 @@ export namespace Prisma {
     isNot?: ClinicWhereInput
   }
 
-  export type DoctorClinicDoctorIdClinicIdCompoundUniqueInput = {
+  export type DoctorClinicAssociationDoctorIdClinicIdCompoundUniqueInput = {
     doctorId: string
     clinicId: string
   }
 
-  export type DoctorClinicCountOrderByAggregateInput = {
+  export type DoctorClinicAssociationCountOrderByAggregateInput = {
     id?: SortOrder
     doctorId?: SortOrder
     clinicId?: SortOrder
+    sourceActive?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    confirmedAt?: SortOrder
+    confirmedByUserId?: SortOrder
+    endedAt?: SortOrder
+    endedByUserId?: SortOrder
+    endReason?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
-  export type DoctorClinicMaxOrderByAggregateInput = {
+  export type DoctorClinicAssociationMaxOrderByAggregateInput = {
     id?: SortOrder
     doctorId?: SortOrder
     clinicId?: SortOrder
+    sourceActive?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    confirmedAt?: SortOrder
+    confirmedByUserId?: SortOrder
+    endedAt?: SortOrder
+    endedByUserId?: SortOrder
+    endReason?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
   }
 
-  export type DoctorClinicMinOrderByAggregateInput = {
+  export type DoctorClinicAssociationMinOrderByAggregateInput = {
     id?: SortOrder
     doctorId?: SortOrder
     clinicId?: SortOrder
+    sourceActive?: SortOrder
+    sourceFirstSeenAt?: SortOrder
+    sourceLastSeenAt?: SortOrder
+    confirmedAt?: SortOrder
+    confirmedByUserId?: SortOrder
+    endedAt?: SortOrder
+    endedByUserId?: SortOrder
+    endReason?: SortOrder
     createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumIngestionRunStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunStatus | EnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionRunStatusFilter<$PrismaModel> | $Enums.IngestionRunStatus
+  }
+
+  export type IngestionRunCountOrderByAggregateInput = {
+    id?: SortOrder
+    sourceProvider?: SortOrder
+    status?: SortOrder
+    startedAt?: SortOrder
+    completedAt?: SortOrder
+    stats?: SortOrder
+    error?: SortOrder
+  }
+
+  export type IngestionRunMaxOrderByAggregateInput = {
+    id?: SortOrder
+    sourceProvider?: SortOrder
+    status?: SortOrder
+    startedAt?: SortOrder
+    completedAt?: SortOrder
+    error?: SortOrder
+  }
+
+  export type IngestionRunMinOrderByAggregateInput = {
+    id?: SortOrder
+    sourceProvider?: SortOrder
+    status?: SortOrder
+    startedAt?: SortOrder
+    completedAt?: SortOrder
+    error?: SortOrder
+  }
+
+  export type EnumIngestionRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunStatus | EnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.IngestionRunStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
+    _max?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
+  }
+
+  export type EnumIngestionSuggestionTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionType | EnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionTypeFilter<$PrismaModel> | $Enums.IngestionSuggestionType
+  }
+
+  export type EnumIngestionSuggestionStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionStatus | EnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel> | $Enums.IngestionSuggestionStatus
+  }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type IngestionRunScalarRelationFilter = {
+    is?: IngestionRunWhereInput
+    isNot?: IngestionRunWhereInput
+  }
+
+  export type ClinicNullableScalarRelationFilter = {
+    is?: ClinicWhereInput | null
+    isNot?: ClinicWhereInput | null
+  }
+
+  export type DoctorNullableScalarRelationFilter = {
+    is?: DoctorWhereInput | null
+    isNot?: DoctorWhereInput | null
+  }
+
+  export type DoctorClinicAssociationNullableScalarRelationFilter = {
+    is?: DoctorClinicAssociationWhereInput | null
+    isNot?: DoctorClinicAssociationWhereInput | null
+  }
+
+  export type IngestionSuggestionCountOrderByAggregateInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    clinicId?: SortOrder
+    doctorId?: SortOrder
+    associationId?: SortOrder
+    reason?: SortOrder
+    payload?: SortOrder
+    suggestedAt?: SortOrder
+    resolvedAt?: SortOrder
+    resolvedByUserId?: SortOrder
+    resolutionNote?: SortOrder
+  }
+
+  export type IngestionSuggestionMaxOrderByAggregateInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    clinicId?: SortOrder
+    doctorId?: SortOrder
+    associationId?: SortOrder
+    reason?: SortOrder
+    suggestedAt?: SortOrder
+    resolvedAt?: SortOrder
+    resolvedByUserId?: SortOrder
+    resolutionNote?: SortOrder
+  }
+
+  export type IngestionSuggestionMinOrderByAggregateInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    clinicId?: SortOrder
+    doctorId?: SortOrder
+    associationId?: SortOrder
+    reason?: SortOrder
+    suggestedAt?: SortOrder
+    resolvedAt?: SortOrder
+    resolvedByUserId?: SortOrder
+    resolutionNote?: SortOrder
+  }
+
+  export type EnumIngestionSuggestionTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionType | EnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionTypeWithAggregatesFilter<$PrismaModel> | $Enums.IngestionSuggestionType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionSuggestionTypeFilter<$PrismaModel>
+    _max?: NestedEnumIngestionSuggestionTypeFilter<$PrismaModel>
+  }
+
+  export type EnumIngestionSuggestionStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionStatus | EnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionStatusWithAggregatesFilter<$PrismaModel> | $Enums.IngestionSuggestionStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
+    _max?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
   }
 
   export type UserCreatepasswordHistoryInput = {
@@ -20940,116 +25071,358 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutPermissionsInput, UserUpdateWithoutPermissionsInput>, UserUncheckedUpdateWithoutPermissionsInput>
   }
 
-  export type DoctorClinicCreateNestedManyWithoutClinicInput = {
-    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
-    createMany?: DoctorClinicCreateManyClinicInputEnvelope
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  export type DoctorClinicAssociationCreateNestedManyWithoutClinicInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
+    createMany?: DoctorClinicAssociationCreateManyClinicInputEnvelope
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
   }
 
-  export type DoctorClinicUncheckedCreateNestedManyWithoutClinicInput = {
-    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
-    createMany?: DoctorClinicCreateManyClinicInputEnvelope
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  export type IngestionSuggestionCreateNestedManyWithoutClinicInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutClinicInput, IngestionSuggestionUncheckedCreateWithoutClinicInput> | IngestionSuggestionCreateWithoutClinicInput[] | IngestionSuggestionUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutClinicInput | IngestionSuggestionCreateOrConnectWithoutClinicInput[]
+    createMany?: IngestionSuggestionCreateManyClinicInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
   }
 
-  export type DoctorClinicUpdateManyWithoutClinicNestedInput = {
-    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
-    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutClinicInput | DoctorClinicUpsertWithWhereUniqueWithoutClinicInput[]
-    createMany?: DoctorClinicCreateManyClinicInputEnvelope
-    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    update?: DoctorClinicUpdateWithWhereUniqueWithoutClinicInput | DoctorClinicUpdateWithWhereUniqueWithoutClinicInput[]
-    updateMany?: DoctorClinicUpdateManyWithWhereWithoutClinicInput | DoctorClinicUpdateManyWithWhereWithoutClinicInput[]
-    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  export type DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
+    createMany?: DoctorClinicAssociationCreateManyClinicInputEnvelope
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
   }
 
-  export type DoctorClinicUncheckedUpdateManyWithoutClinicNestedInput = {
-    create?: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput> | DoctorClinicCreateWithoutClinicInput[] | DoctorClinicUncheckedCreateWithoutClinicInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutClinicInput | DoctorClinicCreateOrConnectWithoutClinicInput[]
-    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutClinicInput | DoctorClinicUpsertWithWhereUniqueWithoutClinicInput[]
-    createMany?: DoctorClinicCreateManyClinicInputEnvelope
-    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    update?: DoctorClinicUpdateWithWhereUniqueWithoutClinicInput | DoctorClinicUpdateWithWhereUniqueWithoutClinicInput[]
-    updateMany?: DoctorClinicUpdateManyWithWhereWithoutClinicInput | DoctorClinicUpdateManyWithWhereWithoutClinicInput[]
-    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  export type IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutClinicInput, IngestionSuggestionUncheckedCreateWithoutClinicInput> | IngestionSuggestionCreateWithoutClinicInput[] | IngestionSuggestionUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutClinicInput | IngestionSuggestionCreateOrConnectWithoutClinicInput[]
+    createMany?: IngestionSuggestionCreateManyClinicInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
   }
 
-  export type DoctorClinicCreateNestedManyWithoutDoctorInput = {
-    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
-    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  export type DoctorClinicAssociationUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
+    upsert?: DoctorClinicAssociationUpsertWithWhereUniqueWithoutClinicInput | DoctorClinicAssociationUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: DoctorClinicAssociationCreateManyClinicInputEnvelope
+    set?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    disconnect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    delete?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    update?: DoctorClinicAssociationUpdateWithWhereUniqueWithoutClinicInput | DoctorClinicAssociationUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: DoctorClinicAssociationUpdateManyWithWhereWithoutClinicInput | DoctorClinicAssociationUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: DoctorClinicAssociationScalarWhereInput | DoctorClinicAssociationScalarWhereInput[]
   }
 
-  export type DoctorClinicUncheckedCreateNestedManyWithoutDoctorInput = {
-    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
-    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
+  export type IngestionSuggestionUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutClinicInput, IngestionSuggestionUncheckedCreateWithoutClinicInput> | IngestionSuggestionCreateWithoutClinicInput[] | IngestionSuggestionUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutClinicInput | IngestionSuggestionCreateOrConnectWithoutClinicInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutClinicInput | IngestionSuggestionUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: IngestionSuggestionCreateManyClinicInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput | IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutClinicInput | IngestionSuggestionUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
   }
 
-  export type DoctorClinicUpdateManyWithoutDoctorNestedInput = {
-    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
-    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput | DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput[]
-    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
-    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    update?: DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput | DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput[]
-    updateMany?: DoctorClinicUpdateManyWithWhereWithoutDoctorInput | DoctorClinicUpdateManyWithWhereWithoutDoctorInput[]
-    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  export type DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
+    upsert?: DoctorClinicAssociationUpsertWithWhereUniqueWithoutClinicInput | DoctorClinicAssociationUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: DoctorClinicAssociationCreateManyClinicInputEnvelope
+    set?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    disconnect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    delete?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    update?: DoctorClinicAssociationUpdateWithWhereUniqueWithoutClinicInput | DoctorClinicAssociationUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: DoctorClinicAssociationUpdateManyWithWhereWithoutClinicInput | DoctorClinicAssociationUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: DoctorClinicAssociationScalarWhereInput | DoctorClinicAssociationScalarWhereInput[]
   }
 
-  export type DoctorClinicUncheckedUpdateManyWithoutDoctorNestedInput = {
-    create?: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput> | DoctorClinicCreateWithoutDoctorInput[] | DoctorClinicUncheckedCreateWithoutDoctorInput[]
-    connectOrCreate?: DoctorClinicCreateOrConnectWithoutDoctorInput | DoctorClinicCreateOrConnectWithoutDoctorInput[]
-    upsert?: DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput | DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput[]
-    createMany?: DoctorClinicCreateManyDoctorInputEnvelope
-    set?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    disconnect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    delete?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    connect?: DoctorClinicWhereUniqueInput | DoctorClinicWhereUniqueInput[]
-    update?: DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput | DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput[]
-    updateMany?: DoctorClinicUpdateManyWithWhereWithoutDoctorInput | DoctorClinicUpdateManyWithWhereWithoutDoctorInput[]
-    deleteMany?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
+  export type IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutClinicInput, IngestionSuggestionUncheckedCreateWithoutClinicInput> | IngestionSuggestionCreateWithoutClinicInput[] | IngestionSuggestionUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutClinicInput | IngestionSuggestionCreateOrConnectWithoutClinicInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutClinicInput | IngestionSuggestionUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: IngestionSuggestionCreateManyClinicInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput | IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutClinicInput | IngestionSuggestionUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
   }
 
-  export type DoctorCreateNestedOneWithoutDoctorClinicsInput = {
-    create?: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
-    connectOrCreate?: DoctorCreateOrConnectWithoutDoctorClinicsInput
+  export type DoctorClinicAssociationCreateNestedManyWithoutDoctorInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutDoctorInput, DoctorClinicAssociationUncheckedCreateWithoutDoctorInput> | DoctorClinicAssociationCreateWithoutDoctorInput[] | DoctorClinicAssociationUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutDoctorInput | DoctorClinicAssociationCreateOrConnectWithoutDoctorInput[]
+    createMany?: DoctorClinicAssociationCreateManyDoctorInputEnvelope
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+  }
+
+  export type IngestionSuggestionCreateNestedManyWithoutDoctorInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutDoctorInput, IngestionSuggestionUncheckedCreateWithoutDoctorInput> | IngestionSuggestionCreateWithoutDoctorInput[] | IngestionSuggestionUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutDoctorInput | IngestionSuggestionCreateOrConnectWithoutDoctorInput[]
+    createMany?: IngestionSuggestionCreateManyDoctorInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type DoctorClinicAssociationUncheckedCreateNestedManyWithoutDoctorInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutDoctorInput, DoctorClinicAssociationUncheckedCreateWithoutDoctorInput> | DoctorClinicAssociationCreateWithoutDoctorInput[] | DoctorClinicAssociationUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutDoctorInput | DoctorClinicAssociationCreateOrConnectWithoutDoctorInput[]
+    createMany?: DoctorClinicAssociationCreateManyDoctorInputEnvelope
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+  }
+
+  export type IngestionSuggestionUncheckedCreateNestedManyWithoutDoctorInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutDoctorInput, IngestionSuggestionUncheckedCreateWithoutDoctorInput> | IngestionSuggestionCreateWithoutDoctorInput[] | IngestionSuggestionUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutDoctorInput | IngestionSuggestionCreateOrConnectWithoutDoctorInput[]
+    createMany?: IngestionSuggestionCreateManyDoctorInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type DoctorClinicAssociationUpdateManyWithoutDoctorNestedInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutDoctorInput, DoctorClinicAssociationUncheckedCreateWithoutDoctorInput> | DoctorClinicAssociationCreateWithoutDoctorInput[] | DoctorClinicAssociationUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutDoctorInput | DoctorClinicAssociationCreateOrConnectWithoutDoctorInput[]
+    upsert?: DoctorClinicAssociationUpsertWithWhereUniqueWithoutDoctorInput | DoctorClinicAssociationUpsertWithWhereUniqueWithoutDoctorInput[]
+    createMany?: DoctorClinicAssociationCreateManyDoctorInputEnvelope
+    set?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    disconnect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    delete?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    update?: DoctorClinicAssociationUpdateWithWhereUniqueWithoutDoctorInput | DoctorClinicAssociationUpdateWithWhereUniqueWithoutDoctorInput[]
+    updateMany?: DoctorClinicAssociationUpdateManyWithWhereWithoutDoctorInput | DoctorClinicAssociationUpdateManyWithWhereWithoutDoctorInput[]
+    deleteMany?: DoctorClinicAssociationScalarWhereInput | DoctorClinicAssociationScalarWhereInput[]
+  }
+
+  export type IngestionSuggestionUpdateManyWithoutDoctorNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutDoctorInput, IngestionSuggestionUncheckedCreateWithoutDoctorInput> | IngestionSuggestionCreateWithoutDoctorInput[] | IngestionSuggestionUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutDoctorInput | IngestionSuggestionCreateOrConnectWithoutDoctorInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutDoctorInput | IngestionSuggestionUpsertWithWhereUniqueWithoutDoctorInput[]
+    createMany?: IngestionSuggestionCreateManyDoctorInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutDoctorInput | IngestionSuggestionUpdateWithWhereUniqueWithoutDoctorInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutDoctorInput | IngestionSuggestionUpdateManyWithWhereWithoutDoctorInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type DoctorClinicAssociationUncheckedUpdateManyWithoutDoctorNestedInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutDoctorInput, DoctorClinicAssociationUncheckedCreateWithoutDoctorInput> | DoctorClinicAssociationCreateWithoutDoctorInput[] | DoctorClinicAssociationUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutDoctorInput | DoctorClinicAssociationCreateOrConnectWithoutDoctorInput[]
+    upsert?: DoctorClinicAssociationUpsertWithWhereUniqueWithoutDoctorInput | DoctorClinicAssociationUpsertWithWhereUniqueWithoutDoctorInput[]
+    createMany?: DoctorClinicAssociationCreateManyDoctorInputEnvelope
+    set?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    disconnect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    delete?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    connect?: DoctorClinicAssociationWhereUniqueInput | DoctorClinicAssociationWhereUniqueInput[]
+    update?: DoctorClinicAssociationUpdateWithWhereUniqueWithoutDoctorInput | DoctorClinicAssociationUpdateWithWhereUniqueWithoutDoctorInput[]
+    updateMany?: DoctorClinicAssociationUpdateManyWithWhereWithoutDoctorInput | DoctorClinicAssociationUpdateManyWithWhereWithoutDoctorInput[]
+    deleteMany?: DoctorClinicAssociationScalarWhereInput | DoctorClinicAssociationScalarWhereInput[]
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutDoctorNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutDoctorInput, IngestionSuggestionUncheckedCreateWithoutDoctorInput> | IngestionSuggestionCreateWithoutDoctorInput[] | IngestionSuggestionUncheckedCreateWithoutDoctorInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutDoctorInput | IngestionSuggestionCreateOrConnectWithoutDoctorInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutDoctorInput | IngestionSuggestionUpsertWithWhereUniqueWithoutDoctorInput[]
+    createMany?: IngestionSuggestionCreateManyDoctorInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutDoctorInput | IngestionSuggestionUpdateWithWhereUniqueWithoutDoctorInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutDoctorInput | IngestionSuggestionUpdateManyWithWhereWithoutDoctorInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type DoctorCreateNestedOneWithoutClinicAssociationsInput = {
+    create?: XOR<DoctorCreateWithoutClinicAssociationsInput, DoctorUncheckedCreateWithoutClinicAssociationsInput>
+    connectOrCreate?: DoctorCreateOrConnectWithoutClinicAssociationsInput
     connect?: DoctorWhereUniqueInput
   }
 
-  export type ClinicCreateNestedOneWithoutDoctorClinicsInput = {
-    create?: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
-    connectOrCreate?: ClinicCreateOrConnectWithoutDoctorClinicsInput
+  export type ClinicCreateNestedOneWithoutDoctorAssociationsInput = {
+    create?: XOR<ClinicCreateWithoutDoctorAssociationsInput, ClinicUncheckedCreateWithoutDoctorAssociationsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutDoctorAssociationsInput
     connect?: ClinicWhereUniqueInput
   }
 
-  export type DoctorUpdateOneRequiredWithoutDoctorClinicsNestedInput = {
-    create?: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
-    connectOrCreate?: DoctorCreateOrConnectWithoutDoctorClinicsInput
-    upsert?: DoctorUpsertWithoutDoctorClinicsInput
+  export type IngestionSuggestionCreateNestedManyWithoutAssociationInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutAssociationInput, IngestionSuggestionUncheckedCreateWithoutAssociationInput> | IngestionSuggestionCreateWithoutAssociationInput[] | IngestionSuggestionUncheckedCreateWithoutAssociationInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutAssociationInput | IngestionSuggestionCreateOrConnectWithoutAssociationInput[]
+    createMany?: IngestionSuggestionCreateManyAssociationInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type IngestionSuggestionUncheckedCreateNestedManyWithoutAssociationInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutAssociationInput, IngestionSuggestionUncheckedCreateWithoutAssociationInput> | IngestionSuggestionCreateWithoutAssociationInput[] | IngestionSuggestionUncheckedCreateWithoutAssociationInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutAssociationInput | IngestionSuggestionCreateOrConnectWithoutAssociationInput[]
+    createMany?: IngestionSuggestionCreateManyAssociationInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type DoctorUpdateOneRequiredWithoutClinicAssociationsNestedInput = {
+    create?: XOR<DoctorCreateWithoutClinicAssociationsInput, DoctorUncheckedCreateWithoutClinicAssociationsInput>
+    connectOrCreate?: DoctorCreateOrConnectWithoutClinicAssociationsInput
+    upsert?: DoctorUpsertWithoutClinicAssociationsInput
     connect?: DoctorWhereUniqueInput
-    update?: XOR<XOR<DoctorUpdateToOneWithWhereWithoutDoctorClinicsInput, DoctorUpdateWithoutDoctorClinicsInput>, DoctorUncheckedUpdateWithoutDoctorClinicsInput>
+    update?: XOR<XOR<DoctorUpdateToOneWithWhereWithoutClinicAssociationsInput, DoctorUpdateWithoutClinicAssociationsInput>, DoctorUncheckedUpdateWithoutClinicAssociationsInput>
   }
 
-  export type ClinicUpdateOneRequiredWithoutDoctorClinicsNestedInput = {
-    create?: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
-    connectOrCreate?: ClinicCreateOrConnectWithoutDoctorClinicsInput
-    upsert?: ClinicUpsertWithoutDoctorClinicsInput
+  export type ClinicUpdateOneRequiredWithoutDoctorAssociationsNestedInput = {
+    create?: XOR<ClinicCreateWithoutDoctorAssociationsInput, ClinicUncheckedCreateWithoutDoctorAssociationsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutDoctorAssociationsInput
+    upsert?: ClinicUpsertWithoutDoctorAssociationsInput
     connect?: ClinicWhereUniqueInput
-    update?: XOR<XOR<ClinicUpdateToOneWithWhereWithoutDoctorClinicsInput, ClinicUpdateWithoutDoctorClinicsInput>, ClinicUncheckedUpdateWithoutDoctorClinicsInput>
+    update?: XOR<XOR<ClinicUpdateToOneWithWhereWithoutDoctorAssociationsInput, ClinicUpdateWithoutDoctorAssociationsInput>, ClinicUncheckedUpdateWithoutDoctorAssociationsInput>
+  }
+
+  export type IngestionSuggestionUpdateManyWithoutAssociationNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutAssociationInput, IngestionSuggestionUncheckedCreateWithoutAssociationInput> | IngestionSuggestionCreateWithoutAssociationInput[] | IngestionSuggestionUncheckedCreateWithoutAssociationInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutAssociationInput | IngestionSuggestionCreateOrConnectWithoutAssociationInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutAssociationInput | IngestionSuggestionUpsertWithWhereUniqueWithoutAssociationInput[]
+    createMany?: IngestionSuggestionCreateManyAssociationInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutAssociationInput | IngestionSuggestionUpdateWithWhereUniqueWithoutAssociationInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutAssociationInput | IngestionSuggestionUpdateManyWithWhereWithoutAssociationInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutAssociationNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutAssociationInput, IngestionSuggestionUncheckedCreateWithoutAssociationInput> | IngestionSuggestionCreateWithoutAssociationInput[] | IngestionSuggestionUncheckedCreateWithoutAssociationInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutAssociationInput | IngestionSuggestionCreateOrConnectWithoutAssociationInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutAssociationInput | IngestionSuggestionUpsertWithWhereUniqueWithoutAssociationInput[]
+    createMany?: IngestionSuggestionCreateManyAssociationInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutAssociationInput | IngestionSuggestionUpdateWithWhereUniqueWithoutAssociationInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutAssociationInput | IngestionSuggestionUpdateManyWithWhereWithoutAssociationInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type IngestionSuggestionCreateNestedManyWithoutIngestionRunInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput> | IngestionSuggestionCreateWithoutIngestionRunInput[] | IngestionSuggestionUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutIngestionRunInput | IngestionSuggestionCreateOrConnectWithoutIngestionRunInput[]
+    createMany?: IngestionSuggestionCreateManyIngestionRunInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type IngestionSuggestionUncheckedCreateNestedManyWithoutIngestionRunInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput> | IngestionSuggestionCreateWithoutIngestionRunInput[] | IngestionSuggestionUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutIngestionRunInput | IngestionSuggestionCreateOrConnectWithoutIngestionRunInput[]
+    createMany?: IngestionSuggestionCreateManyIngestionRunInputEnvelope
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type EnumIngestionRunStatusFieldUpdateOperationsInput = {
+    set?: $Enums.IngestionRunStatus
+  }
+
+  export type IngestionSuggestionUpdateManyWithoutIngestionRunNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput> | IngestionSuggestionCreateWithoutIngestionRunInput[] | IngestionSuggestionUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutIngestionRunInput | IngestionSuggestionCreateOrConnectWithoutIngestionRunInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutIngestionRunInput | IngestionSuggestionUpsertWithWhereUniqueWithoutIngestionRunInput[]
+    createMany?: IngestionSuggestionCreateManyIngestionRunInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput | IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput | IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunNestedInput = {
+    create?: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput> | IngestionSuggestionCreateWithoutIngestionRunInput[] | IngestionSuggestionUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutIngestionRunInput | IngestionSuggestionCreateOrConnectWithoutIngestionRunInput[]
+    upsert?: IngestionSuggestionUpsertWithWhereUniqueWithoutIngestionRunInput | IngestionSuggestionUpsertWithWhereUniqueWithoutIngestionRunInput[]
+    createMany?: IngestionSuggestionCreateManyIngestionRunInputEnvelope
+    set?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    disconnect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    delete?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+    update?: IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput | IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput[]
+    updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput | IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput[]
+    deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type IngestionRunCreateNestedOneWithoutSuggestionsInput = {
+    create?: XOR<IngestionRunCreateWithoutSuggestionsInput, IngestionRunUncheckedCreateWithoutSuggestionsInput>
+    connectOrCreate?: IngestionRunCreateOrConnectWithoutSuggestionsInput
+    connect?: IngestionRunWhereUniqueInput
+  }
+
+  export type ClinicCreateNestedOneWithoutIngestionSuggestionsInput = {
+    create?: XOR<ClinicCreateWithoutIngestionSuggestionsInput, ClinicUncheckedCreateWithoutIngestionSuggestionsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutIngestionSuggestionsInput
+    connect?: ClinicWhereUniqueInput
+  }
+
+  export type DoctorCreateNestedOneWithoutIngestionSuggestionsInput = {
+    create?: XOR<DoctorCreateWithoutIngestionSuggestionsInput, DoctorUncheckedCreateWithoutIngestionSuggestionsInput>
+    connectOrCreate?: DoctorCreateOrConnectWithoutIngestionSuggestionsInput
+    connect?: DoctorWhereUniqueInput
+  }
+
+  export type DoctorClinicAssociationCreateNestedOneWithoutIngestionSuggestionsInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutIngestionSuggestionsInput, DoctorClinicAssociationUncheckedCreateWithoutIngestionSuggestionsInput>
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutIngestionSuggestionsInput
+    connect?: DoctorClinicAssociationWhereUniqueInput
+  }
+
+  export type EnumIngestionSuggestionTypeFieldUpdateOperationsInput = {
+    set?: $Enums.IngestionSuggestionType
+  }
+
+  export type EnumIngestionSuggestionStatusFieldUpdateOperationsInput = {
+    set?: $Enums.IngestionSuggestionStatus
+  }
+
+  export type IngestionRunUpdateOneRequiredWithoutSuggestionsNestedInput = {
+    create?: XOR<IngestionRunCreateWithoutSuggestionsInput, IngestionRunUncheckedCreateWithoutSuggestionsInput>
+    connectOrCreate?: IngestionRunCreateOrConnectWithoutSuggestionsInput
+    upsert?: IngestionRunUpsertWithoutSuggestionsInput
+    connect?: IngestionRunWhereUniqueInput
+    update?: XOR<XOR<IngestionRunUpdateToOneWithWhereWithoutSuggestionsInput, IngestionRunUpdateWithoutSuggestionsInput>, IngestionRunUncheckedUpdateWithoutSuggestionsInput>
+  }
+
+  export type ClinicUpdateOneWithoutIngestionSuggestionsNestedInput = {
+    create?: XOR<ClinicCreateWithoutIngestionSuggestionsInput, ClinicUncheckedCreateWithoutIngestionSuggestionsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutIngestionSuggestionsInput
+    upsert?: ClinicUpsertWithoutIngestionSuggestionsInput
+    disconnect?: ClinicWhereInput | boolean
+    delete?: ClinicWhereInput | boolean
+    connect?: ClinicWhereUniqueInput
+    update?: XOR<XOR<ClinicUpdateToOneWithWhereWithoutIngestionSuggestionsInput, ClinicUpdateWithoutIngestionSuggestionsInput>, ClinicUncheckedUpdateWithoutIngestionSuggestionsInput>
+  }
+
+  export type DoctorUpdateOneWithoutIngestionSuggestionsNestedInput = {
+    create?: XOR<DoctorCreateWithoutIngestionSuggestionsInput, DoctorUncheckedCreateWithoutIngestionSuggestionsInput>
+    connectOrCreate?: DoctorCreateOrConnectWithoutIngestionSuggestionsInput
+    upsert?: DoctorUpsertWithoutIngestionSuggestionsInput
+    disconnect?: DoctorWhereInput | boolean
+    delete?: DoctorWhereInput | boolean
+    connect?: DoctorWhereUniqueInput
+    update?: XOR<XOR<DoctorUpdateToOneWithWhereWithoutIngestionSuggestionsInput, DoctorUpdateWithoutIngestionSuggestionsInput>, DoctorUncheckedUpdateWithoutIngestionSuggestionsInput>
+  }
+
+  export type DoctorClinicAssociationUpdateOneWithoutIngestionSuggestionsNestedInput = {
+    create?: XOR<DoctorClinicAssociationCreateWithoutIngestionSuggestionsInput, DoctorClinicAssociationUncheckedCreateWithoutIngestionSuggestionsInput>
+    connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutIngestionSuggestionsInput
+    upsert?: DoctorClinicAssociationUpsertWithoutIngestionSuggestionsInput
+    disconnect?: DoctorClinicAssociationWhereInput | boolean
+    delete?: DoctorClinicAssociationWhereInput | boolean
+    connect?: DoctorClinicAssociationWhereUniqueInput
+    update?: XOR<XOR<DoctorClinicAssociationUpdateToOneWithWhereWithoutIngestionSuggestionsInput, DoctorClinicAssociationUpdateWithoutIngestionSuggestionsInput>, DoctorClinicAssociationUncheckedUpdateWithoutIngestionSuggestionsInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -21366,6 +25739,80 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumVerificationTokenTypeFilter<$PrismaModel>
     _max?: NestedEnumVerificationTokenTypeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumIngestionRunStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunStatus | EnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionRunStatusFilter<$PrismaModel> | $Enums.IngestionRunStatus
+  }
+
+  export type NestedEnumIngestionRunStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunStatus | EnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionRunStatusWithAggregatesFilter<$PrismaModel> | $Enums.IngestionRunStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
+    _max?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumIngestionSuggestionTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionType | EnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionTypeFilter<$PrismaModel> | $Enums.IngestionSuggestionType
+  }
+
+  export type NestedEnumIngestionSuggestionStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionStatus | EnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel> | $Enums.IngestionSuggestionStatus
+  }
+
+  export type NestedEnumIngestionSuggestionTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionType | EnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionType[] | ListEnumIngestionSuggestionTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionTypeWithAggregatesFilter<$PrismaModel> | $Enums.IngestionSuggestionType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionSuggestionTypeFilter<$PrismaModel>
+    _max?: NestedEnumIngestionSuggestionTypeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumIngestionSuggestionStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionSuggestionStatus | EnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionSuggestionStatusWithAggregatesFilter<$PrismaModel> | $Enums.IngestionSuggestionStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
+    _max?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type RoleCreateWithoutUsersInput = {
@@ -23610,200 +28057,884 @@ export namespace Prisma {
     sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
   }
 
-  export type DoctorClinicCreateWithoutClinicInput = {
+  export type DoctorClinicAssociationCreateWithoutClinicInput = {
     id?: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
-    doctor: DoctorCreateNestedOneWithoutDoctorClinicsInput
+    updatedAt?: Date | string
+    doctor: DoctorCreateNestedOneWithoutClinicAssociationsInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutAssociationInput
   }
 
-  export type DoctorClinicUncheckedCreateWithoutClinicInput = {
+  export type DoctorClinicAssociationUncheckedCreateWithoutClinicInput = {
     id?: string
     doctorId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutAssociationInput
   }
 
-  export type DoctorClinicCreateOrConnectWithoutClinicInput = {
-    where: DoctorClinicWhereUniqueInput
-    create: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput>
+  export type DoctorClinicAssociationCreateOrConnectWithoutClinicInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    create: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput>
   }
 
-  export type DoctorClinicCreateManyClinicInputEnvelope = {
-    data: DoctorClinicCreateManyClinicInput | DoctorClinicCreateManyClinicInput[]
+  export type DoctorClinicAssociationCreateManyClinicInputEnvelope = {
+    data: DoctorClinicAssociationCreateManyClinicInput | DoctorClinicAssociationCreateManyClinicInput[]
     skipDuplicates?: boolean
   }
 
-  export type DoctorClinicUpsertWithWhereUniqueWithoutClinicInput = {
-    where: DoctorClinicWhereUniqueInput
-    update: XOR<DoctorClinicUpdateWithoutClinicInput, DoctorClinicUncheckedUpdateWithoutClinicInput>
-    create: XOR<DoctorClinicCreateWithoutClinicInput, DoctorClinicUncheckedCreateWithoutClinicInput>
-  }
-
-  export type DoctorClinicUpdateWithWhereUniqueWithoutClinicInput = {
-    where: DoctorClinicWhereUniqueInput
-    data: XOR<DoctorClinicUpdateWithoutClinicInput, DoctorClinicUncheckedUpdateWithoutClinicInput>
-  }
-
-  export type DoctorClinicUpdateManyWithWhereWithoutClinicInput = {
-    where: DoctorClinicScalarWhereInput
-    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyWithoutClinicInput>
-  }
-
-  export type DoctorClinicScalarWhereInput = {
-    AND?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
-    OR?: DoctorClinicScalarWhereInput[]
-    NOT?: DoctorClinicScalarWhereInput | DoctorClinicScalarWhereInput[]
-    id?: StringFilter<"DoctorClinic"> | string
-    doctorId?: StringFilter<"DoctorClinic"> | string
-    clinicId?: StringFilter<"DoctorClinic"> | string
-    createdAt?: DateTimeFilter<"DoctorClinic"> | Date | string
-  }
-
-  export type DoctorClinicCreateWithoutDoctorInput = {
+  export type IngestionSuggestionCreateWithoutClinicInput = {
     id?: string
-    createdAt?: Date | string
-    clinic: ClinicCreateNestedOneWithoutDoctorClinicsInput
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+    ingestionRun: IngestionRunCreateNestedOneWithoutSuggestionsInput
+    doctor?: DoctorCreateNestedOneWithoutIngestionSuggestionsInput
+    association?: DoctorClinicAssociationCreateNestedOneWithoutIngestionSuggestionsInput
   }
 
-  export type DoctorClinicUncheckedCreateWithoutDoctorInput = {
+  export type IngestionSuggestionUncheckedCreateWithoutClinicInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    doctorId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionCreateOrConnectWithoutClinicInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    create: XOR<IngestionSuggestionCreateWithoutClinicInput, IngestionSuggestionUncheckedCreateWithoutClinicInput>
+  }
+
+  export type IngestionSuggestionCreateManyClinicInputEnvelope = {
+    data: IngestionSuggestionCreateManyClinicInput | IngestionSuggestionCreateManyClinicInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DoctorClinicAssociationUpsertWithWhereUniqueWithoutClinicInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    update: XOR<DoctorClinicAssociationUpdateWithoutClinicInput, DoctorClinicAssociationUncheckedUpdateWithoutClinicInput>
+    create: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput>
+  }
+
+  export type DoctorClinicAssociationUpdateWithWhereUniqueWithoutClinicInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    data: XOR<DoctorClinicAssociationUpdateWithoutClinicInput, DoctorClinicAssociationUncheckedUpdateWithoutClinicInput>
+  }
+
+  export type DoctorClinicAssociationUpdateManyWithWhereWithoutClinicInput = {
+    where: DoctorClinicAssociationScalarWhereInput
+    data: XOR<DoctorClinicAssociationUpdateManyMutationInput, DoctorClinicAssociationUncheckedUpdateManyWithoutClinicInput>
+  }
+
+  export type DoctorClinicAssociationScalarWhereInput = {
+    AND?: DoctorClinicAssociationScalarWhereInput | DoctorClinicAssociationScalarWhereInput[]
+    OR?: DoctorClinicAssociationScalarWhereInput[]
+    NOT?: DoctorClinicAssociationScalarWhereInput | DoctorClinicAssociationScalarWhereInput[]
+    id?: StringFilter<"DoctorClinicAssociation"> | string
+    doctorId?: StringFilter<"DoctorClinicAssociation"> | string
+    clinicId?: StringFilter<"DoctorClinicAssociation"> | string
+    sourceActive?: BoolFilter<"DoctorClinicAssociation"> | boolean
+    sourceFirstSeenAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    confirmedByUserId?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    endedAt?: DateTimeNullableFilter<"DoctorClinicAssociation"> | Date | string | null
+    endedByUserId?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    endReason?: StringNullableFilter<"DoctorClinicAssociation"> | string | null
+    createdAt?: DateTimeFilter<"DoctorClinicAssociation"> | Date | string
+    updatedAt?: DateTimeFilter<"DoctorClinicAssociation"> | Date | string
+  }
+
+  export type IngestionSuggestionUpsertWithWhereUniqueWithoutClinicInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    update: XOR<IngestionSuggestionUpdateWithoutClinicInput, IngestionSuggestionUncheckedUpdateWithoutClinicInput>
+    create: XOR<IngestionSuggestionCreateWithoutClinicInput, IngestionSuggestionUncheckedCreateWithoutClinicInput>
+  }
+
+  export type IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    data: XOR<IngestionSuggestionUpdateWithoutClinicInput, IngestionSuggestionUncheckedUpdateWithoutClinicInput>
+  }
+
+  export type IngestionSuggestionUpdateManyWithWhereWithoutClinicInput = {
+    where: IngestionSuggestionScalarWhereInput
+    data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyWithoutClinicInput>
+  }
+
+  export type IngestionSuggestionScalarWhereInput = {
+    AND?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+    OR?: IngestionSuggestionScalarWhereInput[]
+    NOT?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+    id?: StringFilter<"IngestionSuggestion"> | string
+    ingestionRunId?: StringFilter<"IngestionSuggestion"> | string
+    type?: EnumIngestionSuggestionTypeFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFilter<"IngestionSuggestion"> | $Enums.IngestionSuggestionStatus
+    clinicId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    doctorId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    associationId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    reason?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    payload?: JsonFilter<"IngestionSuggestion">
+    suggestedAt?: DateTimeFilter<"IngestionSuggestion"> | Date | string
+    resolvedAt?: DateTimeNullableFilter<"IngestionSuggestion"> | Date | string | null
+    resolvedByUserId?: StringNullableFilter<"IngestionSuggestion"> | string | null
+    resolutionNote?: StringNullableFilter<"IngestionSuggestion"> | string | null
+  }
+
+  export type DoctorClinicAssociationCreateWithoutDoctorInput = {
+    id?: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    clinic: ClinicCreateNestedOneWithoutDoctorAssociationsInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutAssociationInput
+  }
+
+  export type DoctorClinicAssociationUncheckedCreateWithoutDoctorInput = {
     id?: string
     clinicId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutAssociationInput
   }
 
-  export type DoctorClinicCreateOrConnectWithoutDoctorInput = {
-    where: DoctorClinicWhereUniqueInput
-    create: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput>
+  export type DoctorClinicAssociationCreateOrConnectWithoutDoctorInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    create: XOR<DoctorClinicAssociationCreateWithoutDoctorInput, DoctorClinicAssociationUncheckedCreateWithoutDoctorInput>
   }
 
-  export type DoctorClinicCreateManyDoctorInputEnvelope = {
-    data: DoctorClinicCreateManyDoctorInput | DoctorClinicCreateManyDoctorInput[]
+  export type DoctorClinicAssociationCreateManyDoctorInputEnvelope = {
+    data: DoctorClinicAssociationCreateManyDoctorInput | DoctorClinicAssociationCreateManyDoctorInput[]
     skipDuplicates?: boolean
   }
 
-  export type DoctorClinicUpsertWithWhereUniqueWithoutDoctorInput = {
-    where: DoctorClinicWhereUniqueInput
-    update: XOR<DoctorClinicUpdateWithoutDoctorInput, DoctorClinicUncheckedUpdateWithoutDoctorInput>
-    create: XOR<DoctorClinicCreateWithoutDoctorInput, DoctorClinicUncheckedCreateWithoutDoctorInput>
+  export type IngestionSuggestionCreateWithoutDoctorInput = {
+    id?: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+    ingestionRun: IngestionRunCreateNestedOneWithoutSuggestionsInput
+    clinic?: ClinicCreateNestedOneWithoutIngestionSuggestionsInput
+    association?: DoctorClinicAssociationCreateNestedOneWithoutIngestionSuggestionsInput
   }
 
-  export type DoctorClinicUpdateWithWhereUniqueWithoutDoctorInput = {
-    where: DoctorClinicWhereUniqueInput
-    data: XOR<DoctorClinicUpdateWithoutDoctorInput, DoctorClinicUncheckedUpdateWithoutDoctorInput>
+  export type IngestionSuggestionUncheckedCreateWithoutDoctorInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
   }
 
-  export type DoctorClinicUpdateManyWithWhereWithoutDoctorInput = {
-    where: DoctorClinicScalarWhereInput
-    data: XOR<DoctorClinicUpdateManyMutationInput, DoctorClinicUncheckedUpdateManyWithoutDoctorInput>
+  export type IngestionSuggestionCreateOrConnectWithoutDoctorInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    create: XOR<IngestionSuggestionCreateWithoutDoctorInput, IngestionSuggestionUncheckedCreateWithoutDoctorInput>
   }
 
-  export type DoctorCreateWithoutDoctorClinicsInput = {
+  export type IngestionSuggestionCreateManyDoctorInputEnvelope = {
+    data: IngestionSuggestionCreateManyDoctorInput | IngestionSuggestionCreateManyDoctorInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DoctorClinicAssociationUpsertWithWhereUniqueWithoutDoctorInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    update: XOR<DoctorClinicAssociationUpdateWithoutDoctorInput, DoctorClinicAssociationUncheckedUpdateWithoutDoctorInput>
+    create: XOR<DoctorClinicAssociationCreateWithoutDoctorInput, DoctorClinicAssociationUncheckedCreateWithoutDoctorInput>
+  }
+
+  export type DoctorClinicAssociationUpdateWithWhereUniqueWithoutDoctorInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    data: XOR<DoctorClinicAssociationUpdateWithoutDoctorInput, DoctorClinicAssociationUncheckedUpdateWithoutDoctorInput>
+  }
+
+  export type DoctorClinicAssociationUpdateManyWithWhereWithoutDoctorInput = {
+    where: DoctorClinicAssociationScalarWhereInput
+    data: XOR<DoctorClinicAssociationUpdateManyMutationInput, DoctorClinicAssociationUncheckedUpdateManyWithoutDoctorInput>
+  }
+
+  export type IngestionSuggestionUpsertWithWhereUniqueWithoutDoctorInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    update: XOR<IngestionSuggestionUpdateWithoutDoctorInput, IngestionSuggestionUncheckedUpdateWithoutDoctorInput>
+    create: XOR<IngestionSuggestionCreateWithoutDoctorInput, IngestionSuggestionUncheckedCreateWithoutDoctorInput>
+  }
+
+  export type IngestionSuggestionUpdateWithWhereUniqueWithoutDoctorInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    data: XOR<IngestionSuggestionUpdateWithoutDoctorInput, IngestionSuggestionUncheckedUpdateWithoutDoctorInput>
+  }
+
+  export type IngestionSuggestionUpdateManyWithWhereWithoutDoctorInput = {
+    where: IngestionSuggestionScalarWhereInput
+    data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyWithoutDoctorInput>
+  }
+
+  export type DoctorCreateWithoutClinicAssociationsInput = {
     id?: string
     firstName: string
     lastName: string
     specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutDoctorInput
   }
 
-  export type DoctorUncheckedCreateWithoutDoctorClinicsInput = {
+  export type DoctorUncheckedCreateWithoutClinicAssociationsInput = {
     id?: string
     firstName: string
     lastName: string
     specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutDoctorInput
   }
 
-  export type DoctorCreateOrConnectWithoutDoctorClinicsInput = {
+  export type DoctorCreateOrConnectWithoutClinicAssociationsInput = {
     where: DoctorWhereUniqueInput
-    create: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
+    create: XOR<DoctorCreateWithoutClinicAssociationsInput, DoctorUncheckedCreateWithoutClinicAssociationsInput>
   }
 
-  export type ClinicCreateWithoutDoctorClinicsInput = {
+  export type ClinicCreateWithoutDoctorAssociationsInput = {
     id?: string
     name: string
     address?: string | null
     territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutClinicInput
   }
 
-  export type ClinicUncheckedCreateWithoutDoctorClinicsInput = {
+  export type ClinicUncheckedCreateWithoutDoctorAssociationsInput = {
     id?: string
     name: string
     address?: string | null
     territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput
   }
 
-  export type ClinicCreateOrConnectWithoutDoctorClinicsInput = {
+  export type ClinicCreateOrConnectWithoutDoctorAssociationsInput = {
     where: ClinicWhereUniqueInput
-    create: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
+    create: XOR<ClinicCreateWithoutDoctorAssociationsInput, ClinicUncheckedCreateWithoutDoctorAssociationsInput>
   }
 
-  export type DoctorUpsertWithoutDoctorClinicsInput = {
-    update: XOR<DoctorUpdateWithoutDoctorClinicsInput, DoctorUncheckedUpdateWithoutDoctorClinicsInput>
-    create: XOR<DoctorCreateWithoutDoctorClinicsInput, DoctorUncheckedCreateWithoutDoctorClinicsInput>
+  export type IngestionSuggestionCreateWithoutAssociationInput = {
+    id?: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+    ingestionRun: IngestionRunCreateNestedOneWithoutSuggestionsInput
+    clinic?: ClinicCreateNestedOneWithoutIngestionSuggestionsInput
+    doctor?: DoctorCreateNestedOneWithoutIngestionSuggestionsInput
+  }
+
+  export type IngestionSuggestionUncheckedCreateWithoutAssociationInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    doctorId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionCreateOrConnectWithoutAssociationInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    create: XOR<IngestionSuggestionCreateWithoutAssociationInput, IngestionSuggestionUncheckedCreateWithoutAssociationInput>
+  }
+
+  export type IngestionSuggestionCreateManyAssociationInputEnvelope = {
+    data: IngestionSuggestionCreateManyAssociationInput | IngestionSuggestionCreateManyAssociationInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type DoctorUpsertWithoutClinicAssociationsInput = {
+    update: XOR<DoctorUpdateWithoutClinicAssociationsInput, DoctorUncheckedUpdateWithoutClinicAssociationsInput>
+    create: XOR<DoctorCreateWithoutClinicAssociationsInput, DoctorUncheckedCreateWithoutClinicAssociationsInput>
     where?: DoctorWhereInput
   }
 
-  export type DoctorUpdateToOneWithWhereWithoutDoctorClinicsInput = {
+  export type DoctorUpdateToOneWithWhereWithoutClinicAssociationsInput = {
     where?: DoctorWhereInput
-    data: XOR<DoctorUpdateWithoutDoctorClinicsInput, DoctorUncheckedUpdateWithoutDoctorClinicsInput>
+    data: XOR<DoctorUpdateWithoutClinicAssociationsInput, DoctorUncheckedUpdateWithoutClinicAssociationsInput>
   }
 
-  export type DoctorUpdateWithoutDoctorClinicsInput = {
+  export type DoctorUpdateWithoutClinicAssociationsInput = {
     id?: StringFieldUpdateOperationsInput | string
     firstName?: StringFieldUpdateOperationsInput | string
     lastName?: StringFieldUpdateOperationsInput | string
     specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutDoctorNestedInput
   }
 
-  export type DoctorUncheckedUpdateWithoutDoctorClinicsInput = {
+  export type DoctorUncheckedUpdateWithoutClinicAssociationsInput = {
     id?: StringFieldUpdateOperationsInput | string
     firstName?: StringFieldUpdateOperationsInput | string
     lastName?: StringFieldUpdateOperationsInput | string
     specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutDoctorNestedInput
   }
 
-  export type ClinicUpsertWithoutDoctorClinicsInput = {
-    update: XOR<ClinicUpdateWithoutDoctorClinicsInput, ClinicUncheckedUpdateWithoutDoctorClinicsInput>
-    create: XOR<ClinicCreateWithoutDoctorClinicsInput, ClinicUncheckedCreateWithoutDoctorClinicsInput>
+  export type ClinicUpsertWithoutDoctorAssociationsInput = {
+    update: XOR<ClinicUpdateWithoutDoctorAssociationsInput, ClinicUncheckedUpdateWithoutDoctorAssociationsInput>
+    create: XOR<ClinicCreateWithoutDoctorAssociationsInput, ClinicUncheckedCreateWithoutDoctorAssociationsInput>
     where?: ClinicWhereInput
   }
 
-  export type ClinicUpdateToOneWithWhereWithoutDoctorClinicsInput = {
+  export type ClinicUpdateToOneWithWhereWithoutDoctorAssociationsInput = {
     where?: ClinicWhereInput
-    data: XOR<ClinicUpdateWithoutDoctorClinicsInput, ClinicUncheckedUpdateWithoutDoctorClinicsInput>
+    data: XOR<ClinicUpdateWithoutDoctorAssociationsInput, ClinicUncheckedUpdateWithoutDoctorAssociationsInput>
   }
 
-  export type ClinicUpdateWithoutDoctorClinicsInput = {
+  export type ClinicUpdateWithoutDoctorAssociationsInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutClinicNestedInput
   }
 
-  export type ClinicUncheckedUpdateWithoutDoctorClinicsInput = {
+  export type ClinicUncheckedUpdateWithoutDoctorAssociationsInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput
+  }
+
+  export type IngestionSuggestionUpsertWithWhereUniqueWithoutAssociationInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    update: XOR<IngestionSuggestionUpdateWithoutAssociationInput, IngestionSuggestionUncheckedUpdateWithoutAssociationInput>
+    create: XOR<IngestionSuggestionCreateWithoutAssociationInput, IngestionSuggestionUncheckedCreateWithoutAssociationInput>
+  }
+
+  export type IngestionSuggestionUpdateWithWhereUniqueWithoutAssociationInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    data: XOR<IngestionSuggestionUpdateWithoutAssociationInput, IngestionSuggestionUncheckedUpdateWithoutAssociationInput>
+  }
+
+  export type IngestionSuggestionUpdateManyWithWhereWithoutAssociationInput = {
+    where: IngestionSuggestionScalarWhereInput
+    data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyWithoutAssociationInput>
+  }
+
+  export type IngestionSuggestionCreateWithoutIngestionRunInput = {
+    id?: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+    clinic?: ClinicCreateNestedOneWithoutIngestionSuggestionsInput
+    doctor?: DoctorCreateNestedOneWithoutIngestionSuggestionsInput
+    association?: DoctorClinicAssociationCreateNestedOneWithoutIngestionSuggestionsInput
+  }
+
+  export type IngestionSuggestionUncheckedCreateWithoutIngestionRunInput = {
+    id?: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    doctorId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionCreateOrConnectWithoutIngestionRunInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    create: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput>
+  }
+
+  export type IngestionSuggestionCreateManyIngestionRunInputEnvelope = {
+    data: IngestionSuggestionCreateManyIngestionRunInput | IngestionSuggestionCreateManyIngestionRunInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type IngestionSuggestionUpsertWithWhereUniqueWithoutIngestionRunInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    update: XOR<IngestionSuggestionUpdateWithoutIngestionRunInput, IngestionSuggestionUncheckedUpdateWithoutIngestionRunInput>
+    create: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput>
+  }
+
+  export type IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput = {
+    where: IngestionSuggestionWhereUniqueInput
+    data: XOR<IngestionSuggestionUpdateWithoutIngestionRunInput, IngestionSuggestionUncheckedUpdateWithoutIngestionRunInput>
+  }
+
+  export type IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput = {
+    where: IngestionSuggestionScalarWhereInput
+    data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunInput>
+  }
+
+  export type IngestionRunCreateWithoutSuggestionsInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+  }
+
+  export type IngestionRunUncheckedCreateWithoutSuggestionsInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+  }
+
+  export type IngestionRunCreateOrConnectWithoutSuggestionsInput = {
+    where: IngestionRunWhereUniqueInput
+    create: XOR<IngestionRunCreateWithoutSuggestionsInput, IngestionRunUncheckedCreateWithoutSuggestionsInput>
+  }
+
+  export type ClinicCreateWithoutIngestionSuggestionsInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorAssociations?: DoctorClinicAssociationCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicUncheckedCreateWithoutIngestionSuggestionsInput = {
+    id?: string
+    name: string
+    address?: string | null
+    territoryId?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicCreateOrConnectWithoutIngestionSuggestionsInput = {
+    where: ClinicWhereUniqueInput
+    create: XOR<ClinicCreateWithoutIngestionSuggestionsInput, ClinicUncheckedCreateWithoutIngestionSuggestionsInput>
+  }
+
+  export type DoctorCreateWithoutIngestionSuggestionsInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    clinicAssociations?: DoctorClinicAssociationCreateNestedManyWithoutDoctorInput
+  }
+
+  export type DoctorUncheckedCreateWithoutIngestionSuggestionsInput = {
+    id?: string
+    firstName: string
+    lastName: string
+    specialty?: string | null
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    clinicAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutDoctorInput
+  }
+
+  export type DoctorCreateOrConnectWithoutIngestionSuggestionsInput = {
+    where: DoctorWhereUniqueInput
+    create: XOR<DoctorCreateWithoutIngestionSuggestionsInput, DoctorUncheckedCreateWithoutIngestionSuggestionsInput>
+  }
+
+  export type DoctorClinicAssociationCreateWithoutIngestionSuggestionsInput = {
+    id?: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctor: DoctorCreateNestedOneWithoutClinicAssociationsInput
+    clinic: ClinicCreateNestedOneWithoutDoctorAssociationsInput
+  }
+
+  export type DoctorClinicAssociationUncheckedCreateWithoutIngestionSuggestionsInput = {
+    id?: string
+    doctorId: string
+    clinicId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type DoctorClinicAssociationCreateOrConnectWithoutIngestionSuggestionsInput = {
+    where: DoctorClinicAssociationWhereUniqueInput
+    create: XOR<DoctorClinicAssociationCreateWithoutIngestionSuggestionsInput, DoctorClinicAssociationUncheckedCreateWithoutIngestionSuggestionsInput>
+  }
+
+  export type IngestionRunUpsertWithoutSuggestionsInput = {
+    update: XOR<IngestionRunUpdateWithoutSuggestionsInput, IngestionRunUncheckedUpdateWithoutSuggestionsInput>
+    create: XOR<IngestionRunCreateWithoutSuggestionsInput, IngestionRunUncheckedCreateWithoutSuggestionsInput>
+    where?: IngestionRunWhereInput
+  }
+
+  export type IngestionRunUpdateToOneWithWhereWithoutSuggestionsInput = {
+    where?: IngestionRunWhereInput
+    data: XOR<IngestionRunUpdateWithoutSuggestionsInput, IngestionRunUncheckedUpdateWithoutSuggestionsInput>
+  }
+
+  export type IngestionRunUpdateWithoutSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionRunUncheckedUpdateWithoutSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type ClinicUpsertWithoutIngestionSuggestionsInput = {
+    update: XOR<ClinicUpdateWithoutIngestionSuggestionsInput, ClinicUncheckedUpdateWithoutIngestionSuggestionsInput>
+    create: XOR<ClinicCreateWithoutIngestionSuggestionsInput, ClinicUncheckedCreateWithoutIngestionSuggestionsInput>
+    where?: ClinicWhereInput
+  }
+
+  export type ClinicUpdateToOneWithWhereWithoutIngestionSuggestionsInput = {
+    where?: ClinicWhereInput
+    data: XOR<ClinicUpdateWithoutIngestionSuggestionsInput, ClinicUncheckedUpdateWithoutIngestionSuggestionsInput>
+  }
+
+  export type ClinicUpdateWithoutIngestionSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorAssociations?: DoctorClinicAssociationUpdateManyWithoutClinicNestedInput
+  }
+
+  export type ClinicUncheckedUpdateWithoutIngestionSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput
+  }
+
+  export type DoctorUpsertWithoutIngestionSuggestionsInput = {
+    update: XOR<DoctorUpdateWithoutIngestionSuggestionsInput, DoctorUncheckedUpdateWithoutIngestionSuggestionsInput>
+    create: XOR<DoctorCreateWithoutIngestionSuggestionsInput, DoctorUncheckedCreateWithoutIngestionSuggestionsInput>
+    where?: DoctorWhereInput
+  }
+
+  export type DoctorUpdateToOneWithWhereWithoutIngestionSuggestionsInput = {
+    where?: DoctorWhereInput
+    data: XOR<DoctorUpdateWithoutIngestionSuggestionsInput, DoctorUncheckedUpdateWithoutIngestionSuggestionsInput>
+  }
+
+  export type DoctorUpdateWithoutIngestionSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    clinicAssociations?: DoctorClinicAssociationUpdateManyWithoutDoctorNestedInput
+  }
+
+  export type DoctorUncheckedUpdateWithoutIngestionSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    firstName?: StringFieldUpdateOperationsInput | string
+    lastName?: StringFieldUpdateOperationsInput | string
+    specialty?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    clinicAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutDoctorNestedInput
+  }
+
+  export type DoctorClinicAssociationUpsertWithoutIngestionSuggestionsInput = {
+    update: XOR<DoctorClinicAssociationUpdateWithoutIngestionSuggestionsInput, DoctorClinicAssociationUncheckedUpdateWithoutIngestionSuggestionsInput>
+    create: XOR<DoctorClinicAssociationCreateWithoutIngestionSuggestionsInput, DoctorClinicAssociationUncheckedCreateWithoutIngestionSuggestionsInput>
+    where?: DoctorClinicAssociationWhereInput
+  }
+
+  export type DoctorClinicAssociationUpdateToOneWithWhereWithoutIngestionSuggestionsInput = {
+    where?: DoctorClinicAssociationWhereInput
+    data: XOR<DoctorClinicAssociationUpdateWithoutIngestionSuggestionsInput, DoctorClinicAssociationUncheckedUpdateWithoutIngestionSuggestionsInput>
+  }
+
+  export type DoctorClinicAssociationUpdateWithoutIngestionSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctor?: DoctorUpdateOneRequiredWithoutClinicAssociationsNestedInput
+    clinic?: ClinicUpdateOneRequiredWithoutDoctorAssociationsNestedInput
+  }
+
+  export type DoctorClinicAssociationUncheckedUpdateWithoutIngestionSuggestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    doctorId?: StringFieldUpdateOperationsInput | string
+    clinicId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -24560,52 +29691,368 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type DoctorClinicCreateManyClinicInput = {
+  export type DoctorClinicAssociationCreateManyClinicInput = {
     id?: string
     doctorId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
-  export type DoctorClinicUpdateWithoutClinicInput = {
+  export type IngestionSuggestionCreateManyClinicInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    doctorId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type DoctorClinicAssociationUpdateWithoutClinicInput = {
     id?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    doctor?: DoctorUpdateOneRequiredWithoutDoctorClinicsNestedInput
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctor?: DoctorUpdateOneRequiredWithoutClinicAssociationsNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutAssociationNestedInput
   }
 
-  export type DoctorClinicUncheckedUpdateWithoutClinicInput = {
+  export type DoctorClinicAssociationUncheckedUpdateWithoutClinicInput = {
     id?: StringFieldUpdateOperationsInput | string
     doctorId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutAssociationNestedInput
   }
 
-  export type DoctorClinicUncheckedUpdateManyWithoutClinicInput = {
+  export type DoctorClinicAssociationUncheckedUpdateManyWithoutClinicInput = {
     id?: StringFieldUpdateOperationsInput | string
     doctorId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
-  export type DoctorClinicCreateManyDoctorInput = {
+  export type IngestionSuggestionUpdateWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    ingestionRun?: IngestionRunUpdateOneRequiredWithoutSuggestionsNestedInput
+    doctor?: DoctorUpdateOneWithoutIngestionSuggestionsNestedInput
+    association?: DoctorClinicAssociationUpdateOneWithoutIngestionSuggestionsNestedInput
+  }
+
+  export type IngestionSuggestionUncheckedUpdateWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type DoctorClinicAssociationCreateManyDoctorInput = {
     id?: string
     clinicId: string
+    sourceActive?: boolean
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    confirmedAt?: Date | string | null
+    confirmedByUserId?: string | null
+    endedAt?: Date | string | null
+    endedByUserId?: string | null
+    endReason?: string | null
     createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
-  export type DoctorClinicUpdateWithoutDoctorInput = {
+  export type IngestionSuggestionCreateManyDoctorInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type DoctorClinicAssociationUpdateWithoutDoctorInput = {
     id?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    clinic?: ClinicUpdateOneRequiredWithoutDoctorClinicsNestedInput
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    clinic?: ClinicUpdateOneRequiredWithoutDoctorAssociationsNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutAssociationNestedInput
   }
 
-  export type DoctorClinicUncheckedUpdateWithoutDoctorInput = {
+  export type DoctorClinicAssociationUncheckedUpdateWithoutDoctorInput = {
     id?: StringFieldUpdateOperationsInput | string
     clinicId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutAssociationNestedInput
   }
 
-  export type DoctorClinicUncheckedUpdateManyWithoutDoctorInput = {
+  export type DoctorClinicAssociationUncheckedUpdateManyWithoutDoctorInput = {
     id?: StringFieldUpdateOperationsInput | string
     clinicId?: StringFieldUpdateOperationsInput | string
+    sourceActive?: BoolFieldUpdateOperationsInput | boolean
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    confirmedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    endedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    endReason?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IngestionSuggestionUpdateWithoutDoctorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    ingestionRun?: IngestionRunUpdateOneRequiredWithoutSuggestionsNestedInput
+    clinic?: ClinicUpdateOneWithoutIngestionSuggestionsNestedInput
+    association?: DoctorClinicAssociationUpdateOneWithoutIngestionSuggestionsNestedInput
+  }
+
+  export type IngestionSuggestionUncheckedUpdateWithoutDoctorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutDoctorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionCreateManyAssociationInput = {
+    id?: string
+    ingestionRunId: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    doctorId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionUpdateWithoutAssociationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    ingestionRun?: IngestionRunUpdateOneRequiredWithoutSuggestionsNestedInput
+    clinic?: ClinicUpdateOneWithoutIngestionSuggestionsNestedInput
+    doctor?: DoctorUpdateOneWithoutIngestionSuggestionsNestedInput
+  }
+
+  export type IngestionSuggestionUncheckedUpdateWithoutAssociationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutAssociationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionCreateManyIngestionRunInput = {
+    id?: string
+    type: $Enums.IngestionSuggestionType
+    status?: $Enums.IngestionSuggestionStatus
+    clinicId?: string | null
+    doctorId?: string | null
+    associationId?: string | null
+    reason?: string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: Date | string
+    resolvedAt?: Date | string | null
+    resolvedByUserId?: string | null
+    resolutionNote?: string | null
+  }
+
+  export type IngestionSuggestionUpdateWithoutIngestionRunInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    clinic?: ClinicUpdateOneWithoutIngestionSuggestionsNestedInput
+    doctor?: DoctorUpdateOneWithoutIngestionSuggestionsNestedInput
+    association?: DoctorClinicAssociationUpdateOneWithoutIngestionSuggestionsNestedInput
+  }
+
+  export type IngestionSuggestionUncheckedUpdateWithoutIngestionRunInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
+    status?: EnumIngestionSuggestionStatusFieldUpdateOperationsInput | $Enums.IngestionSuggestionStatus
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    doctorId?: NullableStringFieldUpdateOperationsInput | string | null
+    associationId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    payload?: JsonNullValueInput | InputJsonValue
+    suggestedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
 

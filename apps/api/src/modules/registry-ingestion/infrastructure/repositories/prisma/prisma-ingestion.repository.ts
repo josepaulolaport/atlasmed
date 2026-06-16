@@ -1,11 +1,11 @@
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { prisma } from "../../../../../infrastructure/database/prisma.client";
 import type {
   IngestionRunRecord,
   IngestionRunRepository,
   IngestionSuggestionRecord,
   IngestionSuggestionRepository,
   CreateSuggestionInput,
-} from "../../application/interfaces/ingestion.repository.interface";
+} from "../../../application/interfaces/ingestion.repository.interface";
 import type {
   IngestionRunStatus,
   IngestionSuggestionStatus,
@@ -192,12 +192,15 @@ export class PrismaIngestionSuggestionRepository
   }
 
   async findAll(params: {
-    page: number;
-    limit: number;
+    page?: number;
+    limit?: number;
     status?: IngestionSuggestionStatus;
     type?: IngestionSuggestionType;
     clinicIds?: string[];
   }): Promise<{ suggestions: IngestionSuggestionRecord[]; total: number }> {
+    const page = params.page ?? 1;
+    const limit = params.limit ?? 20;
+
     const where = {
       ...(params.status ? { status: params.status } : {}),
       ...(params.type ? { type: params.type } : {}),
@@ -206,14 +209,14 @@ export class PrismaIngestionSuggestionRepository
         : {}),
     };
 
-    const skip = (params.page - 1) * params.limit;
+    const skip = (page - 1) * limit;
 
     const [suggestions, total] = await Promise.all([
       prisma.ingestionSuggestion.findMany({
         where,
         orderBy: { suggestedAt: "desc" },
         skip,
-        take: params.limit,
+        take: limit,
       }),
       prisma.ingestionSuggestion.count({ where }),
     ]);

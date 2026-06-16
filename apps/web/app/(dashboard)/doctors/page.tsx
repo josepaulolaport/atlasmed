@@ -127,15 +127,6 @@ export default function DoctorsPage() {
       return;
     }
 
-    if (formClinicIds.length === 0) {
-      toast({
-        title: "Validation",
-        description: "Select at least one clinic",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setSaving(true);
     try {
       if (editingDoctor) {
@@ -143,7 +134,6 @@ export default function DoctorsPage() {
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
           specialty: formSpecialty.trim() || null,
-          clinicIds: formClinicIds,
         });
         toast({ title: "Success", description: "Doctor updated", variant: "success" });
       } else {
@@ -151,7 +141,7 @@ export default function DoctorsPage() {
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
           specialty: formSpecialty.trim() || undefined,
-          clinicIds: formClinicIds,
+          ...(formClinicIds.length > 0 ? { clinicIds: formClinicIds } : {}),
         });
         toast({ title: "Success", description: "Doctor created", variant: "success" });
       }
@@ -330,8 +320,12 @@ export default function DoctorsPage() {
                 onChange={(event) => setFormSpecialty(event.target.value)}
               />
             </div>
+            {!editingDoctor && (
             <div>
-              <Label>Clinics</Label>
+              <Label>Clinics (optional)</Label>
+              <p className="mt-1 text-xs text-gray-500">
+                Leave unselected to add the doctor without clinic links. Associate later from a clinic page.
+              </p>
               <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
                 {clinics.length === 0 ? (
                   <p className="text-sm text-gray-500">No clinics available</p>
@@ -349,6 +343,7 @@ export default function DoctorsPage() {
                 )}
               </div>
             </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -211,7 +213,14 @@ export default function ClinicsPage() {
                   ) : (
                     clinics.map((clinic) => (
                       <TableRow key={clinic.id}>
-                        <TableCell className="font-medium">{clinic.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/clinics/${clinic.id}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {clinic.name}
+                          </Link>
+                        </TableCell>
                         <TableCell>{clinic.address || "—"}</TableCell>
                         <TableCell>{clinic.territoryId || "—"}</TableCell>
                         {canManage && (

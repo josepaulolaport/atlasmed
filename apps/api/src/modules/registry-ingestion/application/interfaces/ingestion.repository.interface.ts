@@ -77,8 +77,8 @@ export interface IngestionSuggestionRepository {
   findById(id: string): Promise<IngestionSuggestionRecord | null>;
 
   findAll(params: {
-    page: number;
-    limit: number;
+    page?: number;
+    limit?: number;
     status?: IngestionSuggestionStatus;
     type?: IngestionSuggestionType;
     clinicIds?: string[];

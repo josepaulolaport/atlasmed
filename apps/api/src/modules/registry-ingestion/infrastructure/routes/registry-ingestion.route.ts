@@ -1,8 +1,8 @@
 import { Elysia, t } from "elysia";
-import { auth } from "../../access/composition";
-import { requirePermission } from "../../access/infrastructure/middleware/permission.middleware";
-import { registryIngestionUseCases } from "../composition";
-import { ResourceNotFoundError } from "../../../shared/errors";
+import { auth } from "../../../access/composition";
+import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
+import { registryIngestionUseCases } from "../../composition";
+import { ResourceNotFoundError } from "../../../../shared/errors";
 
 const runIngestionRoute = new Elysia()
   .use(auth)
@@ -18,6 +18,28 @@ const runIngestionRoute = new Elysia()
     {
       detail: {
         summary: "Run registry ingestion",
+        tags: ["Registry Ingestion"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const runDemoRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("manage", "REGISTRY_INGESTION"))
+  .post(
+    "/registry-ingestion/demo",
+    async ({ getUserId }) => {
+      const userId = await getUserId();
+      return registryIngestionUseCases.runDemo().execute({
+        actorUserId: userId,
+      });
+    },
+    {
+      detail: {
+        summary: "Run mock registry demo scenario",
+        description:
+          "Resets mock registry data and replays v1 → v2 → v4 fixtures to generate sample suggestions",
         tags: ["Registry Ingestion"],
         security: [{ bearerAuth: [] }],
       },
@@ -158,6 +180,7 @@ const rejectSuggestionRoute = new Elysia()
 
 export const registryIngestionRoutes = new Elysia()
   .use(runIngestionRoute)
+  .use(runDemoRoute)
   .use(listRunsRoute)
   .use(listSuggestionsRoute)
   .use(approveSuggestionRoute)

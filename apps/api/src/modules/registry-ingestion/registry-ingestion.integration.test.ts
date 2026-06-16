@@ -74,9 +74,17 @@ describe("Registry ingestion Integration Tests", () => {
           clinic.sourceLastSeenAt = sourceLastSeenAt;
         }
       }),
-      softDelete: mock(async () => {}),
-      reactivate: mock(async () => {
-        throw new Error("not used");
+      softDelete: mock(async (id) => {
+        const clinic = [...clinics.values()].find((c) => c.id === id);
+        if (clinic) {
+          clinic.deletedAt = new Date();
+        }
+      }),
+      reactivate: mock(async (id) => {
+        const clinic = [...clinics.values()].find((c) => c.id === id);
+        if (clinic) {
+          clinic.deletedAt = null;
+        }
       }),
     } as unknown as ClinicRepository;
 
@@ -245,6 +253,37 @@ describe("Registry ingestion Integration Tests", () => {
     ).toBe(true);
     expect(
       [...associations.values()].some((a) => a.sourceActive === false && !a.endedAt)
+    ).toBe(true);
+  });
+
+  it("creates reactivation suggestion when soft-deleted clinic reappears in source", async () => {
+    const sync = new RegistrySyncService({
+      clinicRepository,
+      doctorRepository,
+      associationRepository,
+      suggestionRepository,
+    });
+
+    const v1 = await new MockRegistrySourceAdapter(
+      "snapshot-v1.json",
+      fixturesDir
+    ).fetchSnapshot();
+    await sync.syncSnapshot({ snapshot: v1, ingestionRunId: "run-1" });
+
+    const clinic = [...clinics.values()].find(
+      (c) => c.externalSourceId === "mock-clinic-001"
+    );
+    clinic!.deletedAt = new Date();
+
+    const v5 = await new MockRegistrySourceAdapter(
+      "snapshot-v5-reactivated-clinic.json",
+      fixturesDir
+    ).fetchSnapshot();
+    await sync.syncSnapshot({ snapshot: v5, ingestionRunId: "run-5" });
+
+    expect(clinic?.deletedAt).not.toBeNull();
+    expect(
+      suggestions.some((s) => s.type === "CLINIC_REACTIVATION" && s.clinicId === clinic?.id)
     ).toBe(true);
   });
 });

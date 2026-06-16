@@ -20,6 +20,8 @@ export function applyRoleAbilities(
       can("manage", "VISIT");
       can("manage", "TERRITORY");
       can("manage", "INVITATION");
+      can("manage", "REGISTRY_INGESTION");
+      can("manage", "REGISTRY_SUGGESTION");
       break;
 
     case "MANAGER":
@@ -30,14 +32,20 @@ export function applyRoleAbilities(
       can("update", "INVITATION");
       can("delete", "INVITATION");
       can("read", "CLINIC");
+      can("update", "CLINIC");
       can("read", "DOCTOR");
+      can("update", "DOCTOR");
       can("read", "VISIT");
       can("read", "TERRITORY");
+      can("read", "REGISTRY_SUGGESTION");
+      can("update", "REGISTRY_SUGGESTION");
       break;
 
     case "USER":
       can("read", "CLINIC");
+      can("update", "CLINIC");
       can("read", "DOCTOR");
+      can("update", "DOCTOR");
       can("read", "VISIT");
       cannot("create", "USER");
       cannot("update", "USER");

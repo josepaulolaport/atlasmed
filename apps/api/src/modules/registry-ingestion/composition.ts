@@ -1,11 +1,11 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { redis } from "../../../infrastructure/cache/redis.client";
-import { auditLogService } from "../../../infrastructure/audit/audit-log.service";
-import { environment } from "../../../app/config/environment";
-import { PrismaClinicRepository } from "../../clinic/infrastructure/repositories/prisma/prisma-clinic.repository";
-import { PrismaDoctorClinicAssociationRepository } from "../../clinic/infrastructure/repositories/prisma/prisma-doctor-clinic-association.repository";
-import { PrismaDoctorRepository } from "../../doctor/infrastructure/repositories/prisma/prisma-doctor.repository";
+import { redis } from "../../infrastructure/cache/redis.client";
+import { auditLogService } from "../../infrastructure/audit/audit-log.service";
+import { environment } from "../../app/config/environment";
+import { PrismaClinicRepository } from "../clinic/infrastructure/repositories/prisma/prisma-clinic.repository";
+import { PrismaDoctorClinicAssociationRepository } from "../clinic/infrastructure/repositories/prisma/prisma-doctor-clinic-association.repository";
+import { PrismaDoctorRepository } from "../doctor/infrastructure/repositories/prisma/prisma-doctor.repository";
 import { MockRegistrySourceAdapter } from "./infrastructure/adapters/mock-registry-source.adapter";
 import {
   PrismaIngestionRunRepository,
@@ -20,6 +20,12 @@ import {
   RejectSuggestionUseCase,
 } from "./application/use-cases/suggestion.use-cases";
 import { ListIngestionRunsUseCase } from "./application/use-cases/list-ingestion-runs.use-case";
+import { RunRegistryDemoUseCase } from "./application/use-cases/run-registry-demo.use-case";
+import { cleanupMockRegistryData } from "./infrastructure/demo/registry-mock-cleanup";
+import {
+  createRegistryIngestionRunner,
+  registryIngestionRepositories as demoRegistryRepositories,
+} from "./infrastructure/demo/registry-ingestion-runner";
 
 const INGESTION_LOCK_KEY = `${environment.REDIS_KEY_PREFIX}ingestion:registry:lock`;
 const INGESTION_LOCK_TTL_SECONDS = 300;
@@ -103,5 +109,11 @@ export const registryIngestionUseCases = {
       clinicRepository: registryIngestionRepositories.clinic,
       associationRepository: registryIngestionRepositories.association,
       auditLogService,
+    }),
+  runDemo: () =>
+    new RunRegistryDemoUseCase({
+      createRunner: createRegistryIngestionRunner,
+      cleanupMockData: cleanupMockRegistryData,
+      suggestionRepository: demoRegistryRepositories.suggestion,
     }),
 };

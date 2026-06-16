@@ -70,6 +70,33 @@ enum AuditEventType {
   SUSPICIOUS_ACTIVITY
   DATA_ACCESS
   DATA_EXPORT
+  REGISTRY_INGESTION_COMPLETED
+  REGISTRY_SUGGESTION_APPROVED
+  REGISTRY_SUGGESTION_REJECTED
+  DOCTOR_CLINIC_CONFIRMED
+  DOCTOR_CLINIC_ASSOCIATION_ENDED
+  DOCTOR_CLINIC_MANUAL_ASSOCIATED
+  CLINIC_REACTIVATED
+}
+
+enum IngestionRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum IngestionSuggestionType {
+  CLINIC_REMOVAL
+  CLINIC_REACTIVATION
+  DOCTOR_CLINIC_REMOVAL
+}
+
+enum IngestionSuggestionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  SUPERSEDED
 }
 
 enum AuditEventSeverity {
@@ -323,46 +350,120 @@ model Permission {
 }
 
 model Clinic {
-  id            String         @id @default(cuid())
-  name          String
-  address       String?
-  territoryId   String?
-  deletedAt     DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  doctorClinics DoctorClinic[]
+  id                   String                    @id @default(cuid())
+  name                 String
+  address              String?
+  territoryId          String?
+  sourceProvider       String?
+  externalSourceId     String?
+  sourceContentHash    String?
+  sourceFirstSeenAt    DateTime?
+  sourceLastSeenAt     DateTime?
+  sourcePresent        Boolean                   @default(false)
+  sourceTracked        Boolean                   @default(false)
+  manuallyEditedAt     DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  doctorAssociations   DoctorClinicAssociation[]
+  ingestionSuggestions IngestionSuggestion[]
 
+  @@unique([sourceProvider, externalSourceId])
   @@index([territoryId])
   @@index([deletedAt])
   @@index([name])
+  @@index([sourceProvider, sourcePresent])
   @@map("clinics")
 }
 
 model Doctor {
-  id            String         @id @default(cuid())
-  firstName     String
-  lastName      String
-  specialty     String?
-  deletedAt     DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  doctorClinics DoctorClinic[]
+  id                   String                    @id @default(cuid())
+  firstName            String
+  lastName             String
+  specialty            String?
+  sourceProvider       String?
+  externalSourceId     String?
+  sourceContentHash    String?
+  sourceFirstSeenAt    DateTime?
+  sourceLastSeenAt     DateTime?
+  sourcePresent        Boolean                   @default(false)
+  sourceTracked        Boolean                   @default(false)
+  manuallyEditedAt     DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+  clinicAssociations   DoctorClinicAssociation[]
+  ingestionSuggestions IngestionSuggestion[]
 
+  @@unique([sourceProvider, externalSourceId])
   @@index([deletedAt])
   @@index([lastName, firstName])
+  @@index([sourceProvider, sourcePresent])
   @@map("doctors")
 }
 
-model DoctorClinic {
-  id        String   @id @default(cuid())
-  doctorId  String
-  doctor    Doctor   @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  clinicId  String
-  clinic    Clinic   @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+model DoctorClinicAssociation {
+  id                   String                @id @default(cuid())
+  doctorId             String
+  doctor               Doctor                @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinicId             String
+  clinic               Clinic                @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  sourceActive         Boolean               @default(false)
+  sourceFirstSeenAt    DateTime?
+  sourceLastSeenAt     DateTime?
+  confirmedAt          DateTime?
+  confirmedByUserId    String?
+  endedAt              DateTime?
+  endedByUserId        String?
+  endReason            String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  ingestionSuggestions IngestionSuggestion[]
 
   @@unique([doctorId, clinicId])
   @@index([doctorId])
   @@index([clinicId])
-  @@map("doctor_clinics")
+  @@index([clinicId, sourceActive, endedAt])
+  @@index([clinicId, confirmedAt, endedAt])
+  @@map("doctor_clinic_associations")
+}
+
+model IngestionRun {
+  id             String                @id @default(cuid())
+  sourceProvider String
+  status         IngestionRunStatus    @default(RUNNING)
+  startedAt      DateTime              @default(now())
+  completedAt    DateTime?
+  stats          Json?
+  error          String?
+  suggestions    IngestionSuggestion[]
+
+  @@index([sourceProvider, startedAt])
+  @@index([status])
+  @@map("ingestion_runs")
+}
+
+model IngestionSuggestion {
+  id               String                    @id @default(cuid())
+  ingestionRunId   String
+  ingestionRun     IngestionRun              @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
+  type             IngestionSuggestionType
+  status           IngestionSuggestionStatus @default(PENDING)
+  clinicId         String?
+  clinic           Clinic?                   @relation(fields: [clinicId], references: [id], onDelete: SetNull)
+  doctorId         String?
+  doctor           Doctor?                   @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+  associationId    String?
+  association      DoctorClinicAssociation?  @relation(fields: [associationId], references: [id], onDelete: SetNull)
+  reason           String?
+  payload          Json                      @default("{}")
+  suggestedAt      DateTime                  @default(now())
+  resolvedAt       DateTime?
+  resolvedByUserId String?
+  resolutionNote   String?
+
+  @@index([status, type])
+  @@index([clinicId, status])
+  @@index([ingestionRunId])
+  @@map("ingestion_suggestions")
 }

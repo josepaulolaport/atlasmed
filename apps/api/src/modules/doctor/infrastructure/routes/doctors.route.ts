@@ -56,7 +56,7 @@ const createDoctorRoute = new Elysia()
         firstName: t.String(),
         lastName: t.String(),
         specialty: t.Optional(t.String()),
-        clinicIds: t.Array(t.String(), { minItems: 1 }),
+        clinicIds: t.Optional(t.Array(t.String())),
       }),
     }
   );

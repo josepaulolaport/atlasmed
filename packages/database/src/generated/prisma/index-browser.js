@@ -276,6 +276,14 @@ exports.Prisma.ClinicScalarFieldEnum = {
   name: 'name',
   address: 'address',
   territoryId: 'territoryId',
+  sourceProvider: 'sourceProvider',
+  externalSourceId: 'externalSourceId',
+  sourceContentHash: 'sourceContentHash',
+  sourceFirstSeenAt: 'sourceFirstSeenAt',
+  sourceLastSeenAt: 'sourceLastSeenAt',
+  sourcePresent: 'sourcePresent',
+  sourceTracked: 'sourceTracked',
+  manuallyEditedAt: 'manuallyEditedAt',
   deletedAt: 'deletedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -286,16 +294,59 @@ exports.Prisma.DoctorScalarFieldEnum = {
   firstName: 'firstName',
   lastName: 'lastName',
   specialty: 'specialty',
+  sourceProvider: 'sourceProvider',
+  externalSourceId: 'externalSourceId',
+  sourceContentHash: 'sourceContentHash',
+  sourceFirstSeenAt: 'sourceFirstSeenAt',
+  sourceLastSeenAt: 'sourceLastSeenAt',
+  sourcePresent: 'sourcePresent',
+  sourceTracked: 'sourceTracked',
+  manuallyEditedAt: 'manuallyEditedAt',
   deletedAt: 'deletedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.DoctorClinicScalarFieldEnum = {
+exports.Prisma.DoctorClinicAssociationScalarFieldEnum = {
   id: 'id',
   doctorId: 'doctorId',
   clinicId: 'clinicId',
-  createdAt: 'createdAt'
+  sourceActive: 'sourceActive',
+  sourceFirstSeenAt: 'sourceFirstSeenAt',
+  sourceLastSeenAt: 'sourceLastSeenAt',
+  confirmedAt: 'confirmedAt',
+  confirmedByUserId: 'confirmedByUserId',
+  endedAt: 'endedAt',
+  endedByUserId: 'endedByUserId',
+  endReason: 'endReason',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.IngestionRunScalarFieldEnum = {
+  id: 'id',
+  sourceProvider: 'sourceProvider',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  stats: 'stats',
+  error: 'error'
+};
+
+exports.Prisma.IngestionSuggestionScalarFieldEnum = {
+  id: 'id',
+  ingestionRunId: 'ingestionRunId',
+  type: 'type',
+  status: 'status',
+  clinicId: 'clinicId',
+  doctorId: 'doctorId',
+  associationId: 'associationId',
+  reason: 'reason',
+  payload: 'payload',
+  suggestedAt: 'suggestedAt',
+  resolvedAt: 'resolvedAt',
+  resolvedByUserId: 'resolvedByUserId',
+  resolutionNote: 'resolutionNote'
 };
 
 exports.Prisma.SortOrder = {
@@ -305,6 +356,10 @@ exports.Prisma.SortOrder = {
 
 exports.Prisma.NullableJsonNullValueInput = {
   DbNull: Prisma.DbNull,
+  JsonNull: Prisma.JsonNull
+};
+
+exports.Prisma.JsonNullValueInput = {
   JsonNull: Prisma.JsonNull
 };
 
@@ -380,7 +435,14 @@ exports.AuditEventType = exports.$Enums.AuditEventType = {
   TWO_FACTOR_DISABLE: 'TWO_FACTOR_DISABLE',
   SUSPICIOUS_ACTIVITY: 'SUSPICIOUS_ACTIVITY',
   DATA_ACCESS: 'DATA_ACCESS',
-  DATA_EXPORT: 'DATA_EXPORT'
+  DATA_EXPORT: 'DATA_EXPORT',
+  REGISTRY_INGESTION_COMPLETED: 'REGISTRY_INGESTION_COMPLETED',
+  REGISTRY_SUGGESTION_APPROVED: 'REGISTRY_SUGGESTION_APPROVED',
+  REGISTRY_SUGGESTION_REJECTED: 'REGISTRY_SUGGESTION_REJECTED',
+  DOCTOR_CLINIC_CONFIRMED: 'DOCTOR_CLINIC_CONFIRMED',
+  DOCTOR_CLINIC_ASSOCIATION_ENDED: 'DOCTOR_CLINIC_ASSOCIATION_ENDED',
+  DOCTOR_CLINIC_MANUAL_ASSOCIATED: 'DOCTOR_CLINIC_MANUAL_ASSOCIATED',
+  CLINIC_REACTIVATED: 'CLINIC_REACTIVATED'
 };
 
 exports.AuditEventSeverity = exports.$Enums.AuditEventSeverity = {
@@ -396,6 +458,26 @@ exports.VerificationTokenType = exports.$Enums.VerificationTokenType = {
   PHONE_CHANGE: 'PHONE_CHANGE'
 };
 
+exports.IngestionRunStatus = exports.$Enums.IngestionRunStatus = {
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+};
+
+exports.IngestionSuggestionType = exports.$Enums.IngestionSuggestionType = {
+  CLINIC_REMOVAL: 'CLINIC_REMOVAL',
+  CLINIC_REACTIVATION: 'CLINIC_REACTIVATION',
+  DOCTOR_CLINIC_REMOVAL: 'DOCTOR_CLINIC_REMOVAL'
+};
+
+exports.IngestionSuggestionStatus = exports.$Enums.IngestionSuggestionStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  EXPIRED: 'EXPIRED',
+  SUPERSEDED: 'SUPERSEDED'
+};
+
 exports.Prisma.ModelName = {
   User: 'User',
   UserTerritoryAssignment: 'UserTerritoryAssignment',
@@ -408,7 +490,9 @@ exports.Prisma.ModelName = {
   Permission: 'Permission',
   Clinic: 'Clinic',
   Doctor: 'Doctor',
-  DoctorClinic: 'DoctorClinic'
+  DoctorClinicAssociation: 'DoctorClinicAssociation',
+  IngestionRun: 'IngestionRun',
+  IngestionSuggestion: 'IngestionSuggestion'
 };
 
 /**

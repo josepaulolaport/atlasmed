@@ -18,6 +18,7 @@ export * from "./schemas/user-assignment.schema";
 export * from "./schemas/user-permission.schema";
 export * from "./schemas/clinic.schema";
 export * from "./schemas/doctor.schema";
+export * from "./schemas/registry.schema";
 
 // Re-export Prisma enums as single source of truth
 export {

@@ -21,5 +21,8 @@ export {
   AuditEventType,
   AuditEventSeverity,
   VerificationTokenType,
+  IngestionRunStatus,
+  IngestionSuggestionType,
+  IngestionSuggestionStatus,
 } from "./generated/prisma";
 

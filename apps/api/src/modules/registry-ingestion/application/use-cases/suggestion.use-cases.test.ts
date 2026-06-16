@@ -159,4 +159,108 @@ describe("Suggestion use cases", () => {
     expect(result?.status).toBe("REJECTED");
     expect(associationRepository.restoreSourceActive).toHaveBeenCalledWith("assoc-1");
   });
+
+  it("approve doctor-clinic removal ends association by id", async () => {
+    suggestionRepository.findById = mock(async () => ({
+      id: "sug-3",
+      ingestionRunId: "run-1",
+      type: "DOCTOR_CLINIC_REMOVAL" as const,
+      status: "PENDING" as const,
+      clinicId: "clinic-1",
+      doctorId: "doc-1",
+      associationId: "assoc-1",
+      reason: "missing_from_source",
+      payload: {},
+      suggestedAt: new Date(),
+      resolvedAt: null,
+      resolvedByUserId: null,
+      resolutionNote: null,
+    }));
+
+    suggestionRepository.resolve = mock(async (params) => ({
+      id: "sug-3",
+      ingestionRunId: "run-1",
+      type: "DOCTOR_CLINIC_REMOVAL" as const,
+      status: params.status,
+      clinicId: "clinic-1",
+      doctorId: "doc-1",
+      associationId: "assoc-1",
+      reason: "missing_from_source",
+      payload: {},
+      suggestedAt: new Date(),
+      resolvedAt: new Date(),
+      resolvedByUserId: params.resolvedByUserId,
+      resolutionNote: null,
+    }));
+
+    const useCase = new ApproveSuggestionUseCase({
+      suggestionRepository,
+      clinicRepository,
+      associationRepository,
+    });
+
+    const result = await useCase.execute({
+      suggestionId: "sug-3",
+      userId: "admin-1",
+      scope: createGlobalScopeContext(),
+    });
+
+    expect(result?.status).toBe("APPROVED");
+    expect(associationRepository.endAssociationById).toHaveBeenCalledWith({
+      associationId: "assoc-1",
+      endedByUserId: "admin-1",
+      endReason: "suggestion_approved",
+    });
+  });
+
+  it("approve clinic reactivation reactivates clinic", async () => {
+    suggestionRepository.findById = mock(async () => ({
+      id: "sug-4",
+      ingestionRunId: "run-1",
+      type: "CLINIC_REACTIVATION" as const,
+      status: "PENDING" as const,
+      clinicId: "clinic-1",
+      doctorId: null,
+      associationId: null,
+      reason: "reappeared_in_source",
+      payload: {},
+      suggestedAt: new Date(),
+      resolvedAt: null,
+      resolvedByUserId: null,
+      resolutionNote: null,
+    }));
+
+    suggestionRepository.resolve = mock(async (params) => ({
+      id: "sug-4",
+      ingestionRunId: "run-1",
+      type: "CLINIC_REACTIVATION" as const,
+      status: params.status,
+      clinicId: "clinic-1",
+      doctorId: null,
+      associationId: null,
+      reason: "reappeared_in_source",
+      payload: {},
+      suggestedAt: new Date(),
+      resolvedAt: new Date(),
+      resolvedByUserId: params.resolvedByUserId,
+      resolutionNote: null,
+    }));
+
+    clinicRepository.reactivate = mock(async () => {});
+
+    const useCase = new ApproveSuggestionUseCase({
+      suggestionRepository,
+      clinicRepository,
+      associationRepository,
+    });
+
+    const result = await useCase.execute({
+      suggestionId: "sug-4",
+      userId: "admin-1",
+      scope: createGlobalScopeContext(),
+    });
+
+    expect(result?.status).toBe("APPROVED");
+    expect(clinicRepository.reactivate).toHaveBeenCalledWith("clinic-1");
+  });
 });

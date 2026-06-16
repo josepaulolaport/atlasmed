@@ -1,0 +1,113 @@
+import { describe, expect, it, mock } from "bun:test";
+import { RunRegistryIngestionUseCase } from "./run-registry-ingestion.use-case";
+import type { RegistrySourcePort } from "../interfaces/registry-source.port";
+import type { IngestionRunRepository } from "../interfaces/ingestion.repository.interface";
+import { RegistrySyncService } from "../services/registry-sync.service";
+
+describe("RunRegistryIngestionUseCase", () => {
+  it("returns skipped when lock is not acquired", async () => {
+    const useCase = new RunRegistryIngestionUseCase({
+      registrySource: { fetchSnapshot: mock(async () => { throw new Error("not called"); }) } as RegistrySourcePort,
+      ingestionRunRepository: {} as IngestionRunRepository,
+      registrySyncService: {} as RegistrySyncService,
+      auditLogService: { log: mock(async () => {}) },
+      acquireLock: async () => false,
+      releaseLock: mock(async () => {}),
+    });
+
+    const result = await useCase.execute();
+
+    expect(result).toEqual({
+      skipped: true,
+      reason: "ingestion_already_running",
+    });
+  });
+
+  it("runs ingestion and completes run when lock acquired", async () => {
+    const releaseLock = mock(async () => {});
+
+    const registrySource: RegistrySourcePort = {
+      fetchSnapshot: mock(async () => ({
+        provider: "mock_registry",
+        fetchedAt: new Date("2024-01-01"),
+        clinics: [
+          {
+            externalSourceId: "c1",
+            name: "Clinic",
+            address: null,
+            territoryId: null,
+            contentHash: "hash",
+          },
+        ],
+        doctors: [],
+        associations: [],
+      })),
+    };
+
+    const ingestionRunRepository: IngestionRunRepository = {
+      create: mock(async () => ({
+        id: "run-1",
+        sourceProvider: "mock_registry",
+        status: "RUNNING" as const,
+        startedAt: new Date("2024-01-01"),
+        completedAt: null,
+        stats: null,
+        error: null,
+      })),
+      complete: mock(async (_id, stats) => ({
+        id: "run-1",
+        sourceProvider: "mock_registry",
+        status: "COMPLETED" as const,
+        startedAt: new Date("2024-01-01"),
+        completedAt: new Date("2024-01-01"),
+        stats,
+        error: null,
+      })),
+      fail: mock(async () => {
+        throw new Error("not used");
+      }),
+      findAll: mock(async () => ({ runs: [], total: 0 })),
+    };
+
+    const registrySyncService = {
+      syncSnapshot: mock(async () => ({
+        clinicsCreated: 1,
+        clinicsUpdated: 0,
+        clinicsUnchanged: 0,
+        clinicsMarkedAbsent: 0,
+        clinicsReactivationSuggestions: 0,
+        doctorsCreated: 0,
+        doctorsUpdated: 0,
+        doctorsUnchanged: 0,
+        doctorsMarkedAbsent: 0,
+        associationsCreated: 0,
+        associationsUpdated: 0,
+        associationsMarkedInactive: 0,
+        suggestionsCreated: 0,
+        invalidClinics: 0,
+        invalidDoctors: 0,
+      })),
+    } as unknown as RegistrySyncService;
+
+    const auditLog = mock(async () => {});
+
+    const useCase = new RunRegistryIngestionUseCase({
+      registrySource,
+      ingestionRunRepository,
+      registrySyncService,
+      auditLogService: { log: auditLog },
+      acquireLock: async () => true,
+      releaseLock,
+    });
+
+    const result = await useCase.execute({ actorUserId: "admin-1" });
+
+    expect(result.skipped).toBe(false);
+    if (!result.skipped) {
+      expect(result.run.status).toBe("COMPLETED");
+    }
+    expect(registrySyncService.syncSnapshot).toHaveBeenCalled();
+    expect(releaseLock).toHaveBeenCalled();
+    expect(auditLog).toHaveBeenCalled();
+  });
+});

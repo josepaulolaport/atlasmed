@@ -179,13 +179,17 @@ export class PrismaDoctorRepository implements DoctorRepository {
         firstName: data.firstName,
         lastName: data.lastName,
         specialty: data.specialty ?? null,
-        clinicAssociations: {
-          create: data.clinicIds.map((clinicId) => ({
-            clinicId,
-            confirmedAt: now,
-            confirmedByUserId: data.confirmedByUserId ?? null,
-          })),
-        },
+        ...(data.clinicIds.length > 0
+          ? {
+              clinicAssociations: {
+                create: data.clinicIds.map((clinicId) => ({
+                  clinicId,
+                  confirmedAt: now,
+                  confirmedByUserId: data.confirmedByUserId ?? null,
+                })),
+              },
+            }
+          : {}),
       },
       include: doctorInclude,
     });
