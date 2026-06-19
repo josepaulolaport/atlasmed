@@ -9,6 +9,7 @@ import 'features/auth/presentation/screens/forgot_code_screen.dart';
 import 'features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'features/auth/presentation/screens/forgot_success_screen.dart';
 import 'features/auth/presentation/screens/login_success_screen.dart';
+import 'features/explore/presentation/screens/explore_screen.dart';
 import 'shared/theme/app_theme.dart';
 
 class AtlasMedApp extends ConsumerStatefulWidget {
@@ -119,15 +120,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
             );
           },
         ),
-        // Placeholder for main workspace
+        // Explore screen — clinic/doctor list
         GoRoute(
           path: '/workspace',
-          builder: (_, __) => Scaffold(
-            appBar: AppBar(title: const Text('Atlasmed')),
-            body: const Center(
-              child: Text('Em breve — área de trabalho principal'),
-            ),
-          ),
+          builder: (_, __) => const ExploreScreen(),
         ),
       ],
     );
