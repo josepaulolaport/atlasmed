@@ -1,10 +1,10 @@
+import 'clinic_detail.dart';
 import 'explore_repository.dart';
 import 'models.dart';
 
 class MockExploreRepository implements ExploreRepository {
   @override
   Future<List<Clinic>> getClinics() async {
-    // Simulate network delay
     await Future.delayed(const Duration(milliseconds: 800));
     return _clinics;
   }
@@ -13,6 +13,17 @@ class MockExploreRepository implements ExploreRepository {
   Future<List<Doctor>> getDoctors() async {
     await Future.delayed(const Duration(milliseconds: 800));
     return _doctors;
+  }
+
+  @override
+  Future<ClinicDetail> getClinicDetail(String id) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    // Find matching mock detail
+    final detail = _clinicDetails.firstWhere(
+      (d) => d.id == id,
+      orElse: () => _clinicDetails.first,
+    );
+    return detail;
   }
 }
 
@@ -330,5 +341,151 @@ const _doctors = [
     crm: 'CRM-SP 556677',
     distanceKm: 6.1,
     isPriority: false,
+  ),
+];
+
+// ── Mock clinic details ───────────────────────────────────────
+final _clinicDetails = [
+  ClinicDetail(
+    id: 'c1',
+    name: 'Hospital São Lucas',
+    city: 'São Paulo, SP',
+    neighborhood: 'Vila Mariana',
+    streetAddress: 'Rua Dr. Amâncio de Carvalho, 113',
+    distanceKm: 1.2,
+    status: ClinicStatus.ativa,
+    lastVisitDays: 5,
+    doctorCount: 12,
+    isPriority: true,
+    products: ['AtlasGel', 'AtlasCaps', 'AtlasSpray'],
+    phone: '(11) 5084-1200',
+    whatsapp: '(11) 99723-4455',
+    consultantName: 'Rafael Melo',
+    clientType: 'Key Account',
+    region: 'Zona Sul',
+    ltv: 48500,
+    avgTicket: 3200,
+    avgPurchaseDays: 45,
+    fieldNotes: 'Dr. Carlos solicita visita mensal. Portaria exige agendamento com 48h de antecedência. Preferência por entregas na terça-feira pela manhã.',
+    cnpj: '62.458.877/0001-90',
+    email: 'adm@hospital-saolucas.com.br',
+    website: 'www.hospitalsaolucas.com.br',
+    responsibleDoctor: 'Dr. Fernando Almeida (CRM-SP 123456)',
+    openingHours: 'Seg-Sex 07h-20h | Sáb 08h-16h',
+    registeredSince: DateTime(2019, 3, 15),
+    segment: 'Hospital Privado',
+    signals: [
+      ClinicSignal(type: 'warning', message: 'Faturamento caiu 15% no último trimestre'),
+      ClinicSignal(type: 'info', message: 'Novo médico contratado: Dr. Ricardo Lopes (Cardiologista)'),
+    ],
+    productPerformance: [
+      ProductPerformance(name: 'AtlasGel', trend: 'up', percentageChange: 12.5, share: 45),
+      ProductPerformance(name: 'AtlasCaps', trend: 'down', percentageChange: 8.3, share: 30),
+      ProductPerformance(name: 'AtlasSpray', trend: 'up', percentageChange: 22.1, share: 25),
+    ],
+    payers: [
+      PayerInfo(name: 'Unimed', percentage: 40),
+      PayerInfo(name: 'Bradesco Saúde', percentage: 25),
+      PayerInfo(name: 'SulAmérica', percentage: 20),
+      PayerInfo(name: 'Amil', percentage: 10),
+      PayerInfo(name: 'Outros', percentage: 5),
+    ],
+    visits: [
+      ClinicVisit(
+        date: DateTime(2026, 6, 14),
+        type: 'visita',
+        summary: 'Apresentação do AtlasSpray. Dr. Carlos interessado. Agendado pedido experimental.',
+        consultantName: 'Rafael Melo',
+        hasPendingOrder: true,
+      ),
+      ClinicVisit(
+        date: DateTime(2026, 6, 7),
+        type: 'entrega',
+        summary: 'Entrega de 50 unidades AtlasGel. Recebido por Maria (almoxarifado).',
+        consultantName: 'Rafael Melo',
+      ),
+      ClinicVisit(
+        date: DateTime(2026, 5, 28),
+        type: 'visita',
+        summary: 'Revisão de estoque. Renovação de contrato anual. Inclusão de AtlasSpray.',
+        consultantName: 'Rafael Melo',
+      ),
+      ClinicVisit(
+        date: DateTime(2026, 5, 10),
+        type: 'retorno',
+        summary: 'Devolução de 5 unidades AtlasCaps (lote vencido). Crédito concedido.',
+        consultantName: 'Rafael Melo',
+      ),
+    ],
+    clinicDoctors: [
+      DoctorInfo(id: 'd1', name: 'Dra. Ana Beatriz Oliveira', initials: 'AB', hue: 210, specialty: 'Cardiologia', crm: 'CRM-SP 123456', isKeyOpinionLeader: true, hasPendingInteraction: true),
+      DoctorInfo(id: 'd2', name: 'Dr. Carlos Eduardo Santos', initials: 'CE', hue: 340, specialty: 'Ortopedia', crm: 'CRM-SP 234567'),
+      DoctorInfo(id: 'd13', name: 'Dra. Lúcia Andrade', initials: 'LA', hue: 250, specialty: 'Ginecologia', crm: 'CRM-SP 334455', isKeyOpinionLeader: true),
+    ],
+    nearbyClinics: [
+      NearbyClinic(id: 'c7', name: 'Clínica Bem Estar', distanceKm: 0.8),
+      NearbyClinic(id: 'c2', name: 'Clínica Santa Maria', distanceKm: 2.8),
+      NearbyClinic(id: 'c8', name: 'Hospital São Luiz', distanceKm: 2.1),
+    ],
+  ),
+  ClinicDetail(
+    id: 'c2',
+    name: 'Clínica Santa Maria',
+    city: 'São Paulo, SP',
+    neighborhood: 'Moema',
+    streetAddress: 'Av. Jandira, 550',
+    distanceKm: 2.8,
+    status: ClinicStatus.ativa,
+    lastVisitDays: 18,
+    doctorCount: 8,
+    isPriority: false,
+    products: ['AtlasGel', 'AtlasCaps'],
+    phone: '(11) 5055-7800',
+    whatsapp: '(11) 98844-3311',
+    consultantName: 'Rafael Melo',
+    clientType: 'Conta Estratégica',
+    region: 'Zona Sul',
+    ltv: 28200,
+    avgTicket: 1800,
+    avgPurchaseDays: 60,
+    fieldNotes: 'Preferência por contato via WhatsApp. Dra. Marina é a prescritora principal. Clínica fecha para almoço 12h-14h.',
+    cnpj: '15.233.488/0001-20',
+    email: 'adm@clinicasantamaria.com.br',
+    registeredSince: DateTime(2020, 7, 1),
+    segment: 'Clínica Privada',
+    signals: [
+      ClinicSignal(type: 'success', message: 'Meta de prescrições atingida 3 meses consecutivos'),
+    ],
+    productPerformance: [
+      ProductPerformance(name: 'AtlasGel', trend: 'up', percentageChange: 8.2, share: 60),
+      ProductPerformance(name: 'AtlasCaps', trend: 'stable', percentageChange: 1.5, share: 40),
+    ],
+    payers: [
+      PayerInfo(name: 'Unimed', percentage: 50),
+      PayerInfo(name: 'SulAmérica', percentage: 30),
+      PayerInfo(name: 'Outros', percentage: 20),
+    ],
+    visits: [
+      ClinicVisit(
+        date: DateTime(2026, 6, 1),
+        type: 'visita',
+        summary: 'Renovação de estoque AtlasGel. Dra. Marina satisfeita com resultados.',
+        consultantName: 'Rafael Melo',
+      ),
+      ClinicVisit(
+        date: DateTime(2026, 5, 15),
+        type: 'entrega',
+        summary: 'Entrega de 30 unidades AtlasGel + 20 AtlasCaps.',
+        consultantName: 'Rafael Melo',
+      ),
+    ],
+    clinicDoctors: [
+      DoctorInfo(id: 'd3', name: 'Dra. Marina Costa', initials: 'MC', hue: 160, specialty: 'Dermatologia', crm: 'CRM-SP 345678'),
+      DoctorInfo(id: 'd14', name: 'Dr. Ricardo Gomes', initials: 'RG', hue: 40, specialty: 'Endocrinologia', crm: 'CRM-SP 445566'),
+    ],
+    nearbyClinics: [
+      NearbyClinic(id: 'c1', name: 'Hospital São Lucas', distanceKm: 1.5),
+      NearbyClinic(id: 'c6', name: 'Hospital Samaritano', distanceKm: 0.9),
+    ],
   ),
 ];

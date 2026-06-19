@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/clinic_detail.dart';
 import '../../data/explore_repository.dart';
 import '../../data/models.dart';
 import '../../data/mock_explore_repository.dart';
@@ -6,6 +7,13 @@ import '../../data/mock_explore_repository.dart';
 // ── Repository provider ─────────────────────────────────────
 final exploreRepositoryProvider = Provider<ExploreRepository>((ref) {
   return MockExploreRepository();
+});
+
+// ── Clinic detail provider ──────────────────────────────────
+final clinicDetailProvider =
+    FutureProvider.family<ClinicDetail, String>((ref, id) {
+  final repo = ref.watch(exploreRepositoryProvider);
+  return repo.getClinicDetail(id);
 });
 
 // ── Explore state ───────────────────────────────────────────

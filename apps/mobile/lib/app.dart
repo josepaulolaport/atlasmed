@@ -9,6 +9,7 @@ import 'features/auth/presentation/screens/forgot_code_screen.dart';
 import 'features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'features/auth/presentation/screens/forgot_success_screen.dart';
 import 'features/auth/presentation/screens/login_success_screen.dart';
+import 'features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
 import 'shared/theme/app_theme.dart';
 
@@ -124,6 +125,14 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
         GoRoute(
           path: '/workspace',
           builder: (_, __) => const ExploreScreen(),
+          routes: [
+            GoRoute(
+              path: 'clinic/:id',
+              builder: (_, state) => ClinicDetailScreen(
+                clinicId: state.pathParameters['id']!,
+              ),
+            ),
+          ],
         ),
       ],
     );

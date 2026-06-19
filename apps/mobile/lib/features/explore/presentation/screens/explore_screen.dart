@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../data/models.dart';
 import '../providers/explore_provider.dart';
 import '../widgets/clinic_row.dart';
@@ -209,9 +210,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             final clinic = displayedList[index] as Clinic;
             return ClinicRow(
               clinic: clinic,
-              onTap: () {
-                // TODO: navigate to clinic detail
-              },
+              onTap: () => context.push('/workspace/clinic/${clinic.id}'),
             );
           } else {
             final doctor = displayedList[index] as Doctor;
