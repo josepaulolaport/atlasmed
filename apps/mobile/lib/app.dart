@@ -71,28 +71,20 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
       redirect: (context, state) {
         final auth = ref.read(authProvider);
 
-        // While on splash/unknown, allow splash to play
+        // While on splash/unknown, allow to play
         if (auth.status == AuthStatus.unknown) return null;
 
         final location = state.matchedLocation;
-        final isAuthRoute = location.startsWith('/auth');
-        final isSplash = location == '/splash';
+        final isSplash = location.startsWith('/splash');
 
         if (auth.status == AuthStatus.authenticated) {
-          if (isSplash || isAuthRoute) {
-            return '/workspace';
-          }
+          // Logged in — leave splash/*, allow everything else
+          if (isSplash) return '/workspace';
           return null;
         }
 
-        // Not authenticated
-        if (isSplash) {
-          // checkSession() finished — go to login instead of staying on splash
-          return '/splash/login';
-        }
-        if (!isAuthRoute) {
-          return '/splash';
-        }
+        // Not authenticated — only splash/* allowed
+        if (!isSplash) return '/splash';
         return null;
       },
       routes: [
@@ -103,10 +95,11 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               final auth = ref.read(authProvider);
               if (auth.status == AuthStatus.authenticated) {
                 gc.go('/workspace');
-              } else if (auth.status == AuthStatus.unauthenticated) {
+              } else {
+                // unauthenticated or still unknown → login screen
+                // redirect only allows splash/* for unauthenticated, this is safe
                 gc.go('/splash/login');
               }
-              // if still unknown, checkSession() hasn't finished yet — wait
             },
           ),
           routes: [
