@@ -768,6 +768,11 @@ class _ClinicPayers extends StatelessWidget {
   final List<PayerInfo> items;
   const _ClinicPayers({required this.items});
 
+  static const _colors = [
+    Color(0xFF1e40af), Color(0xFF2563eb), Color(0xFF3b82f6),
+    Color(0xFF60a5fa), Color(0xFF93c5fd),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -779,9 +784,9 @@ class _ClinicPayers extends StatelessWidget {
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(
-        children: items.map((p) => Padding(
+        children: items.asMap().entries.map((e) => Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: _PayerRow(payer: p),
+          child: _PayerRow(payer: e.value, index: e.key, totalColors: _colors),
         )).toList(),
       ),
     );
@@ -790,18 +795,24 @@ class _ClinicPayers extends StatelessWidget {
 
 class _PayerRow extends StatelessWidget {
   final PayerInfo payer;
-  const _PayerRow({required this.payer});
+  final int index;
+  final List<Color> totalColors;
+  const _PayerRow({
+    required this.payer,
+    required this.index,
+    required this.totalColors,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final colors = [const Color(0xFF1e40af), const Color(0xFF2563eb), const Color(0xFF3b82f6), const Color(0xFF60a5fa), const Color(0xFF93c5fd)];
+    final color = totalColors[index % totalColors.length];
 
     return Row(
       children: [
         Container(
           width: 10, height: 10,
           decoration: BoxDecoration(
-            color: colors[items.indexOf(payer) % colors.length],
+            color: color,
             shape: BoxShape.circle,
           ),
         ),
@@ -823,7 +834,7 @@ class _PayerRow extends StatelessWidget {
               widthFactor: payer.percentage / 100,
               child: Container(
                 decoration: BoxDecoration(
-                  color: colors[items.indexOf(payer) % colors.length],
+                  color: color,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
@@ -841,9 +852,6 @@ class _PayerRow extends StatelessWidget {
       ],
     );
   }
-
-  // Hack to get index — we rebuild this widget per item
-  List<PayerInfo> get items => [payer]; // overridden by parent builder
 }
 
 // ======================================================================

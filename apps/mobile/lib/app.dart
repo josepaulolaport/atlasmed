@@ -13,6 +13,11 @@ import 'features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
 import 'shared/theme/app_theme.dart';
 
+/// Notifies GoRouter to re-evaluate redirects when auth state changes.
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void requestRefresh() => notifyListeners();
+}
+
 class AtlasMedApp extends ConsumerStatefulWidget {
   const AtlasMedApp({super.key});
 
@@ -22,6 +27,7 @@ class AtlasMedApp extends ConsumerStatefulWidget {
 
 class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
   late final GoRouter _router;
+  final _routerRefreshNotifier = _RouterRefreshNotifier();
 
   @override
   void initState() {
@@ -34,10 +40,34 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
     });
   }
 
+  @override
+  void dispose() {
+    _routerRefreshNotifier.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Listen to auth changes inside build() — ref.listen only allowed here
+    ref.listen<AuthState>(authProvider, (_, next) {
+      if (next.status == AuthStatus.authenticated ||
+          next.status == AuthStatus.unauthenticated) {
+        _routerRefreshNotifier.requestRefresh();
+      }
+    });
+
+    return MaterialApp.router(
+      title: 'AtlasMed',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      routerConfig: _router,
+    );
+  }
+
   GoRouter _buildRouter() {
     return GoRouter(
       initialLocation: '/splash',
-      refreshListenable: _AuthStateNotifier(ref),
+      refreshListenable: _routerRefreshNotifier,
       redirect: (context, state) {
         final auth = ref.read(authProvider);
 
@@ -136,27 +166,5 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
         ),
       ],
     );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'AtlasMed',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      routerConfig: _router,
-    );
-  }
-}
-
-/// Notifies GoRouter to re-run redirect when auth state changes.
-class _AuthStateNotifier extends ChangeNotifier {
-  _AuthStateNotifier(WidgetRef ref) {
-    ref.listen<AuthState>(authProvider, (_, next) {
-      if (next.status == AuthStatus.authenticated ||
-          next.status == AuthStatus.unauthenticated) {
-        notifyListeners();
-      }
-    });
   }
 }
