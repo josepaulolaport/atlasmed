@@ -12,6 +12,7 @@ import 'features/auth/presentation/screens/login_success_screen.dart';
 import 'features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
+import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
 
 /// Notifies GoRouter to re-evaluate redirects when auth state changes.
@@ -174,6 +175,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               ),
             ),
           ],
+        ),
+        GoRoute(
+          path: '/perfil',
+          builder: (_, __) => const ProfileScreen(),
         ),
       ],
     );
