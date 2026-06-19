@@ -38,8 +38,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final notifier = ref.read(exploreProvider.notifier);
 
     final isClinic = state.activeTab == 'clinic';
-    final filteredList =
-        isClinic ? state.filteredClinics : state.filteredDoctors;
+    final filteredList = isClinic
+        ? state.filteredClinics
+        : state.filteredDoctors;
     final displayedList = filteredList.take(state.visibleCount).toList();
     final hasMore = state.visibleCount < filteredList.length;
 
@@ -80,10 +81,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                               SkeletonRow(isDoctor: !isClinic),
                         )
                       : filteredList.isEmpty
-                          ? EmptyState(
-                              query: state.query, kind: state.activeTab)
-                          : _buildList(
-                              displayedList, hasMore, isClinic, notifier),
+                      ? EmptyState(query: state.query, kind: state.activeTab)
+                      : _buildList(displayedList, hasMore, isClinic, notifier),
                 ),
               ],
             ),
@@ -239,38 +238,47 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           (s) => s.name == key,
           orElse: () => ClinicStatus.ativa,
         );
-        chips.add(FilterChipData(
-          label: status.label,
-          onRemove: () {
-            final next = Map<String, List<String>>.from(state.filters);
-            next['status'] =
-                (next['status'] ?? []).where((x) => x != key).toList();
-            notifier.setFilters(next);
-          },
-        ));
+        chips.add(
+          FilterChipData(
+            label: status.label,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['status'] = (next['status'] ?? [])
+                  .where((x) => x != key)
+                  .toList();
+              notifier.setFilters(next);
+            },
+          ),
+        );
       }
       for (final p in (state.filters['products'] ?? [])) {
-        chips.add(FilterChipData(
-          label: p,
-          onRemove: () {
-            final next = Map<String, List<String>>.from(state.filters);
-            next['products'] =
-                (next['products'] ?? []).where((x) => x != p).toList();
-            notifier.setFilters(next);
-          },
-        ));
+        chips.add(
+          FilterChipData(
+            label: p,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['products'] = (next['products'] ?? [])
+                  .where((x) => x != p)
+                  .toList();
+              notifier.setFilters(next);
+            },
+          ),
+        );
       }
     } else {
       for (final s in (state.filters['specialties'] ?? [])) {
-        chips.add(FilterChipData(
-          label: s,
-          onRemove: () {
-            final next = Map<String, List<String>>.from(state.filters);
-            next['specialties'] =
-                (next['specialties'] ?? []).where((x) => x != s).toList();
-            notifier.setFilters(next);
-          },
-        ));
+        chips.add(
+          FilterChipData(
+            label: s,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['specialties'] = (next['specialties'] ?? [])
+                  .where((x) => x != s)
+                  .toList();
+              notifier.setFilters(next);
+            },
+          ),
+        );
       }
     }
 

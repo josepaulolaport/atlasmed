@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/clinic_detail.dart';
+import '../../data/doctor_detail.dart';
 import '../../data/explore_repository.dart';
 import '../../data/models.dart';
 import '../../data/mock_explore_repository.dart';
@@ -14,6 +15,13 @@ final clinicDetailProvider =
     FutureProvider.family<ClinicDetail, String>((ref, id) {
   final repo = ref.watch(exploreRepositoryProvider);
   return repo.getClinicDetail(id);
+});
+
+// ── Doctor detail provider ──────────────────────────────────
+final doctorDetailProvider =
+    FutureProvider.family<DoctorDetail, String>((ref, id) {
+  final repo = ref.watch(exploreRepositoryProvider);
+  return repo.getDoctorDetail(id);
 });
 
 // ── Explore state ───────────────────────────────────────────

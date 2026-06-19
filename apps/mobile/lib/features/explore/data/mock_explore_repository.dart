@@ -1,4 +1,5 @@
 import 'clinic_detail.dart';
+import 'doctor_detail.dart';
 import 'explore_repository.dart';
 import 'models.dart';
 
@@ -22,6 +23,16 @@ class MockExploreRepository implements ExploreRepository {
     final detail = _clinicDetails.firstWhere(
       (d) => d.id == id,
       orElse: () => _clinicDetails.first,
+    );
+    return detail;
+  }
+
+  @override
+  Future<DoctorDetail> getDoctorDetail(String id) async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final detail = _doctorDetails.firstWhere(
+      (d) => d.id == id,
+      orElse: () => _doctorDetails.first,
     );
     return detail;
   }
@@ -486,6 +497,165 @@ final _clinicDetails = [
     nearbyClinics: [
       NearbyClinic(id: 'c1', name: 'Hospital São Lucas', distanceKm: 1.5),
       NearbyClinic(id: 'c6', name: 'Hospital Samaritano', distanceKm: 0.9),
+    ],
+  ),
+];
+
+// ── Mock doctor details ────────────────────────────────────
+final _doctorDetails = [
+  DoctorDetail(
+    id: 'd1',
+    name: 'Dra. Ana Beatriz Oliveira',
+    initials: 'AB',
+    hue: 210,
+    specialty: 'Cardiologia',
+    crm: 'CRM-SP 123456',
+    role: 'Decisora · Cardiologia',
+    distanceKm: 1.2,
+    phone: '(11) 98844-2107',
+    email: 'ana.oliveira@saolucas.com.br',
+    whatsapp: '(11) 98844-2107',
+    birthday: '22 de março · 52 anos',
+    faculty: 'UNIFESP — Medicina · 2002',
+    residency: 'Residência INCOR · Cardiologia (2008)',
+    team: 'Corinthians',
+    interests: 'Yoga · vinho tinto · fotografia',
+    language: 'Português · Inglês · Francês',
+    statusLabel: 'Decisora',
+    statusColor: 0xFF1e40af,
+    statusBg: 0x1F1e40af,
+    relationshipLabel: 'Aberta',
+    relationshipColor: 0xFF16a373,
+    relationshipBg: 0x1F16a373,
+    gallery: [
+      DoctorPhoto(label: 'Perfil', date: 'mar/2026', hue: 210),
+      DoctorPhoto(label: 'Cartão de visita', date: 'jan/2026', hue: 218),
+      DoctorPhoto(label: 'Congresso SOCESP', date: 'nov/2025', hue: 148),
+    ],
+    signals: [
+      DoctorSignal(kind: 'good', title: 'Crescimento na prescrição de AtlasGel', body: '+32% nos últimos 90 dias. Reforçar com material de evidências.'),
+      DoctorSignal(kind: 'info', title: 'Aniversário em 22 de março', body: 'Enviar mensagem e brinde personalizado.'),
+      DoctorSignal(kind: 'warn', title: 'Preferência por contato por e-mail', body: 'Não atende ligações durante consultas.'),
+    ],
+    prescribing: [
+      DoctorPrescribingItem(product: 'AtlasGel', volume: 'R\$ 72.400', trend: [18, 22, 28, 32, 36, 40], growth: 32, share: 68),
+      DoctorPrescribingItem(product: 'CardioFlex', volume: 'R\$ 18.200', trend: [12, 14, 16, 15, 18, 20], growth: 18, share: 22),
+      DoctorPrescribingItem(product: 'AtlasCaps', volume: 'R\$ 6.100', trend: [4, 5, 4, 5, 6, 7], growth: 8, share: 10, isNew: true),
+    ],
+    clinics: [
+      DoctorClinic(id: 'c1', name: 'Hospital São Lucas', role: 'Principal · 4 dias/sem', days: 'Seg · Ter · Qua · Qui', isMain: true),
+      DoctorClinic(id: 'c6', name: 'Hospital Samaritano', role: 'Secundária · 1 dia/sem', days: 'Sextas'),
+    ],
+    visits: [
+      DoctorVisit(date: '15/jun · seg', time: '10h30', duration: '35 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Reunião agendada', location: 'Hospital São Lucas', note: 'Apresentei novo material de suporte clínico para AtlasGel. Muito receptiva — pediu amostras para 10 pacientes. Interessada em participar de estudo.', outcome: 'positivo', samples: ['AtlasGel 240g · 10un']),
+      DoctorVisit(date: '12/mai · ter', time: '14h00', duration: '50 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Fechamento de pedido', location: 'Hospital São Lucas', note: 'Fechou pedido de R\$ 5.800. Satisfeita com os resultados do AtlasGel nos pacientes.', outcome: 'positivo', orderValue: 'R\$ 5.800'),
+      DoctorVisit(date: '10/abr · qua', time: '09h20', duration: '42 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Follow-up congresso', location: 'Hospital Samaritano', note: 'Follow-up do SOCESP 2025. Comentou sobre novo artigo de cardiologia preventiva. Sugeri trial do CardioFlex.', outcome: 'misto', samples: ['CardioFlex · trial']),
+      DoctorVisit(date: '08/mar · sex', time: '11h15', duration: '30 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Visita rápida', location: 'Hospital São Lucas', note: 'Passou rapidamente no consultório. Confirmou presença no jantar de final de ano.', outcome: 'neutro'),
+    ],
+    notes: [
+      'Prefere contato por e-mail. Não atende ligações durante consultas (07h-12h e 14h-18h).',
+      'Filho mais novo faz faculdade de medicina — sempre perguntar como ele está.',
+      'É da banca do SOCESP — bom canal para eventos e congressos.',
+      'Adora vinho tinto (Malbec). Aniversário em 22/03.',
+    ],
+  ),
+  DoctorDetail(
+    id: 'd6',
+    name: 'Dr. Fernando Pereira',
+    initials: 'FP',
+    hue: 100,
+    specialty: 'Neurologia',
+    crm: 'CRM-SP 678901',
+    role: 'Prescritor · Neurologia',
+    distanceKm: 3.2,
+    phone: '(11) 99912-8877',
+    email: 'fernando.pereira@samaritano.com.br',
+    birthday: '5 de setembro · 45 anos',
+    faculty: 'USP — Medicina · 2005',
+    residency: 'Residência HCFMUSP · Neurologia (2011)',
+    team: 'São Paulo',
+    interests: 'Corrida · jazz · gastronomia',
+    language: 'Português · Inglês · Alemão',
+    statusLabel: 'Prescritor',
+    statusColor: 0xFF16a373,
+    statusBg: 0x1F16a373,
+    relationshipLabel: 'Fiel',
+    relationshipColor: 0xFF16a373,
+    relationshipBg: 0x1F16a373,
+    gallery: [
+      DoctorPhoto(label: 'Perfil', date: 'fev/2026', hue: 100),
+      DoctorPhoto(label: 'Cartão de visita', date: 'set/2025', hue: 90),
+    ],
+    signals: [
+      DoctorSignal(kind: 'good', title: 'Fidelidade AtlasMed', body: 'Prescreve exclusivamente nossos produtos há 3 anos. Renovar parceria.'),
+      DoctorSignal(kind: 'info', title: 'Maratona em 60 dias', body: 'Treinando para a Maratona de SP. Enviar kit de hidratação.'),
+    ],
+    prescribing: [
+      DoctorPrescribingItem(product: 'AtlasGel', volume: 'R\$ 43.200', trend: [32, 34, 36, 38, 40, 42], growth: 8, share: 85),
+      DoctorPrescribingItem(product: 'NeuroFlex', volume: 'R\$ 12.800', trend: [8, 10, 12, 12, 14, 15], growth: 22, share: 15, isNew: true),
+    ],
+    clinics: [
+      DoctorClinic(id: 'c6', name: 'Hospital Samaritano', role: 'Principal · 3 dias/sem', days: 'Seg · Qua · Sex', isMain: true),
+    ],
+    visits: [
+      DoctorVisit(date: '10/jun · ter', time: '08h30', duration: '45 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Visita mensal', location: 'Hospital Samaritano', note: 'Rotina mensal. Renovação de estoque AtlasGel. Mencionou interesse em trial de nova formulação.', outcome: 'positivo', samples: ['AtlasGel 240g · 5un']),
+      DoctorVisit(date: '12/mai · seg', time: '09h00', duration: '30 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Entrega de amostras', location: 'Hospital Samaritano', note: 'Entrega de amostras solicitadas no mês anterior.', outcome: 'positivo', samples: ['AtlasGel 240g · 8un', 'NeuroFlex · trial']),
+      DoctorVisit(date: '18/abr · qua', time: '10h00', duration: '55 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Almoço de negócios', location: 'Restaurante Dona Firmina', note: 'Almoço de alinhamento estratégico. Discutimos plano anual e metas de prescrição.', outcome: 'positivo'),
+    ],
+    notes: [
+      'Fiel absoluto — único prescritor de Neurologia no Samaritano.',
+      'Corredor amador. Sempre perguntar sobre treinos e provas.',
+      'Prefere contato sempre pelo WhatsApp. Responde rápido.',
+    ],
+  ),
+  DoctorDetail(
+    id: 'd4',
+    name: 'Dr. Roberto Almeida',
+    initials: 'RA',
+    hue: 30,
+    specialty: 'Pediatria',
+    crm: 'CRM-SP 456789',
+    role: 'Influenciador · Pediatria',
+    distanceKm: 4.5,
+    phone: '(11) 97765-4321',
+    email: 'roberto.almeida@einstein.com.br',
+    birthday: '30 de novembro · 41 anos',
+    faculty: 'UNICAMP — Medicina · 2007',
+    residency: 'Residência UNICAMP · Pediatria (2013)',
+    team: 'Flamengo',
+    interests: 'Futebol · churrasco · seriados',
+    language: 'Português · Espanhol',
+    statusLabel: 'Influenciador',
+    statusColor: 0xFF7c3aed,
+    statusBg: 0x1F7c3aed,
+    relationshipLabel: 'Em desenvolvimento',
+    relationshipColor: 0xFFc6861b,
+    relationshipBg: 0x1Fc6861b,
+    gallery: [
+      DoctorPhoto(label: 'Perfil', date: 'jan/2026', hue: 30),
+      DoctorPhoto(label: 'Cartão de visita', date: 'jan/2026', hue: 218),
+    ],
+    signals: [
+      DoctorSignal(kind: 'good', title: 'Novo prescritor de AtlasDerm', body: 'Iniciou prescrição há 60 dias. Crescimento promissor.'),
+      DoctorSignal(kind: 'info', title: 'Aniversário em 30/11', body: ' Preparar brinde personalizado. Fã de futebol.'),
+      DoctorSignal(kind: 'warn', title: 'Restrição de visitas às quintas', body: 'Atende em outra clínica. Preferência por terças ou sextas.'),
+    ],
+    prescribing: [
+      DoctorPrescribingItem(product: 'AtlasGel', volume: 'R\$ 22.800', trend: [8, 10, 14, 18, 20, 22], growth: 45, share: 55),
+      DoctorPrescribingItem(product: 'AtlasDerm', volume: 'R\$ 9.400', trend: [0, 0, 0, 2, 4, 8], growth: 100, share: 25, isNew: true),
+      DoctorPrescribingItem(product: 'AtlasCaps', volume: 'R\$ 4.200', trend: [3, 4, 3, 4, 4, 3], growth: -10, share: 20),
+    ],
+    clinics: [
+      DoctorClinic(id: 'c3', name: 'Centro Médico Albert Einstein', role: 'Principal · 4 dias/sem', days: 'Seg · Ter · Qua · Sex', isMain: true),
+    ],
+    visits: [
+      DoctorVisit(date: '12/jun · qua', time: '15h00', duration: '40 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Visita pedagógica', location: 'Centro Médico Albert Einstein', note: 'Apresentei resultados de estudo pediátrico do AtlasGel. Muito interessado — pediu literatura para compartilhar com colegas.', outcome: 'positivo', samples: ['AtlasGel 120g · 8un']),
+      DoctorVisit(date: '08/mai · sex', time: '11h30', duration: '25 min', consultant: 'Rafael Melo', consultantHue: 220, consultantInitials: 'RM', kind: 'Follow-up', location: 'Centro Médico Albert Einstein', note: 'Rápido follow-up. Confirmou que AtlasDerm está funcionando bem. Solicitou mais material.', outcome: 'positivo', samples: ['AtlasDerm · 5un']),
+    ],
+    notes: [
+      'Prescritor novo (AtlasDerm). Acompanhar de perto nos próximos 90 dias.',
+      'Evitar visitas às quintas (atende em outra clínica).',
+      'Grande influenciador na Pediatria — outros residentes o seguem.',
     ],
   ),
 ];

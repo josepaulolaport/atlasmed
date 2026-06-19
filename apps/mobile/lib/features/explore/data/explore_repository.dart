@@ -1,4 +1,5 @@
 import 'clinic_detail.dart';
+import 'doctor_detail.dart';
 import 'models.dart';
 
 /// Abstract repository for explore (clinic/doctor list + detail) data.
@@ -9,4 +10,5 @@ abstract class ExploreRepository {
   Future<List<Clinic>> getClinics();
   Future<List<Doctor>> getDoctors();
   Future<ClinicDetail> getClinicDetail(String id);
+  Future<DoctorDetail> getDoctorDetail(String id);
 }
