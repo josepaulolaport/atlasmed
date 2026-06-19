@@ -1,17 +1,24 @@
-# atlasmed_mobile_app
+# AtlasMed — Mobile
 
-A new Flutter project.
+App Flutter do atlas médico AtlasMed.
 
-## Getting Started
+## Mock Credentials
 
-This project is a starting point for a Flutter application.
+| Campo    | Valor                        |
+|----------|------------------------------|
+| E-mail   | rafael.melo@atlasmed.com     |
+| Senha    | Atlas2026                    |
+| Código   | 123456                       |
 
-A few resources to get you started if this is your first Flutter project:
+## Screens
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **Login** — Splash, login, forgot password (email → código → nova senha → sucesso)
+- **Explore** — Lista de clínicas/médicos com tabs, busca, filtro, ordenação, infinite scroll
+- **Clinic Detail** — 15 seções (hero, signals, health metrics, products, payers, visit timeline, etc.)
+- **Doctor Detail** — 8 seções (header, prescribing trends, visit history, field notes, etc.)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Run
+
+```sh
+flutter run
+```
