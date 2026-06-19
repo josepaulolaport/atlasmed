@@ -220,9 +220,9 @@ class _ClinicHeader extends StatelessWidget {
                     );
                   },
                   itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'Editar', child: ListTile(leading: Icon(Icons.edit_rounded), title: Text('Editar'), dense: true, visualDensity: VisualDensity.compact)),
-                    PopupMenuItem(value: 'Compartilhar', child: ListTile(leading: Icon(Icons.share_rounded), title: Text('Compartilhar'), dense: true, visualDensity: VisualDensity.compact)),
-                    PopupMenuItem(value: 'Reportar', child: ListTile(leading: Icon(Icons.flag_rounded), title: Text('Reportar problema'), dense: true, visualDensity: VisualDensity.compact)),
+                    PopupMenuItem(value: 'Editar', child: ListTile(tileColor: Colors.white, leading: Icon(Icons.edit_rounded), title: Text('Editar'), dense: true, visualDensity: VisualDensity.compact)),
+                    PopupMenuItem(value: 'Compartilhar', child: ListTile(tileColor: Colors.white, leading: Icon(Icons.share_rounded), title: Text('Compartilhar'), dense: true, visualDensity: VisualDensity.compact)),
+                    PopupMenuItem(value: 'Reportar', child: ListTile(tileColor: Colors.white, leading: Icon(Icons.flag_rounded), title: Text('Reportar problema'), dense: true, visualDensity: VisualDensity.compact)),
                   ],
                 ),
               ],
@@ -874,6 +874,7 @@ class _NearbyClinics extends StatelessWidget {
       ),
       child: Column(
         children: items.map((n) => ListTile(
+          tileColor: Colors.white,
           dense: true,
           leading: Container(
             width: 36, height: 36,
@@ -999,34 +1000,35 @@ class _VisitItem extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Date column
-          SizedBox(
-            width: 44,
-            child: Column(
-              children: [
-                Text('${visit.date.day}',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
-                Text(monthNames[visit.date.month - 1],
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6b7280))),
-              ],
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Date column
+            SizedBox(
+              width: 44,
+              child: Column(
+                children: [
+                  Text('${visit.date.day}',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
+                  Text(monthNames[visit.date.month - 1],
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF6b7280))),
+                ],
+              ),
             ),
-          ),
-          // Timeline indicator
-          SizedBox(
-            width: 24,
-            child: Column(
-              children: [
-                Container(
-                  width: 10, height: 10,
-                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                Expanded(child: Container(width: 1, color: const Color(0xFFeef0f3))),
-              ],
+            // Timeline indicator
+            SizedBox(
+              width: 24,
+              child: Column(
+                children: [
+                  Container(
+                    width: 10, height: 10,
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                  ),
+                  Expanded(child: Container(width: 1, color: const Color(0xFFeef0f3))),
+                ],
+              ),
             ),
-          ),
           // Content
           Expanded(
             child: Column(
@@ -1075,6 +1077,7 @@ class _VisitItem extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
   }
 }
@@ -1111,6 +1114,7 @@ class _DoctorMiniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      tileColor: Colors.white,
       dense: true,
       leading: Stack(
         children: [

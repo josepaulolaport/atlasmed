@@ -9,7 +9,6 @@ class GlassInput extends StatefulWidget {
   final TextInputAction? textInputAction;
   final bool obscureText;
   final Widget? icon;
-  final Widget? trailing;
   final bool error;
   final bool enabled;
   final FocusNode? focusNode;
@@ -23,7 +22,6 @@ class GlassInput extends StatefulWidget {
     this.textInputAction,
     this.obscureText = false,
     this.icon,
-    this.trailing,
     this.error = false,
     this.enabled = true,
     this.focusNode,
@@ -37,7 +35,6 @@ class _GlassInputState extends State<GlassInput> {
   late bool _obscured;
   late TextEditingController _controller;
   late FocusNode _focusNode;
-  bool _focused = false;
 
   @override
   void initState() {
@@ -61,9 +58,9 @@ class _GlassInputState extends State<GlassInput> {
     }
   }
 
-  void _onFocusChange() {
-    setState(() => _focused = _focusNode.hasFocus);
-  }
+  void _onFocusChange() => setState(() {});
+
+  void _toggleObscured() => setState(() => _obscured = !_obscured);
 
   @override
   void dispose() {
@@ -74,28 +71,14 @@ class _GlassInputState extends State<GlassInput> {
 
   @override
   Widget build(BuildContext context) {
-    final filled = _controller.text.isNotEmpty;
-    final active = _focused || filled;
-
-    final bgColor = widget.error
-        ? const Color(0x1FFF5A5A)
-        : _focused
-            ? Colors.white.withValues(alpha: 0.18)
-            : Colors.white.withValues(alpha: 0.09);
-
-    final borderColor = widget.error
-        ? const Color(0x99FF7878)
-        : _focused
-            ? Colors.white.withValues(alpha: 0.5)
-            : Colors.white.withValues(alpha: 0.18);
+    final focused = _focusNode.hasFocus;
+    final borderRadius = BorderRadius.circular(14);
 
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: bgColor,
-        border: Border.all(color: borderColor),
-        boxShadow: _focused
+        borderRadius: borderRadius,
+        boxShadow: focused
             ? [
                 BoxShadow(
                   color: Colors.white.withValues(alpha: 0.08),
@@ -116,74 +99,97 @@ class _GlassInputState extends State<GlassInput> {
                 ),
               ],
       ),
-      child: Stack(
-        children: [
-          // Floating label
-          Positioned(
-            left: widget.icon != null ? 48 : 16,
-            top: active ? 10 : null,
-            bottom: active ? null : 0,
-            child: Center(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: active ? 11 : 15,
-                    letterSpacing: active ? 0.6 : 0,
-                    color: widget.error
-                        ? const Color(0xE6FFB4B4)
-                        : Colors.white70,
-                    fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ),
-            ),
+      child: TextField(
+        controller: _controller,
+        focusNode: _focusNode,
+        onChanged: widget.onChanged,
+        enabled: widget.enabled,
+        obscureText: _obscured,
+        keyboardType: widget.keyboardType,
+        textInputAction: widget.textInputAction,
+        style: const TextStyle(
+          fontSize: 15,
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.1,
+        ),
+        decoration: InputDecoration(
+          labelText: widget.label,
+          labelStyle: TextStyle(
+            fontSize: 15,
+            color: widget.error ? const Color(0xE6FFB4B4) : Colors.white70,
+            fontWeight: FontWeight.w400,
           ),
-          // Input row
-          Row(
-            children: [
-              if (widget.icon != null)
-                Padding(
-                  padding: const EdgeInsets.only(left: 16),
+          floatingLabelStyle: const TextStyle(
+            fontSize: 11,
+            letterSpacing: 0.6,
+            color: Colors.white70,
+            fontWeight: FontWeight.w600,
+          ),
+          filled: true,
+          fillColor: widget.error
+              ? const Color(0x1FFF5A5A)
+              : focused
+                  ? Colors.white.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.09),
+          prefixIcon: widget.icon != null
+              ? Padding(
+                  padding: const EdgeInsets.only(left: 16, right: 8),
                   child: IconTheme(
                     data: const IconThemeData(color: Colors.white70),
                     child: widget.icon!,
                   ),
-                ),
-              SizedBox(width: widget.icon != null ? 0 : 16),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: active ? 14 : 0,
-                    right: widget.trailing != null ? 8 : 16,
+                )
+              : null,
+          suffixIcon: widget.obscureText
+              ? IconButton(
+                  icon: Icon(
+                    _obscured
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
+                    color: Colors.white70,
+                    size: 20,
                   ),
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    onChanged: widget.onChanged,
-                    enabled: widget.enabled,
-                    obscureText: _obscured,
-                    keyboardType: widget.keyboardType,
-                    textInputAction: widget.textInputAction,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.1,
-                    ),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                  ),
-                ),
-              ),
-              if (widget.trailing != null) widget.trailing!,
-            ],
+                  onPressed: _toggleObscured,
+                )
+              : null,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: borderRadius,
+            borderSide: BorderSide(
+              color: widget.error
+                  ? const Color(0x99FF7878)
+                  : Colors.white.withValues(alpha: 0.18),
+            ),
           ),
-        ],
+          focusedBorder: OutlineInputBorder(
+            borderRadius: borderRadius,
+            borderSide: BorderSide(
+              color: widget.error
+                  ? const Color(0x99FF7878)
+                  : Colors.white.withValues(alpha: 0.5),
+              width: 1.5,
+            ),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: borderRadius,
+            borderSide: const BorderSide(
+              color: Color(0x99FF7878),
+            ),
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: borderRadius,
+            borderSide: const BorderSide(
+              color: Color(0x99FF7878),
+              width: 1.5,
+            ),
+          ),
+          contentPadding: EdgeInsets.only(
+            left: widget.icon != null ? 12 : 16,
+            right: widget.obscureText ? 12 : 16,
+            top: 22,
+            bottom: 10,
+          ),
+        ),
       ),
     );
   }

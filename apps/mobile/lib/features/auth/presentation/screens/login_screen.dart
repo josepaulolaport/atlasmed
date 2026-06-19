@@ -27,7 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     with SingleTickerProviderStateMixin {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _showPassword = false;
+
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
   int _shakeCount = 0;
@@ -164,28 +164,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                   _passwordController.selection = TextSelection.collapsed(offset: v.length);
                                   ref.read(authProvider.notifier).clearError();
                                 },
-                                obscureText: !_showPassword,
+                                obscureText: true,
                                 textInputAction: TextInputAction.done,
                                 error: authState.error?.kind == AuthErrorKind.wrongCredentials,
                                 enabled: !isLocked,
-                                trailing: SizedBox(
-                                  width: 40,
-                                  height: 40,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      borderRadius: BorderRadius.circular(20),
-                                      onTap: () => setState(() => _showPassword = !_showPassword),
-                                      child: Icon(
-                                        _showPassword
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
-                                        color: Colors.white70,
-                                        size: 20,
-                                      ),
-                                    ),
-                                  ),
-                                ),
                               ),
                               // Error message
                               const SizedBox(height: 12),

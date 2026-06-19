@@ -26,7 +26,7 @@ class _ForgotNewPasswordScreenState
     extends ConsumerState<ForgotNewPasswordScreen> {
   final _newPwController = TextEditingController();
   final _confirmPwController = TextEditingController();
-  bool _showPassword = false;
+
 
   @override
   void dispose() {
@@ -138,26 +138,7 @@ class _ForgotNewPasswordScreenState
                                 TextSelection.collapsed(offset: v.length);
                             setState(() {});
                           },
-                          obscureText: !_showPassword,
-                          trailing: SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () =>
-                                    setState(() => _showPassword = !_showPassword),
-                                child: Icon(
-                                  _showPassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: Colors.white70,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          ),
+                          obscureText: true,
                         ),
                         const SizedBox(height: 12),
                         GlassInput(
@@ -170,8 +151,8 @@ class _ForgotNewPasswordScreenState
                                 TextSelection.collapsed(offset: v.length);
                             setState(() {});
                           },
-                          obscureText: !_showPassword,
-                        ),
+                          obscureText: true,
+                         ),
                         const SizedBox(height: 16),
                         // Strength checklist
                         Container(
