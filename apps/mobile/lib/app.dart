@@ -85,55 +85,66 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
           return null;
         }
 
-        // Not authenticated — only allow auth routes and splash
-        if (!isSplash && !isAuthRoute) {
+        // Not authenticated
+        if (isSplash) {
+          // checkSession() finished — go to login instead of staying on splash
+          return '/splash/login';
+        }
+        if (!isAuthRoute) {
           return '/splash';
         }
-
         return null;
       },
       routes: [
         GoRoute(
           path: '/splash',
-          builder: (_, __) => SplashScreen(
-            onDone: () {}, // GoRouter redirect handles navigation
+          builder: (gc, __) => SplashScreen(
+            onDone: () {
+              final auth = ref.read(authProvider);
+              if (auth.status == AuthStatus.authenticated) {
+                gc.go('/workspace');
+              } else if (auth.status == AuthStatus.unauthenticated) {
+                gc.go('/splash/login');
+              }
+              // if still unknown, checkSession() hasn't finished yet — wait
+            },
           ),
           routes: [
             // Auth flow routes
             GoRoute(
               path: 'login',
-              builder: (_, __) => LoginScreen(
-                onForgotPassword: () => context.push('/splash/login/forgot'),
-                onLoginSuccess: () => context.go('/workspace'),
+              builder: (gc, __) => LoginScreen(
+                onForgotPassword: () => gc.push('/splash/login/forgot'),
+                onLoginSuccess: () => gc.go('/workspace'),
               ),
               routes: [
                 GoRoute(
                   path: 'forgot',
-                  builder: (_, __) => ForgotEmailScreen(
-                    onBack: () => context.pop(),
-                    onCodeSent: () => context.push('/splash/login/forgot/code'),
+                  builder: (gc, __) => ForgotEmailScreen(
+                    onBack: () => gc.pop(),
+                    onCodeSent: () => gc.push('/splash/login/forgot/code'),
                   ),
                   routes: [
                     GoRoute(
                       path: 'code',
-                      builder: (_, __) => ForgotCodeScreen(
-                        onBack: () => context.pop(),
+                      builder: (gc, __) => ForgotCodeScreen(
+                        onBack: () => gc.pop(),
                         onCodeVerified: () =>
-                            context.push('/splash/login/forgot/new-password'),
+                            gc.push('/splash/login/forgot/new-password'),
                       ),
                     ),
                     GoRoute(
                       path: 'new-password',
-                      builder: (_, __) => ForgotNewPasswordScreen(
-                        onBack: () => context.pop(),
+                      builder: (gc, __) => ForgotNewPasswordScreen(
+                        onBack: () => gc.pop(),
                         onSuccess: () =>
-                            context.pushReplacement('/splash/login/forgot/success'),
+                            gc.pushReplacement('/splash/login/forgot/success'),
                       ),
                     ),
                     GoRoute(
                       path: 'success',
-                      builder: (_, __) => ForgotSuccessScreen(
-                        onBackToLogin: () => context.go('/splash/login'),
+                      builder: (gc, __) => ForgotSuccessScreen(
+                        onBackToLogin: () => gc.go('/splash/login'),
                       ),
                     ),
                   ],
