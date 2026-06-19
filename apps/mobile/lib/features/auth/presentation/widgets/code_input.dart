@@ -45,8 +45,8 @@ class _CodeInputState extends State<CodeInput> {
 
   @override
   void dispose() {
-    for (final n in _focusNodes) n.dispose();
-    for (final c in _controllers) c.dispose();
+    for (final n in _focusNodes) { n.dispose(); }
+    for (final c in _controllers) { c.dispose(); }
     super.dispose();
   }
 

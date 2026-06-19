@@ -9,11 +9,16 @@ import 'features/auth/presentation/screens/forgot_code_screen.dart';
 import 'features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'features/auth/presentation/screens/forgot_success_screen.dart';
 import 'features/auth/presentation/screens/login_success_screen.dart';
+import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
+import 'features/map/presentation/screens/map_screen.dart';
+import 'features/orders/presentation/screens/orders_screen.dart';
+import 'features/presentations/presentation/screens/presentations_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
+import 'shared/widgets/app_shell.dart';
 
 /// Notifies GoRouter to re-evaluate redirects when auth state changes.
 class _RouterRefreshNotifier extends ChangeNotifier {
@@ -92,7 +97,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
       routes: [
         GoRoute(
           path: '/splash',
-          builder: (gc, __) => SplashScreen(
+          builder: (gc, _) => SplashScreen(
             onDone: () {
               final auth = ref.read(authProvider);
               if (auth.status == AuthStatus.authenticated) {
@@ -108,21 +113,21 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
             // Auth flow routes
             GoRoute(
               path: 'login',
-              builder: (gc, __) => LoginScreen(
+              builder: (gc, _) => LoginScreen(
                 onForgotPassword: () => gc.push('/splash/login/forgot'),
                 onLoginSuccess: () => gc.go('/workspace'),
               ),
               routes: [
                 GoRoute(
                   path: 'forgot',
-                  builder: (gc, __) => ForgotEmailScreen(
+                  builder: (gc, _) => ForgotEmailScreen(
                     onBack: () => gc.pop(),
                     onCodeSent: () => gc.push('/splash/login/forgot/code'),
                   ),
                   routes: [
                     GoRoute(
                       path: 'code',
-                      builder: (gc, __) => ForgotCodeScreen(
+                      builder: (gc, _) => ForgotCodeScreen(
                         onBack: () => gc.pop(),
                         onCodeVerified: () =>
                             gc.push('/splash/login/forgot/new-password'),
@@ -130,7 +135,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                     ),
                     GoRoute(
                       path: 'new-password',
-                      builder: (gc, __) => ForgotNewPasswordScreen(
+                      builder: (gc, _) => ForgotNewPasswordScreen(
                         onBack: () => gc.pop(),
                         onSuccess: () =>
                             gc.pushReplacement('/splash/login/forgot/success'),
@@ -138,7 +143,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                     ),
                     GoRoute(
                       path: 'success',
-                      builder: (gc, __) => ForgotSuccessScreen(
+                      builder: (gc, _) => ForgotSuccessScreen(
                         onBackToLogin: () => gc.go('/splash/login'),
                       ),
                     ),
@@ -150,35 +155,62 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
         ),
         GoRoute(
           path: '/login-success',
-          builder: (_, __) {
+          builder: (_, _) {
             final auth = ref.read(authProvider);
             return LoginSuccessScreen(
               displayName: auth.session?.userDisplayName ?? 'Rafael',
             );
           },
         ),
-        // Explore screen — clinic/doctor list
-        GoRoute(
-          path: '/workspace',
-          builder: (_, __) => const ExploreScreen(),
+        // Authenticated shell — shared drawer across all main sections
+        ShellRoute(
+          builder: (_, _, child) => AppShellScreen(child: child),
           routes: [
+            // Desempenho
             GoRoute(
-              path: 'clinic/:id',
-              builder: (_, state) => ClinicDetailScreen(
-                clinicId: state.pathParameters['id']!,
-              ),
+              path: '/bi',
+              builder: (_, _) => const DashboardScreen(),
             ),
+            // Explorar (with clinic/doctor detail sub-routes)
             GoRoute(
-              path: 'doctor/:id',
-              builder: (_, state) => DoctorDetailScreen(
-                doctorId: state.pathParameters['id']!,
-              ),
+              path: '/workspace',
+              builder: (_, _) => const ExploreScreen(),
+              routes: [
+                GoRoute(
+                  path: 'clinic/:id',
+                  builder: (_, state) => ClinicDetailScreen(
+                    clinicId: state.pathParameters['id']!,
+                  ),
+                ),
+                GoRoute(
+                  path: 'doctor/:id',
+                  builder: (_, state) => DoctorDetailScreen(
+                    doctorId: state.pathParameters['id']!,
+                  ),
+                ),
+              ],
+            ),
+            // Mapa
+            GoRoute(
+              path: '/mapa',
+              builder: (_, _) => const MapScreen(),
+            ),
+            // Pedidos
+            GoRoute(
+              path: '/pedidos',
+              builder: (_, _) => const OrdersScreen(),
+            ),
+            // Apresentações
+            GoRoute(
+              path: '/apresentacoes',
+              builder: (_, _) => const PresentationsScreen(),
+            ),
+            // Perfil
+            GoRoute(
+              path: '/perfil',
+              builder: (_, _) => const ProfileScreen(),
             ),
           ],
-        ),
-        GoRoute(
-          path: '/perfil',
-          builder: (_, __) => const ProfileScreen(),
         ),
       ],
     );

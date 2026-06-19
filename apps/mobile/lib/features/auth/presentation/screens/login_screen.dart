@@ -116,7 +116,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     child: AnimatedBuilder(
                       animation: _shakeAnimation,
                       key: ValueKey('login_form_$_shakeCount'),
-                      builder: (_, __) {
+                      builder: (_, _) {
                         return Transform.translate(
                           offset: Offset(_shakeAnimation.value, 0),
                           child: Column(

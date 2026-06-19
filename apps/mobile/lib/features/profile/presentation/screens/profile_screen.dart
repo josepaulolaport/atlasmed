@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../shared/widgets/app_shell.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../data/models.dart';
 import '../providers/profile_provider.dart';
@@ -43,7 +44,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // ── Header · identity ────────────────────────
                   profileAsync.when(
                     loading: () => _buildHeaderShimmer(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
                     data: (profile) => _buildHeader(profile),
                   ),
 
@@ -56,7 +57,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         // Território
                         territoryAsync.when(
                           loading: () => _buildSectionShimmer(height: 260),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                           data: (stats) => _buildTerritory(stats),
                         ),
                         const SizedBox(height: 20),
@@ -64,7 +65,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         // Resumo rápido
                         summaryAsync.when(
                           loading: () => _buildSummaryShimmer(),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildQuickSummary(items),
                         ),
                         const SizedBox(height: 20),
@@ -72,7 +73,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         // Preferências
                         prefsAsync.when(
                           loading: () => _buildSectionShimmer(height: 250),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildPreferences(items),
                         ),
                         const SizedBox(height: 20),
@@ -80,7 +81,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         // Atividade recente
                         activityAsync.when(
                           loading: () => _buildSectionShimmer(height: 200),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildRecentActivity(items),
                         ),
                         const SizedBox(height: 20),
@@ -88,7 +89,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         // Suporte & conta
                         supportAsync.when(
                           loading: () => _buildSectionShimmer(height: 160),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildSupportSection(items),
                         ),
                         const SizedBox(height: 12),
@@ -100,7 +101,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         profileAsync.when(
                           data: (profile) => _buildFooter(profile.since),
                           loading: () => const SizedBox.shrink(),
-                          error: (_, __) => const SizedBox.shrink(),
+                          error: (_, _) => const SizedBox.shrink(),
                         ),
                       ],
                     ),
@@ -126,7 +127,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         children: [
           _GlassButton(
             child: const Icon(Icons.menu_rounded, color: Color(0xFF0a2f7f), size: 18),
-            onTap: () {},
+            onTap: () => openAppDrawer(context),
           ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

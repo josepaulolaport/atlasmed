@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../shared/widgets/app_shell.dart';
 import '../../data/models.dart';
 import '../providers/explore_provider.dart';
 import '../widgets/clinic_row.dart';
@@ -56,7 +57,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             // ── Main content ──────────────────────────────
             Column(
               children: [
-                _buildHeader(),
+                const AtlasTopBar(page: 'Explorar'),
                 _buildSearchBar(state, notifier, filterCount, isClinic),
                 TabToggle(
                   value: state.activeTab,
@@ -77,7 +78,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                   child: state.loading
                       ? ListView.builder(
                           itemCount: 8,
-                          itemBuilder: (_, __) =>
+                          itemBuilder: (_, _) =>
                               SkeletonRow(isDoctor: !isClinic),
                         )
                       : filteredList.isEmpty
@@ -109,25 +110,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-      child: Row(
-        children: const [
-          Text(
-            'Explorar',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF0f1729),
-              letterSpacing: -0.5,
-            ),
-          ),
-        ],
       ),
     );
   }

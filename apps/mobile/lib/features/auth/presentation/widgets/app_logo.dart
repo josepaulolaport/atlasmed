@@ -18,7 +18,7 @@ class AppLogo extends StatelessWidget {
           height: size * 0.54,
           fit: BoxFit.contain,
           // Fallback: if asset doesn't exist yet, show text
-          errorBuilder: (_, __, ___) => Text(
+          errorBuilder: (_, _, _) => Text(
             'atlasmed',
             style: TextStyle(
               fontSize: size * 0.2,
