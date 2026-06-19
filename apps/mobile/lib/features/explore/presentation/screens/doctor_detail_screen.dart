@@ -1,3 +1,5 @@
+import 'dart:ui' show lerpDouble;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -17,12 +19,18 @@ class DoctorDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detailAsync = ref.watch(doctorDetailProvider(doctorId));
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
-      body: detailAsync.when(
-        loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, err.toString()),
-        data: (detail) => _DoctorDetailContent(detail: detail),
+    return detailAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: const Color(0xFFf8f9fb),
+        body: _loadingSkeleton(context),
+      ),
+      error: (err, _) => Scaffold(
+        backgroundColor: const Color(0xFFf8f9fb),
+        body: _errorView(context, err.toString()),
+      ),
+      data: (detail) => ColoredBox(
+        color: const Color(0xFFf8f9fb),
+        child: _DoctorDetailContent(detail: detail),
       ),
     );
   }
@@ -101,177 +109,355 @@ class _DoctorDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _DoctorHeader(detail: detail),
-            _DoctorQuickActions(detail: detail),
-            const SizedBox(height: 16),
-            if (detail.signals.isNotEmpty) ...[
-              _DoctorSignals(signals: detail.signals),
+    return CustomScrollView(
+      primary: true,
+      slivers: [
+        _DoctorHeaderSliver(detail: detail),
+        SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const SizedBox(height: 16),
-            ],
-            _DoctorPersonalCard(detail: detail),
-            const SizedBox(height: 16),
-            if (detail.prescribing.isNotEmpty) ...[
-              _DoctorPrescribing(items: detail.prescribing),
+              _DoctorQuickActions(detail: detail),
               const SizedBox(height: 16),
-            ],
-            if (detail.clinics.isNotEmpty) ...[
+              if (detail.signals.isNotEmpty) ...[
+                _DoctorSignals(signals: detail.signals),
+                const SizedBox(height: 16),
+              ],
+              _DoctorPersonalCard(detail: detail),
+              const SizedBox(height: 16),
               _DoctorClinics(clinics: detail.clinics),
               const SizedBox(height: 16),
+              if (detail.prescribing.isNotEmpty) ...[
+                _DoctorPrescribing(items: detail.prescribing),
+                const SizedBox(height: 16),
+              ],
+              if (detail.visits.isNotEmpty) ...[
+                _DoctorVisits(visits: detail.visits),
+                const SizedBox(height: 16),
+              ],
+              if (detail.notes.isNotEmpty) ...[
+                _DoctorNotes(notes: detail.notes),
+                const SizedBox(height: 24),
+              ],
             ],
-            if (detail.visits.isNotEmpty) ...[
-              _DoctorVisits(visits: detail.visits),
-              const SizedBox(height: 16),
-            ],
-            if (detail.notes.isNotEmpty) ...[
-              _DoctorNotes(notes: detail.notes),
-              const SizedBox(height: 24),
-            ],
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }
 
 // ======================================================================
-// 1. DoctorHeader — gradient background + avatar + name + badge
+// 1. DoctorHeader — collapsible gradient header
 // ======================================================================
 
-class _DoctorHeader extends StatelessWidget {
+class _DoctorHeaderSliver extends StatelessWidget {
+  static const toolbarHeight = 52.0;
+
   final DoctorDetail detail;
-  const _DoctorHeader({required this.detail});
+  const _DoctorHeaderSliver({required this.detail});
+
+  double get expandedHeight {
+    var height = 196.0;
+    if (detail.name.length > 28) height += 16;
+    if (detail.residency != null) height += 12;
+    return height;
+  }
 
   @override
   Widget build(BuildContext context) {
     final h = detail.hue;
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            HSLColor.fromAHSL(1, h, 0.58, 0.24).toColor(),
-            HSLColor.fromAHSL(1, h, 0.52, 0.38).toColor(),
-            HSLColor.fromAHSL(1, h, 0.48, 0.48).toColor(),
-          ],
+    final topColor = HSLColor.fromAHSL(1, h, 0.58, 0.24).toColor();
+
+    return SliverAppBar(
+      expandedHeight: expandedHeight,
+      pinned: true,
+      stretch: true,
+      primary: true,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      toolbarHeight: toolbarHeight,
+      backgroundColor: topColor,
+      surfaceTintColor: Colors.transparent,
+      automaticallyImplyLeading: false,
+      leadingWidth: 52,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: _GlassButton(
+          child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+          onTap: () => context.pop(),
         ),
       ),
-      child: Stack(
-        children: [
-          // Decorative glow
-          Positioned(
-            top: -60, right: -60,
-            child: Container(
-              width: 220, height: 220,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    HSLColor.fromAHSL(0.35, h, 0.80, 0.85).toColor(),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: _GlassButton(
+            child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
+            onTap: () {},
           ),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top bar
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _GlassButton(
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
-                        onTap: () => context.pop(),
-                      ),
-                      _GlassButton(
-                        child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
-                        onTap: () {},
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 14),
-                // Avatar + name
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Avatar
-                      Container(
-                        width: 72, height: 72,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 3),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 18, offset: const Offset(0, 6))],
-                          color: HSLColor.fromAHSL(1, h, 0.45, 0.72).toColor(),
-                        ),
-                        child: Center(
-                          child: Text(detail.initials,
-                            style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.5,
-                              color: HSLColor.fromAHSL(1, h, 0.60, 0.22).toColor(),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      // Name + badges
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Status badge
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(width: 5, height: 5, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white)),
-                                  const SizedBox(width: 6),
-                                  Text('${detail.statusLabel} · ${detail.specialty}',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Colors.white)),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(detail.name,
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.15, color: Colors.white)),
-                            const SizedBox(height: 4),
-                            Text(detail.crm,
-                              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.78))),
-                            if (detail.residency != null) ...[
-                              const SizedBox(height: 2),
-                              Text(detail.residency!,
-                                style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.72))),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 22),
+        ),
+      ],
+      flexibleSpace: _DoctorFlexibleHeader(
+        detail: detail,
+        expandedBodyHeight: expandedHeight,
+        toolbarHeight: toolbarHeight,
+      ),
+    );
+  }
+}
+
+class _DoctorFlexibleHeader extends StatelessWidget {
+  final DoctorDetail detail;
+  final double expandedBodyHeight;
+  final double toolbarHeight;
+
+  const _DoctorFlexibleHeader({
+    required this.detail,
+    required this.expandedBodyHeight,
+    required this.toolbarHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final h = detail.hue;
+    final topPadding = MediaQuery.paddingOf(context).top;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final collapsedHeight = topPadding + toolbarHeight;
+        final expandedHeight = topPadding + expandedBodyHeight;
+        final progress = expandedHeight > collapsedHeight
+            ? ((expandedHeight - constraints.maxHeight) /
+                    (expandedHeight - collapsedHeight))
+                .clamp(0.0, 1.0)
+            : 1.0;
+
+        final metaAreaHeight =
+            (constraints.maxHeight - topPadding - toolbarHeight - 12)
+                .clamp(0.0, double.infinity);
+        const collapseStart = 0.12;
+        final showExpandedBody =
+            progress < collapseStart && metaAreaHeight > 96;
+        final nameFontSize = showExpandedBody
+            ? 19.0
+            : lerpDouble(19, 16, ((progress - collapseStart) / (1 - collapseStart)).clamp(0.0, 1.0))!;
+
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                HSLColor.fromAHSL(1, h, 0.58, 0.24).toColor(),
+                HSLColor.fromAHSL(1, h, 0.52, 0.38).toColor(),
+                HSLColor.fromAHSL(1, h, 0.48, 0.48).toColor(),
               ],
             ),
           ),
-        ],
+          child: Stack(
+            fit: StackFit.expand,
+            clipBehavior: Clip.hardEdge,
+            children: [
+              if (showExpandedBody)
+                Positioned(
+                  top: -60,
+                  right: -60,
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          HSLColor.fromAHSL(0.35, h, 0.80, 0.85).toColor(),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (showExpandedBody)
+                Positioned(
+                  left: 16,
+                  right: 16,
+                  top: topPadding + toolbarHeight + 2,
+                  height: metaAreaHeight,
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.bottomLeft,
+                      child: _DoctorExpandedMeta(detail: detail),
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: showExpandedBody ? 84 : 56,
+                right: showExpandedBody ? 16 : 56,
+                top: showExpandedBody ? null : topPadding,
+                bottom: showExpandedBody ? (detail.residency != null ? 46.0 : 30.0) : 0,
+                child: showExpandedBody
+                    ? Align(
+                        alignment: Alignment.bottomLeft,
+                        child: _DoctorNameText(
+                          name: detail.name,
+                          fontSize: nameFontSize,
+                          maxLines: 2,
+                          textAlign: TextAlign.start,
+                        ),
+                      )
+                    : Align(
+                        alignment: Alignment.center,
+                        child: _DoctorNameText(
+                          name: detail.name,
+                          fontSize: nameFontSize,
+                          maxLines: 1,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _DoctorNameText extends StatelessWidget {
+  final String name;
+  final double fontSize;
+  final int maxLines;
+  final TextAlign textAlign;
+
+  const _DoctorNameText({
+    required this.name,
+    required this.fontSize,
+    required this.maxLines,
+    required this.textAlign,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      name,
+      maxLines: maxLines,
+      overflow: TextOverflow.ellipsis,
+      textAlign: textAlign,
+      style: TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w700,
+        letterSpacing: -0.4,
+        height: 1.12,
+        color: Colors.white,
       ),
+    );
+  }
+}
+
+class _DoctorExpandedMeta extends StatelessWidget {
+  final DoctorDetail detail;
+  const _DoctorExpandedMeta({required this.detail});
+
+  @override
+  Widget build(BuildContext context) {
+    final h = detail.hue;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 2.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 14,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            color: HSLColor.fromAHSL(1, h, 0.45, 0.72).toColor(),
+          ),
+          child: Center(
+            child: Text(
+              detail.initials,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+                color: HSLColor.fromAHSL(1, h, 0.60, 0.22).toColor(),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 5,
+                      height: 5,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        '${detail.statusLabel} · ${detail.specialty}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: detail.name.length > 28 ? 50 : 44),
+              Text(
+                detail.crm,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.78),
+                ),
+              ),
+              if (detail.residency != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  detail.residency!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.white.withValues(alpha: 0.72),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -314,7 +500,6 @@ class _DoctorQuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      transform: Matrix4.translationValues(0, -14, 0),
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -725,6 +910,8 @@ class _DoctorPrescribing extends StatelessWidget {
 // ======================================================================
 
 class _DoctorClinics extends StatelessWidget {
+  static const _listHeight = 280.0;
+
   final List<DoctorClinic> clinics;
   const _DoctorClinics({required this.clinics});
 
@@ -745,68 +932,118 @@ class _DoctorClinics extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
             ),
-            child: Column(
-              children: List.generate(clinics.length, (i) {
-                final c = clinics[i];
-                return InkWell(
-                  onTap: () {
-                    context.push('/workspace/clinic/${c.id}');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      border: i > 0 ? const Border(top: BorderSide(color: Color(0xFFeef0f3))) : null,
+            child: clinics.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text(
+                      'Nenhuma clínica vinculada a este profissional.',
+                      style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
                     ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 34, height: 34,
-                          decoration: BoxDecoration(
-                            color: c.isMain ? const Color(0xFFeef2ff) : const Color(0xFFf3f4f6),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(Icons.local_hospital_rounded, size: 16,
-                            color: c.isMain ? const Color(0xFF1e40af) : const Color(0xFF6b7280)),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(c.name,
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0f1729), letterSpacing: -0.1),
-                                      overflow: TextOverflow.ellipsis),
+                  )
+                : SizedBox(
+                    height: _listHeight,
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      itemCount: clinics.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, color: Color(0xFFeef0f3)),
+                      itemBuilder: (context, i) {
+                        final c = clinics[i];
+                        return InkWell(
+                          onTap: () {
+                            context.push('/workspace/clinic/${c.id}');
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: c.isMain
+                                        ? const Color(0xFFeef2ff)
+                                        : const Color(0xFFf3f4f6),
+                                    borderRadius: BorderRadius.circular(8),
                                   ),
-                                  if (c.isMain) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1e40af).withValues(alpha: 0.10),
-                                        borderRadius: BorderRadius.circular(999),
+                                  child: Icon(
+                                    Icons.local_hospital_rounded,
+                                    size: 16,
+                                    color: c.isMain
+                                        ? const Color(0xFF1e40af)
+                                        : const Color(0xFF6b7280),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              c.name,
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF0f1729),
+                                                letterSpacing: -0.1,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (c.isMain) ...[
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 6,
+                                                vertical: 1,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF1e40af)
+                                                    .withValues(alpha: 0.10),
+                                                borderRadius:
+                                                    BorderRadius.circular(999),
+                                              ),
+                                              child: const Text(
+                                                'principal',
+                                                style: TextStyle(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w700,
+                                                  letterSpacing: 0.3,
+                                                  color: Color(0xFF1e40af),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
                                       ),
-                                      child: const Text('principal',
-                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Color(0xFF1e40af))),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 1),
-                              Text('${c.role} · ${c.days}',
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280))),
-                            ],
+                                      const SizedBox(height: 1),
+                                      Text(
+                                        '${c.role} · ${c.days}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Color(0xFF6b7280),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 18,
+                                  color: const Color(0xFF8a94a6).withValues(alpha: 0.7),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(Icons.chevron_right_rounded, size: 18, color: const Color(0xFF8a94a6).withValues(alpha: 0.7)),
-                      ],
+                        );
+                      },
                     ),
                   ),
-                );
-              }),
-            ),
           ),
         ),
       ],

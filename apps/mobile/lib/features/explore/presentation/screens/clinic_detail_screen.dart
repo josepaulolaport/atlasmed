@@ -109,6 +109,8 @@ class _ClinicDetailContent extends StatelessWidget {
               _QuickActions(detail: detail),
               _SuggestEditBanner(),
               _ClinicContextCard(detail: detail),
+              _SectionHeader(title: 'Médicos · ${detail.clinicDoctors.length}'),
+              _ClinicDoctors(doctors: detail.clinicDoctors),
               _AddToRouteButton(),
               // _PhotosButton(),
               if (detail.signals.isNotEmpty)
@@ -130,10 +132,6 @@ class _ClinicDetailContent extends StatelessWidget {
               if (detail.visits.isNotEmpty) ...[
                 _SectionHeader(title: 'Histórico de visitas'),
                 _ClinicVisits(visits: detail.visits),
-              ],
-              if (detail.clinicDoctors.isNotEmpty) ...[
-                _SectionHeader(title: 'Médicos'),
-                _ClinicDoctors(doctors: detail.clinicDoctors),
               ],
               if (detail.fieldNotes != null && detail.fieldNotes!.isNotEmpty) ...[
                 _SectionHeader(title: 'Observações de campo'),
@@ -1087,11 +1085,35 @@ class _VisitItem extends StatelessWidget {
 // ======================================================================
 
 class _ClinicDoctors extends StatelessWidget {
+  static const _listHeight = 280.0;
+
   final List<DoctorInfo> doctors;
   const _ClinicDoctors({required this.doctors});
 
   @override
   Widget build(BuildContext context) {
+    if (doctors.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: const Text(
+          'Nenhum médico vinculado a este estabelecimento.',
+          style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+        ),
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(4),
@@ -1100,8 +1122,14 @@ class _ClinicDoctors extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
       ),
-      child: Column(
-        children: doctors.map((d) => _DoctorMiniCard(doctor: d)).toList(),
+      child: SizedBox(
+        height: _listHeight,
+        child: ListView.separated(
+          padding: EdgeInsets.zero,
+          itemCount: doctors.length,
+          separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFeef0f3)),
+          itemBuilder: (context, index) => _DoctorMiniCard(doctor: doctors[index]),
+        ),
       ),
     );
   }
@@ -1116,54 +1144,77 @@ class _DoctorMiniCard extends StatelessWidget {
     return ListTile(
       tileColor: Colors.white,
       dense: true,
-      leading: Stack(
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: HSLColor.fromAHSL(1, doctor.hue, 0.2, 0.9).toColor(),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(doctor.initials,
-                style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w700,
-                  color: HSLColor.fromAHSL(1, doctor.hue, 0.6, 0.35).toColor(),
-                ),
-              ),
-            ),
-          ),
-          if (doctor.isKeyOpinionLeader)
+      leading: SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          children: [
             Positioned(
-              top: -2, right: -2,
+              left: 0,
+              bottom: 0,
               child: Container(
-                width: 14, height: 14,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7c3aed),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                  color: HSLColor.fromAHSL(1, doctor.hue, 0.2, 0.9).toColor(),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.star_rounded, size: 8, color: Colors.white),
-              ),
-            ),
-          if (doctor.hasPendingInteraction)
-            Positioned(
-              bottom: -2, right: -2,
-              child: Container(
-                width: 12, height: 12,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFea580c),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+                child: Center(
+                  child: Text(
+                    doctor.initials,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: HSLColor.fromAHSL(1, doctor.hue, 0.6, 0.35).toColor(),
+                    ),
+                  ),
                 ),
               ),
             ),
-        ],
+            if (doctor.isKeyOpinionLeader)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7c3aed),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                  child: const Icon(Icons.star_rounded, size: 8, color: Colors.white),
+                ),
+              ),
+            if (doctor.hasPendingInteraction)
+              Positioned(
+                top: 0,
+                left: 0,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFea580c),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
-      title: Text(doctor.name,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF0f1729))),
-      subtitle: Text('${doctor.specialty ?? ''}${doctor.crm != null ? ' • ${doctor.crm}' : ''}',
-        style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
+      title: Text(
+        doctor.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Color(0xFF0f1729)),
+      ),
+      subtitle: Text(
+        '${doctor.specialty ?? ''}${doctor.crm != null ? ' • ${doctor.crm}' : ''}',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
+      ),
       trailing: const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF9ca3af)),
       onTap: () => context.push('/workspace/doctor/${doctor.id}'),
     );

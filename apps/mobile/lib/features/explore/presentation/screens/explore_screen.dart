@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/app_shell.dart';
 import '../../data/models.dart';
+import '../../data/explore_list_filters.dart';
+import '../../data/mappers/explore_mapper.dart';
 import '../providers/explore_provider.dart';
 import '../widgets/clinic_row.dart';
 import '../widgets/doctor_row.dart';
@@ -42,12 +44,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final filteredList = isClinic
         ? state.filteredClinics
         : state.filteredDoctors;
-    final displayedList = filteredList.take(state.visibleCount).toList();
-    final hasMore = state.visibleCount < filteredList.length;
+    final displayedList = filteredList;
+    final hasMore = isClinic ? state.clinicHasMore : state.doctorHasMore;
+    final isLoadingMore = state.loadingMore;
 
     // Build filter chips for active filters
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
+
+    final filterOptions = ref.watch(exploreFilterOptionsProvider).maybeWhen(
+          data: (value) => value,
+          orElse: () => const ExploreFilterOptions(),
+        );
+    final repository = ref.watch(exploreRepositoryProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -83,7 +92,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                         )
                       : filteredList.isEmpty
                       ? EmptyState(query: state.query, kind: state.activeTab)
-                      : _buildList(displayedList, hasMore, isClinic, notifier),
+                      : _buildList(displayedList, hasMore, isLoadingMore, isClinic, notifier),
                 ),
               ],
             ),
@@ -94,9 +103,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               onClose: () => setState(() => _filterOpen = false),
               kind: state.activeTab,
               filters: state.filters,
-              onApply: (f) {
-                notifier.setFilters(f);
+              filterOptions: filterOptions,
+              repository: repository,
+              onApply: (f) async {
                 setState(() => _filterOpen = false);
+                await notifier.setFilters(f);
               },
             ),
 
@@ -154,6 +165,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   Widget _buildList(
     List<dynamic> displayedList,
     bool hasMore,
+    bool isLoadingMore,
     bool isClinic,
     ExploreNotifier notifier,
   ) {
@@ -161,6 +173,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       onNotification: (notification) {
         if (notification is ScrollEndNotification &&
             hasMore &&
+            !isLoadingMore &&
             notification.metrics.pixels >=
                 notification.metrics.maxScrollExtent - 200) {
           notifier.loadMore();
@@ -240,6 +253,43 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               next['products'] = (next['products'] ?? [])
                   .where((x) => x != p)
                   .toList();
+              notifier.setFilters(next);
+            },
+          ),
+        );
+      }
+      for (final code in (state.filters['state'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: code,
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['state'] = (next['state'] ?? []).where((x) => x != code).toList();
+              notifier.setFilters(next);
+            },
+          ),
+        );
+      }
+      for (final type in (state.filters['facilityType'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: formatDisplayName(type),
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['facilityType'] =
+                  (next['facilityType'] ?? []).where((x) => x != type).toList();
+              notifier.setFilters(next);
+            },
+          ),
+        );
+      }
+      for (final city in (state.filters['city'] ?? [])) {
+        chips.add(
+          FilterChipData(
+            label: formatDisplayName(city),
+            onRemove: () {
+              final next = Map<String, List<String>>.from(state.filters);
+              next['city'] = (next['city'] ?? []).where((x) => x != city).toList();
               notifier.setFilters(next);
             },
           ),

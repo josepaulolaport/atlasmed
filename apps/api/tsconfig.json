@@ -1,0 +1,25 @@
+{
+  "extends": "../../tsconfig.base.json",
+
+  "compilerOptions": {
+    "baseUrl": ".",
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    "types": ["bun"],
+
+    "noEmit": true,
+
+    "isolatedModules": true,
+
+    "jsx": "react-jsx",
+
+    "jsxImportSource": "react",
+
+    "exactOptionalPropertyTypes": false
+  },
+
+  "include": ["src"]
+}

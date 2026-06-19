@@ -1,106 +1,117 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/network/api_client.dart';
 import '../../data/clinic_detail.dart';
 import '../../data/doctor_detail.dart';
+import '../../data/explore_list_filters.dart';
 import '../../data/explore_repository.dart';
-import '../../data/models.dart';
 import '../../data/mock_explore_repository.dart';
+import '../../data/api_explore_repository.dart';
+import '../../data/models.dart';
 
-// ── Repository provider ─────────────────────────────────────
 final exploreRepositoryProvider = Provider<ExploreRepository>((ref) {
-  return MockExploreRepository();
+  if (ApiConfig.useMockExplore) {
+    return MockExploreRepository();
+  }
+  return ApiExploreRepository(ref.watch(apiClientProvider));
 });
 
-// ── Clinic detail provider ──────────────────────────────────
+final exploreFilterOptionsProvider = FutureProvider<ExploreFilterOptions>((ref) {
+  return ref.watch(exploreRepositoryProvider).getFacilityFilterOptions();
+});
+
 final clinicDetailProvider =
     FutureProvider.family<ClinicDetail, String>((ref, id) {
   final repo = ref.watch(exploreRepositoryProvider);
   return repo.getClinicDetail(id);
 });
 
-// ── Doctor detail provider ──────────────────────────────────
 final doctorDetailProvider =
     FutureProvider.family<DoctorDetail, String>((ref, id) {
   final repo = ref.watch(exploreRepositoryProvider);
   return repo.getDoctorDetail(id);
 });
 
-// ── Explore state ───────────────────────────────────────────
 class ExploreState {
   final List<Clinic> clinics;
   final List<Doctor> doctors;
   final bool loading;
-  final String activeTab; // 'clinic' | 'doctor'
+  final bool loadingMore;
+  final bool clinicHasMore;
+  final bool doctorHasMore;
+  final int clinicPage;
+  final int doctorPage;
+  final String activeTab;
   final String query;
-  final Map<String, List<String>> filters; // {status: [...], products: [...], specialties: [...]}
+  final Map<String, List<String>> filters;
   final String sort;
-  final int visibleCount;
 
   const ExploreState({
     this.clinics = const [],
     this.doctors = const [],
     this.loading = true,
+    this.loadingMore = false,
+    this.clinicHasMore = false,
+    this.doctorHasMore = false,
+    this.clinicPage = 0,
+    this.doctorPage = 0,
     this.activeTab = 'clinic',
     this.query = '',
     this.filters = const {},
     this.sort = 'distance',
-    this.visibleCount = 15,
   });
 
   ExploreState copyWith({
     List<Clinic>? clinics,
     List<Doctor>? doctors,
     bool? loading,
+    bool? loadingMore,
+    bool? clinicHasMore,
+    bool? doctorHasMore,
+    int? clinicPage,
+    int? doctorPage,
     String? activeTab,
     String? query,
     Map<String, List<String>>? filters,
     String? sort,
-    int? visibleCount,
-    bool resetVisible = false,
   }) {
     return ExploreState(
       clinics: clinics ?? this.clinics,
       doctors: doctors ?? this.doctors,
       loading: loading ?? this.loading,
+      loadingMore: loadingMore ?? this.loadingMore,
+      clinicHasMore: clinicHasMore ?? this.clinicHasMore,
+      doctorHasMore: doctorHasMore ?? this.doctorHasMore,
+      clinicPage: clinicPage ?? this.clinicPage,
+      doctorPage: doctorPage ?? this.doctorPage,
       activeTab: activeTab ?? this.activeTab,
       query: query ?? this.query,
       filters: filters ?? this.filters,
       sort: sort ?? this.sort,
-      visibleCount: resetVisible ? 15 : (visibleCount ?? this.visibleCount),
     );
   }
 
-  // ── Computed properties ───────────────────────────────────
+  ExploreListFilters get clinicListFilters => ExploreListFilters(
+        stateCodes: filters['state'] ?? const [],
+        cities: filters['city'] ?? const [],
+        facilityTypes: filters['facilityType'] ?? const [],
+      );
 
-  /// Filtered clinic list based on query + filters + sort.
   List<Clinic> get filteredClinics {
     var list = List<Clinic>.from(clinics);
 
-    // Search
-    final q = query.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      list = list.where((c) =>
-        c.name.toLowerCase().contains(q) ||
-        c.neighborhood.toLowerCase().contains(q)
-      ).toList();
-    }
-
-    // Status filter
     final statusFilter = filters['status'] ?? [];
     if (statusFilter.isNotEmpty) {
-      list = list.where((c) =>
-        statusFilter.contains(c.status.name)
-      ).toList();
+      list = list.where((c) => statusFilter.contains(c.status.name)).toList();
     }
 
-    // Product filter
     final productFilter = filters['products'] ?? [];
     if (productFilter.isNotEmpty) {
-      list = list.where((c) =>
-        c.products.any((p) => productFilter.contains(p))
-      ).toList();
+      list = list.where((c) => c.products.any((p) => productFilter.contains(p))).toList();
     }
 
-    // Sort
     switch (sort) {
       case 'name-asc':
         list.sort((a, b) => a.name.compareTo(b.name));
@@ -120,29 +131,14 @@ class ExploreState {
     return list;
   }
 
-  /// Filtered doctor list based on query + filters + sort.
   List<Doctor> get filteredDoctors {
     var list = List<Doctor>.from(doctors);
 
-    // Search
-    final q = query.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      list = list.where((d) =>
-        d.name.toLowerCase().contains(q) ||
-        d.specialty.toLowerCase().contains(q) ||
-        d.primaryClinic.toLowerCase().contains(q)
-      ).toList();
-    }
-
-    // Specialty filter
     final specFilter = filters['specialties'] ?? [];
     if (specFilter.isNotEmpty) {
-      list = list.where((d) =>
-        specFilter.contains(d.specialty)
-      ).toList();
+      list = list.where((d) => specFilter.contains(d.specialty)).toList();
     }
 
-    // Sort
     switch (sort) {
       case 'name-asc':
         list.sort((a, b) => a.name.compareTo(b.name));
@@ -159,47 +155,117 @@ class ExploreState {
   }
 }
 
-// ── Explore notifier ────────────────────────────────────────
 class ExploreNotifier extends StateNotifier<ExploreState> {
-  final ExploreRepository _repository;
-
   ExploreNotifier(this._repository) : super(const ExploreState());
 
-  Future<void> loadData() async {
-    state = state.copyWith(loading: true, resetVisible: true);
-    final results = await Future.wait([
-      _repository.getClinics(),
-      _repository.getDoctors(),
-    ]);
+  final ExploreRepository _repository;
+  Timer? _searchDebounce;
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  String? get _searchParam {
+    final search = state.query.trim();
+    return search.length >= 2 ? search : null;
+  }
+
+  Future<void> loadData({bool showFullScreenLoading = true}) async {
     state = state.copyWith(
-      clinics: results[0] as List<Clinic>,
-      doctors: results[1] as List<Doctor>,
+      loading: showFullScreenLoading,
+      loadingMore: !showFullScreenLoading,
+    );
+
+    if (state.activeTab == 'clinic') {
+      final page = await _repository.getClinics(
+        search: _searchParam,
+        filters: state.clinicListFilters,
+        page: 1,
+      );
+      state = state.copyWith(
+        clinics: page.items,
+        clinicPage: 1,
+        clinicHasMore: page.hasMore,
+        loading: false,
+        loadingMore: false,
+      );
+      return;
+    }
+
+    final page = await _repository.getDoctors(search: _searchParam, page: 1);
+    state = state.copyWith(
+      doctors: page.items,
+      doctorPage: 1,
+      doctorHasMore: page.hasMore,
       loading: false,
+      loadingMore: false,
     );
   }
 
-  void setTab(String tab) {
-    state = state.copyWith(activeTab: tab, resetVisible: true);
+  Future<void> setTab(String tab) async {
+    state = state.copyWith(activeTab: tab);
+    if (tab == 'doctor' && state.doctors.isEmpty) {
+      await loadData();
+    } else if (tab == 'clinic' && state.clinics.isEmpty) {
+      await loadData();
+    }
   }
 
   void setQuery(String query) {
-    state = state.copyWith(query: query, resetVisible: true);
+    state = state.copyWith(query: query);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+      loadData();
+    });
   }
 
-  void setFilters(Map<String, List<String>> filters) {
-    state = state.copyWith(filters: filters, resetVisible: true);
+  Future<void> setFilters(Map<String, List<String>> filters) async {
+    state = state.copyWith(filters: filters);
+    if (state.activeTab == 'clinic') {
+      await loadData(showFullScreenLoading: false);
+    }
   }
 
   void setSort(String sort) {
-    state = state.copyWith(sort: sort, resetVisible: true);
+    state = state.copyWith(sort: sort);
   }
 
-  void loadMore() {
-    state = state.copyWith(visibleCount: state.visibleCount + 15);
+  Future<void> loadMore() async {
+    if (state.loading || state.loadingMore) return;
+
+    if (state.activeTab == 'clinic') {
+      if (!state.clinicHasMore) return;
+      state = state.copyWith(loadingMore: true);
+      final nextPage = state.clinicPage + 1;
+      final page = await _repository.getClinics(
+        search: _searchParam,
+        filters: state.clinicListFilters,
+        page: nextPage,
+      );
+      state = state.copyWith(
+        clinics: [...state.clinics, ...page.items],
+        clinicPage: nextPage,
+        clinicHasMore: page.hasMore,
+        loadingMore: false,
+      );
+      return;
+    }
+
+    if (!state.doctorHasMore) return;
+    state = state.copyWith(loadingMore: true);
+    final nextPage = state.doctorPage + 1;
+    final page = await _repository.getDoctors(search: _searchParam, page: nextPage);
+    state = state.copyWith(
+      doctors: [...state.doctors, ...page.items],
+      doctorPage: nextPage,
+      doctorHasMore: page.hasMore,
+      loadingMore: false,
+    );
   }
 }
 
-// ── Provider ────────────────────────────────────────────────
 final exploreProvider = StateNotifierProvider<ExploreNotifier, ExploreState>((ref) {
   final repo = ref.watch(exploreRepositoryProvider);
   return ExploreNotifier(repo);

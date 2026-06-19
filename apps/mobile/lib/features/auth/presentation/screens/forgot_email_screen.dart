@@ -7,7 +7,7 @@ import '../widgets/blue_backdrop.dart';
 import '../widgets/app_back_button.dart';
 
 /// Forgot password — step 1: submit email.
-class ForgotEmailScreen extends ConsumerWidget {
+class ForgotEmailScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onCodeSent;
 
@@ -18,9 +18,63 @@ class ForgotEmailScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ForgotEmailScreen> createState() => _ForgotEmailScreenState();
+}
+
+class _ForgotEmailScreenState extends ConsumerState<ForgotEmailScreen> {
+  String _email = '';
+  bool _submitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final saved = ref.read(authProvider).forgotEmail;
+      if (saved.isNotEmpty && mounted) {
+        setState(() => _email = saved);
+      }
+    });
+  }
+
+  bool get _isValidEmail {
+    final value = _email.trim();
+    return value.contains('@') && value.contains('.');
+  }
+
+  Future<void> _handleSubmit() async {
+    if (!_isValidEmail || _submitting) return;
+
+    setState(() => _submitting = true);
+
+    try {
+      await ref.read(authProvider.notifier).submitForgotEmail(_email.trim());
+
+      if (!mounted) return;
+
+      final st = ref.read(authProvider);
+      if (st.error != null) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'E-mail enviado para ${_email.trim()}. Verifique sua caixa de entrada.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      widget.onCodeSent();
+    } finally {
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
-    final email = TextEditingController(text: state.forgotEmail);
+    final hasError = state.error != null;
 
     return Scaffold(
       body: Stack(
@@ -36,7 +90,7 @@ class ForgotEmailScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: Row(
                       children: [
-                        AppBackButton(onTap: onBack),
+                        AppBackButton(onTap: widget.onBack),
                         const SizedBox(width: 12),
                         Text(
                           'Passo 1 de 3',
@@ -53,7 +107,6 @@ class ForgotEmailScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Mail icon container
                         Container(
                           width: 64,
                           height: 64,
@@ -82,7 +135,7 @@ class ForgotEmailScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'Digite o e-mail cadastrado. Enviaremos um código de 6 dígitos para você.',
+                          'Digite o e-mail cadastrado. Enviaremos um código de recuperação.',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.7),
                             fontSize: 14,
@@ -92,27 +145,43 @@ class ForgotEmailScreen extends ConsumerWidget {
                         const SizedBox(height: 28),
                         GlassInput(
                           label: 'E-mail corporativo',
-                          value: email.text,
-                          onChanged: (v) => email.text = v,
+                          value: _email,
+                          onChanged: (value) {
+                            setState(() => _email = value);
+                            ref.read(authProvider.notifier).clearError();
+                          },
                           keyboardType: TextInputType.emailAddress,
                           icon: const Icon(Icons.email_outlined, size: 18),
+                          error: hasError,
                         ),
+                        if (hasError) ...[
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Color(0xE6FFB4B4),
+                                size: 14,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  state.error!.message,
+                                  style: const TextStyle(
+                                    color: Color(0xE6FFB4B4),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         PrimaryButton(
-                          label: 'Enviar código',
-                          loading: false,
-                          disabled: !email.text.contains('@'),
-                          onPressed: () {
-                            ref
-                                .read(authProvider.notifier)
-                                .submitForgotEmail(email.text)
-                                .then((_) {
-                              final st = ref.read(authProvider);
-                              if (st.error == null) {
-                                onCodeSent();
-                              }
-                            });
-                          },
+                          label: 'Enviar e-mail',
+                          loading: _submitting,
+                          disabled: !_isValidEmail,
+                          onPressed: _handleSubmit,
                         ),
                         const SizedBox(height: 20),
                         Center(
@@ -127,7 +196,7 @@ class ForgotEmailScreen extends ConsumerWidget {
                                 ),
                               ),
                               TextButton(
-                                onPressed: onBack,
+                                onPressed: widget.onBack,
                                 style: TextButton.styleFrom(padding: EdgeInsets.zero),
                                 child: const Text(
                                   'Voltar ao login',

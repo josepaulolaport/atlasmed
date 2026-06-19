@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import 'bottom_sheet.dart';
+import '../../data/explore_list_filters.dart';
+import '../../data/explore_repository.dart';
+import '../../data/mappers/explore_mapper.dart';
+import 'searchable_filter_dropdown.dart';
 
 class FilterSheet extends StatefulWidget {
   final bool open;
   final VoidCallback onClose;
   final String kind;
   final Map<String, List<String>> filters;
+  final ExploreFilterOptions filterOptions;
+  final ExploreRepository repository;
   final ValueChanged<Map<String, List<String>>> onApply;
 
   const FilterSheet({
@@ -14,6 +19,8 @@ class FilterSheet extends StatefulWidget {
     required this.onClose,
     required this.kind,
     required this.filters,
+    required this.repository,
+    this.filterOptions = const ExploreFilterOptions(),
     required this.onApply,
   });
 
@@ -31,7 +38,7 @@ class _FilterSheetState extends State<FilterSheet>
   @override
   void initState() {
     super.initState();
-    _local = Map.from(widget.filters);
+    _local = _copyFilters(widget.filters);
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 320),
@@ -52,7 +59,7 @@ class _FilterSheetState extends State<FilterSheet>
   void didUpdateWidget(FilterSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.open && !oldWidget.open) {
-      _local = Map.from(widget.filters);
+      _local = _copyFilters(widget.filters);
       _animController.forward();
     } else if (!widget.open && oldWidget.open) {
       _animController.reverse();
@@ -65,26 +72,37 @@ class _FilterSheetState extends State<FilterSheet>
     super.dispose();
   }
 
-  void _toggle(String key, String value) {
+  Map<String, List<String>> _copyFilters(Map<String, List<String>> source) {
+    return source.map((key, value) => MapEntry(key, List<String>.from(value)));
+  }
+
+  void _setList(String key, List<String> values) {
     setState(() {
-      final list = List<String>.from(_local[key] ?? []);
-      if (list.contains(value)) {
-        list.remove(value);
+      final next = _copyFilters(_local);
+      if (values.isEmpty) {
+        next.remove(key);
       } else {
-        list.add(value);
+        next[key] = values;
       }
-      _local[key] = list;
+      _local = next;
     });
   }
 
   int get _count =>
       (_local['status']?.length ?? 0) +
       (_local['products']?.length ?? 0) +
+      (_local['state']?.length ?? 0) +
+      (_local['city']?.length ?? 0) +
+      (_local['facilityType']?.length ?? 0) +
       (_local['specialties']?.length ?? 0);
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open && _animController.isDismissed) return const SizedBox.shrink();
+    if (!widget.open && _animController.isDismissed) {
+      return const SizedBox.shrink();
+    }
+
+    final sheetHeight = MediaQuery.sizeOf(context).height * 0.82;
 
     return Stack(
       children: [
@@ -92,7 +110,7 @@ class _FilterSheetState extends State<FilterSheet>
           opacity: _overlayAnim,
           child: GestureDetector(
             onTap: widget.onClose,
-            child: Container(color: const Color(0x803B82F6).withValues(alpha: 0.5)),
+            child: Container(color: Colors.black.withValues(alpha: 0.45)),
           ),
         ),
         Positioned(
@@ -103,95 +121,114 @@ class _FilterSheetState extends State<FilterSheet>
             animation: _animController,
             builder: (context, child) {
               return Transform.translate(
-                offset: Offset(0, _sheetAnim.value * MediaQuery.of(context).size.height * 0.5),
+                offset: Offset(0, _sheetAnim.value * sheetHeight),
                 child: child,
               );
             },
-            child: BottomSheetWidget(
-              title: 'Filtros',
-              child: widget.kind == 'clinic'
-                  ? _ClinicFilters(local: _local, onToggle: _toggle)
-                  : _DoctorFilters(local: _local, onToggle: _toggle),
+            child: Container(
+              height: sheetHeight,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x33000000),
+                    blurRadius: 40,
+                    offset: Offset(0, -12),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 12),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFd1d5db),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Filtros',
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0f1729),
+                        ),
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: widget.kind == 'clinic'
+                          ? _ClinicFilters(
+                              local: _local,
+                              filterOptions: widget.filterOptions,
+                              repository: widget.repository,
+                              onSetList: _setList,
+                            )
+                          : _DoctorFilters(
+                              local: _local,
+                              onSetList: _setList,
+                            ),
+                    ),
+                  ),
+                  _buildButtons(),
+                ],
+              ),
             ),
           ),
         ),
-        if (_animController.isCompleted)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildButtons(),
-          ),
       ],
     );
   }
 
   Widget _buildButtons() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 28),
-      decoration: const BoxDecoration(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+      decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.15))),
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() => _local = {});
-              },
-              child: Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFe5e7eb)),
-                  color: Colors.white,
-                ),
-                child: const Center(
-                  child: Text(
-                    'Limpar',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF374151),
-                    ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => setState(() => _local = {}),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: const Text('Limpar'),
               ),
             ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: () => widget.onApply(_local),
-              child: Container(
-                height: 46,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  color: const Color(0xFF1e40af),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x4D1e40af),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    'Aplicar${_count > 0 ? ' ($_count)' : ''}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: FilledButton(
+                onPressed: () => widget.onApply(_local),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  backgroundColor: const Color(0xFF1e40af),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
+                child: Text('Aplicar${_count > 0 ? ' ($_count)' : ''}'),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -199,9 +236,16 @@ class _FilterSheetState extends State<FilterSheet>
 
 class _ClinicFilters extends StatelessWidget {
   final Map<String, List<String>> local;
-  final void Function(String key, String value) onToggle;
+  final ExploreFilterOptions filterOptions;
+  final ExploreRepository repository;
+  final void Function(String key, List<String> values) onSetList;
 
-  const _ClinicFilters({required this.local, required this.onToggle});
+  const _ClinicFilters({
+    required this.local,
+    required this.filterOptions,
+    required this.repository,
+    required this.onSetList,
+  });
 
   static const _statuses = [
     ('ativa', 'Ativa', Color(0xFF16a373)),
@@ -217,10 +261,75 @@ class _ClinicFilters extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final stateOptions = filterOptions.states
+        .map(
+          (state) => SearchableFilterOption(
+            value: state.code,
+            label: '${state.code} — ${state.name}',
+            subtitle: state.name,
+          ),
+        )
+        .toList();
+
+    final typeOptions = filterOptions.facilityTypes
+        .map(
+          (type) => SearchableFilterOption(
+            value: type,
+            label: formatDisplayName(type),
+          ),
+        )
+        .toList();
+
+    final selectedStates = local['state'] ?? const [];
+
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        SearchableFilterDropdown(
+          label: 'Estado (UF)',
+          hint: 'Selecionar UF',
+          selectedValues: selectedStates,
+          options: stateOptions,
+          searchHint: 'Buscar UF ou estado…',
+          onChanged: (values) {
+            onSetList('state', values);
+            if (values.isEmpty) return;
+            final cities = local['city'] ?? const [];
+            if (cities.isEmpty) return;
+            onSetList('city', const []);
+          },
+        ),
+        SearchableFilterDropdown(
+          label: 'Cidade',
+          hint: 'Selecionar cidade',
+          selectedValues: local['city'] ?? const [],
+          options: const [],
+          searchHint: 'Buscar cidade…',
+          onSearch: (query) async {
+            final cities = await repository.searchCities(
+              search: query,
+              stateCodes: selectedStates,
+            );
+            return cities
+                .map(
+                  (city) => SearchableFilterOption(
+                    value: city.name,
+                    label: formatDisplayName(city.name),
+                    subtitle: city.stateCode,
+                  ),
+                )
+                .toList();
+          },
+          onChanged: (values) => onSetList('city', values),
+        ),
+        SearchableFilterDropdown(
+          label: 'Tipo de estabelecimento',
+          hint: 'Selecionar tipo',
+          selectedValues: local['facilityType'] ?? const [],
+          options: typeOptions,
+          searchHint: 'Buscar tipo…',
+          onChanged: (values) => onSetList('facilityType', values),
+        ),
         _SectionHeader(title: 'Status'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
@@ -233,14 +342,22 @@ class _ClinicFilters extends StatelessWidget {
                 label: s.$2,
                 dotColor: s.$3,
                 selected: on,
-                onTap: () => onToggle('status', s.$1),
+                onTap: () {
+                  final current = List<String>.from(local['status'] ?? []);
+                  if (current.contains(s.$1)) {
+                    current.remove(s.$1);
+                  } else {
+                    current.add(s.$1);
+                  }
+                  onSetList('status', current);
+                },
               );
             }).toList(),
           ),
         ),
         _SectionHeader(title: 'Produto em uso'),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -249,7 +366,15 @@ class _ClinicFilters extends StatelessWidget {
               return _SimpleChip(
                 label: p,
                 selected: on,
-                onTap: () => onToggle('products', p),
+                onTap: () {
+                  final current = List<String>.from(local['products'] ?? []);
+                  if (current.contains(p)) {
+                    current.remove(p);
+                  } else {
+                    current.add(p);
+                  }
+                  onSetList('products', current);
+                },
               );
             }).toList(),
           ),
@@ -261,9 +386,12 @@ class _ClinicFilters extends StatelessWidget {
 
 class _DoctorFilters extends StatelessWidget {
   final Map<String, List<String>> local;
-  final void Function(String key, String value) onToggle;
+  final void Function(String key, List<String> values) onSetList;
 
-  const _DoctorFilters({required this.local, required this.onToggle});
+  const _DoctorFilters({
+    required this.local,
+    required this.onSetList,
+  });
 
   static const _specialties = [
     'Cardiologia', 'Ortopedia', 'Dermatologia', 'Pediatria',
@@ -273,12 +401,11 @@ class _DoctorFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(title: 'Especialidade'),
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -287,7 +414,15 @@ class _DoctorFilters extends StatelessWidget {
               return _SimpleChip(
                 label: s,
                 selected: on,
-                onTap: () => onToggle('specialties', s),
+                onTap: () {
+                  final current = List<String>.from(local['specialties'] ?? []);
+                  if (current.contains(s)) {
+                    current.remove(s);
+                  } else {
+                    current.add(s);
+                  }
+                  onSetList('specialties', current);
+                },
               );
             }).toList(),
           ),

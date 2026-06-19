@@ -122,32 +122,30 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                   path: 'forgot',
                   builder: (gc, _) => ForgotEmailScreen(
                     onBack: () => gc.pop(),
-                    onCodeSent: () => gc.push('/splash/login/forgot/code'),
+                    onCodeSent: () => gc.push('/splash/login/forgot-code'),
                   ),
-                  routes: [
-                    GoRoute(
-                      path: 'code',
-                      builder: (gc, _) => ForgotCodeScreen(
-                        onBack: () => gc.pop(),
-                        onCodeVerified: () =>
-                            gc.push('/splash/login/forgot/new-password'),
-                      ),
-                    ),
-                    GoRoute(
-                      path: 'new-password',
-                      builder: (gc, _) => ForgotNewPasswordScreen(
-                        onBack: () => gc.pop(),
-                        onSuccess: () =>
-                            gc.pushReplacement('/splash/login/forgot/success'),
-                      ),
-                    ),
-                    GoRoute(
-                      path: 'success',
-                      builder: (gc, _) => ForgotSuccessScreen(
-                        onBackToLogin: () => gc.go('/splash/login'),
-                      ),
-                    ),
-                  ],
+                ),
+                GoRoute(
+                  path: 'forgot-code',
+                  builder: (gc, _) => ForgotCodeScreen(
+                    onBack: () => gc.pop(),
+                    onCodeVerified: () =>
+                        gc.push('/splash/login/forgot-new-password'),
+                  ),
+                ),
+                GoRoute(
+                  path: 'forgot-new-password',
+                  builder: (gc, _) => ForgotNewPasswordScreen(
+                    onBack: () => gc.pop(),
+                    onSuccess: () =>
+                        gc.pushReplacement('/splash/login/forgot-success'),
+                  ),
+                ),
+                GoRoute(
+                  path: 'forgot-success',
+                  builder: (gc, _) => ForgotSuccessScreen(
+                    onBackToLogin: () => gc.go('/splash/login'),
+                  ),
                 ),
               ],
             ),

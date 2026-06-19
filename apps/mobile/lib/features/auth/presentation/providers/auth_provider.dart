@@ -1,17 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/network/api_client.dart';
+import '../../data/api_auth_repository.dart';
 import '../../data/auth_repository.dart';
 import '../../data/models.dart';
 import '../../data/mock_auth_repository.dart';
 
-// ── Repository provider ─────────────────────────────────────
-// Swap MockAuthRepository for ApiAuthRepository when backend is ready.
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  return MockAuthRepository();
+  if (ApiConfig.useMockAuth) {
+    return MockAuthRepository();
+  }
+  return ApiAuthRepository(
+    apiClient: ref.watch(apiClientProvider),
+    tokenStorage: ref.watch(tokenStorageProvider),
+  );
 });
 
-// ── Auth state ──────────────────────────────────────────────
 enum AuthStatus {
-  unknown, // splash screen, checking stored session
+  unknown,
   unauthenticated,
   authenticating,
   authenticated,
@@ -21,9 +27,9 @@ class AuthState {
   final AuthStatus status;
   final AuthSession? session;
   final AuthException? error;
-  final int forgotStep; // 0=none, 1=email, 2=code, 3=new-password, 4=success
+  final int forgotStep;
   final String forgotEmail;
-  final String verificationCode;
+  final String resetToken;
   final String newPassword;
   final String confirmPassword;
 
@@ -33,7 +39,7 @@ class AuthState {
     this.error,
     this.forgotStep = 0,
     this.forgotEmail = '',
-    this.verificationCode = '',
+    this.resetToken = '',
     this.newPassword = '',
     this.confirmPassword = '',
   });
@@ -44,7 +50,7 @@ class AuthState {
     AuthException? error,
     int? forgotStep,
     String? forgotEmail,
-    String? verificationCode,
+    String? resetToken,
     String? newPassword,
     String? confirmPassword,
     bool clearError = false,
@@ -55,20 +61,18 @@ class AuthState {
       error: clearError ? null : (error ?? this.error),
       forgotStep: forgotStep ?? this.forgotStep,
       forgotEmail: forgotEmail ?? this.forgotEmail,
-      verificationCode: verificationCode ?? this.verificationCode,
+      resetToken: resetToken ?? this.resetToken,
       newPassword: newPassword ?? this.newPassword,
       confirmPassword: confirmPassword ?? this.confirmPassword,
     );
   }
 }
 
-// ── Auth Notifier ───────────────────────────────────────────
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository _repository;
 
   AuthNotifier(this._repository) : super(const AuthState());
 
-  /// Check stored session on app start.
   Future<void> checkSession() async {
     try {
       final session = await _repository.getStoredSession();
@@ -85,7 +89,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Attempt login with email + password.
   Future<void> login(String email, String password) async {
     state = state.copyWith(
       status: AuthStatus.authenticating,
@@ -110,7 +113,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Start forgot password flow — step 1: submit email.
   Future<void> submitForgotEmail(String email) async {
     state = state.copyWith(forgotEmail: email, error: null, clearError: true);
 
@@ -121,35 +123,54 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(forgotStep: 1, error: null);
     } on AuthException catch (e) {
       state = state.copyWith(error: e);
+    } catch (e) {
+      state = state.copyWith(
+        error: AuthException(
+          kind: AuthErrorKind.networkError,
+          message: 'Não foi possível enviar o e-mail. Verifique sua conexão.',
+        ),
+      );
     }
   }
 
-  /// Step 2: verify code.
-  Future<bool> submitCode(String code) async {
-    final ok = await _repository.verifyResetCode(state.forgotEmail, code);
-    if (ok) {
-      state = state.copyWith(forgotStep: 2, verificationCode: code, error: null);
-      return true;
-    } else {
+  Future<bool> submitResetToken(String token) async {
+    final trimmed = token.trim();
+
+    if (trimmed.length < 8) {
       state = state.copyWith(
         error: const AuthException(
           kind: AuthErrorKind.invalidCode,
-          message: 'Código inválido. Confira e tente novamente.',
+          message: 'Cole o código completo recebido por e-mail.',
+        ),
+      );
+      return false;
+    }
+
+    try {
+      await _repository.validateResetToken(trimmed);
+      state = state.copyWith(resetToken: trimmed, forgotStep: 2, error: null);
+      return true;
+    } on AuthException catch (e) {
+      state = state.copyWith(error: e);
+      return false;
+    } catch (_) {
+      state = state.copyWith(
+        error: const AuthException(
+          kind: AuthErrorKind.networkError,
+          message: 'Não foi possível validar o código. Tente novamente.',
         ),
       );
       return false;
     }
   }
 
-  /// Step 3: submit new password.
   Future<void> submitNewPassword(String newPassword, String confirmPassword) async {
     state = state.copyWith(newPassword: newPassword, confirmPassword: confirmPassword);
 
     try {
       await _repository.resetPassword(
         ResetPasswordRequest(
-          email: state.forgotEmail,
-          code: state.verificationCode,
+          token: state.resetToken,
           newPassword: newPassword,
         ),
       );
@@ -159,7 +180,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Go back to forgot step.
   void forgotBack() {
     if (state.forgotStep == 1) {
       state = state.copyWith(forgotStep: 0, error: null, clearError: true);
@@ -172,31 +192,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  /// Return to login from forgot success.
   void backToLogin() {
     state = state.copyWith(
       forgotStep: 0,
       forgotEmail: '',
-      verificationCode: '',
+      resetToken: '',
       newPassword: '',
       confirmPassword: '',
       error: null,
     );
   }
 
-  /// Logout.
   Future<void> logout() async {
     await _repository.clearSession();
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 
-  /// Clear current error.
   void clearError() {
     state = state.copyWith(clearError: true);
   }
 }
 
-// ── Provider ────────────────────────────────────────────────
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final repo = ref.watch(authRepositoryProvider);
   return AuthNotifier(repo);

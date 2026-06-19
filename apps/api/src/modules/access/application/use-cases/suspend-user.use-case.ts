@@ -1,0 +1,89 @@
+import type { Role, ScopeContext } from "@atlasmed/access";
+import type { UserRepository } from "../interfaces/user.repository.interface";
+import type { SessionRepository } from "../interfaces/session.repository.interface";
+import type { IAuthCache } from "../interfaces/auth-cache.interface";
+import type { ISessionCache } from "../interfaces/session-cache.interface";
+import { SessionService } from "../services/session.service";
+import type { ScopeService } from "../services/scope.service";
+import { assertCanMutateUser } from "../services/managed-user-authorization.service";
+import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IMetrics } from "../interfaces/metrics.interface";
+import { UserNotFoundError, OperationNotAllowedError } from "../../../../shared/errors";
+
+interface Dependencies {
+  userRepository: UserRepository;
+  sessionRepository: SessionRepository;
+  authCache: IAuthCache;
+  sessionCache: ISessionCache;
+  scopeService: ScopeService;
+  auditLog: IAuditLog;
+  metrics: IMetrics;
+}
+
+export class SuspendUserUseCase {
+  private readonly sessionService: SessionService;
+
+  constructor(private readonly deps: Dependencies) {
+    this.sessionService = new SessionService({
+      sessionRepository: deps.sessionRepository,
+      sessionCache: deps.sessionCache,
+    });
+  }
+
+  async execute(params: {
+    userId: string;
+    suspendedBy: string;
+    actorRole: Role;
+    scope: ScopeContext;
+    reason?: string;
+  }) {
+    const user = await this.deps.userRepository.findById(params.userId);
+
+    if (!user) {
+      throw new UserNotFoundError(params.userId);
+    }
+
+    assertCanMutateUser({
+      scope: params.scope,
+      actorId: params.suspendedBy,
+      actorRole: params.actorRole,
+      target: { id: user.id, managerId: user.managerId },
+      action: "suspend",
+    });
+
+    if (user.status === "SUSPENDED") {
+      throw new OperationNotAllowedError(
+        "suspend_user",
+        "User is already suspended"
+      );
+    }
+
+    const oldStatus = user.status;
+
+    await this.deps.userRepository.suspend(params.userId);
+
+    await this.sessionService.revokeAllByUserId(params.userId);
+
+    await this.deps.authCache.invalidate(params.userId);
+
+    if (user.managerId) {
+      await this.deps.scopeService.invalidateForManagerChange({
+        userId: params.userId,
+        previousManagerId: user.managerId,
+        nextManagerId: user.managerId,
+      });
+    } else {
+      await this.deps.scopeService.invalidate(params.userId);
+    }
+
+    await this.deps.auditLog.logUserStatusChange({
+      userId: params.suspendedBy,
+      targetUserId: params.userId,
+      oldStatus,
+      newStatus: "SUSPENDED",
+      reason: params.reason,
+    });
+
+    this.deps.metrics.recordSessionRevoked("user_suspended");
+  }
+}

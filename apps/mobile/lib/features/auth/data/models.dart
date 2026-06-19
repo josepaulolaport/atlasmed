@@ -5,7 +5,7 @@ class LoginRequest {
   const LoginRequest({required this.email, required this.password});
 
   Map<String, dynamic> toJson() => {
-        'email': email,
+        'identifier': email,
         'password': password,
       };
 }
@@ -15,23 +15,20 @@ class ForgotPasswordRequest {
 
   const ForgotPasswordRequest({required this.email});
 
-  Map<String, dynamic> toJson() => {'email': email};
+  Map<String, dynamic> toJson() => {'identifier': email};
 }
 
 class ResetPasswordRequest {
-  final String email;
-  final String code;
+  final String token;
   final String newPassword;
 
   const ResetPasswordRequest({
-    required this.email,
-    required this.code,
+    required this.token,
     required this.newPassword,
   });
 
   Map<String, dynamic> toJson() => {
-        'email': email,
-        'code': code,
+        'token': token,
         'newPassword': newPassword,
       };
 }

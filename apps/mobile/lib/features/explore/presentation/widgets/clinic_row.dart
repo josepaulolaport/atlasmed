@@ -92,11 +92,14 @@ class ClinicRow extends StatelessWidget {
                     children: [
                       Icon(Icons.location_on_rounded, size: 11, color: const Color(0xFF6b7280)),
                       const SizedBox(width: 2),
-                      Text(
-                        clinic.neighborhood,
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Color(0xFF6b7280),
+                      Expanded(
+                        child: Text(
+                          _locationLine(clinic),
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            color: Color(0xFF6b7280),
+                          ),
                         ),
                       ),
                     ],
@@ -133,6 +136,20 @@ class ClinicRow extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _locationLine(Clinic clinic) {
+    final parts = <String>[];
+    if (clinic.neighborhood.trim().isNotEmpty && clinic.neighborhood != '—') {
+      parts.add(clinic.neighborhood);
+    }
+    if (clinic.city.trim().isNotEmpty && clinic.city != '—') {
+      parts.add(clinic.city);
+    }
+    if (clinic.stateCode != null && clinic.stateCode!.trim().isNotEmpty) {
+      parts.add(clinic.stateCode!);
+    }
+    return parts.isEmpty ? '—' : parts.join(' · ');
   }
 }
 

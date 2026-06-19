@@ -21,5 +21,15 @@ App Flutter do atlas médico AtlasMed.
 ## Run
 
 ```sh
+cd apps/mobile
+flutter pub get
 flutter run
 ```
+
+Start the API first: `cd apps/api && bun run dev` (uses `atlasmed_test` DB).
+
+**Real API login:** `admin@atlasmed.com` / `admin123456`
+
+**Explore:** search with at least 2 characters to load data from `mcp_test`.
+
+## Mock Credentials (offline: `--dart-define=USE_MOCK_AUTH=true`)

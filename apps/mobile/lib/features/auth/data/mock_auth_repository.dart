@@ -8,7 +8,6 @@ import 'auth_repository.dart';
 class MockAuthRepository implements AuthRepository {
   static const _demoEmail = 'rafael.melo@atlasmed.com';
   static const _demoPassword = 'Atlas2026';
-  static const _demoCode = '123456';
 
   int _attempts = 0;
   static const _maxAttempts = 4;
@@ -59,19 +58,23 @@ class MockAuthRepository implements AuthRepository {
         message: 'E-mail não encontrado.',
       );
     }
-    // In production, sends email with 6-digit code
   }
 
   @override
-  Future<bool> verifyResetCode(String email, String code) async {
-    await Future.delayed(const Duration(milliseconds: 700));
-    return code == _demoCode;
+  Future<void> validateResetToken(String token) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    if (token.trim().length < 8 || token == 'invalid-token') {
+      throw const AuthException(
+        kind: AuthErrorKind.invalidCode,
+        message: 'Código inválido.',
+      );
+    }
   }
 
   @override
   Future<void> resetPassword(ResetPasswordRequest request) async {
     await Future.delayed(const Duration(milliseconds: 900));
-    // In production, posts to backend
   }
 
   @override

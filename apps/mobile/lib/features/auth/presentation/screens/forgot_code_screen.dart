@@ -1,14 +1,13 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/auth_repository.dart';
 import '../providers/auth_provider.dart';
-import '../widgets/code_input.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/blue_backdrop.dart';
 import '../widgets/app_back_button.dart';
+import '../widgets/glass_input.dart';
 
-/// Forgot password — step 2: 6-digit code verification.
+/// Forgot password — step 2: paste reset token from email.
 class ForgotCodeScreen extends ConsumerStatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onCodeVerified;
@@ -24,44 +23,31 @@ class ForgotCodeScreen extends ConsumerStatefulWidget {
 }
 
 class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
-  String _code = '';
-  int _cooldown = 42;
-  Timer? _timer;
+  String _token = '';
+  bool _validating = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _startCooldown();
-  }
+  Future<void> _handleVerify() async {
+    if (_validating) return;
 
-  void _startCooldown() {
-    _cooldown = 42;
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_cooldown > 0) {
-        setState(() => _cooldown--);
+    setState(() => _validating = true);
+
+    try {
+      final ok = await ref.read(authProvider.notifier).submitResetToken(_token);
+      if (ok && mounted) {
+        widget.onCodeVerified();
       }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _handleVerify() async {
-    final ok = await ref.read(authProvider.notifier).submitCode(_code);
-    if (ok && mounted) {
-      widget.onCodeVerified();
+    } finally {
+      if (mounted) {
+        setState(() => _validating = false);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(authProvider);
-    final isLoading = state.status == AuthStatus.authenticating;
-    final codeError = state.error?.kind == AuthErrorKind.invalidCode;
+    final tokenError = state.error?.kind == AuthErrorKind.invalidCode ||
+        state.error?.kind == AuthErrorKind.expiredCode;
 
     return Scaffold(
       body: Stack(
@@ -112,7 +98,7 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                         ),
                         const SizedBox(height: 20),
                         const Text(
-                          'Verifique seu e-mail',
+                          'Cole o código do e-mail',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 26,
@@ -129,7 +115,9 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                               height: 1.5,
                             ),
                             children: [
-                              const TextSpan(text: 'Enviamos um código para\n'),
+                              const TextSpan(
+                                text: 'Verifique seu e-mail e cole o código de recuperação enviado para\n',
+                              ),
                               TextSpan(
                                 text: state.forgotEmail,
                                 style: const TextStyle(
@@ -141,15 +129,16 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                           ),
                         ),
                         const SizedBox(height: 28),
-                        CodeInput(
-                          value: _code,
-                          onChanged: (v) {
-                            setState(() => _code = v);
+                        GlassInput(
+                          label: 'Código de recuperação',
+                          value: _token,
+                          onChanged: (value) {
+                            setState(() => _token = value);
                             ref.read(authProvider.notifier).clearError();
                           },
-                          error: codeError,
+                          error: tokenError,
                         ),
-                        if (codeError) ...[
+                        if (tokenError) ...[
                           const SizedBox(height: 10),
                           Row(
                             children: [
@@ -159,9 +148,9 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                                 size: 14,
                               ),
                               const SizedBox(width: 6),
-                              const Text(
-                                'Código inválido. Confira e tente novamente.',
-                                style: TextStyle(
+                              Text(
+                                state.error?.message ?? 'Código inválido.',
+                                style: const TextStyle(
                                   color: Color(0xE6FFB4B4),
                                   fontSize: 12,
                                 ),
@@ -171,36 +160,10 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                         ],
                         const SizedBox(height: 24),
                         PrimaryButton(
-                          label: 'Verificar código',
-                          loading: isLoading,
-                          disabled: _code.length < 6,
+                          label: 'Continuar',
+                          loading: _validating,
+                          disabled: _token.trim().length < 8,
                           onPressed: _handleVerify,
-                        ),
-                        const SizedBox(height: 20),
-                        Center(
-                          child: _cooldown > 0
-                              ? Text(
-                                  'Reenviar código em 0:${_cooldown.toString().padLeft(2, '0')}',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.65),
-                                    fontSize: 13,
-                                  ),
-                                )
-                              : TextButton(
-                                  onPressed: () {
-                                    // Resend logic
-                                    _startCooldown();
-                                  },
-                                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
-                                  child: const Text(
-                                    'Reenviar código',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
                         ),
                       ],
                     ),

@@ -25,41 +25,49 @@ class DoctorRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Stack(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: hslBg.toColor(),
-                  ),
-                  child: Center(
-                    child: Text(
-                      doctor.initials,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: hslText.toColor(),
-                      ),
-                    ),
-                  ),
-                ),
-                if (doctor.isPriority)
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: Stack(
+                children: [
                   Positioned(
-                    top: -2,
-                    right: -2,
+                    left: 0,
+                    bottom: 0,
                     child: Container(
-                      width: 12,
-                      height: 12,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFe11d48),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                        color: hslBg.toColor(),
+                      ),
+                      child: Center(
+                        child: Text(
+                          doctor.initials,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: hslText.toColor(),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-              ],
+                  if (doctor.isPriority)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFe11d48),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -107,20 +115,13 @@ class DoctorRow extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          doctor.primaryClinic,
+                          '${doctor.primaryClinic} · ${doctor.crm}',
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11.5,
                             color: Color(0xFF6b7280),
                           ),
-                        ),
-                      ),
-                      const Text(' · ', style: TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
-                      Text(
-                        doctor.crm,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          color: Color(0xFF6b7280),
                         ),
                       ),
                     ],

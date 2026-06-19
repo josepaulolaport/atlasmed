@@ -1,19 +1,65 @@
 import 'clinic_detail.dart';
 import 'doctor_detail.dart';
+import 'explore_list_filters.dart';
+import 'explore_page.dart';
 import 'explore_repository.dart';
 import 'models.dart';
 
 class MockExploreRepository implements ExploreRepository {
   @override
-  Future<List<Clinic>> getClinics() async {
+  Future<ExplorePage<Clinic>> getClinics({
+    String? search,
+    ExploreListFilters filters = const ExploreListFilters(),
+    int page = 1,
+    int limit = explorePageSize,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 800));
-    return _clinics;
+    var list = _clinics;
+    if (search != null && search.trim().length >= 2) {
+      final q = search.trim().toLowerCase();
+      list = list
+          .where(
+            (c) =>
+                c.name.toLowerCase().contains(q) ||
+                c.city.toLowerCase().contains(q) ||
+                c.neighborhood.toLowerCase().contains(q),
+          )
+          .toList();
+    }
+    final start = (page - 1) * limit;
+    final slice = list.skip(start).take(limit).toList();
+    return ExplorePage(
+      items: slice,
+      hasMore: start + slice.length < list.length,
+      page: page,
+    );
   }
 
   @override
-  Future<List<Doctor>> getDoctors() async {
+  Future<ExplorePage<Doctor>> getDoctors({
+    String? search,
+    int page = 1,
+    int limit = explorePageSize,
+  }) async {
     await Future.delayed(const Duration(milliseconds: 800));
-    return _doctors;
+    var list = _doctors;
+    if (search != null && search.trim().length >= 2) {
+      final q = search.trim().toLowerCase();
+      list = list
+          .where(
+            (d) =>
+                d.name.toLowerCase().contains(q) ||
+                d.specialty.toLowerCase().contains(q),
+          )
+          .toList();
+    }
+    final start = (page - 1) * limit;
+    final slice = list.skip(start).take(limit).toList();
+    return ExplorePage(
+      items: slice,
+      hasMore: start + slice.length < list.length,
+      page: page,
+    );
   }
 
   @override
@@ -35,6 +81,42 @@ class MockExploreRepository implements ExploreRepository {
       orElse: () => _doctorDetails.first,
     );
     return detail;
+  }
+
+  @override
+  Future<ExploreFilterOptions> getFacilityFilterOptions() async {
+    return const ExploreFilterOptions(
+      states: [
+        ExploreStateOption(code: 'SP', name: 'São Paulo'),
+        ExploreStateOption(code: 'RJ', name: 'Rio de Janeiro'),
+        ExploreStateOption(code: 'MG', name: 'Minas Gerais'),
+      ],
+      facilityTypes: ['Hospital Geral', 'Clínica', 'UPA', 'Laboratório'],
+    );
+  }
+
+  @override
+  Future<List<ExploreCityOption>> searchCities({
+    String? search,
+    List<String> stateCodes = const [],
+    int limit = 40,
+  }) async {
+    const cities = [
+      ExploreCityOption(name: 'São Paulo', stateCode: 'SP'),
+      ExploreCityOption(name: 'Rio de Janeiro', stateCode: 'RJ'),
+      ExploreCityOption(name: 'Belo Horizonte', stateCode: 'MG'),
+      ExploreCityOption(name: 'Curitiba', stateCode: 'PR'),
+    ];
+
+    var results = cities;
+    if (stateCodes.isNotEmpty) {
+      results = results.where((c) => stateCodes.contains(c.stateCode)).toList();
+    }
+    if (search != null && search.trim().isNotEmpty) {
+      final q = search.trim().toLowerCase();
+      results = results.where((c) => c.name.toLowerCase().contains(q)).toList();
+    }
+    return results.take(limit).toList();
   }
 }
 

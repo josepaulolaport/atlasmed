@@ -63,6 +63,24 @@ class Clinic {
   final bool isPriority;
   final List<String> products;
 
+  // DB-backed (mcp_test)
+  final String? cnesCode;
+  final String? legalName;
+  final String? fullAddress;
+  final String? postalCode;
+  final String? stateCode;
+  final String? stateName;
+  final double? latitude;
+  final double? longitude;
+  final String? phone;
+  final String? email;
+  final String? websiteUrl;
+  final String? facilityType;
+  final String? facilityTypeCode;
+  final String? unitTypeName;
+  final String? unitSubtypeName;
+  final bool isActive;
+
   const Clinic({
     required this.id,
     required this.name,
@@ -74,6 +92,22 @@ class Clinic {
     required this.doctorCount,
     required this.isPriority,
     required this.products,
+    this.cnesCode,
+    this.legalName,
+    this.fullAddress,
+    this.postalCode,
+    this.stateCode,
+    this.stateName,
+    this.latitude,
+    this.longitude,
+    this.phone,
+    this.email,
+    this.websiteUrl,
+    this.facilityType,
+    this.facilityTypeCode,
+    this.unitTypeName,
+    this.unitSubtypeName,
+    this.isActive = true,
   });
 }
 
@@ -89,6 +123,19 @@ class Doctor {
   final double distanceKm;
   final bool isPriority;
 
+  // DB-backed (mcp_test)
+  final String? socialName;
+  final int activeFacilitiesCount;
+  final String? currentFacilities;
+  final String? currentLocations;
+  final String? licenses;
+  final String? councils;
+  final String? occupationCodes;
+  final int activePositions;
+  final int? totalWeeklyHours;
+  final bool isPreceptor;
+  final bool isResident;
+
   const Doctor({
     required this.id,
     required this.name,
@@ -99,5 +146,16 @@ class Doctor {
     required this.crm,
     required this.distanceKm,
     required this.isPriority,
+    this.socialName,
+    this.activeFacilitiesCount = 0,
+    this.currentFacilities,
+    this.currentLocations,
+    this.licenses,
+    this.councils,
+    this.occupationCodes,
+    this.activePositions = 0,
+    this.totalWeeklyHours,
+    this.isPreceptor = false,
+    this.isResident = false,
   });
 }
