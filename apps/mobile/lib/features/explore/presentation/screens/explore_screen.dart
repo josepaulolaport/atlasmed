@@ -215,9 +215,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             final doctor = displayedList[index] as Doctor;
             return DoctorRow(
               doctor: doctor,
-              onTap: () {
-                // TODO: navigate to doctor detail
-              },
+              onTap: () => context.push('/workspace/doctor/${doctor.id}'),
             );
           }
         },

@@ -327,7 +327,7 @@ class _DoctorQuickActions extends StatelessWidget {
           _QuickAction(label: 'Ligar', icon: Icons.phone_rounded, hue: detail.hue, onTap: detail.phone != null ? () {} : null),
           _QuickAction(label: 'WhatsApp', icon: Icons.chat_rounded, hue: detail.hue, onTap: detail.whatsapp != null ? () {} : null),
           _QuickAction(label: 'E-mail', icon: Icons.email_rounded, hue: detail.hue, onTap: detail.email != null ? () {} : null),
-          _QuickAction(label: 'Nova visita', icon: Icons.calendar_add_rounded, hue: detail.hue, onTap: () {}),
+          _QuickAction(label: 'Nova visita', icon: Icons.event_rounded, hue: detail.hue, onTap: () {}),
         ],
       ),
     );
@@ -984,59 +984,61 @@ class _DoctorNotes extends StatelessWidget {
               boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
             ),
             child: Column(
-              children: List.generate(notes.length, (i) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    border: i < notes.length - 1 ? const Border(bottom: BorderSide(color: Color(0xFFeef0f3))) : null,
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 18, height: 18,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFeef2ff),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Center(
-                          child: Text('${i + 1}',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1e40af))),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(notes[i],
-                          style: const TextStyle(fontSize: 12.5, color: Color(0xFF374151), height: 1.45)),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-              const SizedBox(height: 4),
-              InkWell(
-                onTap: () {},
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFFc7d2fe), width: 1, style: BorderStyle.solid),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Center(
+              children: [
+                ...List.generate(notes.length, (i) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      border: i < notes.length - 1 ? const Border(bottom: BorderSide(color: Color(0xFFeef0f3))) : null,
+                    ),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.add_rounded, size: 14, color: Color(0xFF1e40af)),
-                        SizedBox(width: 4),
-                        Text('Adicionar nota',
-                          style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1e40af))),
+                        Container(
+                          width: 18, height: 18,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFeef2ff),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Center(
+                            child: Text('${i + 1}',
+                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1e40af))),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(notes[i],
+                            style: const TextStyle(fontSize: 12.5, color: Color(0xFF374151), height: 1.45)),
+                        ),
                       ],
+                    ),
+                  );
+                }),
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () {},
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFc7d2fe), width: 1, style: BorderStyle.solid),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.add_rounded, size: 14, color: Color(0xFF1e40af)),
+                          SizedBox(width: 4),
+                          Text('Adicionar nota',
+                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1e40af))),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],

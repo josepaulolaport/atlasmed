@@ -1165,7 +1165,7 @@ class _DoctorMiniCard extends StatelessWidget {
       subtitle: Text('${doctor.specialty ?? ''}${doctor.crm != null ? ' • ${doctor.crm}' : ''}',
         style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
       trailing: const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF9ca3af)),
-      onTap: () {},
+      onTap: () => context.push('/workspace/doctor/${doctor.id}'),
     );
   }
 }
