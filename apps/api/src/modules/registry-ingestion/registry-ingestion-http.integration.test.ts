@@ -191,7 +191,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const clinicRecord = await prisma.clinic.create({
       data: {
         name: `Out of Scope Clinic ${fixtures.uniqueId}`,
-        territoryId: `other-territory-${fixtures.uniqueId}`,
+        territoryId: fixtures.outOfScopeTerritoryId,
       },
     });
 

@@ -1,24 +1,27 @@
 import type { ScopeContext } from "../contracts/scope-context.contract";
+import { withTerritoryScopeAliases } from "../contracts/scope-context.contract";
 import { Role } from "../enums/role.enum";
 
 export function createGlobalScopeContext(): ScopeContext {
-  return {
+  return withTerritoryScopeAliases({
     isGlobal: true,
-    territoryIds: [],
+    assignedTerritoryIds: [],
+    effectiveTerritoryIds: [],
     clinicIds: [],
     managedUserIds: [],
     isOperationallyActive: true,
-  };
+  });
 }
 
 export function createEmptyScopeContext(): ScopeContext {
-  return {
+  return withTerritoryScopeAliases({
     isGlobal: false,
-    territoryIds: [],
+    assignedTerritoryIds: [],
+    effectiveTerritoryIds: [],
     clinicIds: [],
     managedUserIds: [],
     isOperationallyActive: false,
-  };
+  });
 }
 
 export function canMutateUser(

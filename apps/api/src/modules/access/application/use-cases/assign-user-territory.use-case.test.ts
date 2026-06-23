@@ -14,7 +14,6 @@ import {
 import { createMockScopeService } from "../../test-helpers/fixtures";
 import {
   InsufficientPermissionsError,
-  OperationNotAllowedError,
   UserNotFoundError,
 } from "../../../../shared/errors";
 
@@ -26,6 +25,7 @@ describe("AssignUserTerritoryUseCase", () => {
   let userRepository: ReturnType<typeof createMockUserRepository>;
   let scopeRepository: ReturnType<typeof createMockScopeRepository>;
   let scopeService: ReturnType<typeof createMockScopeService>;
+  let territoryAssignmentPolicy: { validateAssignment: ReturnType<typeof mock> };
 
   beforeEach(() => {
     userRepository = createMockUserRepository({
@@ -37,12 +37,16 @@ describe("AssignUserTerritoryUseCase", () => {
     });
     scopeRepository = createMockScopeRepository();
     scopeService = createMockScopeService();
+    territoryAssignmentPolicy = {
+      validateAssignment: mock(async () => undefined),
+    };
 
     useCase = new AssignUserTerritoryUseCase({
       userRepository,
       scopeRepository,
       scopeService,
       auditLog: createMockAuditLogService(),
+      territoryAssignmentPolicy: territoryAssignmentPolicy as never,
     });
   });
 
@@ -54,6 +58,7 @@ describe("AssignUserTerritoryUseCase", () => {
       actorRole: Role.ADMIN,
     });
 
+    expect(territoryAssignmentPolicy.validateAssignment).toHaveBeenCalled();
     expect(scopeRepository.assignTerritory).toHaveBeenCalledWith({
       userId: fieldUser.id,
       territoryId: "territory-a",
@@ -64,17 +69,19 @@ describe("AssignUserTerritoryUseCase", () => {
     );
   });
 
-  it("rejects non-USER target", async () => {
-    await expect(
-      useCase.execute({
-        targetUserId: managerUser.id,
-        territoryId: "territory-a",
-        assignedBy: "admin-1",
-        actorRole: Role.ADMIN,
-      })
-    ).rejects.toThrow(OperationNotAllowedError);
+  it("assigns territory for MANAGER target when actor is ADMIN", async () => {
+    await useCase.execute({
+      targetUserId: managerUser.id,
+      territoryId: "territory-a",
+      assignedBy: "admin-1",
+      actorRole: Role.ADMIN,
+    });
 
-    expect(scopeRepository.assignTerritory).not.toHaveBeenCalled();
+    expect(scopeRepository.assignTerritory).toHaveBeenCalledWith({
+      userId: managerUser.id,
+      territoryId: "territory-a",
+      assignedBy: "admin-1",
+    });
   });
 
   it("rejects MANAGER actor", async () => {

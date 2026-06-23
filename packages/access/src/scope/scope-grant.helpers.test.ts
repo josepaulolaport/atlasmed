@@ -21,6 +21,7 @@ describe("mergeGrantsIntoScope", () => {
     ]);
 
     expect(merged.grantIds).toEqual(["g1", "g2"]);
+    expect(merged.effectiveTerritoryIds).toContain("t-1");
     expect(merged.territoryIds).toContain("t-1");
     expect(merged.clinicIds).toContain("c-1");
     expect(merged.isOperationallyActive).toBe(true);

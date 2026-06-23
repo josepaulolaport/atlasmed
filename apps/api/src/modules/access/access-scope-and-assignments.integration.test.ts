@@ -188,7 +188,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
     if (!dbReady) return;
 
     const token = await loginToken(fixtures.admin.email);
-    const newTerritory = `${fixtures.territoryId}-extra`;
+    const newTerritory = fixtures.extraTerritoryId;
 
     let response = await authRequest(
       `http://localhost/access/users/${fixtures.fieldUser.id}/assignments`,

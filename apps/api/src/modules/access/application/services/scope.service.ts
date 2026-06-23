@@ -1,5 +1,5 @@
 import { mergeGrantsIntoScope, type ScopeContext } from "@atlasmed/access";
-import type { ScopeRepository, TerritoryScopePort } from "../interfaces/scope.repository.interface";
+import type { ScopeRepository, TerritoryHierarchyPort, TerritoryScopePort } from "../interfaces/scope.repository.interface";
 import { ScopeResolver } from "./scope-resolver.service";
 import { scopeCacheService } from "../../infrastructure/cache/scope-cache.service";
 import type { AccessGrantService } from "./access-grant.service";
@@ -7,6 +7,7 @@ import type { AccessGrantService } from "./access-grant.service";
 interface ScopeServiceDependencies {
   scopeRepository: ScopeRepository;
   territoryScopePort: TerritoryScopePort;
+  territoryHierarchyPort: TerritoryHierarchyPort;
   accessGrantService: AccessGrantService;
 }
 

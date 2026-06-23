@@ -29,3 +29,7 @@ export interface ScopeRepository {
 export interface TerritoryScopePort {
   getClinicIdsForTerritories(territoryIds: string[]): Promise<string[]>;
 }
+
+export interface TerritoryHierarchyPort {
+  resolveDescendantIds(ancestorIds: string[], activeOnly?: boolean): Promise<string[]>;
+}

@@ -18,7 +18,7 @@ export function assertResourceInScope(
 
   switch (resourceType) {
     case "territory":
-      if (!scope.territoryIds.includes(resourceId)) {
+      if (!scope.effectiveTerritoryIds.includes(resourceId)) {
         throw new ForbiddenError("Resource outside scope: territory");
       }
       return;

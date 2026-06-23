@@ -3,6 +3,7 @@ import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { ScopeRepository } from "../interfaces/scope.repository.interface";
 import type { ScopeService } from "../services/scope.service";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { TerritoryAssignmentPolicyService } from "../../../territory/application/services/territory-assignment-policy.service";
 import {
   UserNotFoundError,
   InsufficientPermissionsError,
@@ -14,6 +15,7 @@ interface Dependencies {
   scopeRepository: ScopeRepository;
   scopeService: ScopeService;
   auditLog: IAuditLog;
+  territoryAssignmentPolicy: TerritoryAssignmentPolicyService;
 }
 
 export class AssignUserTerritoryUseCase {
@@ -38,12 +40,18 @@ export class AssignUserTerritoryUseCase {
       throw new UserNotFoundError(params.targetUserId);
     }
 
-    if (target.role.name !== Role.USER) {
+    if (target.role.name !== Role.USER && target.role.name !== Role.MANAGER) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "Territory assignments are only supported for USER accounts"
+        "Territory assignments are only supported for USER and MANAGER accounts"
       );
     }
+
+    await this.deps.territoryAssignmentPolicy.validateAssignment({
+      targetUserId: params.targetUserId,
+      targetRole: target.role.name as Role,
+      territoryId: params.territoryId,
+    });
 
     await this.deps.scopeRepository.assignTerritory({
       userId: params.targetUserId,

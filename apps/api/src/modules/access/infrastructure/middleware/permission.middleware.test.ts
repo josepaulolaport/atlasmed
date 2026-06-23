@@ -170,7 +170,10 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("create", "USER")).toBe(true);
       expect(ability.can("read", "CLINIC")).toBe(true);
       expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("update", "CLINIC")).toBe(false);
+      expect(ability.can("update", "CLINIC")).toBe(true);
+      expect(ability.can("create", "TERRITORY")).toBe(true);
+      expect(ability.can("update", "TERRITORY")).toBe(true);
+      expect(ability.can("manage", "TERRITORY")).toBe(false);
     });
 
     it("should check multiple denied permissions for USER", () => {
@@ -249,12 +252,12 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "USER")).toBe(false);
     });
 
-    it("should have read-only on CLINIC", () => {
+    it("should have read and update on CLINIC", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
       expect(ability.can("read", "CLINIC")).toBe(true);
       expect(ability.can("create", "CLINIC")).toBe(false);
-      expect(ability.can("update", "CLINIC")).toBe(false);
+      expect(ability.can("update", "CLINIC")).toBe(true);
       expect(ability.can("delete", "CLINIC")).toBe(false);
     });
 
@@ -267,23 +270,24 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "VISIT")).toBe(false);
     });
 
-    it("should have read-only on TERRITORY", () => {
+    it("should have read, create, and update on TERRITORY", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
       expect(ability.can("read", "TERRITORY")).toBe(true);
-      expect(ability.can("create", "TERRITORY")).toBe(false);
-      expect(ability.can("update", "TERRITORY")).toBe(false);
+      expect(ability.can("create", "TERRITORY")).toBe(true);
+      expect(ability.can("update", "TERRITORY")).toBe(true);
       expect(ability.can("delete", "TERRITORY")).toBe(false);
+      expect(ability.can("manage", "TERRITORY")).toBe(false);
     });
   });
 
   describe("USER permissions", () => {
-    it("should have read-only on CLINIC", () => {
+    it("should have read and update on CLINIC", () => {
       const ability = defineAbilitiesFor("USER");
 
       expect(ability.can("read", "CLINIC")).toBe(true);
       expect(ability.can("create", "CLINIC")).toBe(false);
-      expect(ability.can("update", "CLINIC")).toBe(false);
+      expect(ability.can("update", "CLINIC")).toBe(true);
       expect(ability.can("delete", "CLINIC")).toBe(false);
     });
 

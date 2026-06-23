@@ -1,12 +1,17 @@
 import { hash } from "argon2";
 import { prisma } from "../../../infrastructure/database/prisma.client";
 import { ROLE_PRIORITY_BY_NAME } from "../application/constants/role-priority.constants";
+import { TerritoryClosureService } from "../../territory/application/services/territory-closure.service";
+import { PrismaTerritoryRepository } from "../../territory/infrastructure/repositories/prisma/prisma-territory.repository";
+import { PrismaTerritoryClosureRepository } from "../../territory/infrastructure/repositories/prisma/prisma-territory-closure.repository";
 
 const TEST_PASSWORD = "Password123!";
 
 export interface ScopeIntegrationFixtures {
   uniqueId: string;
   territoryId: string;
+  extraTerritoryId: string;
+  outOfScopeTerritoryId: string;
   admin: { id: string; email: string; token?: string };
   manager: { id: string; email: string };
   otherManager: { id: string; email: string };
@@ -15,11 +20,87 @@ export interface ScopeIntegrationFixtures {
   password: string;
 }
 
+async function rebuildClosure(territoryId: string): Promise<void> {
+  const closureService = new TerritoryClosureService({
+    territoryRepository: new PrismaTerritoryRepository(),
+    closureRepository: new PrismaTerritoryClosureRepository(),
+  });
+  await closureService.rebuildSubtree(territoryId);
+}
+
 export async function seedScopeIntegrationFixtures(
   uniqueId: string
 ): Promise<ScopeIntegrationFixtures> {
   const passwordHash = await hash(TEST_PASSWORD);
-  const territoryId = `territory-test-${uniqueId}`;
+  const codeSuffix = uniqueId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase();
+
+  const root = await prisma.territory.create({
+    data: {
+      name: `Brazil ${uniqueId}`,
+      code: `BR-${codeSuffix}`,
+      nodeType: "root",
+    },
+  });
+  await rebuildClosure(root.id);
+
+  const region = await prisma.territory.create({
+    data: {
+      name: `Region ${uniqueId}`,
+      code: `BR-${codeSuffix}-SE`,
+      nodeType: "region",
+      regionSlug: "SE",
+      parentId: root.id,
+    },
+  });
+  await rebuildClosure(region.id);
+
+  const patch = await prisma.territory.create({
+    data: {
+      name: `Patch ${uniqueId}`,
+      code: `BR-${codeSuffix}-SE-01`,
+      nodeType: "patch",
+      regionSlug: "SE",
+      parentId: region.id,
+    },
+  });
+  await rebuildClosure(patch.id);
+
+  const extraPatch = await prisma.territory.create({
+    data: {
+      name: `Patch Extra ${uniqueId}`,
+      code: `BR-${codeSuffix}-SE-02`,
+      nodeType: "patch",
+      regionSlug: "SE",
+      parentId: region.id,
+    },
+  });
+  await rebuildClosure(extraPatch.id);
+
+  const otherRegion = await prisma.territory.create({
+    data: {
+      name: `Region North ${uniqueId}`,
+      code: `BR-${codeSuffix}-N`,
+      nodeType: "region",
+      regionSlug: "N",
+      parentId: root.id,
+    },
+  });
+  await rebuildClosure(otherRegion.id);
+
+  const outOfScopePatch = await prisma.territory.create({
+    data: {
+      name: `Patch North ${uniqueId}`,
+      code: `BR-${codeSuffix}-N-01`,
+      nodeType: "patch",
+      regionSlug: "N",
+      parentId: otherRegion.id,
+    },
+  });
+  await rebuildClosure(outOfScopePatch.id);
+
+  const territoryId = patch.id;
+  const extraTerritoryId = extraPatch.id;
+  const outOfScopeTerritoryId = outOfScopePatch.id;
 
   const [adminRole, managerRole, userRole] = await Promise.all([
     prisma.role.upsert({
@@ -119,6 +200,8 @@ export async function seedScopeIntegrationFixtures(
   return {
     uniqueId,
     territoryId,
+    extraTerritoryId,
+    outOfScopeTerritoryId,
     admin: { id: admin.id, email: admin.email! },
     manager: { id: manager.id, email: manager.email! },
     otherManager: { id: otherManager.id, email: otherManager.email! },
@@ -129,9 +212,26 @@ export async function seedScopeIntegrationFixtures(
 }
 
 export async function cleanupScopeIntegrationFixtures(uniqueId: string) {
-  await prisma.userTerritoryAssignment.deleteMany({
-    where: { territoryId: `territory-test-${uniqueId}` },
+  const territories = await prisma.territory.findMany({
+    where: { code: { contains: uniqueId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase() } },
+    select: { id: true },
   });
+  const territoryIds = territories.map((t) => t.id);
+
+  if (territoryIds.length > 0) {
+    await prisma.userTerritoryAssignment.deleteMany({
+      where: { territoryId: { in: territoryIds } },
+    });
+    await prisma.territoryClosure.deleteMany({
+      where: {
+        OR: [
+          { ancestorId: { in: territoryIds } },
+          { descendantId: { in: territoryIds } },
+        ],
+      },
+    });
+    await prisma.territory.deleteMany({ where: { id: { in: territoryIds } } });
+  }
 
   await prisma.session.deleteMany({
     where: {

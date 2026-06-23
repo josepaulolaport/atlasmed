@@ -37,6 +37,8 @@ export function applyRoleAbilities(
       can("update", "DOCTOR");
       can("read", "VISIT");
       can("read", "TERRITORY");
+      can("create", "TERRITORY");
+      can("update", "TERRITORY");
       can("read", "REGISTRY_SUGGESTION");
       can("update", "REGISTRY_SUGGESTION");
       break;
