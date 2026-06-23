@@ -159,6 +159,44 @@ exports.Prisma.UserTerritoryAssignmentScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.TerritoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  code: 'code',
+  nodeType: 'nodeType',
+  regionSlug: 'regionSlug',
+  stateCode: 'stateCode',
+  parentId: 'parentId',
+  isActive: 'isActive',
+  organizationId: 'organizationId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TerritoryClosureScalarFieldEnum = {
+  ancestorId: 'ancestorId',
+  descendantId: 'descendantId',
+  depth: 'depth'
+};
+
+exports.Prisma.TerritoryApprovalRequestScalarFieldEnum = {
+  id: 'id',
+  type: 'type',
+  status: 'status',
+  requesterId: 'requesterId',
+  reviewerId: 'reviewerId',
+  entityPayload: 'entityPayload',
+  targetTerritoryId: 'targetTerritoryId',
+  clinicId: 'clinicId',
+  toTerritoryId: 'toTerritoryId',
+  reason: 'reason',
+  resolutionNote: 'resolutionNote',
+  supersededById: 'supersededById',
+  resolvedAt: 'resolvedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.RoleScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -275,7 +313,11 @@ exports.Prisma.ClinicScalarFieldEnum = {
   id: 'id',
   name: 'name',
   address: 'address',
+  lat: 'lat',
+  lng: 'lng',
   territoryId: 'territoryId',
+  territoryAssignmentStatus: 'territoryAssignmentStatus',
+  territoryAssignmentSource: 'territoryAssignmentSource',
   sourceProvider: 'sourceProvider',
   externalSourceId: 'externalSourceId',
   sourceContentHash: 'sourceContentHash',
@@ -385,6 +427,28 @@ exports.UserStatus = exports.$Enums.UserStatus = {
   PENDING: 'PENDING'
 };
 
+exports.TerritoryNodeType = exports.$Enums.TerritoryNodeType = {
+  root: 'root',
+  region: 'region',
+  state: 'state',
+  intermediate: 'intermediate',
+  patch: 'patch'
+};
+
+exports.TerritoryApprovalType = exports.$Enums.TerritoryApprovalType = {
+  create_territory: 'create_territory',
+  reparent_territory: 'reparent_territory',
+  deactivate_territory: 'deactivate_territory',
+  clinic_territory_change: 'clinic_territory_change'
+};
+
+exports.TerritoryApprovalStatus = exports.$Enums.TerritoryApprovalStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  superseded: 'superseded'
+};
+
 exports.AuthSessionDeviceType = exports.$Enums.AuthSessionDeviceType = {
   DESKTOP: 'DESKTOP',
   MOBILE: 'MOBILE',
@@ -458,6 +522,17 @@ exports.VerificationTokenType = exports.$Enums.VerificationTokenType = {
   PHONE_CHANGE: 'PHONE_CHANGE'
 };
 
+exports.TerritoryAssignmentStatus = exports.$Enums.TerritoryAssignmentStatus = {
+  assigned: 'assigned',
+  unassigned: 'unassigned',
+  ambiguous: 'ambiguous'
+};
+
+exports.TerritoryAssignmentSource = exports.$Enums.TerritoryAssignmentSource = {
+  geo: 'geo',
+  manual: 'manual'
+};
+
 exports.IngestionRunStatus = exports.$Enums.IngestionRunStatus = {
   RUNNING: 'RUNNING',
   COMPLETED: 'COMPLETED',
@@ -481,6 +556,9 @@ exports.IngestionSuggestionStatus = exports.$Enums.IngestionSuggestionStatus = {
 exports.Prisma.ModelName = {
   User: 'User',
   UserTerritoryAssignment: 'UserTerritoryAssignment',
+  Territory: 'Territory',
+  TerritoryClosure: 'TerritoryClosure',
+  TerritoryApprovalRequest: 'TerritoryApprovalRequest',
   Role: 'Role',
   Session: 'Session',
   Invitation: 'Invitation',

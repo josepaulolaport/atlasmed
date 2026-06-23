@@ -24,5 +24,10 @@ export {
   IngestionRunStatus,
   IngestionSuggestionType,
   IngestionSuggestionStatus,
+  TerritoryNodeType,
+  TerritoryAssignmentStatus,
+  TerritoryAssignmentSource,
+  TerritoryApprovalType,
+  TerritoryApprovalStatus,
 } from "./generated/prisma";
 

@@ -24,6 +24,21 @@ export type User = $Result.DefaultSelection<Prisma.$UserPayload>
  */
 export type UserTerritoryAssignment = $Result.DefaultSelection<Prisma.$UserTerritoryAssignmentPayload>
 /**
+ * Model Territory
+ * 
+ */
+export type Territory = $Result.DefaultSelection<Prisma.$TerritoryPayload>
+/**
+ * Model TerritoryClosure
+ * 
+ */
+export type TerritoryClosure = $Result.DefaultSelection<Prisma.$TerritoryClosurePayload>
+/**
+ * Model TerritoryApprovalRequest
+ * 
+ */
+export type TerritoryApprovalRequest = $Result.DefaultSelection<Prisma.$TerritoryApprovalRequestPayload>
+/**
  * Model Role
  * 
  */
@@ -217,6 +232,54 @@ export const VerificationTokenType: {
 
 export type VerificationTokenType = (typeof VerificationTokenType)[keyof typeof VerificationTokenType]
 
+
+export const TerritoryNodeType: {
+  root: 'root',
+  region: 'region',
+  state: 'state',
+  intermediate: 'intermediate',
+  patch: 'patch'
+};
+
+export type TerritoryNodeType = (typeof TerritoryNodeType)[keyof typeof TerritoryNodeType]
+
+
+export const TerritoryAssignmentStatus: {
+  assigned: 'assigned',
+  unassigned: 'unassigned',
+  ambiguous: 'ambiguous'
+};
+
+export type TerritoryAssignmentStatus = (typeof TerritoryAssignmentStatus)[keyof typeof TerritoryAssignmentStatus]
+
+
+export const TerritoryAssignmentSource: {
+  geo: 'geo',
+  manual: 'manual'
+};
+
+export type TerritoryAssignmentSource = (typeof TerritoryAssignmentSource)[keyof typeof TerritoryAssignmentSource]
+
+
+export const TerritoryApprovalType: {
+  create_territory: 'create_territory',
+  reparent_territory: 'reparent_territory',
+  deactivate_territory: 'deactivate_territory',
+  clinic_territory_change: 'clinic_territory_change'
+};
+
+export type TerritoryApprovalType = (typeof TerritoryApprovalType)[keyof typeof TerritoryApprovalType]
+
+
+export const TerritoryApprovalStatus: {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  superseded: 'superseded'
+};
+
+export type TerritoryApprovalStatus = (typeof TerritoryApprovalStatus)[keyof typeof TerritoryApprovalStatus]
+
 }
 
 export type InvitationStatus = $Enums.InvitationStatus
@@ -258,6 +321,26 @@ export const AuditEventSeverity: typeof $Enums.AuditEventSeverity
 export type VerificationTokenType = $Enums.VerificationTokenType
 
 export const VerificationTokenType: typeof $Enums.VerificationTokenType
+
+export type TerritoryNodeType = $Enums.TerritoryNodeType
+
+export const TerritoryNodeType: typeof $Enums.TerritoryNodeType
+
+export type TerritoryAssignmentStatus = $Enums.TerritoryAssignmentStatus
+
+export const TerritoryAssignmentStatus: typeof $Enums.TerritoryAssignmentStatus
+
+export type TerritoryAssignmentSource = $Enums.TerritoryAssignmentSource
+
+export const TerritoryAssignmentSource: typeof $Enums.TerritoryAssignmentSource
+
+export type TerritoryApprovalType = $Enums.TerritoryApprovalType
+
+export const TerritoryApprovalType: typeof $Enums.TerritoryApprovalType
+
+export type TerritoryApprovalStatus = $Enums.TerritoryApprovalStatus
+
+export const TerritoryApprovalStatus: typeof $Enums.TerritoryApprovalStatus
 
 /**
  * ##  Prisma Client ʲˢ
@@ -399,6 +482,36 @@ export class PrismaClient<
     * ```
     */
   get userTerritoryAssignment(): Prisma.UserTerritoryAssignmentDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.territory`: Exposes CRUD operations for the **Territory** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more Territories
+    * const territories = await prisma.territory.findMany()
+    * ```
+    */
+  get territory(): Prisma.TerritoryDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.territoryClosure`: Exposes CRUD operations for the **TerritoryClosure** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more TerritoryClosures
+    * const territoryClosures = await prisma.territoryClosure.findMany()
+    * ```
+    */
+  get territoryClosure(): Prisma.TerritoryClosureDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.territoryApprovalRequest`: Exposes CRUD operations for the **TerritoryApprovalRequest** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more TerritoryApprovalRequests
+    * const territoryApprovalRequests = await prisma.territoryApprovalRequest.findMany()
+    * ```
+    */
+  get territoryApprovalRequest(): Prisma.TerritoryApprovalRequestDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.role`: Exposes CRUD operations for the **Role** model.
@@ -955,6 +1068,9 @@ export namespace Prisma {
   export const ModelName: {
     User: 'User',
     UserTerritoryAssignment: 'UserTerritoryAssignment',
+    Territory: 'Territory',
+    TerritoryClosure: 'TerritoryClosure',
+    TerritoryApprovalRequest: 'TerritoryApprovalRequest',
     Role: 'Role',
     Session: 'Session',
     Invitation: 'Invitation',
@@ -982,7 +1098,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "user" | "userTerritoryAssignment" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "clinic" | "doctor" | "doctorClinicAssociation" | "ingestionRun" | "ingestionSuggestion"
+      modelProps: "user" | "userTerritoryAssignment" | "territory" | "territoryClosure" | "territoryApprovalRequest" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "clinic" | "doctor" | "doctorClinicAssociation" | "ingestionRun" | "ingestionSuggestion"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -1131,6 +1247,228 @@ export namespace Prisma {
           count: {
             args: Prisma.UserTerritoryAssignmentCountArgs<ExtArgs>
             result: $Utils.Optional<UserTerritoryAssignmentCountAggregateOutputType> | number
+          }
+        }
+      }
+      Territory: {
+        payload: Prisma.$TerritoryPayload<ExtArgs>
+        fields: Prisma.TerritoryFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.TerritoryFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.TerritoryFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>
+          }
+          findFirst: {
+            args: Prisma.TerritoryFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.TerritoryFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>
+          }
+          findMany: {
+            args: Prisma.TerritoryFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>[]
+          }
+          create: {
+            args: Prisma.TerritoryCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>
+          }
+          createMany: {
+            args: Prisma.TerritoryCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.TerritoryCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>[]
+          }
+          delete: {
+            args: Prisma.TerritoryDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>
+          }
+          update: {
+            args: Prisma.TerritoryUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>
+          }
+          deleteMany: {
+            args: Prisma.TerritoryDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.TerritoryUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.TerritoryUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>[]
+          }
+          upsert: {
+            args: Prisma.TerritoryUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryPayload>
+          }
+          aggregate: {
+            args: Prisma.TerritoryAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateTerritory>
+          }
+          groupBy: {
+            args: Prisma.TerritoryGroupByArgs<ExtArgs>
+            result: $Utils.Optional<TerritoryGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.TerritoryCountArgs<ExtArgs>
+            result: $Utils.Optional<TerritoryCountAggregateOutputType> | number
+          }
+        }
+      }
+      TerritoryClosure: {
+        payload: Prisma.$TerritoryClosurePayload<ExtArgs>
+        fields: Prisma.TerritoryClosureFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.TerritoryClosureFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.TerritoryClosureFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>
+          }
+          findFirst: {
+            args: Prisma.TerritoryClosureFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.TerritoryClosureFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>
+          }
+          findMany: {
+            args: Prisma.TerritoryClosureFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>[]
+          }
+          create: {
+            args: Prisma.TerritoryClosureCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>
+          }
+          createMany: {
+            args: Prisma.TerritoryClosureCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.TerritoryClosureCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>[]
+          }
+          delete: {
+            args: Prisma.TerritoryClosureDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>
+          }
+          update: {
+            args: Prisma.TerritoryClosureUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>
+          }
+          deleteMany: {
+            args: Prisma.TerritoryClosureDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.TerritoryClosureUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.TerritoryClosureUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>[]
+          }
+          upsert: {
+            args: Prisma.TerritoryClosureUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryClosurePayload>
+          }
+          aggregate: {
+            args: Prisma.TerritoryClosureAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateTerritoryClosure>
+          }
+          groupBy: {
+            args: Prisma.TerritoryClosureGroupByArgs<ExtArgs>
+            result: $Utils.Optional<TerritoryClosureGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.TerritoryClosureCountArgs<ExtArgs>
+            result: $Utils.Optional<TerritoryClosureCountAggregateOutputType> | number
+          }
+        }
+      }
+      TerritoryApprovalRequest: {
+        payload: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>
+        fields: Prisma.TerritoryApprovalRequestFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.TerritoryApprovalRequestFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.TerritoryApprovalRequestFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>
+          }
+          findFirst: {
+            args: Prisma.TerritoryApprovalRequestFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.TerritoryApprovalRequestFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>
+          }
+          findMany: {
+            args: Prisma.TerritoryApprovalRequestFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>[]
+          }
+          create: {
+            args: Prisma.TerritoryApprovalRequestCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>
+          }
+          createMany: {
+            args: Prisma.TerritoryApprovalRequestCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.TerritoryApprovalRequestCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>[]
+          }
+          delete: {
+            args: Prisma.TerritoryApprovalRequestDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>
+          }
+          update: {
+            args: Prisma.TerritoryApprovalRequestUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>
+          }
+          deleteMany: {
+            args: Prisma.TerritoryApprovalRequestDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.TerritoryApprovalRequestUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.TerritoryApprovalRequestUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>[]
+          }
+          upsert: {
+            args: Prisma.TerritoryApprovalRequestUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$TerritoryApprovalRequestPayload>
+          }
+          aggregate: {
+            args: Prisma.TerritoryApprovalRequestAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateTerritoryApprovalRequest>
+          }
+          groupBy: {
+            args: Prisma.TerritoryApprovalRequestGroupByArgs<ExtArgs>
+            result: $Utils.Optional<TerritoryApprovalRequestGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.TerritoryApprovalRequestCountArgs<ExtArgs>
+            result: $Utils.Optional<TerritoryApprovalRequestCountAggregateOutputType> | number
           }
         }
       }
@@ -2132,6 +2470,9 @@ export namespace Prisma {
   export type GlobalOmitConfig = {
     user?: UserOmit
     userTerritoryAssignment?: UserTerritoryAssignmentOmit
+    territory?: TerritoryOmit
+    territoryClosure?: TerritoryClosureOmit
+    territoryApprovalRequest?: TerritoryApprovalRequestOmit
     role?: RoleOmit
     session?: SessionOmit
     invitation?: InvitationOmit
@@ -2314,6 +2655,122 @@ export namespace Prisma {
 
 
   /**
+   * Count Type TerritoryCountOutputType
+   */
+
+  export type TerritoryCountOutputType = {
+    children: number
+    clinics: number
+    userAssignments: number
+    closureAsAncestor: number
+    closureAsDescendant: number
+    approvalRequests: number
+    clinicApprovalRequests: number
+  }
+
+  export type TerritoryCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    children?: boolean | TerritoryCountOutputTypeCountChildrenArgs
+    clinics?: boolean | TerritoryCountOutputTypeCountClinicsArgs
+    userAssignments?: boolean | TerritoryCountOutputTypeCountUserAssignmentsArgs
+    closureAsAncestor?: boolean | TerritoryCountOutputTypeCountClosureAsAncestorArgs
+    closureAsDescendant?: boolean | TerritoryCountOutputTypeCountClosureAsDescendantArgs
+    approvalRequests?: boolean | TerritoryCountOutputTypeCountApprovalRequestsArgs
+    clinicApprovalRequests?: boolean | TerritoryCountOutputTypeCountClinicApprovalRequestsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryCountOutputType
+     */
+    select?: TerritoryCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountChildrenArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountClinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ClinicWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountUserAssignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UserTerritoryAssignmentWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountClosureAsAncestorArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryClosureWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountClosureAsDescendantArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryClosureWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountApprovalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryApprovalRequestWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountClinicApprovalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryApprovalRequestWhereInput
+  }
+
+
+  /**
+   * Count Type TerritoryApprovalRequestCountOutputType
+   */
+
+  export type TerritoryApprovalRequestCountOutputType = {
+    supersedes: number
+  }
+
+  export type TerritoryApprovalRequestCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    supersedes?: boolean | TerritoryApprovalRequestCountOutputTypeCountSupersedesArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * TerritoryApprovalRequestCountOutputType without action
+   */
+  export type TerritoryApprovalRequestCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequestCountOutputType
+     */
+    select?: TerritoryApprovalRequestCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * TerritoryApprovalRequestCountOutputType without action
+   */
+  export type TerritoryApprovalRequestCountOutputTypeCountSupersedesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryApprovalRequestWhereInput
+  }
+
+
+  /**
    * Count Type RoleCountOutputType
    */
 
@@ -2360,11 +2817,13 @@ export namespace Prisma {
   export type ClinicCountOutputType = {
     doctorAssociations: number
     ingestionSuggestions: number
+    territoryApprovalRequests: number
   }
 
   export type ClinicCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     doctorAssociations?: boolean | ClinicCountOutputTypeCountDoctorAssociationsArgs
     ingestionSuggestions?: boolean | ClinicCountOutputTypeCountIngestionSuggestionsArgs
+    territoryApprovalRequests?: boolean | ClinicCountOutputTypeCountTerritoryApprovalRequestsArgs
   }
 
   // Custom InputTypes
@@ -2390,6 +2849,13 @@ export namespace Prisma {
    */
   export type ClinicCountOutputTypeCountIngestionSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: IngestionSuggestionWhereInput
+  }
+
+  /**
+   * ClinicCountOutputType without action
+   */
+  export type ClinicCountOutputTypeCountTerritoryApprovalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryApprovalRequestWhereInput
   }
 
 
@@ -4300,6 +4766,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userTerritoryAssignment"]>
 
   export type UserTerritoryAssignmentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -4310,6 +4777,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userTerritoryAssignment"]>
 
   export type UserTerritoryAssignmentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -4320,6 +4788,7 @@ export namespace Prisma {
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
+    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["userTerritoryAssignment"]>
 
   export type UserTerritoryAssignmentSelectScalar = {
@@ -4334,18 +4803,22 @@ export namespace Prisma {
   export type UserTerritoryAssignmentOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "userId" | "territoryId" | "assignedBy" | "createdAt" | "updatedAt", ExtArgs["result"]["userTerritoryAssignment"]>
   export type UserTerritoryAssignmentInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
   }
   export type UserTerritoryAssignmentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
   }
   export type UserTerritoryAssignmentIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
+    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
   }
 
   export type $UserTerritoryAssignmentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "UserTerritoryAssignment"
     objects: {
       user: Prisma.$UserPayload<ExtArgs>
+      territory: Prisma.$TerritoryPayload<ExtArgs>
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -4749,6 +5222,7 @@ export namespace Prisma {
   export interface Prisma__UserTerritoryAssignmentClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     user<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    territory<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -5200,6 +5674,3762 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: UserTerritoryAssignmentInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model Territory
+   */
+
+  export type AggregateTerritory = {
+    _count: TerritoryCountAggregateOutputType | null
+    _min: TerritoryMinAggregateOutputType | null
+    _max: TerritoryMaxAggregateOutputType | null
+  }
+
+  export type TerritoryMinAggregateOutputType = {
+    id: string | null
+    name: string | null
+    code: string | null
+    nodeType: $Enums.TerritoryNodeType | null
+    regionSlug: string | null
+    stateCode: string | null
+    parentId: string | null
+    isActive: boolean | null
+    organizationId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TerritoryMaxAggregateOutputType = {
+    id: string | null
+    name: string | null
+    code: string | null
+    nodeType: $Enums.TerritoryNodeType | null
+    regionSlug: string | null
+    stateCode: string | null
+    parentId: string | null
+    isActive: boolean | null
+    organizationId: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TerritoryCountAggregateOutputType = {
+    id: number
+    name: number
+    code: number
+    nodeType: number
+    regionSlug: number
+    stateCode: number
+    parentId: number
+    isActive: number
+    organizationId: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type TerritoryMinAggregateInputType = {
+    id?: true
+    name?: true
+    code?: true
+    nodeType?: true
+    regionSlug?: true
+    stateCode?: true
+    parentId?: true
+    isActive?: true
+    organizationId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TerritoryMaxAggregateInputType = {
+    id?: true
+    name?: true
+    code?: true
+    nodeType?: true
+    regionSlug?: true
+    stateCode?: true
+    parentId?: true
+    isActive?: true
+    organizationId?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TerritoryCountAggregateInputType = {
+    id?: true
+    name?: true
+    code?: true
+    nodeType?: true
+    regionSlug?: true
+    stateCode?: true
+    parentId?: true
+    isActive?: true
+    organizationId?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type TerritoryAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Territory to aggregate.
+     */
+    where?: TerritoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Territories to fetch.
+     */
+    orderBy?: TerritoryOrderByWithRelationInput | TerritoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: TerritoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Territories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Territories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned Territories
+    **/
+    _count?: true | TerritoryCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: TerritoryMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: TerritoryMaxAggregateInputType
+  }
+
+  export type GetTerritoryAggregateType<T extends TerritoryAggregateArgs> = {
+        [P in keyof T & keyof AggregateTerritory]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateTerritory[P]>
+      : GetScalarType<T[P], AggregateTerritory[P]>
+  }
+
+
+
+
+  export type TerritoryGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryWhereInput
+    orderBy?: TerritoryOrderByWithAggregationInput | TerritoryOrderByWithAggregationInput[]
+    by: TerritoryScalarFieldEnum[] | TerritoryScalarFieldEnum
+    having?: TerritoryScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: TerritoryCountAggregateInputType | true
+    _min?: TerritoryMinAggregateInputType
+    _max?: TerritoryMaxAggregateInputType
+  }
+
+  export type TerritoryGroupByOutputType = {
+    id: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug: string | null
+    stateCode: string | null
+    parentId: string | null
+    isActive: boolean
+    organizationId: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: TerritoryCountAggregateOutputType | null
+    _min: TerritoryMinAggregateOutputType | null
+    _max: TerritoryMaxAggregateOutputType | null
+  }
+
+  type GetTerritoryGroupByPayload<T extends TerritoryGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<TerritoryGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof TerritoryGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], TerritoryGroupByOutputType[P]>
+            : GetScalarType<T[P], TerritoryGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type TerritorySelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    code?: boolean
+    nodeType?: boolean
+    regionSlug?: boolean
+    stateCode?: boolean
+    parentId?: boolean
+    isActive?: boolean
+    organizationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    parent?: boolean | Territory$parentArgs<ExtArgs>
+    children?: boolean | Territory$childrenArgs<ExtArgs>
+    clinics?: boolean | Territory$clinicsArgs<ExtArgs>
+    userAssignments?: boolean | Territory$userAssignmentsArgs<ExtArgs>
+    closureAsAncestor?: boolean | Territory$closureAsAncestorArgs<ExtArgs>
+    closureAsDescendant?: boolean | Territory$closureAsDescendantArgs<ExtArgs>
+    approvalRequests?: boolean | Territory$approvalRequestsArgs<ExtArgs>
+    clinicApprovalRequests?: boolean | Territory$clinicApprovalRequestsArgs<ExtArgs>
+    _count?: boolean | TerritoryCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["territory"]>
+
+  export type TerritorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    code?: boolean
+    nodeType?: boolean
+    regionSlug?: boolean
+    stateCode?: boolean
+    parentId?: boolean
+    isActive?: boolean
+    organizationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    parent?: boolean | Territory$parentArgs<ExtArgs>
+  }, ExtArgs["result"]["territory"]>
+
+  export type TerritorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    name?: boolean
+    code?: boolean
+    nodeType?: boolean
+    regionSlug?: boolean
+    stateCode?: boolean
+    parentId?: boolean
+    isActive?: boolean
+    organizationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    parent?: boolean | Territory$parentArgs<ExtArgs>
+  }, ExtArgs["result"]["territory"]>
+
+  export type TerritorySelectScalar = {
+    id?: boolean
+    name?: boolean
+    code?: boolean
+    nodeType?: boolean
+    regionSlug?: boolean
+    stateCode?: boolean
+    parentId?: boolean
+    isActive?: boolean
+    organizationId?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type TerritoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "code" | "nodeType" | "regionSlug" | "stateCode" | "parentId" | "isActive" | "organizationId" | "createdAt" | "updatedAt", ExtArgs["result"]["territory"]>
+  export type TerritoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    parent?: boolean | Territory$parentArgs<ExtArgs>
+    children?: boolean | Territory$childrenArgs<ExtArgs>
+    clinics?: boolean | Territory$clinicsArgs<ExtArgs>
+    userAssignments?: boolean | Territory$userAssignmentsArgs<ExtArgs>
+    closureAsAncestor?: boolean | Territory$closureAsAncestorArgs<ExtArgs>
+    closureAsDescendant?: boolean | Territory$closureAsDescendantArgs<ExtArgs>
+    approvalRequests?: boolean | Territory$approvalRequestsArgs<ExtArgs>
+    clinicApprovalRequests?: boolean | Territory$clinicApprovalRequestsArgs<ExtArgs>
+    _count?: boolean | TerritoryCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type TerritoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    parent?: boolean | Territory$parentArgs<ExtArgs>
+  }
+  export type TerritoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    parent?: boolean | Territory$parentArgs<ExtArgs>
+  }
+
+  export type $TerritoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "Territory"
+    objects: {
+      parent: Prisma.$TerritoryPayload<ExtArgs> | null
+      children: Prisma.$TerritoryPayload<ExtArgs>[]
+      clinics: Prisma.$ClinicPayload<ExtArgs>[]
+      userAssignments: Prisma.$UserTerritoryAssignmentPayload<ExtArgs>[]
+      closureAsAncestor: Prisma.$TerritoryClosurePayload<ExtArgs>[]
+      closureAsDescendant: Prisma.$TerritoryClosurePayload<ExtArgs>[]
+      approvalRequests: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>[]
+      clinicApprovalRequests: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      name: string
+      code: string
+      nodeType: $Enums.TerritoryNodeType
+      regionSlug: string | null
+      stateCode: string | null
+      parentId: string | null
+      isActive: boolean
+      organizationId: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["territory"]>
+    composites: {}
+  }
+
+  type TerritoryGetPayload<S extends boolean | null | undefined | TerritoryDefaultArgs> = $Result.GetResult<Prisma.$TerritoryPayload, S>
+
+  type TerritoryCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<TerritoryFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: TerritoryCountAggregateInputType | true
+    }
+
+  export interface TerritoryDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['Territory'], meta: { name: 'Territory' } }
+    /**
+     * Find zero or one Territory that matches the filter.
+     * @param {TerritoryFindUniqueArgs} args - Arguments to find a Territory
+     * @example
+     * // Get one Territory
+     * const territory = await prisma.territory.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends TerritoryFindUniqueArgs>(args: SelectSubset<T, TerritoryFindUniqueArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one Territory that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {TerritoryFindUniqueOrThrowArgs} args - Arguments to find a Territory
+     * @example
+     * // Get one Territory
+     * const territory = await prisma.territory.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends TerritoryFindUniqueOrThrowArgs>(args: SelectSubset<T, TerritoryFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Territory that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryFindFirstArgs} args - Arguments to find a Territory
+     * @example
+     * // Get one Territory
+     * const territory = await prisma.territory.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends TerritoryFindFirstArgs>(args?: SelectSubset<T, TerritoryFindFirstArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first Territory that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryFindFirstOrThrowArgs} args - Arguments to find a Territory
+     * @example
+     * // Get one Territory
+     * const territory = await prisma.territory.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends TerritoryFindFirstOrThrowArgs>(args?: SelectSubset<T, TerritoryFindFirstOrThrowArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more Territories that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all Territories
+     * const territories = await prisma.territory.findMany()
+     * 
+     * // Get first 10 Territories
+     * const territories = await prisma.territory.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const territoryWithIdOnly = await prisma.territory.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends TerritoryFindManyArgs>(args?: SelectSubset<T, TerritoryFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a Territory.
+     * @param {TerritoryCreateArgs} args - Arguments to create a Territory.
+     * @example
+     * // Create one Territory
+     * const Territory = await prisma.territory.create({
+     *   data: {
+     *     // ... data to create a Territory
+     *   }
+     * })
+     * 
+     */
+    create<T extends TerritoryCreateArgs>(args: SelectSubset<T, TerritoryCreateArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many Territories.
+     * @param {TerritoryCreateManyArgs} args - Arguments to create many Territories.
+     * @example
+     * // Create many Territories
+     * const territory = await prisma.territory.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends TerritoryCreateManyArgs>(args?: SelectSubset<T, TerritoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many Territories and returns the data saved in the database.
+     * @param {TerritoryCreateManyAndReturnArgs} args - Arguments to create many Territories.
+     * @example
+     * // Create many Territories
+     * const territory = await prisma.territory.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many Territories and only return the `id`
+     * const territoryWithIdOnly = await prisma.territory.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends TerritoryCreateManyAndReturnArgs>(args?: SelectSubset<T, TerritoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a Territory.
+     * @param {TerritoryDeleteArgs} args - Arguments to delete one Territory.
+     * @example
+     * // Delete one Territory
+     * const Territory = await prisma.territory.delete({
+     *   where: {
+     *     // ... filter to delete one Territory
+     *   }
+     * })
+     * 
+     */
+    delete<T extends TerritoryDeleteArgs>(args: SelectSubset<T, TerritoryDeleteArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one Territory.
+     * @param {TerritoryUpdateArgs} args - Arguments to update one Territory.
+     * @example
+     * // Update one Territory
+     * const territory = await prisma.territory.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends TerritoryUpdateArgs>(args: SelectSubset<T, TerritoryUpdateArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more Territories.
+     * @param {TerritoryDeleteManyArgs} args - Arguments to filter Territories to delete.
+     * @example
+     * // Delete a few Territories
+     * const { count } = await prisma.territory.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends TerritoryDeleteManyArgs>(args?: SelectSubset<T, TerritoryDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Territories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many Territories
+     * const territory = await prisma.territory.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends TerritoryUpdateManyArgs>(args: SelectSubset<T, TerritoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more Territories and returns the data updated in the database.
+     * @param {TerritoryUpdateManyAndReturnArgs} args - Arguments to update many Territories.
+     * @example
+     * // Update many Territories
+     * const territory = await prisma.territory.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more Territories and only return the `id`
+     * const territoryWithIdOnly = await prisma.territory.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends TerritoryUpdateManyAndReturnArgs>(args: SelectSubset<T, TerritoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one Territory.
+     * @param {TerritoryUpsertArgs} args - Arguments to update or create a Territory.
+     * @example
+     * // Update or create a Territory
+     * const territory = await prisma.territory.upsert({
+     *   create: {
+     *     // ... data to create a Territory
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the Territory we want to update
+     *   }
+     * })
+     */
+    upsert<T extends TerritoryUpsertArgs>(args: SelectSubset<T, TerritoryUpsertArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of Territories.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryCountArgs} args - Arguments to filter Territories to count.
+     * @example
+     * // Count the number of Territories
+     * const count = await prisma.territory.count({
+     *   where: {
+     *     // ... the filter for the Territories we want to count
+     *   }
+     * })
+    **/
+    count<T extends TerritoryCountArgs>(
+      args?: Subset<T, TerritoryCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], TerritoryCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a Territory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends TerritoryAggregateArgs>(args: Subset<T, TerritoryAggregateArgs>): Prisma.PrismaPromise<GetTerritoryAggregateType<T>>
+
+    /**
+     * Group by Territory.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends TerritoryGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: TerritoryGroupByArgs['orderBy'] }
+        : { orderBy?: TerritoryGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, TerritoryGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTerritoryGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the Territory model
+   */
+  readonly fields: TerritoryFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for Territory.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__TerritoryClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    parent<T extends Territory$parentArgs<ExtArgs> = {}>(args?: Subset<T, Territory$parentArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    children<T extends Territory$childrenArgs<ExtArgs> = {}>(args?: Subset<T, Territory$childrenArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    clinics<T extends Territory$clinicsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$clinicsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    userAssignments<T extends Territory$userAssignmentsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$userAssignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserTerritoryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    closureAsAncestor<T extends Territory$closureAsAncestorArgs<ExtArgs> = {}>(args?: Subset<T, Territory$closureAsAncestorArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    closureAsDescendant<T extends Territory$closureAsDescendantArgs<ExtArgs> = {}>(args?: Subset<T, Territory$closureAsDescendantArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    approvalRequests<T extends Territory$approvalRequestsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$approvalRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    clinicApprovalRequests<T extends Territory$clinicApprovalRequestsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$clinicApprovalRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the Territory model
+   */
+  interface TerritoryFieldRefs {
+    readonly id: FieldRef<"Territory", 'String'>
+    readonly name: FieldRef<"Territory", 'String'>
+    readonly code: FieldRef<"Territory", 'String'>
+    readonly nodeType: FieldRef<"Territory", 'TerritoryNodeType'>
+    readonly regionSlug: FieldRef<"Territory", 'String'>
+    readonly stateCode: FieldRef<"Territory", 'String'>
+    readonly parentId: FieldRef<"Territory", 'String'>
+    readonly isActive: FieldRef<"Territory", 'Boolean'>
+    readonly organizationId: FieldRef<"Territory", 'String'>
+    readonly createdAt: FieldRef<"Territory", 'DateTime'>
+    readonly updatedAt: FieldRef<"Territory", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * Territory findUnique
+   */
+  export type TerritoryFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * Filter, which Territory to fetch.
+     */
+    where: TerritoryWhereUniqueInput
+  }
+
+  /**
+   * Territory findUniqueOrThrow
+   */
+  export type TerritoryFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * Filter, which Territory to fetch.
+     */
+    where: TerritoryWhereUniqueInput
+  }
+
+  /**
+   * Territory findFirst
+   */
+  export type TerritoryFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * Filter, which Territory to fetch.
+     */
+    where?: TerritoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Territories to fetch.
+     */
+    orderBy?: TerritoryOrderByWithRelationInput | TerritoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Territories.
+     */
+    cursor?: TerritoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Territories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Territories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Territories.
+     */
+    distinct?: TerritoryScalarFieldEnum | TerritoryScalarFieldEnum[]
+  }
+
+  /**
+   * Territory findFirstOrThrow
+   */
+  export type TerritoryFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * Filter, which Territory to fetch.
+     */
+    where?: TerritoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Territories to fetch.
+     */
+    orderBy?: TerritoryOrderByWithRelationInput | TerritoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for Territories.
+     */
+    cursor?: TerritoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Territories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Territories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Territories.
+     */
+    distinct?: TerritoryScalarFieldEnum | TerritoryScalarFieldEnum[]
+  }
+
+  /**
+   * Territory findMany
+   */
+  export type TerritoryFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * Filter, which Territories to fetch.
+     */
+    where?: TerritoryWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of Territories to fetch.
+     */
+    orderBy?: TerritoryOrderByWithRelationInput | TerritoryOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing Territories.
+     */
+    cursor?: TerritoryWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` Territories from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` Territories.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of Territories.
+     */
+    distinct?: TerritoryScalarFieldEnum | TerritoryScalarFieldEnum[]
+  }
+
+  /**
+   * Territory create
+   */
+  export type TerritoryCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * The data needed to create a Territory.
+     */
+    data: XOR<TerritoryCreateInput, TerritoryUncheckedCreateInput>
+  }
+
+  /**
+   * Territory createMany
+   */
+  export type TerritoryCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many Territories.
+     */
+    data: TerritoryCreateManyInput | TerritoryCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * Territory createManyAndReturn
+   */
+  export type TerritoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * The data used to create many Territories.
+     */
+    data: TerritoryCreateManyInput | TerritoryCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Territory update
+   */
+  export type TerritoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * The data needed to update a Territory.
+     */
+    data: XOR<TerritoryUpdateInput, TerritoryUncheckedUpdateInput>
+    /**
+     * Choose, which Territory to update.
+     */
+    where: TerritoryWhereUniqueInput
+  }
+
+  /**
+   * Territory updateMany
+   */
+  export type TerritoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update Territories.
+     */
+    data: XOR<TerritoryUpdateManyMutationInput, TerritoryUncheckedUpdateManyInput>
+    /**
+     * Filter which Territories to update
+     */
+    where?: TerritoryWhereInput
+    /**
+     * Limit how many Territories to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * Territory updateManyAndReturn
+   */
+  export type TerritoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * The data used to update Territories.
+     */
+    data: XOR<TerritoryUpdateManyMutationInput, TerritoryUncheckedUpdateManyInput>
+    /**
+     * Filter which Territories to update
+     */
+    where?: TerritoryWhereInput
+    /**
+     * Limit how many Territories to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * Territory upsert
+   */
+  export type TerritoryUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * The filter to search for the Territory to update in case it exists.
+     */
+    where: TerritoryWhereUniqueInput
+    /**
+     * In case the Territory found by the `where` argument doesn't exist, create a new Territory with this data.
+     */
+    create: XOR<TerritoryCreateInput, TerritoryUncheckedCreateInput>
+    /**
+     * In case the Territory was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<TerritoryUpdateInput, TerritoryUncheckedUpdateInput>
+  }
+
+  /**
+   * Territory delete
+   */
+  export type TerritoryDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    /**
+     * Filter which Territory to delete.
+     */
+    where: TerritoryWhereUniqueInput
+  }
+
+  /**
+   * Territory deleteMany
+   */
+  export type TerritoryDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which Territories to delete
+     */
+    where?: TerritoryWhereInput
+    /**
+     * Limit how many Territories to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * Territory.parent
+   */
+  export type Territory$parentArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+  }
+
+  /**
+   * Territory.children
+   */
+  export type Territory$childrenArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+    orderBy?: TerritoryOrderByWithRelationInput | TerritoryOrderByWithRelationInput[]
+    cursor?: TerritoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryScalarFieldEnum | TerritoryScalarFieldEnum[]
+  }
+
+  /**
+   * Territory.clinics
+   */
+  export type Territory$clinicsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    where?: ClinicWhereInput
+    orderBy?: ClinicOrderByWithRelationInput | ClinicOrderByWithRelationInput[]
+    cursor?: ClinicWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ClinicScalarFieldEnum | ClinicScalarFieldEnum[]
+  }
+
+  /**
+   * Territory.userAssignments
+   */
+  export type Territory$userAssignmentsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UserTerritoryAssignment
+     */
+    select?: UserTerritoryAssignmentSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UserTerritoryAssignment
+     */
+    omit?: UserTerritoryAssignmentOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UserTerritoryAssignmentInclude<ExtArgs> | null
+    where?: UserTerritoryAssignmentWhereInput
+    orderBy?: UserTerritoryAssignmentOrderByWithRelationInput | UserTerritoryAssignmentOrderByWithRelationInput[]
+    cursor?: UserTerritoryAssignmentWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: UserTerritoryAssignmentScalarFieldEnum | UserTerritoryAssignmentScalarFieldEnum[]
+  }
+
+  /**
+   * Territory.closureAsAncestor
+   */
+  export type Territory$closureAsAncestorArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    where?: TerritoryClosureWhereInput
+    orderBy?: TerritoryClosureOrderByWithRelationInput | TerritoryClosureOrderByWithRelationInput[]
+    cursor?: TerritoryClosureWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryClosureScalarFieldEnum | TerritoryClosureScalarFieldEnum[]
+  }
+
+  /**
+   * Territory.closureAsDescendant
+   */
+  export type Territory$closureAsDescendantArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    where?: TerritoryClosureWhereInput
+    orderBy?: TerritoryClosureOrderByWithRelationInput | TerritoryClosureOrderByWithRelationInput[]
+    cursor?: TerritoryClosureWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryClosureScalarFieldEnum | TerritoryClosureScalarFieldEnum[]
+  }
+
+  /**
+   * Territory.approvalRequests
+   */
+  export type Territory$approvalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    where?: TerritoryApprovalRequestWhereInput
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
+  }
+
+  /**
+   * Territory.clinicApprovalRequests
+   */
+  export type Territory$clinicApprovalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    where?: TerritoryApprovalRequestWhereInput
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
+  }
+
+  /**
+   * Territory without action
+   */
+  export type TerritoryDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model TerritoryClosure
+   */
+
+  export type AggregateTerritoryClosure = {
+    _count: TerritoryClosureCountAggregateOutputType | null
+    _avg: TerritoryClosureAvgAggregateOutputType | null
+    _sum: TerritoryClosureSumAggregateOutputType | null
+    _min: TerritoryClosureMinAggregateOutputType | null
+    _max: TerritoryClosureMaxAggregateOutputType | null
+  }
+
+  export type TerritoryClosureAvgAggregateOutputType = {
+    depth: number | null
+  }
+
+  export type TerritoryClosureSumAggregateOutputType = {
+    depth: number | null
+  }
+
+  export type TerritoryClosureMinAggregateOutputType = {
+    ancestorId: string | null
+    descendantId: string | null
+    depth: number | null
+  }
+
+  export type TerritoryClosureMaxAggregateOutputType = {
+    ancestorId: string | null
+    descendantId: string | null
+    depth: number | null
+  }
+
+  export type TerritoryClosureCountAggregateOutputType = {
+    ancestorId: number
+    descendantId: number
+    depth: number
+    _all: number
+  }
+
+
+  export type TerritoryClosureAvgAggregateInputType = {
+    depth?: true
+  }
+
+  export type TerritoryClosureSumAggregateInputType = {
+    depth?: true
+  }
+
+  export type TerritoryClosureMinAggregateInputType = {
+    ancestorId?: true
+    descendantId?: true
+    depth?: true
+  }
+
+  export type TerritoryClosureMaxAggregateInputType = {
+    ancestorId?: true
+    descendantId?: true
+    depth?: true
+  }
+
+  export type TerritoryClosureCountAggregateInputType = {
+    ancestorId?: true
+    descendantId?: true
+    depth?: true
+    _all?: true
+  }
+
+  export type TerritoryClosureAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TerritoryClosure to aggregate.
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryClosures to fetch.
+     */
+    orderBy?: TerritoryClosureOrderByWithRelationInput | TerritoryClosureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: TerritoryClosureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryClosures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryClosures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned TerritoryClosures
+    **/
+    _count?: true | TerritoryClosureCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: TerritoryClosureAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: TerritoryClosureSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: TerritoryClosureMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: TerritoryClosureMaxAggregateInputType
+  }
+
+  export type GetTerritoryClosureAggregateType<T extends TerritoryClosureAggregateArgs> = {
+        [P in keyof T & keyof AggregateTerritoryClosure]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateTerritoryClosure[P]>
+      : GetScalarType<T[P], AggregateTerritoryClosure[P]>
+  }
+
+
+
+
+  export type TerritoryClosureGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryClosureWhereInput
+    orderBy?: TerritoryClosureOrderByWithAggregationInput | TerritoryClosureOrderByWithAggregationInput[]
+    by: TerritoryClosureScalarFieldEnum[] | TerritoryClosureScalarFieldEnum
+    having?: TerritoryClosureScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: TerritoryClosureCountAggregateInputType | true
+    _avg?: TerritoryClosureAvgAggregateInputType
+    _sum?: TerritoryClosureSumAggregateInputType
+    _min?: TerritoryClosureMinAggregateInputType
+    _max?: TerritoryClosureMaxAggregateInputType
+  }
+
+  export type TerritoryClosureGroupByOutputType = {
+    ancestorId: string
+    descendantId: string
+    depth: number
+    _count: TerritoryClosureCountAggregateOutputType | null
+    _avg: TerritoryClosureAvgAggregateOutputType | null
+    _sum: TerritoryClosureSumAggregateOutputType | null
+    _min: TerritoryClosureMinAggregateOutputType | null
+    _max: TerritoryClosureMaxAggregateOutputType | null
+  }
+
+  type GetTerritoryClosureGroupByPayload<T extends TerritoryClosureGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<TerritoryClosureGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof TerritoryClosureGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], TerritoryClosureGroupByOutputType[P]>
+            : GetScalarType<T[P], TerritoryClosureGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type TerritoryClosureSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    ancestorId?: boolean
+    descendantId?: boolean
+    depth?: boolean
+    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
+    descendant?: boolean | TerritoryDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["territoryClosure"]>
+
+  export type TerritoryClosureSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    ancestorId?: boolean
+    descendantId?: boolean
+    depth?: boolean
+    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
+    descendant?: boolean | TerritoryDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["territoryClosure"]>
+
+  export type TerritoryClosureSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    ancestorId?: boolean
+    descendantId?: boolean
+    depth?: boolean
+    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
+    descendant?: boolean | TerritoryDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["territoryClosure"]>
+
+  export type TerritoryClosureSelectScalar = {
+    ancestorId?: boolean
+    descendantId?: boolean
+    depth?: boolean
+  }
+
+  export type TerritoryClosureOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"ancestorId" | "descendantId" | "depth", ExtArgs["result"]["territoryClosure"]>
+  export type TerritoryClosureInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
+    descendant?: boolean | TerritoryDefaultArgs<ExtArgs>
+  }
+  export type TerritoryClosureIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
+    descendant?: boolean | TerritoryDefaultArgs<ExtArgs>
+  }
+  export type TerritoryClosureIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
+    descendant?: boolean | TerritoryDefaultArgs<ExtArgs>
+  }
+
+  export type $TerritoryClosurePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "TerritoryClosure"
+    objects: {
+      ancestor: Prisma.$TerritoryPayload<ExtArgs>
+      descendant: Prisma.$TerritoryPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      ancestorId: string
+      descendantId: string
+      depth: number
+    }, ExtArgs["result"]["territoryClosure"]>
+    composites: {}
+  }
+
+  type TerritoryClosureGetPayload<S extends boolean | null | undefined | TerritoryClosureDefaultArgs> = $Result.GetResult<Prisma.$TerritoryClosurePayload, S>
+
+  type TerritoryClosureCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<TerritoryClosureFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: TerritoryClosureCountAggregateInputType | true
+    }
+
+  export interface TerritoryClosureDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TerritoryClosure'], meta: { name: 'TerritoryClosure' } }
+    /**
+     * Find zero or one TerritoryClosure that matches the filter.
+     * @param {TerritoryClosureFindUniqueArgs} args - Arguments to find a TerritoryClosure
+     * @example
+     * // Get one TerritoryClosure
+     * const territoryClosure = await prisma.territoryClosure.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends TerritoryClosureFindUniqueArgs>(args: SelectSubset<T, TerritoryClosureFindUniqueArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one TerritoryClosure that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {TerritoryClosureFindUniqueOrThrowArgs} args - Arguments to find a TerritoryClosure
+     * @example
+     * // Get one TerritoryClosure
+     * const territoryClosure = await prisma.territoryClosure.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends TerritoryClosureFindUniqueOrThrowArgs>(args: SelectSubset<T, TerritoryClosureFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TerritoryClosure that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureFindFirstArgs} args - Arguments to find a TerritoryClosure
+     * @example
+     * // Get one TerritoryClosure
+     * const territoryClosure = await prisma.territoryClosure.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends TerritoryClosureFindFirstArgs>(args?: SelectSubset<T, TerritoryClosureFindFirstArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TerritoryClosure that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureFindFirstOrThrowArgs} args - Arguments to find a TerritoryClosure
+     * @example
+     * // Get one TerritoryClosure
+     * const territoryClosure = await prisma.territoryClosure.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends TerritoryClosureFindFirstOrThrowArgs>(args?: SelectSubset<T, TerritoryClosureFindFirstOrThrowArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more TerritoryClosures that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all TerritoryClosures
+     * const territoryClosures = await prisma.territoryClosure.findMany()
+     * 
+     * // Get first 10 TerritoryClosures
+     * const territoryClosures = await prisma.territoryClosure.findMany({ take: 10 })
+     * 
+     * // Only select the `ancestorId`
+     * const territoryClosureWithAncestorIdOnly = await prisma.territoryClosure.findMany({ select: { ancestorId: true } })
+     * 
+     */
+    findMany<T extends TerritoryClosureFindManyArgs>(args?: SelectSubset<T, TerritoryClosureFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a TerritoryClosure.
+     * @param {TerritoryClosureCreateArgs} args - Arguments to create a TerritoryClosure.
+     * @example
+     * // Create one TerritoryClosure
+     * const TerritoryClosure = await prisma.territoryClosure.create({
+     *   data: {
+     *     // ... data to create a TerritoryClosure
+     *   }
+     * })
+     * 
+     */
+    create<T extends TerritoryClosureCreateArgs>(args: SelectSubset<T, TerritoryClosureCreateArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many TerritoryClosures.
+     * @param {TerritoryClosureCreateManyArgs} args - Arguments to create many TerritoryClosures.
+     * @example
+     * // Create many TerritoryClosures
+     * const territoryClosure = await prisma.territoryClosure.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends TerritoryClosureCreateManyArgs>(args?: SelectSubset<T, TerritoryClosureCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many TerritoryClosures and returns the data saved in the database.
+     * @param {TerritoryClosureCreateManyAndReturnArgs} args - Arguments to create many TerritoryClosures.
+     * @example
+     * // Create many TerritoryClosures
+     * const territoryClosure = await prisma.territoryClosure.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many TerritoryClosures and only return the `ancestorId`
+     * const territoryClosureWithAncestorIdOnly = await prisma.territoryClosure.createManyAndReturn({
+     *   select: { ancestorId: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends TerritoryClosureCreateManyAndReturnArgs>(args?: SelectSubset<T, TerritoryClosureCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a TerritoryClosure.
+     * @param {TerritoryClosureDeleteArgs} args - Arguments to delete one TerritoryClosure.
+     * @example
+     * // Delete one TerritoryClosure
+     * const TerritoryClosure = await prisma.territoryClosure.delete({
+     *   where: {
+     *     // ... filter to delete one TerritoryClosure
+     *   }
+     * })
+     * 
+     */
+    delete<T extends TerritoryClosureDeleteArgs>(args: SelectSubset<T, TerritoryClosureDeleteArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one TerritoryClosure.
+     * @param {TerritoryClosureUpdateArgs} args - Arguments to update one TerritoryClosure.
+     * @example
+     * // Update one TerritoryClosure
+     * const territoryClosure = await prisma.territoryClosure.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends TerritoryClosureUpdateArgs>(args: SelectSubset<T, TerritoryClosureUpdateArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more TerritoryClosures.
+     * @param {TerritoryClosureDeleteManyArgs} args - Arguments to filter TerritoryClosures to delete.
+     * @example
+     * // Delete a few TerritoryClosures
+     * const { count } = await prisma.territoryClosure.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends TerritoryClosureDeleteManyArgs>(args?: SelectSubset<T, TerritoryClosureDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TerritoryClosures.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many TerritoryClosures
+     * const territoryClosure = await prisma.territoryClosure.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends TerritoryClosureUpdateManyArgs>(args: SelectSubset<T, TerritoryClosureUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TerritoryClosures and returns the data updated in the database.
+     * @param {TerritoryClosureUpdateManyAndReturnArgs} args - Arguments to update many TerritoryClosures.
+     * @example
+     * // Update many TerritoryClosures
+     * const territoryClosure = await prisma.territoryClosure.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more TerritoryClosures and only return the `ancestorId`
+     * const territoryClosureWithAncestorIdOnly = await prisma.territoryClosure.updateManyAndReturn({
+     *   select: { ancestorId: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends TerritoryClosureUpdateManyAndReturnArgs>(args: SelectSubset<T, TerritoryClosureUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one TerritoryClosure.
+     * @param {TerritoryClosureUpsertArgs} args - Arguments to update or create a TerritoryClosure.
+     * @example
+     * // Update or create a TerritoryClosure
+     * const territoryClosure = await prisma.territoryClosure.upsert({
+     *   create: {
+     *     // ... data to create a TerritoryClosure
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the TerritoryClosure we want to update
+     *   }
+     * })
+     */
+    upsert<T extends TerritoryClosureUpsertArgs>(args: SelectSubset<T, TerritoryClosureUpsertArgs<ExtArgs>>): Prisma__TerritoryClosureClient<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of TerritoryClosures.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureCountArgs} args - Arguments to filter TerritoryClosures to count.
+     * @example
+     * // Count the number of TerritoryClosures
+     * const count = await prisma.territoryClosure.count({
+     *   where: {
+     *     // ... the filter for the TerritoryClosures we want to count
+     *   }
+     * })
+    **/
+    count<T extends TerritoryClosureCountArgs>(
+      args?: Subset<T, TerritoryClosureCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], TerritoryClosureCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a TerritoryClosure.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends TerritoryClosureAggregateArgs>(args: Subset<T, TerritoryClosureAggregateArgs>): Prisma.PrismaPromise<GetTerritoryClosureAggregateType<T>>
+
+    /**
+     * Group by TerritoryClosure.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryClosureGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends TerritoryClosureGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: TerritoryClosureGroupByArgs['orderBy'] }
+        : { orderBy?: TerritoryClosureGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, TerritoryClosureGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTerritoryClosureGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the TerritoryClosure model
+   */
+  readonly fields: TerritoryClosureFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for TerritoryClosure.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__TerritoryClosureClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    ancestor<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    descendant<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the TerritoryClosure model
+   */
+  interface TerritoryClosureFieldRefs {
+    readonly ancestorId: FieldRef<"TerritoryClosure", 'String'>
+    readonly descendantId: FieldRef<"TerritoryClosure", 'String'>
+    readonly depth: FieldRef<"TerritoryClosure", 'Int'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * TerritoryClosure findUnique
+   */
+  export type TerritoryClosureFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryClosure to fetch.
+     */
+    where: TerritoryClosureWhereUniqueInput
+  }
+
+  /**
+   * TerritoryClosure findUniqueOrThrow
+   */
+  export type TerritoryClosureFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryClosure to fetch.
+     */
+    where: TerritoryClosureWhereUniqueInput
+  }
+
+  /**
+   * TerritoryClosure findFirst
+   */
+  export type TerritoryClosureFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryClosure to fetch.
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryClosures to fetch.
+     */
+    orderBy?: TerritoryClosureOrderByWithRelationInput | TerritoryClosureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TerritoryClosures.
+     */
+    cursor?: TerritoryClosureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryClosures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryClosures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TerritoryClosures.
+     */
+    distinct?: TerritoryClosureScalarFieldEnum | TerritoryClosureScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryClosure findFirstOrThrow
+   */
+  export type TerritoryClosureFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryClosure to fetch.
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryClosures to fetch.
+     */
+    orderBy?: TerritoryClosureOrderByWithRelationInput | TerritoryClosureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TerritoryClosures.
+     */
+    cursor?: TerritoryClosureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryClosures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryClosures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TerritoryClosures.
+     */
+    distinct?: TerritoryClosureScalarFieldEnum | TerritoryClosureScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryClosure findMany
+   */
+  export type TerritoryClosureFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryClosures to fetch.
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryClosures to fetch.
+     */
+    orderBy?: TerritoryClosureOrderByWithRelationInput | TerritoryClosureOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing TerritoryClosures.
+     */
+    cursor?: TerritoryClosureWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryClosures from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryClosures.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TerritoryClosures.
+     */
+    distinct?: TerritoryClosureScalarFieldEnum | TerritoryClosureScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryClosure create
+   */
+  export type TerritoryClosureCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * The data needed to create a TerritoryClosure.
+     */
+    data: XOR<TerritoryClosureCreateInput, TerritoryClosureUncheckedCreateInput>
+  }
+
+  /**
+   * TerritoryClosure createMany
+   */
+  export type TerritoryClosureCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many TerritoryClosures.
+     */
+    data: TerritoryClosureCreateManyInput | TerritoryClosureCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * TerritoryClosure createManyAndReturn
+   */
+  export type TerritoryClosureCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * The data used to create many TerritoryClosures.
+     */
+    data: TerritoryClosureCreateManyInput | TerritoryClosureCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * TerritoryClosure update
+   */
+  export type TerritoryClosureUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * The data needed to update a TerritoryClosure.
+     */
+    data: XOR<TerritoryClosureUpdateInput, TerritoryClosureUncheckedUpdateInput>
+    /**
+     * Choose, which TerritoryClosure to update.
+     */
+    where: TerritoryClosureWhereUniqueInput
+  }
+
+  /**
+   * TerritoryClosure updateMany
+   */
+  export type TerritoryClosureUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update TerritoryClosures.
+     */
+    data: XOR<TerritoryClosureUpdateManyMutationInput, TerritoryClosureUncheckedUpdateManyInput>
+    /**
+     * Filter which TerritoryClosures to update
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * Limit how many TerritoryClosures to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * TerritoryClosure updateManyAndReturn
+   */
+  export type TerritoryClosureUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * The data used to update TerritoryClosures.
+     */
+    data: XOR<TerritoryClosureUpdateManyMutationInput, TerritoryClosureUncheckedUpdateManyInput>
+    /**
+     * Filter which TerritoryClosures to update
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * Limit how many TerritoryClosures to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * TerritoryClosure upsert
+   */
+  export type TerritoryClosureUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * The filter to search for the TerritoryClosure to update in case it exists.
+     */
+    where: TerritoryClosureWhereUniqueInput
+    /**
+     * In case the TerritoryClosure found by the `where` argument doesn't exist, create a new TerritoryClosure with this data.
+     */
+    create: XOR<TerritoryClosureCreateInput, TerritoryClosureUncheckedCreateInput>
+    /**
+     * In case the TerritoryClosure was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<TerritoryClosureUpdateInput, TerritoryClosureUncheckedUpdateInput>
+  }
+
+  /**
+   * TerritoryClosure delete
+   */
+  export type TerritoryClosureDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+    /**
+     * Filter which TerritoryClosure to delete.
+     */
+    where: TerritoryClosureWhereUniqueInput
+  }
+
+  /**
+   * TerritoryClosure deleteMany
+   */
+  export type TerritoryClosureDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TerritoryClosures to delete
+     */
+    where?: TerritoryClosureWhereInput
+    /**
+     * Limit how many TerritoryClosures to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * TerritoryClosure without action
+   */
+  export type TerritoryClosureDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryClosure
+     */
+    select?: TerritoryClosureSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryClosure
+     */
+    omit?: TerritoryClosureOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryClosureInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model TerritoryApprovalRequest
+   */
+
+  export type AggregateTerritoryApprovalRequest = {
+    _count: TerritoryApprovalRequestCountAggregateOutputType | null
+    _min: TerritoryApprovalRequestMinAggregateOutputType | null
+    _max: TerritoryApprovalRequestMaxAggregateOutputType | null
+  }
+
+  export type TerritoryApprovalRequestMinAggregateOutputType = {
+    id: string | null
+    type: $Enums.TerritoryApprovalType | null
+    status: $Enums.TerritoryApprovalStatus | null
+    requesterId: string | null
+    reviewerId: string | null
+    targetTerritoryId: string | null
+    clinicId: string | null
+    toTerritoryId: string | null
+    reason: string | null
+    resolutionNote: string | null
+    supersededById: string | null
+    resolvedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TerritoryApprovalRequestMaxAggregateOutputType = {
+    id: string | null
+    type: $Enums.TerritoryApprovalType | null
+    status: $Enums.TerritoryApprovalStatus | null
+    requesterId: string | null
+    reviewerId: string | null
+    targetTerritoryId: string | null
+    clinicId: string | null
+    toTerritoryId: string | null
+    reason: string | null
+    resolutionNote: string | null
+    supersededById: string | null
+    resolvedAt: Date | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type TerritoryApprovalRequestCountAggregateOutputType = {
+    id: number
+    type: number
+    status: number
+    requesterId: number
+    reviewerId: number
+    entityPayload: number
+    targetTerritoryId: number
+    clinicId: number
+    toTerritoryId: number
+    reason: number
+    resolutionNote: number
+    supersededById: number
+    resolvedAt: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type TerritoryApprovalRequestMinAggregateInputType = {
+    id?: true
+    type?: true
+    status?: true
+    requesterId?: true
+    reviewerId?: true
+    targetTerritoryId?: true
+    clinicId?: true
+    toTerritoryId?: true
+    reason?: true
+    resolutionNote?: true
+    supersededById?: true
+    resolvedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TerritoryApprovalRequestMaxAggregateInputType = {
+    id?: true
+    type?: true
+    status?: true
+    requesterId?: true
+    reviewerId?: true
+    targetTerritoryId?: true
+    clinicId?: true
+    toTerritoryId?: true
+    reason?: true
+    resolutionNote?: true
+    supersededById?: true
+    resolvedAt?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type TerritoryApprovalRequestCountAggregateInputType = {
+    id?: true
+    type?: true
+    status?: true
+    requesterId?: true
+    reviewerId?: true
+    entityPayload?: true
+    targetTerritoryId?: true
+    clinicId?: true
+    toTerritoryId?: true
+    reason?: true
+    resolutionNote?: true
+    supersededById?: true
+    resolvedAt?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type TerritoryApprovalRequestAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TerritoryApprovalRequest to aggregate.
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryApprovalRequests to fetch.
+     */
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryApprovalRequests from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryApprovalRequests.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned TerritoryApprovalRequests
+    **/
+    _count?: true | TerritoryApprovalRequestCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: TerritoryApprovalRequestMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: TerritoryApprovalRequestMaxAggregateInputType
+  }
+
+  export type GetTerritoryApprovalRequestAggregateType<T extends TerritoryApprovalRequestAggregateArgs> = {
+        [P in keyof T & keyof AggregateTerritoryApprovalRequest]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateTerritoryApprovalRequest[P]>
+      : GetScalarType<T[P], AggregateTerritoryApprovalRequest[P]>
+  }
+
+
+
+
+  export type TerritoryApprovalRequestGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryApprovalRequestWhereInput
+    orderBy?: TerritoryApprovalRequestOrderByWithAggregationInput | TerritoryApprovalRequestOrderByWithAggregationInput[]
+    by: TerritoryApprovalRequestScalarFieldEnum[] | TerritoryApprovalRequestScalarFieldEnum
+    having?: TerritoryApprovalRequestScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: TerritoryApprovalRequestCountAggregateInputType | true
+    _min?: TerritoryApprovalRequestMinAggregateInputType
+    _max?: TerritoryApprovalRequestMaxAggregateInputType
+  }
+
+  export type TerritoryApprovalRequestGroupByOutputType = {
+    id: string
+    type: $Enums.TerritoryApprovalType
+    status: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId: string | null
+    entityPayload: JsonValue
+    targetTerritoryId: string | null
+    clinicId: string | null
+    toTerritoryId: string | null
+    reason: string | null
+    resolutionNote: string | null
+    supersededById: string | null
+    resolvedAt: Date | null
+    createdAt: Date
+    updatedAt: Date
+    _count: TerritoryApprovalRequestCountAggregateOutputType | null
+    _min: TerritoryApprovalRequestMinAggregateOutputType | null
+    _max: TerritoryApprovalRequestMaxAggregateOutputType | null
+  }
+
+  type GetTerritoryApprovalRequestGroupByPayload<T extends TerritoryApprovalRequestGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<TerritoryApprovalRequestGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof TerritoryApprovalRequestGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], TerritoryApprovalRequestGroupByOutputType[P]>
+            : GetScalarType<T[P], TerritoryApprovalRequestGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type TerritoryApprovalRequestSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    type?: boolean
+    status?: boolean
+    requesterId?: boolean
+    reviewerId?: boolean
+    entityPayload?: boolean
+    targetTerritoryId?: boolean
+    clinicId?: boolean
+    toTerritoryId?: boolean
+    reason?: boolean
+    resolutionNote?: boolean
+    supersededById?: boolean
+    resolvedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    targetTerritory?: boolean | TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>
+    clinic?: boolean | TerritoryApprovalRequest$clinicArgs<ExtArgs>
+    toTerritory?: boolean | TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>
+    supersededBy?: boolean | TerritoryApprovalRequest$supersededByArgs<ExtArgs>
+    supersedes?: boolean | TerritoryApprovalRequest$supersedesArgs<ExtArgs>
+    _count?: boolean | TerritoryApprovalRequestCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["territoryApprovalRequest"]>
+
+  export type TerritoryApprovalRequestSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    type?: boolean
+    status?: boolean
+    requesterId?: boolean
+    reviewerId?: boolean
+    entityPayload?: boolean
+    targetTerritoryId?: boolean
+    clinicId?: boolean
+    toTerritoryId?: boolean
+    reason?: boolean
+    resolutionNote?: boolean
+    supersededById?: boolean
+    resolvedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    targetTerritory?: boolean | TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>
+    clinic?: boolean | TerritoryApprovalRequest$clinicArgs<ExtArgs>
+    toTerritory?: boolean | TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>
+    supersededBy?: boolean | TerritoryApprovalRequest$supersededByArgs<ExtArgs>
+  }, ExtArgs["result"]["territoryApprovalRequest"]>
+
+  export type TerritoryApprovalRequestSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    type?: boolean
+    status?: boolean
+    requesterId?: boolean
+    reviewerId?: boolean
+    entityPayload?: boolean
+    targetTerritoryId?: boolean
+    clinicId?: boolean
+    toTerritoryId?: boolean
+    reason?: boolean
+    resolutionNote?: boolean
+    supersededById?: boolean
+    resolvedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    targetTerritory?: boolean | TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>
+    clinic?: boolean | TerritoryApprovalRequest$clinicArgs<ExtArgs>
+    toTerritory?: boolean | TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>
+    supersededBy?: boolean | TerritoryApprovalRequest$supersededByArgs<ExtArgs>
+  }, ExtArgs["result"]["territoryApprovalRequest"]>
+
+  export type TerritoryApprovalRequestSelectScalar = {
+    id?: boolean
+    type?: boolean
+    status?: boolean
+    requesterId?: boolean
+    reviewerId?: boolean
+    entityPayload?: boolean
+    targetTerritoryId?: boolean
+    clinicId?: boolean
+    toTerritoryId?: boolean
+    reason?: boolean
+    resolutionNote?: boolean
+    supersededById?: boolean
+    resolvedAt?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type TerritoryApprovalRequestOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "type" | "status" | "requesterId" | "reviewerId" | "entityPayload" | "targetTerritoryId" | "clinicId" | "toTerritoryId" | "reason" | "resolutionNote" | "supersededById" | "resolvedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["territoryApprovalRequest"]>
+  export type TerritoryApprovalRequestInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    targetTerritory?: boolean | TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>
+    clinic?: boolean | TerritoryApprovalRequest$clinicArgs<ExtArgs>
+    toTerritory?: boolean | TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>
+    supersededBy?: boolean | TerritoryApprovalRequest$supersededByArgs<ExtArgs>
+    supersedes?: boolean | TerritoryApprovalRequest$supersedesArgs<ExtArgs>
+    _count?: boolean | TerritoryApprovalRequestCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type TerritoryApprovalRequestIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    targetTerritory?: boolean | TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>
+    clinic?: boolean | TerritoryApprovalRequest$clinicArgs<ExtArgs>
+    toTerritory?: boolean | TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>
+    supersededBy?: boolean | TerritoryApprovalRequest$supersededByArgs<ExtArgs>
+  }
+  export type TerritoryApprovalRequestIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    targetTerritory?: boolean | TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>
+    clinic?: boolean | TerritoryApprovalRequest$clinicArgs<ExtArgs>
+    toTerritory?: boolean | TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>
+    supersededBy?: boolean | TerritoryApprovalRequest$supersededByArgs<ExtArgs>
+  }
+
+  export type $TerritoryApprovalRequestPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "TerritoryApprovalRequest"
+    objects: {
+      targetTerritory: Prisma.$TerritoryPayload<ExtArgs> | null
+      clinic: Prisma.$ClinicPayload<ExtArgs> | null
+      toTerritory: Prisma.$TerritoryPayload<ExtArgs> | null
+      supersededBy: Prisma.$TerritoryApprovalRequestPayload<ExtArgs> | null
+      supersedes: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      type: $Enums.TerritoryApprovalType
+      status: $Enums.TerritoryApprovalStatus
+      requesterId: string
+      reviewerId: string | null
+      entityPayload: Prisma.JsonValue
+      targetTerritoryId: string | null
+      clinicId: string | null
+      toTerritoryId: string | null
+      reason: string | null
+      resolutionNote: string | null
+      supersededById: string | null
+      resolvedAt: Date | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["territoryApprovalRequest"]>
+    composites: {}
+  }
+
+  type TerritoryApprovalRequestGetPayload<S extends boolean | null | undefined | TerritoryApprovalRequestDefaultArgs> = $Result.GetResult<Prisma.$TerritoryApprovalRequestPayload, S>
+
+  type TerritoryApprovalRequestCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<TerritoryApprovalRequestFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: TerritoryApprovalRequestCountAggregateInputType | true
+    }
+
+  export interface TerritoryApprovalRequestDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TerritoryApprovalRequest'], meta: { name: 'TerritoryApprovalRequest' } }
+    /**
+     * Find zero or one TerritoryApprovalRequest that matches the filter.
+     * @param {TerritoryApprovalRequestFindUniqueArgs} args - Arguments to find a TerritoryApprovalRequest
+     * @example
+     * // Get one TerritoryApprovalRequest
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends TerritoryApprovalRequestFindUniqueArgs>(args: SelectSubset<T, TerritoryApprovalRequestFindUniqueArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one TerritoryApprovalRequest that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {TerritoryApprovalRequestFindUniqueOrThrowArgs} args - Arguments to find a TerritoryApprovalRequest
+     * @example
+     * // Get one TerritoryApprovalRequest
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends TerritoryApprovalRequestFindUniqueOrThrowArgs>(args: SelectSubset<T, TerritoryApprovalRequestFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TerritoryApprovalRequest that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestFindFirstArgs} args - Arguments to find a TerritoryApprovalRequest
+     * @example
+     * // Get one TerritoryApprovalRequest
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends TerritoryApprovalRequestFindFirstArgs>(args?: SelectSubset<T, TerritoryApprovalRequestFindFirstArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first TerritoryApprovalRequest that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestFindFirstOrThrowArgs} args - Arguments to find a TerritoryApprovalRequest
+     * @example
+     * // Get one TerritoryApprovalRequest
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends TerritoryApprovalRequestFindFirstOrThrowArgs>(args?: SelectSubset<T, TerritoryApprovalRequestFindFirstOrThrowArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more TerritoryApprovalRequests that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all TerritoryApprovalRequests
+     * const territoryApprovalRequests = await prisma.territoryApprovalRequest.findMany()
+     * 
+     * // Get first 10 TerritoryApprovalRequests
+     * const territoryApprovalRequests = await prisma.territoryApprovalRequest.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const territoryApprovalRequestWithIdOnly = await prisma.territoryApprovalRequest.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends TerritoryApprovalRequestFindManyArgs>(args?: SelectSubset<T, TerritoryApprovalRequestFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a TerritoryApprovalRequest.
+     * @param {TerritoryApprovalRequestCreateArgs} args - Arguments to create a TerritoryApprovalRequest.
+     * @example
+     * // Create one TerritoryApprovalRequest
+     * const TerritoryApprovalRequest = await prisma.territoryApprovalRequest.create({
+     *   data: {
+     *     // ... data to create a TerritoryApprovalRequest
+     *   }
+     * })
+     * 
+     */
+    create<T extends TerritoryApprovalRequestCreateArgs>(args: SelectSubset<T, TerritoryApprovalRequestCreateArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many TerritoryApprovalRequests.
+     * @param {TerritoryApprovalRequestCreateManyArgs} args - Arguments to create many TerritoryApprovalRequests.
+     * @example
+     * // Create many TerritoryApprovalRequests
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends TerritoryApprovalRequestCreateManyArgs>(args?: SelectSubset<T, TerritoryApprovalRequestCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many TerritoryApprovalRequests and returns the data saved in the database.
+     * @param {TerritoryApprovalRequestCreateManyAndReturnArgs} args - Arguments to create many TerritoryApprovalRequests.
+     * @example
+     * // Create many TerritoryApprovalRequests
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many TerritoryApprovalRequests and only return the `id`
+     * const territoryApprovalRequestWithIdOnly = await prisma.territoryApprovalRequest.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends TerritoryApprovalRequestCreateManyAndReturnArgs>(args?: SelectSubset<T, TerritoryApprovalRequestCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a TerritoryApprovalRequest.
+     * @param {TerritoryApprovalRequestDeleteArgs} args - Arguments to delete one TerritoryApprovalRequest.
+     * @example
+     * // Delete one TerritoryApprovalRequest
+     * const TerritoryApprovalRequest = await prisma.territoryApprovalRequest.delete({
+     *   where: {
+     *     // ... filter to delete one TerritoryApprovalRequest
+     *   }
+     * })
+     * 
+     */
+    delete<T extends TerritoryApprovalRequestDeleteArgs>(args: SelectSubset<T, TerritoryApprovalRequestDeleteArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one TerritoryApprovalRequest.
+     * @param {TerritoryApprovalRequestUpdateArgs} args - Arguments to update one TerritoryApprovalRequest.
+     * @example
+     * // Update one TerritoryApprovalRequest
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends TerritoryApprovalRequestUpdateArgs>(args: SelectSubset<T, TerritoryApprovalRequestUpdateArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more TerritoryApprovalRequests.
+     * @param {TerritoryApprovalRequestDeleteManyArgs} args - Arguments to filter TerritoryApprovalRequests to delete.
+     * @example
+     * // Delete a few TerritoryApprovalRequests
+     * const { count } = await prisma.territoryApprovalRequest.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends TerritoryApprovalRequestDeleteManyArgs>(args?: SelectSubset<T, TerritoryApprovalRequestDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TerritoryApprovalRequests.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many TerritoryApprovalRequests
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends TerritoryApprovalRequestUpdateManyArgs>(args: SelectSubset<T, TerritoryApprovalRequestUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more TerritoryApprovalRequests and returns the data updated in the database.
+     * @param {TerritoryApprovalRequestUpdateManyAndReturnArgs} args - Arguments to update many TerritoryApprovalRequests.
+     * @example
+     * // Update many TerritoryApprovalRequests
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more TerritoryApprovalRequests and only return the `id`
+     * const territoryApprovalRequestWithIdOnly = await prisma.territoryApprovalRequest.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends TerritoryApprovalRequestUpdateManyAndReturnArgs>(args: SelectSubset<T, TerritoryApprovalRequestUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one TerritoryApprovalRequest.
+     * @param {TerritoryApprovalRequestUpsertArgs} args - Arguments to update or create a TerritoryApprovalRequest.
+     * @example
+     * // Update or create a TerritoryApprovalRequest
+     * const territoryApprovalRequest = await prisma.territoryApprovalRequest.upsert({
+     *   create: {
+     *     // ... data to create a TerritoryApprovalRequest
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the TerritoryApprovalRequest we want to update
+     *   }
+     * })
+     */
+    upsert<T extends TerritoryApprovalRequestUpsertArgs>(args: SelectSubset<T, TerritoryApprovalRequestUpsertArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of TerritoryApprovalRequests.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestCountArgs} args - Arguments to filter TerritoryApprovalRequests to count.
+     * @example
+     * // Count the number of TerritoryApprovalRequests
+     * const count = await prisma.territoryApprovalRequest.count({
+     *   where: {
+     *     // ... the filter for the TerritoryApprovalRequests we want to count
+     *   }
+     * })
+    **/
+    count<T extends TerritoryApprovalRequestCountArgs>(
+      args?: Subset<T, TerritoryApprovalRequestCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], TerritoryApprovalRequestCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a TerritoryApprovalRequest.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends TerritoryApprovalRequestAggregateArgs>(args: Subset<T, TerritoryApprovalRequestAggregateArgs>): Prisma.PrismaPromise<GetTerritoryApprovalRequestAggregateType<T>>
+
+    /**
+     * Group by TerritoryApprovalRequest.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {TerritoryApprovalRequestGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends TerritoryApprovalRequestGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: TerritoryApprovalRequestGroupByArgs['orderBy'] }
+        : { orderBy?: TerritoryApprovalRequestGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, TerritoryApprovalRequestGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTerritoryApprovalRequestGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the TerritoryApprovalRequest model
+   */
+  readonly fields: TerritoryApprovalRequestFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for TerritoryApprovalRequest.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__TerritoryApprovalRequestClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    targetTerritory<T extends TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    clinic<T extends TerritoryApprovalRequest$clinicArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryApprovalRequest$clinicArgs<ExtArgs>>): Prisma__ClinicClient<$Result.GetResult<Prisma.$ClinicPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    toTerritory<T extends TerritoryApprovalRequest$toTerritoryArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryApprovalRequest$toTerritoryArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    supersededBy<T extends TerritoryApprovalRequest$supersededByArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryApprovalRequest$supersededByArgs<ExtArgs>>): Prisma__TerritoryApprovalRequestClient<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    supersedes<T extends TerritoryApprovalRequest$supersedesArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryApprovalRequest$supersedesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the TerritoryApprovalRequest model
+   */
+  interface TerritoryApprovalRequestFieldRefs {
+    readonly id: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly type: FieldRef<"TerritoryApprovalRequest", 'TerritoryApprovalType'>
+    readonly status: FieldRef<"TerritoryApprovalRequest", 'TerritoryApprovalStatus'>
+    readonly requesterId: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly reviewerId: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly entityPayload: FieldRef<"TerritoryApprovalRequest", 'Json'>
+    readonly targetTerritoryId: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly clinicId: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly toTerritoryId: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly reason: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly resolutionNote: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly supersededById: FieldRef<"TerritoryApprovalRequest", 'String'>
+    readonly resolvedAt: FieldRef<"TerritoryApprovalRequest", 'DateTime'>
+    readonly createdAt: FieldRef<"TerritoryApprovalRequest", 'DateTime'>
+    readonly updatedAt: FieldRef<"TerritoryApprovalRequest", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * TerritoryApprovalRequest findUnique
+   */
+  export type TerritoryApprovalRequestFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryApprovalRequest to fetch.
+     */
+    where: TerritoryApprovalRequestWhereUniqueInput
+  }
+
+  /**
+   * TerritoryApprovalRequest findUniqueOrThrow
+   */
+  export type TerritoryApprovalRequestFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryApprovalRequest to fetch.
+     */
+    where: TerritoryApprovalRequestWhereUniqueInput
+  }
+
+  /**
+   * TerritoryApprovalRequest findFirst
+   */
+  export type TerritoryApprovalRequestFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryApprovalRequest to fetch.
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryApprovalRequests to fetch.
+     */
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TerritoryApprovalRequests.
+     */
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryApprovalRequests from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryApprovalRequests.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TerritoryApprovalRequests.
+     */
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryApprovalRequest findFirstOrThrow
+   */
+  export type TerritoryApprovalRequestFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryApprovalRequest to fetch.
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryApprovalRequests to fetch.
+     */
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for TerritoryApprovalRequests.
+     */
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryApprovalRequests from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryApprovalRequests.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TerritoryApprovalRequests.
+     */
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryApprovalRequest findMany
+   */
+  export type TerritoryApprovalRequestFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * Filter, which TerritoryApprovalRequests to fetch.
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of TerritoryApprovalRequests to fetch.
+     */
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing TerritoryApprovalRequests.
+     */
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` TerritoryApprovalRequests from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` TerritoryApprovalRequests.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of TerritoryApprovalRequests.
+     */
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryApprovalRequest create
+   */
+  export type TerritoryApprovalRequestCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * The data needed to create a TerritoryApprovalRequest.
+     */
+    data: XOR<TerritoryApprovalRequestCreateInput, TerritoryApprovalRequestUncheckedCreateInput>
+  }
+
+  /**
+   * TerritoryApprovalRequest createMany
+   */
+  export type TerritoryApprovalRequestCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many TerritoryApprovalRequests.
+     */
+    data: TerritoryApprovalRequestCreateManyInput | TerritoryApprovalRequestCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * TerritoryApprovalRequest createManyAndReturn
+   */
+  export type TerritoryApprovalRequestCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * The data used to create many TerritoryApprovalRequests.
+     */
+    data: TerritoryApprovalRequestCreateManyInput | TerritoryApprovalRequestCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * TerritoryApprovalRequest update
+   */
+  export type TerritoryApprovalRequestUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * The data needed to update a TerritoryApprovalRequest.
+     */
+    data: XOR<TerritoryApprovalRequestUpdateInput, TerritoryApprovalRequestUncheckedUpdateInput>
+    /**
+     * Choose, which TerritoryApprovalRequest to update.
+     */
+    where: TerritoryApprovalRequestWhereUniqueInput
+  }
+
+  /**
+   * TerritoryApprovalRequest updateMany
+   */
+  export type TerritoryApprovalRequestUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update TerritoryApprovalRequests.
+     */
+    data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyInput>
+    /**
+     * Filter which TerritoryApprovalRequests to update
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * Limit how many TerritoryApprovalRequests to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * TerritoryApprovalRequest updateManyAndReturn
+   */
+  export type TerritoryApprovalRequestUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * The data used to update TerritoryApprovalRequests.
+     */
+    data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyInput>
+    /**
+     * Filter which TerritoryApprovalRequests to update
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * Limit how many TerritoryApprovalRequests to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * TerritoryApprovalRequest upsert
+   */
+  export type TerritoryApprovalRequestUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * The filter to search for the TerritoryApprovalRequest to update in case it exists.
+     */
+    where: TerritoryApprovalRequestWhereUniqueInput
+    /**
+     * In case the TerritoryApprovalRequest found by the `where` argument doesn't exist, create a new TerritoryApprovalRequest with this data.
+     */
+    create: XOR<TerritoryApprovalRequestCreateInput, TerritoryApprovalRequestUncheckedCreateInput>
+    /**
+     * In case the TerritoryApprovalRequest was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<TerritoryApprovalRequestUpdateInput, TerritoryApprovalRequestUncheckedUpdateInput>
+  }
+
+  /**
+   * TerritoryApprovalRequest delete
+   */
+  export type TerritoryApprovalRequestDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    /**
+     * Filter which TerritoryApprovalRequest to delete.
+     */
+    where: TerritoryApprovalRequestWhereUniqueInput
+  }
+
+  /**
+   * TerritoryApprovalRequest deleteMany
+   */
+  export type TerritoryApprovalRequestDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which TerritoryApprovalRequests to delete
+     */
+    where?: TerritoryApprovalRequestWhereInput
+    /**
+     * Limit how many TerritoryApprovalRequests to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * TerritoryApprovalRequest.targetTerritory
+   */
+  export type TerritoryApprovalRequest$targetTerritoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+  }
+
+  /**
+   * TerritoryApprovalRequest.clinic
+   */
+  export type TerritoryApprovalRequest$clinicArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Clinic
+     */
+    select?: ClinicSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Clinic
+     */
+    omit?: ClinicOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicInclude<ExtArgs> | null
+    where?: ClinicWhereInput
+  }
+
+  /**
+   * TerritoryApprovalRequest.toTerritory
+   */
+  export type TerritoryApprovalRequest$toTerritoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+  }
+
+  /**
+   * TerritoryApprovalRequest.supersededBy
+   */
+  export type TerritoryApprovalRequest$supersededByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    where?: TerritoryApprovalRequestWhereInput
+  }
+
+  /**
+   * TerritoryApprovalRequest.supersedes
+   */
+  export type TerritoryApprovalRequest$supersedesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    where?: TerritoryApprovalRequestWhereInput
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
+  }
+
+  /**
+   * TerritoryApprovalRequest without action
+   */
+  export type TerritoryApprovalRequestDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
   }
 
 
@@ -13501,15 +17731,31 @@ export namespace Prisma {
 
   export type AggregateClinic = {
     _count: ClinicCountAggregateOutputType | null
+    _avg: ClinicAvgAggregateOutputType | null
+    _sum: ClinicSumAggregateOutputType | null
     _min: ClinicMinAggregateOutputType | null
     _max: ClinicMaxAggregateOutputType | null
+  }
+
+  export type ClinicAvgAggregateOutputType = {
+    lat: number | null
+    lng: number | null
+  }
+
+  export type ClinicSumAggregateOutputType = {
+    lat: number | null
+    lng: number | null
   }
 
   export type ClinicMinAggregateOutputType = {
     id: string | null
     name: string | null
     address: string | null
+    lat: number | null
+    lng: number | null
     territoryId: string | null
+    territoryAssignmentStatus: $Enums.TerritoryAssignmentStatus | null
+    territoryAssignmentSource: $Enums.TerritoryAssignmentSource | null
     sourceProvider: string | null
     externalSourceId: string | null
     sourceContentHash: string | null
@@ -13527,7 +17773,11 @@ export namespace Prisma {
     id: string | null
     name: string | null
     address: string | null
+    lat: number | null
+    lng: number | null
     territoryId: string | null
+    territoryAssignmentStatus: $Enums.TerritoryAssignmentStatus | null
+    territoryAssignmentSource: $Enums.TerritoryAssignmentSource | null
     sourceProvider: string | null
     externalSourceId: string | null
     sourceContentHash: string | null
@@ -13545,7 +17795,11 @@ export namespace Prisma {
     id: number
     name: number
     address: number
+    lat: number
+    lng: number
     territoryId: number
+    territoryAssignmentStatus: number
+    territoryAssignmentSource: number
     sourceProvider: number
     externalSourceId: number
     sourceContentHash: number
@@ -13561,11 +17815,25 @@ export namespace Prisma {
   }
 
 
+  export type ClinicAvgAggregateInputType = {
+    lat?: true
+    lng?: true
+  }
+
+  export type ClinicSumAggregateInputType = {
+    lat?: true
+    lng?: true
+  }
+
   export type ClinicMinAggregateInputType = {
     id?: true
     name?: true
     address?: true
+    lat?: true
+    lng?: true
     territoryId?: true
+    territoryAssignmentStatus?: true
+    territoryAssignmentSource?: true
     sourceProvider?: true
     externalSourceId?: true
     sourceContentHash?: true
@@ -13583,7 +17851,11 @@ export namespace Prisma {
     id?: true
     name?: true
     address?: true
+    lat?: true
+    lng?: true
     territoryId?: true
+    territoryAssignmentStatus?: true
+    territoryAssignmentSource?: true
     sourceProvider?: true
     externalSourceId?: true
     sourceContentHash?: true
@@ -13601,7 +17873,11 @@ export namespace Prisma {
     id?: true
     name?: true
     address?: true
+    lat?: true
+    lng?: true
     territoryId?: true
+    territoryAssignmentStatus?: true
+    territoryAssignmentSource?: true
     sourceProvider?: true
     externalSourceId?: true
     sourceContentHash?: true
@@ -13654,6 +17930,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: ClinicAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ClinicSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ClinicMinAggregateInputType
@@ -13684,6 +17972,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: ClinicCountAggregateInputType | true
+    _avg?: ClinicAvgAggregateInputType
+    _sum?: ClinicSumAggregateInputType
     _min?: ClinicMinAggregateInputType
     _max?: ClinicMaxAggregateInputType
   }
@@ -13692,7 +17982,11 @@ export namespace Prisma {
     id: string
     name: string
     address: string | null
+    lat: number | null
+    lng: number | null
     territoryId: string | null
+    territoryAssignmentStatus: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource: $Enums.TerritoryAssignmentSource
     sourceProvider: string | null
     externalSourceId: string | null
     sourceContentHash: string | null
@@ -13705,6 +17999,8 @@ export namespace Prisma {
     createdAt: Date
     updatedAt: Date
     _count: ClinicCountAggregateOutputType | null
+    _avg: ClinicAvgAggregateOutputType | null
+    _sum: ClinicSumAggregateOutputType | null
     _min: ClinicMinAggregateOutputType | null
     _max: ClinicMaxAggregateOutputType | null
   }
@@ -13727,7 +18023,11 @@ export namespace Prisma {
     id?: boolean
     name?: boolean
     address?: boolean
+    lat?: boolean
+    lng?: boolean
     territoryId?: boolean
+    territoryAssignmentStatus?: boolean
+    territoryAssignmentSource?: boolean
     sourceProvider?: boolean
     externalSourceId?: boolean
     sourceContentHash?: boolean
@@ -13739,8 +18039,10 @@ export namespace Prisma {
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    territory?: boolean | Clinic$territoryArgs<ExtArgs>
     doctorAssociations?: boolean | Clinic$doctorAssociationsArgs<ExtArgs>
     ingestionSuggestions?: boolean | Clinic$ingestionSuggestionsArgs<ExtArgs>
+    territoryApprovalRequests?: boolean | Clinic$territoryApprovalRequestsArgs<ExtArgs>
     _count?: boolean | ClinicCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["clinic"]>
 
@@ -13748,7 +18050,11 @@ export namespace Prisma {
     id?: boolean
     name?: boolean
     address?: boolean
+    lat?: boolean
+    lng?: boolean
     territoryId?: boolean
+    territoryAssignmentStatus?: boolean
+    territoryAssignmentSource?: boolean
     sourceProvider?: boolean
     externalSourceId?: boolean
     sourceContentHash?: boolean
@@ -13760,13 +18066,18 @@ export namespace Prisma {
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    territory?: boolean | Clinic$territoryArgs<ExtArgs>
   }, ExtArgs["result"]["clinic"]>
 
   export type ClinicSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     name?: boolean
     address?: boolean
+    lat?: boolean
+    lng?: boolean
     territoryId?: boolean
+    territoryAssignmentStatus?: boolean
+    territoryAssignmentSource?: boolean
     sourceProvider?: boolean
     externalSourceId?: boolean
     sourceContentHash?: boolean
@@ -13778,13 +18089,18 @@ export namespace Prisma {
     deletedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
+    territory?: boolean | Clinic$territoryArgs<ExtArgs>
   }, ExtArgs["result"]["clinic"]>
 
   export type ClinicSelectScalar = {
     id?: boolean
     name?: boolean
     address?: boolean
+    lat?: boolean
+    lng?: boolean
     territoryId?: boolean
+    territoryAssignmentStatus?: boolean
+    territoryAssignmentSource?: boolean
     sourceProvider?: boolean
     externalSourceId?: boolean
     sourceContentHash?: boolean
@@ -13798,26 +18114,38 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type ClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "address" | "territoryId" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clinic"]>
+  export type ClinicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "address" | "lat" | "lng" | "territoryId" | "territoryAssignmentStatus" | "territoryAssignmentSource" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["clinic"]>
   export type ClinicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    territory?: boolean | Clinic$territoryArgs<ExtArgs>
     doctorAssociations?: boolean | Clinic$doctorAssociationsArgs<ExtArgs>
     ingestionSuggestions?: boolean | Clinic$ingestionSuggestionsArgs<ExtArgs>
+    territoryApprovalRequests?: boolean | Clinic$territoryApprovalRequestsArgs<ExtArgs>
     _count?: boolean | ClinicCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type ClinicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type ClinicIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
+  export type ClinicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    territory?: boolean | Clinic$territoryArgs<ExtArgs>
+  }
+  export type ClinicIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    territory?: boolean | Clinic$territoryArgs<ExtArgs>
+  }
 
   export type $ClinicPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Clinic"
     objects: {
+      territory: Prisma.$TerritoryPayload<ExtArgs> | null
       doctorAssociations: Prisma.$DoctorClinicAssociationPayload<ExtArgs>[]
       ingestionSuggestions: Prisma.$IngestionSuggestionPayload<ExtArgs>[]
+      territoryApprovalRequests: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       name: string
       address: string | null
+      lat: number | null
+      lng: number | null
       territoryId: string | null
+      territoryAssignmentStatus: $Enums.TerritoryAssignmentStatus
+      territoryAssignmentSource: $Enums.TerritoryAssignmentSource
       sourceProvider: string | null
       externalSourceId: string | null
       sourceContentHash: string | null
@@ -14223,8 +18551,10 @@ export namespace Prisma {
    */
   export interface Prisma__ClinicClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
+    territory<T extends Clinic$territoryArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$territoryArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     doctorAssociations<T extends Clinic$doctorAssociationsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$doctorAssociationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$DoctorClinicAssociationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     ingestionSuggestions<T extends Clinic$ingestionSuggestionsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$ingestionSuggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    territoryApprovalRequests<T extends Clinic$territoryApprovalRequestsArgs<ExtArgs> = {}>(args?: Subset<T, Clinic$territoryApprovalRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -14257,7 +18587,11 @@ export namespace Prisma {
     readonly id: FieldRef<"Clinic", 'String'>
     readonly name: FieldRef<"Clinic", 'String'>
     readonly address: FieldRef<"Clinic", 'String'>
+    readonly lat: FieldRef<"Clinic", 'Float'>
+    readonly lng: FieldRef<"Clinic", 'Float'>
     readonly territoryId: FieldRef<"Clinic", 'String'>
+    readonly territoryAssignmentStatus: FieldRef<"Clinic", 'TerritoryAssignmentStatus'>
+    readonly territoryAssignmentSource: FieldRef<"Clinic", 'TerritoryAssignmentSource'>
     readonly sourceProvider: FieldRef<"Clinic", 'String'>
     readonly externalSourceId: FieldRef<"Clinic", 'String'>
     readonly sourceContentHash: FieldRef<"Clinic", 'String'>
@@ -14523,6 +18857,10 @@ export namespace Prisma {
      */
     data: ClinicCreateManyInput | ClinicCreateManyInput[]
     skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicIncludeCreateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -14593,6 +18931,10 @@ export namespace Prisma {
      * Limit how many Clinics to update.
      */
     limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ClinicIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -14662,6 +19004,25 @@ export namespace Prisma {
   }
 
   /**
+   * Clinic.territory
+   */
+  export type Clinic$territoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+  }
+
+  /**
    * Clinic.doctorAssociations
    */
   export type Clinic$doctorAssociationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -14707,6 +19068,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: IngestionSuggestionScalarFieldEnum | IngestionSuggestionScalarFieldEnum[]
+  }
+
+  /**
+   * Clinic.territoryApprovalRequests
+   */
+  export type Clinic$territoryApprovalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the TerritoryApprovalRequest
+     */
+    select?: TerritoryApprovalRequestSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the TerritoryApprovalRequest
+     */
+    omit?: TerritoryApprovalRequestOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryApprovalRequestInclude<ExtArgs> | null
+    where?: TerritoryApprovalRequestWhereInput
+    orderBy?: TerritoryApprovalRequestOrderByWithRelationInput | TerritoryApprovalRequestOrderByWithRelationInput[]
+    cursor?: TerritoryApprovalRequestWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
   }
 
   /**
@@ -19566,6 +23951,53 @@ export namespace Prisma {
   export type UserTerritoryAssignmentScalarFieldEnum = (typeof UserTerritoryAssignmentScalarFieldEnum)[keyof typeof UserTerritoryAssignmentScalarFieldEnum]
 
 
+  export const TerritoryScalarFieldEnum: {
+    id: 'id',
+    name: 'name',
+    code: 'code',
+    nodeType: 'nodeType',
+    regionSlug: 'regionSlug',
+    stateCode: 'stateCode',
+    parentId: 'parentId',
+    isActive: 'isActive',
+    organizationId: 'organizationId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type TerritoryScalarFieldEnum = (typeof TerritoryScalarFieldEnum)[keyof typeof TerritoryScalarFieldEnum]
+
+
+  export const TerritoryClosureScalarFieldEnum: {
+    ancestorId: 'ancestorId',
+    descendantId: 'descendantId',
+    depth: 'depth'
+  };
+
+  export type TerritoryClosureScalarFieldEnum = (typeof TerritoryClosureScalarFieldEnum)[keyof typeof TerritoryClosureScalarFieldEnum]
+
+
+  export const TerritoryApprovalRequestScalarFieldEnum: {
+    id: 'id',
+    type: 'type',
+    status: 'status',
+    requesterId: 'requesterId',
+    reviewerId: 'reviewerId',
+    entityPayload: 'entityPayload',
+    targetTerritoryId: 'targetTerritoryId',
+    clinicId: 'clinicId',
+    toTerritoryId: 'toTerritoryId',
+    reason: 'reason',
+    resolutionNote: 'resolutionNote',
+    supersededById: 'supersededById',
+    resolvedAt: 'resolvedAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type TerritoryApprovalRequestScalarFieldEnum = (typeof TerritoryApprovalRequestScalarFieldEnum)[keyof typeof TerritoryApprovalRequestScalarFieldEnum]
+
+
   export const RoleScalarFieldEnum: {
     id: 'id',
     name: 'name',
@@ -19703,7 +24135,11 @@ export namespace Prisma {
     id: 'id',
     name: 'name',
     address: 'address',
+    lat: 'lat',
+    lng: 'lng',
     territoryId: 'territoryId',
+    territoryAssignmentStatus: 'territoryAssignmentStatus',
+    territoryAssignmentSource: 'territoryAssignmentSource',
     sourceProvider: 'sourceProvider',
     externalSourceId: 'externalSourceId',
     sourceContentHash: 'sourceContentHash',
@@ -19923,6 +24359,48 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'TerritoryNodeType'
+   */
+  export type EnumTerritoryNodeTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryNodeType'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryNodeType[]'
+   */
+  export type ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryNodeType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryApprovalType'
+   */
+  export type EnumTerritoryApprovalTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryApprovalType'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryApprovalType[]'
+   */
+  export type ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryApprovalType[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryApprovalStatus'
+   */
+  export type EnumTerritoryApprovalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryApprovalStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryApprovalStatus[]'
+   */
+  export type ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryApprovalStatus[]'>
+    
+
+
+  /**
    * Reference to a field of type 'AuthSessionDeviceType'
    */
   export type EnumAuthSessionDeviceTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AuthSessionDeviceType'>
@@ -20007,6 +24485,48 @@ export namespace Prisma {
 
 
   /**
+   * Reference to a field of type 'Float'
+   */
+  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+    
+
+
+  /**
+   * Reference to a field of type 'Float[]'
+   */
+  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryAssignmentStatus'
+   */
+  export type EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryAssignmentStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryAssignmentStatus[]'
+   */
+  export type ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryAssignmentStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryAssignmentSource'
+   */
+  export type EnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryAssignmentSource'>
+    
+
+
+  /**
+   * Reference to a field of type 'TerritoryAssignmentSource[]'
+   */
+  export type ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryAssignmentSource[]'>
+    
+
+
+  /**
    * Reference to a field of type 'IngestionRunStatus'
    */
   export type EnumIngestionRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionRunStatus'>
@@ -20045,20 +24565,6 @@ export namespace Prisma {
    * Reference to a field of type 'IngestionSuggestionStatus[]'
    */
   export type ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionSuggestionStatus[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'Float'
-   */
-  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
-    
-
-
-  /**
-   * Reference to a field of type 'Float[]'
-   */
-  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
     
   /**
    * Deep Input Types
@@ -20270,6 +24776,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"UserTerritoryAssignment"> | Date | string
     updatedAt?: DateTimeFilter<"UserTerritoryAssignment"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    territory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
   }
 
   export type UserTerritoryAssignmentOrderByWithRelationInput = {
@@ -20280,6 +24787,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
+    territory?: TerritoryOrderByWithRelationInput
   }
 
   export type UserTerritoryAssignmentWhereUniqueInput = Prisma.AtLeast<{
@@ -20294,6 +24802,7 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"UserTerritoryAssignment"> | Date | string
     updatedAt?: DateTimeFilter<"UserTerritoryAssignment"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
+    territory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
   }, "id" | "userId_territoryId">
 
   export type UserTerritoryAssignmentOrderByWithAggregationInput = {
@@ -20318,6 +24827,281 @@ export namespace Prisma {
     assignedBy?: StringNullableWithAggregatesFilter<"UserTerritoryAssignment"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"UserTerritoryAssignment"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"UserTerritoryAssignment"> | Date | string
+  }
+
+  export type TerritoryWhereInput = {
+    AND?: TerritoryWhereInput | TerritoryWhereInput[]
+    OR?: TerritoryWhereInput[]
+    NOT?: TerritoryWhereInput | TerritoryWhereInput[]
+    id?: StringFilter<"Territory"> | string
+    name?: StringFilter<"Territory"> | string
+    code?: StringFilter<"Territory"> | string
+    nodeType?: EnumTerritoryNodeTypeFilter<"Territory"> | $Enums.TerritoryNodeType
+    regionSlug?: StringNullableFilter<"Territory"> | string | null
+    stateCode?: StringNullableFilter<"Territory"> | string | null
+    parentId?: StringNullableFilter<"Territory"> | string | null
+    isActive?: BoolFilter<"Territory"> | boolean
+    organizationId?: StringNullableFilter<"Territory"> | string | null
+    createdAt?: DateTimeFilter<"Territory"> | Date | string
+    updatedAt?: DateTimeFilter<"Territory"> | Date | string
+    parent?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    children?: TerritoryListRelationFilter
+    clinics?: ClinicListRelationFilter
+    userAssignments?: UserTerritoryAssignmentListRelationFilter
+    closureAsAncestor?: TerritoryClosureListRelationFilter
+    closureAsDescendant?: TerritoryClosureListRelationFilter
+    approvalRequests?: TerritoryApprovalRequestListRelationFilter
+    clinicApprovalRequests?: TerritoryApprovalRequestListRelationFilter
+  }
+
+  export type TerritoryOrderByWithRelationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    code?: SortOrder
+    nodeType?: SortOrder
+    regionSlug?: SortOrderInput | SortOrder
+    stateCode?: SortOrderInput | SortOrder
+    parentId?: SortOrderInput | SortOrder
+    isActive?: SortOrder
+    organizationId?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    parent?: TerritoryOrderByWithRelationInput
+    children?: TerritoryOrderByRelationAggregateInput
+    clinics?: ClinicOrderByRelationAggregateInput
+    userAssignments?: UserTerritoryAssignmentOrderByRelationAggregateInput
+    closureAsAncestor?: TerritoryClosureOrderByRelationAggregateInput
+    closureAsDescendant?: TerritoryClosureOrderByRelationAggregateInput
+    approvalRequests?: TerritoryApprovalRequestOrderByRelationAggregateInput
+    clinicApprovalRequests?: TerritoryApprovalRequestOrderByRelationAggregateInput
+  }
+
+  export type TerritoryWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    code?: string
+    parentId_name?: TerritoryParentIdNameCompoundUniqueInput
+    AND?: TerritoryWhereInput | TerritoryWhereInput[]
+    OR?: TerritoryWhereInput[]
+    NOT?: TerritoryWhereInput | TerritoryWhereInput[]
+    name?: StringFilter<"Territory"> | string
+    nodeType?: EnumTerritoryNodeTypeFilter<"Territory"> | $Enums.TerritoryNodeType
+    regionSlug?: StringNullableFilter<"Territory"> | string | null
+    stateCode?: StringNullableFilter<"Territory"> | string | null
+    parentId?: StringNullableFilter<"Territory"> | string | null
+    isActive?: BoolFilter<"Territory"> | boolean
+    organizationId?: StringNullableFilter<"Territory"> | string | null
+    createdAt?: DateTimeFilter<"Territory"> | Date | string
+    updatedAt?: DateTimeFilter<"Territory"> | Date | string
+    parent?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    children?: TerritoryListRelationFilter
+    clinics?: ClinicListRelationFilter
+    userAssignments?: UserTerritoryAssignmentListRelationFilter
+    closureAsAncestor?: TerritoryClosureListRelationFilter
+    closureAsDescendant?: TerritoryClosureListRelationFilter
+    approvalRequests?: TerritoryApprovalRequestListRelationFilter
+    clinicApprovalRequests?: TerritoryApprovalRequestListRelationFilter
+  }, "id" | "code" | "parentId_name">
+
+  export type TerritoryOrderByWithAggregationInput = {
+    id?: SortOrder
+    name?: SortOrder
+    code?: SortOrder
+    nodeType?: SortOrder
+    regionSlug?: SortOrderInput | SortOrder
+    stateCode?: SortOrderInput | SortOrder
+    parentId?: SortOrderInput | SortOrder
+    isActive?: SortOrder
+    organizationId?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: TerritoryCountOrderByAggregateInput
+    _max?: TerritoryMaxOrderByAggregateInput
+    _min?: TerritoryMinOrderByAggregateInput
+  }
+
+  export type TerritoryScalarWhereWithAggregatesInput = {
+    AND?: TerritoryScalarWhereWithAggregatesInput | TerritoryScalarWhereWithAggregatesInput[]
+    OR?: TerritoryScalarWhereWithAggregatesInput[]
+    NOT?: TerritoryScalarWhereWithAggregatesInput | TerritoryScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"Territory"> | string
+    name?: StringWithAggregatesFilter<"Territory"> | string
+    code?: StringWithAggregatesFilter<"Territory"> | string
+    nodeType?: EnumTerritoryNodeTypeWithAggregatesFilter<"Territory"> | $Enums.TerritoryNodeType
+    regionSlug?: StringNullableWithAggregatesFilter<"Territory"> | string | null
+    stateCode?: StringNullableWithAggregatesFilter<"Territory"> | string | null
+    parentId?: StringNullableWithAggregatesFilter<"Territory"> | string | null
+    isActive?: BoolWithAggregatesFilter<"Territory"> | boolean
+    organizationId?: StringNullableWithAggregatesFilter<"Territory"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"Territory"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"Territory"> | Date | string
+  }
+
+  export type TerritoryClosureWhereInput = {
+    AND?: TerritoryClosureWhereInput | TerritoryClosureWhereInput[]
+    OR?: TerritoryClosureWhereInput[]
+    NOT?: TerritoryClosureWhereInput | TerritoryClosureWhereInput[]
+    ancestorId?: StringFilter<"TerritoryClosure"> | string
+    descendantId?: StringFilter<"TerritoryClosure"> | string
+    depth?: IntFilter<"TerritoryClosure"> | number
+    ancestor?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
+    descendant?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
+  }
+
+  export type TerritoryClosureOrderByWithRelationInput = {
+    ancestorId?: SortOrder
+    descendantId?: SortOrder
+    depth?: SortOrder
+    ancestor?: TerritoryOrderByWithRelationInput
+    descendant?: TerritoryOrderByWithRelationInput
+  }
+
+  export type TerritoryClosureWhereUniqueInput = Prisma.AtLeast<{
+    ancestorId_descendantId?: TerritoryClosureAncestorIdDescendantIdCompoundUniqueInput
+    AND?: TerritoryClosureWhereInput | TerritoryClosureWhereInput[]
+    OR?: TerritoryClosureWhereInput[]
+    NOT?: TerritoryClosureWhereInput | TerritoryClosureWhereInput[]
+    ancestorId?: StringFilter<"TerritoryClosure"> | string
+    descendantId?: StringFilter<"TerritoryClosure"> | string
+    depth?: IntFilter<"TerritoryClosure"> | number
+    ancestor?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
+    descendant?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
+  }, "ancestorId_descendantId">
+
+  export type TerritoryClosureOrderByWithAggregationInput = {
+    ancestorId?: SortOrder
+    descendantId?: SortOrder
+    depth?: SortOrder
+    _count?: TerritoryClosureCountOrderByAggregateInput
+    _avg?: TerritoryClosureAvgOrderByAggregateInput
+    _max?: TerritoryClosureMaxOrderByAggregateInput
+    _min?: TerritoryClosureMinOrderByAggregateInput
+    _sum?: TerritoryClosureSumOrderByAggregateInput
+  }
+
+  export type TerritoryClosureScalarWhereWithAggregatesInput = {
+    AND?: TerritoryClosureScalarWhereWithAggregatesInput | TerritoryClosureScalarWhereWithAggregatesInput[]
+    OR?: TerritoryClosureScalarWhereWithAggregatesInput[]
+    NOT?: TerritoryClosureScalarWhereWithAggregatesInput | TerritoryClosureScalarWhereWithAggregatesInput[]
+    ancestorId?: StringWithAggregatesFilter<"TerritoryClosure"> | string
+    descendantId?: StringWithAggregatesFilter<"TerritoryClosure"> | string
+    depth?: IntWithAggregatesFilter<"TerritoryClosure"> | number
+  }
+
+  export type TerritoryApprovalRequestWhereInput = {
+    AND?: TerritoryApprovalRequestWhereInput | TerritoryApprovalRequestWhereInput[]
+    OR?: TerritoryApprovalRequestWhereInput[]
+    NOT?: TerritoryApprovalRequestWhereInput | TerritoryApprovalRequestWhereInput[]
+    id?: StringFilter<"TerritoryApprovalRequest"> | string
+    type?: EnumTerritoryApprovalTypeFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFilter<"TerritoryApprovalRequest"> | string
+    reviewerId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    entityPayload?: JsonFilter<"TerritoryApprovalRequest">
+    targetTerritoryId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    clinicId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    toTerritoryId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    reason?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    resolutionNote?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    supersededById?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    resolvedAt?: DateTimeNullableFilter<"TerritoryApprovalRequest"> | Date | string | null
+    createdAt?: DateTimeFilter<"TerritoryApprovalRequest"> | Date | string
+    updatedAt?: DateTimeFilter<"TerritoryApprovalRequest"> | Date | string
+    targetTerritory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    clinic?: XOR<ClinicNullableScalarRelationFilter, ClinicWhereInput> | null
+    toTerritory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    supersededBy?: XOR<TerritoryApprovalRequestNullableScalarRelationFilter, TerritoryApprovalRequestWhereInput> | null
+    supersedes?: TerritoryApprovalRequestListRelationFilter
+  }
+
+  export type TerritoryApprovalRequestOrderByWithRelationInput = {
+    id?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    requesterId?: SortOrder
+    reviewerId?: SortOrderInput | SortOrder
+    entityPayload?: SortOrder
+    targetTerritoryId?: SortOrderInput | SortOrder
+    clinicId?: SortOrderInput | SortOrder
+    toTerritoryId?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    resolutionNote?: SortOrderInput | SortOrder
+    supersededById?: SortOrderInput | SortOrder
+    resolvedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    targetTerritory?: TerritoryOrderByWithRelationInput
+    clinic?: ClinicOrderByWithRelationInput
+    toTerritory?: TerritoryOrderByWithRelationInput
+    supersededBy?: TerritoryApprovalRequestOrderByWithRelationInput
+    supersedes?: TerritoryApprovalRequestOrderByRelationAggregateInput
+  }
+
+  export type TerritoryApprovalRequestWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: TerritoryApprovalRequestWhereInput | TerritoryApprovalRequestWhereInput[]
+    OR?: TerritoryApprovalRequestWhereInput[]
+    NOT?: TerritoryApprovalRequestWhereInput | TerritoryApprovalRequestWhereInput[]
+    type?: EnumTerritoryApprovalTypeFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFilter<"TerritoryApprovalRequest"> | string
+    reviewerId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    entityPayload?: JsonFilter<"TerritoryApprovalRequest">
+    targetTerritoryId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    clinicId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    toTerritoryId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    reason?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    resolutionNote?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    supersededById?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    resolvedAt?: DateTimeNullableFilter<"TerritoryApprovalRequest"> | Date | string | null
+    createdAt?: DateTimeFilter<"TerritoryApprovalRequest"> | Date | string
+    updatedAt?: DateTimeFilter<"TerritoryApprovalRequest"> | Date | string
+    targetTerritory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    clinic?: XOR<ClinicNullableScalarRelationFilter, ClinicWhereInput> | null
+    toTerritory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    supersededBy?: XOR<TerritoryApprovalRequestNullableScalarRelationFilter, TerritoryApprovalRequestWhereInput> | null
+    supersedes?: TerritoryApprovalRequestListRelationFilter
+  }, "id">
+
+  export type TerritoryApprovalRequestOrderByWithAggregationInput = {
+    id?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    requesterId?: SortOrder
+    reviewerId?: SortOrderInput | SortOrder
+    entityPayload?: SortOrder
+    targetTerritoryId?: SortOrderInput | SortOrder
+    clinicId?: SortOrderInput | SortOrder
+    toTerritoryId?: SortOrderInput | SortOrder
+    reason?: SortOrderInput | SortOrder
+    resolutionNote?: SortOrderInput | SortOrder
+    supersededById?: SortOrderInput | SortOrder
+    resolvedAt?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: TerritoryApprovalRequestCountOrderByAggregateInput
+    _max?: TerritoryApprovalRequestMaxOrderByAggregateInput
+    _min?: TerritoryApprovalRequestMinOrderByAggregateInput
+  }
+
+  export type TerritoryApprovalRequestScalarWhereWithAggregatesInput = {
+    AND?: TerritoryApprovalRequestScalarWhereWithAggregatesInput | TerritoryApprovalRequestScalarWhereWithAggregatesInput[]
+    OR?: TerritoryApprovalRequestScalarWhereWithAggregatesInput[]
+    NOT?: TerritoryApprovalRequestScalarWhereWithAggregatesInput | TerritoryApprovalRequestScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"TerritoryApprovalRequest"> | string
+    type?: EnumTerritoryApprovalTypeWithAggregatesFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusWithAggregatesFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalStatus
+    requesterId?: StringWithAggregatesFilter<"TerritoryApprovalRequest"> | string
+    reviewerId?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    entityPayload?: JsonWithAggregatesFilter<"TerritoryApprovalRequest">
+    targetTerritoryId?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    clinicId?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    toTerritoryId?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    reason?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    resolutionNote?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    supersededById?: StringNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | string | null
+    resolvedAt?: DateTimeNullableWithAggregatesFilter<"TerritoryApprovalRequest"> | Date | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"TerritoryApprovalRequest"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"TerritoryApprovalRequest"> | Date | string
   }
 
   export type RoleWhereInput = {
@@ -21003,7 +25787,11 @@ export namespace Prisma {
     id?: StringFilter<"Clinic"> | string
     name?: StringFilter<"Clinic"> | string
     address?: StringNullableFilter<"Clinic"> | string | null
+    lat?: FloatNullableFilter<"Clinic"> | number | null
+    lng?: FloatNullableFilter<"Clinic"> | number | null
     territoryId?: StringNullableFilter<"Clinic"> | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFilter<"Clinic"> | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFilter<"Clinic"> | $Enums.TerritoryAssignmentSource
     sourceProvider?: StringNullableFilter<"Clinic"> | string | null
     externalSourceId?: StringNullableFilter<"Clinic"> | string | null
     sourceContentHash?: StringNullableFilter<"Clinic"> | string | null
@@ -21015,15 +25803,21 @@ export namespace Prisma {
     deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
     createdAt?: DateTimeFilter<"Clinic"> | Date | string
     updatedAt?: DateTimeFilter<"Clinic"> | Date | string
+    territory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
     doctorAssociations?: DoctorClinicAssociationListRelationFilter
     ingestionSuggestions?: IngestionSuggestionListRelationFilter
+    territoryApprovalRequests?: TerritoryApprovalRequestListRelationFilter
   }
 
   export type ClinicOrderByWithRelationInput = {
     id?: SortOrder
     name?: SortOrder
     address?: SortOrderInput | SortOrder
+    lat?: SortOrderInput | SortOrder
+    lng?: SortOrderInput | SortOrder
     territoryId?: SortOrderInput | SortOrder
+    territoryAssignmentStatus?: SortOrder
+    territoryAssignmentSource?: SortOrder
     sourceProvider?: SortOrderInput | SortOrder
     externalSourceId?: SortOrderInput | SortOrder
     sourceContentHash?: SortOrderInput | SortOrder
@@ -21035,8 +25829,10 @@ export namespace Prisma {
     deletedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    territory?: TerritoryOrderByWithRelationInput
     doctorAssociations?: DoctorClinicAssociationOrderByRelationAggregateInput
     ingestionSuggestions?: IngestionSuggestionOrderByRelationAggregateInput
+    territoryApprovalRequests?: TerritoryApprovalRequestOrderByRelationAggregateInput
   }
 
   export type ClinicWhereUniqueInput = Prisma.AtLeast<{
@@ -21047,7 +25843,11 @@ export namespace Prisma {
     NOT?: ClinicWhereInput | ClinicWhereInput[]
     name?: StringFilter<"Clinic"> | string
     address?: StringNullableFilter<"Clinic"> | string | null
+    lat?: FloatNullableFilter<"Clinic"> | number | null
+    lng?: FloatNullableFilter<"Clinic"> | number | null
     territoryId?: StringNullableFilter<"Clinic"> | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFilter<"Clinic"> | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFilter<"Clinic"> | $Enums.TerritoryAssignmentSource
     sourceProvider?: StringNullableFilter<"Clinic"> | string | null
     externalSourceId?: StringNullableFilter<"Clinic"> | string | null
     sourceContentHash?: StringNullableFilter<"Clinic"> | string | null
@@ -21059,15 +25859,21 @@ export namespace Prisma {
     deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
     createdAt?: DateTimeFilter<"Clinic"> | Date | string
     updatedAt?: DateTimeFilter<"Clinic"> | Date | string
+    territory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
     doctorAssociations?: DoctorClinicAssociationListRelationFilter
     ingestionSuggestions?: IngestionSuggestionListRelationFilter
+    territoryApprovalRequests?: TerritoryApprovalRequestListRelationFilter
   }, "id" | "sourceProvider_externalSourceId">
 
   export type ClinicOrderByWithAggregationInput = {
     id?: SortOrder
     name?: SortOrder
     address?: SortOrderInput | SortOrder
+    lat?: SortOrderInput | SortOrder
+    lng?: SortOrderInput | SortOrder
     territoryId?: SortOrderInput | SortOrder
+    territoryAssignmentStatus?: SortOrder
+    territoryAssignmentSource?: SortOrder
     sourceProvider?: SortOrderInput | SortOrder
     externalSourceId?: SortOrderInput | SortOrder
     sourceContentHash?: SortOrderInput | SortOrder
@@ -21080,8 +25886,10 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: ClinicCountOrderByAggregateInput
+    _avg?: ClinicAvgOrderByAggregateInput
     _max?: ClinicMaxOrderByAggregateInput
     _min?: ClinicMinOrderByAggregateInput
+    _sum?: ClinicSumOrderByAggregateInput
   }
 
   export type ClinicScalarWhereWithAggregatesInput = {
@@ -21091,7 +25899,11 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"Clinic"> | string
     name?: StringWithAggregatesFilter<"Clinic"> | string
     address?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    lat?: FloatNullableWithAggregatesFilter<"Clinic"> | number | null
+    lng?: FloatNullableWithAggregatesFilter<"Clinic"> | number | null
     territoryId?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusWithAggregatesFilter<"Clinic"> | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceWithAggregatesFilter<"Clinic"> | $Enums.TerritoryAssignmentSource
     sourceProvider?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
     externalSourceId?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
     sourceContentHash?: StringNullableWithAggregatesFilter<"Clinic"> | string | null
@@ -21727,11 +26539,11 @@ export namespace Prisma {
 
   export type UserTerritoryAssignmentCreateInput = {
     id?: string
-    territoryId: string
     assignedBy?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutTerritoryAssignmentsInput
+    territory: TerritoryCreateNestedOneWithoutUserAssignmentsInput
   }
 
   export type UserTerritoryAssignmentUncheckedCreateInput = {
@@ -21745,11 +26557,11 @@ export namespace Prisma {
 
   export type UserTerritoryAssignmentUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
     assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutTerritoryAssignmentsNestedInput
+    territory?: TerritoryUpdateOneRequiredWithoutUserAssignmentsNestedInput
   }
 
   export type UserTerritoryAssignmentUncheckedUpdateInput = {
@@ -21772,7 +26584,6 @@ export namespace Prisma {
 
   export type UserTerritoryAssignmentUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
     assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -21783,6 +26594,297 @@ export namespace Prisma {
     userId?: StringFieldUpdateOperationsInput | string
     territoryId?: StringFieldUpdateOperationsInput | string
     assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryCreateInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryCreateManyInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryClosureCreateInput = {
+    depth: number
+    ancestor: TerritoryCreateNestedOneWithoutClosureAsAncestorInput
+    descendant: TerritoryCreateNestedOneWithoutClosureAsDescendantInput
+  }
+
+  export type TerritoryClosureUncheckedCreateInput = {
+    ancestorId: string
+    descendantId: string
+    depth: number
+  }
+
+  export type TerritoryClosureUpdateInput = {
+    depth?: IntFieldUpdateOperationsInput | number
+    ancestor?: TerritoryUpdateOneRequiredWithoutClosureAsAncestorNestedInput
+    descendant?: TerritoryUpdateOneRequiredWithoutClosureAsDescendantNestedInput
+  }
+
+  export type TerritoryClosureUncheckedUpdateInput = {
+    ancestorId?: StringFieldUpdateOperationsInput | string
+    descendantId?: StringFieldUpdateOperationsInput | string
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryClosureCreateManyInput = {
+    ancestorId: string
+    descendantId: string
+    depth: number
+  }
+
+  export type TerritoryClosureUpdateManyMutationInput = {
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryClosureUncheckedUpdateManyInput = {
+    ancestorId?: StringFieldUpdateOperationsInput | string
+    descendantId?: StringFieldUpdateOperationsInput | string
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryApprovalRequestCreateInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    targetTerritory?: TerritoryCreateNestedOneWithoutApprovalRequestsInput
+    clinic?: ClinicCreateNestedOneWithoutTerritoryApprovalRequestsInput
+    toTerritory?: TerritoryCreateNestedOneWithoutClinicApprovalRequestsInput
+    supersededBy?: TerritoryApprovalRequestCreateNestedOneWithoutSupersedesInput
+    supersedes?: TerritoryApprovalRequestCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    targetTerritory?: TerritoryUpdateOneWithoutApprovalRequestsNestedInput
+    clinic?: ClinicUpdateOneWithoutTerritoryApprovalRequestsNestedInput
+    toTerritory?: TerritoryUpdateOneWithoutClinicApprovalRequestsNestedInput
+    supersededBy?: TerritoryApprovalRequestUpdateOneWithoutSupersedesNestedInput
+    supersedes?: TerritoryApprovalRequestUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestCreateManyInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryApprovalRequestUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -22576,7 +27678,10 @@ export namespace Prisma {
     id?: string
     name: string
     address?: string | null
-    territoryId?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -22588,15 +27693,21 @@ export namespace Prisma {
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    territory?: TerritoryCreateNestedOneWithoutClinicsInput
     doctorAssociations?: DoctorClinicAssociationCreateNestedManyWithoutClinicInput
     ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicUncheckedCreateInput = {
     id?: string
     name: string
     address?: string | null
+    lat?: number | null
+    lng?: number | null
     territoryId?: string | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -22610,13 +27721,17 @@ export namespace Prisma {
     updatedAt?: Date | string
     doctorAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput
     ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
-    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -22628,15 +27743,21 @@ export namespace Prisma {
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territory?: TerritoryUpdateOneWithoutClinicsNestedInput
     doctorAssociations?: DoctorClinicAssociationUpdateManyWithoutClinicNestedInput
     ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutClinicNestedInput
   }
 
   export type ClinicUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -22650,13 +27771,18 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     doctorAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput
     ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicNestedInput
   }
 
   export type ClinicCreateManyInput = {
     id?: string
     name: string
     address?: string | null
+    lat?: number | null
+    lng?: number | null
     territoryId?: string | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -22674,7 +27800,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
-    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -22692,7 +27821,11 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23560,6 +28693,11 @@ export namespace Prisma {
     isNot?: UserWhereInput
   }
 
+  export type TerritoryScalarRelationFilter = {
+    is?: TerritoryWhereInput
+    isNot?: TerritoryWhereInput
+  }
+
   export type UserTerritoryAssignmentUserIdTerritoryIdCompoundUniqueInput = {
     userId: string
     territoryId: string
@@ -23590,6 +28728,291 @@ export namespace Prisma {
     assignedBy?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type EnumTerritoryNodeTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryNodeType | EnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel> | $Enums.TerritoryNodeType
+  }
+
+  export type TerritoryNullableScalarRelationFilter = {
+    is?: TerritoryWhereInput | null
+    isNot?: TerritoryWhereInput | null
+  }
+
+  export type TerritoryListRelationFilter = {
+    every?: TerritoryWhereInput
+    some?: TerritoryWhereInput
+    none?: TerritoryWhereInput
+  }
+
+  export type ClinicListRelationFilter = {
+    every?: ClinicWhereInput
+    some?: ClinicWhereInput
+    none?: ClinicWhereInput
+  }
+
+  export type TerritoryClosureListRelationFilter = {
+    every?: TerritoryClosureWhereInput
+    some?: TerritoryClosureWhereInput
+    none?: TerritoryClosureWhereInput
+  }
+
+  export type TerritoryApprovalRequestListRelationFilter = {
+    every?: TerritoryApprovalRequestWhereInput
+    some?: TerritoryApprovalRequestWhereInput
+    none?: TerritoryApprovalRequestWhereInput
+  }
+
+  export type TerritoryOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ClinicOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type TerritoryClosureOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type TerritoryApprovalRequestOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type TerritoryParentIdNameCompoundUniqueInput = {
+    parentId: string
+    name: string
+  }
+
+  export type TerritoryCountOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    code?: SortOrder
+    nodeType?: SortOrder
+    regionSlug?: SortOrder
+    stateCode?: SortOrder
+    parentId?: SortOrder
+    isActive?: SortOrder
+    organizationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TerritoryMaxOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    code?: SortOrder
+    nodeType?: SortOrder
+    regionSlug?: SortOrder
+    stateCode?: SortOrder
+    parentId?: SortOrder
+    isActive?: SortOrder
+    organizationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TerritoryMinOrderByAggregateInput = {
+    id?: SortOrder
+    name?: SortOrder
+    code?: SortOrder
+    nodeType?: SortOrder
+    regionSlug?: SortOrder
+    stateCode?: SortOrder
+    parentId?: SortOrder
+    isActive?: SortOrder
+    organizationId?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumTerritoryNodeTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryNodeType | EnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryNodeTypeWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryNodeType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
+  }
+
+  export type TerritoryClosureAncestorIdDescendantIdCompoundUniqueInput = {
+    ancestorId: string
+    descendantId: string
+  }
+
+  export type TerritoryClosureCountOrderByAggregateInput = {
+    ancestorId?: SortOrder
+    descendantId?: SortOrder
+    depth?: SortOrder
+  }
+
+  export type TerritoryClosureAvgOrderByAggregateInput = {
+    depth?: SortOrder
+  }
+
+  export type TerritoryClosureMaxOrderByAggregateInput = {
+    ancestorId?: SortOrder
+    descendantId?: SortOrder
+    depth?: SortOrder
+  }
+
+  export type TerritoryClosureMinOrderByAggregateInput = {
+    ancestorId?: SortOrder
+    descendantId?: SortOrder
+    depth?: SortOrder
+  }
+
+  export type TerritoryClosureSumOrderByAggregateInput = {
+    depth?: SortOrder
+  }
+
+  export type EnumTerritoryApprovalTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalType | EnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalTypeFilter<$PrismaModel> | $Enums.TerritoryApprovalType
+  }
+
+  export type EnumTerritoryApprovalStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalStatus | EnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalStatusFilter<$PrismaModel> | $Enums.TerritoryApprovalStatus
+  }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type ClinicNullableScalarRelationFilter = {
+    is?: ClinicWhereInput | null
+    isNot?: ClinicWhereInput | null
+  }
+
+  export type TerritoryApprovalRequestNullableScalarRelationFilter = {
+    is?: TerritoryApprovalRequestWhereInput | null
+    isNot?: TerritoryApprovalRequestWhereInput | null
+  }
+
+  export type TerritoryApprovalRequestCountOrderByAggregateInput = {
+    id?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    requesterId?: SortOrder
+    reviewerId?: SortOrder
+    entityPayload?: SortOrder
+    targetTerritoryId?: SortOrder
+    clinicId?: SortOrder
+    toTerritoryId?: SortOrder
+    reason?: SortOrder
+    resolutionNote?: SortOrder
+    supersededById?: SortOrder
+    resolvedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TerritoryApprovalRequestMaxOrderByAggregateInput = {
+    id?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    requesterId?: SortOrder
+    reviewerId?: SortOrder
+    targetTerritoryId?: SortOrder
+    clinicId?: SortOrder
+    toTerritoryId?: SortOrder
+    reason?: SortOrder
+    resolutionNote?: SortOrder
+    supersededById?: SortOrder
+    resolvedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type TerritoryApprovalRequestMinOrderByAggregateInput = {
+    id?: SortOrder
+    type?: SortOrder
+    status?: SortOrder
+    requesterId?: SortOrder
+    reviewerId?: SortOrder
+    targetTerritoryId?: SortOrder
+    clinicId?: SortOrder
+    toTerritoryId?: SortOrder
+    reason?: SortOrder
+    resolutionNote?: SortOrder
+    supersededById?: SortOrder
+    resolvedAt?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type EnumTerritoryApprovalTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalType | EnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalTypeWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryApprovalType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryApprovalTypeFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryApprovalTypeFilter<$PrismaModel>
+  }
+
+  export type EnumTerritoryApprovalStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalStatus | EnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalStatusWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryApprovalStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryApprovalStatusFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryApprovalStatusFilter<$PrismaModel>
+  }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
   }
 
   export type RoleCountOrderByAggregateInput = {
@@ -24047,6 +29470,31 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type EnumTerritoryAssignmentStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentStatus | EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel> | $Enums.TerritoryAssignmentStatus
+  }
+
+  export type EnumTerritoryAssignmentSourceFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentSource | EnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel> | $Enums.TerritoryAssignmentSource
+  }
+
   export type DoctorClinicAssociationListRelationFilter = {
     every?: DoctorClinicAssociationWhereInput
     some?: DoctorClinicAssociationWhereInput
@@ -24076,7 +29524,11 @@ export namespace Prisma {
     id?: SortOrder
     name?: SortOrder
     address?: SortOrder
+    lat?: SortOrder
+    lng?: SortOrder
     territoryId?: SortOrder
+    territoryAssignmentStatus?: SortOrder
+    territoryAssignmentSource?: SortOrder
     sourceProvider?: SortOrder
     externalSourceId?: SortOrder
     sourceContentHash?: SortOrder
@@ -24090,11 +29542,20 @@ export namespace Prisma {
     updatedAt?: SortOrder
   }
 
+  export type ClinicAvgOrderByAggregateInput = {
+    lat?: SortOrder
+    lng?: SortOrder
+  }
+
   export type ClinicMaxOrderByAggregateInput = {
     id?: SortOrder
     name?: SortOrder
     address?: SortOrder
+    lat?: SortOrder
+    lng?: SortOrder
     territoryId?: SortOrder
+    territoryAssignmentStatus?: SortOrder
+    territoryAssignmentSource?: SortOrder
     sourceProvider?: SortOrder
     externalSourceId?: SortOrder
     sourceContentHash?: SortOrder
@@ -24112,7 +29573,11 @@ export namespace Prisma {
     id?: SortOrder
     name?: SortOrder
     address?: SortOrder
+    lat?: SortOrder
+    lng?: SortOrder
     territoryId?: SortOrder
+    territoryAssignmentStatus?: SortOrder
+    territoryAssignmentSource?: SortOrder
     sourceProvider?: SortOrder
     externalSourceId?: SortOrder
     sourceContentHash?: SortOrder
@@ -24124,6 +29589,47 @@ export namespace Prisma {
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type ClinicSumOrderByAggregateInput = {
+    lat?: SortOrder
+    lng?: SortOrder
+  }
+
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
+  export type EnumTerritoryAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentStatus | EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryAssignmentStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel>
+  }
+
+  export type EnumTerritoryAssignmentSourceWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentSource | EnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentSourceWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryAssignmentSource
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel>
   }
 
   export type DoctorSourceProviderExternalSourceIdCompoundUniqueInput = {
@@ -24306,38 +29812,10 @@ export namespace Prisma {
     notIn?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
     not?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel> | $Enums.IngestionSuggestionStatus
   }
-  export type JsonFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type IngestionRunScalarRelationFilter = {
     is?: IngestionRunWhereInput
     isNot?: IngestionRunWhereInput
-  }
-
-  export type ClinicNullableScalarRelationFilter = {
-    is?: ClinicWhereInput | null
-    isNot?: ClinicWhereInput | null
   }
 
   export type DoctorNullableScalarRelationFilter = {
@@ -24414,32 +29892,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
     _max?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
-  }
-  export type JsonWithAggregatesFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedJsonFilter<$PrismaModel>
-    _max?: NestedJsonFilter<$PrismaModel>
   }
 
   export type UserCreatepasswordHistoryInput = {
@@ -24855,12 +30307,482 @@ export namespace Prisma {
     connect?: UserWhereUniqueInput
   }
 
+  export type TerritoryCreateNestedOneWithoutUserAssignmentsInput = {
+    create?: XOR<TerritoryCreateWithoutUserAssignmentsInput, TerritoryUncheckedCreateWithoutUserAssignmentsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutUserAssignmentsInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
   export type UserUpdateOneRequiredWithoutTerritoryAssignmentsNestedInput = {
     create?: XOR<UserCreateWithoutTerritoryAssignmentsInput, UserUncheckedCreateWithoutTerritoryAssignmentsInput>
     connectOrCreate?: UserCreateOrConnectWithoutTerritoryAssignmentsInput
     upsert?: UserUpsertWithoutTerritoryAssignmentsInput
     connect?: UserWhereUniqueInput
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutTerritoryAssignmentsInput, UserUpdateWithoutTerritoryAssignmentsInput>, UserUncheckedUpdateWithoutTerritoryAssignmentsInput>
+  }
+
+  export type TerritoryUpdateOneRequiredWithoutUserAssignmentsNestedInput = {
+    create?: XOR<TerritoryCreateWithoutUserAssignmentsInput, TerritoryUncheckedCreateWithoutUserAssignmentsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutUserAssignmentsInput
+    upsert?: TerritoryUpsertWithoutUserAssignmentsInput
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutUserAssignmentsInput, TerritoryUpdateWithoutUserAssignmentsInput>, TerritoryUncheckedUpdateWithoutUserAssignmentsInput>
+  }
+
+  export type TerritoryCreateNestedOneWithoutChildrenInput = {
+    create?: XOR<TerritoryCreateWithoutChildrenInput, TerritoryUncheckedCreateWithoutChildrenInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutChildrenInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
+  export type TerritoryCreateNestedManyWithoutParentInput = {
+    create?: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput> | TerritoryCreateWithoutParentInput[] | TerritoryUncheckedCreateWithoutParentInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutParentInput | TerritoryCreateOrConnectWithoutParentInput[]
+    createMany?: TerritoryCreateManyParentInputEnvelope
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+  }
+
+  export type ClinicCreateNestedManyWithoutTerritoryInput = {
+    create?: XOR<ClinicCreateWithoutTerritoryInput, ClinicUncheckedCreateWithoutTerritoryInput> | ClinicCreateWithoutTerritoryInput[] | ClinicUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: ClinicCreateOrConnectWithoutTerritoryInput | ClinicCreateOrConnectWithoutTerritoryInput[]
+    createMany?: ClinicCreateManyTerritoryInputEnvelope
+    connect?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+  }
+
+  export type UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput = {
+    create?: XOR<UserTerritoryAssignmentCreateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput> | UserTerritoryAssignmentCreateWithoutTerritoryInput[] | UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput | UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput[]
+    createMany?: UserTerritoryAssignmentCreateManyTerritoryInputEnvelope
+    connect?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+  }
+
+  export type TerritoryClosureCreateNestedManyWithoutAncestorInput = {
+    create?: XOR<TerritoryClosureCreateWithoutAncestorInput, TerritoryClosureUncheckedCreateWithoutAncestorInput> | TerritoryClosureCreateWithoutAncestorInput[] | TerritoryClosureUncheckedCreateWithoutAncestorInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutAncestorInput | TerritoryClosureCreateOrConnectWithoutAncestorInput[]
+    createMany?: TerritoryClosureCreateManyAncestorInputEnvelope
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+  }
+
+  export type TerritoryClosureCreateNestedManyWithoutDescendantInput = {
+    create?: XOR<TerritoryClosureCreateWithoutDescendantInput, TerritoryClosureUncheckedCreateWithoutDescendantInput> | TerritoryClosureCreateWithoutDescendantInput[] | TerritoryClosureUncheckedCreateWithoutDescendantInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutDescendantInput | TerritoryClosureCreateOrConnectWithoutDescendantInput[]
+    createMany?: TerritoryClosureCreateManyDescendantInputEnvelope
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+  }
+
+  export type TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput> | TerritoryApprovalRequestCreateWithoutTargetTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyTargetTerritoryInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput> | TerritoryApprovalRequestCreateWithoutToTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyToTerritoryInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type TerritoryUncheckedCreateNestedManyWithoutParentInput = {
+    create?: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput> | TerritoryCreateWithoutParentInput[] | TerritoryUncheckedCreateWithoutParentInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutParentInput | TerritoryCreateOrConnectWithoutParentInput[]
+    createMany?: TerritoryCreateManyParentInputEnvelope
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+  }
+
+  export type ClinicUncheckedCreateNestedManyWithoutTerritoryInput = {
+    create?: XOR<ClinicCreateWithoutTerritoryInput, ClinicUncheckedCreateWithoutTerritoryInput> | ClinicCreateWithoutTerritoryInput[] | ClinicUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: ClinicCreateOrConnectWithoutTerritoryInput | ClinicCreateOrConnectWithoutTerritoryInput[]
+    createMany?: ClinicCreateManyTerritoryInputEnvelope
+    connect?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+  }
+
+  export type UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput = {
+    create?: XOR<UserTerritoryAssignmentCreateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput> | UserTerritoryAssignmentCreateWithoutTerritoryInput[] | UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput | UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput[]
+    createMany?: UserTerritoryAssignmentCreateManyTerritoryInputEnvelope
+    connect?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+  }
+
+  export type TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput = {
+    create?: XOR<TerritoryClosureCreateWithoutAncestorInput, TerritoryClosureUncheckedCreateWithoutAncestorInput> | TerritoryClosureCreateWithoutAncestorInput[] | TerritoryClosureUncheckedCreateWithoutAncestorInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutAncestorInput | TerritoryClosureCreateOrConnectWithoutAncestorInput[]
+    createMany?: TerritoryClosureCreateManyAncestorInputEnvelope
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+  }
+
+  export type TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput = {
+    create?: XOR<TerritoryClosureCreateWithoutDescendantInput, TerritoryClosureUncheckedCreateWithoutDescendantInput> | TerritoryClosureCreateWithoutDescendantInput[] | TerritoryClosureUncheckedCreateWithoutDescendantInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutDescendantInput | TerritoryClosureCreateOrConnectWithoutDescendantInput[]
+    createMany?: TerritoryClosureCreateManyDescendantInputEnvelope
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput> | TerritoryApprovalRequestCreateWithoutTargetTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyTargetTerritoryInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput> | TerritoryApprovalRequestCreateWithoutToTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyToTerritoryInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type EnumTerritoryNodeTypeFieldUpdateOperationsInput = {
+    set?: $Enums.TerritoryNodeType
+  }
+
+  export type TerritoryUpdateOneWithoutChildrenNestedInput = {
+    create?: XOR<TerritoryCreateWithoutChildrenInput, TerritoryUncheckedCreateWithoutChildrenInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutChildrenInput
+    upsert?: TerritoryUpsertWithoutChildrenInput
+    disconnect?: TerritoryWhereInput | boolean
+    delete?: TerritoryWhereInput | boolean
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutChildrenInput, TerritoryUpdateWithoutChildrenInput>, TerritoryUncheckedUpdateWithoutChildrenInput>
+  }
+
+  export type TerritoryUpdateManyWithoutParentNestedInput = {
+    create?: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput> | TerritoryCreateWithoutParentInput[] | TerritoryUncheckedCreateWithoutParentInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutParentInput | TerritoryCreateOrConnectWithoutParentInput[]
+    upsert?: TerritoryUpsertWithWhereUniqueWithoutParentInput | TerritoryUpsertWithWhereUniqueWithoutParentInput[]
+    createMany?: TerritoryCreateManyParentInputEnvelope
+    set?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    disconnect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    delete?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    update?: TerritoryUpdateWithWhereUniqueWithoutParentInput | TerritoryUpdateWithWhereUniqueWithoutParentInput[]
+    updateMany?: TerritoryUpdateManyWithWhereWithoutParentInput | TerritoryUpdateManyWithWhereWithoutParentInput[]
+    deleteMany?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
+  }
+
+  export type ClinicUpdateManyWithoutTerritoryNestedInput = {
+    create?: XOR<ClinicCreateWithoutTerritoryInput, ClinicUncheckedCreateWithoutTerritoryInput> | ClinicCreateWithoutTerritoryInput[] | ClinicUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: ClinicCreateOrConnectWithoutTerritoryInput | ClinicCreateOrConnectWithoutTerritoryInput[]
+    upsert?: ClinicUpsertWithWhereUniqueWithoutTerritoryInput | ClinicUpsertWithWhereUniqueWithoutTerritoryInput[]
+    createMany?: ClinicCreateManyTerritoryInputEnvelope
+    set?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    disconnect?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    delete?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    connect?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    update?: ClinicUpdateWithWhereUniqueWithoutTerritoryInput | ClinicUpdateWithWhereUniqueWithoutTerritoryInput[]
+    updateMany?: ClinicUpdateManyWithWhereWithoutTerritoryInput | ClinicUpdateManyWithWhereWithoutTerritoryInput[]
+    deleteMany?: ClinicScalarWhereInput | ClinicScalarWhereInput[]
+  }
+
+  export type UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput = {
+    create?: XOR<UserTerritoryAssignmentCreateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput> | UserTerritoryAssignmentCreateWithoutTerritoryInput[] | UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput | UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput[]
+    upsert?: UserTerritoryAssignmentUpsertWithWhereUniqueWithoutTerritoryInput | UserTerritoryAssignmentUpsertWithWhereUniqueWithoutTerritoryInput[]
+    createMany?: UserTerritoryAssignmentCreateManyTerritoryInputEnvelope
+    set?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    disconnect?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    delete?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    connect?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    update?: UserTerritoryAssignmentUpdateWithWhereUniqueWithoutTerritoryInput | UserTerritoryAssignmentUpdateWithWhereUniqueWithoutTerritoryInput[]
+    updateMany?: UserTerritoryAssignmentUpdateManyWithWhereWithoutTerritoryInput | UserTerritoryAssignmentUpdateManyWithWhereWithoutTerritoryInput[]
+    deleteMany?: UserTerritoryAssignmentScalarWhereInput | UserTerritoryAssignmentScalarWhereInput[]
+  }
+
+  export type TerritoryClosureUpdateManyWithoutAncestorNestedInput = {
+    create?: XOR<TerritoryClosureCreateWithoutAncestorInput, TerritoryClosureUncheckedCreateWithoutAncestorInput> | TerritoryClosureCreateWithoutAncestorInput[] | TerritoryClosureUncheckedCreateWithoutAncestorInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutAncestorInput | TerritoryClosureCreateOrConnectWithoutAncestorInput[]
+    upsert?: TerritoryClosureUpsertWithWhereUniqueWithoutAncestorInput | TerritoryClosureUpsertWithWhereUniqueWithoutAncestorInput[]
+    createMany?: TerritoryClosureCreateManyAncestorInputEnvelope
+    set?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    disconnect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    delete?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    update?: TerritoryClosureUpdateWithWhereUniqueWithoutAncestorInput | TerritoryClosureUpdateWithWhereUniqueWithoutAncestorInput[]
+    updateMany?: TerritoryClosureUpdateManyWithWhereWithoutAncestorInput | TerritoryClosureUpdateManyWithWhereWithoutAncestorInput[]
+    deleteMany?: TerritoryClosureScalarWhereInput | TerritoryClosureScalarWhereInput[]
+  }
+
+  export type TerritoryClosureUpdateManyWithoutDescendantNestedInput = {
+    create?: XOR<TerritoryClosureCreateWithoutDescendantInput, TerritoryClosureUncheckedCreateWithoutDescendantInput> | TerritoryClosureCreateWithoutDescendantInput[] | TerritoryClosureUncheckedCreateWithoutDescendantInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutDescendantInput | TerritoryClosureCreateOrConnectWithoutDescendantInput[]
+    upsert?: TerritoryClosureUpsertWithWhereUniqueWithoutDescendantInput | TerritoryClosureUpsertWithWhereUniqueWithoutDescendantInput[]
+    createMany?: TerritoryClosureCreateManyDescendantInputEnvelope
+    set?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    disconnect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    delete?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    update?: TerritoryClosureUpdateWithWhereUniqueWithoutDescendantInput | TerritoryClosureUpdateWithWhereUniqueWithoutDescendantInput[]
+    updateMany?: TerritoryClosureUpdateManyWithWhereWithoutDescendantInput | TerritoryClosureUpdateManyWithWhereWithoutDescendantInput[]
+    deleteMany?: TerritoryClosureScalarWhereInput | TerritoryClosureScalarWhereInput[]
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput> | TerritoryApprovalRequestCreateWithoutTargetTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutTargetTerritoryInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutTargetTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyTargetTerritoryInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutTargetTerritoryInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutTargetTerritoryInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutTargetTerritoryInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutTargetTerritoryInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput> | TerritoryApprovalRequestCreateWithoutToTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutToTerritoryInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutToTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyToTerritoryInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutToTerritoryInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutToTerritoryInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutToTerritoryInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutToTerritoryInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+  }
+
+  export type TerritoryUncheckedUpdateManyWithoutParentNestedInput = {
+    create?: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput> | TerritoryCreateWithoutParentInput[] | TerritoryUncheckedCreateWithoutParentInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutParentInput | TerritoryCreateOrConnectWithoutParentInput[]
+    upsert?: TerritoryUpsertWithWhereUniqueWithoutParentInput | TerritoryUpsertWithWhereUniqueWithoutParentInput[]
+    createMany?: TerritoryCreateManyParentInputEnvelope
+    set?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    disconnect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    delete?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    update?: TerritoryUpdateWithWhereUniqueWithoutParentInput | TerritoryUpdateWithWhereUniqueWithoutParentInput[]
+    updateMany?: TerritoryUpdateManyWithWhereWithoutParentInput | TerritoryUpdateManyWithWhereWithoutParentInput[]
+    deleteMany?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
+  }
+
+  export type ClinicUncheckedUpdateManyWithoutTerritoryNestedInput = {
+    create?: XOR<ClinicCreateWithoutTerritoryInput, ClinicUncheckedCreateWithoutTerritoryInput> | ClinicCreateWithoutTerritoryInput[] | ClinicUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: ClinicCreateOrConnectWithoutTerritoryInput | ClinicCreateOrConnectWithoutTerritoryInput[]
+    upsert?: ClinicUpsertWithWhereUniqueWithoutTerritoryInput | ClinicUpsertWithWhereUniqueWithoutTerritoryInput[]
+    createMany?: ClinicCreateManyTerritoryInputEnvelope
+    set?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    disconnect?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    delete?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    connect?: ClinicWhereUniqueInput | ClinicWhereUniqueInput[]
+    update?: ClinicUpdateWithWhereUniqueWithoutTerritoryInput | ClinicUpdateWithWhereUniqueWithoutTerritoryInput[]
+    updateMany?: ClinicUpdateManyWithWhereWithoutTerritoryInput | ClinicUpdateManyWithWhereWithoutTerritoryInput[]
+    deleteMany?: ClinicScalarWhereInput | ClinicScalarWhereInput[]
+  }
+
+  export type UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput = {
+    create?: XOR<UserTerritoryAssignmentCreateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput> | UserTerritoryAssignmentCreateWithoutTerritoryInput[] | UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput[]
+    connectOrCreate?: UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput | UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput[]
+    upsert?: UserTerritoryAssignmentUpsertWithWhereUniqueWithoutTerritoryInput | UserTerritoryAssignmentUpsertWithWhereUniqueWithoutTerritoryInput[]
+    createMany?: UserTerritoryAssignmentCreateManyTerritoryInputEnvelope
+    set?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    disconnect?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    delete?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    connect?: UserTerritoryAssignmentWhereUniqueInput | UserTerritoryAssignmentWhereUniqueInput[]
+    update?: UserTerritoryAssignmentUpdateWithWhereUniqueWithoutTerritoryInput | UserTerritoryAssignmentUpdateWithWhereUniqueWithoutTerritoryInput[]
+    updateMany?: UserTerritoryAssignmentUpdateManyWithWhereWithoutTerritoryInput | UserTerritoryAssignmentUpdateManyWithWhereWithoutTerritoryInput[]
+    deleteMany?: UserTerritoryAssignmentScalarWhereInput | UserTerritoryAssignmentScalarWhereInput[]
+  }
+
+  export type TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput = {
+    create?: XOR<TerritoryClosureCreateWithoutAncestorInput, TerritoryClosureUncheckedCreateWithoutAncestorInput> | TerritoryClosureCreateWithoutAncestorInput[] | TerritoryClosureUncheckedCreateWithoutAncestorInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutAncestorInput | TerritoryClosureCreateOrConnectWithoutAncestorInput[]
+    upsert?: TerritoryClosureUpsertWithWhereUniqueWithoutAncestorInput | TerritoryClosureUpsertWithWhereUniqueWithoutAncestorInput[]
+    createMany?: TerritoryClosureCreateManyAncestorInputEnvelope
+    set?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    disconnect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    delete?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    update?: TerritoryClosureUpdateWithWhereUniqueWithoutAncestorInput | TerritoryClosureUpdateWithWhereUniqueWithoutAncestorInput[]
+    updateMany?: TerritoryClosureUpdateManyWithWhereWithoutAncestorInput | TerritoryClosureUpdateManyWithWhereWithoutAncestorInput[]
+    deleteMany?: TerritoryClosureScalarWhereInput | TerritoryClosureScalarWhereInput[]
+  }
+
+  export type TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput = {
+    create?: XOR<TerritoryClosureCreateWithoutDescendantInput, TerritoryClosureUncheckedCreateWithoutDescendantInput> | TerritoryClosureCreateWithoutDescendantInput[] | TerritoryClosureUncheckedCreateWithoutDescendantInput[]
+    connectOrCreate?: TerritoryClosureCreateOrConnectWithoutDescendantInput | TerritoryClosureCreateOrConnectWithoutDescendantInput[]
+    upsert?: TerritoryClosureUpsertWithWhereUniqueWithoutDescendantInput | TerritoryClosureUpsertWithWhereUniqueWithoutDescendantInput[]
+    createMany?: TerritoryClosureCreateManyDescendantInputEnvelope
+    set?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    disconnect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    delete?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    connect?: TerritoryClosureWhereUniqueInput | TerritoryClosureWhereUniqueInput[]
+    update?: TerritoryClosureUpdateWithWhereUniqueWithoutDescendantInput | TerritoryClosureUpdateWithWhereUniqueWithoutDescendantInput[]
+    updateMany?: TerritoryClosureUpdateManyWithWhereWithoutDescendantInput | TerritoryClosureUpdateManyWithWhereWithoutDescendantInput[]
+    deleteMany?: TerritoryClosureScalarWhereInput | TerritoryClosureScalarWhereInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput> | TerritoryApprovalRequestCreateWithoutTargetTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutTargetTerritoryInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutTargetTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyTargetTerritoryInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutTargetTerritoryInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutTargetTerritoryInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutTargetTerritoryInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutTargetTerritoryInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput> | TerritoryApprovalRequestCreateWithoutToTerritoryInput[] | TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput | TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutToTerritoryInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutToTerritoryInput[]
+    createMany?: TerritoryApprovalRequestCreateManyToTerritoryInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutToTerritoryInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutToTerritoryInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutToTerritoryInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutToTerritoryInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+  }
+
+  export type TerritoryCreateNestedOneWithoutClosureAsAncestorInput = {
+    create?: XOR<TerritoryCreateWithoutClosureAsAncestorInput, TerritoryUncheckedCreateWithoutClosureAsAncestorInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClosureAsAncestorInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
+  export type TerritoryCreateNestedOneWithoutClosureAsDescendantInput = {
+    create?: XOR<TerritoryCreateWithoutClosureAsDescendantInput, TerritoryUncheckedCreateWithoutClosureAsDescendantInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClosureAsDescendantInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
+  export type TerritoryUpdateOneRequiredWithoutClosureAsAncestorNestedInput = {
+    create?: XOR<TerritoryCreateWithoutClosureAsAncestorInput, TerritoryUncheckedCreateWithoutClosureAsAncestorInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClosureAsAncestorInput
+    upsert?: TerritoryUpsertWithoutClosureAsAncestorInput
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutClosureAsAncestorInput, TerritoryUpdateWithoutClosureAsAncestorInput>, TerritoryUncheckedUpdateWithoutClosureAsAncestorInput>
+  }
+
+  export type TerritoryUpdateOneRequiredWithoutClosureAsDescendantNestedInput = {
+    create?: XOR<TerritoryCreateWithoutClosureAsDescendantInput, TerritoryUncheckedCreateWithoutClosureAsDescendantInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClosureAsDescendantInput
+    upsert?: TerritoryUpsertWithoutClosureAsDescendantInput
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutClosureAsDescendantInput, TerritoryUpdateWithoutClosureAsDescendantInput>, TerritoryUncheckedUpdateWithoutClosureAsDescendantInput>
+  }
+
+  export type TerritoryCreateNestedOneWithoutApprovalRequestsInput = {
+    create?: XOR<TerritoryCreateWithoutApprovalRequestsInput, TerritoryUncheckedCreateWithoutApprovalRequestsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutApprovalRequestsInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
+  export type ClinicCreateNestedOneWithoutTerritoryApprovalRequestsInput = {
+    create?: XOR<ClinicCreateWithoutTerritoryApprovalRequestsInput, ClinicUncheckedCreateWithoutTerritoryApprovalRequestsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutTerritoryApprovalRequestsInput
+    connect?: ClinicWhereUniqueInput
+  }
+
+  export type TerritoryCreateNestedOneWithoutClinicApprovalRequestsInput = {
+    create?: XOR<TerritoryCreateWithoutClinicApprovalRequestsInput, TerritoryUncheckedCreateWithoutClinicApprovalRequestsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClinicApprovalRequestsInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
+  export type TerritoryApprovalRequestCreateNestedOneWithoutSupersedesInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutSupersedesInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersedesInput>
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutSupersedesInput
+    connect?: TerritoryApprovalRequestWhereUniqueInput
+  }
+
+  export type TerritoryApprovalRequestCreateNestedManyWithoutSupersededByInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput> | TerritoryApprovalRequestCreateWithoutSupersededByInput[] | TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput | TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput[]
+    createMany?: TerritoryApprovalRequestCreateManySupersededByInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateNestedManyWithoutSupersededByInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput> | TerritoryApprovalRequestCreateWithoutSupersededByInput[] | TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput | TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput[]
+    createMany?: TerritoryApprovalRequestCreateManySupersededByInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type EnumTerritoryApprovalTypeFieldUpdateOperationsInput = {
+    set?: $Enums.TerritoryApprovalType
+  }
+
+  export type EnumTerritoryApprovalStatusFieldUpdateOperationsInput = {
+    set?: $Enums.TerritoryApprovalStatus
+  }
+
+  export type TerritoryUpdateOneWithoutApprovalRequestsNestedInput = {
+    create?: XOR<TerritoryCreateWithoutApprovalRequestsInput, TerritoryUncheckedCreateWithoutApprovalRequestsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutApprovalRequestsInput
+    upsert?: TerritoryUpsertWithoutApprovalRequestsInput
+    disconnect?: TerritoryWhereInput | boolean
+    delete?: TerritoryWhereInput | boolean
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutApprovalRequestsInput, TerritoryUpdateWithoutApprovalRequestsInput>, TerritoryUncheckedUpdateWithoutApprovalRequestsInput>
+  }
+
+  export type ClinicUpdateOneWithoutTerritoryApprovalRequestsNestedInput = {
+    create?: XOR<ClinicCreateWithoutTerritoryApprovalRequestsInput, ClinicUncheckedCreateWithoutTerritoryApprovalRequestsInput>
+    connectOrCreate?: ClinicCreateOrConnectWithoutTerritoryApprovalRequestsInput
+    upsert?: ClinicUpsertWithoutTerritoryApprovalRequestsInput
+    disconnect?: ClinicWhereInput | boolean
+    delete?: ClinicWhereInput | boolean
+    connect?: ClinicWhereUniqueInput
+    update?: XOR<XOR<ClinicUpdateToOneWithWhereWithoutTerritoryApprovalRequestsInput, ClinicUpdateWithoutTerritoryApprovalRequestsInput>, ClinicUncheckedUpdateWithoutTerritoryApprovalRequestsInput>
+  }
+
+  export type TerritoryUpdateOneWithoutClinicApprovalRequestsNestedInput = {
+    create?: XOR<TerritoryCreateWithoutClinicApprovalRequestsInput, TerritoryUncheckedCreateWithoutClinicApprovalRequestsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClinicApprovalRequestsInput
+    upsert?: TerritoryUpsertWithoutClinicApprovalRequestsInput
+    disconnect?: TerritoryWhereInput | boolean
+    delete?: TerritoryWhereInput | boolean
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutClinicApprovalRequestsInput, TerritoryUpdateWithoutClinicApprovalRequestsInput>, TerritoryUncheckedUpdateWithoutClinicApprovalRequestsInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateOneWithoutSupersedesNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutSupersedesInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersedesInput>
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutSupersedesInput
+    upsert?: TerritoryApprovalRequestUpsertWithoutSupersedesInput
+    disconnect?: TerritoryApprovalRequestWhereInput | boolean
+    delete?: TerritoryApprovalRequestWhereInput | boolean
+    connect?: TerritoryApprovalRequestWhereUniqueInput
+    update?: XOR<XOR<TerritoryApprovalRequestUpdateToOneWithWhereWithoutSupersedesInput, TerritoryApprovalRequestUpdateWithoutSupersedesInput>, TerritoryApprovalRequestUncheckedUpdateWithoutSupersedesInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithoutSupersededByNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput> | TerritoryApprovalRequestCreateWithoutSupersededByInput[] | TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput | TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutSupersededByInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutSupersededByInput[]
+    createMany?: TerritoryApprovalRequestCreateManySupersededByInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutSupersededByInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutSupersededByInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutSupersededByInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutSupersededByInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput> | TerritoryApprovalRequestCreateWithoutSupersededByInput[] | TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput | TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutSupersededByInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutSupersededByInput[]
+    createMany?: TerritoryApprovalRequestCreateManySupersededByInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutSupersededByInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutSupersededByInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutSupersededByInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutSupersededByInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
   }
 
   export type UserCreateNestedManyWithoutRoleInput = {
@@ -25071,6 +30993,12 @@ export namespace Prisma {
     update?: XOR<XOR<UserUpdateToOneWithWhereWithoutPermissionsInput, UserUpdateWithoutPermissionsInput>, UserUncheckedUpdateWithoutPermissionsInput>
   }
 
+  export type TerritoryCreateNestedOneWithoutClinicsInput = {
+    create?: XOR<TerritoryCreateWithoutClinicsInput, TerritoryUncheckedCreateWithoutClinicsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClinicsInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
   export type DoctorClinicAssociationCreateNestedManyWithoutClinicInput = {
     create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
     connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
@@ -25085,6 +31013,13 @@ export namespace Prisma {
     connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
   }
 
+  export type TerritoryApprovalRequestCreateNestedManyWithoutClinicInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutClinicInput, TerritoryApprovalRequestUncheckedCreateWithoutClinicInput> | TerritoryApprovalRequestCreateWithoutClinicInput[] | TerritoryApprovalRequestUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutClinicInput | TerritoryApprovalRequestCreateOrConnectWithoutClinicInput[]
+    createMany?: TerritoryApprovalRequestCreateManyClinicInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
   export type DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput = {
     create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
     connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
@@ -25097,6 +31032,39 @@ export namespace Prisma {
     connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutClinicInput | IngestionSuggestionCreateOrConnectWithoutClinicInput[]
     createMany?: IngestionSuggestionCreateManyClinicInputEnvelope
     connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateNestedManyWithoutClinicInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutClinicInput, TerritoryApprovalRequestUncheckedCreateWithoutClinicInput> | TerritoryApprovalRequestCreateWithoutClinicInput[] | TerritoryApprovalRequestUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutClinicInput | TerritoryApprovalRequestCreateOrConnectWithoutClinicInput[]
+    createMany?: TerritoryApprovalRequestCreateManyClinicInputEnvelope
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+  }
+
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type EnumTerritoryAssignmentStatusFieldUpdateOperationsInput = {
+    set?: $Enums.TerritoryAssignmentStatus
+  }
+
+  export type EnumTerritoryAssignmentSourceFieldUpdateOperationsInput = {
+    set?: $Enums.TerritoryAssignmentSource
+  }
+
+  export type TerritoryUpdateOneWithoutClinicsNestedInput = {
+    create?: XOR<TerritoryCreateWithoutClinicsInput, TerritoryUncheckedCreateWithoutClinicsInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutClinicsInput
+    upsert?: TerritoryUpsertWithoutClinicsInput
+    disconnect?: TerritoryWhereInput | boolean
+    delete?: TerritoryWhereInput | boolean
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutClinicsInput, TerritoryUpdateWithoutClinicsInput>, TerritoryUncheckedUpdateWithoutClinicsInput>
   }
 
   export type DoctorClinicAssociationUpdateManyWithoutClinicNestedInput = {
@@ -25127,6 +31095,20 @@ export namespace Prisma {
     deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
   }
 
+  export type TerritoryApprovalRequestUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutClinicInput, TerritoryApprovalRequestUncheckedCreateWithoutClinicInput> | TerritoryApprovalRequestCreateWithoutClinicInput[] | TerritoryApprovalRequestUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutClinicInput | TerritoryApprovalRequestCreateOrConnectWithoutClinicInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutClinicInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: TerritoryApprovalRequestCreateManyClinicInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutClinicInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutClinicInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+  }
+
   export type DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput = {
     create?: XOR<DoctorClinicAssociationCreateWithoutClinicInput, DoctorClinicAssociationUncheckedCreateWithoutClinicInput> | DoctorClinicAssociationCreateWithoutClinicInput[] | DoctorClinicAssociationUncheckedCreateWithoutClinicInput[]
     connectOrCreate?: DoctorClinicAssociationCreateOrConnectWithoutClinicInput | DoctorClinicAssociationCreateOrConnectWithoutClinicInput[]
@@ -25153,6 +31135,20 @@ export namespace Prisma {
     update?: IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput | IngestionSuggestionUpdateWithWhereUniqueWithoutClinicInput[]
     updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutClinicInput | IngestionSuggestionUpdateManyWithWhereWithoutClinicInput[]
     deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicNestedInput = {
+    create?: XOR<TerritoryApprovalRequestCreateWithoutClinicInput, TerritoryApprovalRequestUncheckedCreateWithoutClinicInput> | TerritoryApprovalRequestCreateWithoutClinicInput[] | TerritoryApprovalRequestUncheckedCreateWithoutClinicInput[]
+    connectOrCreate?: TerritoryApprovalRequestCreateOrConnectWithoutClinicInput | TerritoryApprovalRequestCreateOrConnectWithoutClinicInput[]
+    upsert?: TerritoryApprovalRequestUpsertWithWhereUniqueWithoutClinicInput | TerritoryApprovalRequestUpsertWithWhereUniqueWithoutClinicInput[]
+    createMany?: TerritoryApprovalRequestCreateManyClinicInputEnvelope
+    set?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    disconnect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    delete?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
+    update?: TerritoryApprovalRequestUpdateWithWhereUniqueWithoutClinicInput | TerritoryApprovalRequestUpdateWithWhereUniqueWithoutClinicInput[]
+    updateMany?: TerritoryApprovalRequestUpdateManyWithWhereWithoutClinicInput | TerritoryApprovalRequestUpdateManyWithWhereWithoutClinicInput[]
+    deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
   }
 
   export type DoctorClinicAssociationCreateNestedManyWithoutDoctorInput = {
@@ -25639,6 +31635,80 @@ export namespace Prisma {
     _max?: NestedDateTimeFilter<$PrismaModel>
   }
 
+  export type NestedEnumTerritoryNodeTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryNodeType | EnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel> | $Enums.TerritoryNodeType
+  }
+
+  export type NestedEnumTerritoryNodeTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryNodeType | EnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryNodeTypeWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryNodeType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumTerritoryApprovalTypeFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalType | EnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalTypeFilter<$PrismaModel> | $Enums.TerritoryApprovalType
+  }
+
+  export type NestedEnumTerritoryApprovalStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalStatus | EnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalStatusFilter<$PrismaModel> | $Enums.TerritoryApprovalStatus
+  }
+
+  export type NestedEnumTerritoryApprovalTypeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalType | EnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalType[] | ListEnumTerritoryApprovalTypeFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalTypeWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryApprovalType
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryApprovalTypeFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryApprovalTypeFilter<$PrismaModel>
+  }
+
+  export type NestedEnumTerritoryApprovalStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryApprovalStatus | EnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryApprovalStatus[] | ListEnumTerritoryApprovalStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryApprovalStatusWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryApprovalStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryApprovalStatusFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryApprovalStatusFilter<$PrismaModel>
+  }
+  export type NestedJsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
   export type NestedEnumAuthSessionDeviceTypeFilter<$PrismaModel = never> = {
     equals?: $Enums.AuthSessionDeviceType | EnumAuthSessionDeviceTypeFieldRefInput<$PrismaModel>
     in?: $Enums.AuthSessionDeviceType[] | ListEnumAuthSessionDeviceTypeFieldRefInput<$PrismaModel>
@@ -25741,6 +31811,67 @@ export namespace Prisma {
     _max?: NestedEnumVerificationTokenTypeFilter<$PrismaModel>
   }
 
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+
+  export type NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentStatus | EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel> | $Enums.TerritoryAssignmentStatus
+  }
+
+  export type NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentSource | EnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel> | $Enums.TerritoryAssignmentSource
+  }
+
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
+  }
+
+  export type NestedEnumTerritoryAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentStatus | EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryAssignmentStatus
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumTerritoryAssignmentSourceWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.TerritoryAssignmentSource | EnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    in?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    notIn?: $Enums.TerritoryAssignmentSource[] | ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel>
+    not?: NestedEnumTerritoryAssignmentSourceWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryAssignmentSource
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel>
+    _max?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel>
+  }
+
   export type NestedEnumIngestionRunStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.IngestionRunStatus | EnumIngestionRunStatusFieldRefInput<$PrismaModel>
     in?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
@@ -25790,29 +31921,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
     _max?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel>
-  }
-  export type NestedJsonFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<NestedJsonFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>,
-        Required<NestedJsonFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<NestedJsonFilterBase<$PrismaModel>>, 'path'>>
-
-  export type NestedJsonFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type RoleCreateWithoutUsersInput = {
@@ -26005,10 +32113,10 @@ export namespace Prisma {
 
   export type UserTerritoryAssignmentCreateWithoutUserInput = {
     id?: string
-    territoryId: string
     assignedBy?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    territory: TerritoryCreateNestedOneWithoutUserAssignmentsInput
   }
 
   export type UserTerritoryAssignmentUncheckedCreateWithoutUserInput = {
@@ -26772,6 +32880,51 @@ export namespace Prisma {
     create: XOR<UserCreateWithoutTerritoryAssignmentsInput, UserUncheckedCreateWithoutTerritoryAssignmentsInput>
   }
 
+  export type TerritoryCreateWithoutUserAssignmentsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutUserAssignmentsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutUserAssignmentsInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutUserAssignmentsInput, TerritoryUncheckedCreateWithoutUserAssignmentsInput>
+  }
+
   export type UserUpsertWithoutTerritoryAssignmentsInput = {
     update: XOR<UserUpdateWithoutTerritoryAssignmentsInput, UserUncheckedUpdateWithoutTerritoryAssignmentsInput>
     create: XOR<UserCreateWithoutTerritoryAssignmentsInput, UserUncheckedCreateWithoutTerritoryAssignmentsInput>
@@ -26855,6 +33008,1249 @@ export namespace Prisma {
     verificationTokens?: VerificationTokenUncheckedUpdateManyWithoutUserNestedInput
     sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
     permissions?: PermissionUncheckedUpdateManyWithoutUserNestedInput
+  }
+
+  export type TerritoryUpsertWithoutUserAssignmentsInput = {
+    update: XOR<TerritoryUpdateWithoutUserAssignmentsInput, TerritoryUncheckedUpdateWithoutUserAssignmentsInput>
+    create: XOR<TerritoryCreateWithoutUserAssignmentsInput, TerritoryUncheckedCreateWithoutUserAssignmentsInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutUserAssignmentsInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutUserAssignmentsInput, TerritoryUncheckedUpdateWithoutUserAssignmentsInput>
+  }
+
+  export type TerritoryUpdateWithoutUserAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutUserAssignmentsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryCreateWithoutChildrenInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutChildrenInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutChildrenInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutChildrenInput, TerritoryUncheckedCreateWithoutChildrenInput>
+  }
+
+  export type TerritoryCreateWithoutParentInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutParentInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutParentInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput>
+  }
+
+  export type TerritoryCreateManyParentInputEnvelope = {
+    data: TerritoryCreateManyParentInput | TerritoryCreateManyParentInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type ClinicCreateWithoutTerritoryInput = {
+    id?: string
+    name: string
+    address?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorAssociations?: DoctorClinicAssociationCreateNestedManyWithoutClinicInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicUncheckedCreateWithoutTerritoryInput = {
+    id?: string
+    name: string
+    address?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicCreateOrConnectWithoutTerritoryInput = {
+    where: ClinicWhereUniqueInput
+    create: XOR<ClinicCreateWithoutTerritoryInput, ClinicUncheckedCreateWithoutTerritoryInput>
+  }
+
+  export type ClinicCreateManyTerritoryInputEnvelope = {
+    data: ClinicCreateManyTerritoryInput | ClinicCreateManyTerritoryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UserTerritoryAssignmentCreateWithoutTerritoryInput = {
+    id?: string
+    assignedBy?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    user: UserCreateNestedOneWithoutTerritoryAssignmentsInput
+  }
+
+  export type UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput = {
+    id?: string
+    userId: string
+    assignedBy?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserTerritoryAssignmentCreateOrConnectWithoutTerritoryInput = {
+    where: UserTerritoryAssignmentWhereUniqueInput
+    create: XOR<UserTerritoryAssignmentCreateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput>
+  }
+
+  export type UserTerritoryAssignmentCreateManyTerritoryInputEnvelope = {
+    data: UserTerritoryAssignmentCreateManyTerritoryInput | UserTerritoryAssignmentCreateManyTerritoryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryClosureCreateWithoutAncestorInput = {
+    depth: number
+    descendant: TerritoryCreateNestedOneWithoutClosureAsDescendantInput
+  }
+
+  export type TerritoryClosureUncheckedCreateWithoutAncestorInput = {
+    descendantId: string
+    depth: number
+  }
+
+  export type TerritoryClosureCreateOrConnectWithoutAncestorInput = {
+    where: TerritoryClosureWhereUniqueInput
+    create: XOR<TerritoryClosureCreateWithoutAncestorInput, TerritoryClosureUncheckedCreateWithoutAncestorInput>
+  }
+
+  export type TerritoryClosureCreateManyAncestorInputEnvelope = {
+    data: TerritoryClosureCreateManyAncestorInput | TerritoryClosureCreateManyAncestorInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryClosureCreateWithoutDescendantInput = {
+    depth: number
+    ancestor: TerritoryCreateNestedOneWithoutClosureAsAncestorInput
+  }
+
+  export type TerritoryClosureUncheckedCreateWithoutDescendantInput = {
+    ancestorId: string
+    depth: number
+  }
+
+  export type TerritoryClosureCreateOrConnectWithoutDescendantInput = {
+    where: TerritoryClosureWhereUniqueInput
+    create: XOR<TerritoryClosureCreateWithoutDescendantInput, TerritoryClosureUncheckedCreateWithoutDescendantInput>
+  }
+
+  export type TerritoryClosureCreateManyDescendantInputEnvelope = {
+    data: TerritoryClosureCreateManyDescendantInput | TerritoryClosureCreateManyDescendantInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryApprovalRequestCreateWithoutTargetTerritoryInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    clinic?: ClinicCreateNestedOneWithoutTerritoryApprovalRequestsInput
+    toTerritory?: TerritoryCreateNestedOneWithoutClinicApprovalRequestsInput
+    supersededBy?: TerritoryApprovalRequestCreateNestedOneWithoutSupersedesInput
+    supersedes?: TerritoryApprovalRequestCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestCreateOrConnectWithoutTargetTerritoryInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    create: XOR<TerritoryApprovalRequestCreateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestCreateManyTargetTerritoryInputEnvelope = {
+    data: TerritoryApprovalRequestCreateManyTargetTerritoryInput | TerritoryApprovalRequestCreateManyTargetTerritoryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryApprovalRequestCreateWithoutToTerritoryInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    targetTerritory?: TerritoryCreateNestedOneWithoutApprovalRequestsInput
+    clinic?: ClinicCreateNestedOneWithoutTerritoryApprovalRequestsInput
+    supersededBy?: TerritoryApprovalRequestCreateNestedOneWithoutSupersedesInput
+    supersedes?: TerritoryApprovalRequestCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestCreateOrConnectWithoutToTerritoryInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    create: XOR<TerritoryApprovalRequestCreateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestCreateManyToTerritoryInputEnvelope = {
+    data: TerritoryApprovalRequestCreateManyToTerritoryInput | TerritoryApprovalRequestCreateManyToTerritoryInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryUpsertWithoutChildrenInput = {
+    update: XOR<TerritoryUpdateWithoutChildrenInput, TerritoryUncheckedUpdateWithoutChildrenInput>
+    create: XOR<TerritoryCreateWithoutChildrenInput, TerritoryUncheckedCreateWithoutChildrenInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutChildrenInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutChildrenInput, TerritoryUncheckedUpdateWithoutChildrenInput>
+  }
+
+  export type TerritoryUpdateWithoutChildrenInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutChildrenInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUpsertWithWhereUniqueWithoutParentInput = {
+    where: TerritoryWhereUniqueInput
+    update: XOR<TerritoryUpdateWithoutParentInput, TerritoryUncheckedUpdateWithoutParentInput>
+    create: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput>
+  }
+
+  export type TerritoryUpdateWithWhereUniqueWithoutParentInput = {
+    where: TerritoryWhereUniqueInput
+    data: XOR<TerritoryUpdateWithoutParentInput, TerritoryUncheckedUpdateWithoutParentInput>
+  }
+
+  export type TerritoryUpdateManyWithWhereWithoutParentInput = {
+    where: TerritoryScalarWhereInput
+    data: XOR<TerritoryUpdateManyMutationInput, TerritoryUncheckedUpdateManyWithoutParentInput>
+  }
+
+  export type TerritoryScalarWhereInput = {
+    AND?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
+    OR?: TerritoryScalarWhereInput[]
+    NOT?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
+    id?: StringFilter<"Territory"> | string
+    name?: StringFilter<"Territory"> | string
+    code?: StringFilter<"Territory"> | string
+    nodeType?: EnumTerritoryNodeTypeFilter<"Territory"> | $Enums.TerritoryNodeType
+    regionSlug?: StringNullableFilter<"Territory"> | string | null
+    stateCode?: StringNullableFilter<"Territory"> | string | null
+    parentId?: StringNullableFilter<"Territory"> | string | null
+    isActive?: BoolFilter<"Territory"> | boolean
+    organizationId?: StringNullableFilter<"Territory"> | string | null
+    createdAt?: DateTimeFilter<"Territory"> | Date | string
+    updatedAt?: DateTimeFilter<"Territory"> | Date | string
+  }
+
+  export type ClinicUpsertWithWhereUniqueWithoutTerritoryInput = {
+    where: ClinicWhereUniqueInput
+    update: XOR<ClinicUpdateWithoutTerritoryInput, ClinicUncheckedUpdateWithoutTerritoryInput>
+    create: XOR<ClinicCreateWithoutTerritoryInput, ClinicUncheckedCreateWithoutTerritoryInput>
+  }
+
+  export type ClinicUpdateWithWhereUniqueWithoutTerritoryInput = {
+    where: ClinicWhereUniqueInput
+    data: XOR<ClinicUpdateWithoutTerritoryInput, ClinicUncheckedUpdateWithoutTerritoryInput>
+  }
+
+  export type ClinicUpdateManyWithWhereWithoutTerritoryInput = {
+    where: ClinicScalarWhereInput
+    data: XOR<ClinicUpdateManyMutationInput, ClinicUncheckedUpdateManyWithoutTerritoryInput>
+  }
+
+  export type ClinicScalarWhereInput = {
+    AND?: ClinicScalarWhereInput | ClinicScalarWhereInput[]
+    OR?: ClinicScalarWhereInput[]
+    NOT?: ClinicScalarWhereInput | ClinicScalarWhereInput[]
+    id?: StringFilter<"Clinic"> | string
+    name?: StringFilter<"Clinic"> | string
+    address?: StringNullableFilter<"Clinic"> | string | null
+    lat?: FloatNullableFilter<"Clinic"> | number | null
+    lng?: FloatNullableFilter<"Clinic"> | number | null
+    territoryId?: StringNullableFilter<"Clinic"> | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFilter<"Clinic"> | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFilter<"Clinic"> | $Enums.TerritoryAssignmentSource
+    sourceProvider?: StringNullableFilter<"Clinic"> | string | null
+    externalSourceId?: StringNullableFilter<"Clinic"> | string | null
+    sourceContentHash?: StringNullableFilter<"Clinic"> | string | null
+    sourceFirstSeenAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    sourceLastSeenAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    sourcePresent?: BoolFilter<"Clinic"> | boolean
+    sourceTracked?: BoolFilter<"Clinic"> | boolean
+    manuallyEditedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    deletedAt?: DateTimeNullableFilter<"Clinic"> | Date | string | null
+    createdAt?: DateTimeFilter<"Clinic"> | Date | string
+    updatedAt?: DateTimeFilter<"Clinic"> | Date | string
+  }
+
+  export type UserTerritoryAssignmentUpsertWithWhereUniqueWithoutTerritoryInput = {
+    where: UserTerritoryAssignmentWhereUniqueInput
+    update: XOR<UserTerritoryAssignmentUpdateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedUpdateWithoutTerritoryInput>
+    create: XOR<UserTerritoryAssignmentCreateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedCreateWithoutTerritoryInput>
+  }
+
+  export type UserTerritoryAssignmentUpdateWithWhereUniqueWithoutTerritoryInput = {
+    where: UserTerritoryAssignmentWhereUniqueInput
+    data: XOR<UserTerritoryAssignmentUpdateWithoutTerritoryInput, UserTerritoryAssignmentUncheckedUpdateWithoutTerritoryInput>
+  }
+
+  export type UserTerritoryAssignmentUpdateManyWithWhereWithoutTerritoryInput = {
+    where: UserTerritoryAssignmentScalarWhereInput
+    data: XOR<UserTerritoryAssignmentUpdateManyMutationInput, UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryInput>
+  }
+
+  export type TerritoryClosureUpsertWithWhereUniqueWithoutAncestorInput = {
+    where: TerritoryClosureWhereUniqueInput
+    update: XOR<TerritoryClosureUpdateWithoutAncestorInput, TerritoryClosureUncheckedUpdateWithoutAncestorInput>
+    create: XOR<TerritoryClosureCreateWithoutAncestorInput, TerritoryClosureUncheckedCreateWithoutAncestorInput>
+  }
+
+  export type TerritoryClosureUpdateWithWhereUniqueWithoutAncestorInput = {
+    where: TerritoryClosureWhereUniqueInput
+    data: XOR<TerritoryClosureUpdateWithoutAncestorInput, TerritoryClosureUncheckedUpdateWithoutAncestorInput>
+  }
+
+  export type TerritoryClosureUpdateManyWithWhereWithoutAncestorInput = {
+    where: TerritoryClosureScalarWhereInput
+    data: XOR<TerritoryClosureUpdateManyMutationInput, TerritoryClosureUncheckedUpdateManyWithoutAncestorInput>
+  }
+
+  export type TerritoryClosureScalarWhereInput = {
+    AND?: TerritoryClosureScalarWhereInput | TerritoryClosureScalarWhereInput[]
+    OR?: TerritoryClosureScalarWhereInput[]
+    NOT?: TerritoryClosureScalarWhereInput | TerritoryClosureScalarWhereInput[]
+    ancestorId?: StringFilter<"TerritoryClosure"> | string
+    descendantId?: StringFilter<"TerritoryClosure"> | string
+    depth?: IntFilter<"TerritoryClosure"> | number
+  }
+
+  export type TerritoryClosureUpsertWithWhereUniqueWithoutDescendantInput = {
+    where: TerritoryClosureWhereUniqueInput
+    update: XOR<TerritoryClosureUpdateWithoutDescendantInput, TerritoryClosureUncheckedUpdateWithoutDescendantInput>
+    create: XOR<TerritoryClosureCreateWithoutDescendantInput, TerritoryClosureUncheckedCreateWithoutDescendantInput>
+  }
+
+  export type TerritoryClosureUpdateWithWhereUniqueWithoutDescendantInput = {
+    where: TerritoryClosureWhereUniqueInput
+    data: XOR<TerritoryClosureUpdateWithoutDescendantInput, TerritoryClosureUncheckedUpdateWithoutDescendantInput>
+  }
+
+  export type TerritoryClosureUpdateManyWithWhereWithoutDescendantInput = {
+    where: TerritoryClosureScalarWhereInput
+    data: XOR<TerritoryClosureUpdateManyMutationInput, TerritoryClosureUncheckedUpdateManyWithoutDescendantInput>
+  }
+
+  export type TerritoryApprovalRequestUpsertWithWhereUniqueWithoutTargetTerritoryInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    update: XOR<TerritoryApprovalRequestUpdateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedUpdateWithoutTargetTerritoryInput>
+    create: XOR<TerritoryApprovalRequestCreateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutTargetTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateWithWhereUniqueWithoutTargetTerritoryInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    data: XOR<TerritoryApprovalRequestUpdateWithoutTargetTerritoryInput, TerritoryApprovalRequestUncheckedUpdateWithoutTargetTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithWhereWithoutTargetTerritoryInput = {
+    where: TerritoryApprovalRequestScalarWhereInput
+    data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestScalarWhereInput = {
+    AND?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+    OR?: TerritoryApprovalRequestScalarWhereInput[]
+    NOT?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
+    id?: StringFilter<"TerritoryApprovalRequest"> | string
+    type?: EnumTerritoryApprovalTypeFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFilter<"TerritoryApprovalRequest"> | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFilter<"TerritoryApprovalRequest"> | string
+    reviewerId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    entityPayload?: JsonFilter<"TerritoryApprovalRequest">
+    targetTerritoryId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    clinicId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    toTerritoryId?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    reason?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    resolutionNote?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    supersededById?: StringNullableFilter<"TerritoryApprovalRequest"> | string | null
+    resolvedAt?: DateTimeNullableFilter<"TerritoryApprovalRequest"> | Date | string | null
+    createdAt?: DateTimeFilter<"TerritoryApprovalRequest"> | Date | string
+    updatedAt?: DateTimeFilter<"TerritoryApprovalRequest"> | Date | string
+  }
+
+  export type TerritoryApprovalRequestUpsertWithWhereUniqueWithoutToTerritoryInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    update: XOR<TerritoryApprovalRequestUpdateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedUpdateWithoutToTerritoryInput>
+    create: XOR<TerritoryApprovalRequestCreateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedCreateWithoutToTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateWithWhereUniqueWithoutToTerritoryInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    data: XOR<TerritoryApprovalRequestUpdateWithoutToTerritoryInput, TerritoryApprovalRequestUncheckedUpdateWithoutToTerritoryInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithWhereWithoutToTerritoryInput = {
+    where: TerritoryApprovalRequestScalarWhereInput
+    data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryInput>
+  }
+
+  export type TerritoryCreateWithoutClosureAsAncestorInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutClosureAsAncestorInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutClosureAsAncestorInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutClosureAsAncestorInput, TerritoryUncheckedCreateWithoutClosureAsAncestorInput>
+  }
+
+  export type TerritoryCreateWithoutClosureAsDescendantInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutClosureAsDescendantInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutClosureAsDescendantInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutClosureAsDescendantInput, TerritoryUncheckedCreateWithoutClosureAsDescendantInput>
+  }
+
+  export type TerritoryUpsertWithoutClosureAsAncestorInput = {
+    update: XOR<TerritoryUpdateWithoutClosureAsAncestorInput, TerritoryUncheckedUpdateWithoutClosureAsAncestorInput>
+    create: XOR<TerritoryCreateWithoutClosureAsAncestorInput, TerritoryUncheckedCreateWithoutClosureAsAncestorInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutClosureAsAncestorInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutClosureAsAncestorInput, TerritoryUncheckedUpdateWithoutClosureAsAncestorInput>
+  }
+
+  export type TerritoryUpdateWithoutClosureAsAncestorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutClosureAsAncestorInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUpsertWithoutClosureAsDescendantInput = {
+    update: XOR<TerritoryUpdateWithoutClosureAsDescendantInput, TerritoryUncheckedUpdateWithoutClosureAsDescendantInput>
+    create: XOR<TerritoryCreateWithoutClosureAsDescendantInput, TerritoryUncheckedCreateWithoutClosureAsDescendantInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutClosureAsDescendantInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutClosureAsDescendantInput, TerritoryUncheckedUpdateWithoutClosureAsDescendantInput>
+  }
+
+  export type TerritoryUpdateWithoutClosureAsDescendantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutClosureAsDescendantInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryCreateWithoutApprovalRequestsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutApprovalRequestsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutApprovalRequestsInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutApprovalRequestsInput, TerritoryUncheckedCreateWithoutApprovalRequestsInput>
+  }
+
+  export type ClinicCreateWithoutTerritoryApprovalRequestsInput = {
+    id?: string
+    name: string
+    address?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    territory?: TerritoryCreateNestedOneWithoutClinicsInput
+    doctorAssociations?: DoctorClinicAssociationCreateNestedManyWithoutClinicInput
+    ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicUncheckedCreateWithoutTerritoryApprovalRequestsInput = {
+    id?: string
+    name: string
+    address?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryId?: string | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    doctorAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput
+  }
+
+  export type ClinicCreateOrConnectWithoutTerritoryApprovalRequestsInput = {
+    where: ClinicWhereUniqueInput
+    create: XOR<ClinicCreateWithoutTerritoryApprovalRequestsInput, ClinicUncheckedCreateWithoutTerritoryApprovalRequestsInput>
+  }
+
+  export type TerritoryCreateWithoutClinicApprovalRequestsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    clinics?: ClinicCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutClinicApprovalRequestsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    clinics?: ClinicUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutClinicApprovalRequestsInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutClinicApprovalRequestsInput, TerritoryUncheckedCreateWithoutClinicApprovalRequestsInput>
+  }
+
+  export type TerritoryApprovalRequestCreateWithoutSupersedesInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    targetTerritory?: TerritoryCreateNestedOneWithoutApprovalRequestsInput
+    clinic?: ClinicCreateNestedOneWithoutTerritoryApprovalRequestsInput
+    toTerritory?: TerritoryCreateNestedOneWithoutClinicApprovalRequestsInput
+    supersededBy?: TerritoryApprovalRequestCreateNestedOneWithoutSupersedesInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateWithoutSupersedesInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryApprovalRequestCreateOrConnectWithoutSupersedesInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    create: XOR<TerritoryApprovalRequestCreateWithoutSupersedesInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersedesInput>
+  }
+
+  export type TerritoryApprovalRequestCreateWithoutSupersededByInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    targetTerritory?: TerritoryCreateNestedOneWithoutApprovalRequestsInput
+    clinic?: ClinicCreateNestedOneWithoutTerritoryApprovalRequestsInput
+    toTerritory?: TerritoryCreateNestedOneWithoutClinicApprovalRequestsInput
+    supersedes?: TerritoryApprovalRequestCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestCreateOrConnectWithoutSupersededByInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    create: XOR<TerritoryApprovalRequestCreateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput>
+  }
+
+  export type TerritoryApprovalRequestCreateManySupersededByInputEnvelope = {
+    data: TerritoryApprovalRequestCreateManySupersededByInput | TerritoryApprovalRequestCreateManySupersededByInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryUpsertWithoutApprovalRequestsInput = {
+    update: XOR<TerritoryUpdateWithoutApprovalRequestsInput, TerritoryUncheckedUpdateWithoutApprovalRequestsInput>
+    create: XOR<TerritoryCreateWithoutApprovalRequestsInput, TerritoryUncheckedCreateWithoutApprovalRequestsInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutApprovalRequestsInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutApprovalRequestsInput, TerritoryUncheckedUpdateWithoutApprovalRequestsInput>
+  }
+
+  export type TerritoryUpdateWithoutApprovalRequestsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutApprovalRequestsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type ClinicUpsertWithoutTerritoryApprovalRequestsInput = {
+    update: XOR<ClinicUpdateWithoutTerritoryApprovalRequestsInput, ClinicUncheckedUpdateWithoutTerritoryApprovalRequestsInput>
+    create: XOR<ClinicCreateWithoutTerritoryApprovalRequestsInput, ClinicUncheckedCreateWithoutTerritoryApprovalRequestsInput>
+    where?: ClinicWhereInput
+  }
+
+  export type ClinicUpdateToOneWithWhereWithoutTerritoryApprovalRequestsInput = {
+    where?: ClinicWhereInput
+    data: XOR<ClinicUpdateWithoutTerritoryApprovalRequestsInput, ClinicUncheckedUpdateWithoutTerritoryApprovalRequestsInput>
+  }
+
+  export type ClinicUpdateWithoutTerritoryApprovalRequestsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territory?: TerritoryUpdateOneWithoutClinicsNestedInput
+    doctorAssociations?: DoctorClinicAssociationUpdateManyWithoutClinicNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutClinicNestedInput
+  }
+
+  export type ClinicUncheckedUpdateWithoutTerritoryApprovalRequestsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput
+  }
+
+  export type TerritoryUpsertWithoutClinicApprovalRequestsInput = {
+    update: XOR<TerritoryUpdateWithoutClinicApprovalRequestsInput, TerritoryUncheckedUpdateWithoutClinicApprovalRequestsInput>
+    create: XOR<TerritoryCreateWithoutClinicApprovalRequestsInput, TerritoryUncheckedCreateWithoutClinicApprovalRequestsInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutClinicApprovalRequestsInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutClinicApprovalRequestsInput, TerritoryUncheckedUpdateWithoutClinicApprovalRequestsInput>
+  }
+
+  export type TerritoryUpdateWithoutClinicApprovalRequestsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutClinicApprovalRequestsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+  }
+
+  export type TerritoryApprovalRequestUpsertWithoutSupersedesInput = {
+    update: XOR<TerritoryApprovalRequestUpdateWithoutSupersedesInput, TerritoryApprovalRequestUncheckedUpdateWithoutSupersedesInput>
+    create: XOR<TerritoryApprovalRequestCreateWithoutSupersedesInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersedesInput>
+    where?: TerritoryApprovalRequestWhereInput
+  }
+
+  export type TerritoryApprovalRequestUpdateToOneWithWhereWithoutSupersedesInput = {
+    where?: TerritoryApprovalRequestWhereInput
+    data: XOR<TerritoryApprovalRequestUpdateWithoutSupersedesInput, TerritoryApprovalRequestUncheckedUpdateWithoutSupersedesInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateWithoutSupersedesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    targetTerritory?: TerritoryUpdateOneWithoutApprovalRequestsNestedInput
+    clinic?: ClinicUpdateOneWithoutTerritoryApprovalRequestsNestedInput
+    toTerritory?: TerritoryUpdateOneWithoutClinicApprovalRequestsNestedInput
+    supersededBy?: TerritoryApprovalRequestUpdateOneWithoutSupersedesNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateWithoutSupersedesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryApprovalRequestUpsertWithWhereUniqueWithoutSupersededByInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    update: XOR<TerritoryApprovalRequestUpdateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedUpdateWithoutSupersededByInput>
+    create: XOR<TerritoryApprovalRequestCreateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedCreateWithoutSupersededByInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateWithWhereUniqueWithoutSupersededByInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    data: XOR<TerritoryApprovalRequestUpdateWithoutSupersededByInput, TerritoryApprovalRequestUncheckedUpdateWithoutSupersededByInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithWhereWithoutSupersededByInput = {
+    where: TerritoryApprovalRequestScalarWhereInput
+    data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByInput>
   }
 
   export type UserCreateWithoutRoleInput = {
@@ -28057,6 +35453,51 @@ export namespace Prisma {
     sentInvitations?: InvitationUncheckedUpdateManyWithoutInvitedByNestedInput
   }
 
+  export type TerritoryCreateWithoutClinicsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutClinicsInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutClinicsInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutClinicsInput, TerritoryUncheckedCreateWithoutClinicsInput>
+  }
+
   export type DoctorClinicAssociationCreateWithoutClinicInput = {
     id?: string
     sourceActive?: boolean
@@ -28139,6 +35580,103 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type TerritoryApprovalRequestCreateWithoutClinicInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    targetTerritory?: TerritoryCreateNestedOneWithoutApprovalRequestsInput
+    toTerritory?: TerritoryCreateNestedOneWithoutClinicApprovalRequestsInput
+    supersededBy?: TerritoryApprovalRequestCreateNestedOneWithoutSupersedesInput
+    supersedes?: TerritoryApprovalRequestCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedCreateWithoutClinicInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutSupersededByInput
+  }
+
+  export type TerritoryApprovalRequestCreateOrConnectWithoutClinicInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    create: XOR<TerritoryApprovalRequestCreateWithoutClinicInput, TerritoryApprovalRequestUncheckedCreateWithoutClinicInput>
+  }
+
+  export type TerritoryApprovalRequestCreateManyClinicInputEnvelope = {
+    data: TerritoryApprovalRequestCreateManyClinicInput | TerritoryApprovalRequestCreateManyClinicInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryUpsertWithoutClinicsInput = {
+    update: XOR<TerritoryUpdateWithoutClinicsInput, TerritoryUncheckedUpdateWithoutClinicsInput>
+    create: XOR<TerritoryCreateWithoutClinicsInput, TerritoryUncheckedCreateWithoutClinicsInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutClinicsInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutClinicsInput, TerritoryUncheckedUpdateWithoutClinicsInput>
+  }
+
+  export type TerritoryUpdateWithoutClinicsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutClinicsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
   export type DoctorClinicAssociationUpsertWithWhereUniqueWithoutClinicInput = {
     where: DoctorClinicAssociationWhereUniqueInput
     update: XOR<DoctorClinicAssociationUpdateWithoutClinicInput, DoctorClinicAssociationUncheckedUpdateWithoutClinicInput>
@@ -28207,6 +35745,22 @@ export namespace Prisma {
     resolvedAt?: DateTimeNullableFilter<"IngestionSuggestion"> | Date | string | null
     resolvedByUserId?: StringNullableFilter<"IngestionSuggestion"> | string | null
     resolutionNote?: StringNullableFilter<"IngestionSuggestion"> | string | null
+  }
+
+  export type TerritoryApprovalRequestUpsertWithWhereUniqueWithoutClinicInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    update: XOR<TerritoryApprovalRequestUpdateWithoutClinicInput, TerritoryApprovalRequestUncheckedUpdateWithoutClinicInput>
+    create: XOR<TerritoryApprovalRequestCreateWithoutClinicInput, TerritoryApprovalRequestUncheckedCreateWithoutClinicInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateWithWhereUniqueWithoutClinicInput = {
+    where: TerritoryApprovalRequestWhereUniqueInput
+    data: XOR<TerritoryApprovalRequestUpdateWithoutClinicInput, TerritoryApprovalRequestUncheckedUpdateWithoutClinicInput>
+  }
+
+  export type TerritoryApprovalRequestUpdateManyWithWhereWithoutClinicInput = {
+    where: TerritoryApprovalRequestScalarWhereInput
+    data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicInput>
   }
 
   export type DoctorClinicAssociationCreateWithoutDoctorInput = {
@@ -28370,7 +35924,10 @@ export namespace Prisma {
     id?: string
     name: string
     address?: string | null
-    territoryId?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -28382,14 +35939,20 @@ export namespace Prisma {
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    territory?: TerritoryCreateNestedOneWithoutClinicsInput
     ingestionSuggestions?: IngestionSuggestionCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicUncheckedCreateWithoutDoctorAssociationsInput = {
     id?: string
     name: string
     address?: string | null
+    lat?: number | null
+    lng?: number | null
     territoryId?: string | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -28402,6 +35965,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     ingestionSuggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicCreateOrConnectWithoutDoctorAssociationsInput = {
@@ -28513,7 +36077,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
-    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28525,14 +36092,20 @@ export namespace Prisma {
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territory?: TerritoryUpdateOneWithoutClinicsNestedInput
     ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutClinicNestedInput
   }
 
   export type ClinicUncheckedUpdateWithoutDoctorAssociationsInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28545,6 +36118,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicNestedInput
   }
 
   export type IngestionSuggestionUpsertWithWhereUniqueWithoutAssociationInput = {
@@ -28648,7 +36222,10 @@ export namespace Prisma {
     id?: string
     name: string
     address?: string | null
-    territoryId?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -28660,14 +36237,20 @@ export namespace Prisma {
     deletedAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    territory?: TerritoryCreateNestedOneWithoutClinicsInput
     doctorAssociations?: DoctorClinicAssociationCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicUncheckedCreateWithoutIngestionSuggestionsInput = {
     id?: string
     name: string
     address?: string | null
+    lat?: number | null
+    lng?: number | null
     territoryId?: string | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
     sourceProvider?: string | null
     externalSourceId?: string | null
     sourceContentHash?: string | null
@@ -28680,6 +36263,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     doctorAssociations?: DoctorClinicAssociationUncheckedCreateNestedManyWithoutClinicInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutClinicInput
   }
 
   export type ClinicCreateOrConnectWithoutIngestionSuggestionsInput = {
@@ -28813,7 +36397,10 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
-    territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28825,14 +36412,20 @@ export namespace Prisma {
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territory?: TerritoryUpdateOneWithoutClinicsNestedInput
     doctorAssociations?: DoctorClinicAssociationUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutClinicNestedInput
   }
 
   export type ClinicUncheckedUpdateWithoutIngestionSuggestionsInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
     sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
     externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
     sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28845,6 +36438,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     doctorAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicNestedInput
   }
 
   export type DoctorUpsertWithoutIngestionSuggestionsInput = {
@@ -29178,10 +36772,10 @@ export namespace Prisma {
 
   export type UserTerritoryAssignmentUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
     assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territory?: TerritoryUpdateOneRequiredWithoutUserAssignmentsNestedInput
   }
 
   export type UserTerritoryAssignmentUncheckedUpdateWithoutUserInput = {
@@ -29491,6 +37085,444 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type TerritoryCreateManyParentInput = {
+    id?: string
+    name: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type ClinicCreateManyTerritoryInput = {
+    id?: string
+    name: string
+    address?: string | null
+    lat?: number | null
+    lng?: number | null
+    territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
+    sourceProvider?: string | null
+    externalSourceId?: string | null
+    sourceContentHash?: string | null
+    sourceFirstSeenAt?: Date | string | null
+    sourceLastSeenAt?: Date | string | null
+    sourcePresent?: boolean
+    sourceTracked?: boolean
+    manuallyEditedAt?: Date | string | null
+    deletedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UserTerritoryAssignmentCreateManyTerritoryInput = {
+    id?: string
+    userId: string
+    assignedBy?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryClosureCreateManyAncestorInput = {
+    descendantId: string
+    depth: number
+  }
+
+  export type TerritoryClosureCreateManyDescendantInput = {
+    ancestorId: string
+    depth: number
+  }
+
+  export type TerritoryApprovalRequestCreateManyTargetTerritoryInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryApprovalRequestCreateManyToTerritoryInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryUpdateWithoutParentInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutParentInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    clinics?: ClinicUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    clinicApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateManyWithoutParentInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type ClinicUpdateWithoutTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorAssociations?: DoctorClinicAssociationUpdateManyWithoutClinicNestedInput
+    ingestionSuggestions?: IngestionSuggestionUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutClinicNestedInput
+  }
+
+  export type ClinicUncheckedUpdateWithoutTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    doctorAssociations?: DoctorClinicAssociationUncheckedUpdateManyWithoutClinicNestedInput
+    ingestionSuggestions?: IngestionSuggestionUncheckedUpdateManyWithoutClinicNestedInput
+    territoryApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicNestedInput
+  }
+
+  export type ClinicUncheckedUpdateManyWithoutTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    address?: NullableStringFieldUpdateOperationsInput | string | null
+    lat?: NullableFloatFieldUpdateOperationsInput | number | null
+    lng?: NullableFloatFieldUpdateOperationsInput | number | null
+    territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
+    territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
+    sourceProvider?: NullableStringFieldUpdateOperationsInput | string | null
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceContentHash?: NullableStringFieldUpdateOperationsInput | string | null
+    sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    sourcePresent?: BoolFieldUpdateOperationsInput | boolean
+    sourceTracked?: BoolFieldUpdateOperationsInput | boolean
+    manuallyEditedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserTerritoryAssignmentUpdateWithoutTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    user?: UserUpdateOneRequiredWithoutTerritoryAssignmentsNestedInput
+  }
+
+  export type UserTerritoryAssignmentUncheckedUpdateWithoutTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    userId?: StringFieldUpdateOperationsInput | string
+    assignedBy?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryClosureUpdateWithoutAncestorInput = {
+    depth?: IntFieldUpdateOperationsInput | number
+    descendant?: TerritoryUpdateOneRequiredWithoutClosureAsDescendantNestedInput
+  }
+
+  export type TerritoryClosureUncheckedUpdateWithoutAncestorInput = {
+    descendantId?: StringFieldUpdateOperationsInput | string
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryClosureUncheckedUpdateManyWithoutAncestorInput = {
+    descendantId?: StringFieldUpdateOperationsInput | string
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryClosureUpdateWithoutDescendantInput = {
+    depth?: IntFieldUpdateOperationsInput | number
+    ancestor?: TerritoryUpdateOneRequiredWithoutClosureAsAncestorNestedInput
+  }
+
+  export type TerritoryClosureUncheckedUpdateWithoutDescendantInput = {
+    ancestorId?: StringFieldUpdateOperationsInput | string
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryClosureUncheckedUpdateManyWithoutDescendantInput = {
+    ancestorId?: StringFieldUpdateOperationsInput | string
+    depth?: IntFieldUpdateOperationsInput | number
+  }
+
+  export type TerritoryApprovalRequestUpdateWithoutTargetTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    clinic?: ClinicUpdateOneWithoutTerritoryApprovalRequestsNestedInput
+    toTerritory?: TerritoryUpdateOneWithoutClinicApprovalRequestsNestedInput
+    supersededBy?: TerritoryApprovalRequestUpdateOneWithoutSupersedesNestedInput
+    supersedes?: TerritoryApprovalRequestUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateWithoutTargetTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryApprovalRequestUpdateWithoutToTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    targetTerritory?: TerritoryUpdateOneWithoutApprovalRequestsNestedInput
+    clinic?: ClinicUpdateOneWithoutTerritoryApprovalRequestsNestedInput
+    supersededBy?: TerritoryApprovalRequestUpdateOneWithoutSupersedesNestedInput
+    supersedes?: TerritoryApprovalRequestUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateWithoutToTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryApprovalRequestCreateManySupersededByInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    clinicId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryApprovalRequestUpdateWithoutSupersededByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    targetTerritory?: TerritoryUpdateOneWithoutApprovalRequestsNestedInput
+    clinic?: ClinicUpdateOneWithoutTerritoryApprovalRequestsNestedInput
+    toTerritory?: TerritoryUpdateOneWithoutClinicApprovalRequestsNestedInput
+    supersedes?: TerritoryApprovalRequestUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateWithoutSupersededByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    clinicId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type UserCreateManyRoleInput = {
     id?: string
     email: string
@@ -29721,6 +37753,23 @@ export namespace Prisma {
     resolutionNote?: string | null
   }
 
+  export type TerritoryApprovalRequestCreateManyClinicInput = {
+    id?: string
+    type: $Enums.TerritoryApprovalType
+    status?: $Enums.TerritoryApprovalStatus
+    requesterId: string
+    reviewerId?: string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: string | null
+    toTerritoryId?: string | null
+    reason?: string | null
+    resolutionNote?: string | null
+    supersededById?: string | null
+    resolvedAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
   export type DoctorClinicAssociationUpdateWithoutClinicInput = {
     id?: StringFieldUpdateOperationsInput | string
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
@@ -29811,6 +37860,59 @@ export namespace Prisma {
     resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type TerritoryApprovalRequestUpdateWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    targetTerritory?: TerritoryUpdateOneWithoutApprovalRequestsNestedInput
+    toTerritory?: TerritoryUpdateOneWithoutClinicApprovalRequestsNestedInput
+    supersededBy?: TerritoryApprovalRequestUpdateOneWithoutSupersedesNestedInput
+    supersedes?: TerritoryApprovalRequestUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    supersedes?: TerritoryApprovalRequestUncheckedUpdateManyWithoutSupersededByNestedInput
+  }
+
+  export type TerritoryApprovalRequestUncheckedUpdateManyWithoutClinicInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    type?: EnumTerritoryApprovalTypeFieldUpdateOperationsInput | $Enums.TerritoryApprovalType
+    status?: EnumTerritoryApprovalStatusFieldUpdateOperationsInput | $Enums.TerritoryApprovalStatus
+    requesterId?: StringFieldUpdateOperationsInput | string
+    reviewerId?: NullableStringFieldUpdateOperationsInput | string | null
+    entityPayload?: JsonNullValueInput | InputJsonValue
+    targetTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    toTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    reason?: NullableStringFieldUpdateOperationsInput | string | null
+    resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+    supersededById?: NullableStringFieldUpdateOperationsInput | string | null
+    resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DoctorClinicAssociationCreateManyDoctorInput = {
