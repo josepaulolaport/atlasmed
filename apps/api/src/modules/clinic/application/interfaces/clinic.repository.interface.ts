@@ -2,7 +2,11 @@ export interface ClinicRecord {
   id: string;
   name: string;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   territoryId: string | null;
+  territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
+  territoryAssignmentSource: "geo" | "manual";
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -26,7 +30,8 @@ export interface ClinicSourceUpsertInput {
   externalSourceId: string;
   name: string;
   address: string | null;
-  territoryId: string | null;
+  lat?: number | null;
+  lng?: number | null;
   sourceContentHash: string;
   sourceLastSeenAt: Date;
 }
@@ -51,7 +56,8 @@ export interface ClinicRepository {
   create(data: {
     name: string;
     address?: string | null;
-    territoryId?: string | null;
+    lat?: number | null;
+    lng?: number | null;
   }): Promise<ClinicRecord>;
 
   update(
@@ -59,7 +65,8 @@ export interface ClinicRepository {
     data: {
       name?: string;
       address?: string | null;
-      territoryId?: string | null;
+      lat?: number | null;
+      lng?: number | null;
       manuallyEditedAt?: Date;
     }
   ): Promise<ClinicRecord>;

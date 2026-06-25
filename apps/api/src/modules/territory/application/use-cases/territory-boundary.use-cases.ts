@@ -1,8 +1,13 @@
 import type { ScopeContext } from "@atlasmed/access";
 import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
+import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
+import type { TerritoryGeoParentService } from "../services/territory-geo-parent.service";
+import type { TerritoryGeoMembershipService } from "../services/territory-geo-membership.service";
 import { TerritoryHierarchyValidator } from "../services/territory-hierarchy-validator.service";
+import { applyTerritoryBoundary } from "../services/territory-boundary.application";
+import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
 import {
   OperationNotAllowedError,
   ResourceNotFoundError,
@@ -11,7 +16,10 @@ import { assertManagerReadScope } from "./territory-crud.use-cases";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
+  territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
+  geoParentService: TerritoryGeoParentService;
+  geoMembershipService: TerritoryGeoMembershipService;
   hierarchyValidator?: TerritoryHierarchyValidator;
   onBoundaryChanged?: (territoryId: string) => Promise<void>;
 }
@@ -43,30 +51,43 @@ export class TerritoryBoundaryUseCases {
     scope: ScopeContext;
     geoJson: GeoJsonGeometry;
   }) {
-    await this.assertWritableLeaf(input.territoryId, input.scope);
+    const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
 
-    const overlaps = await this.deps.spatialRepository.findOverlappingLeaves(
-      input.territoryId,
+    const resolution = await applyTerritoryBoundary(
+      {
+        territoryRepository: this.deps.territoryRepository,
+        territoryTypeRepository: this.deps.territoryTypeRepository,
+        spatialRepository: this.deps.spatialRepository,
+        geoParentService: this.deps.geoParentService,
+        geoMembershipService: this.deps.geoMembershipService,
+        onBoundaryChanged: this.deps.onBoundaryChanged,
+      },
+      territory,
       input.geoJson
     );
 
-    if (overlaps.length > 0) {
-      throw new OperationNotAllowedError(
-        "save_boundary",
-        `Boundary overlaps with: ${overlaps.map((o) => o.code).join(", ")}`
-      );
-    }
-
-    await this.deps.spatialRepository.saveBoundary(input.territoryId, input.geoJson);
-    await this.deps.onBoundaryChanged?.(input.territoryId);
-
-    return { success: true };
+    return serializeBoundaryResolution(resolution);
   }
 
   async deleteBoundary(input: { territoryId: string; scope: ScopeContext }) {
-    await this.assertWritableLeaf(input.territoryId, input.scope);
+    const territory = await this.assertWritableBoundary(input.territoryId, input.scope);
+
+    const type =
+      territory.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    if (type?.canHaveBoundary) {
+      throw new OperationNotAllowedError(
+        "delete_boundary",
+        "Territories of this type must keep a geographic boundary"
+      );
+    }
+
     await this.deps.spatialRepository.deleteBoundary(input.territoryId);
-    await this.deps.onBoundaryChanged?.(input.territoryId);
+
+    if (type?.assignsClinics) {
+      await this.deps.onBoundaryChanged?.(input.territoryId);
+    }
+
     return { success: true };
   }
 
@@ -81,10 +102,7 @@ export class TerritoryBoundaryUseCases {
     }
   }
 
-  private async assertWritableLeaf(
-    territoryId: string,
-    scope: ScopeContext
-  ): Promise<void> {
+  private async assertWritableBoundary(territoryId: string, scope: ScopeContext) {
     const territory = await this.deps.territoryRepository.findById(territoryId);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", territoryId);
@@ -94,18 +112,20 @@ export class TerritoryBoundaryUseCases {
       throw new OperationNotAllowedError("save_boundary", "Territory is not active");
     }
 
-    const activeChildCount =
-      await this.deps.territoryRepository.countActiveChildren(territoryId);
-
-    if (!this.hierarchyValidator.isDynamicLeaf(activeChildCount)) {
+    const type =
+      territory.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    if (!type || !this.hierarchyValidator.canHaveBoundary(type)) {
       throw new OperationNotAllowedError(
         "save_boundary",
-        "Only leaf territories can have boundaries"
+        "This territory type cannot have a boundary"
       );
     }
 
     if (!scope.isGlobal) {
       assertManagerReadScope(scope, territoryId);
     }
+
+    return territory;
   }
 }

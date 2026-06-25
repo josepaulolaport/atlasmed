@@ -6,7 +6,8 @@ const clinicSchema = z.object({
   externalSourceId: z.string().trim().min(1).max(200),
   name: z.string().trim().min(1).max(200),
   address: z.string().trim().max(500).optional().nullable(),
-  territoryId: z.string().trim().min(1).max(200).optional().nullable(),
+  lat: z.coerce.number().min(-90).max(90).optional().nullable(),
+  lng: z.coerce.number().min(-180).max(180).optional().nullable(),
 });
 
 export function sanitizeClinicRecord(raw: unknown): SanitizedClinicRecord | null {
@@ -17,22 +18,23 @@ export function sanitizeClinicRecord(raw: unknown): SanitizedClinicRecord | null
 
   const name = normalizeText(parsed.data.name);
   const address = parsed.data.address ? normalizeText(parsed.data.address) : null;
-  const territoryId = parsed.data.territoryId
-    ? normalizeText(parsed.data.territoryId)
-    : null;
+  const lat = parsed.data.lat ?? null;
+  const lng = parsed.data.lng ?? null;
 
   const contentHash = computeContentHash({
     externalSourceId: parsed.data.externalSourceId,
     name,
     address,
-    territoryId,
+    lat,
+    lng,
   });
 
   return {
     externalSourceId: parsed.data.externalSourceId,
     name,
     address,
-    territoryId,
+    lat,
+    lng,
     contentHash,
   };
 }

@@ -20,13 +20,14 @@
     "db:studio": "cd ../../packages/database && prisma studio",
     "db:generate": "cd ../../packages/database && prisma generate",
     "db:seed": "bun src/infrastructure/database/seed.ts",
+    "db:ingest:brazil": "bun src/scripts/ingest-brazil-geography.ts",
     "db:seed:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun src/infrastructure/database/test-seed.ts",
     "db:reset:test": "cd ../../packages/database && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test prisma migrate reset --force --skip-seed"
   },
   "dependencies": {
     "@atlasmed/access": "workspace:*",
     "@atlasmed/config": "workspace:*",
-    "@atlasmed/database": "workspace:*",
+    "@atlasmed/mapbox": "workspace:*",
     "@elysiajs/cookie": "^0.8.0",
     "@elysiajs/cors": "^1.4.2",
     "@elysiajs/openapi": "^1.4.15",

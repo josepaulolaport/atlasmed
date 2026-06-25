@@ -51,10 +51,15 @@ describe("ScopeResolver", () => {
 
     expect(scope.assignedTerritoryIds).toEqual(["territory-1"]);
     expect(scope.effectiveTerritoryIds).toEqual(["territory-1", "territory-1-child"]);
+    expect(scope.analyticsEffectiveTerritoryIds).toEqual([
+      "territory-1",
+      "territory-1-child",
+    ]);
     expect(scope.clinicIds).toEqual(["clinic-for-territory-1", "clinic-for-territory-1-child"]);
+    expect(scope.analyticsClinicIds).toEqual(scope.clinicIds);
   });
 
-  it("unions manager own and report assignments", async () => {
+  it("splits manager oversight and analytics clinic scope", async () => {
     const scopeRepository: ScopeRepository = {
       findTerritoryIdsByUserId: mock(async (userId: string) =>
         userId === "manager-1" ? ["region-1"] : []
@@ -74,7 +79,37 @@ describe("ScopeResolver", () => {
     });
     const scope = await resolver.resolve("manager-1", Role.MANAGER);
 
-    expect(scope.assignedTerritoryIds.sort()).toEqual(["patch-1", "region-1"].sort());
+    expect(scope.assignedTerritoryIds).toEqual(["region-1"]);
+    expect(scope.reportAssignedTerritoryIds).toEqual(["patch-1"]);
+    expect(scope.effectiveTerritoryIds).toEqual(["region-1", "region-1-child"]);
+    expect(scope.analyticsEffectiveTerritoryIds).toEqual(["patch-1", "patch-1-child"]);
+    expect(scope.clinicIds).toEqual(["clinic-for-region-1", "clinic-for-region-1-child"]);
+    expect(scope.analyticsClinicIds).toEqual(["clinic-for-patch-1", "clinic-for-patch-1-child"]);
     expect(scope.managedUserIds).toEqual(["user-1"]);
+  });
+
+  it("falls back to report territories for manager oversight when unassigned", async () => {
+    const scopeRepository: ScopeRepository = {
+      findTerritoryIdsByUserId: mock(async () => []),
+      findTerritoryIdsByUserIds: mock(async () => ["patch-1"]),
+      findManagedUserIds: mock(async () => ["user-1"]),
+      assignTerritory: mock(async () => undefined),
+      revokeTerritory: mock(async () => undefined),
+      findTerritoryAssignmentsByUserId: mock(async () => []),
+      findManagerIdByUserId: mock(async () => null),
+    };
+
+    const resolver = new ScopeResolver({
+      scopeRepository,
+      territoryScopePort,
+      territoryHierarchyPort,
+    });
+    const scope = await resolver.resolve("manager-1", Role.MANAGER);
+
+    expect(scope.assignedTerritoryIds).toEqual([]);
+    expect(scope.effectiveTerritoryIds).toEqual(["patch-1", "patch-1-child"]);
+    expect(scope.analyticsEffectiveTerritoryIds).toEqual(["patch-1", "patch-1-child"]);
+    expect(scope.clinicIds).toEqual(["clinic-for-patch-1", "clinic-for-patch-1-child"]);
+    expect(scope.analyticsClinicIds).toEqual(scope.clinicIds);
   });
 });

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/contexts/auth-context";
+import { usersApi } from "@/lib/api/users";
+import { useTerritoryLabels } from "@/components/territory/territory-picker";
 import { updateProfileSchema } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AlertCircle, CheckCircle2, XCircle, Mail, Phone } from "lucide-react";
-import type { UpdateProfileRequest } from "@/types/auth";
+import type { UpdateProfileRequest, UserAssignments } from "@/types/auth";
 import { getInitials, formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 
@@ -20,6 +22,16 @@ export default function ProfilePage() {
   const { user, updateProfile } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assignments, setAssignments] = useState<UserAssignments | null>(null);
+  const { getLabel } = useTerritoryLabels();
+
+  useEffect(() => {
+    if (!user) return;
+    usersApi
+      .getUserAssignments(user.id)
+      .then(setAssignments)
+      .catch(() => setAssignments(null));
+  }, [user]);
 
   const {
     register,
@@ -152,6 +164,26 @@ export default function ProfilePage() {
             </div>
           </CardContent>
         </Card>
+
+        {assignments && assignments.territories.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Assigned Territories</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y rounded-md border">
+                {assignments.territories.map((t) => (
+                  <li key={t.territoryId} className="px-3 py-2 text-sm">
+                    <span className="font-medium">{getLabel(t.territoryId)}</span>
+                    <p className="text-xs text-gray-500">
+                      Assigned {formatDateTime(t.assignedAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

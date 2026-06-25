@@ -3,7 +3,8 @@
  *
  * Authorization invariants (do not bypass):
  * 1. Routes: CASL via requirePermission() after auth plugin (role + AccessGrants).
- * 2. Mutations/lists: ScopeContext from getScope() — use-cases are source of truth for row-level scope.
+ * 2. Mutations/lists: ScopeContext from getScope() — use `clinicIds` for operational
+ *    visibility and `analyticsClinicIds` for manager analytics roll-ups.
  * 3. AccessGrants (Permission table): exceptional overrides merged into CASL and scope (territory/clinic ids).
  * 4. clinicIds in ScopeContext require a real TerritoryScopePort (clinic module); stub returns [] until then.
  * 5. Session validity: JWT + session row + tokenVersion; caches revalidate from DB periodically.

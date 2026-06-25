@@ -9,6 +9,15 @@ function isRefreshRequest(config: InternalAxiosRequestConfig): boolean {
   return url.includes("/access/refresh");
 }
 
+function hadAuthorizationHeader(config: InternalAxiosRequestConfig): boolean {
+  const headers = config.headers;
+  if (!headers) {
+    return false;
+  }
+
+  return Boolean(headers.Authorization ?? headers.authorization);
+}
+
 export const apiClient = axios.create({
   baseURL: API_URL,
   headers: {
@@ -17,10 +26,30 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-let accessToken: string | null = null;
+const ACCESS_TOKEN_STORAGE_KEY = "atlasmed_access_token";
+
+function readStoredAccessToken(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return sessionStorage.getItem(ACCESS_TOKEN_STORAGE_KEY);
+}
+
+let accessToken: string | null = readStoredAccessToken();
 
 export function setAccessToken(token: string | null): void {
   accessToken = token;
+
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (token) {
+    sessionStorage.setItem(ACCESS_TOKEN_STORAGE_KEY, token);
+  } else {
+    sessionStorage.removeItem(ACCESS_TOKEN_STORAGE_KEY);
+  }
 }
 
 export function getAccessToken(): string | null {
@@ -65,6 +94,11 @@ apiClient.interceptors.response.use(
       if (isRefreshRequest(originalRequest)) {
         isRefreshing = false;
         setAccessToken(null);
+        return Promise.reject(error);
+      }
+
+      // Login/register and other unauthenticated calls legitimately return 401.
+      if (!hadAuthorizationHeader(originalRequest)) {
         return Promise.reject(error);
       }
 

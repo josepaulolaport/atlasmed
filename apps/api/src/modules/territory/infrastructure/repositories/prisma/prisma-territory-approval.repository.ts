@@ -1,4 +1,5 @@
 import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import type { Prisma } from "@atlasmed/database";
 import type {
   CreateApprovalInput,
   TerritoryApprovalRecord,
@@ -48,7 +49,7 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
       data: {
         type: input.type,
         requesterId: input.requesterId,
-        entityPayload: input.entityPayload,
+        entityPayload: input.entityPayload as Prisma.InputJsonValue,
         targetTerritoryId: input.targetTerritoryId ?? null,
         clinicId: input.clinicId ?? null,
         toTerritoryId: input.toTerritoryId ?? null,

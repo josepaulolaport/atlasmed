@@ -8,7 +8,9 @@ export function mergeGrantsIntoScope(
 ): ScopeContext {
   const grantIds = grants.map((g) => g.id);
   const effectiveTerritoryIds = new Set(scope.effectiveTerritoryIds);
+  const analyticsEffectiveTerritoryIds = new Set(scope.analyticsEffectiveTerritoryIds);
   const clinicIds = new Set(scope.clinicIds);
+  const analyticsClinicIds = new Set(scope.analyticsClinicIds);
 
   for (const grant of grants) {
     const resource = grant.resource.toUpperCase();
@@ -18,10 +20,12 @@ export function mergeGrantsIntoScope(
 
     if (resource === "TERRITORY") {
       effectiveTerritoryIds.add(grant.resourceId);
+      analyticsEffectiveTerritoryIds.add(grant.resourceId);
     }
 
     if (resource === "CLINIC") {
       clinicIds.add(grant.resourceId);
+      analyticsClinicIds.add(grant.resourceId);
     }
   }
 
@@ -29,7 +33,9 @@ export function mergeGrantsIntoScope(
     ...scope,
     grantIds,
     effectiveTerritoryIds: [...effectiveTerritoryIds],
+    analyticsEffectiveTerritoryIds: [...analyticsEffectiveTerritoryIds],
     clinicIds: [...clinicIds],
+    analyticsClinicIds: [...analyticsClinicIds],
     isOperationallyActive:
       scope.isOperationallyActive ||
       effectiveTerritoryIds.size > 0 ||

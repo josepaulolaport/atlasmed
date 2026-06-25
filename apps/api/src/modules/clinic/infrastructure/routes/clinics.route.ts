@@ -49,7 +49,8 @@ const createClinicRoute = new Elysia()
       body: t.Object({
         name: t.String(),
         address: t.Optional(t.String()),
-        territoryId: t.Optional(t.String()),
+        lat: t.Optional(t.Number()),
+        lng: t.Optional(t.Number()),
       }),
     }
   );
@@ -109,7 +110,8 @@ const updateClinicRoute = new Elysia()
       body: t.Object({
         name: t.Optional(t.String()),
         address: t.Optional(t.Union([t.String(), t.Null()])),
-        territoryId: t.Optional(t.Union([t.String(), t.Null()])),
+        lat: t.Optional(t.Union([t.Number(), t.Null()])),
+        lng: t.Optional(t.Union([t.Number(), t.Null()])),
       }),
     }
   );

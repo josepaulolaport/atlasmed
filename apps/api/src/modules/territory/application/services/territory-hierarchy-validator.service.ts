@@ -1,81 +1,61 @@
-import type { TerritoryNodeType } from "@atlasmed/database";
+import type { TerritoryTypeRecord } from "../interfaces/territory-type.repository.interface";
 import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
 import { OperationNotAllowedError } from "../../../../shared/errors";
-import {
-  validateRegionSlug,
-  validateStateCode,
-} from "./territory-code-generator.service";
-
-const ALLOWED_CHILDREN: Record<TerritoryNodeType, TerritoryNodeType[]> = {
-  root: ["region"],
-  region: ["state", "intermediate"],
-  state: ["intermediate", "patch"],
-  intermediate: ["intermediate", "state", "patch"],
-  patch: ["intermediate", "patch"],
-};
+import { validateCountryCode } from "../constants/territory-geo.constants";
+import { validateTerritorySlug } from "../constants/territory-slug.constants";
 
 export class TerritoryHierarchyValidator {
   validateCreate(params: {
-    nodeType: TerritoryNodeType;
+    type: TerritoryTypeRecord;
+    slug: string;
+    countryCode: string;
     parent: TerritoryRecord | null;
-    regionSlug?: string | null;
-    stateCode?: string | null;
-    hasActiveRoot: boolean;
+    parentId?: string | null;
+    hasActiveCountryForCode: boolean;
   }): void {
-    const { nodeType, parent, regionSlug, stateCode, hasActiveRoot } = params;
+    const { type, slug, countryCode, parent, parentId, hasActiveCountryForCode } = params;
 
-    if (nodeType === "root") {
-      if (parent) {
+    if (!validateTerritorySlug(slug)) {
+      throw new OperationNotAllowedError(
+        "create_territory",
+        "slug must be 3-60 lowercase alphanumeric characters with optional hyphens"
+      );
+    }
+
+    if (!validateCountryCode(countryCode)) {
+      throw new OperationNotAllowedError(
+        "create_territory",
+        "countryCode must be a valid two-letter ISO code"
+      );
+    }
+
+    if (type.isCountryLevel) {
+      if (parentId || parent) {
         throw new OperationNotAllowedError(
           "create_territory",
-          "Root territory cannot have a parent"
+          "Country-level territories cannot have a parent"
         );
       }
-      if (hasActiveRoot) {
+      if (hasActiveCountryForCode) {
         throw new OperationNotAllowedError(
           "create_territory",
-          "An active root territory already exists"
+          `An active country already exists for ${countryCode}`
         );
       }
       return;
     }
 
-    if (!parent) {
-      throw new OperationNotAllowedError(
-        "create_territory",
-        "Non-root territories require a parent"
-      );
-    }
-
-    if (!parent.isActive) {
-      throw new OperationNotAllowedError(
-        "create_territory",
-        "Parent territory must be active"
-      );
-    }
-
-    const allowed = ALLOWED_CHILDREN[parent.nodeType];
-    if (!allowed.includes(nodeType)) {
-      throw new OperationNotAllowedError(
-        "create_territory",
-        `Cannot create ${nodeType} under ${parent.nodeType}`
-      );
-    }
-
-    if (nodeType === "region") {
-      if (!regionSlug || !validateRegionSlug(regionSlug)) {
+    if (parent) {
+      if (!parent.isActive) {
         throw new OperationNotAllowedError(
           "create_territory",
-          "Region territories require a valid regionSlug (2-10 uppercase alphanumeric)"
+          "Parent territory must be active"
         );
       }
-    }
-
-    if (nodeType === "state") {
-      if (!stateCode || !validateStateCode(stateCode)) {
+      if (parent.countryCode && parent.countryCode !== countryCode) {
         throw new OperationNotAllowedError(
           "create_territory",
-          "State territories require a valid two-letter stateCode"
+          "Parent must belong to the same country"
         );
       }
     }
@@ -83,10 +63,18 @@ export class TerritoryHierarchyValidator {
 
   validateReparent(params: {
     territory: TerritoryRecord;
+    territoryType: TerritoryTypeRecord;
     newParent: TerritoryRecord;
     descendantIds: string[];
   }): void {
-    const { territory, newParent, descendantIds } = params;
+    const { territory, territoryType, newParent, descendantIds } = params;
+
+    if (territoryType.isCountryLevel) {
+      throw new OperationNotAllowedError(
+        "reparent_territory",
+        "Country-level territories cannot be reparented"
+      );
+    }
 
     if (territory.id === newParent.id) {
       throw new OperationNotAllowedError(
@@ -102,16 +90,23 @@ export class TerritoryHierarchyValidator {
       );
     }
 
-    const allowed = ALLOWED_CHILDREN[newParent.nodeType];
-    if (!allowed.includes(territory.nodeType)) {
+    if (
+      territory.countryCode &&
+      newParent.countryCode &&
+      territory.countryCode !== newParent.countryCode
+    ) {
       throw new OperationNotAllowedError(
         "reparent_territory",
-        `Cannot place ${territory.nodeType} under ${newParent.nodeType}`
+        "Cannot reparent across countries"
       );
     }
   }
 
   isDynamicLeaf(activeChildCount: number): boolean {
     return activeChildCount === 0;
+  }
+
+  canHaveBoundary(type: TerritoryTypeRecord): boolean {
+    return type.canHaveBoundary;
   }
 }

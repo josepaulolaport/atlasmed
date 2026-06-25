@@ -2,6 +2,7 @@ import { createQueue, createWorker, type JobOptions } from "./queue.client";
 
 export interface TerritoryMembershipJob {
   territoryId?: string;
+  clinicIds?: string[];
   reason: "boundary_change" | "manual_recompute" | "clinic_update";
 }
 

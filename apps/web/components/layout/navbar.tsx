@@ -24,12 +24,14 @@ import {
   Menu,
   Building2,
   Stethoscope,
+  MapPin,
 } from "lucide-react";
 import { cn, getInitials } from "@/lib/utils";
 import {
   canManageUsers,
   canReadClinics,
   canReadDoctors,
+  canReadTerritories,
   canViewHealth,
   hasMinimumRole,
 } from "@/lib/permissions";
@@ -52,6 +54,9 @@ export function Navbar() {
       : []),
     ...(canReadDoctors(user.role.name)
       ? [{ name: "Doctors", href: "/doctors", icon: Stethoscope }]
+      : []),
+    ...(canReadTerritories(user.role.name)
+      ? [{ name: "Territories", href: "/territories", icon: MapPin }]
       : []),
     ...(hasMinimumRole(user.role.name, "MANAGER")
       ? [{ name: "Registry", href: "/registry-suggestions", icon: Shield }]

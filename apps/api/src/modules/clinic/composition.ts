@@ -14,6 +14,11 @@ import {
   ListClinicDoctorsUseCase,
   ManuallyAssociateDoctorUseCase,
 } from "./application/use-cases/clinic-doctor.use-cases";
+import {
+  territoryMembershipService,
+} from "../territory/composition";
+import { geocodingPort } from "../maps/composition";
+import { ClinicGeocodingService } from "./application/services/clinic-geocoding.service";
 
 export const clinicRepositories = {
   clinic: new PrismaClinicRepository(),
@@ -24,17 +29,28 @@ export const clinicTerritoryScopePort = new PrismaTerritoryScopePort(
   clinicRepositories.clinic
 );
 
+export const clinicGeocodingService = new ClinicGeocodingService({
+  clinicRepository: clinicRepositories.clinic,
+  geocodingPort,
+});
+
+async function handleClinicLocationChanged(clinicId: string): Promise<void> {
+  await clinicGeocodingService.ensureCoordinatesPersisted(clinicId);
+  await territoryMembershipService.assignClinicById(clinicId);
+}
+
+const clinicMembershipDeps = {
+  clinicRepository: clinicRepositories.clinic,
+  clinicGeocodingService,
+  onClinicLocationChanged: handleClinicLocationChanged,
+};
+
 export const clinicUseCases = {
-  listClinics: () =>
-    new ListClinicsUseCase({ clinicRepository: clinicRepositories.clinic }),
-  getClinic: () =>
-    new GetClinicUseCase({ clinicRepository: clinicRepositories.clinic }),
-  createClinic: () =>
-    new CreateClinicUseCase({ clinicRepository: clinicRepositories.clinic }),
-  updateClinic: () =>
-    new UpdateClinicUseCase({ clinicRepository: clinicRepositories.clinic }),
-  deleteClinic: () =>
-    new DeleteClinicUseCase({ clinicRepository: clinicRepositories.clinic }),
+  listClinics: () => new ListClinicsUseCase(clinicMembershipDeps),
+  getClinic: () => new GetClinicUseCase(clinicMembershipDeps),
+  createClinic: () => new CreateClinicUseCase(clinicMembershipDeps),
+  updateClinic: () => new UpdateClinicUseCase(clinicMembershipDeps),
+  deleteClinic: () => new DeleteClinicUseCase(clinicMembershipDeps),
   listClinicDoctors: () =>
     new ListClinicDoctorsUseCase({
       associationRepository: clinicRepositories.association,
@@ -52,3 +68,5 @@ export const clinicUseCases = {
       associationRepository: clinicRepositories.association,
     }),
 };
+
+export { territoryMembershipService };

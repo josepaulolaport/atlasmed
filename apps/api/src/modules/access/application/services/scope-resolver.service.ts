@@ -37,7 +37,9 @@ export class ScopeResolver {
         isGlobal: false,
         assignedTerritoryIds,
         effectiveTerritoryIds,
+        analyticsEffectiveTerritoryIds: effectiveTerritoryIds,
         clinicIds,
+        analyticsClinicIds: clinicIds,
         managedUserIds: [],
         isOperationallyActive: effectiveTerritoryIds.length > 0,
       });
@@ -52,27 +54,53 @@ export class ScopeResolver {
           ? await this.deps.scopeRepository.findTerritoryIdsByUserIds(managedUserIds)
           : [];
 
-      const assignedTerritoryIds = [
-        ...new Set([...ownAssignments, ...reportAssignments]),
-      ];
-      const effectiveTerritoryIds =
-        await this.deps.territoryHierarchyPort.resolveDescendantIds(
-          assignedTerritoryIds,
-          true
-        );
-      const clinicIds =
-        await this.deps.territoryScopePort.getClinicIdsForTerritories(
-          effectiveTerritoryIds
-        );
+      const oversightTerritoryIds =
+        ownAssignments.length > 0
+          ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+              ownAssignments,
+              true
+            )
+          : reportAssignments.length > 0
+            ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+                reportAssignments,
+                true
+              )
+            : [];
+
+      const analyticsEffectiveTerritoryIds =
+        reportAssignments.length > 0
+          ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+              reportAssignments,
+              true
+            )
+          : [];
+
+      const oversightClinicIds =
+        oversightTerritoryIds.length > 0
+          ? await this.deps.territoryScopePort.getClinicIdsForTerritories(
+              oversightTerritoryIds
+            )
+          : [];
+
+      const analyticsClinicIds =
+        analyticsEffectiveTerritoryIds.length > 0
+          ? await this.deps.territoryScopePort.getClinicIdsForTerritories(
+              analyticsEffectiveTerritoryIds
+            )
+          : [];
 
       return withTerritoryScopeAliases({
         isGlobal: false,
-        assignedTerritoryIds,
-        effectiveTerritoryIds,
-        clinicIds: [...new Set(clinicIds)],
+        assignedTerritoryIds: ownAssignments,
+        effectiveTerritoryIds: oversightTerritoryIds,
+        analyticsEffectiveTerritoryIds,
+        clinicIds: [...new Set(oversightClinicIds)],
+        analyticsClinicIds: [...new Set(analyticsClinicIds)],
         managedUserIds,
+        reportAssignedTerritoryIds: reportAssignments,
         isOperationallyActive:
-          managedUserIds.length > 0 && effectiveTerritoryIds.length > 0,
+          managedUserIds.length > 0 &&
+          (oversightTerritoryIds.length > 0 || analyticsEffectiveTerritoryIds.length > 0),
       });
     }
 

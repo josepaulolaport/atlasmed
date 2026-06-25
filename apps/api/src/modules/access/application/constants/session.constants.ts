@@ -2,7 +2,9 @@ import type { Role } from "@atlasmed/access";
 import { environment } from "../../../../app/config/environment";
 import { parseDurationToMs } from "../../../../shared/utils/parse-duration";
 
-const REFRESH_EXPIRATION_MS = parseDurationToMs(environment.JWT_REFRESH_EXPIRATION);
+const REFRESH_EXPIRATION_MS = parseDurationToMs(
+  environment.JWT_REFRESH_EXPIRATION,
+);
 
 // Optional role caps — session lifetime cannot exceed refresh token policy
 export const SESSION_EXPIRY: Record<Role, number> = {

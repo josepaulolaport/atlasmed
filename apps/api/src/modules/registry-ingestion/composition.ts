@@ -26,6 +26,8 @@ import {
   createRegistryIngestionRunner,
   registryIngestionRepositories as demoRegistryRepositories,
 } from "./infrastructure/demo/registry-ingestion-runner";
+import { territoryMembershipService } from "../territory/composition";
+import { clinicGeocodingService } from "../clinic/composition";
 
 const INGESTION_LOCK_KEY = `${environment.REDIS_KEY_PREFIX}ingestion:registry:lock`;
 const INGESTION_LOCK_TTL_SECONDS = 300;
@@ -53,6 +55,9 @@ const registrySyncService = new RegistrySyncService({
   doctorRepository: registryIngestionRepositories.doctor,
   associationRepository: registryIngestionRepositories.association,
   suggestionRepository: registryIngestionRepositories.suggestion,
+  ensureClinicCoordinates: (clinicId) =>
+    clinicGeocodingService.ensureCoordinatesPersisted(clinicId).then(() => undefined),
+  onClinicLocationChanged: (clinicId) => territoryMembershipService.assignClinicById(clinicId),
 });
 
 async function acquireIngestionLock(): Promise<boolean> {

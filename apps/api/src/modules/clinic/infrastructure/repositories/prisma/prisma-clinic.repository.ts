@@ -10,7 +10,11 @@ function mapClinic(clinic: {
   id: string;
   name: string;
   address: string | null;
+  lat: number | null;
+  lng: number | null;
   territoryId: string | null;
+  territoryAssignmentStatus: ClinicRecord["territoryAssignmentStatus"];
+  territoryAssignmentSource: ClinicRecord["territoryAssignmentSource"];
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -27,7 +31,11 @@ function mapClinic(clinic: {
     id: clinic.id,
     name: clinic.name,
     address: clinic.address,
+    lat: clinic.lat,
+    lng: clinic.lng,
     territoryId: clinic.territoryId,
+    territoryAssignmentStatus: clinic.territoryAssignmentStatus,
+    territoryAssignmentSource: clinic.territoryAssignmentSource,
     sourceProvider: clinic.sourceProvider,
     externalSourceId: clinic.externalSourceId,
     sourceContentHash: clinic.sourceContentHash,
@@ -122,13 +130,15 @@ export class PrismaClinicRepository implements ClinicRepository {
   async create(data: {
     name: string;
     address?: string | null;
-    territoryId?: string | null;
+    lat?: number | null;
+    lng?: number | null;
   }): Promise<ClinicRecord> {
     const clinic = await prisma.clinic.create({
       data: {
         name: data.name,
         address: data.address ?? null,
-        territoryId: data.territoryId ?? null,
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
       },
     });
 
@@ -140,7 +150,8 @@ export class PrismaClinicRepository implements ClinicRepository {
     data: {
       name?: string;
       address?: string | null;
-      territoryId?: string | null;
+      lat?: number | null;
+      lng?: number | null;
       manuallyEditedAt?: Date;
     }
   ): Promise<ClinicRecord> {
@@ -195,7 +206,8 @@ export class PrismaClinicRepository implements ClinicRepository {
         data: {
           name: input.name,
           address: input.address,
-          territoryId: input.territoryId,
+          lat: input.lat ?? null,
+          lng: input.lng ?? null,
           sourceProvider: input.sourceProvider,
           externalSourceId: input.externalSourceId,
           sourceContentHash: input.sourceContentHash,
@@ -220,7 +232,8 @@ export class PrismaClinicRepository implements ClinicRepository {
     if (!existing.manuallyEditedAt) {
       updateData.name = input.name;
       updateData.address = input.address;
-      updateData.territoryId = input.territoryId;
+      if (input.lat !== undefined) updateData.lat = input.lat;
+      if (input.lng !== undefined) updateData.lng = input.lng;
     }
 
     const clinic = await prisma.clinic.update({

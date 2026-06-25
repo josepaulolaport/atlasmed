@@ -6,10 +6,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { clinicsApi } from "@/lib/api/clinics";
+import { mapsApi } from "@/lib/api/maps";
 import { canManageClinics, canReadClinics } from "@/lib/permissions";
+import { useTerritoryLabels } from "@/components/territory/territory-picker";
 import type { Clinic } from "@/types/clinic";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
@@ -30,6 +33,15 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 
+function territoryStatusBadge(status?: Clinic["territoryAssignmentStatus"]) {
+  if (!status || status === "assigned") return null;
+  return (
+    <Badge variant={status === "ambiguous" ? "secondary" : "outline"} className="ml-2 text-xs">
+      {status}
+    </Badge>
+  );
+}
+
 export default function ClinicsPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -42,12 +54,15 @@ export default function ClinicsPage() {
   const [editingClinic, setEditingClinic] = useState<Clinic | null>(null);
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
-  const [formTerritoryId, setFormTerritoryId] = useState("");
+  const [formLat, setFormLat] = useState("");
+  const [formLng, setFormLng] = useState("");
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const canRead = user ? canReadClinics(user.role.name) : false;
   const canManage = user ? canManageClinics(user.role.name) : false;
+  const { getLabel } = useTerritoryLabels();
 
   useEffect(() => {
     if (user && !canRead) {
@@ -86,7 +101,8 @@ export default function ClinicsPage() {
     setEditingClinic(null);
     setFormName("");
     setFormAddress("");
-    setFormTerritoryId("");
+    setFormLat("");
+    setFormLng("");
     setDialogOpen(true);
   };
 
@@ -94,8 +110,56 @@ export default function ClinicsPage() {
     setEditingClinic(clinic);
     setFormName(clinic.name);
     setFormAddress(clinic.address ?? "");
-    setFormTerritoryId(clinic.territoryId ?? "");
+    setFormLat(clinic.lat != null ? String(clinic.lat) : "");
+    setFormLng(clinic.lng != null ? String(clinic.lng) : "");
     setDialogOpen(true);
+  };
+
+  const parseCoordinate = (value: string): number | null | undefined => {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const handleGeocodeAddress = async () => {
+    if (!formAddress.trim()) {
+      toast({
+        title: "Validation",
+        description: "Enter an address to geocode",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeocoding(true);
+    try {
+      const result = await mapsApi.forwardGeocode(formAddress.trim());
+      if (!result) {
+        toast({
+          title: "Not found",
+          description: "Could not resolve coordinates for this address",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFormLat(String(result.latitude));
+      setFormLng(String(result.longitude));
+      toast({
+        title: "Geocoded",
+        description: result.fullAddress ?? "Coordinates updated from address",
+        variant: "success",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Geocoding failed. Check that Mapbox is configured on the API.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeocoding(false);
+    }
   };
 
   const handleSave = async () => {
@@ -108,22 +172,52 @@ export default function ClinicsPage() {
       return;
     }
 
+    const lat = parseCoordinate(formLat);
+    const lng = parseCoordinate(formLng);
+    if (lat === undefined || lng === undefined) {
+      toast({
+        title: "Validation",
+        description: "Latitude and longitude must be valid numbers when provided",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (lat == null && lng == null && !formAddress.trim()) {
+      toast({
+        title: "Validation",
+        description: "Provide an address or coordinates",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingClinic) {
         await clinicsApi.updateClinic(editingClinic.id, {
           name: formName.trim(),
           address: formAddress.trim() || null,
-          territoryId: formTerritoryId.trim() || null,
+          lat,
+          lng,
         });
-        toast({ title: "Success", description: "Clinic updated", variant: "success" });
+        toast({
+          title: "Success",
+          description: "Clinic updated. Territory will be assigned automatically from coordinates.",
+          variant: "success",
+        });
       } else {
         await clinicsApi.createClinic({
           name: formName.trim(),
           address: formAddress.trim() || undefined,
-          territoryId: formTerritoryId.trim() || undefined,
+          lat: lat ?? undefined,
+          lng: lng ?? undefined,
         });
-        toast({ title: "Success", description: "Clinic created", variant: "success" });
+        toast({
+          title: "Success",
+          description: "Clinic created. Territory will be assigned automatically when coordinates match a boundary.",
+          variant: "success",
+        });
       }
 
       setDialogOpen(false);
@@ -164,7 +258,9 @@ export default function ClinicsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Clinics</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage clinic locations</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Clinics are assigned to territories automatically from coordinates
+          </p>
         </div>
         {canManage && (
           <Button onClick={openCreateDialog}>
@@ -199,6 +295,7 @@ export default function ClinicsPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Address</TableHead>
+                    <TableHead>Coordinates</TableHead>
                     <TableHead>Territory</TableHead>
                     {canManage && <TableHead className="w-[120px]">Actions</TableHead>}
                   </TableRow>
@@ -206,7 +303,10 @@ export default function ClinicsPage() {
                 <TableBody>
                   {clinics.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canManage ? 4 : 3} className="text-center text-gray-500">
+                      <TableCell
+                        colSpan={canManage ? 5 : 4}
+                        className="text-center text-gray-500"
+                      >
                         No clinics found
                       </TableCell>
                     </TableRow>
@@ -222,7 +322,17 @@ export default function ClinicsPage() {
                           </Link>
                         </TableCell>
                         <TableCell>{clinic.address || "—"}</TableCell>
-                        <TableCell>{clinic.territoryId || "—"}</TableCell>
+                        <TableCell className="text-sm">
+                          {clinic.lat != null && clinic.lng != null
+                            ? `${clinic.lat.toFixed(4)}, ${clinic.lng.toFixed(4)}`
+                            : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <span>
+                            {clinic.territoryId ? getLabel(clinic.territoryId) : "—"}
+                          </span>
+                          {territoryStatusBadge(clinic.territoryAssignmentStatus)}
+                        </TableCell>
                         {canManage && (
                           <TableCell>
                             <div className="flex gap-2">
@@ -289,20 +399,55 @@ export default function ClinicsPage() {
             </div>
             <div>
               <Label htmlFor="clinic-address">Address</Label>
-              <Input
-                id="clinic-address"
-                value={formAddress}
-                onChange={(event) => setFormAddress(event.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="clinic-address"
+                  value={formAddress}
+                  onChange={(event) => setFormAddress(event.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleGeocodeAddress}
+                  disabled={geocoding}
+                >
+                  {geocoding ? "Geocoding..." : "Geocode"}
+                </Button>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="clinic-territory">Territory ID</Label>
-              <Input
-                id="clinic-territory"
-                value={formTerritoryId}
-                onChange={(event) => setFormTerritoryId(event.target.value)}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="clinic-lat">Latitude</Label>
+                <Input
+                  id="clinic-lat"
+                  type="number"
+                  step="any"
+                  placeholder="-23.5505"
+                  value={formLat}
+                  onChange={(event) => setFormLat(event.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="clinic-lng">Longitude</Label>
+                <Input
+                  id="clinic-lng"
+                  type="number"
+                  step="any"
+                  placeholder="-46.6333"
+                  value={formLng}
+                  onChange={(event) => setFormLng(event.target.value)}
+                />
+              </div>
             </div>
+            {editingClinic?.territoryId && (
+              <p className="text-sm text-gray-600">
+                Current territory: {getLabel(editingClinic.territoryId)} (assigned automatically)
+              </p>
+            )}
+            <p className="text-xs text-gray-500">
+              Coordinates are saved to the clinic record when geocoded (preview or on save).
+              Territory assignment runs automatically from stored coordinates.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>

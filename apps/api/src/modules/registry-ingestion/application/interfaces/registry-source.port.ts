@@ -2,7 +2,8 @@ export interface SanitizedClinicRecord {
   externalSourceId: string;
   name: string;
   address: string | null;
-  territoryId: string | null;
+  lat: number | null;
+  lng: number | null;
   contentHash: string;
 }
 

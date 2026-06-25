@@ -33,6 +33,8 @@ interface Dependencies {
   doctorRepository: DoctorRepository;
   associationRepository: DoctorClinicAssociationRepository;
   suggestionRepository: IngestionSuggestionRepository;
+  onClinicLocationChanged?: (clinicId: string) => Promise<void>;
+  ensureClinicCoordinates?: (clinicId: string) => Promise<void>;
 }
 
 function associationKey(doctorExternalId: string, clinicExternalId: string): string {
@@ -101,12 +103,16 @@ export class RegistrySyncService {
         externalSourceId: clinic.externalSourceId,
         name: clinic.name,
         address: clinic.address,
-        territoryId: clinic.territoryId,
+        lat: clinic.lat,
+        lng: clinic.lng,
         sourceContentHash: clinic.contentHash,
         sourceLastSeenAt: now,
       });
 
       clinicExternalToInternal.set(clinic.externalSourceId, result.clinic.id);
+
+      await this.deps.ensureClinicCoordinates?.(result.clinic.id);
+      await this.deps.onClinicLocationChanged?.(result.clinic.id);
 
       if (result.created) {
         stats.clinicsCreated += 1;

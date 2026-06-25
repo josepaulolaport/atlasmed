@@ -1,8 +1,13 @@
+export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
+
 export interface Clinic {
   id: string;
   name: string;
   address?: string;
+  lat?: number;
+  lng?: number;
   territoryId?: string;
+  territoryAssignmentStatus?: TerritoryAssignmentStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -20,13 +25,15 @@ export interface Doctor {
 export interface CreateClinicRequest {
   name: string;
   address?: string;
-  territoryId?: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface UpdateClinicRequest {
   name?: string;
   address?: string | null;
-  territoryId?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface CreateDoctorRequest {

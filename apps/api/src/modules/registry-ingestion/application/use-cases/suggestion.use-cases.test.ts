@@ -246,7 +246,27 @@ describe("Suggestion use cases", () => {
       resolutionNote: null,
     }));
 
-    clinicRepository.reactivate = mock(async () => {});
+    clinicRepository.reactivate = mock(async () => ({
+      id: "clinic-1",
+      name: "Clinic",
+      address: null,
+      lat: null,
+      lng: null,
+      territoryId: null,
+      territoryAssignmentStatus: "unassigned" as const,
+      territoryAssignmentSource: "geo" as const,
+      sourceProvider: null,
+      externalSourceId: null,
+      sourceContentHash: null,
+      sourceFirstSeenAt: null,
+      sourceLastSeenAt: null,
+      sourcePresent: true,
+      sourceTracked: true,
+      manuallyEditedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      deletedAt: null,
+    }));
 
     const useCase = new ApproveSuggestionUseCase({
       suggestionRepository,

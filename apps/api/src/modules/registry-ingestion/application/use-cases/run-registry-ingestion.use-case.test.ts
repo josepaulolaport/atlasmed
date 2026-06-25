@@ -3,6 +3,7 @@ import { RunRegistryIngestionUseCase } from "./run-registry-ingestion.use-case";
 import type { RegistrySourcePort } from "../interfaces/registry-source.port";
 import type { IngestionRunRepository } from "../interfaces/ingestion.repository.interface";
 import { RegistrySyncService } from "../services/registry-sync.service";
+import type { AuditLogService } from "../../../../infrastructure/audit/audit-log.service";
 
 describe("RunRegistryIngestionUseCase", () => {
   it("returns skipped when lock is not acquired", async () => {
@@ -10,7 +11,7 @@ describe("RunRegistryIngestionUseCase", () => {
       registrySource: { fetchSnapshot: mock(async () => { throw new Error("not called"); }) } as RegistrySourcePort,
       ingestionRunRepository: {} as IngestionRunRepository,
       registrySyncService: {} as RegistrySyncService,
-      auditLogService: { log: mock(async () => {}) },
+      auditLogService: { log: mock(async () => {}) } as unknown as AuditLogService,
       acquireLock: async () => false,
       releaseLock: mock(async () => {}),
     });
@@ -35,7 +36,8 @@ describe("RunRegistryIngestionUseCase", () => {
             externalSourceId: "c1",
             name: "Clinic",
             address: null,
-            territoryId: null,
+            lat: null,
+            lng: null,
             contentHash: "hash",
           },
         ],
@@ -66,7 +68,7 @@ describe("RunRegistryIngestionUseCase", () => {
       fail: mock(async () => {
         throw new Error("not used");
       }),
-      findAll: mock(async () => ({ runs: [], total: 0 })),
+      findRecent: mock(async () => ({ runs: [], total: 0 })),
     };
 
     const registrySyncService = {
@@ -95,7 +97,7 @@ describe("RunRegistryIngestionUseCase", () => {
       registrySource,
       ingestionRunRepository,
       registrySyncService,
-      auditLogService: { log: auditLog },
+      auditLogService: { log: auditLog } as unknown as AuditLogService,
       acquireLock: async () => true,
       releaseLock,
     });

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import { Role } from "../enums/role.enum";
-import { canManageUsers, canViewHealth, hasMinimumRole } from "./ui.permissions";
+import {
+  canManageUsers,
+  canReadTerritories,
+  canManageTerritories,
+  canViewHealth,
+  hasMinimumRole,
+} from "./ui.permissions";
 
 describe("ui.permissions", () => {
   describe("hasMinimumRole", () => {
@@ -30,6 +36,24 @@ describe("ui.permissions", () => {
       expect(canViewHealth(Role.ADMIN)).toBe(true);
       expect(canViewHealth(Role.MANAGER)).toBe(false);
       expect(canViewHealth(Role.USER)).toBe(false);
+    });
+  });
+
+  describe("canReadTerritories", () => {
+    it("should allow ADMIN and MANAGER", () => {
+      expect(canReadTerritories(Role.ADMIN)).toBe(true);
+      expect(canReadTerritories(Role.MANAGER)).toBe(true);
+    });
+
+    it("should deny USER", () => {
+      expect(canReadTerritories(Role.USER)).toBe(false);
+    });
+  });
+
+  describe("canManageTerritories", () => {
+    it("should allow ADMIN only", () => {
+      expect(canManageTerritories(Role.ADMIN)).toBe(true);
+      expect(canManageTerritories(Role.MANAGER)).toBe(false);
     });
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it, mock } from "bun:test";
 import { GetInvitationsUseCase } from "./get-invitations.use-case";
 import { createMockInviteRepository, createMockUserRepository } from "../../test-helpers/repository-mocks";
 import { createGlobalScopeContext, Role } from "@atlasmed/access";
+import { scopedManagerContext } from "../../test-helpers/route-test-context";
 import { InsufficientPermissionsError } from "../../../../shared/errors";
 
 describe("GetInvitationsUseCase", () => {
@@ -76,13 +77,10 @@ describe("GetInvitationsUseCase", () => {
     await useCase.execute({
       actorId: "manager-1",
       actorRole: Role.MANAGER,
-      scope: {
-        isGlobal: false,
+      scope: scopedManagerContext({
         territoryIds: ["t-1"],
-        clinicIds: [],
         managedUserIds: ["u-1"],
-        isOperationallyActive: true,
-      },
+      }),
     });
 
     expect(findAll).toHaveBeenCalledWith({

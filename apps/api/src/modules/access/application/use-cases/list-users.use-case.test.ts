@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import { ListUsersUseCase } from "./list-users.use-case";
 import { createMockUserRepository } from "../../test-helpers/repository-mocks";
-import { createEmptyScopeContext, createGlobalScopeContext } from "@atlasmed/access";
+import { createEmptyScopeContext, createGlobalScopeContext, withTerritoryScopeAliases } from "@atlasmed/access";
 
 describe("ListUsersUseCase", () => {
   const mockUser = {
@@ -119,13 +119,14 @@ describe("ListUsersUseCase", () => {
       findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
     });
 
-    const scope = {
+    const scope = withTerritoryScopeAliases({
       isGlobal: false,
-      territoryIds: ["territory-1"],
+      assignedTerritoryIds: ["territory-1"],
+      effectiveTerritoryIds: ["territory-1"],
       clinicIds: [],
       managedUserIds: ["report-1", "report-2"],
       isOperationallyActive: true,
-    };
+    });
 
     const useCase = new ListUsersUseCase({ userRepository });
     await useCase.execute({ scope });
@@ -148,13 +149,14 @@ describe("ListUsersUseCase", () => {
       findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
     });
 
-    const scope = {
+    const scope = withTerritoryScopeAliases({
       isGlobal: false,
-      territoryIds: ["territory-shared"],
+      assignedTerritoryIds: ["territory-shared"],
+      effectiveTerritoryIds: ["territory-shared"],
       clinicIds: [],
       managedUserIds: ["direct-report-1"],
       isOperationallyActive: true,
-    };
+    });
 
     const useCase = new ListUsersUseCase({ userRepository });
     await useCase.execute({ scope });

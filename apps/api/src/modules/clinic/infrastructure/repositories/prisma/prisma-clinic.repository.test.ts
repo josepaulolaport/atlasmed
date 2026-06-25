@@ -10,7 +10,8 @@ describe("Clinic source upsert manual edit protection", () => {
     const input = {
       name: "Source Name",
       address: "Source Address",
-      territoryId: "t-1",
+      lat: -23.5,
+      lng: -46.6,
       sourceContentHash: "hash-2",
       sourceLastSeenAt: new Date(),
     };
@@ -25,12 +26,14 @@ describe("Clinic source upsert manual edit protection", () => {
     if (!existing.manuallyEditedAt) {
       updateData.name = input.name;
       updateData.address = input.address;
-      updateData.territoryId = input.territoryId;
+      if (input.lat !== undefined) updateData.lat = input.lat;
+      if (input.lng !== undefined) updateData.lng = input.lng;
     }
 
     expect(updateData.name).toBeUndefined();
     expect(updateData.address).toBeUndefined();
-    expect(updateData.territoryId).toBeUndefined();
+    expect(updateData.lat).toBeUndefined();
+    expect(updateData.lng).toBeUndefined();
     expect(updateData.sourceContentHash).toBe("hash-2");
   });
 });

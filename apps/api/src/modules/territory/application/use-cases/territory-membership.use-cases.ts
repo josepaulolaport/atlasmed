@@ -74,13 +74,11 @@ export class TerritoryMembershipUseCases {
       throw new ResourceNotFoundError("Territory", input.territoryId);
     }
 
-    const activeChildCount = await this.deps.territoryRepository.countActiveChildren(
-      input.territoryId
-    );
-    if (activeChildCount > 0) {
+    const type = territory.territoryType;
+    if (!type?.assignsClinics) {
       throw new OperationNotAllowedError(
         "override_clinic_territory",
-        "Clinics can only be assigned to leaf territories"
+        "Clinics can only be assigned to territory types that allow clinic assignment"
       );
     }
 
@@ -104,7 +102,7 @@ export class TerritoryMembershipUseCases {
 
     await this.deps.clinicWriter.updateTerritoryMembership(input.clinicId, {
       territoryId: clinic.territoryId,
-      territoryAssignmentStatus: clinic.territoryAssignmentStatus,
+      territoryAssignmentStatus: clinic.territoryAssignmentStatus ?? "unassigned",
       territoryAssignmentSource: "geo",
     });
 

@@ -107,6 +107,10 @@ const EnvironmentSchema = Type.Object({
   TWILIO_AUTH_TOKEN: OptionalString(),
   TWILIO_PHONE_NUMBER: OptionalString(),
   TWILIO_WHATSAPP_NUMBER: OptionalString(),
+
+  MAPBOX_SECRET_TOKEN: OptionalString(),
+  MAPBOX_PUBLIC_TOKEN: OptionalString(),
+  MAPBOX_USERNAME: Type.Optional(Type.String({ default: "mapbox" })),
   
   // ============================================================================
   // Rate Limiting Configuration
@@ -378,6 +382,9 @@ const processEnv = {
   AUDIT_LOG_RETENTION_DAYS: Number(process.env.AUDIT_LOG_RETENTION_DAYS ?? 90),
   REGISTRY_SOURCE: process.env.REGISTRY_SOURCE ?? 'mock',
   REGISTRY_MOCK_FIXTURE: process.env.REGISTRY_MOCK_FIXTURE ?? 'snapshot-v1.json',
+  MAPBOX_SECRET_TOKEN: process.env.MAPBOX_SECRET_TOKEN,
+  MAPBOX_PUBLIC_TOKEN: process.env.MAPBOX_PUBLIC_TOKEN,
+  MAPBOX_USERNAME: process.env.MAPBOX_USERNAME ?? 'mapbox',
 };
 
 // Validate environment at startup

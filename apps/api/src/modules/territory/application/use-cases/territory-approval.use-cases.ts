@@ -4,6 +4,7 @@ import type { TerritoryApprovalRepository } from "../interfaces/territory-approv
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import { TerritoryCrudUseCases } from "./territory-crud.use-cases";
 import type { ClinicMembershipWriter } from "../services/territory-membership.service";
+import type { IAuditLog } from "../../../access/application/interfaces/audit-log.interface";
 import {
   OperationNotAllowedError,
   ResourceConflictError,
@@ -17,16 +18,7 @@ interface Dependencies {
   clinicWriter: ClinicMembershipWriter;
   invalidateScopeForTerritories?: (territoryIds: string[]) => Promise<void>;
   enqueueMembershipRecompute?: (territoryId?: string) => Promise<void>;
-  auditLog?: {
-    log: (entry: {
-      userId: string;
-      eventType: string;
-      action: string;
-      resource: string;
-      resourceId: string;
-      details?: Record<string, unknown>;
-    }) => Promise<void>;
-  };
+  auditLog?: IAuditLog;
 }
 
 export class TerritoryApprovalUseCases {
@@ -160,10 +152,14 @@ export class TerritoryApprovalUseCases {
       case "create_territory":
         await this.deps.territoryCrud.createTerritory({
           name: String(request.entityPayload.name),
-          nodeType: request.entityPayload.nodeType as never,
+          slug: String(request.entityPayload.slug),
+          territoryTypeId: request.entityPayload.territoryTypeId as string | undefined,
+          typeSlug: request.entityPayload.typeSlug as string | undefined,
+          countryCode: request.entityPayload.countryCode as string | undefined,
           parentId: request.entityPayload.parentId as string | undefined,
-          regionSlug: request.entityPayload.regionSlug as string | undefined,
-          stateCode: request.entityPayload.stateCode as string | undefined,
+          boundary: request.entityPayload.boundary as
+            | { type: "Polygon" | "MultiPolygon"; coordinates: unknown }
+            | undefined,
         });
         break;
       case "reparent_territory":

@@ -8,18 +8,22 @@ describe("sanitize-clinic", () => {
       externalSourceId: "mock-clinic-001",
       name: "  Alpha   Medical  ",
       address: " 100 Main St ",
+      lat: -23.55,
+      lng: -46.63,
     });
 
     expect(result).toEqual({
       externalSourceId: "mock-clinic-001",
       name: "Alpha Medical",
       address: "100 Main St",
-      territoryId: null,
+      lat: -23.55,
+      lng: -46.63,
       contentHash: computeContentHash({
         externalSourceId: "mock-clinic-001",
         name: "Alpha Medical",
         address: "100 Main St",
-        territoryId: null,
+        lat: -23.55,
+        lng: -46.63,
       }),
     });
   });

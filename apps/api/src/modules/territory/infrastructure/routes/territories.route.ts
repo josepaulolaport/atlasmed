@@ -1,13 +1,13 @@
 import { Elysia, t } from "elysia";
 import { Role } from "@atlasmed/access";
-import { auth } from "../../access/composition";
-import { requirePermission } from "../../access/infrastructure/middleware/permission.middleware";
-import { territoryUseCases } from "../composition";
+import { auth } from "../../../access/composition";
+import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
+import { territoryUseCases } from "../../composition";
 import {
   InsufficientPermissionsError,
   ResourceNotFoundError,
-} from "../../../shared/errors";
-import { isAdminRole, isManagerRole } from "../application/use-cases/territory-crud.use-cases";
+} from "../../../../shared/errors";
+import { isAdminRole, isManagerRole } from "../../application/use-cases/territory-crud.use-cases";
 
 export const territoriesRoute = new Elysia()
   .use(auth)
@@ -25,6 +25,68 @@ export const territoriesRoute = new Elysia()
       }),
     }
   )
+  .use(requirePermission("read", "TERRITORY"))
+  .get("/territory-types", async () => {
+    return territoryUseCases.listTerritoryTypes().listTypes();
+  })
+  .use(requirePermission("read", "TERRITORY"))
+  .get("/territory-types/:id", async ({ params }) => {
+    return territoryUseCases.getTerritoryType().getType(params.id);
+  })
+  .use(requirePermission("create", "TERRITORY"))
+  .post(
+    "/territory-types",
+    async ({ body, getUser }) => {
+      const user = await getUser();
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
+      }
+      return territoryUseCases.createTerritoryType().createType(body);
+    },
+    {
+      body: t.Object({
+        slug: t.String(),
+        name: t.String(),
+        description: t.Optional(t.String()),
+        canHaveBoundary: t.Optional(t.Boolean()),
+        assignsClinics: t.Optional(t.Boolean()),
+        assignableToUsers: t.Optional(t.Boolean()),
+        assignableToManagers: t.Optional(t.Boolean()),
+        isCountryLevel: t.Optional(t.Boolean()),
+        blockSiblingOverlap: t.Optional(t.Boolean()),
+        sortOrder: t.Optional(t.Number()),
+      }),
+    }
+  )
+  .use(requirePermission("update", "TERRITORY"))
+  .patch(
+    "/territory-types/:id",
+    async ({ params, body, getUser }) => {
+      const user = await getUser();
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
+      }
+      return territoryUseCases.updateTerritoryType().updateType(params.id, body);
+    },
+    {
+      body: t.Object({
+        name: t.Optional(t.String()),
+        description: t.Optional(t.Union([t.String(), t.Null()])),
+        canHaveBoundary: t.Optional(t.Boolean()),
+        assignsClinics: t.Optional(t.Boolean()),
+        assignableToUsers: t.Optional(t.Boolean()),
+        assignableToManagers: t.Optional(t.Boolean()),
+        isCountryLevel: t.Optional(t.Boolean()),
+        blockSiblingOverlap: t.Optional(t.Boolean()),
+        sortOrder: t.Optional(t.Number()),
+        isActive: t.Optional(t.Boolean()),
+      }),
+    }
+  )
+  .use(requirePermission("read", "TERRITORY"))
+  .get("/territories/ambiguous-parents", async () => {
+    return territoryUseCases.listAmbiguousParentTerritories().listAmbiguousParentTerritories();
+  })
   .use(requirePermission("read", "TERRITORY"))
   .get("/territories/:id", async ({ params, getScope }) => {
     const scope = await getScope();
@@ -65,17 +127,18 @@ export const territoriesRoute = new Elysia()
     {
       body: t.Object({
         name: t.String(),
-        nodeType: t.Union([
-          t.Literal("root"),
-          t.Literal("region"),
-          t.Literal("state"),
-          t.Literal("intermediate"),
-          t.Literal("patch"),
-        ]),
+        slug: t.String(),
+        territoryTypeId: t.Optional(t.String()),
+        typeSlug: t.Optional(t.String()),
         parentId: t.Optional(t.String()),
-        regionSlug: t.Optional(t.String()),
-        stateCode: t.Optional(t.String()),
+        countryCode: t.Optional(t.String()),
         reason: t.Optional(t.String()),
+        boundary: t.Optional(
+          t.Object({
+            type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
+            coordinates: t.Unknown(),
+          })
+        ),
       }),
     }
   )
@@ -297,4 +360,69 @@ export const territoriesRoute = new Elysia()
     {
       body: t.Object({ note: t.Optional(t.String()) }),
     }
-  );
+  )
+  .use(requirePermission("read", "TERRITORY"))
+  .get("/territories/:id/rollup-links", async ({ params }) => {
+    return territoryUseCases.listRollupLinks().listRollupLinks(params.id);
+  })
+  .use(requirePermission("update", "TERRITORY"))
+  .post(
+    "/territories/:id/rollup-links",
+    async ({ params, body, getUser }) => {
+      const user = await getUser();
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
+      }
+      return territoryUseCases.addRollupLink().addRollupLink({
+        territoryId: params.id,
+        ancestorId: body.ancestorId,
+        relationshipType: body.relationshipType,
+      });
+    },
+    {
+      body: t.Object({
+        ancestorId: t.String(),
+        relationshipType: t.Optional(t.Literal("reporting")),
+      }),
+    }
+  )
+  .delete("/territories/:id/rollup-links/:linkId", async ({ params, getUser }) => {
+    const user = await getUser();
+    if (!isAdminRole(user.role.name as Role)) {
+      throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
+    }
+    return territoryUseCases.removeRollupLink().removeRollupLink(params.id, params.linkId);
+  })
+  .use(requirePermission("read", "TERRITORY"))
+  .get("/territories/:id/operational-members", async ({ params, getScope }) => {
+    const scope = await getScope();
+    return territoryUseCases.listOperationalMembers().listOperationalMembers({
+      referenceTerritoryId: params.id,
+      scope,
+    });
+  })
+  .get("/territories/:id/geo-memberships", async ({ params, getScope }) => {
+    const scope = await getScope();
+    return territoryUseCases.listReferenceMemberships().listReferenceMemberships({
+      operationalTerritoryId: params.id,
+      scope,
+    });
+  })
+  .get(
+    "/territories/:operationalId/clipped-boundary/:referenceId",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return territoryUseCases.getClippedBoundary().getClippedBoundary({
+        operationalTerritoryId: params.operationalId,
+        referenceTerritoryId: params.referenceId,
+        scope,
+      });
+    }
+  )
+  .get("/territories/:id/coverage-view", async ({ params, getScope }) => {
+    const scope = await getScope();
+    return territoryUseCases.getReferenceCoverage().getReferenceCoverage({
+      referenceTerritoryId: params.id,
+      scope,
+    });
+  });

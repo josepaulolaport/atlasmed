@@ -37,8 +37,12 @@ export async function seedScopeIntegrationFixtures(
   const root = await prisma.territory.create({
     data: {
       name: `Brazil ${uniqueId}`,
+      slug: `br-${codeSuffix.toLowerCase()}`,
       code: `BR-${codeSuffix}`,
-      nodeType: "root",
+      nodeType: "region",
+      territoryTypeId: "tt_country",
+      countryCode: "BR",
+      regionSlug: "BR",
     },
   });
   await rebuildClosure(root.id);
@@ -46,8 +50,11 @@ export async function seedScopeIntegrationFixtures(
   const region = await prisma.territory.create({
     data: {
       name: `Region ${uniqueId}`,
+      slug: `se-${codeSuffix.toLowerCase()}`,
       code: `BR-${codeSuffix}-SE`,
       nodeType: "region",
+      territoryTypeId: "tt_region",
+      countryCode: "BR",
       regionSlug: "SE",
       parentId: root.id,
     },
@@ -57,8 +64,11 @@ export async function seedScopeIntegrationFixtures(
   const patch = await prisma.territory.create({
     data: {
       name: `Patch ${uniqueId}`,
+      slug: `patch-01-${codeSuffix.toLowerCase()}`,
       code: `BR-${codeSuffix}-SE-01`,
       nodeType: "patch",
+      territoryTypeId: "tt_patch",
+      countryCode: "BR",
       regionSlug: "SE",
       parentId: region.id,
     },
@@ -68,8 +78,11 @@ export async function seedScopeIntegrationFixtures(
   const extraPatch = await prisma.territory.create({
     data: {
       name: `Patch Extra ${uniqueId}`,
+      slug: `patch-02-${codeSuffix.toLowerCase()}`,
       code: `BR-${codeSuffix}-SE-02`,
       nodeType: "patch",
+      territoryTypeId: "tt_patch",
+      countryCode: "BR",
       regionSlug: "SE",
       parentId: region.id,
     },
@@ -79,8 +92,11 @@ export async function seedScopeIntegrationFixtures(
   const otherRegion = await prisma.territory.create({
     data: {
       name: `Region North ${uniqueId}`,
+      slug: `n-${codeSuffix.toLowerCase()}`,
       code: `BR-${codeSuffix}-N`,
       nodeType: "region",
+      territoryTypeId: "tt_region",
+      countryCode: "BR",
       regionSlug: "N",
       parentId: root.id,
     },
@@ -90,8 +106,11 @@ export async function seedScopeIntegrationFixtures(
   const outOfScopePatch = await prisma.territory.create({
     data: {
       name: `Patch North ${uniqueId}`,
+      slug: `patch-n-01-${codeSuffix.toLowerCase()}`,
       code: `BR-${codeSuffix}-N-01`,
       nodeType: "patch",
+      territoryTypeId: "tt_patch",
+      countryCode: "BR",
       regionSlug: "N",
       parentId: otherRegion.id,
     },

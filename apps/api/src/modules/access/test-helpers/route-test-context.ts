@@ -4,6 +4,7 @@ import {
   createEmptyScopeContext,
   createGlobalScopeContext,
   defineAbilitiesFor,
+  withTerritoryScopeAliases,
   type ScopeContext,
   type Action,
   type Subject,
@@ -114,13 +115,39 @@ export const userRouteTestUser: RouteTestUser = {
 };
 
 export function managerScopedContext(territoryIds: string[]): ScopeContext {
-  return {
+  return withTerritoryScopeAliases({
     isGlobal: false,
-    territoryIds,
+    assignedTerritoryIds: territoryIds,
+    effectiveTerritoryIds: territoryIds,
+    analyticsEffectiveTerritoryIds: [],
     clinicIds: [],
+    analyticsClinicIds: [],
     managedUserIds: ["field-user-test"],
     isOperationallyActive: territoryIds.length > 0,
-  };
+  });
+}
+
+export function scopedManagerContext(input: {
+  territoryIds: string[];
+  clinicIds?: string[];
+  analyticsClinicIds?: string[];
+  analyticsTerritoryIds?: string[];
+  managedUserIds?: string[];
+  isOperationallyActive?: boolean;
+  grantIds?: string[];
+}): ScopeContext {
+  return withTerritoryScopeAliases({
+    isGlobal: false,
+    assignedTerritoryIds: input.territoryIds,
+    effectiveTerritoryIds: input.territoryIds,
+    analyticsEffectiveTerritoryIds: input.analyticsTerritoryIds ?? [],
+    clinicIds: input.clinicIds ?? [],
+    analyticsClinicIds: input.analyticsClinicIds ?? [],
+    managedUserIds: input.managedUserIds ?? [],
+    isOperationallyActive:
+      input.isOperationallyActive ?? input.territoryIds.length > 0,
+    grantIds: input.grantIds,
+  });
 }
 
 export function emptyManagerScope(): ScopeContext {

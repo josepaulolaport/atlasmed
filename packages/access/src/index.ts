@@ -19,6 +19,7 @@ export * from "./schemas/user-permission.schema";
 export * from "./schemas/clinic.schema";
 export * from "./schemas/doctor.schema";
 export * from "./schemas/registry.schema";
+export * from "./schemas/territory.schema";
 
 // Re-export Prisma enums as single source of truth
 export {
@@ -61,6 +62,10 @@ export {
   canManageClinics,
   canReadDoctors,
   canManageDoctors,
+  canReadTerritories,
+  canManageTerritories,
+  canCreateTerritories,
+  canUpdateTerritories,
   canViewHealth,
   hasMinimumRole,
   isAdmin,

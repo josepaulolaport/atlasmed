@@ -10,6 +10,7 @@ import {
   createMockInviteRepository,
 } from "../../test-helpers/fixtures";
 import { createGlobalScopeContext, Role } from "@atlasmed/access";
+import { scopedManagerContext } from "../../test-helpers/route-test-context";
 import {
   InviteNotFoundError,
   InsufficientPermissionsError,
@@ -67,14 +68,10 @@ describe("ResendInviteUseCase", () => {
       inviteId: "invite-123",
       actorId: "manager-1",
       actorRole: Role.MANAGER,
-      scope: {
-        isGlobal: false,
+      scope: scopedManagerContext({
         territoryIds: ["t-1"],
-        clinicIds: [],
-        managedUserIds: [],
-        isOperationallyActive: true,
         grantIds: [],
-      },
+      }),
     });
 
     expect(result.token).toBeDefined();
@@ -99,14 +96,10 @@ describe("ResendInviteUseCase", () => {
         inviteId: "invite-123",
         actorId: "manager-2",
         actorRole: Role.MANAGER,
-        scope: {
-          isGlobal: false,
+        scope: scopedManagerContext({
           territoryIds: [],
-          clinicIds: [],
-          managedUserIds: [],
-          isOperationallyActive: true,
           grantIds: [],
-        },
+        }),
       })
     ).rejects.toThrow(InsufficientPermissionsError);
   });

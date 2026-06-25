@@ -36,9 +36,28 @@ export function canManageDoctors(role: Role): boolean {
   return ability.can("create", "DOCTOR") || ability.can("manage", "DOCTOR");
 }
 
-export function canViewHealth(role: Role): boolean {
+export function canReadTerritories(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("read", "TERRITORY") || ability.can("manage", "TERRITORY");
+}
+
+export function canManageTerritories(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
   return ability.can("manage", "TERRITORY");
+}
+
+export function canCreateTerritories(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("create", "TERRITORY") || ability.can("manage", "TERRITORY");
+}
+
+export function canUpdateTerritories(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("update", "TERRITORY") || ability.can("manage", "TERRITORY");
+}
+
+export function canViewHealth(role: Role): boolean {
+  return role === Role.ADMIN;
 }
 
 export function isAdmin(role: Role): boolean {

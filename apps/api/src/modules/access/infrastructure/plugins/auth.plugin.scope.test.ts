@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { UserStatus, AuthSessionDeviceType, AuthSessionType } from "@atlasmed/database";
 import type { Role } from "@atlasmed/access";
+import { withTerritoryScopeAliases } from "@atlasmed/access";
 import { TokenService } from "../../application/services/token.service";
 import { createAuthPlugin } from "./auth.plugin";
 import type { SessionRepository } from "../../application/interfaces/session.repository.interface";
@@ -172,13 +173,18 @@ describe("Auth Plugin Scope", () => {
 
   it("returns isOperationallyActive false for USER without territories", async () => {
     mockScopeService.resolve = mock(() =>
-      Promise.resolve({
-        isGlobal: false,
-        territoryIds: [],
-        clinicIds: [],
-        managedUserIds: [],
-        isOperationallyActive: false,
-      })
+      Promise.resolve(
+        withTerritoryScopeAliases({
+          isGlobal: false,
+          assignedTerritoryIds: [],
+          effectiveTerritoryIds: [],
+          analyticsEffectiveTerritoryIds: [],
+          clinicIds: [],
+          analyticsClinicIds: [],
+          managedUserIds: [],
+          isOperationallyActive: false,
+        })
+      )
     );
 
     const accessToken = await signToken("USER");
@@ -199,13 +205,18 @@ describe("Auth Plugin Scope", () => {
 
   it("returns isOperationallyActive true for USER with territories", async () => {
     mockScopeService.resolve = mock(() =>
-      Promise.resolve({
-        isGlobal: false,
-        territoryIds: ["territory-a"],
-        clinicIds: ["clinic-for-territory-a"],
-        managedUserIds: [],
-        isOperationallyActive: true,
-      })
+      Promise.resolve(
+        withTerritoryScopeAliases({
+          isGlobal: false,
+          assignedTerritoryIds: ["territory-a"],
+          effectiveTerritoryIds: ["territory-a"],
+          analyticsEffectiveTerritoryIds: ["territory-a"],
+          clinicIds: ["clinic-for-territory-a"],
+          analyticsClinicIds: ["clinic-for-territory-a"],
+          managedUserIds: [],
+          isOperationallyActive: true,
+        })
+      )
     );
 
     const accessToken = await signToken("USER");
@@ -235,13 +246,19 @@ describe("Auth Plugin Scope", () => {
     }));
 
     mockScopeService.resolve = mock(() =>
-      Promise.resolve({
-        isGlobal: false,
-        territoryIds: ["territory-a"],
-        clinicIds: [],
-        managedUserIds: ["field-user-1", "field-user-2"],
-        isOperationallyActive: true,
-      })
+      Promise.resolve(
+        withTerritoryScopeAliases({
+          isGlobal: false,
+          assignedTerritoryIds: ["territory-a"],
+          effectiveTerritoryIds: ["territory-a"],
+          analyticsEffectiveTerritoryIds: ["patch-1"],
+          clinicIds: [],
+          analyticsClinicIds: ["clinic-patch-1"],
+          managedUserIds: ["field-user-1", "field-user-2"],
+          reportAssignedTerritoryIds: ["patch-1"],
+          isOperationallyActive: true,
+        })
+      )
     );
 
     const accessToken = await signToken("MANAGER");

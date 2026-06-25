@@ -44,6 +44,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const refreshed = await authApi.refreshToken();
           if (!mounted) return;
           setAccessToken(refreshed.session.token);
+          setUser(refreshed.user);
+          return;
         }
 
         const userData = await authApi.getProfile();
@@ -51,15 +53,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
       } catch (error) {
         if (!mounted) return;
-        setAccessToken(null);
-        setUser(null);
 
-        if (
-          isRefreshTokenReuseError(error) &&
-          typeof window !== "undefined" &&
-          !isPublicAuthPath(pathname)
-        ) {
-          router.replace("/login?reason=refresh_reuse");
+        if (!getAccessToken()) {
+          setAccessToken(null);
+          setUser(null);
+
+          if (
+            isRefreshTokenReuseError(error) &&
+            typeof window !== "undefined" &&
+            !isPublicAuthPath(pathname)
+          ) {
+            router.replace("/login?reason=refresh_reuse");
+          }
         }
       } finally {
         if (mounted) {
@@ -90,6 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setAccessToken(response.session.token);
       setUser(response.user);
+      setBootstrappedPath("/dashboard");
 
       toast({
         title: "Success",
@@ -119,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setAccessToken(response.session.token);
     setUser(response.user);
+    setBootstrappedPath("/dashboard");
 
     toast({
       title: "Success",

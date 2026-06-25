@@ -120,6 +120,33 @@ enum TerritoryNodeType {
   patch
 }
 
+enum TerritoryRollupRelationshipType {
+  reporting
+}
+
+enum TerritoryRollupLinkSource {
+  geo
+  manual
+}
+
+enum TerritoryParentAssignmentStatus {
+  resolved
+  ambiguous
+  manual
+}
+
+enum TerritoryParentAssignmentSource {
+  geo
+  inferred
+  manual
+}
+
+enum TerritoryGeoMembershipStatus {
+  pending
+  ready
+  failed
+}
+
 enum TerritoryAssignmentStatus {
   assigned
   unassigned
@@ -209,20 +236,53 @@ model UserTerritoryAssignment {
   @@map("user_territory_assignments")
 }
 
+model TerritoryType {
+  id                   String      @id @default(cuid())
+  slug                 String      @unique
+  name                 String
+  description          String?
+  canHaveBoundary      Boolean     @default(true)
+  assignsClinics       Boolean     @default(false)
+  assignableToUsers    Boolean     @default(false)
+  assignableToManagers Boolean     @default(false)
+  isCountryLevel       Boolean     @default(false)
+  blockSiblingOverlap  Boolean     @default(false)
+  sortOrder            Int         @default(0)
+  isActive             Boolean     @default(true)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  territories          Territory[]
+
+  @@index([isActive])
+  @@map("territory_types")
+}
+
 model Territory {
-  id             String            @id @default(cuid())
-  name           String
-  code           String            @unique
-  nodeType       TerritoryNodeType
-  regionSlug     String?
-  stateCode      String?
-  parentId       String?
-  parent         Territory?        @relation("TerritoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children       Territory[]       @relation("TerritoryHierarchy")
-  isActive       Boolean           @default(true)
-  organizationId String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  id                       String                         @id @default(cuid())
+  name                     String
+  slug                     String
+  code                     String                         @unique
+  nodeType                 TerritoryNodeType
+  territoryTypeId          String
+  territoryType            TerritoryType                  @relation(fields: [territoryTypeId], references: [id], onDelete: Restrict)
+  countryCode              String?
+  regionSlug               String?
+  stateCode                String?
+  parentId                 String?
+  parent                   Territory?                     @relation("TerritoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children                 Territory[]                    @relation("TerritoryHierarchy")
+  isActive                 Boolean                        @default(true)
+  parentAssignmentStatus   TerritoryParentAssignmentStatus @default(resolved)
+  parentAssignmentSource   TerritoryParentAssignmentSource?
+  organizationId           String?
+  geoMembershipStatus      TerritoryGeoMembershipStatus?
+  boundaryMinLng           Float?
+  boundaryMinLat           Float?
+  boundaryMaxLng           Float?
+  boundaryMaxLat           Float?
+  boundaryAreaSqKm         Float?
+  createdAt                DateTime                       @default(now())
+  updatedAt                DateTime                       @updatedAt
 
   clinics                    Clinic[]
   userAssignments              UserTerritoryAssignment[]
@@ -230,11 +290,19 @@ model Territory {
   closureAsDescendant          TerritoryClosure[]         @relation("ClosureDescendant")
   approvalRequests             TerritoryApprovalRequest[] @relation("ApprovalTargetTerritory")
   clinicApprovalRequests       TerritoryApprovalRequest[] @relation("ApprovalClinicTerritory")
+  rollupLinksAsTerritory       TerritoryRollupLink[]      @relation("RollupTerritory")
+  rollupLinksAsAncestor        TerritoryRollupLink[]      @relation("RollupAncestor")
+  geoMembershipAsOperational   TerritoryGeoMembership[]   @relation("GeoMembershipOperational")
+  geoMembershipAsReference     TerritoryGeoMembership[]   @relation("GeoMembershipReference")
 
   @@unique([parentId, name])
+  @@unique([slug])
   @@index([parentId])
   @@index([isActive])
   @@index([nodeType])
+  @@index([countryCode])
+  @@index([parentAssignmentStatus])
+  @@index([territoryTypeId])
   @@map("territories")
 }
 
@@ -248,6 +316,39 @@ model TerritoryClosure {
   @@id([ancestorId, descendantId])
   @@index([descendantId])
   @@map("territory_closure")
+}
+
+model TerritoryRollupLink {
+  id               String                        @id @default(cuid())
+  territoryId      String
+  ancestorId       String
+  relationshipType TerritoryRollupRelationshipType @default(reporting)
+  source           TerritoryRollupLinkSource     @default(manual)
+  territory        Territory                     @relation("RollupTerritory", fields: [territoryId], references: [id], onDelete: Cascade)
+  ancestor         Territory                     @relation("RollupAncestor", fields: [ancestorId], references: [id], onDelete: Cascade)
+  createdAt        DateTime                      @default(now())
+
+  @@unique([territoryId, ancestorId, relationshipType])
+  @@index([ancestorId])
+  @@index([territoryId, source])
+  @@map("territory_rollup_links")
+}
+
+model TerritoryGeoMembership {
+  id                     String   @id @default(cuid())
+  operationalTerritoryId String
+  referenceTerritoryId   String
+  referenceTypeSlug      String
+  overlapRatio           Float
+  intersectionAreaSqKm   Float
+  computedAt             DateTime @default(now())
+  operationalTerritory   Territory @relation("GeoMembershipOperational", fields: [operationalTerritoryId], references: [id], onDelete: Cascade)
+  referenceTerritory     Territory @relation("GeoMembershipReference", fields: [referenceTerritoryId], references: [id], onDelete: Cascade)
+
+  @@unique([operationalTerritoryId, referenceTerritoryId])
+  @@index([referenceTerritoryId])
+  @@index([operationalTerritoryId])
+  @@map("territory_geo_membership")
 }
 
 model TerritoryApprovalRequest {

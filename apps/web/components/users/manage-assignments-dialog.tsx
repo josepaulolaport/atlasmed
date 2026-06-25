@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usersApi } from "@/lib/api/users";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import {
+  TerritoryPicker,
+  useTerritoryLabels,
+} from "@/components/territory/territory-picker";
 import {
   Dialog,
   DialogContent,
@@ -17,12 +22,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Trash2 } from "lucide-react";
 import type { User, UserAssignments } from "@/types/auth";
+import { getTerritoryAssignmentPickerConfig } from "@/lib/territory/assignment-picker-config";
 
 interface ManageAssignmentsDialogProps {
   user: User | null;
@@ -39,10 +44,18 @@ export function ManageAssignmentsDialog({
   const [managers, setManagers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingManager, setSavingManager] = useState(false);
-  const [territoryInput, setTerritoryInput] = useState("");
+  const [selectedTerritoryId, setSelectedTerritoryId] = useState("");
   const [territoryBusy, setTerritoryBusy] = useState<string | null>(null);
+  const { getLabel } = useTerritoryLabels();
 
   const isTargetUser = user?.role.name === "USER";
+  const isTargetManager = user?.role.name === "MANAGER";
+  const canAssignTerritories = isTargetUser || isTargetManager;
+  const territoryPickerConfig = user
+    ? getTerritoryAssignmentPickerConfig(
+        isTargetManager ? "MANAGER" : "USER"
+      )
+    : null;
 
   const loadData = useCallback(async () => {
     if (!user) return;
@@ -76,7 +89,7 @@ export function ManageAssignmentsDialog({
 
   useEffect(() => {
     if (open && user) {
-      setTerritoryInput("");
+      setSelectedTerritoryId("");
       loadData();
     } else {
       setAssignments(null);
@@ -99,10 +112,9 @@ export function ManageAssignmentsDialog({
         variant: "success",
       });
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to update manager",
+        description: getApiErrorMessage(err, "Failed to update manager"),
         variant: "destructive",
       });
     } finally {
@@ -111,22 +123,12 @@ export function ManageAssignmentsDialog({
   };
 
   const handleAddTerritory = async () => {
-    if (!user) return;
-
-    const territoryId = territoryInput.trim();
-    if (!territoryId) {
-      toast({
-        title: "Invalid territory",
-        description: "Territory ID cannot be empty",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!user || !selectedTerritoryId) return;
 
     setTerritoryBusy("add");
     try {
-      await usersApi.assignTerritory(user.id, territoryId);
-      setTerritoryInput("");
+      await usersApi.assignTerritory(user.id, selectedTerritoryId);
+      setSelectedTerritoryId("");
       await loadData();
       toast({
         title: "Success",
@@ -134,10 +136,9 @@ export function ManageAssignmentsDialog({
         variant: "success",
       });
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to assign territory",
+        description: getApiErrorMessage(err, "Failed to assign territory"),
         variant: "destructive",
       });
     } finally {
@@ -158,10 +159,9 @@ export function ManageAssignmentsDialog({
         variant: "success",
       });
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
       toast({
         title: "Error",
-        description: error.response?.data?.message || "Failed to revoke territory",
+        description: getApiErrorMessage(err, "Failed to revoke territory"),
         variant: "destructive",
       });
     } finally {
@@ -204,38 +204,41 @@ export function ManageAssignmentsDialog({
               </div>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="manager-select">Manager</Label>
-              <Select
-                value={assignments.managerId ?? "none"}
-                onValueChange={handleManagerChange}
-                disabled={savingManager}
-              >
-                <SelectTrigger id="manager-select">
-                  <SelectValue placeholder="Select manager" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {managers.map((manager) => (
-                    <SelectItem key={manager.id} value={manager.id}>
-                      {formatManagerLabel(manager)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {assignments.manager && (
-                <p className="text-xs text-gray-500">
-                  Current: {assignments.manager.username} ({assignments.manager.email})
-                </p>
-              )}
-            </div>
-
             {isTargetUser && (
+              <div className="space-y-2">
+                <Label htmlFor="manager-select">Manager</Label>
+                <Select
+                  value={assignments.managerId ?? "none"}
+                  onValueChange={handleManagerChange}
+                  disabled={savingManager}
+                >
+                  <SelectTrigger id="manager-select">
+                    <SelectValue placeholder="Select manager" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {managers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.id}>
+                        {formatManagerLabel(manager)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {assignments.manager && (
+                  <p className="text-xs text-gray-500">
+                    Current: {assignments.manager.username} ({assignments.manager.email})
+                  </p>
+                )}
+              </div>
+            )}
+
+            {canAssignTerritories && territoryPickerConfig && (
               <div className="space-y-3">
                 <Label>Territories</Label>
+                <p className="text-xs text-gray-500">{territoryPickerConfig.helperText}</p>
                 {assignments.territories.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    No territories assigned. Add a territory ID below.
+                    No territories assigned. Select a territory below.
                   </p>
                 ) : (
                   <ul className="divide-y rounded-md border">
@@ -245,7 +248,9 @@ export function ManageAssignmentsDialog({
                         className="flex items-center justify-between gap-2 px-3 py-2"
                       >
                         <div>
-                          <span className="font-mono text-sm">{t.territoryId}</span>
+                          <span className="text-sm font-medium">
+                            {getLabel(t.territoryId)}
+                          </span>
                           <p className="text-xs text-gray-500">
                             Assigned {new Date(t.assignedAt).toLocaleString()}
                           </p>
@@ -267,30 +272,25 @@ export function ManageAssignmentsDialog({
                     ))}
                   </ul>
                 )}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Territory ID"
-                    value={territoryInput}
-                    onChange={(e) => setTerritoryInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddTerritory();
-                      }
-                    }}
-                    disabled={territoryBusy !== null}
-                  />
-                  <Button
-                    onClick={handleAddTerritory}
-                    disabled={territoryBusy !== null || !territoryInput.trim()}
-                  >
-                    {territoryBusy === "add" ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Add"
-                    )}
-                  </Button>
-                </div>
+                <TerritoryPicker
+                  value={selectedTerritoryId}
+                  onChange={setSelectedTerritoryId}
+                  disabled={territoryBusy !== null}
+                  pickerConfig={territoryPickerConfig}
+                  excludeCountry={territoryPickerConfig.excludeCountry}
+                  placeholder="Select an eligible territory"
+                />
+                <Button
+                  onClick={handleAddTerritory}
+                  disabled={territoryBusy !== null || !selectedTerritoryId}
+                  className="w-full"
+                >
+                  {territoryBusy === "add" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Add territory"
+                  )}
+                </Button>
               </div>
             )}
           </div>

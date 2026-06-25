@@ -1,11 +1,24 @@
 import { Role } from "@atlasmed/access";
-import type { TerritoryNodeType } from "@atlasmed/database";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
+import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
-import { TerritoryCodeGenerator } from "../services/territory-code-generator.service";
+import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
 import { TerritoryHierarchyValidator } from "../services/territory-hierarchy-validator.service";
 import { TerritoryClosureService } from "../services/territory-closure.service";
+import type { TerritoryGeoParentService } from "../services/territory-geo-parent.service";
+import type { TerritoryGeoMembershipService } from "../services/territory-geo-membership.service";
+import { isOperationalTerritoryType } from "../constants/territory-geo-membership.constants";
+import {
+  applyTerritoryBoundary,
+  assertBoundaryProvidedForType,
+} from "../services/territory-boundary.application";
+import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
+import { normalizeCountryCode } from "../constants/territory-geo.constants";
+import {
+  legacyNodeTypeForTypeSlug,
+  normalizeTerritorySlug,
+} from "../constants/territory-slug.constants";
 import {
   OperationNotAllowedError,
   ResourceNotFoundError,
@@ -13,22 +26,46 @@ import {
 
 interface TerritoryCrudDependencies {
   territoryRepository: TerritoryRepository;
+  territoryTypeRepository: TerritoryTypeRepository;
   closureRepository: TerritoryClosureRepository;
   spatialRepository: TerritorySpatialRepository;
-  codeGenerator?: TerritoryCodeGenerator;
+  geoParentService: TerritoryGeoParentService;
+  geoMembershipService: TerritoryGeoMembershipService;
   hierarchyValidator?: TerritoryHierarchyValidator;
   closureService?: TerritoryClosureService;
+  onTerritoryDeactivated?: (territoryId: string) => Promise<void>;
+  onBoundaryChanged?: (territoryId: string) => Promise<void>;
+}
+
+function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>) {
+  return {
+    id: type.id,
+    slug: type.slug,
+    name: type.name,
+    description: type.description ?? undefined,
+    canHaveBoundary: type.canHaveBoundary,
+    assignsClinics: type.assignsClinics,
+    assignableToUsers: type.assignableToUsers,
+    assignableToManagers: type.assignableToManagers,
+    isCountryLevel: type.isCountryLevel,
+    blockSiblingOverlap: type.blockSiblingOverlap,
+    sortOrder: type.sortOrder,
+    isActive: type.isActive,
+  };
 }
 
 function serializeTerritory(territory: {
   id: string;
   name: string;
+  slug: string;
   code: string;
-  nodeType: TerritoryNodeType;
-  regionSlug: string | null;
-  stateCode: string | null;
+  territoryTypeId: string;
+  territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>;
+  countryCode: string | null;
   parentId: string | null;
   isActive: boolean;
+  parentAssignmentStatus: string;
+  parentAssignmentSource: string | null;
   createdAt: Date;
   updatedAt: Date;
   activeChildCount?: number;
@@ -36,32 +73,37 @@ function serializeTerritory(territory: {
   assignedUserCount?: number;
   hasBoundary?: boolean;
 }) {
+  if (!territory.territoryType) {
+    throw new Error(`Territory ${territory.id} is missing territoryType`);
+  }
+
   return {
     id: territory.id,
     name: territory.name,
+    slug: territory.slug,
     code: territory.code,
-    nodeType: territory.nodeType,
-    typeIndicator: territory.nodeType,
-    regionSlug: territory.regionSlug ?? undefined,
-    stateCode: territory.stateCode ?? undefined,
+    territoryTypeId: territory.territoryTypeId,
+    territoryType: serializeTerritoryType(territory.territoryType),
+    countryCode: territory.countryCode ?? undefined,
     parentId: territory.parentId ?? undefined,
     isActive: territory.isActive,
+    parentAssignmentStatus: territory.parentAssignmentStatus,
+    parentAssignmentSource: territory.parentAssignmentSource ?? undefined,
     clinicCount: territory.clinicCount ?? 0,
     assignedUserCount: territory.assignedUserCount ?? 0,
     hasBoundary: territory.hasBoundary ?? false,
     isLeaf: (territory.activeChildCount ?? 0) === 0,
+    isCountryLevel: territory.territoryType.isCountryLevel,
     createdAt: territory.createdAt.toISOString(),
     updatedAt: territory.updatedAt.toISOString(),
   };
 }
 
 export class TerritoryCrudUseCases {
-  private readonly codeGenerator: TerritoryCodeGenerator;
   private readonly hierarchyValidator: TerritoryHierarchyValidator;
   private readonly closureService: TerritoryClosureService;
 
   constructor(private readonly deps: TerritoryCrudDependencies) {
-    this.codeGenerator = deps.codeGenerator ?? new TerritoryCodeGenerator();
     this.hierarchyValidator =
       deps.hierarchyValidator ?? new TerritoryHierarchyValidator();
     this.closureService =
@@ -74,84 +116,119 @@ export class TerritoryCrudUseCases {
 
   async createTerritory(input: {
     name: string;
-    nodeType: TerritoryNodeType;
+    slug: string;
+    territoryTypeId?: string;
+    typeSlug?: string;
+    countryCode?: string;
     parentId?: string;
-    regionSlug?: string;
-    stateCode?: string;
+    boundary?: GeoJsonGeometry;
   }) {
-    const parent = input.parentId
-      ? await this.deps.territoryRepository.findById(input.parentId)
-      : null;
+    const type = input.territoryTypeId
+      ? await this.deps.territoryTypeRepository.findById(input.territoryTypeId)
+      : input.typeSlug
+        ? await this.deps.territoryTypeRepository.findBySlug(input.typeSlug)
+        : null;
 
-    if (input.parentId && !parent) {
-      throw new ResourceNotFoundError("Territory", input.parentId);
+    if (!type || !type.isActive) {
+      throw new ResourceNotFoundError(
+        "TerritoryType",
+        input.territoryTypeId ?? input.typeSlug ?? "unknown"
+      );
     }
 
-    const hasActiveRoot = !!(await this.deps.territoryRepository.findActiveRoot());
+    let parent = null;
+    if (input.parentId) {
+      parent = await this.deps.territoryRepository.findById(input.parentId);
+      if (!parent) {
+        throw new ResourceNotFoundError("Territory", input.parentId);
+      }
+    }
+
+    const countryCode = resolveCountryCode({
+      countryCode: input.countryCode,
+      slug: input.slug,
+      type,
+      parent,
+    });
+
+    const slug = resolveTerritorySlug({
+      slug: input.slug,
+      type,
+      countryCode,
+    });
+
+    const hasActiveCountryForCode = !!(await this.deps.territoryRepository.findActiveCountryByCode(
+      countryCode
+    ));
+
+    const existingSlug = await this.deps.territoryRepository.findBySlug(slug);
+    if (existingSlug) {
+      throw new OperationNotAllowedError(
+        "create_territory",
+        `Territory identifier '${slug}' is already in use`
+      );
+    }
 
     this.hierarchyValidator.validateCreate({
-      nodeType: input.nodeType,
+      type,
+      slug,
+      countryCode,
       parent,
-      regionSlug: input.regionSlug ?? null,
-      stateCode: input.stateCode ?? null,
-      hasActiveRoot,
+      parentId: input.parentId ?? null,
+      hasActiveCountryForCode,
     });
 
-    if (parent && parent.nodeType === "patch") {
-      const clinicCount = await this.deps.territoryRepository.countClinics(parent.id);
-      if (clinicCount > 0) {
-        throw new OperationNotAllowedError(
-          "create_territory",
-          "Parent patch has assigned clinics; migrate clinics before adding children"
-        );
-      }
-      if (await this.deps.spatialRepository.hasBoundary(parent.id)) {
-        await this.deps.spatialRepository.deleteBoundary(parent.id);
-      }
+    const boundary = assertBoundaryProvidedForType(type.canHaveBoundary, input.boundary);
+
+    let resolvedParentId = type.isCountryLevel ? null : (input.parentId ?? null);
+    if (!type.isCountryLevel && !resolvedParentId && isOperationalTerritoryType(type)) {
+      const country = await this.deps.territoryRepository.findActiveCountryByCode(countryCode);
+      resolvedParentId = country?.id ?? null;
     }
-
-    let patchSequence: number | undefined;
-    if (input.nodeType === "patch" && input.parentId) {
-      patchSequence =
-        (await this.deps.territoryRepository.countPatchesUnderParent(input.parentId)) + 1;
-    }
-
-    const inheritedRegionSlug =
-      input.regionSlug ??
-      parent?.regionSlug ??
-      (input.nodeType === "region" ? input.regionSlug : null);
-    const inheritedStateCode =
-      input.stateCode ??
-      parent?.stateCode ??
-      (input.nodeType === "state" ? input.stateCode : null);
-
-    const code = this.codeGenerator.generateCode({
-      nodeType: input.nodeType,
-      parentCode: parent?.code ?? null,
-      regionSlug: inheritedRegionSlug,
-      stateCode: inheritedStateCode,
-      name: input.name,
-      patchSequence,
-    });
 
     const territory = await this.deps.territoryRepository.create({
-      name: input.name,
-      code,
-      nodeType: input.nodeType,
-      parentId: input.parentId ?? null,
-      regionSlug:
-        input.nodeType === "region"
-          ? input.regionSlug ?? null
-          : inheritedRegionSlug ?? null,
-      stateCode:
-        input.nodeType === "state"
-          ? input.stateCode ?? null
-          : inheritedStateCode ?? null,
+      name: input.name.trim(),
+      slug,
+      code: slug.toUpperCase(),
+      nodeType: legacyNodeTypeForTypeSlug(type.slug),
+      territoryTypeId: type.id,
+      countryCode,
+      parentId: resolvedParentId,
+      parentAssignmentSource: resolvedParentId ? "manual" : null,
+      parentAssignmentStatus: resolvedParentId ? "resolved" : "ambiguous",
     });
 
     await this.closureService.rebuildSubtree(territory.id);
 
-    return serializeTerritory(await this.enrichTerritory(territory.id));
+    let boundaryResolution:
+      | Awaited<ReturnType<typeof applyTerritoryBoundary>>
+      | undefined;
+
+    if (type.canHaveBoundary) {
+      boundaryResolution = await applyTerritoryBoundary(
+        {
+          territoryRepository: this.deps.territoryRepository,
+          territoryTypeRepository: this.deps.territoryTypeRepository,
+          spatialRepository: this.deps.spatialRepository,
+          geoParentService: this.deps.geoParentService,
+          geoMembershipService: this.deps.geoMembershipService,
+          onBoundaryChanged: this.deps.onBoundaryChanged,
+        },
+        { ...territory, territoryType: type },
+        boundary
+      );
+    }
+
+    const serialized = serializeTerritory(await this.enrichTerritory(territory.id));
+
+    if (!boundaryResolution) {
+      return serialized;
+    }
+
+    return {
+      ...serialized,
+      boundaryResolution: serializeBoundaryResolution(boundaryResolution),
+    };
   }
 
   async getTerritory(id: string) {
@@ -190,16 +267,23 @@ export class TerritoryCrudUseCases {
       throw new ResourceNotFoundError("Territory", id);
     }
 
+    const territoryType =
+      territory.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    if (!territoryType) {
+      throw new ResourceNotFoundError("TerritoryType", territory.territoryTypeId);
+    }
+
     if (input.isActive === false) {
       await this.validateDeactivate(id);
     }
 
     if (input.parentId !== undefined && input.parentId !== territory.parentId) {
       if (!input.parentId) {
-        if (territory.nodeType !== "root") {
+        if (!territoryType.isCountryLevel) {
           throw new OperationNotAllowedError(
             "reparent_territory",
-            "Only root territory can have no parent"
+            "Only country-level territories can have no parent"
           );
         }
       } else {
@@ -213,6 +297,7 @@ export class TerritoryCrudUseCases {
         );
         this.hierarchyValidator.validateReparent({
           territory,
+          territoryType,
           newParent,
           descendantIds,
         });
@@ -223,10 +308,20 @@ export class TerritoryCrudUseCases {
       name: input.name,
       parentId: input.parentId,
       isActive: input.isActive,
+      ...(input.parentId !== undefined && input.parentId !== territory.parentId
+        ? {
+            parentAssignmentStatus: input.parentId ? "manual" : territory.parentAssignmentStatus,
+            parentAssignmentSource: input.parentId ? "manual" : territory.parentAssignmentSource,
+          }
+        : {}),
     });
 
     if (input.parentId !== undefined && input.parentId !== territory.parentId) {
       await this.closureService.rebuildSubtree(id);
+    }
+
+    if (input.isActive === false && territory.isActive) {
+      await this.deps.onTerritoryDeactivated?.(id);
     }
 
     return serializeTerritory(await this.enrichTerritory(updated.id));
@@ -251,6 +346,14 @@ export class TerritoryCrudUseCases {
       territoryId: id,
       descendantIds: descendantIds.filter((descendantId) => descendantId !== id),
     };
+  }
+
+  async listAmbiguousParentTerritories() {
+    const territories = await this.deps.territoryRepository.findAmbiguousParentAssignments();
+    const enriched = await Promise.all(
+      territories.map(async (t) => serializeTerritory(await this.enrichTerritory(t.id)))
+    );
+    return { data: enriched };
   }
 
   private async validateDeactivate(id: string): Promise<void> {
@@ -285,6 +388,13 @@ export class TerritoryCrudUseCases {
       throw new ResourceNotFoundError("Territory", id);
     }
 
+    const territoryType =
+      territory.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    if (!territoryType) {
+      throw new ResourceNotFoundError("TerritoryType", territory.territoryTypeId);
+    }
+
     const [activeChildCount, clinicCount, assignedUserCount, hasBoundary] =
       await Promise.all([
         this.deps.territoryRepository.countActiveChildren(id),
@@ -295,6 +405,7 @@ export class TerritoryCrudUseCases {
 
     return {
       ...territory,
+      territoryType,
       activeChildCount,
       clinicCount,
       assignedUserCount,
@@ -342,4 +453,37 @@ export function isAdminRole(role: Role): boolean {
 
 export function isManagerRole(role: Role): boolean {
   return role === Role.MANAGER;
+}
+
+function resolveCountryCode(input: {
+  countryCode?: string;
+  slug: string;
+  type: { isCountryLevel: boolean };
+  parent: { countryCode: string | null } | null;
+}): string {
+  if (input.countryCode?.trim()) {
+    return normalizeCountryCode(input.countryCode);
+  }
+
+  if (input.parent?.countryCode) {
+    return normalizeCountryCode(input.parent.countryCode);
+  }
+
+  if (input.type.isCountryLevel && input.slug.trim()) {
+    return normalizeCountryCode(input.slug);
+  }
+
+  return normalizeCountryCode(undefined);
+}
+
+function resolveTerritorySlug(input: {
+  slug: string;
+  type: { isCountryLevel: boolean };
+  countryCode: string;
+}): string {
+  if (input.type.isCountryLevel) {
+    return normalizeTerritorySlug(input.countryCode);
+  }
+
+  return normalizeTerritorySlug(input.slug);
 }

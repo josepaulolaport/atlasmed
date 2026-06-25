@@ -25,12 +25,26 @@ export class PrismaClinicMembershipWriter implements ClinicMembershipWriter {
 
   async findClinicsForMembership(params?: {
     clinicIds?: string[];
+    territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]> {
     const clinics = await prisma.clinic.findMany({
       where: {
         deletedAt: null,
         ...(params?.clinicIds ? { id: { in: params.clinicIds } } : {}),
+        ...(params?.territoryIds ? { territoryId: { in: params.territoryIds } } : {}),
+        ...(params?.boundingBox
+          ? {
+              lat: {
+                gte: params.boundingBox.minLat,
+                lte: params.boundingBox.maxLat,
+              },
+              lng: {
+                gte: params.boundingBox.minLng,
+                lte: params.boundingBox.maxLng,
+              },
+            }
+          : {}),
       },
       select: {
         id: true,
