@@ -18,7 +18,7 @@ import type {
   SaveBoundaryResponse,
   TerritoryRollupLink,
   TerritoryTreeNode,
-  UnassignedClinic,
+  UnassignedFacility,
   UpdateTerritoryRequest,
 } from "@/types/territory";
 
@@ -132,31 +132,31 @@ export const territoriesApi = {
     return response.data;
   },
 
-  listUnassignedClinics: async (params?: {
+  listUnassignedFacilities: async (params?: {
     page?: number;
     limit?: number;
-  }): Promise<PaginatedResponse<UnassignedClinic>> => {
-    const response = await apiClient.get<PaginatedResponse<UnassignedClinic>>(
-      "/territory/territories/unassigned-clinics",
+  }): Promise<PaginatedResponse<UnassignedFacility>> => {
+    const response = await apiClient.get<PaginatedResponse<UnassignedFacility>>(
+      "/territory/territories/unassigned-facilities",
       { params }
     );
     return response.data;
   },
 
   overrideClinicTerritory: async (
-    clinicId: string,
+    facilityId: string,
     data: ClinicTerritoryOverrideRequest
   ): Promise<{ success: boolean }> => {
     const response = await apiClient.patch<{ success: boolean }>(
-      `/territory/clinics/${clinicId}/territory`,
+      `/territory/facilities/${facilityId}/territory`,
       data
     );
     return response.data;
   },
 
-  unlockClinicGeo: async (clinicId: string): Promise<{ success: boolean }> => {
+  unlockClinicGeo: async (facilityId: string): Promise<{ success: boolean }> => {
     const response = await apiClient.post<{ success: boolean }>(
-      `/territory/clinics/${clinicId}/territory/unlock-geo`
+      `/territory/facilities/${facilityId}/territory/unlock-geo`
     );
     return response.data;
   },

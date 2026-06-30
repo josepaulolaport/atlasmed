@@ -12,6 +12,8 @@ export interface ScopeIntegrationFixtures {
   territoryId: string;
   extraTerritoryId: string;
   outOfScopeTerritoryId: string;
+  inScopeFacilityId: string;
+  outOfScopeFacilityId: string;
   admin: { id: string; email: string; token?: string };
   manager: { id: string; email: string };
   otherManager: { id: string; email: string };
@@ -34,18 +36,28 @@ export async function seedScopeIntegrationFixtures(
   const passwordHash = await hash(TEST_PASSWORD);
   const codeSuffix = uniqueId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase();
 
-  const root = await prisma.territory.create({
-    data: {
-      name: `Brazil ${uniqueId}`,
-      slug: `br-${codeSuffix.toLowerCase()}`,
-      code: `BR-${codeSuffix}`,
-      nodeType: "region",
+  let root = await prisma.territory.findFirst({
+    where: {
       territoryTypeId: "tt_country",
       countryCode: "BR",
-      regionSlug: "BR",
+      isActive: true,
     },
   });
-  await rebuildClosure(root.id);
+
+  if (!root) {
+    root = await prisma.territory.create({
+      data: {
+        name: `Brazil ${uniqueId}`,
+        slug: `br-${codeSuffix.toLowerCase()}`,
+        code: `BR-${codeSuffix}`,
+        nodeType: "region",
+        territoryTypeId: "tt_country",
+        countryCode: "BR",
+        regionSlug: "BR",
+      },
+    });
+    await rebuildClosure(root.id);
+  }
 
   const region = await prisma.territory.create({
     data: {
@@ -216,11 +228,27 @@ export async function seedScopeIntegrationFixtures(
     },
   });
 
+  const inScopeFacility = await prisma.facility.create({
+    data: {
+      displayName: `Scope Facility In ${uniqueId}`,
+      territoryId,
+    },
+  });
+
+  const outOfScopeFacility = await prisma.facility.create({
+    data: {
+      displayName: `Scope Facility Out ${uniqueId}`,
+      territoryId: outOfScopeTerritoryId,
+    },
+  });
+
   return {
     uniqueId,
     territoryId,
     extraTerritoryId,
     outOfScopeTerritoryId,
+    inScopeFacilityId: inScopeFacility.id,
+    outOfScopeFacilityId: outOfScopeFacility.id,
     admin: { id: admin.id, email: admin.email! },
     manager: { id: manager.id, email: manager.email! },
     otherManager: { id: otherManager.id, email: otherManager.email! },
@@ -231,13 +259,23 @@ export async function seedScopeIntegrationFixtures(
 }
 
 export async function cleanupScopeIntegrationFixtures(uniqueId: string) {
+  const codeSuffix = uniqueId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase();
   const territories = await prisma.territory.findMany({
-    where: { code: { contains: uniqueId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase() } },
+    where: {
+      code: { contains: codeSuffix },
+      territoryTypeId: { not: "tt_country" },
+    },
     select: { id: true },
   });
   const territoryIds = territories.map((t) => t.id);
 
   if (territoryIds.length > 0) {
+    await prisma.facility.deleteMany({
+      where: {
+        displayName: { contains: uniqueId },
+      },
+    });
+
     await prisma.userTerritoryAssignment.deleteMany({
       where: { territoryId: { in: territoryIds } },
     });

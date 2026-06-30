@@ -6,7 +6,7 @@ export interface ScopeContext {
   assignedTerritoryIds: string[];
   /**
    * Oversight territories (expanded): manager's own assignments, or all assignments for USER.
-   * Used for clinic/doctor list visibility and territory read scope.
+   * Used for facility/professional list visibility and territory read scope.
    */
   effectiveTerritoryIds: string[];
   /**
@@ -16,9 +16,13 @@ export interface ScopeContext {
   analyticsEffectiveTerritoryIds: string[];
   /** @deprecated Use effectiveTerritoryIds */
   territoryIds: string[];
-  /** Clinics visible for operational list/detail (oversight). */
+  /** Facilities visible for operational list/detail (oversight). */
+  facilityIds: string[];
+  /** Facilities included in manager analytics roll-ups (rep-controlled territories). */
+  analyticsFacilityIds: string[];
+  /** @deprecated Use facilityIds */
   clinicIds: string[];
-  /** Clinics included in manager analytics roll-ups (rep-controlled territories). */
+  /** @deprecated Use analyticsFacilityIds */
   analyticsClinicIds: string[];
   managedUserIds: string[];
   /** Manager only: unexpanded territory IDs assigned to direct reports. */
@@ -35,22 +39,32 @@ export interface ScopeActor {
 export function withTerritoryScopeAliases(
   scope: Omit<
     ScopeContext,
-    "territoryIds" | "analyticsEffectiveTerritoryIds" | "analyticsClinicIds"
+    | "territoryIds"
+    | "analyticsEffectiveTerritoryIds"
+    | "analyticsFacilityIds"
+    | "clinicIds"
+    | "analyticsClinicIds"
   > & {
     territoryIds?: string[];
     analyticsEffectiveTerritoryIds?: string[];
+    analyticsFacilityIds?: string[];
+    clinicIds?: string[];
     analyticsClinicIds?: string[];
   }
 ): ScopeContext {
   const effectiveTerritoryIds = scope.effectiveTerritoryIds;
-  const clinicIds = scope.clinicIds;
+  const facilityIds = scope.facilityIds ?? scope.clinicIds ?? [];
+  const analyticsFacilityIds =
+    scope.analyticsFacilityIds ?? scope.analyticsClinicIds ?? facilityIds;
   return {
     ...scope,
     effectiveTerritoryIds,
     analyticsEffectiveTerritoryIds:
       scope.analyticsEffectiveTerritoryIds ?? effectiveTerritoryIds,
     territoryIds: scope.territoryIds ?? effectiveTerritoryIds,
-    clinicIds,
-    analyticsClinicIds: scope.analyticsClinicIds ?? clinicIds,
+    facilityIds,
+    analyticsFacilityIds,
+    clinicIds: facilityIds,
+    analyticsClinicIds: analyticsFacilityIds,
   };
 }

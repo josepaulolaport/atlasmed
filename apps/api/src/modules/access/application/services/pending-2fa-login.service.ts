@@ -49,6 +49,22 @@ export class Pending2FALoginService {
     return JSON.parse(raw) as Pending2FALoginData;
   }
 
+  /**
+   * Single-flight lock after successful TOTP verification.
+   * Prevents concurrent verify requests from creating multiple sessions.
+   */
+  async acquireVerificationLock(pendingToken: string): Promise<boolean> {
+    const result = await this.deps.redis.set(
+      `${environment.REDIS_KEY_PREFIX}pending_2fa_lock:${pendingToken}`,
+      "1",
+      "EX",
+      PENDING_LOGIN_TTL_SECONDS,
+      "NX"
+    );
+
+    return result === "OK";
+  }
+
   /** Atomically read and delete pending login (single-use on successful 2FA). */
   async consume(pendingToken: string): Promise<Pending2FALoginData> {
     const key = this.pendingKey(pendingToken);

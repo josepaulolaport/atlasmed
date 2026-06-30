@@ -1,8 +1,8 @@
-# Feature: Clinic, Doctor, and Registry Ingestion
+# Feature: Facility, Professional, and Registry Ingestion
 
 ## Current State
 
-Atlasmed has early clinic and doctor domain support, including clinic records, doctor records, doctor-clinic associations, and external registry ingestion workflows.
+Atlasmed has early clinic and doctor domain support, including clinic records, doctor records, facility-professional associations, and external registry ingestion workflows.
 
 ## Current Data Concepts
 
@@ -16,8 +16,8 @@ Atlasmed has early clinic and doctor domain support, including clinic records, d
 
 Current suggestion types include:
 
-- Clinic removal.
-- Clinic reactivation.
+- Facility removal.
+- Facility reactivation.
 - Doctor-clinic association removal.
 
 ## Target Direction

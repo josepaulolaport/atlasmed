@@ -1,28 +1,30 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createGlobalScopeContext } from "@atlasmed/access";
+import type { ScopeContext } from "@atlasmed/access";
 import {
   ApproveSuggestionUseCase,
+  ListSuggestionsUseCase,
   RejectSuggestionUseCase,
 } from "./suggestion.use-cases";
-import type { ClinicRepository } from "../../../clinic/application/interfaces/clinic.repository.interface";
-import type { DoctorClinicAssociationRepository } from "../../../clinic/application/interfaces/doctor-clinic-association.repository.interface";
+import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
+import type { FacilityProfessionalRepository } from "../../../facility/application/interfaces/facility-professional.repository.interface";
 import type { IngestionSuggestionRepository } from "../interfaces/ingestion.repository.interface";
 
 describe("Suggestion use cases", () => {
   let suggestionRepository: IngestionSuggestionRepository;
-  let clinicRepository: ClinicRepository;
-  let associationRepository: DoctorClinicAssociationRepository;
+  let facilityRepository: FacilityRepository;
+  let facilityProfessionalRepository: FacilityProfessionalRepository;
 
   beforeEach(() => {
     suggestionRepository = {
       findById: mock(async () => ({
         id: "sug-1",
         ingestionRunId: "run-1",
-        type: "CLINIC_REMOVAL" as const,
+        type: "FACILITY_REGISTRY_DEACTIVATED" as const,
         status: "PENDING" as const,
-        clinicId: "clinic-1",
-        doctorId: null,
-        associationId: null,
+        facilityId: "clinic-1",
+        professionalId: null,
+        facilityProfessionalId: null,
         reason: "missing_from_source",
         payload: {},
         suggestedAt: new Date(),
@@ -33,11 +35,11 @@ describe("Suggestion use cases", () => {
       resolve: mock(async (params) => ({
         id: params.id,
         ingestionRunId: "run-1",
-        type: "CLINIC_REMOVAL" as const,
+        type: "FACILITY_REGISTRY_DEACTIVATED" as const,
         status: params.status,
-        clinicId: "clinic-1",
-        doctorId: null,
-        associationId: null,
+        facilityId: "clinic-1",
+        professionalId: null,
+        facilityProfessionalId: null,
         reason: "missing_from_source",
         payload: {},
         suggestedAt: new Date(),
@@ -53,18 +55,18 @@ describe("Suggestion use cases", () => {
       findAll: mock(async () => ({ suggestions: [], total: 0 })),
     };
 
-    clinicRepository = {
+    facilityRepository = {
       softDelete: mock(async () => {}),
       reactivate: mock(async () => {
         throw new Error("not used");
       }),
-    } as unknown as ClinicRepository;
+    } as unknown as FacilityRepository;
 
-    associationRepository = {
+    facilityProfessionalRepository = {
       endAssociationById: mock(async () => ({
         id: "assoc-1",
-        doctorId: "doc-1",
-        clinicId: "clinic-1",
+        professionalId: "doc-1",
+        facilityId: "clinic-1",
         sourceActive: false,
         sourceFirstSeenAt: null,
         sourceLastSeenAt: null,
@@ -78,8 +80,8 @@ describe("Suggestion use cases", () => {
       })),
       restoreSourceActive: mock(async () => ({
         id: "assoc-1",
-        doctorId: "doc-1",
-        clinicId: "clinic-1",
+        professionalId: "doc-1",
+        facilityId: "clinic-1",
         sourceActive: true,
         sourceFirstSeenAt: null,
         sourceLastSeenAt: null,
@@ -91,14 +93,14 @@ describe("Suggestion use cases", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       })),
-    } as unknown as DoctorClinicAssociationRepository;
+    } as unknown as FacilityProfessionalRepository;
   });
 
   it("approve clinic removal soft deletes clinic", async () => {
     const useCase = new ApproveSuggestionUseCase({
       suggestionRepository,
-      clinicRepository,
-      associationRepository,
+      facilityRepository,
+      facilityProfessionalRepository,
     });
 
     const result = await useCase.execute({
@@ -108,18 +110,18 @@ describe("Suggestion use cases", () => {
     });
 
     expect(result?.status).toBe("APPROVED");
-    expect(clinicRepository.softDelete).toHaveBeenCalledWith("clinic-1");
+    expect(facilityRepository.softDelete).toHaveBeenCalledWith("clinic-1");
   });
 
-  it("reject doctor-clinic removal restores source link", async () => {
+  it("reject facility-professional removal restores source link", async () => {
     suggestionRepository.findById = mock(async () => ({
       id: "sug-2",
       ingestionRunId: "run-1",
-      type: "DOCTOR_CLINIC_REMOVAL" as const,
+      type: "FACILITY_PROFESSIONAL_REMOVAL" as const,
       status: "PENDING" as const,
-      clinicId: "clinic-1",
-      doctorId: "doc-1",
-      associationId: "assoc-1",
+      facilityId: "clinic-1",
+      professionalId: "doc-1",
+      facilityProfessionalId: "assoc-1",
       reason: "missing_from_source",
       payload: {},
       suggestedAt: new Date(),
@@ -131,11 +133,11 @@ describe("Suggestion use cases", () => {
     suggestionRepository.resolve = mock(async (params) => ({
       id: "sug-2",
       ingestionRunId: "run-1",
-      type: "DOCTOR_CLINIC_REMOVAL" as const,
+      type: "FACILITY_PROFESSIONAL_REMOVAL" as const,
       status: params.status,
-      clinicId: "clinic-1",
-      doctorId: "doc-1",
-      associationId: "assoc-1",
+      facilityId: "clinic-1",
+      professionalId: "doc-1",
+      facilityProfessionalId: "assoc-1",
       reason: "missing_from_source",
       payload: {},
       suggestedAt: new Date(),
@@ -146,8 +148,8 @@ describe("Suggestion use cases", () => {
 
     const useCase = new RejectSuggestionUseCase({
       suggestionRepository,
-      clinicRepository,
-      associationRepository,
+      facilityRepository,
+      facilityProfessionalRepository,
     });
 
     const result = await useCase.execute({
@@ -157,18 +159,18 @@ describe("Suggestion use cases", () => {
     });
 
     expect(result?.status).toBe("REJECTED");
-    expect(associationRepository.restoreSourceActive).toHaveBeenCalledWith("assoc-1");
+    expect(facilityProfessionalRepository.restoreSourceActive).toHaveBeenCalledWith("assoc-1");
   });
 
-  it("approve doctor-clinic removal ends association by id", async () => {
+  it("approve facility-professional removal ends association by id", async () => {
     suggestionRepository.findById = mock(async () => ({
       id: "sug-3",
       ingestionRunId: "run-1",
-      type: "DOCTOR_CLINIC_REMOVAL" as const,
+      type: "FACILITY_PROFESSIONAL_REMOVAL" as const,
       status: "PENDING" as const,
-      clinicId: "clinic-1",
-      doctorId: "doc-1",
-      associationId: "assoc-1",
+      facilityId: "clinic-1",
+      professionalId: "doc-1",
+      facilityProfessionalId: "assoc-1",
       reason: "missing_from_source",
       payload: {},
       suggestedAt: new Date(),
@@ -180,11 +182,11 @@ describe("Suggestion use cases", () => {
     suggestionRepository.resolve = mock(async (params) => ({
       id: "sug-3",
       ingestionRunId: "run-1",
-      type: "DOCTOR_CLINIC_REMOVAL" as const,
+      type: "FACILITY_PROFESSIONAL_REMOVAL" as const,
       status: params.status,
-      clinicId: "clinic-1",
-      doctorId: "doc-1",
-      associationId: "assoc-1",
+      facilityId: "clinic-1",
+      professionalId: "doc-1",
+      facilityProfessionalId: "assoc-1",
       reason: "missing_from_source",
       payload: {},
       suggestedAt: new Date(),
@@ -195,8 +197,8 @@ describe("Suggestion use cases", () => {
 
     const useCase = new ApproveSuggestionUseCase({
       suggestionRepository,
-      clinicRepository,
-      associationRepository,
+      facilityRepository,
+      facilityProfessionalRepository,
     });
 
     const result = await useCase.execute({
@@ -206,8 +208,8 @@ describe("Suggestion use cases", () => {
     });
 
     expect(result?.status).toBe("APPROVED");
-    expect(associationRepository.endAssociationById).toHaveBeenCalledWith({
-      associationId: "assoc-1",
+    expect(facilityProfessionalRepository.endAssociationById).toHaveBeenCalledWith({
+      facilityProfessionalId: "assoc-1",
       endedByUserId: "admin-1",
       endReason: "suggestion_approved",
     });
@@ -217,11 +219,11 @@ describe("Suggestion use cases", () => {
     suggestionRepository.findById = mock(async () => ({
       id: "sug-4",
       ingestionRunId: "run-1",
-      type: "CLINIC_REACTIVATION" as const,
+      type: "FACILITY_REGISTRY_REACTIVATED" as const,
       status: "PENDING" as const,
-      clinicId: "clinic-1",
-      doctorId: null,
-      associationId: null,
+      facilityId: "clinic-1",
+      professionalId: null,
+      facilityProfessionalId: null,
       reason: "reappeared_in_source",
       payload: {},
       suggestedAt: new Date(),
@@ -233,11 +235,11 @@ describe("Suggestion use cases", () => {
     suggestionRepository.resolve = mock(async (params) => ({
       id: "sug-4",
       ingestionRunId: "run-1",
-      type: "CLINIC_REACTIVATION" as const,
+      type: "FACILITY_REGISTRY_REACTIVATED" as const,
       status: params.status,
-      clinicId: "clinic-1",
-      doctorId: null,
-      associationId: null,
+      facilityId: "clinic-1",
+      professionalId: null,
+      facilityProfessionalId: null,
       reason: "reappeared_in_source",
       payload: {},
       suggestedAt: new Date(),
@@ -246,7 +248,7 @@ describe("Suggestion use cases", () => {
       resolutionNote: null,
     }));
 
-    clinicRepository.reactivate = mock(async () => ({
+    facilityRepository.reactivate = mock(async () => ({
       id: "clinic-1",
       name: "Clinic",
       address: null,
@@ -270,8 +272,8 @@ describe("Suggestion use cases", () => {
 
     const useCase = new ApproveSuggestionUseCase({
       suggestionRepository,
-      clinicRepository,
-      associationRepository,
+      facilityRepository,
+      facilityProfessionalRepository,
     });
 
     const result = await useCase.execute({
@@ -281,6 +283,32 @@ describe("Suggestion use cases", () => {
     });
 
     expect(result?.status).toBe("APPROVED");
-    expect(clinicRepository.reactivate).toHaveBeenCalledWith("clinic-1");
+    expect(facilityRepository.reactivate).toHaveBeenCalledWith("clinic-1");
+  });
+
+  it("list suggestions uses deny-by-default facility scope when manager has no facilities", async () => {
+    const scopedManager: ScopeContext = {
+      isGlobal: false,
+      roleName: "MANAGER",
+      effectiveTerritoryIds: ["territory-1"],
+      facilityIds: [],
+      managedUserIds: ["user-1"],
+    };
+
+    const useCase = new ListSuggestionsUseCase({
+      suggestionRepository,
+    });
+
+    await useCase.execute({
+      scope: scopedManager,
+      page: 1,
+      limit: 20,
+    });
+
+    expect(suggestionRepository.findAll).toHaveBeenCalledWith(
+      expect.objectContaining({
+        facilityIds: ["__none__"],
+      })
+    );
   });
 });

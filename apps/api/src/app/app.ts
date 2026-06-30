@@ -4,8 +4,9 @@ import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { healthRoute } from "../infrastructure/health/health.route";
 import { access } from "../modules/access";
-import { clinic } from "../modules/clinic";
-import { doctor } from "../modules/doctor";
+import { facility } from "../modules/facility";
+import { catalog } from "../modules/catalog";
+import { professional } from "../modules/professional";
 import { registryIngestion } from "../modules/registry-ingestion";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
@@ -111,7 +112,7 @@ const app = new Elysia()
 
   // Versioned API routes
   .group('/api/v1', (app) =>
-    app.use(access).use(clinic).use(doctor).use(registryIngestion).use(territory).use(maps)
+    app.use(access).use(facility).use(catalog).use(professional).use(registryIngestion).use(territory).use(maps)
   );
 
 export default app;

@@ -331,7 +331,7 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
         c."territoryId" AS territory_id,
         op.code AS operational_territory_code,
         op.name AS operational_territory_name
-      FROM clinics c
+      FROM facilities c
       INNER JOIN territories op ON op.id = c."territoryId"
       INNER JOIN territory_geo_membership m
         ON m."operationalTerritoryId" = op.id

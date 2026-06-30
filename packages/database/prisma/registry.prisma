@@ -1,0 +1,371 @@
+// Auto-generated registry schema models
+
+model RegistryAgreementType {
+  agreementCode String @id @map("agreement_code")
+  agreementName String @map("agreement_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("agreement_types")
+  @@schema("registry")
+}
+
+model RegistryCareType {
+  careTypeCode String @id @map("care_type_code")
+  careTypeName String @map("care_type_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("care_types")
+  @@schema("registry")
+}
+
+model RegistryDeactivationReason {
+  deactivationCode String @id @map("deactivation_code")
+  deactivationReason String @map("deactivation_reason")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("deactivation_reasons")
+  @@schema("registry")
+}
+
+model RegistryEquipmentCatalog {
+  equipmentCode String @map("equipment_code")
+  equipmentTypeCode String @map("equipment_type_code")
+  equipmentName String @map("equipment_name")
+  renemCode String? @map("renem_code")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([equipmentCode, equipmentTypeCode])
+  @@map("equipment_catalog")
+  @@schema("registry")
+}
+
+model RegistryEquipmentCategory {
+  categoryCode String @id @map("category_code")
+  categoryName String @map("category_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("equipment_categories")
+  @@schema("registry")
+}
+
+model RegistryFacility {
+  facilityId String @id @map("facility_id")
+  cnesCode String? @map("cnes_code")
+  legalName String? @map("legal_name")
+  tradeName String? @map("trade_name")
+  streetAddress String? @map("street_address")
+  streetNumber String? @map("street_number")
+  addressComplement String? @map("address_complement")
+  neighborhood String? @map("neighborhood")
+  postalCode String? @map("postal_code")
+  municipalityId String? @map("municipality_id")
+  healthRegionId String? @map("health_region_id")
+  phoneNumber String? @map("phone_number")
+  faxNumber String? @map("fax_number")
+  email String? @map("email")
+  websiteUrl String? @map("website_url")
+  latitude Float? @map("latitude")
+  longitude Float? @map("longitude")
+  taxIdCnpj String? @map("tax_id_cnpj")
+  taxIdCpf String? @map("tax_id_cpf")
+  ownerTaxId String? @map("owner_tax_id")
+  legalEntityTypeCode String? @map("legal_entity_type_code")
+  entityType String? @map("entity_type")
+  facilityTypeCode String? @map("facility_type_code")
+  primaryActivityCode String? @map("primary_activity_code")
+  unitTypeCode String? @map("unit_type_code")
+  operatingHoursCode String? @map("operating_hours_code")
+  deactivationReasonCode String? @map("deactivation_reason_code")
+  is_24_7 Int? @map("is_24_7")
+  isPhilanthropic Int? @map("is_philanthropic")
+  hasInternet Int? @map("has_internet")
+  hasFormalContract Int? @map("has_formal_contract")
+  licenseIssueDate String? @map("license_issue_date")
+  sanitaryLicenseExpiry String? @map("sanitary_license_expiry")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  unitTypeName String? @map("unit_type_name")
+  unitSubtypeName String? @map("unit_subtype_name")
+  @@map("facilities")
+  @@schema("registry")
+}
+
+model RegistryFacilityAgreement {
+  facilityId String @map("facility_id")
+  careTypeCode String @map("care_type_code")
+  agreementCode String @map("agreement_code")
+  updatedByUser String? @map("updated_by_user")
+  lastUpdatedDate String? @map("last_updated_date")
+  originUpdatedDate String? @map("origin_updated_date")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([facilityId, careTypeCode, agreementCode])
+  @@map("facility_agreements")
+  @@schema("registry")
+}
+
+model RegistryFacilityEquipment {
+  facilityId String @map("facility_id")
+  equipmentCode String @map("equipment_code")
+  equipmentCategoryCode String @map("equipment_category_code")
+  quantity Int? @map("quantity")
+  operationalStatus String? @map("operational_status")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([facilityId, equipmentCode, equipmentCategoryCode])
+  @@map("facility_equipment")
+  @@schema("registry")
+}
+
+model RegistryFacilityPhysicalInstallation {
+  facilityId String @map("facility_id")
+  installationCode String @map("installation_code")
+  quantity Int? @map("quantity")
+  bedCount Int? @map("bed_count")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  originUpdatedDate String? @map("origin_updated_date")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([facilityId, installationCode])
+  @@map("facility_physical_installations")
+  @@schema("registry")
+}
+
+model RegistryFacilityProfessional {
+  facilityId String @map("facility_id")
+  professionalId String @map("professional_id")
+  occupationCode String @map("occupation_code")
+  municipalityId String? @map("municipality_id")
+  serviceAreaId String? @map("service_area_id")
+  teamSequenceNumber Int? @map("team_sequence_number")
+  serviceType String? @map("service_type")
+  employmentTypeCode String? @map("employment_type_code")
+  startDate String? @map("start_date")
+  terminationDate String? @map("termination_date")
+  microAreaCode String? @map("micro_area_code")
+  otherTeamCnes String? @map("other_team_cnes")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([facilityId, professionalId, occupationCode])
+  @@map("facility_professionals")
+  @@schema("registry")
+}
+
+model RegistryFacilityRepresentative {
+  facilityId String @id @map("facility_id")
+  representativeName String @map("representative_name")
+  roleTitle String? @map("role_title")
+  email String? @map("email")
+  taxId String? @map("tax_id")
+  updatedByUser String? @map("updated_by_user")
+  lastUpdatedDate String? @map("last_updated_date")
+  originUpdatedDate String? @map("origin_updated_date")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("facility_representatives")
+  @@schema("registry")
+}
+
+model RegistryFacilityService {
+  facilityId String @map("facility_id")
+  serviceCode String @map("service_code")
+  classificationCode String @map("classification_code")
+  characteristicType String @map("characteristic_type")
+  ownerTaxId String @map("owner_tax_id")
+  addressComplement String @map("address_complement")
+  ambulatoryCapacity Int? @map("ambulatory_capacity")
+  ambulatoryCapacitySus Int? @map("ambulatory_capacity_sus")
+  hospitalCapacity Int? @map("hospital_capacity")
+  hospitalCapacitySus Int? @map("hospital_capacity_sus")
+  isActive Int? @map("is_active")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([facilityId, serviceCode, classificationCode, characteristicType, ownerTaxId, addressComplement])
+  @@map("facility_services")
+  @@schema("registry")
+}
+
+model RegistryFacilityType {
+  facilityTypeCode String @id @map("facility_type_code")
+  facilityTypeName String @map("facility_type_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("facility_types")
+  @@schema("registry")
+}
+
+model RegistryInstallationSubtype {
+  installationSubtypeCode String @id @map("installation_subtype_code")
+  installationSubtypeName String @map("installation_subtype_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("installation_subtypes")
+  @@schema("registry")
+}
+
+model RegistryMaintainer {
+  taxId String @id @map("tax_id")
+  legalName String? @map("legal_name")
+  bankCode String? @map("bank_code")
+  branchNumber String? @map("branch_number")
+  accountNumber String? @map("account_number")
+  streetAddress String? @map("street_address")
+  streetNumber String? @map("street_number")
+  addressComplement String? @map("address_complement")
+  neighborhood String? @map("neighborhood")
+  postalCode String? @map("postal_code")
+  municipalityId String? @map("municipality_id")
+  healthRegionId String? @map("health_region_id")
+  phoneNumber String? @map("phone_number")
+  formFilledDate String? @map("form_filled_date")
+  fmsFesStatus String? @map("fms_fes_status")
+  fmsFesTaxId String? @map("fms_fes_tax_id")
+  legalEntityTypeCode String? @map("legal_entity_type_code")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  managerCode String? @map("manager_code")
+  managerMunicipalityId String? @map("manager_municipality_id")
+  originUpdatedDate String? @map("origin_updated_date")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("maintainers")
+  @@schema("registry")
+}
+
+model RegistryMunicipality {
+  municipalityId String @id @map("municipality_id")
+  municipalityName String @map("municipality_name")
+  stateCode String @map("state_code")
+  registrationType String? @map("registration_type")
+  pactType String? @map("pact_type")
+  dataSubmissionType String? @map("data_submission_type")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("municipalities")
+  @@schema("registry")
+}
+
+model RegistryOccupation {
+  occupationCode String @id @map("occupation_code")
+  occupationName String @map("occupation_name")
+  professionalClassification String? @map("professional_classification")
+  isHealthOccupation String? @map("is_health_occupation")
+  isRegulated String? @map("is_regulated")
+  referenceYear String? @map("reference_year")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("occupations")
+  @@schema("registry")
+}
+
+model RegistryPhysicalInstallationType {
+  installationTypeCode String @id @map("installation_type_code")
+  installationTypeName String @map("installation_type_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("physical_installation_types")
+  @@schema("registry")
+}
+
+model RegistryPhysicalInstallation {
+  installationCode String @id @map("installation_code")
+  installationSubtypeCode String? @map("installation_subtype_code")
+  installationName String @map("installation_name")
+  installationTypeCode String? @map("installation_type_code")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("physical_installations")
+  @@schema("registry")
+}
+
+model RegistryProfessionalCouncil {
+  councilCode String @id @map("council_code")
+  councilName String @map("council_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("professional_councils")
+  @@schema("registry")
+}
+
+model RegistryProfessionalWorkload {
+  facilityId String @map("facility_id")
+  professionalId String @map("professional_id")
+  occupationCode String @map("occupation_code")
+  weeklyHoursAmbulatory Int? @map("weekly_hours_ambulatory")
+  serviceType String @map("service_type")
+  employmentTypeCode String @map("employment_type_code")
+  professionalCouncilCode String? @map("professional_council_code")
+  licenseNumber String? @map("license_number")
+  licenseState String? @map("license_state")
+  isPreceptor Int? @map("is_preceptor")
+  isResident Int? @map("is_resident")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([facilityId, professionalId, occupationCode, employmentTypeCode, serviceType])
+  @@map("professional_workload")
+  @@schema("registry")
+}
+
+model RegistryProfessional {
+  professionalId String @id @map("professional_id")
+  fullName String @map("full_name")
+  socialName String? @map("social_name")
+  taxId String? @map("tax_id")
+  healthCardNumber String? @map("health_card_number")
+  nationalityCode String? @map("nationality_code")
+  lastUpdatedDate String? @map("last_updated_date")
+  updatedByUser String? @map("updated_by_user")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("professionals")
+  @@schema("registry")
+}
+
+model RegistryServiceClassification {
+  classificationId String @map("classification_id")
+  serviceSpecialtyCode String @map("service_specialty_code")
+  classificationName String @map("classification_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+
+  @@id([classificationId, serviceSpecialtyCode])
+  @@map("service_classifications")
+  @@schema("registry")
+}
+
+model RegistryServiceSpecialty {
+  serviceCode String @id @map("service_code")
+  serviceName String @map("service_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("service_specialties")
+  @@schema("registry")
+}
+
+model RegistryState {
+  stateCode String @id @map("state_code")
+  stateName String @map("state_name")
+  createdAt DateTime? @map("created_at")
+  updatedAt DateTime? @map("updated_at")
+  @@map("states")
+  @@schema("registry")
+}
+

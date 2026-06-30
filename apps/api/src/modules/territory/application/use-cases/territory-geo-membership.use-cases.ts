@@ -1,9 +1,10 @@
 import type { ScopeContext } from "@atlasmed/access";
+import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryGeoMembershipRepository } from "../interfaces/territory-geo-membership.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import { ResourceNotFoundError } from "../../../../shared/errors";
-import { assertManagerReadScope } from "./territory-crud.use-cases";
+import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
 
 function serializeMembership(record: {
   id: string;
@@ -39,6 +40,7 @@ export class TerritoryGeoMembershipUseCases {
       territoryRepository: TerritoryRepository;
       geoMembershipRepository: TerritoryGeoMembershipRepository;
       spatialRepository: TerritorySpatialRepository;
+      closureRepository: TerritoryClosureRepository;
     }
   ) {}
 
@@ -102,7 +104,11 @@ export class TerritoryGeoMembershipUseCases {
     }
 
     if (!scope.isGlobal) {
-      assertManagerReadScope(scope, territoryId);
+      await assertManagerReadableTerritory(
+        scope,
+        territoryId,
+        this.deps.closureRepository
+      );
     }
   }
 }

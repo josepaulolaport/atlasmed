@@ -112,7 +112,14 @@ export const disable2FASchema = z.object({
 });
 
 export const grantPermissionSchema = z.object({
-  resource: z.enum(["USER", "CLINIC", "VISIT", "TERRITORY", "INVITATION"]),
+  resource: z.enum([
+    "USER",
+    "FACILITY",
+    "PROFESSIONAL",
+    "VISIT",
+    "TERRITORY",
+    "INVITATION",
+  ]),
   action: z.enum(["create", "read", "update", "delete", "manage"]),
   resourceId: z.string().optional(),
   expiresAt: z.string().datetime().optional(),

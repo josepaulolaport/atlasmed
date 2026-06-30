@@ -39,7 +39,7 @@ The system uses a **dual-layer territory model**:
 10. WHEN scope is resolved THEN `effectiveTerritoryIds` SHALL include closure descendants of assigned territories AND operational patches linked via geo membership to assigned reference territories.
 11. WHEN a territory assignment changes THEN the system SHALL invalidate affected Redis scope caches.
 
-### Clinic membership
+### Facility membership
 
 12. WHEN a clinic has coordinates and `territoryAssignmentSource = geo` THEN the system SHALL assign it to the containing active patch via `ST_Covers`.
 13. WHEN a clinic is assigned to a patch THEN access checks and coverage analytics SHALL use `Clinic.territoryId`.

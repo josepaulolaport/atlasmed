@@ -231,7 +231,7 @@
 ### B.3 Implement real `TerritoryScopePort` (when clinic schema exists)
 
 **Priority:** Critical for clinic launch  
-**Issue:** `StubTerritoryScopePort` returns `[]` for all `clinicIds`.
+**Issue:** `StubTerritoryScopePort` returns `[]` for all `facilityIds`.
 
 **Files:**
 - `apps/api/src/modules/access/infrastructure/scope/stub-territory-scope.port.ts`
@@ -240,15 +240,15 @@
 - `apps/api/src/modules/access/application/services/scope-resolver.service.ts`
 
 **Tasks:**
-- [ ] Implement `getClinicIdsForTerritories(territoryIds)` against clinic/territory tables.
+- [ ] Implement `getFacilityIdsForTerritories(territoryIds)` against clinic/territory tables.
 - [ ] Wire in composition; remove stub from production path.
-- [ ] Integration test: USER with territory assignment gets non-empty `clinicIds`.
+- [ ] Integration test: USER with territory assignment gets non-empty `facilityIds`.
 - [ ] Remove `console.warn` from stub; use structured logger only in stub until replaced.
 
 **Acceptance criteria:**
-- `getScope()` returns accurate `clinicIds` for USER and MANAGER roles.
+- `getScope()` returns accurate `facilityIds` for USER and MANAGER roles.
 
-**Dependency:** Clinic module schema (`Territory`, `Clinic` or equivalent).
+**Dependency:** Facility module schema (`Territory`, `Clinic` or equivalent).
 
 ---
 
@@ -672,7 +672,7 @@ D.1, D.2, E.1, E.2
 ### Sprint 4 — Data hygiene
 C.1, C.3, C.4, AC.1, AC.6
 
-### Sprint 5 — Clinic readiness
+### Sprint 5 — Facility readiness
 B.2, B.3 (when schema ready), C.2 decision, D.3
 
 ### Backlog

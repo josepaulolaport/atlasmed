@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MockRegistrySourceAdapter } from "../infrastructure/adapters/mock-registry-source.adapter";
+import { RegistryDiffService } from "../application/services/registry-diff.service";
 import { RegistrySyncService } from "../application/services/registry-sync.service";
 import {
   ApproveSuggestionUseCase,
@@ -22,25 +23,31 @@ const fixturesDir = join(
 export function createRegistryIngestionStack(fixtureName: string) {
   const registrySource = new MockRegistrySourceAdapter(fixtureName, fixturesDir);
 
-  const registrySyncService = new RegistrySyncService({
-    clinicRepository: registryIngestionRepositories.clinic,
-    doctorRepository: registryIngestionRepositories.doctor,
-    associationRepository: registryIngestionRepositories.association,
+  const registryDiffService = new RegistryDiffService({
+    facilityRepository: registryIngestionRepositories.facility,
     suggestionRepository: registryIngestionRepositories.suggestion,
+  });
+
+  const registrySyncService = new RegistrySyncService({
+    facilityRepository: registryIngestionRepositories.facility,
+    professionalRepository: registryIngestionRepositories.professional,
+    facilityProfessionalRepository: registryIngestionRepositories.association,
+    suggestionRepository: registryIngestionRepositories.suggestion,
+    registryDiffService,
   });
 
   const runIngestion = createRegistryIngestionRunner(fixtureName);
 
   const approveSuggestion = new ApproveSuggestionUseCase({
     suggestionRepository: registryIngestionRepositories.suggestion,
-    clinicRepository: registryIngestionRepositories.clinic,
-    associationRepository: registryIngestionRepositories.association,
+    facilityRepository: registryIngestionRepositories.facility,
+    facilityProfessionalRepository: registryIngestionRepositories.association,
   });
 
   const rejectSuggestion = new RejectSuggestionUseCase({
     suggestionRepository: registryIngestionRepositories.suggestion,
-    clinicRepository: registryIngestionRepositories.clinic,
-    associationRepository: registryIngestionRepositories.association,
+    facilityRepository: registryIngestionRepositories.facility,
+    facilityProfessionalRepository: registryIngestionRepositories.association,
   });
 
   return {

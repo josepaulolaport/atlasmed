@@ -31,7 +31,7 @@ describe("RunRegistryIngestionUseCase", () => {
       fetchSnapshot: mock(async () => ({
         provider: "mock_registry",
         fetchedAt: new Date("2024-01-01"),
-        clinics: [
+        facilities: [
           {
             externalSourceId: "c1",
             name: "Clinic",
@@ -73,21 +73,22 @@ describe("RunRegistryIngestionUseCase", () => {
 
     const registrySyncService = {
       syncSnapshot: mock(async () => ({
-        clinicsCreated: 1,
-        clinicsUpdated: 0,
-        clinicsUnchanged: 0,
-        clinicsMarkedAbsent: 0,
-        clinicsReactivationSuggestions: 0,
-        doctorsCreated: 0,
-        doctorsUpdated: 0,
-        doctorsUnchanged: 0,
-        doctorsMarkedAbsent: 0,
+        facilitiesCreated: 1,
+        facilitiesUpdated: 0,
+        facilitiesUnchanged: 0,
+        facilitiesMarkedAbsent: 0,
+        facilitiesReactivationSuggestions: 0,
+        professionalsCreated: 0,
+        professionalsUpdated: 0,
+        professionalsUnchanged: 0,
+        professionalsMarkedAbsent: 0,
         associationsCreated: 0,
         associationsUpdated: 0,
         associationsMarkedInactive: 0,
         suggestionsCreated: 0,
-        invalidClinics: 0,
-        invalidDoctors: 0,
+        fieldUpdateSuggestions: 0,
+        invalidFacilities: 0,
+        invalidProfessionals: 0,
       })),
     } as unknown as RegistrySyncService;
 

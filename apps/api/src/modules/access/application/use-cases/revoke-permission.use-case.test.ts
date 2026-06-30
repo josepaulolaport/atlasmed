@@ -21,7 +21,7 @@ describe("RevokePermissionUseCase", () => {
   it("should revoke permission when actor is admin", async () => {
     await useCase.execute({
       targetUserId: "user-123",
-      resource: "CLINIC",
+      resource: "FACILITY",
       resourceId: "clinic-1",
       action: "update",
       revokedBy: "admin-1",
@@ -30,7 +30,7 @@ describe("RevokePermissionUseCase", () => {
 
     expect(mockAccessGrantService.revokePermission).toHaveBeenCalledWith({
       userId: "user-123",
-      resource: "CLINIC",
+      resource: "FACILITY",
       resourceId: "clinic-1",
       action: "update",
       revokedBy: "admin-1",
@@ -41,7 +41,7 @@ describe("RevokePermissionUseCase", () => {
     await expect(
       useCase.execute({
         targetUserId: "user-123",
-        resource: "CLINIC",
+        resource: "FACILITY",
         action: "update",
         revokedBy: "manager-1",
         actorRole: Role.MANAGER,

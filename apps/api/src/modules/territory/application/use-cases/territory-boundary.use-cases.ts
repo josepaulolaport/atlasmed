@@ -1,5 +1,6 @@
 import type { ScopeContext } from "@atlasmed/access";
 import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
+import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
@@ -12,12 +13,14 @@ import {
   OperationNotAllowedError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
-import { assertManagerReadScope } from "./territory-crud.use-cases";
+import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
+import { assertLeafTerritoryInJurisdiction } from "../services/territory-scope-policy.service";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
+  closureRepository: TerritoryClosureRepository;
   geoParentService: TerritoryGeoParentService;
   geoMembershipService: TerritoryGeoMembershipService;
   hierarchyValidator?: TerritoryHierarchyValidator;
@@ -97,9 +100,11 @@ export class TerritoryBoundaryUseCases {
       throw new ResourceNotFoundError("Territory", territoryId);
     }
 
-    if (!scope.isGlobal) {
-      assertManagerReadScope(scope, territoryId);
-    }
+    await assertManagerReadableTerritory(
+      scope,
+      territoryId,
+      this.deps.closureRepository
+    );
   }
 
   private async assertWritableBoundary(territoryId: string, scope: ScopeContext) {
@@ -123,7 +128,12 @@ export class TerritoryBoundaryUseCases {
     }
 
     if (!scope.isGlobal) {
-      assertManagerReadScope(scope, territoryId);
+      await assertLeafTerritoryInJurisdiction({
+        scope,
+        territoryRepository: this.deps.territoryRepository,
+        territoryId,
+        operation: "save_boundary",
+      });
     }
 
     return territory;

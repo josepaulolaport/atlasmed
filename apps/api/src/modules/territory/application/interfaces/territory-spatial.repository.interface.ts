@@ -82,5 +82,5 @@ export interface TerritorySpatialRepository {
 
   findAssignedClinicsInReferenceTerritory(
     referenceTerritoryId: string
-  ): Promise<ClinicInReferenceTerritory[]>;
+  ): Promise<FacilityInReferenceTerritory[]>;
 }

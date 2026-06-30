@@ -34,6 +34,7 @@ export const userPermissionsRoute = new Elysia({
       resource: parsed.resource,
       resourceId: parsed.resourceId,
       action: parsed.action,
+      conditions: parsed.conditions,
       grantedBy: await getUserId(),
       actorRole: actor.role.name,
       expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : undefined,
@@ -45,6 +46,7 @@ export const userPermissionsRoute = new Elysia({
         resource: grant.resource,
         resourceId: grant.resourceId ?? undefined,
         action: grant.action,
+        conditions: grant.conditions,
         expiresAt: grant.expiresAt?.toISOString(),
       },
       message: "Permission granted",
@@ -54,6 +56,7 @@ export const userPermissionsRoute = new Elysia({
       resource: t.String(),
       resourceId: t.Optional(t.String()),
       action: t.String(),
+      conditions: t.Optional(t.Record(t.String(), t.Any())),
       expiresAt: t.Optional(t.String()),
     }),
   })

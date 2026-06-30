@@ -1,11 +1,11 @@
 import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
 import type {
-  ClinicDoctorListItem,
-  DoctorClinicView,
+  FacilityProfessionalListItem,
+  FacilityProfessionalView,
   RegistryDemoResult,
   RegistrySuggestion,
-} from "@/types/clinic";
+} from "@/types/facility";
 
 export const registryApi = {
   runIngestion: async () => {
@@ -46,40 +46,40 @@ export const registryApi = {
   },
 };
 
-export const clinicDoctorsApi = {
-  listDoctors: async (
-    clinicId: string,
+export const facilityDoctorsApi = {
+  listProfessionals: async (
+    facilityId: string,
     params?: {
-      view?: DoctorClinicView;
+      view?: FacilityProfessionalView;
       page?: number;
       limit?: number;
       search?: string;
     }
-  ): Promise<PaginatedResponse<ClinicDoctorListItem>> => {
-    const response = await apiClient.get<PaginatedResponse<ClinicDoctorListItem>>(
-      `/clinic/clinics/${clinicId}/doctors`,
+  ): Promise<PaginatedResponse<FacilityProfessionalListItem>> => {
+    const response = await apiClient.get<PaginatedResponse<FacilityProfessionalListItem>>(
+      `/clinic/facilities/${facilityId}/professionals`,
       { params }
     );
     return response.data;
   },
 
-  confirmDoctor: async (clinicId: string, doctorId: string) => {
+  confirmDoctor: async (facilityId: string, professionalId: string) => {
     const response = await apiClient.post(
-      `/clinic/clinics/${clinicId}/doctors/${doctorId}/confirm`
+      `/clinic/facilities/${facilityId}/professionals/${professionalId}/confirm`
     );
     return response.data;
   },
 
-  associateDoctor: async (clinicId: string, doctorId: string) => {
+  associateDoctor: async (facilityId: string, professionalId: string) => {
     const response = await apiClient.post(
-      `/clinic/clinics/${clinicId}/doctors/${doctorId}/associate`
+      `/clinic/facilities/${facilityId}/professionals/${professionalId}/associate`
     );
     return response.data;
   },
 
-  endAssociation: async (clinicId: string, doctorId: string) => {
+  endAssociation: async (facilityId: string, professionalId: string) => {
     const response = await apiClient.delete(
-      `/clinic/clinics/${clinicId}/doctors/${doctorId}`
+      `/clinic/facilities/${facilityId}/professionals/${professionalId}`
     );
     return response.data;
   },

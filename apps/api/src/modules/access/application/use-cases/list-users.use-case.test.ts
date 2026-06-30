@@ -123,7 +123,7 @@ describe("ListUsersUseCase", () => {
       isGlobal: false,
       assignedTerritoryIds: ["territory-1"],
       effectiveTerritoryIds: ["territory-1"],
-      clinicIds: [],
+      facilityIds: [],
       managedUserIds: ["report-1", "report-2"],
       isOperationallyActive: true,
     });
@@ -153,7 +153,7 @@ describe("ListUsersUseCase", () => {
       isGlobal: false,
       assignedTerritoryIds: ["territory-shared"],
       effectiveTerritoryIds: ["territory-shared"],
-      clinicIds: [],
+      facilityIds: [],
       managedUserIds: ["direct-report-1"],
       isOperationallyActive: true,
     });

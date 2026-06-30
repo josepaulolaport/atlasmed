@@ -1,5 +1,5 @@
 {
-  "clinics": [
+  "facilities": [
     {
       "externalSourceId": "mock-clinic-001",
       "name": "Alpha Medical Center",
@@ -11,7 +11,7 @@
       "address": "200 Oak Avenue"
     }
   ],
-  "doctors": [
+  "professionals": [
     {
       "externalSourceId": "mock-doctor-001",
       "firstName": "Jane",

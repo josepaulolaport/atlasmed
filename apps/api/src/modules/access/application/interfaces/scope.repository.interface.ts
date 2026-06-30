@@ -27,7 +27,7 @@ export interface ScopeRepository {
 }
 
 export interface TerritoryScopePort {
-  getClinicIdsForTerritories(territoryIds: string[]): Promise<string[]>;
+  getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]>;
 }
 
 export interface TerritoryHierarchyPort {

@@ -1,4 +1,4 @@
-export interface SanitizedClinicRecord {
+export interface SanitizedFacilityRecord {
   externalSourceId: string;
   name: string;
   address: string | null;
@@ -7,7 +7,7 @@ export interface SanitizedClinicRecord {
   contentHash: string;
 }
 
-export interface SanitizedDoctorRecord {
+export interface SanitizedProfessionalRecord {
   externalSourceId: string;
   firstName: string;
   lastName: string;
@@ -23,8 +23,8 @@ export interface SanitizedAssociationRecord {
 export interface RegistrySnapshot {
   provider: string;
   fetchedAt: Date;
-  clinics: SanitizedClinicRecord[];
-  doctors: SanitizedDoctorRecord[];
+  facilities: SanitizedFacilityRecord[];
+  doctors: SanitizedProfessionalRecord[];
   associations: SanitizedAssociationRecord[];
 }
 

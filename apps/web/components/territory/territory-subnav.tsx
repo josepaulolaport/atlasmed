@@ -9,7 +9,7 @@ const links = [
   { href: "/territories/types", label: "Types" },
   { href: "/territories/ambiguous-parents", label: "Ambiguous parents" },
   { href: "/territories/approvals", label: "Approvals" },
-  { href: "/territories/unassigned-clinics", label: "Unassigned clinics" },
+  { href: "/territories/unassigned-facilities", label: "Unassigned clinics" },
 ];
 
 export function TerritorySubnav() {

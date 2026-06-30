@@ -12,8 +12,7 @@ import {
 } from "./role.permissions";
 import { AbilityBuilder, createMongoAbility } from "@casl/ability";
 import type { Role } from "../enums/role.enum";
-
-type ScopedGrantConditions = { id: string };
+import { buildCaslConditionsFromGrant } from "./grant-conditions";
 
 export function applyGrantsToAbility(
   grants: AccessGrantRecord[],
@@ -22,7 +21,7 @@ export function applyGrantsToAbility(
   const grantCan = can as (
     action: Action,
     subjectType: Subject,
-    conditions?: ScopedGrantConditions
+    conditions?: Record<string, unknown>
   ) => void;
 
   for (const grant of grants) {
@@ -33,8 +32,10 @@ export function applyGrantsToAbility(
       continue;
     }
 
-    if (grant.resourceId) {
-      grantCan(action, subjectType, { id: grant.resourceId });
+    const conditions = buildCaslConditionsFromGrant(grant);
+
+    if (conditions) {
+      grantCan(action, subjectType, conditions);
     } else {
       can(action, subjectType);
     }

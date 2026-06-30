@@ -37,9 +37,9 @@ function mapSuggestion(suggestion: {
   ingestionRunId: string;
   type: IngestionSuggestionType;
   status: IngestionSuggestionStatus;
-  clinicId: string | null;
-  doctorId: string | null;
-  associationId: string | null;
+  facilityId: string | null;
+  professionalId: string | null;
+  facilityProfessionalId: string | null;
   reason: string | null;
   payload: unknown;
   suggestedAt: Date;
@@ -52,9 +52,9 @@ function mapSuggestion(suggestion: {
     ingestionRunId: suggestion.ingestionRunId,
     type: suggestion.type,
     status: suggestion.status,
-    clinicId: suggestion.clinicId,
-    doctorId: suggestion.doctorId,
-    associationId: suggestion.associationId,
+    facilityId: suggestion.facilityId,
+    professionalId: suggestion.professionalId,
+    facilityProfessionalId: suggestion.facilityProfessionalId,
     reason: suggestion.reason,
     payload: (suggestion.payload as Record<string, unknown>) ?? {},
     suggestedAt: suggestion.suggestedAt,
@@ -135,9 +135,9 @@ export class PrismaIngestionSuggestionRepository
       data: {
         ingestionRunId: input.ingestionRunId,
         type: input.type,
-        clinicId: input.clinicId,
-        doctorId: input.doctorId,
-        associationId: input.associationId,
+        facilityId: input.facilityId,
+        professionalId: input.professionalId,
+        facilityProfessionalId: input.facilityProfessionalId,
         reason: input.reason,
         payload: (input.payload ?? {}) as object,
       },
@@ -148,17 +148,17 @@ export class PrismaIngestionSuggestionRepository
 
   async findPendingDuplicate(params: {
     type: IngestionSuggestionType;
-    clinicId?: string;
-    doctorId?: string;
-    associationId?: string;
+    facilityId?: string;
+    professionalId?: string;
+    facilityProfessionalId?: string;
   }): Promise<IngestionSuggestionRecord | null> {
     const suggestion = await prisma.ingestionSuggestion.findFirst({
       where: {
         type: params.type,
         status: "PENDING",
-        clinicId: params.clinicId ?? null,
-        doctorId: params.doctorId ?? null,
-        associationId: params.associationId ?? null,
+        facilityId: params.facilityId ?? null,
+        professionalId: params.professionalId ?? null,
+        facilityProfessionalId: params.facilityProfessionalId ?? null,
       },
     });
 
@@ -167,17 +167,17 @@ export class PrismaIngestionSuggestionRepository
 
   async supersedePending(params: {
     type: IngestionSuggestionType;
-    clinicId?: string;
-    doctorId?: string;
-    associationId?: string;
+    facilityId?: string;
+    professionalId?: string;
+    facilityProfessionalId?: string;
   }): Promise<void> {
     await prisma.ingestionSuggestion.updateMany({
       where: {
         type: params.type,
         status: "PENDING",
-        clinicId: params.clinicId ?? null,
-        doctorId: params.doctorId ?? null,
-        associationId: params.associationId ?? null,
+        facilityId: params.facilityId ?? null,
+        professionalId: params.professionalId ?? null,
+        facilityProfessionalId: params.facilityProfessionalId ?? null,
       },
       data: { status: "SUPERSEDED", resolvedAt: new Date() },
     });
@@ -196,7 +196,7 @@ export class PrismaIngestionSuggestionRepository
     limit?: number;
     status?: IngestionSuggestionStatus;
     type?: IngestionSuggestionType;
-    clinicIds?: string[];
+    facilityIds?: string[];
   }): Promise<{ suggestions: IngestionSuggestionRecord[]; total: number }> {
     const page = params.page ?? 1;
     const limit = params.limit ?? 20;
@@ -204,8 +204,15 @@ export class PrismaIngestionSuggestionRepository
     const where = {
       ...(params.status ? { status: params.status } : {}),
       ...(params.type ? { type: params.type } : {}),
-      ...(params.clinicIds?.length
-        ? { clinicId: { in: params.clinicIds } }
+      ...(params.facilityIds
+        ? {
+            facilityId: {
+              in:
+                params.facilityIds.length > 0
+                  ? params.facilityIds
+                  : ["__none__"],
+            },
+          }
         : {}),
     };
 

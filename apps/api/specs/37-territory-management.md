@@ -29,7 +29,7 @@ Territory is the **first access-control axis**. Market segmentation (Spec 10) is
 | Rule | Description |
 |------|-------------|
 | **Reps are assigned to territories, not clinics** | `UserTerritoryAssignment` links users to territory nodes. Reps never receive direct clinic assignments. |
-| **Clinics belong to exactly one operational patch** | `Clinic.territoryId` FK to a territory with `TerritoryType.assignsClinics = true` (slug `patch`). |
+| **Clinics belong to exactly one operational patch** | `Clinic.territoryId` FK to a territory with `TerritoryType.assignsFacilities = true` (slug `patch`). |
 | **Parent assignment expands downward** | User scope includes closure descendants of assigned territories **plus** operational patches linked via `territory_geo_membership` when assigned to a reference territory. |
 | **Geo assigns membership; FK stores it** | Point-in-polygon runs on write (ingest, create, boundary change). Reads filter on `Clinic.territoryId` — never recompute polygons per request. |
 | **Reference geography uses manual tree parents** | Country, macro-region, state, and municipality nodes keep admin-defined `parentId`; boundaries do not auto-reparent them. |
@@ -43,7 +43,7 @@ The system uses **two complementary layers**, not a single fixed 4-level tree:
 | Layer | Territory types (slug) | Parent | Boundary | Clinics |
 |-------|------------------------|--------|----------|---------|
 | **Reference geography** | `country`, `region`, `state`, `intermediate` | Manual tree (`parentId` + closure) | Full IBGE/admin boundary | No |
-| **Operational** | `patch` (`assignsClinics: true`) | Defaults to active country (`br`) | Full patch boundary (may be MultiPolygon) | Yes |
+| **Operational** | `patch` (`assignsFacilities: true`) | Defaults to active country (`br`) | Full patch boundary (may be MultiPolygon) | Yes |
 
 **Geo membership** (`territory_geo_membership`) links operational patches to reference `state` and `intermediate` (municipality) territories. Membership rows are **computed automatically** when a patch boundary is saved — admins do not declare intersections manually.
 
@@ -59,7 +59,7 @@ The system uses **two complementary layers**, not a single fixed 4-level tree:
 
 Types are configurable via `TerritoryType` records. Brazil seed types:
 
-| Slug | `assignsClinics` | `canHaveBoundary` | `isCountryLevel` | Role |
+| Slug | `assignsFacilities` | `canHaveBoundary` | `isCountryLevel` | Role |
 |------|------------------|-------------------|------------------|------|
 | `country` | false | true | true | Root (`BR`) |
 | `region` | false | true | false | IBGE macro-region |
@@ -130,7 +130,7 @@ As a manager assigned to São Paulo state, I want to see clinics in patches that
 **US-TERR-08 — View my territory on profile**  
 As a representative, I want to see which territories I am assigned to, so that I understand my coverage scope.
 
-### Clinic membership (automatic + override)
+### Facility membership (automatic + override)
 
 **US-TERR-09 — Auto-assign clinic by location**  
 As the system, when a clinic is created or ingested with coordinates, I want to assign it to the patch whose boundary contains the point.
@@ -174,7 +174,7 @@ WHEN an admin deactivates a territory THEN the system SHALL block deactivation w
 WHEN a country-level territory exists for a `countryCode` THEN exactly one active country root SHALL exist per country (MVP: `BR` / `br`).
 
 **AC-TERR-07**  
-WHEN a territory has `TerritoryType.assignsClinics = true` THEN it MAY receive clinic assignments. Reference geography types SHALL NOT receive clinic FK assignments.
+WHEN a territory has `TerritoryType.assignsFacilities = true` THEN it MAY receive clinic assignments. Reference geography types SHALL NOT receive clinic FK assignments.
 
 ---
 
@@ -228,7 +228,7 @@ WHEN a user's territory assignment changes THEN Redis `ScopeContext` cache SHALL
 
 ---
 
-### Clinic membership (geo assignment)
+### Facility membership (geo assignment)
 
 **AC-TERR-19**  
 WHEN a clinic has valid `lat`/`lng` and `territoryAssignmentSource = 'geo'` THEN the system SHALL assign it to the containing active patch via `ST_Covers`.
@@ -280,7 +280,7 @@ ADMIN users SHALL have global territory scope unless restricted by segments.
 | GET | `/territories/:operationalId/clipped-boundary/:referenceId` | Clipped geometry |
 | GET | `/territories/:id/coverage-view` | State/municipality coverage payload |
 | POST | `/territories/recompute-membership` | Force clinic geo recompute |
-| GET | `/territories/unassigned-clinics` | Unassigned/ambiguous clinics |
+| GET | `/territories/unassigned-facilities` | Unassigned/ambiguous clinics |
 | GET/POST | `/territory-types` | Type CRUD |
 | GET/POST/DELETE | `/territories/:id/rollup-links` | Reporting rollups |
 | POST | `/territories/approval-requests` | Territory approval workflow |
@@ -312,7 +312,7 @@ interface ScopeContext {
   isGlobal: boolean;
   assignedTerritoryIds: string[];
   effectiveTerritoryIds: string[];  // closure descendants ∪ geo-linked patches
-  clinicIds: string[];
+  facilityIds: string[];
   managedUserIds: string[];
   segmentIds: string[];
 }
@@ -391,7 +391,7 @@ apps/api/src/modules/territory/
 | Brazil IBGE ingestion | Done | ~5,604 territories |
 | Geo membership index | Done | Auto on patch save |
 | Scope resolver + cache invalidation | Done | Membership-aware hierarchy port |
-| Clinic geo assignment + recompute job | Done | BullMQ queue |
+| Facility geo assignment + recompute job | Done | BullMQ queue |
 | Coverage view API | Done | `GET /territories/:id/coverage-view` |
 | Coverage map UI | Deferred | API ready |
 | Clipped geometry cache | Deferred | On-demand ST_Intersection |

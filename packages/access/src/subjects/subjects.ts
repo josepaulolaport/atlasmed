@@ -1,9 +1,9 @@
 export const Subjects = {
   USER: "USER",
 
-  CLINIC: "CLINIC",
+  FACILITY: "FACILITY",
 
-  DOCTOR: "DOCTOR",
+  PROFESSIONAL: "PROFESSIONAL",
 
   VISIT: "VISIT",
 
@@ -14,6 +14,8 @@ export const Subjects = {
   REGISTRY_INGESTION: "REGISTRY_INGESTION",
 
   REGISTRY_SUGGESTION: "REGISTRY_SUGGESTION",
+
+  CATALOG: "CATALOG",
 } as const;
 
 export type Subject = (typeof Subjects)[keyof typeof Subjects];

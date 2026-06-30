@@ -2,6 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { Role } from "../enums/role.enum";
 import {
   canManageUsers,
+  canReadCatalog,
+  canManageCatalog,
   canReadTerritories,
   canManageTerritories,
   canViewHealth,
@@ -54,6 +56,20 @@ describe("ui.permissions", () => {
     it("should allow ADMIN only", () => {
       expect(canManageTerritories(Role.ADMIN)).toBe(true);
       expect(canManageTerritories(Role.MANAGER)).toBe(false);
+    });
+  });
+
+  describe("catalog permissions", () => {
+    it("should allow ADMIN to read and manage catalog", () => {
+      expect(canReadCatalog(Role.ADMIN)).toBe(true);
+      expect(canManageCatalog(Role.ADMIN)).toBe(true);
+    });
+
+    it("should deny MANAGER and USER catalog access", () => {
+      expect(canReadCatalog(Role.MANAGER)).toBe(false);
+      expect(canManageCatalog(Role.MANAGER)).toBe(false);
+      expect(canReadCatalog(Role.USER)).toBe(false);
+      expect(canManageCatalog(Role.USER)).toBe(false);
     });
   });
 });

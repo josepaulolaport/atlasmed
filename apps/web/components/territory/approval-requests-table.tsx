@@ -112,7 +112,7 @@ export function ApprovalRequestsTable({ requests, onRefresh }: ApprovalRequestsT
               </TableCell>
               <TableCell className="font-mono text-xs">{req.requesterId}</TableCell>
               <TableCell className="font-mono text-xs">
-                {req.targetTerritoryId ?? req.clinicId ?? "—"}
+                {req.targetTerritoryId ?? req.facilityId ?? "—"}
               </TableCell>
               <TableCell className="text-sm">{formatDateTime(req.createdAt)}</TableCell>
               <TableCell>

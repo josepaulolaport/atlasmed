@@ -17,7 +17,7 @@ Atlasmed currently uses a TypeScript monorepo with a Bun/Elysia backend, a Next.
 ## Backend Module Boundaries
 
 - `access`: identity, users, roles, sessions, invitations, verification, 2FA, permissions, scopes.
-- `clinic`: clinics and doctor-clinic associations.
+- `clinic`: clinics and facility-professional associations.
 - `doctor`: doctors.
 - `registry-ingestion`: external registry ingestion and suggestion workflows.
 

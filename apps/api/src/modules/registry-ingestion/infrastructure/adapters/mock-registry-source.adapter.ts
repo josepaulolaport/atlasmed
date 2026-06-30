@@ -7,8 +7,10 @@ import type {
 import { MOCK_REGISTRY_PROVIDER } from "../../application/interfaces/registry-source.port";
 
 interface FixtureFile {
-  clinics: unknown[];
-  doctors: unknown[];
+  facilities?: unknown[];
+  clinics?: unknown[];
+  doctors?: unknown[];
+  professionals?: unknown[];
   associations: Array<{ doctorExternalId: string; clinicExternalId: string }>;
 }
 
@@ -26,8 +28,8 @@ export class MockRegistrySourceAdapter implements RegistrySourcePort {
     return {
       provider: MOCK_REGISTRY_PROVIDER,
       fetchedAt: new Date(),
-      clinics: parsed.clinics as RegistrySnapshot["clinics"],
-      doctors: parsed.doctors as RegistrySnapshot["doctors"],
+      facilities: (parsed.facilities ?? parsed.clinics ?? []) as RegistrySnapshot["facilities"],
+      doctors: (parsed.professionals ?? parsed.doctors ?? []) as RegistrySnapshot["doctors"],
       associations: parsed.associations,
     };
   }

@@ -9,7 +9,7 @@ import {
 import { Elysia } from "elysia";
 import { HttpError } from "@atlasmed/access";
 import { access } from "../access/index";
-import { clinic } from "../clinic/index";
+import { facility } from "../facility/index";
 import { registryIngestion } from "../registry-ingestion/index";
 import { AppError } from "../../shared/errors";
 import { prisma } from "../../infrastructure/database/prisma.client";
@@ -23,6 +23,7 @@ import {
   type ScopeIntegrationFixtures,
 } from "../access/test-helpers/scope-integration-fixtures";
 import { cleanupMockRegistryData } from "../registry-ingestion/test-helpers/registry-test-factory";
+import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 
 function createRegistryHttpApp() {
   return new Elysia()
@@ -46,7 +47,7 @@ function createRegistryHttpApp() {
       };
     })
     .group("/api/v1", (app) =>
-      app.use(access).use(clinic).use(registryIngestion)
+      app.use(access).use(facility).use(registryIngestion)
     );
 }
 
@@ -68,6 +69,13 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   beforeEach(async () => {
     if (!dbReady) return;
     await cleanupMockRegistryData();
+    await scopeCacheService.invalidateMany([
+      fixtures.admin.id,
+      fixtures.manager.id,
+      fixtures.otherManager.id,
+      fixtures.fieldUser.id,
+      fixtures.otherUser.id,
+    ]);
   });
 
   afterAll(async () => {
@@ -144,12 +152,12 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     expect(Array.isArray(body.data)).toBe(true);
   });
 
-  it("scoped MANAGER can approve suggestion for clinic in territory", async () => {
+  it("scoped MANAGER can approve suggestion for facility in territory", async () => {
     if (!dbReady) return;
 
-    const clinicRecord = await prisma.clinic.create({
+    const clinicRecord = await prisma.facility.create({
       data: {
-        name: `Registry Scope Clinic ${fixtures.uniqueId}`,
+        displayName: `Registry Scope Facility ${fixtures.uniqueId}`,
         territoryId: fixtures.territoryId,
       },
     });
@@ -161,9 +169,9 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const suggestion = await prisma.ingestionSuggestion.create({
       data: {
         ingestionRunId: run.id,
-        type: "CLINIC_REMOVAL",
+        type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
-        clinicId: clinicRecord.id,
+        facilityId: clinicRecord.id,
         reason: "test_scope",
       },
     });
@@ -181,16 +189,77 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
 
     expect(approveResponse.status).toBe(200);
 
-    await prisma.clinic.delete({ where: { id: clinicRecord.id } }).catch(() => {});
+    await prisma.facility.delete({ where: { id: clinicRecord.id } }).catch(() => {});
+    await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
+  });
+
+  it("MANAGER list only returns suggestions for facilities in scope", async () => {
+    if (!dbReady) return;
+
+    const inScopeFacility = await prisma.facility.create({
+      data: {
+        displayName: `In Scope Facility ${fixtures.uniqueId}`,
+        territoryId: fixtures.territoryId,
+      },
+    });
+
+    const outOfScopeFacility = await prisma.facility.create({
+      data: {
+        displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
+        territoryId: fixtures.outOfScopeTerritoryId,
+      },
+    });
+
+    const run = await prisma.ingestionRun.create({
+      data: { sourceProvider: "mock_registry", status: "COMPLETED" },
+    });
+
+    const inScopeSuggestion = await prisma.ingestionSuggestion.create({
+      data: {
+        ingestionRunId: run.id,
+        type: "FACILITY_REGISTRY_DEACTIVATED",
+        status: "PENDING",
+        facilityId: inScopeFacility.id,
+        reason: "test_in_scope",
+      },
+    });
+
+    const outOfScopeSuggestion = await prisma.ingestionSuggestion.create({
+      data: {
+        ingestionRunId: run.id,
+        type: "FACILITY_REGISTRY_DEACTIVATED",
+        status: "PENDING",
+        facilityId: outOfScopeFacility.id,
+        reason: "test_out_of_scope_list",
+      },
+    });
+
+    const managerToken = await loginToken(fixtures.manager.email);
+    const response = await authRequest(
+      "http://localhost/api/v1/registry-suggestions?status=PENDING",
+      managerToken
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: Array<{ id: string }> };
+    const ids = body.data.map((item) => item.id);
+
+    expect(ids).toContain(inScopeSuggestion.id);
+    expect(ids).not.toContain(outOfScopeSuggestion.id);
+
+    await prisma.facility.delete({ where: { id: inScopeFacility.id } }).catch(() => {});
+    await prisma.facility
+      .delete({ where: { id: outOfScopeFacility.id } })
+      .catch(() => {});
     await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
   });
 
   it("returns 403 when MANAGER approves suggestion outside scope", async () => {
     if (!dbReady) return;
 
-    const clinicRecord = await prisma.clinic.create({
+    const clinicRecord = await prisma.facility.create({
       data: {
-        name: `Out of Scope Clinic ${fixtures.uniqueId}`,
+        displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
         territoryId: fixtures.outOfScopeTerritoryId,
       },
     });
@@ -202,9 +271,9 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const suggestion = await prisma.ingestionSuggestion.create({
       data: {
         ingestionRunId: run.id,
-        type: "CLINIC_REMOVAL",
+        type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
-        clinicId: clinicRecord.id,
+        facilityId: clinicRecord.id,
         reason: "test_out_of_scope",
       },
     });
@@ -222,7 +291,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
 
     expect(response.status).toBe(403);
 
-    await prisma.clinic.delete({ where: { id: clinicRecord.id } }).catch(() => {});
+    await prisma.facility.delete({ where: { id: clinicRecord.id } }).catch(() => {});
     await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
   });
 
@@ -230,7 +299,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     if (!dbReady) return;
 
     const response = await authRequest(
-      "http://localhost/api/v1/clinic/clinics/some-id/doctors",
+      "http://localhost/api/v1/facilities/some-id/professionals",
       null
     );
 

@@ -13,7 +13,9 @@
       },
   
       "lint": {},
-  
-      "typecheck": {}
+
+      "typecheck": {},
+
+      "test": {}
     }
   }

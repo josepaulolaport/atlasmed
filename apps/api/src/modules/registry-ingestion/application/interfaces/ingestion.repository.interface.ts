@@ -36,9 +36,9 @@ export interface IngestionSuggestionRecord {
   ingestionRunId: string;
   type: IngestionSuggestionType;
   status: IngestionSuggestionStatus;
-  clinicId: string | null;
-  doctorId: string | null;
-  associationId: string | null;
+  facilityId: string | null;
+  professionalId: string | null;
+  facilityProfessionalId: string | null;
   reason: string | null;
   payload: Record<string, unknown>;
   suggestedAt: Date;
@@ -50,9 +50,9 @@ export interface IngestionSuggestionRecord {
 export interface CreateSuggestionInput {
   ingestionRunId: string;
   type: IngestionSuggestionType;
-  clinicId?: string;
-  doctorId?: string;
-  associationId?: string;
+  facilityId?: string;
+  professionalId?: string;
+  facilityProfessionalId?: string;
   reason?: string;
   payload?: Record<string, unknown>;
 }
@@ -62,16 +62,16 @@ export interface IngestionSuggestionRepository {
 
   findPendingDuplicate(params: {
     type: IngestionSuggestionType;
-    clinicId?: string;
-    doctorId?: string;
-    associationId?: string;
+    facilityId?: string;
+    professionalId?: string;
+    facilityProfessionalId?: string;
   }): Promise<IngestionSuggestionRecord | null>;
 
   supersedePending(params: {
     type: IngestionSuggestionType;
-    clinicId?: string;
-    doctorId?: string;
-    associationId?: string;
+    facilityId?: string;
+    professionalId?: string;
+    facilityProfessionalId?: string;
   }): Promise<void>;
 
   findById(id: string): Promise<IngestionSuggestionRecord | null>;
@@ -81,7 +81,7 @@ export interface IngestionSuggestionRepository {
     limit?: number;
     status?: IngestionSuggestionStatus;
     type?: IngestionSuggestionType;
-    clinicIds?: string[];
+    facilityIds?: string[];
   }): Promise<{ suggestions: IngestionSuggestionRecord[]; total: number }>;
 
   resolve(params: {

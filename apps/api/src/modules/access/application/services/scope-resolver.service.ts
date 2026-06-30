@@ -28,8 +28,8 @@ export class ScopeResolver {
           assignedTerritoryIds,
           true
         );
-      const clinicIds =
-        await this.deps.territoryScopePort.getClinicIdsForTerritories(
+      const facilityIds =
+        await this.deps.territoryScopePort.getFacilityIdsForTerritories(
           effectiveTerritoryIds
         );
 
@@ -38,8 +38,8 @@ export class ScopeResolver {
         assignedTerritoryIds,
         effectiveTerritoryIds,
         analyticsEffectiveTerritoryIds: effectiveTerritoryIds,
-        clinicIds,
-        analyticsClinicIds: clinicIds,
+        facilityIds,
+        analyticsFacilityIds: facilityIds,
         managedUserIds: [],
         isOperationallyActive: effectiveTerritoryIds.length > 0,
       });
@@ -77,14 +77,14 @@ export class ScopeResolver {
 
       const oversightClinicIds =
         oversightTerritoryIds.length > 0
-          ? await this.deps.territoryScopePort.getClinicIdsForTerritories(
+          ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
               oversightTerritoryIds
             )
           : [];
 
-      const analyticsClinicIds =
+      const analyticsFacilityIds =
         analyticsEffectiveTerritoryIds.length > 0
-          ? await this.deps.territoryScopePort.getClinicIdsForTerritories(
+          ? await this.deps.territoryScopePort.getFacilityIdsForTerritories(
               analyticsEffectiveTerritoryIds
             )
           : [];
@@ -94,8 +94,8 @@ export class ScopeResolver {
         assignedTerritoryIds: ownAssignments,
         effectiveTerritoryIds: oversightTerritoryIds,
         analyticsEffectiveTerritoryIds,
-        clinicIds: [...new Set(oversightClinicIds)],
-        analyticsClinicIds: [...new Set(analyticsClinicIds)],
+        facilityIds: [...new Set(oversightClinicIds)],
+        analyticsFacilityIds: [...new Set(analyticsFacilityIds)],
         managedUserIds,
         reportAssignedTerritoryIds: reportAssignments,
         isOperationallyActive:

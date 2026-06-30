@@ -20,7 +20,7 @@ export class TerritoryMembershipUseCases {
     return this.deps.membershipService.recomputeAll();
   }
 
-  async listUnassignedClinics(input: {
+  async listUnassignedFacilities(input: {
     scope: ScopeContext;
     page?: number;
     limit?: number;
@@ -41,7 +41,11 @@ export class TerritoryMembershipUseCases {
         return true;
       }
 
-      return true;
+      if (input.scope.facilityIds.length > 0) {
+        return input.scope.facilityIds.includes(clinic.id);
+      }
+
+      return false;
     });
 
     const start = (page - 1) * limit;
@@ -65,7 +69,7 @@ export class TerritoryMembershipUseCases {
   }
 
   async adminOverrideClinicTerritory(input: {
-    clinicId: string;
+    facilityId: string;
     territoryId: string;
     reason?: string;
   }) {
@@ -82,7 +86,7 @@ export class TerritoryMembershipUseCases {
       );
     }
 
-    await this.deps.clinicWriter.updateTerritoryMembership(input.clinicId, {
+    await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
       territoryId: input.territoryId,
       territoryAssignmentStatus: "assigned",
       territoryAssignmentSource: "manual",
@@ -91,16 +95,16 @@ export class TerritoryMembershipUseCases {
     return { success: true };
   }
 
-  async unlockClinicGeo(input: { clinicId: string }) {
+  async unlockClinicGeo(input: { facilityId: string }) {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
-      clinicIds: [input.clinicId],
+      facilityIds: [input.facilityId],
     });
     const clinic = clinics[0];
     if (!clinic) {
-      throw new ResourceNotFoundError("Clinic", input.clinicId);
+      throw new ResourceNotFoundError("Clinic", input.facilityId);
     }
 
-    await this.deps.clinicWriter.updateTerritoryMembership(input.clinicId, {
+    await this.deps.clinicWriter.updateTerritoryMembership(input.facilityId, {
       territoryId: clinic.territoryId,
       territoryAssignmentStatus: clinic.territoryAssignmentStatus ?? "unassigned",
       territoryAssignmentSource: "geo",

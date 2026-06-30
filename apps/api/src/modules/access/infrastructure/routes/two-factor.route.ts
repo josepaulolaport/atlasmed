@@ -49,10 +49,12 @@ export const twoFactorRoute = new Elysia({
   )
   .post(
     "/2fa/confirm",
-    async ({ getUserId, body, request }: any) => {
+    async ({ getUserId, getSessionId, body, request }: any) => {
       const userId = await getUserId();
+      const sessionId = await getSessionId();
       return await accessUseCases.confirm2faSetup().execute({
         userId,
+        sessionId,
         code: body.code,
         ipAddress: getClientIp(request),
       });
@@ -78,10 +80,12 @@ export const twoFactorRoute = new Elysia({
   )
   .post(
     "/2fa/disable",
-    async ({ getUserId, body, request }: any) => {
+    async ({ getUserId, getSessionId, body, request }: any) => {
       const userId = await getUserId();
+      const sessionId = await getSessionId();
       return await accessUseCases.disable2fa().execute({
         userId,
+        sessionId,
         password: body.password,
         code: body.code,
         ipAddress: getClientIp(request),

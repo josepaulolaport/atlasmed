@@ -75,6 +75,7 @@ describe("Verify2FALoginUseCase", () => {
         userAgent: "Mozilla/5.0",
       })),
       recordFailedAttempt: mock(async () => true),
+      acquireVerificationLock: mock(async () => true),
     } as unknown as Pending2FALoginService;
     mockTwoFactorService = {
       decryptSecret: mock(() => "plain-secret"),

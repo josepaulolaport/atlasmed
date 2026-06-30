@@ -15,7 +15,7 @@ function mapApproval(record: {
   reviewerId: string | null;
   entityPayload: unknown;
   targetTerritoryId: string | null;
-  clinicId: string | null;
+  facilityId: string | null;
   toTerritoryId: string | null;
   reason: string | null;
   resolutionNote: string | null;
@@ -32,7 +32,7 @@ function mapApproval(record: {
     reviewerId: record.reviewerId,
     entityPayload: (record.entityPayload ?? {}) as Record<string, unknown>,
     targetTerritoryId: record.targetTerritoryId,
-    clinicId: record.clinicId,
+    facilityId: record.facilityId,
     toTerritoryId: record.toTerritoryId,
     reason: record.reason,
     resolutionNote: record.resolutionNote,
@@ -51,7 +51,7 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
         requesterId: input.requesterId,
         entityPayload: input.entityPayload as Prisma.InputJsonValue,
         targetTerritoryId: input.targetTerritoryId ?? null,
-        clinicId: input.clinicId ?? null,
+        facilityId: input.facilityId ?? null,
         toTerritoryId: input.toTerritoryId ?? null,
         reason: input.reason ?? null,
       },
@@ -67,14 +67,14 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
   async findPendingByEntity(params: {
     type: TerritoryApprovalRecord["type"];
     targetTerritoryId?: string | null;
-    clinicId?: string | null;
+    facilityId?: string | null;
   }): Promise<TerritoryApprovalRecord[]> {
     const records = await prisma.territoryApprovalRequest.findMany({
       where: {
         type: params.type,
         status: "pending",
         targetTerritoryId: params.targetTerritoryId ?? undefined,
-        clinicId: params.clinicId ?? undefined,
+        facilityId: params.facilityId ?? undefined,
       },
     });
     return records.map(mapApproval);
@@ -84,7 +84,7 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
     type: TerritoryApprovalRecord["type"];
     requesterId: string;
     targetTerritoryId?: string | null;
-    clinicId?: string | null;
+    facilityId?: string | null;
   }): Promise<TerritoryApprovalRecord | null> {
     const record = await prisma.territoryApprovalRequest.findFirst({
       where: {
@@ -92,7 +92,7 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
         status: "pending",
         requesterId: params.requesterId,
         targetTerritoryId: params.targetTerritoryId ?? undefined,
-        clinicId: params.clinicId ?? undefined,
+        facilityId: params.facilityId ?? undefined,
       },
     });
     return record ? mapApproval(record) : null;

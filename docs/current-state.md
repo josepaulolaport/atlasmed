@@ -25,7 +25,7 @@ The backend is a TypeScript API using Bun and ElysiaJS. It has PostgreSQL via Pr
 Implemented backend modules:
 
 - `access`: authentication, sessions, invitations, verification, RBAC, grants, scopes, 2FA, audit, and user management.
-- `clinic`: clinic CRUD and doctor-clinic association workflows.
+- `clinic`: clinic CRUD and facility-professional association workflows.
 - `doctor`: doctor CRUD.
 - `registry-ingestion`: ingestion runs and suggestions for external registry changes.
 
@@ -53,7 +53,7 @@ The Prisma schema currently includes:
 
 - Users, roles, sessions, invitations, password resets, verification tokens, permissions, audit logs.
 - User territory assignments.
-- Clinics, doctors, doctor-clinic associations.
+- Clinics, doctors, facility-professional associations.
 - Registry ingestion runs and ingestion suggestions.
 
 Not yet present as first-class models:
@@ -71,4 +71,4 @@ Root-level status and implementation docs exist, including API endpoints, setup,
 
 ## Worktree Note
 
-The current branch is `feature/clinic-doctor` and the worktree contains uncommitted changes around clinic, doctor, registry ingestion, web pages, and generated Prisma files. Documentation work should avoid modifying those implementation files unless explicitly requested.
+The current branch is `feature/facility-professional` and the worktree contains uncommitted changes around clinic, doctor, registry ingestion, web pages, and generated Prisma files. Documentation work should avoid modifying those implementation files unless explicitly requested.
