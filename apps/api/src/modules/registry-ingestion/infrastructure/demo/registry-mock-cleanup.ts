@@ -2,33 +2,33 @@ import { prisma } from "../../../../infrastructure/database/prisma.client";
 import { MOCK_REGISTRY_PROVIDER } from "../../application/interfaces/registry-source.port";
 
 export async function cleanupMockRegistryData(): Promise<void> {
-  const mockClinics = await prisma.clinic.findMany({
+  const mockClinics = await prisma.facility.findMany({
     where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
     select: { id: true },
   });
-  const mockDoctors = await prisma.doctor.findMany({
+  const mockDoctors = await prisma.professional.findMany({
     where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
     select: { id: true },
   });
 
-  const clinicIds = mockClinics.map((c) => c.id);
-  const doctorIds = mockDoctors.map((d) => d.id);
+  const facilityIds = mockClinics.map((c) => c.id);
+  const professionalIds = mockDoctors.map((d) => d.id);
 
-  if (clinicIds.length > 0 || doctorIds.length > 0) {
+  if (facilityIds.length > 0 || professionalIds.length > 0) {
     await prisma.ingestionSuggestion.deleteMany({
       where: {
         OR: [
-          ...(clinicIds.length > 0 ? [{ clinicId: { in: clinicIds } }] : []),
-          ...(doctorIds.length > 0 ? [{ doctorId: { in: doctorIds } }] : []),
+          ...(facilityIds.length > 0 ? [{ facilityId: { in: facilityIds } }] : []),
+          ...(professionalIds.length > 0 ? [{ professionalId: { in: professionalIds } }] : []),
         ],
       },
     });
 
-    await prisma.doctorClinicAssociation.deleteMany({
+    await prisma.facilityProfessional.deleteMany({
       where: {
         OR: [
-          ...(clinicIds.length > 0 ? [{ clinicId: { in: clinicIds } }] : []),
-          ...(doctorIds.length > 0 ? [{ doctorId: { in: doctorIds } }] : []),
+          ...(facilityIds.length > 0 ? [{ facilityId: { in: facilityIds } }] : []),
+          ...(professionalIds.length > 0 ? [{ professionalId: { in: professionalIds } }] : []),
         ],
       },
     });
@@ -38,11 +38,11 @@ export async function cleanupMockRegistryData(): Promise<void> {
     where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
   });
 
-  await prisma.doctor.deleteMany({
+  await prisma.professional.deleteMany({
     where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
   });
 
-  await prisma.clinic.deleteMany({
+  await prisma.facility.deleteMany({
     where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
   });
 }

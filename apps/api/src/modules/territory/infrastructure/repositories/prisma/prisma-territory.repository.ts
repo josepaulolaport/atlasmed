@@ -122,7 +122,7 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
   async countClinics(territoryId: string): Promise<number> {
     const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
       SELECT COUNT(*)::bigint AS count
-      FROM clinics c
+      FROM facilities c
       WHERE c."deletedAt" IS NULL
         AND c."territoryId" IS NOT NULL
         AND EXISTS (

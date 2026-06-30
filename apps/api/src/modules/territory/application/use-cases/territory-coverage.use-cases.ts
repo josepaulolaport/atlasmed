@@ -1,4 +1,5 @@
 import type { ScopeContext } from "@atlasmed/access";
+import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritoryGeoMembershipRepository } from "../interfaces/territory-geo-membership.repository.interface";
@@ -10,10 +11,10 @@ import {
   OperationNotAllowedError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
-import { assertManagerReadScope } from "./territory-crud.use-cases";
+import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
 
 function groupClinicsByTerritoryId(
-  clinics: Array<{
+  facilities: Array<{
     id: string;
     name: string;
     lat: number;
@@ -26,15 +27,15 @@ function groupClinicsByTerritoryId(
     Array<{ id: string; name: string; lat: number; lng: number }>
   >();
 
-  for (const clinic of clinics) {
-    const bucket = grouped.get(clinic.territoryId) ?? [];
+  for (const facility of facilities) {
+    const bucket = grouped.get(facility.territoryId) ?? [];
     bucket.push({
-      id: clinic.id,
-      name: clinic.name,
-      lat: clinic.lat,
-      lng: clinic.lng,
+      id: facility.id,
+      name: facility.name,
+      lat: facility.lat,
+      lng: facility.lng,
     });
-    grouped.set(clinic.territoryId, bucket);
+    grouped.set(facility.territoryId, bucket);
   }
 
   return grouped;
@@ -47,6 +48,7 @@ export class TerritoryCoverageUseCases {
       territoryTypeRepository: TerritoryTypeRepository;
       geoMembershipRepository: TerritoryGeoMembershipRepository;
       spatialRepository: TerritorySpatialRepository;
+      closureRepository: TerritoryClosureRepository;
     }
   ) {}
 
@@ -76,7 +78,7 @@ export class TerritoryCoverageUseCases {
           overlapRatio: membership.overlapRatio,
           intersectionAreaSqKm: membership.intersectionAreaSqKm,
           clippedBoundary,
-          clinics: clinicsByPatch.get(membership.operationalTerritoryId) ?? [],
+          facilities: clinicsByPatch.get(membership.operationalTerritoryId) ?? [],
         };
       })
     );
@@ -112,7 +114,11 @@ export class TerritoryCoverageUseCases {
     }
 
     if (!scope.isGlobal) {
-      assertManagerReadScope(scope, referenceTerritoryId);
+      await assertManagerReadableTerritory(
+        scope,
+        referenceTerritoryId,
+        this.deps.closureRepository
+      );
     }
 
     return reference;

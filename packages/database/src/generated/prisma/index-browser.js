@@ -120,6 +120,309 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.RegistryAgreementTypeScalarFieldEnum = {
+  agreementCode: 'agreementCode',
+  agreementName: 'agreementName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryCareTypeScalarFieldEnum = {
+  careTypeCode: 'careTypeCode',
+  careTypeName: 'careTypeName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryDeactivationReasonScalarFieldEnum = {
+  deactivationCode: 'deactivationCode',
+  deactivationReason: 'deactivationReason',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryEquipmentCatalogScalarFieldEnum = {
+  equipmentCode: 'equipmentCode',
+  equipmentTypeCode: 'equipmentTypeCode',
+  equipmentName: 'equipmentName',
+  renemCode: 'renemCode',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryEquipmentCategoryScalarFieldEnum = {
+  categoryCode: 'categoryCode',
+  categoryName: 'categoryName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityScalarFieldEnum = {
+  facilityId: 'facilityId',
+  cnesCode: 'cnesCode',
+  legalName: 'legalName',
+  tradeName: 'tradeName',
+  streetAddress: 'streetAddress',
+  streetNumber: 'streetNumber',
+  addressComplement: 'addressComplement',
+  neighborhood: 'neighborhood',
+  postalCode: 'postalCode',
+  municipalityId: 'municipalityId',
+  healthRegionId: 'healthRegionId',
+  phoneNumber: 'phoneNumber',
+  faxNumber: 'faxNumber',
+  email: 'email',
+  websiteUrl: 'websiteUrl',
+  latitude: 'latitude',
+  longitude: 'longitude',
+  taxIdCnpj: 'taxIdCnpj',
+  taxIdCpf: 'taxIdCpf',
+  ownerTaxId: 'ownerTaxId',
+  legalEntityTypeCode: 'legalEntityTypeCode',
+  entityType: 'entityType',
+  facilityTypeCode: 'facilityTypeCode',
+  primaryActivityCode: 'primaryActivityCode',
+  unitTypeCode: 'unitTypeCode',
+  operatingHoursCode: 'operatingHoursCode',
+  deactivationReasonCode: 'deactivationReasonCode',
+  is_24_7: 'is_24_7',
+  isPhilanthropic: 'isPhilanthropic',
+  hasInternet: 'hasInternet',
+  hasFormalContract: 'hasFormalContract',
+  licenseIssueDate: 'licenseIssueDate',
+  sanitaryLicenseExpiry: 'sanitaryLicenseExpiry',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  unitTypeName: 'unitTypeName',
+  unitSubtypeName: 'unitSubtypeName'
+};
+
+exports.Prisma.RegistryFacilityAgreementScalarFieldEnum = {
+  facilityId: 'facilityId',
+  careTypeCode: 'careTypeCode',
+  agreementCode: 'agreementCode',
+  updatedByUser: 'updatedByUser',
+  lastUpdatedDate: 'lastUpdatedDate',
+  originUpdatedDate: 'originUpdatedDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityEquipmentScalarFieldEnum = {
+  facilityId: 'facilityId',
+  equipmentCode: 'equipmentCode',
+  equipmentCategoryCode: 'equipmentCategoryCode',
+  quantity: 'quantity',
+  operationalStatus: 'operationalStatus',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityPhysicalInstallationScalarFieldEnum = {
+  facilityId: 'facilityId',
+  installationCode: 'installationCode',
+  quantity: 'quantity',
+  bedCount: 'bedCount',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  originUpdatedDate: 'originUpdatedDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityProfessionalScalarFieldEnum = {
+  facilityId: 'facilityId',
+  professionalId: 'professionalId',
+  occupationCode: 'occupationCode',
+  municipalityId: 'municipalityId',
+  serviceAreaId: 'serviceAreaId',
+  teamSequenceNumber: 'teamSequenceNumber',
+  serviceType: 'serviceType',
+  employmentTypeCode: 'employmentTypeCode',
+  startDate: 'startDate',
+  terminationDate: 'terminationDate',
+  microAreaCode: 'microAreaCode',
+  otherTeamCnes: 'otherTeamCnes',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityRepresentativeScalarFieldEnum = {
+  facilityId: 'facilityId',
+  representativeName: 'representativeName',
+  roleTitle: 'roleTitle',
+  email: 'email',
+  taxId: 'taxId',
+  updatedByUser: 'updatedByUser',
+  lastUpdatedDate: 'lastUpdatedDate',
+  originUpdatedDate: 'originUpdatedDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityServiceScalarFieldEnum = {
+  facilityId: 'facilityId',
+  serviceCode: 'serviceCode',
+  classificationCode: 'classificationCode',
+  characteristicType: 'characteristicType',
+  ownerTaxId: 'ownerTaxId',
+  addressComplement: 'addressComplement',
+  ambulatoryCapacity: 'ambulatoryCapacity',
+  ambulatoryCapacitySus: 'ambulatoryCapacitySus',
+  hospitalCapacity: 'hospitalCapacity',
+  hospitalCapacitySus: 'hospitalCapacitySus',
+  isActive: 'isActive',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryFacilityTypeScalarFieldEnum = {
+  facilityTypeCode: 'facilityTypeCode',
+  facilityTypeName: 'facilityTypeName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryInstallationSubtypeScalarFieldEnum = {
+  installationSubtypeCode: 'installationSubtypeCode',
+  installationSubtypeName: 'installationSubtypeName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryMaintainerScalarFieldEnum = {
+  taxId: 'taxId',
+  legalName: 'legalName',
+  bankCode: 'bankCode',
+  branchNumber: 'branchNumber',
+  accountNumber: 'accountNumber',
+  streetAddress: 'streetAddress',
+  streetNumber: 'streetNumber',
+  addressComplement: 'addressComplement',
+  neighborhood: 'neighborhood',
+  postalCode: 'postalCode',
+  municipalityId: 'municipalityId',
+  healthRegionId: 'healthRegionId',
+  phoneNumber: 'phoneNumber',
+  formFilledDate: 'formFilledDate',
+  fmsFesStatus: 'fmsFesStatus',
+  fmsFesTaxId: 'fmsFesTaxId',
+  legalEntityTypeCode: 'legalEntityTypeCode',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  managerCode: 'managerCode',
+  managerMunicipalityId: 'managerMunicipalityId',
+  originUpdatedDate: 'originUpdatedDate',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryMunicipalityScalarFieldEnum = {
+  municipalityId: 'municipalityId',
+  municipalityName: 'municipalityName',
+  stateCode: 'stateCode',
+  registrationType: 'registrationType',
+  pactType: 'pactType',
+  dataSubmissionType: 'dataSubmissionType',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryOccupationScalarFieldEnum = {
+  occupationCode: 'occupationCode',
+  occupationName: 'occupationName',
+  professionalClassification: 'professionalClassification',
+  isHealthOccupation: 'isHealthOccupation',
+  isRegulated: 'isRegulated',
+  referenceYear: 'referenceYear',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryPhysicalInstallationTypeScalarFieldEnum = {
+  installationTypeCode: 'installationTypeCode',
+  installationTypeName: 'installationTypeName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryPhysicalInstallationScalarFieldEnum = {
+  installationCode: 'installationCode',
+  installationSubtypeCode: 'installationSubtypeCode',
+  installationName: 'installationName',
+  installationTypeCode: 'installationTypeCode',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryProfessionalCouncilScalarFieldEnum = {
+  councilCode: 'councilCode',
+  councilName: 'councilName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryProfessionalWorkloadScalarFieldEnum = {
+  facilityId: 'facilityId',
+  professionalId: 'professionalId',
+  occupationCode: 'occupationCode',
+  weeklyHoursAmbulatory: 'weeklyHoursAmbulatory',
+  serviceType: 'serviceType',
+  employmentTypeCode: 'employmentTypeCode',
+  professionalCouncilCode: 'professionalCouncilCode',
+  licenseNumber: 'licenseNumber',
+  licenseState: 'licenseState',
+  isPreceptor: 'isPreceptor',
+  isResident: 'isResident',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryProfessionalScalarFieldEnum = {
+  professionalId: 'professionalId',
+  fullName: 'fullName',
+  socialName: 'socialName',
+  taxId: 'taxId',
+  healthCardNumber: 'healthCardNumber',
+  nationalityCode: 'nationalityCode',
+  lastUpdatedDate: 'lastUpdatedDate',
+  updatedByUser: 'updatedByUser',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryServiceClassificationScalarFieldEnum = {
+  classificationId: 'classificationId',
+  serviceSpecialtyCode: 'serviceSpecialtyCode',
+  classificationName: 'classificationName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryServiceSpecialtyScalarFieldEnum = {
+  serviceCode: 'serviceCode',
+  serviceName: 'serviceName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RegistryStateScalarFieldEnum = {
+  stateCode: 'stateCode',
+  stateName: 'stateName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.UserScalarFieldEnum = {
   id: 'id',
   email: 'email',
@@ -234,7 +537,7 @@ exports.Prisma.TerritoryApprovalRequestScalarFieldEnum = {
   reviewerId: 'reviewerId',
   entityPayload: 'entityPayload',
   targetTerritoryId: 'targetTerritoryId',
-  clinicId: 'clinicId',
+  facilityId: 'facilityId',
   toTerritoryId: 'toTerritoryId',
   reason: 'reason',
   resolutionNote: 'resolutionNote',
@@ -356,12 +659,35 @@ exports.Prisma.PermissionScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.ClinicScalarFieldEnum = {
+exports.Prisma.FacilityScalarFieldEnum = {
   id: 'id',
-  name: 'name',
+  displayName: 'displayName',
   address: 'address',
   lat: 'lat',
   lng: 'lng',
+  cnesCode: 'cnesCode',
+  legalName: 'legalName',
+  tradeName: 'tradeName',
+  streetAddress: 'streetAddress',
+  streetNumber: 'streetNumber',
+  addressComplement: 'addressComplement',
+  neighborhood: 'neighborhood',
+  postalCode: 'postalCode',
+  phoneNumber: 'phoneNumber',
+  faxNumber: 'faxNumber',
+  email: 'email',
+  websiteUrl: 'websiteUrl',
+  taxIdCnpj: 'taxIdCnpj',
+  taxIdCpf: 'taxIdCpf',
+  ownerTaxId: 'ownerTaxId',
+  facilityTypeCode: 'facilityTypeCode',
+  registryDeactivationCode: 'registryDeactivationCode',
+  isActiveInRegistry: 'isActiveInRegistry',
+  referenceMunicipalityCode: 'referenceMunicipalityCode',
+  conformityStatus: 'conformityStatus',
+  commercialStatus: 'commercialStatus',
+  primarySectorId: 'primarySectorId',
+  imageUrl: 'imageUrl',
   territoryId: 'territoryId',
   territoryAssignmentStatus: 'territoryAssignmentStatus',
   territoryAssignmentSource: 'territoryAssignmentSource',
@@ -378,11 +704,16 @@ exports.Prisma.ClinicScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.DoctorScalarFieldEnum = {
+exports.Prisma.ProfessionalScalarFieldEnum = {
   id: 'id',
   firstName: 'firstName',
   lastName: 'lastName',
-  specialty: 'specialty',
+  fullName: 'fullName',
+  socialName: 'socialName',
+  primarySpecialtyLabel: 'primarySpecialtyLabel',
+  crmCouncil: 'crmCouncil',
+  crmNumber: 'crmNumber',
+  crmState: 'crmState',
   sourceProvider: 'sourceProvider',
   externalSourceId: 'externalSourceId',
   sourceContentHash: 'sourceContentHash',
@@ -396,10 +727,18 @@ exports.Prisma.DoctorScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.DoctorClinicAssociationScalarFieldEnum = {
+exports.Prisma.FacilityProfessionalScalarFieldEnum = {
   id: 'id',
-  doctorId: 'doctorId',
-  clinicId: 'clinicId',
+  professionalId: 'professionalId',
+  facilityId: 'facilityId',
+  occupationCode: 'occupationCode',
+  specialtyLabel: 'specialtyLabel',
+  employmentTypeCode: 'employmentTypeCode',
+  sourceOccupationCode: 'sourceOccupationCode',
+  isPrescriber: 'isPrescriber',
+  isBuyer: 'isBuyer',
+  isDecisionMaker: 'isDecisionMaker',
+  relationshipLevel: 'relationshipLevel',
   sourceActive: 'sourceActive',
   sourceFirstSeenAt: 'sourceFirstSeenAt',
   sourceLastSeenAt: 'sourceLastSeenAt',
@@ -408,6 +747,105 @@ exports.Prisma.DoctorClinicAssociationScalarFieldEnum = {
   endedAt: 'endedAt',
   endedByUserId: 'endedByUserId',
   endReason: 'endReason',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.FacilityRepresentativeScalarFieldEnum = {
+  id: 'id',
+  facilityId: 'facilityId',
+  representativeName: 'representativeName',
+  roleTitle: 'roleTitle',
+  email: 'email',
+  taxId: 'taxId',
+  contactType: 'contactType',
+  relationshipLevel: 'relationshipLevel',
+  phone: 'phone',
+  notes: 'notes',
+  sourceProvider: 'sourceProvider',
+  externalSourceKey: 'externalSourceKey',
+  sourceActive: 'sourceActive',
+  confirmedAt: 'confirmedAt',
+  confirmedByUserId: 'confirmedByUserId',
+  endedAt: 'endedAt',
+  manuallyEditedAt: 'manuallyEditedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.FacilityConsultantAssignmentScalarFieldEnum = {
+  id: 'id',
+  facilityId: 'facilityId',
+  userId: 'userId',
+  startedAt: 'startedAt',
+  endedAt: 'endedAt',
+  assignedByUserId: 'assignedByUserId',
+  endReason: 'endReason',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.SectorScalarFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ProductScalarFieldEnum = {
+  id: 'id',
+  code: 'code',
+  name: 'name',
+  sectorId: 'sectorId',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.HealthcareProviderScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  type: 'type',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.FacilityHealthcareProviderShareScalarFieldEnum = {
+  id: 'id',
+  facilityId: 'facilityId',
+  healthcareProviderId: 'healthcareProviderId',
+  sharePercent: 'sharePercent',
+  source: 'source',
+  sourceFirstSeenAt: 'sourceFirstSeenAt',
+  sourceLastSeenAt: 'sourceLastSeenAt',
+  manuallyEditedAt: 'manuallyEditedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ConformityRequirementScalarFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  description: 'description',
+  sectorId: 'sectorId',
+  isActive: 'isActive',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ConformityRecordScalarFieldEnum = {
+  id: 'id',
+  facilityId: 'facilityId',
+  requirementId: 'requirementId',
+  status: 'status',
+  submittedAt: 'submittedAt',
+  validatedAt: 'validatedAt',
+  expiresAt: 'expiresAt',
+  validatedByUserId: 'validatedByUserId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -427,9 +865,9 @@ exports.Prisma.IngestionSuggestionScalarFieldEnum = {
   ingestionRunId: 'ingestionRunId',
   type: 'type',
   status: 'status',
-  clinicId: 'clinicId',
-  doctorId: 'doctorId',
-  associationId: 'associationId',
+  facilityId: 'facilityId',
+  professionalId: 'professionalId',
+  facilityProfessionalId: 'facilityProfessionalId',
   reason: 'reason',
   payload: 'payload',
   suggestedAt: 'suggestedAt',
@@ -457,15 +895,15 @@ exports.Prisma.QueryMode = {
   insensitive: 'insensitive'
 };
 
+exports.Prisma.NullsOrder = {
+  first: 'first',
+  last: 'last'
+};
+
 exports.Prisma.JsonNullValueFilter = {
   DbNull: Prisma.DbNull,
   JsonNull: Prisma.JsonNull,
   AnyNull: Prisma.AnyNull
-};
-
-exports.Prisma.NullsOrder = {
-  first: 'first',
-  last: 'last'
 };
 exports.UserStatus = exports.$Enums.UserStatus = {
   ACTIVE: 'ACTIVE',
@@ -596,6 +1034,20 @@ exports.VerificationTokenType = exports.$Enums.VerificationTokenType = {
   PHONE_CHANGE: 'PHONE_CHANGE'
 };
 
+exports.ConformityStatus = exports.$Enums.ConformityStatus = {
+  INCOMPLETE: 'INCOMPLETE',
+  COMPLETE: 'COMPLETE',
+  EXPIRING_SOON: 'EXPIRING_SOON',
+  NON_CONFORMING: 'NON_CONFORMING'
+};
+
+exports.CommercialStatus = exports.$Enums.CommercialStatus = {
+  REGISTERED: 'REGISTERED',
+  COMMERCIALLY_ACTIVE: 'COMMERCIALLY_ACTIVE',
+  COMMERCIALLY_SUSPENDED: 'COMMERCIALLY_SUSPENDED',
+  COMMERCIALLY_INACTIVE: 'COMMERCIALLY_INACTIVE'
+};
+
 exports.TerritoryAssignmentStatus = exports.$Enums.TerritoryAssignmentStatus = {
   assigned: 'assigned',
   unassigned: 'unassigned',
@@ -607,6 +1059,33 @@ exports.TerritoryAssignmentSource = exports.$Enums.TerritoryAssignmentSource = {
   manual: 'manual'
 };
 
+exports.ContactType = exports.$Enums.ContactType = {
+  PROFESSIONAL: 'PROFESSIONAL',
+  DECISOR: 'DECISOR',
+  COMPRADOR: 'COMPRADOR'
+};
+
+exports.HealthcareProviderType = exports.$Enums.HealthcareProviderType = {
+  PRIVATE: 'PRIVATE',
+  PUBLIC: 'PUBLIC',
+  MIXED: 'MIXED',
+  OTHER: 'OTHER'
+};
+
+exports.HealthcareProviderShareSource = exports.$Enums.HealthcareProviderShareSource = {
+  MANUAL: 'MANUAL',
+  REGISTRY: 'REGISTRY',
+  IMPORT: 'IMPORT'
+};
+
+exports.ConformityRecordStatus = exports.$Enums.ConformityRecordStatus = {
+  PENDING: 'PENDING',
+  SUBMITTED: 'SUBMITTED',
+  VALIDATED: 'VALIDATED',
+  REJECTED: 'REJECTED',
+  EXPIRED: 'EXPIRED'
+};
+
 exports.IngestionRunStatus = exports.$Enums.IngestionRunStatus = {
   RUNNING: 'RUNNING',
   COMPLETED: 'COMPLETED',
@@ -614,6 +1093,14 @@ exports.IngestionRunStatus = exports.$Enums.IngestionRunStatus = {
 };
 
 exports.IngestionSuggestionType = exports.$Enums.IngestionSuggestionType = {
+  FACILITY_FIELD_UPDATE: 'FACILITY_FIELD_UPDATE',
+  FACILITY_REGISTRY_DEACTIVATED: 'FACILITY_REGISTRY_DEACTIVATED',
+  FACILITY_REGISTRY_REACTIVATED: 'FACILITY_REGISTRY_REACTIVATED',
+  FACILITY_PROFESSIONAL_REMOVAL: 'FACILITY_PROFESSIONAL_REMOVAL',
+  FACILITY_PROFESSIONAL_ADD: 'FACILITY_PROFESSIONAL_ADD',
+  FACILITY_REPRESENTATIVE_REMOVAL: 'FACILITY_REPRESENTATIVE_REMOVAL',
+  FACILITY_REPRESENTATIVE_ADD: 'FACILITY_REPRESENTATIVE_ADD',
+  FACILITY_REPRESENTATIVE_FIELD_UPDATE: 'FACILITY_REPRESENTATIVE_FIELD_UPDATE',
   CLINIC_REMOVAL: 'CLINIC_REMOVAL',
   CLINIC_REACTIVATION: 'CLINIC_REACTIVATION',
   DOCTOR_CLINIC_REMOVAL: 'DOCTOR_CLINIC_REMOVAL'
@@ -628,6 +1115,31 @@ exports.IngestionSuggestionStatus = exports.$Enums.IngestionSuggestionStatus = {
 };
 
 exports.Prisma.ModelName = {
+  RegistryAgreementType: 'RegistryAgreementType',
+  RegistryCareType: 'RegistryCareType',
+  RegistryDeactivationReason: 'RegistryDeactivationReason',
+  RegistryEquipmentCatalog: 'RegistryEquipmentCatalog',
+  RegistryEquipmentCategory: 'RegistryEquipmentCategory',
+  RegistryFacility: 'RegistryFacility',
+  RegistryFacilityAgreement: 'RegistryFacilityAgreement',
+  RegistryFacilityEquipment: 'RegistryFacilityEquipment',
+  RegistryFacilityPhysicalInstallation: 'RegistryFacilityPhysicalInstallation',
+  RegistryFacilityProfessional: 'RegistryFacilityProfessional',
+  RegistryFacilityRepresentative: 'RegistryFacilityRepresentative',
+  RegistryFacilityService: 'RegistryFacilityService',
+  RegistryFacilityType: 'RegistryFacilityType',
+  RegistryInstallationSubtype: 'RegistryInstallationSubtype',
+  RegistryMaintainer: 'RegistryMaintainer',
+  RegistryMunicipality: 'RegistryMunicipality',
+  RegistryOccupation: 'RegistryOccupation',
+  RegistryPhysicalInstallationType: 'RegistryPhysicalInstallationType',
+  RegistryPhysicalInstallation: 'RegistryPhysicalInstallation',
+  RegistryProfessionalCouncil: 'RegistryProfessionalCouncil',
+  RegistryProfessionalWorkload: 'RegistryProfessionalWorkload',
+  RegistryProfessional: 'RegistryProfessional',
+  RegistryServiceClassification: 'RegistryServiceClassification',
+  RegistryServiceSpecialty: 'RegistryServiceSpecialty',
+  RegistryState: 'RegistryState',
   User: 'User',
   UserTerritoryAssignment: 'UserTerritoryAssignment',
   TerritoryType: 'TerritoryType',
@@ -643,9 +1155,17 @@ exports.Prisma.ModelName = {
   AuditLog: 'AuditLog',
   VerificationToken: 'VerificationToken',
   Permission: 'Permission',
-  Clinic: 'Clinic',
-  Doctor: 'Doctor',
-  DoctorClinicAssociation: 'DoctorClinicAssociation',
+  Facility: 'Facility',
+  Professional: 'Professional',
+  FacilityProfessional: 'FacilityProfessional',
+  FacilityRepresentative: 'FacilityRepresentative',
+  FacilityConsultantAssignment: 'FacilityConsultantAssignment',
+  Sector: 'Sector',
+  Product: 'Product',
+  HealthcareProvider: 'HealthcareProvider',
+  FacilityHealthcareProviderShare: 'FacilityHealthcareProviderShare',
+  ConformityRequirement: 'ConformityRequirement',
+  ConformityRecord: 'ConformityRecord',
   IngestionRun: 'IngestionRun',
   IngestionSuggestion: 'IngestionSuggestion'
 };

@@ -16,24 +16,24 @@ export function canManageUsers(role: Role): boolean {
   return ability.can("read", "USER") || ability.can("manage", "USER");
 }
 
-export function canReadClinics(role: Role): boolean {
+export function canReadFacilities(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("read", "CLINIC") || ability.can("manage", "CLINIC");
+  return ability.can("read", "FACILITY") || ability.can("manage", "FACILITY");
 }
 
-export function canManageClinics(role: Role): boolean {
+export function canManageFacilities(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("create", "CLINIC") || ability.can("manage", "CLINIC");
+  return ability.can("create", "FACILITY") || ability.can("manage", "FACILITY");
 }
 
-export function canReadDoctors(role: Role): boolean {
+export function canReadProfessionals(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("read", "DOCTOR") || ability.can("manage", "DOCTOR");
+  return ability.can("read", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
 }
 
-export function canManageDoctors(role: Role): boolean {
+export function canManageProfessionals(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
-  return ability.can("create", "DOCTOR") || ability.can("manage", "DOCTOR");
+  return ability.can("create", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
 }
 
 export function canReadTerritories(role: Role): boolean {
@@ -58,6 +58,21 @@ export function canUpdateTerritories(role: Role): boolean {
 
 export function canViewHealth(role: Role): boolean {
   return role === Role.ADMIN;
+}
+
+export function canManageCatalog(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("manage", "CATALOG");
+}
+
+export function canReadCatalog(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return (
+    ability.can("read", "CATALOG") ||
+    ability.can("create", "CATALOG") ||
+    ability.can("update", "CATALOG") ||
+    ability.can("manage", "CATALOG")
+  );
 }
 
 export function isAdmin(role: Role): boolean {

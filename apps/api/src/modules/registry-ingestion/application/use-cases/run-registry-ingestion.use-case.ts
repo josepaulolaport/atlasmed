@@ -1,7 +1,7 @@
 import type { RegistrySourcePort } from "../interfaces/registry-source.port";
 import type { IngestionRunRepository } from "../interfaces/ingestion.repository.interface";
-import { sanitizeClinicBatch } from "../sanitize/sanitize-clinic";
-import { sanitizeDoctorBatch } from "../sanitize/sanitize-doctor";
+import { sanitizeFacilityBatch } from "../sanitize/sanitize-facility";
+import { sanitizeProfessionalBatch } from "../sanitize/sanitize-professional";
 import { RegistrySyncService } from "../services/registry-sync.service";
 import type { AuditLogService } from "../../../../infrastructure/audit/audit-log.service";
 
@@ -33,13 +33,13 @@ export class RunRegistryIngestionUseCase {
       const run = await this.deps.ingestionRunRepository.create(rawSnapshot.provider);
       runId = run.id;
 
-      const clinicBatch = sanitizeClinicBatch(rawSnapshot.clinics as unknown[]);
-      const doctorBatch = sanitizeDoctorBatch(rawSnapshot.doctors as unknown[]);
+      const facilityBatch = sanitizeFacilityBatch(rawSnapshot.facilities as unknown[]);
+      const professionalBatch = sanitizeProfessionalBatch(rawSnapshot.doctors as unknown[]);
 
       const snapshot = {
         ...rawSnapshot,
-        clinics: clinicBatch.valid,
-        doctors: doctorBatch.valid,
+        facilities: facilityBatch.valid,
+        doctors: professionalBatch.valid,
       };
 
       const syncStats = await this.deps.registrySyncService.syncSnapshot({
@@ -49,8 +49,8 @@ export class RunRegistryIngestionUseCase {
 
       const stats = {
         ...syncStats,
-        invalidClinics: clinicBatch.invalidCount,
-        invalidDoctors: doctorBatch.invalidCount,
+        invalidFacilities: facilityBatch.invalidCount,
+        invalidProfessionals: professionalBatch.invalidCount,
       };
 
       const completed = await this.deps.ingestionRunRepository.complete(run.id, stats);

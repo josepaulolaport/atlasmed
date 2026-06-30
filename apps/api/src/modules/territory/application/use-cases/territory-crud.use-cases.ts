@@ -1,4 +1,5 @@
 import { Role } from "@atlasmed/access";
+import type { ScopeContext } from "@atlasmed/access";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
@@ -23,6 +24,10 @@ import {
   OperationNotAllowedError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
+import {
+  assertTerritoryReadable,
+  resolveReadableTerritoryIds,
+} from "../services/territory-scope-policy.service";
 
 interface TerritoryCrudDependencies {
   territoryRepository: TerritoryRepository;
@@ -239,10 +244,26 @@ export class TerritoryCrudUseCases {
     return serializeTerritory(await this.enrichTerritory(id));
   }
 
-  async listTerritories(format: "tree" | "flat" = "flat") {
+  async listTerritories(
+    format: "tree" | "flat" = "flat",
+    scope?: ScopeContext
+  ) {
     const territories = await this.deps.territoryRepository.findAllActive();
+
+    let filtered = territories;
+    if (scope && !scope.isGlobal) {
+      const readableIds = await resolveReadableTerritoryIds(
+        scope,
+        this.deps.closureRepository
+      );
+      filtered =
+        readableIds === null
+          ? territories
+          : territories.filter((territory) => readableIds.has(territory.id));
+    }
+
     const enriched = await Promise.all(
-      territories.map(async (t) =>
+      filtered.map(async (t) =>
         serializeTerritory(await this.enrichTerritory(t.id))
       )
     );
@@ -331,10 +352,18 @@ export class TerritoryCrudUseCases {
     return this.updateTerritory(id, { isActive: false });
   }
 
-  async getDescendants(id: string) {
+  async getDescendants(id: string, scope?: ScopeContext) {
     const territory = await this.deps.territoryRepository.findById(id);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", id);
+    }
+
+    if (scope && !scope.isGlobal) {
+      const readableIds = await resolveReadableTerritoryIds(
+        scope,
+        this.deps.closureRepository
+      );
+      assertTerritoryReadable(readableIds, id);
     }
 
     const descendantIds = await this.deps.closureRepository.findDescendantIds(
@@ -342,16 +371,32 @@ export class TerritoryCrudUseCases {
       true
     );
 
+    const scopedDescendantIds =
+      scope && !scope.isGlobal
+        ? descendantIds.filter(
+            (descendantId) =>
+              descendantId !== id &&
+              scope.effectiveTerritoryIds.includes(descendantId)
+          )
+        : descendantIds.filter((descendantId) => descendantId !== id);
+
     return {
       territoryId: id,
-      descendantIds: descendantIds.filter((descendantId) => descendantId !== id),
+      descendantIds: scopedDescendantIds,
     };
   }
 
-  async listAmbiguousParentTerritories() {
+  async listAmbiguousParentTerritories(scope?: ScopeContext) {
     const territories = await this.deps.territoryRepository.findAmbiguousParentAssignments();
+
+    let filtered = territories;
+    if (scope && !scope.isGlobal) {
+      const jurisdictionIds = new Set(scope.effectiveTerritoryIds);
+      filtered = territories.filter((territory) => jurisdictionIds.has(territory.id));
+    }
+
     const enriched = await Promise.all(
-      territories.map(async (t) => serializeTerritory(await this.enrichTerritory(t.id)))
+      filtered.map(async (t) => serializeTerritory(await this.enrichTerritory(t.id)))
     );
     return { data: enriched };
   }
@@ -445,6 +490,19 @@ export function assertManagerReadScope(
   if (!scope.effectiveTerritoryIds.includes(territoryId)) {
     throw new OperationNotAllowedError("read_territory", "Territory outside manager scope");
   }
+}
+
+export async function assertManagerReadableTerritory(
+  scope: ScopeContext,
+  territoryId: string,
+  closureRepository: TerritoryClosureRepository
+): Promise<void> {
+  if (scope.isGlobal) {
+    return;
+  }
+
+  const readableIds = await resolveReadableTerritoryIds(scope, closureRepository);
+  assertTerritoryReadable(readableIds, territoryId);
 }
 
 export function isAdminRole(role: Role): boolean {

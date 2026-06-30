@@ -29,8 +29,8 @@ import {
 import { cn, getInitials } from "@/lib/utils";
 import {
   canManageUsers,
-  canReadClinics,
-  canReadDoctors,
+  canReadFacilities,
+  canReadProfessionals,
   canReadTerritories,
   canViewHealth,
   hasMinimumRole,
@@ -49,11 +49,11 @@ export function Navbar() {
     ...(canManageUsers(user.role.name)
       ? [{ name: "Users", href: "/users", icon: Users }]
       : []),
-    ...(canReadClinics(user.role.name)
-      ? [{ name: "Clinics", href: "/clinics", icon: Building2 }]
+    ...(canReadFacilities(user.role.name)
+      ? [{ name: "Clinics", href: "/facilities", icon: Building2 }]
       : []),
-    ...(canReadDoctors(user.role.name)
-      ? [{ name: "Doctors", href: "/doctors", icon: Stethoscope }]
+    ...(canReadProfessionals(user.role.name)
+      ? [{ name: "Doctors", href: "/professionals", icon: Stethoscope }]
       : []),
     ...(canReadTerritories(user.role.name)
       ? [{ name: "Territories", href: "/territories", icon: MapPin }]

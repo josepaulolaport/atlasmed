@@ -1,11 +1,13 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
+import type { IngestionSuggestionType } from "@atlasmed/database";
 import {
   ForbiddenError,
   ValidationError,
 } from "../../../../shared/errors";
-import type { ClinicRepository } from "../../../clinic/application/interfaces/clinic.repository.interface";
-import type { DoctorClinicAssociationRepository } from "../../../clinic/application/interfaces/doctor-clinic-association.repository.interface";
+import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
+import type { FacilityProfessionalRepository } from "../../../facility/application/interfaces/facility-professional.repository.interface";
+import type { FacilityGeocodingService } from "../../../facility/application/services/facility-geocoding.service";
 import type {
   IngestionSuggestionRecord,
   IngestionSuggestionRepository,
@@ -20,8 +22,8 @@ function assertSuggestionInScope(
     return;
   }
 
-  if (suggestion.clinicId) {
-    assertResourceInScope(scope, "clinic", suggestion.clinicId);
+  if (suggestion.facilityId) {
+    assertResourceInScope(scope, "facility", suggestion.facilityId);
     return;
   }
 
@@ -30,9 +32,59 @@ function assertSuggestionInScope(
 
 interface Dependencies {
   suggestionRepository: IngestionSuggestionRepository;
-  clinicRepository: ClinicRepository;
-  associationRepository: DoctorClinicAssociationRepository;
+  facilityRepository: FacilityRepository;
+  facilityProfessionalRepository: FacilityProfessionalRepository;
+  facilityGeocodingService?: FacilityGeocodingService;
   auditLogService?: AuditLogService;
+}
+
+function parseFieldUpdatePayload(payload: Record<string, unknown>): {
+  name?: string;
+  address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+} {
+  const changes = Array.isArray(payload.changes) ? payload.changes : [];
+  const updates: {
+    name?: string;
+    address?: string | null;
+    lat?: number | null;
+    lng?: number | null;
+  } = {};
+
+  for (const change of changes) {
+    if (!change || typeof change !== "object") {
+      continue;
+    }
+
+    const field = (change as { field?: string }).field;
+    const proposed = (change as { proposed?: unknown }).proposed;
+
+    if (field === "displayName" && typeof proposed === "string") {
+      updates.name = proposed;
+    }
+    if (field === "address") {
+      updates.address = typeof proposed === "string" ? proposed : null;
+    }
+    if (field === "lat") {
+      updates.lat = typeof proposed === "number" ? proposed : null;
+    }
+    if (field === "lng") {
+      updates.lng = typeof proposed === "number" ? proposed : null;
+    }
+  }
+
+  return updates;
+}
+
+function resolveSuggestionFacilityScope(
+  scope: ScopeContext
+): string[] | undefined {
+  if (scope.isGlobal) {
+    return undefined;
+  }
+
+  return scope.facilityIds.length > 0 ? scope.facilityIds : ["__none__"];
 }
 
 export class ListSuggestionsUseCase {
@@ -43,7 +95,7 @@ export class ListSuggestionsUseCase {
     page?: number;
     limit?: number;
     status?: "PENDING" | "APPROVED" | "REJECTED" | "EXPIRED" | "SUPERSEDED";
-    type?: "CLINIC_REMOVAL" | "CLINIC_REACTIVATION" | "DOCTOR_CLINIC_REMOVAL";
+    type?: IngestionSuggestionType;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
@@ -53,7 +105,7 @@ export class ListSuggestionsUseCase {
       limit,
       status: input.status,
       type: input.type,
-      clinicIds: input.scope.isGlobal ? undefined : input.scope.clinicIds,
+      facilityIds: resolveSuggestionFacilityScope(input.scope),
     });
 
     return {
@@ -62,9 +114,9 @@ export class ListSuggestionsUseCase {
         ingestionRunId: s.ingestionRunId,
         type: s.type,
         status: s.status,
-        clinicId: s.clinicId ?? undefined,
-        doctorId: s.doctorId ?? undefined,
-        associationId: s.associationId ?? undefined,
+        facilityId: s.facilityId ?? undefined,
+        professionalId: s.professionalId ?? undefined,
+        facilityProfessionalId: s.facilityProfessionalId ?? undefined,
         reason: s.reason ?? undefined,
         payload: s.payload,
         suggestedAt: s.suggestedAt.toISOString(),
@@ -108,41 +160,62 @@ export class ApproveSuggestionUseCase {
     assertSuggestionInScope(input.scope, suggestion);
 
     switch (suggestion.type) {
-      case "CLINIC_REMOVAL": {
-        if (!suggestion.clinicId) {
+      case "FACILITY_REGISTRY_DEACTIVATED": {
+        if (!suggestion.facilityId) {
           throw new ValidationError([
-            { field: "clinicId", message: "Clinic removal suggestion missing clinicId" },
+            { field: "facilityId", message: "Facility removal suggestion missing facilityId" },
           ]);
         }
-        await this.deps.clinicRepository.softDelete(suggestion.clinicId);
+        await this.deps.facilityRepository.softDelete(suggestion.facilityId);
         break;
       }
-      case "CLINIC_REACTIVATION": {
-        if (!suggestion.clinicId) {
+      case "FACILITY_REGISTRY_REACTIVATED": {
+        if (!suggestion.facilityId) {
           throw new ValidationError([
             {
-              field: "clinicId",
-              message: "Clinic reactivation suggestion missing clinicId",
+              field: "facilityId",
+              message: "Facility reactivation suggestion missing facilityId",
             },
           ]);
         }
-        await this.deps.clinicRepository.reactivate(suggestion.clinicId);
+        await this.deps.facilityRepository.reactivate(suggestion.facilityId);
         break;
       }
+      case "FACILITY_PROFESSIONAL_REMOVAL":
       case "DOCTOR_CLINIC_REMOVAL": {
-        if (!suggestion.associationId) {
+        if (!suggestion.facilityProfessionalId) {
           throw new ValidationError([
             {
-              field: "associationId",
-              message: "Doctor-clinic removal suggestion missing associationId",
+              field: "facilityProfessionalId",
+              message: "Professional removal suggestion missing facilityProfessionalId",
             },
           ]);
         }
-        await this.deps.associationRepository.endAssociationById({
-          associationId: suggestion.associationId,
+        await this.deps.facilityProfessionalRepository.endAssociationById({
+          facilityProfessionalId: suggestion.facilityProfessionalId,
           endedByUserId: input.userId,
           endReason: "suggestion_approved",
         });
+        break;
+      }
+      case "FACILITY_FIELD_UPDATE": {
+        if (!suggestion.facilityId) {
+          throw new ValidationError([
+            { field: "facilityId", message: "Field update suggestion missing facilityId" },
+          ]);
+        }
+
+        const updates = parseFieldUpdatePayload(suggestion.payload);
+        await this.deps.facilityRepository.applyApprovedFieldUpdates(
+          suggestion.facilityId,
+          updates
+        );
+
+        if (updates.address !== undefined) {
+          await this.deps.facilityGeocodingService?.ensureCoordinatesPersisted(
+            suggestion.facilityId
+          );
+        }
         break;
       }
     }
@@ -160,7 +233,7 @@ export class ApproveSuggestionUseCase {
       action: "registry_suggestion_approved",
       resource: "registry_suggestion",
       resourceId: resolved.id,
-      details: { type: resolved.type, clinicId: resolved.clinicId, doctorId: resolved.doctorId },
+      details: { type: resolved.type, facilityId: resolved.facilityId, professionalId: resolved.professionalId },
     });
 
     return {
@@ -197,11 +270,12 @@ export class RejectSuggestionUseCase {
     assertSuggestionInScope(input.scope, suggestion);
 
     if (
-      suggestion.type === "DOCTOR_CLINIC_REMOVAL" &&
-      suggestion.associationId
+      (suggestion.type === "FACILITY_PROFESSIONAL_REMOVAL" ||
+        suggestion.type === "DOCTOR_CLINIC_REMOVAL") &&
+      suggestion.facilityProfessionalId
     ) {
-      await this.deps.associationRepository.restoreSourceActive(
-        suggestion.associationId
+      await this.deps.facilityProfessionalRepository.restoreSourceActive(
+        suggestion.facilityProfessionalId
       );
     }
 
@@ -218,7 +292,7 @@ export class RejectSuggestionUseCase {
       action: "registry_suggestion_rejected",
       resource: "registry_suggestion",
       resourceId: resolved.id,
-      details: { type: resolved.type, clinicId: resolved.clinicId, doctorId: resolved.doctorId },
+      details: { type: resolved.type, facilityId: resolved.facilityId, professionalId: resolved.professionalId },
     });
 
     return {
@@ -248,9 +322,9 @@ export class GetSuggestionUseCase {
       ingestionRunId: suggestion.ingestionRunId,
       type: suggestion.type,
       status: suggestion.status,
-      clinicId: suggestion.clinicId ?? undefined,
-      doctorId: suggestion.doctorId ?? undefined,
-      associationId: suggestion.associationId ?? undefined,
+      facilityId: suggestion.facilityId ?? undefined,
+      professionalId: suggestion.professionalId ?? undefined,
+      facilityProfessionalId: suggestion.facilityProfessionalId ?? undefined,
       reason: suggestion.reason ?? undefined,
       payload: suggestion.payload,
       suggestedAt: suggestion.suggestedAt.toISOString(),

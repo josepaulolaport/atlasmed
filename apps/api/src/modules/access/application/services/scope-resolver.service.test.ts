@@ -5,7 +5,7 @@ import type { ScopeRepository } from "../interfaces/scope.repository.interface";
 
 describe("ScopeResolver", () => {
   const territoryScopePort = {
-    getClinicIdsForTerritories: mock(async (territoryIds: string[]) =>
+    getFacilityIdsForTerritories: mock(async (territoryIds: string[]) =>
       territoryIds.map((id) => `clinic-for-${id}`)
     ),
   };
@@ -55,8 +55,8 @@ describe("ScopeResolver", () => {
       "territory-1",
       "territory-1-child",
     ]);
-    expect(scope.clinicIds).toEqual(["clinic-for-territory-1", "clinic-for-territory-1-child"]);
-    expect(scope.analyticsClinicIds).toEqual(scope.clinicIds);
+    expect(scope.facilityIds).toEqual(["clinic-for-territory-1", "clinic-for-territory-1-child"]);
+    expect(scope.analyticsFacilityIds).toEqual(scope.facilityIds);
   });
 
   it("splits manager oversight and analytics clinic scope", async () => {
@@ -83,8 +83,8 @@ describe("ScopeResolver", () => {
     expect(scope.reportAssignedTerritoryIds).toEqual(["patch-1"]);
     expect(scope.effectiveTerritoryIds).toEqual(["region-1", "region-1-child"]);
     expect(scope.analyticsEffectiveTerritoryIds).toEqual(["patch-1", "patch-1-child"]);
-    expect(scope.clinicIds).toEqual(["clinic-for-region-1", "clinic-for-region-1-child"]);
-    expect(scope.analyticsClinicIds).toEqual(["clinic-for-patch-1", "clinic-for-patch-1-child"]);
+    expect(scope.facilityIds).toEqual(["clinic-for-region-1", "clinic-for-region-1-child"]);
+    expect(scope.analyticsFacilityIds).toEqual(["clinic-for-patch-1", "clinic-for-patch-1-child"]);
     expect(scope.managedUserIds).toEqual(["user-1"]);
   });
 
@@ -109,7 +109,7 @@ describe("ScopeResolver", () => {
     expect(scope.assignedTerritoryIds).toEqual([]);
     expect(scope.effectiveTerritoryIds).toEqual(["patch-1", "patch-1-child"]);
     expect(scope.analyticsEffectiveTerritoryIds).toEqual(["patch-1", "patch-1-child"]);
-    expect(scope.clinicIds).toEqual(["clinic-for-patch-1", "clinic-for-patch-1-child"]);
-    expect(scope.analyticsClinicIds).toEqual(scope.clinicIds);
+    expect(scope.facilityIds).toEqual(["clinic-for-patch-1", "clinic-for-patch-1-child"]);
+    expect(scope.analyticsFacilityIds).toEqual(scope.facilityIds);
   });
 });

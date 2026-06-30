@@ -15,13 +15,14 @@ export function applyRoleAbilities(
   switch (role) {
     case "ADMIN":
       can("manage", "USER");
-      can("manage", "CLINIC");
-      can("manage", "DOCTOR");
+      can("manage", "FACILITY");
+      can("manage", "PROFESSIONAL");
       can("manage", "VISIT");
       can("manage", "TERRITORY");
       can("manage", "INVITATION");
       can("manage", "REGISTRY_INGESTION");
       can("manage", "REGISTRY_SUGGESTION");
+      can("manage", "CATALOG");
       break;
 
     case "MANAGER":
@@ -31,10 +32,10 @@ export function applyRoleAbilities(
       can("create", "INVITATION");
       can("update", "INVITATION");
       can("delete", "INVITATION");
-      can("read", "CLINIC");
-      can("update", "CLINIC");
-      can("read", "DOCTOR");
-      can("update", "DOCTOR");
+      can("read", "FACILITY");
+      can("update", "FACILITY");
+      can("read", "PROFESSIONAL");
+      can("update", "PROFESSIONAL");
       can("read", "VISIT");
       can("read", "TERRITORY");
       can("create", "TERRITORY");
@@ -44,10 +45,10 @@ export function applyRoleAbilities(
       break;
 
     case "USER":
-      can("read", "CLINIC");
-      can("update", "CLINIC");
-      can("read", "DOCTOR");
-      can("update", "DOCTOR");
+      can("read", "FACILITY");
+      can("update", "FACILITY");
+      can("read", "PROFESSIONAL");
+      can("update", "PROFESSIONAL");
       can("read", "VISIT");
       cannot("create", "USER");
       cannot("update", "USER");

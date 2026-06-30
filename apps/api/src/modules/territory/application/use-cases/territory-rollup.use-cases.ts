@@ -1,3 +1,4 @@
+import type { ScopeContext } from "@atlasmed/access";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRollupRepository } from "../interfaces/territory-rollup.repository.interface";
@@ -5,6 +6,7 @@ import {
   OperationNotAllowedError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
+import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
 
 function serializeRollupLink(link: {
   id: string;
@@ -44,10 +46,18 @@ export class TerritoryRollupUseCases {
     }
   ) {}
 
-  async listRollupLinks(territoryId: string) {
+  async listRollupLinks(territoryId: string, scope?: ScopeContext) {
     const territory = await this.deps.territoryRepository.findById(territoryId);
     if (!territory) {
       throw new ResourceNotFoundError("Territory", territoryId);
+    }
+
+    if (scope && !scope.isGlobal) {
+      await assertManagerReadableTerritory(
+        scope,
+        territoryId,
+        this.deps.closureRepository
+      );
     }
 
     const links = await this.deps.rollupRepository.listByTerritoryId(territoryId);

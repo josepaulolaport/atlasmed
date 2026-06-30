@@ -9,8 +9,8 @@ export function mergeGrantsIntoScope(
   const grantIds = grants.map((g) => g.id);
   const effectiveTerritoryIds = new Set(scope.effectiveTerritoryIds);
   const analyticsEffectiveTerritoryIds = new Set(scope.analyticsEffectiveTerritoryIds);
-  const clinicIds = new Set(scope.clinicIds);
-  const analyticsClinicIds = new Set(scope.analyticsClinicIds);
+  const facilityIds = new Set(scope.facilityIds);
+  const analyticsFacilityIds = new Set(scope.analyticsFacilityIds);
 
   for (const grant of grants) {
     const resource = grant.resource.toUpperCase();
@@ -23,22 +23,25 @@ export function mergeGrantsIntoScope(
       analyticsEffectiveTerritoryIds.add(grant.resourceId);
     }
 
-    if (resource === "CLINIC") {
-      clinicIds.add(grant.resourceId);
-      analyticsClinicIds.add(grant.resourceId);
+    if (resource === "FACILITY" || resource === "CLINIC") {
+      facilityIds.add(grant.resourceId);
+      analyticsFacilityIds.add(grant.resourceId);
     }
   }
 
   return withTerritoryScopeAliases({
-    ...scope,
-    grantIds,
+    isGlobal: scope.isGlobal,
+    assignedTerritoryIds: scope.assignedTerritoryIds,
     effectiveTerritoryIds: [...effectiveTerritoryIds],
     analyticsEffectiveTerritoryIds: [...analyticsEffectiveTerritoryIds],
-    clinicIds: [...clinicIds],
-    analyticsClinicIds: [...analyticsClinicIds],
+    facilityIds: [...facilityIds],
+    analyticsFacilityIds: [...analyticsFacilityIds],
+    managedUserIds: scope.managedUserIds,
+    reportAssignedTerritoryIds: scope.reportAssignedTerritoryIds,
     isOperationallyActive:
       scope.isOperationallyActive ||
       effectiveTerritoryIds.size > 0 ||
-      clinicIds.size > 0,
+      facilityIds.size > 0,
+    grantIds,
   });
 }

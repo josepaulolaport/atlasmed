@@ -1,8 +1,10 @@
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { IAuthCache } from "../interfaces/auth-cache.interface";
+import type { ISessionCache } from "../interfaces/session-cache.interface";
 import type { TwoFactorService } from "../services/two-factor.service";
+import type { SessionService } from "../services/session.service";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
-import type { PasswordService } from "../services/password.service";
+import { PasswordService } from "../services/password.service";
 import {
   InvalidCredentialsError,
   OperationNotAllowedError,
@@ -13,6 +15,8 @@ interface Dependencies {
   userRepository: UserRepository;
   twoFactorService: TwoFactorService;
   authCache: IAuthCache;
+  sessionService: SessionService;
+  sessionCache: ISessionCache;
   passwordService: PasswordService;
   auditLog: IAuditLog;
 }
@@ -24,6 +28,7 @@ export class Disable2FAUseCase {
     userId: string;
     password: string;
     code: string;
+    sessionId?: string;
     ipAddress?: string;
   }) {
     const user = await this.deps.userRepository.findById(params.userId);
@@ -55,6 +60,8 @@ export class Disable2FAUseCase {
     await this.deps.userRepository.disableTwoFactor(params.userId);
     await this.deps.twoFactorService.clearPendingSetup(params.userId);
     await this.deps.authCache.invalidate(params.userId);
+    await this.deps.sessionService.revokeAllByUserId(params.userId, params.sessionId);
+    await this.deps.sessionCache.invalidateByUserId(params.userId, params.sessionId);
 
     await this.deps.auditLog.log2FADisable({
       userId: params.userId,

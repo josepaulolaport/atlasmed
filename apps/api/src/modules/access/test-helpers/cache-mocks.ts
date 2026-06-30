@@ -38,7 +38,7 @@ export function createMockScopeService(overrides?: Partial<ScopeService>): Scope
     resolve: mock(() => Promise.resolve({
       isGlobal: true,
       territoryIds: [],
-      clinicIds: [],
+      facilityIds: [],
       managedUserIds: [],
       isOperationallyActive: true,
     })),

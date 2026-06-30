@@ -11,7 +11,7 @@ export interface TerritoryApprovalRecord {
   reviewerId: string | null;
   entityPayload: Record<string, unknown>;
   targetTerritoryId: string | null;
-  clinicId: string | null;
+  facilityId: string | null;
   toTerritoryId: string | null;
   reason: string | null;
   resolutionNote: string | null;
@@ -26,7 +26,7 @@ export interface CreateApprovalInput {
   requesterId: string;
   entityPayload: Record<string, unknown>;
   targetTerritoryId?: string | null;
-  clinicId?: string | null;
+  facilityId?: string | null;
   toTerritoryId?: string | null;
   reason?: string | null;
 }
@@ -39,14 +39,14 @@ export interface TerritoryApprovalRepository {
   findPendingByEntity(params: {
     type: TerritoryApprovalType;
     targetTerritoryId?: string | null;
-    clinicId?: string | null;
+    facilityId?: string | null;
   }): Promise<TerritoryApprovalRecord[]>;
 
   findPendingByRequesterAndEntity(params: {
     type: TerritoryApprovalType;
     requesterId: string;
     targetTerritoryId?: string | null;
-    clinicId?: string | null;
+    facilityId?: string | null;
   }): Promise<TerritoryApprovalRecord | null>;
 
   supersede(id: string, supersededById: string): Promise<void>;

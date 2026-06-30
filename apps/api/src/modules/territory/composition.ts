@@ -5,7 +5,7 @@ import { PrismaTerritorySpatialRepository } from "./infrastructure/repositories/
 import { PrismaTerritoryApprovalRepository } from "./infrastructure/repositories/prisma/prisma-territory-approval.repository";
 import { PrismaTerritoryRollupRepository } from "./infrastructure/repositories/prisma/prisma-territory-rollup.repository";
 import { PrismaTerritoryHierarchyPort } from "./infrastructure/ports/prisma-territory-hierarchy.port";
-import { PrismaClinicMembershipWriter } from "./infrastructure/adapters/prisma-clinic-membership.writer";
+import { PrismaClinicMembershipWriter } from "./infrastructure/adapters/prisma-facility-membership.writer";
 import { TerritoryClosureService } from "./application/services/territory-closure.service";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
@@ -34,7 +34,7 @@ export const territoryRepositories = {
   geoMembership: new PrismaTerritoryGeoMembershipRepository(),
 };
 
-export const clinicMembershipWriter = new PrismaClinicMembershipWriter();
+export const facilityMembershipWriter = new PrismaClinicMembershipWriter();
 
 export const territoryHierarchyPort = new PrismaTerritoryHierarchyPort(
   territoryRepositories.closure,
@@ -49,7 +49,7 @@ const territoryClosureService = new TerritoryClosureService({
 const territoryMembershipService = new TerritoryMembershipService({
   spatialRepository: territoryRepositories.spatial,
   territoryRepository: territoryRepositories.territory,
-  clinicWriter: clinicMembershipWriter,
+  clinicWriter: facilityMembershipWriter,
 });
 
 async function enqueueMembershipRecompute(territoryId?: string): Promise<void> {
@@ -64,9 +64,9 @@ async function onTerritoryBoundaryChanged(territoryId: string): Promise<void> {
   await invalidateScopeForTerritories([territoryId]);
 }
 
-async function enqueueClinicMembershipUpdate(clinicId: string): Promise<void> {
+async function enqueueClinicMembershipUpdate(facilityId: string): Promise<void> {
   await territoryMembershipQueue.enqueue({
-    clinicIds: [clinicId],
+    facilityIds: [facilityId],
     reason: "clinic_update",
   });
 }
@@ -78,9 +78,9 @@ async function invalidateScopeForTerritories(territoryIds: string[]): Promise<vo
 }
 
 territoryMembershipQueue.registerHandler(async (job) => {
-  if (job.clinicIds?.length) {
-    for (const clinicId of job.clinicIds) {
-      await territoryMembershipService.assignClinicById(clinicId);
+  if (job.facilityIds?.length) {
+    for (const facilityId of job.facilityIds) {
+      await territoryMembershipService.assignFacilityById(facilityId);
     }
     return;
   }
@@ -127,6 +127,7 @@ function createBoundaryUseCases() {
     territoryRepository: territoryRepositories.territory,
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
+    closureRepository: territoryRepositories.closure,
     geoParentService: territoryGeoParentService,
     geoMembershipService: territoryGeoMembershipService,
     onBoundaryChanged: onTerritoryBoundaryChanged,
@@ -160,32 +161,33 @@ export const territoryUseCases = {
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
     }),
-  listUnassignedClinics: () =>
+  listUnassignedFacilities: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
     }),
   adminOverrideClinicTerritory: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
     }),
   unlockClinicGeo: () =>
     new TerritoryMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       membershipService: territoryMembershipService,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
     }),
   submitApproval: () =>
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
+      closureRepository: territoryRepositories.closure,
       territoryCrud,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
       invalidateScopeForTerritories,
       enqueueMembershipRecompute,
       auditLog: auditLogAdapter,
@@ -194,15 +196,17 @@ export const territoryUseCases = {
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
+      closureRepository: territoryRepositories.closure,
       territoryCrud,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
     }),
   approveRequest: () =>
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
+      closureRepository: territoryRepositories.closure,
       territoryCrud,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
       invalidateScopeForTerritories,
       enqueueMembershipRecompute,
       auditLog: auditLogAdapter,
@@ -211,8 +215,9 @@ export const territoryUseCases = {
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
+      closureRepository: territoryRepositories.closure,
       territoryCrud,
-      clinicWriter: clinicMembershipWriter,
+      clinicWriter: facilityMembershipWriter,
     }),
   listRollupLinks: () =>
     new TerritoryRollupUseCases({
@@ -237,18 +242,21 @@ export const territoryUseCases = {
       territoryRepository: territoryRepositories.territory,
       geoMembershipRepository: territoryRepositories.geoMembership,
       spatialRepository: territoryRepositories.spatial,
+      closureRepository: territoryRepositories.closure,
     }),
   listReferenceMemberships: () =>
     new TerritoryGeoMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       geoMembershipRepository: territoryRepositories.geoMembership,
       spatialRepository: territoryRepositories.spatial,
+      closureRepository: territoryRepositories.closure,
     }),
   getClippedBoundary: () =>
     new TerritoryGeoMembershipUseCases({
       territoryRepository: territoryRepositories.territory,
       geoMembershipRepository: territoryRepositories.geoMembership,
       spatialRepository: territoryRepositories.spatial,
+      closureRepository: territoryRepositories.closure,
     }),
   getReferenceCoverage: () =>
     new TerritoryCoverageUseCases({
@@ -256,5 +264,6 @@ export const territoryUseCases = {
       territoryTypeRepository: territoryRepositories.territoryType,
       geoMembershipRepository: territoryRepositories.geoMembership,
       spatialRepository: territoryRepositories.spatial,
+      closureRepository: territoryRepositories.closure,
     }),
 };

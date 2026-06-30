@@ -8,8 +8,8 @@ export function createGlobalScopeContext(): ScopeContext {
     assignedTerritoryIds: [],
     effectiveTerritoryIds: [],
     analyticsEffectiveTerritoryIds: [],
-    clinicIds: [],
-    analyticsClinicIds: [],
+    facilityIds: [],
+    analyticsFacilityIds: [],
     managedUserIds: [],
     isOperationallyActive: true,
   });
@@ -21,8 +21,8 @@ export function createEmptyScopeContext(): ScopeContext {
     assignedTerritoryIds: [],
     effectiveTerritoryIds: [],
     analyticsEffectiveTerritoryIds: [],
-    clinicIds: [],
-    analyticsClinicIds: [],
+    facilityIds: [],
+    analyticsFacilityIds: [],
     managedUserIds: [],
     isOperationallyActive: false,
   });

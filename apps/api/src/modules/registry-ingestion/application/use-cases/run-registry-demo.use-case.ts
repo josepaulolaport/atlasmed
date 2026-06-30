@@ -76,18 +76,19 @@ export class RunRegistryDemoUseCase {
         id: suggestion.id,
         type: suggestion.type,
         reason: suggestion.reason ?? undefined,
-        clinicId: suggestion.clinicId ?? undefined,
-        doctorId: suggestion.doctorId ?? undefined,
+        facilityId: suggestion.facilityId ?? undefined,
+        professionalId: suggestion.professionalId ?? undefined,
         payload: suggestion.payload,
         suggestedAt: suggestion.suggestedAt.toISOString(),
       })),
       summary: {
         pendingCount: total,
-        clinicRemovals: suggestions.filter((s) => s.type === "CLINIC_REMOVAL").length,
-        clinicReactivations: suggestions.filter((s) => s.type === "CLINIC_REACTIVATION")
+        clinicRemovals: suggestions.filter((s) => s.type === "FACILITY_REGISTRY_DEACTIVATED").length,
+        clinicReactivations: suggestions.filter((s) => s.type === "FACILITY_REGISTRY_REACTIVATED")
           .length,
-        doctorClinicRemovals: suggestions.filter((s) => s.type === "DOCTOR_CLINIC_REMOVAL")
-          .length,
+        facilityProfessionalRemovals: suggestions.filter(
+          (s) => s.type === "FACILITY_PROFESSIONAL_REMOVAL"
+        ).length,
       },
     };
   }

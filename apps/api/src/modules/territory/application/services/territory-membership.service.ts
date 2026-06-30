@@ -13,7 +13,7 @@ export interface ClinicMembershipTarget {
 
 export interface ClinicMembershipWriter {
   updateTerritoryMembership(
-    clinicId: string,
+    facilityId: string,
     data: {
       territoryId: string | null;
       territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
@@ -22,10 +22,10 @@ export interface ClinicMembershipWriter {
   ): Promise<void>;
 
   findClinicsForMembership(params?: {
-    clinicIds?: string[];
+    facilityIds?: string[];
     territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
-  }): Promise<ClinicMembershipTarget[]>;
+  }): Promise<FacilityMembershipTarget[]>;
 }
 
 interface Dependencies {
@@ -72,9 +72,9 @@ export class TerritoryMembershipService {
     });
   }
 
-  async assignClinicById(clinicId: string): Promise<void> {
+  async assignFacilityById(facilityId: string): Promise<void> {
     const clinics = await this.deps.clinicWriter.findClinicsForMembership({
-      clinicIds: [clinicId],
+      facilityIds: [facilityId],
     });
     const clinic = clinics[0];
     if (!clinic) {
@@ -92,7 +92,7 @@ export class TerritoryMembershipService {
       await this.assignClinicByGeo(clinic);
       const after = (
         await this.deps.clinicWriter.findClinicsForMembership({
-          clinicIds: [clinic.id],
+          facilityIds: [clinic.id],
         })
       )[0]?.territoryId;
       if (before !== after) {

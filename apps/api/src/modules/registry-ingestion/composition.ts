@@ -3,15 +3,18 @@ import { fileURLToPath } from "node:url";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { auditLogService } from "../../infrastructure/audit/audit-log.service";
 import { environment } from "../../app/config/environment";
-import { PrismaClinicRepository } from "../clinic/infrastructure/repositories/prisma/prisma-clinic.repository";
-import { PrismaDoctorClinicAssociationRepository } from "../clinic/infrastructure/repositories/prisma/prisma-doctor-clinic-association.repository";
-import { PrismaDoctorRepository } from "../doctor/infrastructure/repositories/prisma/prisma-doctor.repository";
+import { PrismaFacilityRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility.repository";
+import { PrismaFacilityProfessionalRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility-professional.repository";
+import { PrismaProfessionalRepository } from "../professional/infrastructure/repositories/prisma/prisma-professional.repository";
 import { MockRegistrySourceAdapter } from "./infrastructure/adapters/mock-registry-source.adapter";
 import {
   PrismaIngestionRunRepository,
   PrismaIngestionSuggestionRepository,
 } from "./infrastructure/repositories/prisma/prisma-ingestion.repository";
+import { PrismaRegistryReadRepository } from "./infrastructure/repositories/prisma/prisma-registry-read.repository";
 import { RegistrySyncService } from "./application/services/registry-sync.service";
+import { RegistryDiffService } from "./application/services/registry-diff.service";
+import { RegistryReadService } from "./application/services/registry-read.service";
 import { RunRegistryIngestionUseCase } from "./application/use-cases/run-registry-ingestion.use-case";
 import {
   ApproveSuggestionUseCase,
@@ -26,8 +29,7 @@ import {
   createRegistryIngestionRunner,
   registryIngestionRepositories as demoRegistryRepositories,
 } from "./infrastructure/demo/registry-ingestion-runner";
-import { territoryMembershipService } from "../territory/composition";
-import { clinicGeocodingService } from "../clinic/composition";
+import { facilityGeocodingService } from "../facility/composition";
 
 const INGESTION_LOCK_KEY = `${environment.REDIS_KEY_PREFIX}ingestion:registry:lock`;
 const INGESTION_LOCK_TTL_SECONDS = 300;
@@ -38,11 +40,12 @@ const fixturesDir = join(
 );
 
 export const registryIngestionRepositories = {
-  clinic: new PrismaClinicRepository(),
-  doctor: new PrismaDoctorRepository(),
-  association: new PrismaDoctorClinicAssociationRepository(),
+  facility: new PrismaFacilityRepository(),
+  professional: new PrismaProfessionalRepository(),
+  association: new PrismaFacilityProfessionalRepository(),
   ingestionRun: new PrismaIngestionRunRepository(),
   suggestion: new PrismaIngestionSuggestionRepository(),
+  registryRead: new PrismaRegistryReadRepository(),
 };
 
 const registrySource = new MockRegistrySourceAdapter(
@@ -50,14 +53,22 @@ const registrySource = new MockRegistrySourceAdapter(
   fixturesDir
 );
 
-const registrySyncService = new RegistrySyncService({
-  clinicRepository: registryIngestionRepositories.clinic,
-  doctorRepository: registryIngestionRepositories.doctor,
-  associationRepository: registryIngestionRepositories.association,
+const registryDiffService = new RegistryDiffService({
+  facilityRepository: registryIngestionRepositories.facility,
   suggestionRepository: registryIngestionRepositories.suggestion,
-  ensureClinicCoordinates: (clinicId) =>
-    clinicGeocodingService.ensureCoordinatesPersisted(clinicId).then(() => undefined),
-  onClinicLocationChanged: (clinicId) => territoryMembershipService.assignClinicById(clinicId),
+});
+
+const registrySyncService = new RegistrySyncService({
+  facilityRepository: registryIngestionRepositories.facility,
+  professionalRepository: registryIngestionRepositories.professional,
+  facilityProfessionalRepository: registryIngestionRepositories.association,
+  suggestionRepository: registryIngestionRepositories.suggestion,
+  registryDiffService,
+});
+
+export const registryReadService = new RegistryReadService({
+  facilityRepository: registryIngestionRepositories.facility,
+  registryReadRepository: registryIngestionRepositories.registryRead,
 });
 
 async function acquireIngestionLock(): Promise<boolean> {
@@ -92,27 +103,28 @@ export const registryIngestionUseCases = {
   listSuggestions: () =>
     new ListSuggestionsUseCase({
       suggestionRepository: registryIngestionRepositories.suggestion,
-      clinicRepository: registryIngestionRepositories.clinic,
-      associationRepository: registryIngestionRepositories.association,
+      facilityRepository: registryIngestionRepositories.facility,
+      facilityProfessionalRepository: registryIngestionRepositories.association,
     }),
   getSuggestion: () =>
     new GetSuggestionUseCase({
       suggestionRepository: registryIngestionRepositories.suggestion,
-      clinicRepository: registryIngestionRepositories.clinic,
-      associationRepository: registryIngestionRepositories.association,
+      facilityRepository: registryIngestionRepositories.facility,
+      facilityProfessionalRepository: registryIngestionRepositories.association,
     }),
   approveSuggestion: () =>
     new ApproveSuggestionUseCase({
       suggestionRepository: registryIngestionRepositories.suggestion,
-      clinicRepository: registryIngestionRepositories.clinic,
-      associationRepository: registryIngestionRepositories.association,
+      facilityRepository: registryIngestionRepositories.facility,
+      facilityProfessionalRepository: registryIngestionRepositories.association,
+      facilityGeocodingService,
       auditLogService,
     }),
   rejectSuggestion: () =>
     new RejectSuggestionUseCase({
       suggestionRepository: registryIngestionRepositories.suggestion,
-      clinicRepository: registryIngestionRepositories.clinic,
-      associationRepository: registryIngestionRepositories.association,
+      facilityRepository: registryIngestionRepositories.facility,
+      facilityProfessionalRepository: registryIngestionRepositories.association,
       auditLogService,
     }),
   runDemo: () =>

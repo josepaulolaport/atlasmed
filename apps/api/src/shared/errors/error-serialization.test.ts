@@ -54,7 +54,7 @@ describe("AppError.toClientJSON", () => {
 
     expect(new ResourceNotFoundError("Clinic", "clinic-1").toClientJSON()).toEqual({
       code: "RESOURCE_NOT_FOUND",
-      message: "Clinic not found",
+      message: "Facility not found",
     });
   });
 

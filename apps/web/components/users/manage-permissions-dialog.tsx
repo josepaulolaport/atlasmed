@@ -36,7 +36,14 @@ interface ManagePermissionsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const RESOURCES = ["USER", "CLINIC", "DOCTOR", "VISIT", "TERRITORY", "INVITATION"] as const;
+const RESOURCES = [
+  "USER",
+  "FACILITY",
+  "PROFESSIONAL",
+  "VISIT",
+  "TERRITORY",
+  "INVITATION",
+] as const;
 const ACTIONS = ["create", "read", "update", "delete", "manage"] as const;
 
 export function ManagePermissionsDialog({

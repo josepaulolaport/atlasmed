@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { registryApi } from "@/lib/api/registry";
-import type { RegistryDemoResult, RegistrySuggestion } from "@/types/clinic";
+import type { RegistryDemoResult, RegistrySuggestion } from "@/types/facility";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,9 +19,9 @@ import { useAuth } from "@/contexts/auth-context";
 import { hasMinimumRole } from "@/lib/permissions";
 
 const TYPE_LABELS: Record<RegistrySuggestion["type"], string> = {
-  CLINIC_REMOVAL: "Remove clinic",
-  CLINIC_REACTIVATION: "Reactivate clinic",
-  DOCTOR_CLINIC_REMOVAL: "Remove doctor from clinic",
+  FACILITY_REGISTRY_DEACTIVATED: "Remove clinic",
+  FACILITY_REGISTRY_REACTIVATED: "Reactivate clinic",
+  DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Remove doctor from clinic",
 };
 
 function getPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
@@ -29,23 +29,23 @@ function getPayloadString(payload: Record<string, unknown>, key: string): string
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function getClinicLabel(suggestion: RegistrySuggestion): string {
+function getFacilityLabel(suggestion: RegistrySuggestion): string {
   return (
     getPayloadString(suggestion.payload, "name") ||
     getPayloadString(suggestion.payload, "externalSourceId") ||
-    suggestion.clinicId ||
+    suggestion.facilityId ||
     "—"
   );
 }
 
-function getDoctorLabel(suggestion: RegistrySuggestion): string {
+function getProfessionalLabel(suggestion: RegistrySuggestion): string {
   const firstName = getPayloadString(suggestion.payload, "firstName");
   const lastName = getPayloadString(suggestion.payload, "lastName");
   if (firstName || lastName) {
     return [firstName, lastName].filter(Boolean).join(" ");
   }
 
-  return getPayloadString(suggestion.payload, "doctorExternalSourceId") || suggestion.doctorId || "—";
+  return getPayloadString(suggestion.payload, "doctorExternalSourceId") || suggestion.professionalId || "—";
 }
 
 export default function RegistrySuggestionsPage() {
@@ -129,7 +129,7 @@ export default function RegistrySuggestionsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Registry Suggestions</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Review source-driven clinic and doctor-clinic changes before applying them
+            Review source-driven clinic and facility-professional changes before applying them
           </p>
         </div>
         {hasMinimumRole(user.role.name, "ADMIN") && (
@@ -177,7 +177,7 @@ export default function RegistrySuggestionsPage() {
                 {demoResult.summary.clinicRemovals === 1 ? "" : "s"}
               </Badge>
               <Badge variant="outline">
-                {demoResult.summary.doctorClinicRemovals} doctor-clinic removal
+                {demoResult.summary.doctorClinicRemovals} facility-professional removal
                 {demoResult.summary.doctorClinicRemovals === 1 ? "" : "s"}
               </Badge>
             </div>
@@ -232,8 +232,8 @@ export default function RegistrySuggestionsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>{suggestion.reason || "—"}</TableCell>
-                    <TableCell>{getClinicLabel(suggestion)}</TableCell>
-                    <TableCell>{getDoctorLabel(suggestion)}</TableCell>
+                    <TableCell>{getFacilityLabel(suggestion)}</TableCell>
+                    <TableCell>{getProfessionalLabel(suggestion)}</TableCell>
                     <TableCell>{new Date(suggestion.suggestedAt).toLocaleString()}</TableCell>
                     <TableCell className="space-x-2 text-right">
                       <Button size="sm" onClick={() => handleApprove(suggestion.id)}>

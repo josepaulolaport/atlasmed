@@ -1,11 +1,11 @@
 import type { ScopeContext } from "../contracts/scope-context.contract";
 import { ForbiddenError } from "../errors/forbidden.error";
 
-export type ScopedResourceType = "territory" | "clinic" | "user";
+export type ScopedResourceType = "territory" | "facility" | "user";
 
 /**
- * Cross-module scope guard — use in clinic/visit modules before returning row data.
- * Phase 8: wire real TerritoryScopePort when clinic module ships.
+ * Cross-module scope guard — use in facility/professional modules before returning row data.
+ * Route-level CASL (Model A) is role-wide; this is the row-level enforcement layer.
  */
 export function assertResourceInScope(
   scope: ScopeContext,
@@ -22,9 +22,9 @@ export function assertResourceInScope(
         throw new ForbiddenError("Resource outside scope: territory");
       }
       return;
-    case "clinic":
-      if (!scope.clinicIds.includes(resourceId)) {
-        throw new ForbiddenError("Resource outside scope: clinic");
+    case "facility":
+      if (!scope.facilityIds.includes(resourceId)) {
+        throw new ForbiddenError("Resource outside scope: facility");
       }
       return;
     case "user":

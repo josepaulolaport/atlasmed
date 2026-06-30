@@ -155,12 +155,26 @@ export class AccountLockedError extends AppError {
 // Resource Errors (404)
 // ============================================================================
 
+function normalizeResourceLabel(resource: string): string {
+  if (resource === "Clinic" || resource === "CLINIC") {
+    return "Facility";
+  }
+
+  if (resource === "Doctor" || resource === "DOCTOR") {
+    return "Professional";
+  }
+
+  return resource;
+}
+
 export class ResourceNotFoundError extends AppError {
   constructor(resource: string, identifier: string | number) {
+    const label = normalizeResourceLabel(resource);
+
     super(
       'RESOURCE_NOT_FOUND',
       404,
-      `${resource} not found`,
+      `${label} not found`,
       { resource, identifier }
     );
   }

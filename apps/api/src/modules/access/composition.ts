@@ -3,10 +3,10 @@
  *
  * Authorization invariants (do not bypass):
  * 1. Routes: CASL via requirePermission() after auth plugin (role + AccessGrants).
- * 2. Mutations/lists: ScopeContext from getScope() — use `clinicIds` for operational
- *    visibility and `analyticsClinicIds` for manager analytics roll-ups.
+ * 2. Mutations/lists: ScopeContext from getScope() — use `facilityIds` for operational
+ *    visibility and `analyticsFacilityIds` for manager analytics roll-ups.
  * 3. AccessGrants (Permission table): exceptional overrides merged into CASL and scope (territory/clinic ids).
- * 4. clinicIds in ScopeContext require a real TerritoryScopePort (clinic module); stub returns [] until then.
+ * 4. facilityIds in ScopeContext require a real TerritoryScopePort (clinic module); stub returns [] until then.
  * 5. Session validity: JWT + session row + tokenVersion; caches revalidate from DB periodically.
  *
  * domain/ is intentionally empty until domain entities are justified.
@@ -76,7 +76,7 @@ import { Pending2FALoginService } from "./application/services/pending-2fa-login
 
 import { PrismaScopeRepository } from "./infrastructure/repositories/prisma/prisma-scope.repository";
 import { PrismaAccessGrantRepository } from "./infrastructure/repositories/prisma/prisma-access-grant.repository";
-import { clinicTerritoryScopePort } from "../clinic/composition";
+import { facilityTerritoryScopePort } from "../facility/composition";
 import { territoryHierarchyPort, territoryAssignmentPolicy } from "../territory/composition";
 import { ScopeService } from "./application/services/scope.service";
 import { AccessGrantService } from "./application/services/access-grant.service";
@@ -106,7 +106,7 @@ export const accessRepositories = {
   accessGrant: new PrismaAccessGrantRepository(),
 };
 
-const territoryScopePort = clinicTerritoryScopePort;
+const territoryScopePort = facilityTerritoryScopePort;
 const hierarchyPort = territoryHierarchyPort;
 
 export const accessGrantCache = new AccessGrantCacheService();
@@ -260,6 +260,8 @@ export const accessUseCases = {
     userRepository: accessRepositories.user,
     twoFactorService: accessServices.twoFactor,
     authCache: accessCaches.auth,
+    sessionService: accessServices.session,
+    sessionCache: accessCaches.session,
     auditLog: accessInfrastructure.auditLog,
   }),
 
@@ -278,6 +280,8 @@ export const accessUseCases = {
     userRepository: accessRepositories.user,
     twoFactorService: accessServices.twoFactor,
     authCache: accessCaches.auth,
+    sessionService: accessServices.session,
+    sessionCache: accessCaches.session,
     passwordService: accessServices.password,
     auditLog: accessInfrastructure.auditLog,
   }),

@@ -66,7 +66,7 @@ describe("TerritoryCoverageUseCases", () => {
     const findAssignedClinicsInReferenceTerritory = mock(async () => [
       {
         id: "clinic-1",
-        name: "Clinic A",
+        name: "Facility A",
         lat: -23.5,
         lng: -46.6,
         territoryId: "patch-1",
@@ -75,7 +75,7 @@ describe("TerritoryCoverageUseCases", () => {
       },
       {
         id: "clinic-2",
-        name: "Clinic B",
+        name: "Facility B",
         lat: -23.6,
         lng: -46.7,
         territoryId: "patch-1",
@@ -84,7 +84,7 @@ describe("TerritoryCoverageUseCases", () => {
       },
       {
         id: "clinic-3",
-        name: "Clinic C",
+        name: "Facility C",
         lat: -22.9,
         lng: -47.1,
         territoryId: "patch-2",
@@ -140,8 +140,8 @@ describe("TerritoryCoverageUseCases", () => {
     expect(result.clinicCount).toBe(3);
     expect(result.patchCount).toBe(2);
     expect(result.patches).toHaveLength(2);
-    expect(result.patches[0]?.clinics).toHaveLength(2);
-    expect(result.patches[1]?.clinics).toHaveLength(1);
+    expect(result.patches[0]?.facilities).toHaveLength(2);
+    expect(result.patches[1]?.facilities).toHaveLength(1);
     expect(getClippedBoundaryAsGeoJson).toHaveBeenCalledTimes(2);
     expect(findAssignedClinicsInReferenceTerritory).toHaveBeenCalledWith("sp");
   });

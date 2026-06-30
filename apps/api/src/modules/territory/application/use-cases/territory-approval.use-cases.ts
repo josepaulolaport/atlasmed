@@ -1,6 +1,8 @@
 import { Role } from "@atlasmed/access";
+import type { ScopeContext } from "@atlasmed/access";
 import type { TerritoryApprovalType } from "@atlasmed/database";
 import type { TerritoryApprovalRepository } from "../interfaces/territory-approval.repository.interface";
+import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import { TerritoryCrudUseCases } from "./territory-crud.use-cases";
 import type { ClinicMembershipWriter } from "../services/territory-membership.service";
@@ -10,10 +12,12 @@ import {
   ResourceConflictError,
   ResourceNotFoundError,
 } from "../../../../shared/errors";
+import { assertManagerTerritoryApprovalRequest } from "../services/territory-scope-policy.service";
 
 interface Dependencies {
   approvalRepository: TerritoryApprovalRepository;
   territoryRepository: TerritoryRepository;
+  closureRepository: TerritoryClosureRepository;
   territoryCrud: TerritoryCrudUseCases;
   clinicWriter: ClinicMembershipWriter;
   invalidateScopeForTerritories?: (territoryIds: string[]) => Promise<void>;
@@ -27,10 +31,11 @@ export class TerritoryApprovalUseCases {
   async submitRequest(input: {
     requesterId: string;
     requesterRole: Role;
+    scope: ScopeContext;
     type: TerritoryApprovalType;
     entityPayload: Record<string, unknown>;
     targetTerritoryId?: string;
-    clinicId?: string;
+    facilityId?: string;
     toTerritoryId?: string;
     reason?: string;
   }) {
@@ -41,11 +46,22 @@ export class TerritoryApprovalUseCases {
       );
     }
 
+    await assertManagerTerritoryApprovalRequest({
+      scope: input.scope,
+      territoryRepository: this.deps.territoryRepository,
+      closureRepository: this.deps.closureRepository,
+      type: input.type,
+      targetTerritoryId: input.targetTerritoryId ?? null,
+      facilityId: input.facilityId ?? null,
+      toTerritoryId: input.toTerritoryId ?? null,
+      entityPayload: input.entityPayload,
+    });
+
     const pendingFromOthers = (
       await this.deps.approvalRepository.findPendingByEntity({
         type: input.type,
         targetTerritoryId: input.targetTerritoryId ?? null,
-        clinicId: input.clinicId ?? null,
+        facilityId: input.facilityId ?? null,
       })
     ).filter((request) => request.requesterId !== input.requesterId);
 
@@ -60,7 +76,7 @@ export class TerritoryApprovalUseCases {
       type: input.type,
       requesterId: input.requesterId,
       targetTerritoryId: input.targetTerritoryId ?? null,
-      clinicId: input.clinicId ?? null,
+      facilityId: input.facilityId ?? null,
     });
 
     const created = await this.deps.approvalRepository.create({
@@ -68,7 +84,7 @@ export class TerritoryApprovalUseCases {
       requesterId: input.requesterId,
       entityPayload: input.entityPayload,
       targetTerritoryId: input.targetTerritoryId ?? null,
-      clinicId: input.clinicId ?? null,
+      facilityId: input.facilityId ?? null,
       toTerritoryId: input.toTerritoryId ?? null,
       reason: input.reason ?? null,
     });
@@ -145,7 +161,7 @@ export class TerritoryApprovalUseCases {
     type: TerritoryApprovalType;
     entityPayload: Record<string, unknown>;
     targetTerritoryId: string | null;
-    clinicId: string | null;
+    facilityId: string | null;
     toTerritoryId: string | null;
   }): Promise<void> {
     switch (request.type) {
@@ -186,8 +202,8 @@ export class TerritoryApprovalUseCases {
         await this.deps.territoryCrud.deactivateTerritory(request.targetTerritoryId);
         await this.deps.invalidateScopeForTerritories?.([request.targetTerritoryId]);
         break;
-      case "clinic_territory_change":
-        if (!request.clinicId || !request.toTerritoryId) {
+      case "facility_territory_change":
+        if (!request.facilityId || !request.toTerritoryId) {
           throw new OperationNotAllowedError(
             "approve_request",
             "Missing clinic or target territory for clinic move request"
@@ -200,7 +216,7 @@ export class TerritoryApprovalUseCases {
             "Target territory must be active"
           );
         }
-        await this.deps.clinicWriter.updateTerritoryMembership(request.clinicId, {
+        await this.deps.clinicWriter.updateTerritoryMembership(request.facilityId, {
           territoryId: request.toTerritoryId,
           territoryAssignmentStatus: "assigned",
           territoryAssignmentSource: "manual",

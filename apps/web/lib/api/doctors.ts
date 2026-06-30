@@ -2,39 +2,39 @@ import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
 import type {
   CreateDoctorRequest,
-  Doctor,
+  Professional,
   UpdateDoctorRequest,
-} from "@/types/clinic";
+} from "@/types/facility";
 
-export const doctorsApi = {
-  getDoctors: async (params?: {
+export const professionalsApi = {
+  getProfessionals: async (params?: {
     page?: number;
     limit?: number;
     search?: string;
-    clinicId?: string;
-  }): Promise<PaginatedResponse<Doctor>> => {
-    const response = await apiClient.get<PaginatedResponse<Doctor>>("/doctor/doctors", {
+    facilityId?: string;
+  }): Promise<PaginatedResponse<Professional>> => {
+    const response = await apiClient.get<PaginatedResponse<Professional>>("/doctor/professionals", {
       params,
     });
     return response.data;
   },
 
-  getDoctor: async (id: string): Promise<Doctor> => {
-    const response = await apiClient.get<Doctor>(`/doctor/doctors/${id}`);
+  getProfessional: async (id: string): Promise<Professional> => {
+    const response = await apiClient.get<Professional>(`/doctor/professionals/${id}`);
     return response.data;
   },
 
-  createDoctor: async (data: CreateDoctorRequest): Promise<Doctor> => {
-    const response = await apiClient.post<Doctor>("/doctor/doctors", data);
+  createDoctor: async (data: CreateDoctorRequest): Promise<Professional> => {
+    const response = await apiClient.post<Professional>("/doctor/professionals", data);
     return response.data;
   },
 
-  updateDoctor: async (id: string, data: UpdateDoctorRequest): Promise<Doctor> => {
-    const response = await apiClient.patch<Doctor>(`/doctor/doctors/${id}`, data);
+  updateDoctor: async (id: string, data: UpdateDoctorRequest): Promise<Professional> => {
+    const response = await apiClient.patch<Professional>(`/doctor/professionals/${id}`, data);
     return response.data;
   },
 
   deleteDoctor: async (id: string): Promise<void> => {
-    await apiClient.delete(`/doctor/doctors/${id}`);
+    await apiClient.delete(`/doctor/professionals/${id}`);
   },
 };

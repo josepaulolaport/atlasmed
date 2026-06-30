@@ -1,9 +1,9 @@
 export {
   canManageUsers,
-  canReadClinics,
-  canManageClinics,
-  canReadDoctors,
-  canManageDoctors,
+  canReadFacilities,
+  canManageFacilities,
+  canReadProfessionals,
+  canManageProfessionals,
   canReadTerritories,
   canManageTerritories,
   canCreateTerritories,

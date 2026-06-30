@@ -105,7 +105,7 @@ export interface TerritoryApprovalRequest {
   reviewerId?: string | null;
   entityPayload: Record<string, unknown>;
   targetTerritoryId?: string | null;
-  clinicId?: string | null;
+  facilityId?: string | null;
   toTerritoryId?: string | null;
   reason?: string | null;
   resolutionNote?: string | null;
@@ -119,7 +119,7 @@ export type TerritoryApprovalType =
   | "create_territory"
   | "reparent_territory"
   | "deactivate_territory"
-  | "clinic_territory_change";
+  | "facility_territory_change";
 
 export type TerritoryApprovalStatus =
   | "pending"
@@ -133,12 +133,12 @@ export interface SubmitApprovalRequest {
   type: TerritoryApprovalType;
   entityPayload?: Record<string, unknown>;
   targetTerritoryId?: string;
-  clinicId?: string;
+  facilityId?: string;
   toTerritoryId?: string;
   reason?: string;
 }
 
-export interface UnassignedClinic {
+export interface UnassignedFacility {
   id: string;
   lat?: number;
   lng?: number;

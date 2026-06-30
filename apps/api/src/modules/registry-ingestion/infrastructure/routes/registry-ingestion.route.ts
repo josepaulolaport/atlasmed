@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import type { IngestionSuggestionType } from "@atlasmed/database";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { registryIngestionUseCases } from "../../composition";
@@ -90,11 +91,7 @@ const listSuggestionsRoute = new Elysia()
           | "EXPIRED"
           | "SUPERSEDED"
           | undefined,
-        type: query.type as
-          | "CLINIC_REMOVAL"
-          | "CLINIC_REACTIVATION"
-          | "DOCTOR_CLINIC_REMOVAL"
-          | undefined,
+        type: query.type as IngestionSuggestionType | undefined,
       });
     },
     {

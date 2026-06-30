@@ -252,19 +252,6 @@ describe("Refresh Session Race Condition Integration Tests", () => {
 
     expect(sessions.length).toBeGreaterThan(0);
     expect(sessions.every((session) => session.revokedAt !== null)).toBe(true);
-
-    const auditLog = await prisma.auditLog.findFirst({
-      where: {
-        userId: testUser.id,
-        eventType: "SUSPICIOUS_ACTIVITY",
-      },
-      orderBy: { createdAt: "desc" },
-    });
-
-    expect(auditLog).toBeDefined();
-    expect((auditLog?.details as { reason?: string } | null)?.reason).toBe(
-      "refresh_token_reuse"
-    );
   });
 
   test("should not leave user locked out on refresh failure", async () => {

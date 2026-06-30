@@ -22,7 +22,7 @@ function handleMapboxError(error: unknown): never {
 
 export const mapsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "CLINIC"))
+  .use(requirePermission("read", "FACILITY"))
   .get("/config", () => mapboxMapsUseCases.getConfig())
   .get(
     "/geocode/forward",

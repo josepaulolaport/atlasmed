@@ -120,8 +120,8 @@ export function managerScopedContext(territoryIds: string[]): ScopeContext {
     assignedTerritoryIds: territoryIds,
     effectiveTerritoryIds: territoryIds,
     analyticsEffectiveTerritoryIds: [],
-    clinicIds: [],
-    analyticsClinicIds: [],
+    facilityIds: [],
+    analyticsFacilityIds: [],
     managedUserIds: ["field-user-test"],
     isOperationallyActive: territoryIds.length > 0,
   });
@@ -129,8 +129,8 @@ export function managerScopedContext(territoryIds: string[]): ScopeContext {
 
 export function scopedManagerContext(input: {
   territoryIds: string[];
-  clinicIds?: string[];
-  analyticsClinicIds?: string[];
+  facilityIds?: string[];
+  analyticsFacilityIds?: string[];
   analyticsTerritoryIds?: string[];
   managedUserIds?: string[];
   isOperationallyActive?: boolean;
@@ -141,8 +141,8 @@ export function scopedManagerContext(input: {
     assignedTerritoryIds: input.territoryIds,
     effectiveTerritoryIds: input.territoryIds,
     analyticsEffectiveTerritoryIds: input.analyticsTerritoryIds ?? [],
-    clinicIds: input.clinicIds ?? [],
-    analyticsClinicIds: input.analyticsClinicIds ?? [],
+    facilityIds: input.facilityIds ?? [],
+    analyticsFacilityIds: input.analyticsFacilityIds ?? [],
     managedUserIds: input.managedUserIds ?? [],
     isOperationallyActive:
       input.isOperationallyActive ?? input.territoryIds.length > 0,

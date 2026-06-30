@@ -1,12 +1,12 @@
 {
-  "clinics": [
+  "facilities": [
     {
       "externalSourceId": "mock-clinic-002",
       "name": "Beta Health Clinic",
       "address": "200 Oak Avenue"
     }
   ],
-  "doctors": [
+  "professionals": [
     {
       "externalSourceId": "mock-doctor-001",
       "firstName": "Jane",

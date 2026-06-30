@@ -73,7 +73,7 @@ This document lists implementation work already present in the repository at the
 
 - [x] Audit log model.
 - [x] Audit log service.
-- [x] Audit event types for user, session, verification, permission, registry, doctor-clinic, and data-access events.
+- [x] Audit event types for user, session, verification, permission, registry, facility-professional, and data-access events.
 - [x] Audit severity levels.
 - [x] SIEM export helper placeholder/foundation.
 - [x] Cleanup jobs for audit retention and expired security records.
@@ -101,17 +101,17 @@ This document lists implementation work already present in the repository at the
 - [x] Error code documentation.
 - [x] Backend phase implementation docs for error handling, observability, versioning, and API docs.
 
-## Clinic, Doctor, and Registry Domains
+## Facility, Professional, and Registry Domains
 
-- [x] Clinic model with registry provenance and soft-delete fields.
-- [x] Doctor model with registry provenance and soft-delete fields.
+- [x] Facility model with registry provenance and soft-delete fields.
+- [x] Professional model with registry provenance and soft-delete fields.
 - [x] Doctor-clinic association model.
-- [x] Clinic application use cases and repository interface.
-- [x] Clinic Prisma repository.
-- [x] Clinic API routes.
-- [x] Doctor application use cases and repository interface.
-- [x] Doctor Prisma repository.
-- [x] Doctor API routes.
+- [x] Facility application use cases and repository interface.
+- [x] Facility Prisma repository.
+- [x] Facility API routes.
+- [x] Professional application use cases and repository interface.
+- [x] Professional Prisma repository.
+- [x] Professional API routes.
 - [x] Doctor-clinic association use cases and repository.
 - [x] Registry ingestion run model.
 - [x] Registry ingestion suggestion model.
@@ -157,7 +157,7 @@ This document lists implementation work already present in the repository at the
 - [x] User permission-management dialog.
 - [x] User assignment-management dialog.
 - [x] Clinics page.
-- [x] Clinic detail page.
+- [x] Facility detail page.
 - [x] Doctors page.
 - [x] Registry suggestions page.
 

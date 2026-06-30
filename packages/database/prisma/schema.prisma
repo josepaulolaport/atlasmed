@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas  = ["public", "registry"]
 }
 
 enum InvitationStatus {
@@ -17,6 +18,7 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   REVOKED
+  @@schema("public")
 }
 
 enum UserStatus {
@@ -24,6 +26,7 @@ enum UserStatus {
   INACTIVE
   SUSPENDED
   PENDING
+  @@schema("public")
 }
 
 enum AuthSessionDeviceType {
@@ -31,12 +34,14 @@ enum AuthSessionDeviceType {
   MOBILE
   TABLET
   UNKNOWN
+  @@schema("public")
 }
 
 enum AuthSessionType {
   WEB
   MOBILE
   API
+  @@schema("public")
 }
 
 enum AuditEventType {
@@ -77,18 +82,76 @@ enum AuditEventType {
   DOCTOR_CLINIC_ASSOCIATION_ENDED
   DOCTOR_CLINIC_MANUAL_ASSOCIATED
   CLINIC_REACTIVATED
+  @@schema("public")
 }
 
 enum IngestionRunStatus {
   RUNNING
   COMPLETED
   FAILED
+  @@schema("public")
 }
 
 enum IngestionSuggestionType {
+  FACILITY_FIELD_UPDATE
+  FACILITY_REGISTRY_DEACTIVATED
+  FACILITY_REGISTRY_REACTIVATED
+  FACILITY_PROFESSIONAL_REMOVAL
+  FACILITY_PROFESSIONAL_ADD
+  FACILITY_REPRESENTATIVE_REMOVAL
+  FACILITY_REPRESENTATIVE_ADD
+  FACILITY_REPRESENTATIVE_FIELD_UPDATE
   CLINIC_REMOVAL
   CLINIC_REACTIVATION
   DOCTOR_CLINIC_REMOVAL
+  @@schema("public")
+}
+
+enum ConformityStatus {
+  INCOMPLETE
+  COMPLETE
+  EXPIRING_SOON
+  NON_CONFORMING
+  @@schema("public")
+}
+
+enum CommercialStatus {
+  REGISTERED
+  COMMERCIALLY_ACTIVE
+  COMMERCIALLY_SUSPENDED
+  COMMERCIALLY_INACTIVE
+  @@schema("public")
+}
+
+enum ContactType {
+  PROFESSIONAL
+  DECISOR
+  COMPRADOR
+  @@schema("public")
+}
+
+enum HealthcareProviderType {
+  PRIVATE
+  PUBLIC
+  MIXED
+  OTHER
+  @@schema("public")
+}
+
+enum HealthcareProviderShareSource {
+  MANUAL
+  REGISTRY
+  IMPORT
+  @@schema("public")
+}
+
+enum ConformityRecordStatus {
+  PENDING
+  SUBMITTED
+  VALIDATED
+  REJECTED
+  EXPIRED
+  @@schema("public")
 }
 
 enum IngestionSuggestionStatus {
@@ -97,12 +160,14 @@ enum IngestionSuggestionStatus {
   REJECTED
   EXPIRED
   SUPERSEDED
+  @@schema("public")
 }
 
 enum AuditEventSeverity {
   INFO
   WARNING
   CRITICAL
+  @@schema("public")
 }
 
 enum VerificationTokenType {
@@ -110,6 +175,7 @@ enum VerificationTokenType {
   PHONE_VERIFICATION
   EMAIL_CHANGE
   PHONE_CHANGE
+  @@schema("public")
 }
 
 enum TerritoryNodeType {
@@ -118,44 +184,52 @@ enum TerritoryNodeType {
   state
   intermediate
   patch
+  @@schema("public")
 }
 
 enum TerritoryRollupRelationshipType {
   reporting
+  @@schema("public")
 }
 
 enum TerritoryRollupLinkSource {
   geo
   manual
+  @@schema("public")
 }
 
 enum TerritoryParentAssignmentStatus {
   resolved
   ambiguous
   manual
+  @@schema("public")
 }
 
 enum TerritoryParentAssignmentSource {
   geo
   inferred
   manual
+  @@schema("public")
 }
 
 enum TerritoryGeoMembershipStatus {
   pending
   ready
   failed
+  @@schema("public")
 }
 
 enum TerritoryAssignmentStatus {
   assigned
   unassigned
   ambiguous
+  @@schema("public")
 }
 
 enum TerritoryAssignmentSource {
   geo
   manual
+  @@schema("public")
 }
 
 enum TerritoryApprovalType {
@@ -163,6 +237,7 @@ enum TerritoryApprovalType {
   reparent_territory
   deactivate_territory
   clinic_territory_change
+  @@schema("public")
 }
 
 enum TerritoryApprovalStatus {
@@ -170,6 +245,7 @@ enum TerritoryApprovalStatus {
   approved
   rejected
   superseded
+  @@schema("public")
 }
 
 model User {
@@ -217,6 +293,7 @@ model User {
   @@index([status])
   @@index([deletedAt])
   @@index([managerId])
+  @@schema("public")
   @@map("users")
 }
 
@@ -233,6 +310,7 @@ model UserTerritoryAssignment {
   @@unique([userId, territoryId])
   @@index([userId])
   @@index([territoryId])
+  @@schema("public")
   @@map("user_territory_assignments")
 }
 
@@ -254,6 +332,7 @@ model TerritoryType {
   territories          Territory[]
 
   @@index([isActive])
+  @@schema("public")
   @@map("territory_types")
 }
 
@@ -284,12 +363,12 @@ model Territory {
   createdAt                DateTime                       @default(now())
   updatedAt                DateTime                       @updatedAt
 
-  clinics                    Clinic[]
+  facilities                   Facility[]
   userAssignments              UserTerritoryAssignment[]
   closureAsAncestor            TerritoryClosure[]         @relation("ClosureAncestor")
   closureAsDescendant          TerritoryClosure[]         @relation("ClosureDescendant")
   approvalRequests             TerritoryApprovalRequest[] @relation("ApprovalTargetTerritory")
-  clinicApprovalRequests       TerritoryApprovalRequest[] @relation("ApprovalClinicTerritory")
+  facilityApprovalRequests     TerritoryApprovalRequest[] @relation("ApprovalFacilityTerritory")
   rollupLinksAsTerritory       TerritoryRollupLink[]      @relation("RollupTerritory")
   rollupLinksAsAncestor        TerritoryRollupLink[]      @relation("RollupAncestor")
   geoMembershipAsOperational   TerritoryGeoMembership[]   @relation("GeoMembershipOperational")
@@ -303,6 +382,7 @@ model Territory {
   @@index([countryCode])
   @@index([parentAssignmentStatus])
   @@index([territoryTypeId])
+  @@schema("public")
   @@map("territories")
 }
 
@@ -315,6 +395,7 @@ model TerritoryClosure {
 
   @@id([ancestorId, descendantId])
   @@index([descendantId])
+  @@schema("public")
   @@map("territory_closure")
 }
 
@@ -331,6 +412,7 @@ model TerritoryRollupLink {
   @@unique([territoryId, ancestorId, relationshipType])
   @@index([ancestorId])
   @@index([territoryId, source])
+  @@schema("public")
   @@map("territory_rollup_links")
 }
 
@@ -348,6 +430,7 @@ model TerritoryGeoMembership {
   @@unique([operationalTerritoryId, referenceTerritoryId])
   @@index([referenceTerritoryId])
   @@index([operationalTerritoryId])
+  @@schema("public")
   @@map("territory_geo_membership")
 }
 
@@ -360,10 +443,10 @@ model TerritoryApprovalRequest {
   entityPayload      Json                    @default("{}")
   targetTerritoryId  String?
   targetTerritory    Territory?              @relation("ApprovalTargetTerritory", fields: [targetTerritoryId], references: [id], onDelete: SetNull)
-  clinicId           String?
-  clinic             Clinic?                 @relation(fields: [clinicId], references: [id], onDelete: SetNull)
-  toTerritoryId      String?
-  toTerritory        Territory?              @relation("ApprovalClinicTerritory", fields: [toTerritoryId], references: [id], onDelete: SetNull)
+  facilityId           String?
+  facility             Facility?               @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  toTerritoryId        String?
+  toTerritory          Territory?              @relation("ApprovalFacilityTerritory", fields: [toTerritoryId], references: [id], onDelete: SetNull)
   reason             String?
   resolutionNote     String?
   supersededById     String?
@@ -376,7 +459,8 @@ model TerritoryApprovalRequest {
   @@index([status, type])
   @@index([requesterId])
   @@index([targetTerritoryId, status])
-  @@index([clinicId, status, type])
+  @@index([facilityId, status, type])
+  @@schema("public")
   @@map("territory_approval_requests")
 }
 
@@ -391,6 +475,7 @@ model Role {
   updatedAt   DateTime     @updatedAt
 
   @@index([priority])
+  @@schema("public")
   @@map("roles")
 }
 
@@ -431,6 +516,7 @@ model Session {
   @@index([userId, revokedAt, expiresAt])
   @@index([deviceFingerprint])
   @@index([suspiciousActivity])
+  @@schema("public")
   @@map("sessions")
 }
 
@@ -460,6 +546,7 @@ model Invitation {
   @@index([status, expiresAt])
   @@index([acceptedByUserId])
   @@index([invitedByUserId])
+  @@schema("public")
   @@map("invitations")
 }
 
@@ -479,6 +566,7 @@ model PasswordReset {
   @@index([tokenHash])
   @@index([expiresAt])
   @@index([userId, usedAt])
+  @@schema("public")
   @@map("password_resets")
 }
 
@@ -510,6 +598,7 @@ model AuditLog {
   @@index([resourceId])
   @@index([sessionId])
   @@index([severity, createdAt])
+  @@schema("public")
   @@map("audit_logs")
 }
 
@@ -530,6 +619,7 @@ model VerificationToken {
   @@index([type])
   @@index([expiresAt])
   @@index([userId, type, verifiedAt])
+  @@schema("public")
   @@map("verification_tokens")
 }
 
@@ -551,15 +641,40 @@ model Permission {
   @@index([userId, resource])
   @@index([expiresAt])
   @@unique([userId, resource, resourceId, action])
+  @@schema("public")
   @@map("permissions")
 }
 
-model Clinic {
+model Facility {
   id                        String                     @id @default(cuid())
-  name                      String
+  displayName               String                     @map("name")
   address                   String?
   lat                       Float?
   lng                       Float?
+  cnesCode                  String?                    @map("cnes_code")
+  legalName                 String?                    @map("legal_name")
+  tradeName                 String?                    @map("trade_name")
+  streetAddress             String?                    @map("street_address")
+  streetNumber              String?                    @map("street_number")
+  addressComplement         String?                    @map("address_complement")
+  neighborhood              String?
+  postalCode                String?                    @map("postal_code")
+  phoneNumber               String?                    @map("phone_number")
+  faxNumber                 String?                    @map("fax_number")
+  email                     String?
+  websiteUrl                String?                    @map("website_url")
+  taxIdCnpj                 String?                    @map("tax_id_cnpj")
+  taxIdCpf                  String?                    @map("tax_id_cpf")
+  ownerTaxId                String?                    @map("owner_tax_id")
+  facilityTypeCode          String?                    @map("facility_type_code")
+  registryDeactivationCode  String?                    @map("registry_deactivation_code")
+  isActiveInRegistry        Boolean                    @default(true) @map("is_active_in_registry")
+  referenceMunicipalityCode String?                    @map("reference_municipality_code")
+  conformityStatus          ConformityStatus           @default(INCOMPLETE)
+  commercialStatus          CommercialStatus?          @map("commercial_status")
+  primarySectorId           String?                    @map("primary_sector_id")
+  primarySector             Sector?                    @relation(fields: [primarySectorId], references: [id], onDelete: SetNull)
+  imageUrl                  String?                    @map("image_url")
   territoryId               String?
   territory                 Territory?                 @relation(fields: [territoryId], references: [id], onDelete: SetNull)
   territoryAssignmentStatus TerritoryAssignmentStatus  @default(unassigned)
@@ -575,69 +690,248 @@ model Clinic {
   deletedAt                 DateTime?
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
-  doctorAssociations        DoctorClinicAssociation[]
+  professionalAssociations  FacilityProfessional[]
+  representatives           FacilityRepresentative[]
+  consultantAssignments     FacilityConsultantAssignment[]
+  healthcareProviderShares  FacilityHealthcareProviderShare[]
+  conformityRecords         ConformityRecord[]
   ingestionSuggestions      IngestionSuggestion[]
   territoryApprovalRequests TerritoryApprovalRequest[]
 
   @@unique([sourceProvider, externalSourceId])
+  @@unique([sourceProvider, cnesCode])
   @@index([territoryId])
   @@index([deletedAt])
-  @@index([name])
+  @@index([displayName])
   @@index([sourceProvider, sourcePresent])
   @@index([territoryAssignmentStatus])
-  @@map("clinics")
+  @@index([primarySectorId])
+  @@index([conformityStatus])
+  @@schema("public")
+  @@map("facilities")
 }
 
-model Doctor {
-  id                  String                    @id @default(cuid())
-  firstName           String
-  lastName            String
-  specialty           String?
-  sourceProvider      String?
-  externalSourceId    String?
-  sourceContentHash   String?
-  sourceFirstSeenAt   DateTime?
-  sourceLastSeenAt    DateTime?
-  sourcePresent       Boolean                   @default(false)
-  sourceTracked       Boolean                   @default(false)
-  manuallyEditedAt    DateTime?
-  deletedAt           DateTime?
-  createdAt           DateTime                  @default(now())
-  updatedAt           DateTime                  @updatedAt
-  clinicAssociations  DoctorClinicAssociation[]
+model Professional {
+  id                   String                 @id @default(cuid())
+  firstName            String
+  lastName             String
+  fullName             String?                @map("full_name")
+  socialName           String?                @map("social_name")
+  primarySpecialtyLabel String?               @map("primary_specialty_label")
+  crmCouncil           String?                @map("crm_council")
+  crmNumber            String?                @map("crm_number")
+  crmState             String?                @map("crm_state")
+  sourceProvider       String?
+  externalSourceId     String?
+  sourceContentHash    String?
+  sourceFirstSeenAt    DateTime?
+  sourceLastSeenAt     DateTime?
+  sourcePresent        Boolean                @default(false)
+  sourceTracked        Boolean                @default(false)
+  manuallyEditedAt     DateTime?
+  deletedAt            DateTime?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  facilityAssociations FacilityProfessional[]
   ingestionSuggestions IngestionSuggestion[]
 
   @@unique([sourceProvider, externalSourceId])
   @@index([deletedAt])
   @@index([lastName, firstName])
   @@index([sourceProvider, sourcePresent])
-  @@map("doctors")
+  @@schema("public")
+  @@map("professionals")
 }
 
-model DoctorClinicAssociation {
-  id                String    @id @default(cuid())
-  doctorId          String
-  doctor            Doctor    @relation(fields: [doctorId], references: [id], onDelete: Cascade)
-  clinicId          String
-  clinic            Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
-  sourceActive      Boolean   @default(false)
-  sourceFirstSeenAt DateTime?
-  sourceLastSeenAt  DateTime?
-  confirmedAt       DateTime?
-  confirmedByUserId String?
-  endedAt           DateTime?
-  endedByUserId     String?
-  endReason         String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+model FacilityProfessional {
+  id                  String    @id @default(cuid())
+  professionalId      String
+  professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  facilityId          String
+  facility            Facility  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  occupationCode      String    @default("LEGACY") @map("occupation_code")
+  specialtyLabel      String?   @map("specialty_label")
+  employmentTypeCode  String?   @map("employment_type_code")
+  sourceOccupationCode String?  @map("source_occupation_code")
+  isPrescriber        Boolean   @default(false) @map("is_prescriber")
+  isBuyer             Boolean   @default(false) @map("is_buyer")
+  isDecisionMaker     Boolean   @default(false) @map("is_decision_maker")
+  relationshipLevel   String?   @map("relationship_level")
+  sourceActive        Boolean   @default(false)
+  sourceFirstSeenAt   DateTime?
+  sourceLastSeenAt    DateTime?
+  confirmedAt         DateTime?
+  confirmedByUserId   String?
+  endedAt             DateTime?
+  endedByUserId       String?
+  endReason           String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
   ingestionSuggestions IngestionSuggestion[]
 
-  @@unique([doctorId, clinicId])
-  @@index([doctorId])
-  @@index([clinicId])
-  @@index([clinicId, sourceActive, endedAt])
-  @@index([clinicId, confirmedAt, endedAt])
-  @@map("doctor_clinic_associations")
+  @@unique([facilityId, professionalId, occupationCode])
+  @@index([professionalId])
+  @@index([facilityId])
+  @@index([facilityId, sourceActive, endedAt])
+  @@index([facilityId, confirmedAt, endedAt])
+  @@schema("public")
+  @@map("facility_professionals")
+}
+
+model FacilityRepresentative {
+  id                String      @id @default(cuid())
+  facilityId        String
+  facility          Facility    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  representativeName String     @map("representative_name")
+  roleTitle         String?     @map("role_title")
+  email             String?
+  taxId             String?     @map("tax_id")
+  contactType       ContactType @default(PROFESSIONAL) @map("contact_type")
+  relationshipLevel String?     @map("relationship_level")
+  phone             String?
+  notes             String?
+  sourceProvider    String?     @map("source_provider")
+  externalSourceKey String?     @map("external_source_key")
+  sourceActive      Boolean     @default(false) @map("source_active")
+  confirmedAt       DateTime?   @map("confirmed_at")
+  confirmedByUserId String?     @map("confirmed_by_user_id")
+  endedAt           DateTime?   @map("ended_at")
+  manuallyEditedAt  DateTime?   @map("manually_edited_at")
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([facilityId, externalSourceKey])
+  @@index([facilityId])
+  @@index([facilityId, sourceActive, endedAt])
+  @@index([facilityId, confirmedAt, endedAt])
+  @@schema("public")
+  @@map("facility_representatives")
+}
+
+model FacilityConsultantAssignment {
+  id                String    @id @default(cuid())
+  facilityId        String
+  facility          Facility  @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  userId            String
+  startedAt         DateTime  @default(now()) @map("started_at")
+  endedAt           DateTime? @map("ended_at")
+  assignedByUserId  String?   @map("assigned_by_user_id")
+  endReason         String?   @map("end_reason")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([facilityId])
+  @@index([userId])
+  @@index([facilityId, endedAt])
+  @@schema("public")
+  @@map("facility_consultant_assignments")
+}
+
+model Sector {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  isActive  Boolean   @default(true) @map("is_active")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+  facilities Facility[]
+  conformityRequirements ConformityRequirement[]
+
+  @@index([isActive])
+  @@schema("public")
+  @@map("sectors")
+}
+
+model Product {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  sectorId  String   @map("sector_id")
+  sector    Sector   @relation(fields: [sectorId], references: [id], onDelete: Restrict)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sectorId])
+  @@index([isActive])
+  @@schema("public")
+  @@map("products")
+}
+
+model HealthcareProvider {
+  id        String                 @id @default(cuid())
+  name      String
+  type      HealthcareProviderType
+  isActive  Boolean                @default(true) @map("is_active")
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  facilityShares FacilityHealthcareProviderShare[]
+
+  @@index([isActive])
+  @@schema("public")
+  @@map("healthcare_providers")
+}
+
+model FacilityHealthcareProviderShare {
+  id                   String                      @id @default(cuid())
+  facilityId           String                      @map("facility_id")
+  facility             Facility                    @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  healthcareProviderId String                      @map("healthcare_provider_id")
+  healthcareProvider   HealthcareProvider          @relation(fields: [healthcareProviderId], references: [id], onDelete: Restrict)
+  sharePercent         Float                       @map("share_percent")
+  source               HealthcareProviderShareSource @default(MANUAL)
+  sourceFirstSeenAt    DateTime?                   @map("source_first_seen_at")
+  sourceLastSeenAt     DateTime?                   @map("source_last_seen_at")
+  manuallyEditedAt     DateTime?                   @map("manually_edited_at")
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+
+  @@unique([facilityId, healthcareProviderId])
+  @@index([facilityId])
+  @@index([healthcareProviderId])
+  @@schema("public")
+  @@map("facility_healthcare_provider_shares")
+}
+
+model ConformityRequirement {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  description  String?
+  sectorId     String?  @map("sector_id")
+  sector       Sector?  @relation(fields: [sectorId], references: [id], onDelete: SetNull)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  records      ConformityRecord[]
+
+  @@index([sectorId])
+  @@index([isActive])
+  @@schema("public")
+  @@map("conformity_requirements")
+}
+
+model ConformityRecord {
+  id                String                 @id @default(cuid())
+  facilityId        String                 @map("facility_id")
+  facility          Facility               @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  requirementId     String                 @map("requirement_id")
+  requirement       ConformityRequirement  @relation(fields: [requirementId], references: [id], onDelete: Restrict)
+  status            ConformityRecordStatus @default(PENDING)
+  submittedAt       DateTime?              @map("submitted_at")
+  validatedAt       DateTime?              @map("validated_at")
+  expiresAt         DateTime?              @map("expires_at")
+  validatedByUserId String?                @map("validated_by_user_id")
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@unique([facilityId, requirementId])
+  @@index([facilityId])
+  @@index([requirementId])
+  @@index([status])
+  @@schema("public")
+  @@map("conformity_records")
 }
 
 model IngestionRun {
@@ -652,30 +946,32 @@ model IngestionRun {
 
   @@index([sourceProvider, startedAt])
   @@index([status])
+  @@schema("public")
   @@map("ingestion_runs")
 }
 
 model IngestionSuggestion {
-  id               String                    @id @default(cuid())
-  ingestionRunId   String
-  ingestionRun     IngestionRun              @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
-  type             IngestionSuggestionType
-  status           IngestionSuggestionStatus @default(PENDING)
-  clinicId         String?
-  clinic           Clinic?                   @relation(fields: [clinicId], references: [id], onDelete: SetNull)
-  doctorId         String?
-  doctor           Doctor?                   @relation(fields: [doctorId], references: [id], onDelete: SetNull)
-  associationId    String?
-  association      DoctorClinicAssociation?  @relation(fields: [associationId], references: [id], onDelete: SetNull)
-  reason           String?
-  payload          Json                      @default("{}")
-  suggestedAt      DateTime                  @default(now())
-  resolvedAt       DateTime?
-  resolvedByUserId String?
-  resolutionNote   String?
+  id                     String                    @id @default(cuid())
+  ingestionRunId         String
+  ingestionRun           IngestionRun              @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
+  type                   IngestionSuggestionType
+  status                 IngestionSuggestionStatus @default(PENDING)
+  facilityId             String?
+  facility               Facility?                 @relation(fields: [facilityId], references: [id], onDelete: SetNull)
+  professionalId         String?
+  professional           Professional?             @relation(fields: [professionalId], references: [id], onDelete: SetNull)
+  facilityProfessionalId String?
+  facilityProfessional   FacilityProfessional?     @relation(fields: [facilityProfessionalId], references: [id], onDelete: SetNull)
+  reason                 String?
+  payload                Json                      @default("{}")
+  suggestedAt            DateTime                  @default(now())
+  resolvedAt             DateTime?
+  resolvedByUserId       String?
+  resolutionNote         String?
 
   @@index([status, type])
-  @@index([clinicId, status])
+  @@index([facilityId, status])
   @@index([ingestionRunId])
+  @@schema("public")
   @@map("ingestion_suggestions")
 }

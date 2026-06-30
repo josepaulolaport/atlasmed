@@ -55,7 +55,7 @@ describe("PermissionMiddleware", () => {
     it("should allow ADMIN to manage CLINIC", () => {
       const ability = defineAbilitiesFor("ADMIN");
 
-      expect(ability.can("manage", "CLINIC")).toBe(true);
+      expect(ability.can("manage", "FACILITY")).toBe(true);
     });
 
     it("should allow ADMIN to manage VISIT", () => {
@@ -79,8 +79,8 @@ describe("PermissionMiddleware", () => {
     it("should allow MANAGER to read CLINIC", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
-      expect(ability.can("read", "CLINIC")).toBe(true);
-      expect(ability.can("manage", "CLINIC")).toBe(false);
+      expect(ability.can("read", "FACILITY")).toBe(true);
+      expect(ability.can("manage", "FACILITY")).toBe(false);
     });
 
     it("should allow MANAGER to read VISIT", () => {
@@ -99,7 +99,7 @@ describe("PermissionMiddleware", () => {
     it("should allow USER to read CLINIC", () => {
       const ability = defineAbilitiesFor("USER");
 
-      expect(ability.can("read", "CLINIC")).toBe(true);
+      expect(ability.can("read", "FACILITY")).toBe(true);
     });
 
     it("should allow USER to read VISIT", () => {
@@ -143,7 +143,7 @@ describe("PermissionMiddleware", () => {
     it("should deny USER from managing CLINIC", () => {
       const ability = defineAbilitiesFor("USER");
 
-      expect(ability.can("manage", "CLINIC")).toBe(false);
+      expect(ability.can("manage", "FACILITY")).toBe(false);
     });
 
     it("should deny USER from managing VISIT", () => {
@@ -168,9 +168,9 @@ describe("PermissionMiddleware", () => {
 
       expect(ability.can("read", "USER")).toBe(true);
       expect(ability.can("create", "USER")).toBe(true);
-      expect(ability.can("read", "CLINIC")).toBe(true);
+      expect(ability.can("read", "FACILITY")).toBe(true);
       expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("update", "CLINIC")).toBe(true);
+      expect(ability.can("update", "FACILITY")).toBe(true);
       expect(ability.can("create", "TERRITORY")).toBe(true);
       expect(ability.can("update", "TERRITORY")).toBe(true);
       expect(ability.can("manage", "TERRITORY")).toBe(false);
@@ -217,10 +217,10 @@ describe("PermissionMiddleware", () => {
     it("should have full CRUD on CLINIC", () => {
       const ability = defineAbilitiesFor("ADMIN");
 
-      expect(ability.can("create", "CLINIC")).toBe(true);
-      expect(ability.can("read", "CLINIC")).toBe(true);
-      expect(ability.can("update", "CLINIC")).toBe(true);
-      expect(ability.can("delete", "CLINIC")).toBe(true);
+      expect(ability.can("create", "FACILITY")).toBe(true);
+      expect(ability.can("read", "FACILITY")).toBe(true);
+      expect(ability.can("update", "FACILITY")).toBe(true);
+      expect(ability.can("delete", "FACILITY")).toBe(true);
     });
 
     it("should have full CRUD on VISIT", () => {
@@ -255,10 +255,10 @@ describe("PermissionMiddleware", () => {
     it("should have read and update on CLINIC", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
-      expect(ability.can("read", "CLINIC")).toBe(true);
-      expect(ability.can("create", "CLINIC")).toBe(false);
-      expect(ability.can("update", "CLINIC")).toBe(true);
-      expect(ability.can("delete", "CLINIC")).toBe(false);
+      expect(ability.can("read", "FACILITY")).toBe(true);
+      expect(ability.can("create", "FACILITY")).toBe(false);
+      expect(ability.can("update", "FACILITY")).toBe(true);
+      expect(ability.can("delete", "FACILITY")).toBe(false);
     });
 
     it("should have read-only on VISIT", () => {
@@ -285,10 +285,10 @@ describe("PermissionMiddleware", () => {
     it("should have read and update on CLINIC", () => {
       const ability = defineAbilitiesFor("USER");
 
-      expect(ability.can("read", "CLINIC")).toBe(true);
-      expect(ability.can("create", "CLINIC")).toBe(false);
-      expect(ability.can("update", "CLINIC")).toBe(true);
-      expect(ability.can("delete", "CLINIC")).toBe(false);
+      expect(ability.can("read", "FACILITY")).toBe(true);
+      expect(ability.can("create", "FACILITY")).toBe(false);
+      expect(ability.can("update", "FACILITY")).toBe(true);
+      expect(ability.can("delete", "FACILITY")).toBe(false);
     });
 
     it("should have read-only on VISIT", () => {

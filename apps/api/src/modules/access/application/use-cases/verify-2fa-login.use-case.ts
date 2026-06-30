@@ -78,6 +78,14 @@ export class Verify2FALoginUseCase {
       throw new InvalidCredentialsError();
     }
 
+    const acquired = await this.deps.pending2faLoginService.acquireVerificationLock(
+      params.pendingToken
+    );
+
+    if (!acquired) {
+      throw new TokenInvalidError();
+    }
+
     await this.deps.pending2faLoginService.consume(params.pendingToken);
 
     await this.deps.userRepository.updateLastLogin(user.id);

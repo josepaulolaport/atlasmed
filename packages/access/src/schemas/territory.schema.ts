@@ -60,16 +60,16 @@ export const territoryApprovalRequestSchema = z.object({
     "create_territory",
     "reparent_territory",
     "deactivate_territory",
-    "clinic_territory_change",
+    "facility_territory_change",
   ]),
   entityPayload: z.record(z.string(), z.unknown()).optional(),
   targetTerritoryId: z.string().trim().min(1).optional(),
-  clinicId: z.string().trim().min(1).optional(),
+  facilityId: z.string().trim().min(1).optional(),
   toTerritoryId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
 });
 
-export const clinicTerritoryOverrideSchema = z.object({
+export const facilityTerritoryOverrideSchema = z.object({
   territoryId: z.string().trim().min(1),
   reason: z.string().trim().max(500).optional(),
 });

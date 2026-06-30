@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { RegistrySyncService } from "./application/services/registry-sync.service";
+import { RegistryDiffService } from "./application/services/registry-diff.service";
 import { MockRegistrySourceAdapter } from "./infrastructure/adapters/mock-registry-source.adapter";
-import type { ClinicRepository } from "../clinic/application/interfaces/clinic.repository.interface";
-import type { DoctorRepository } from "../doctor/application/interfaces/doctor.repository.interface";
-import type { DoctorClinicAssociationRepository } from "../clinic/application/interfaces/doctor-clinic-association.repository.interface";
+import type { FacilityRepository } from "../facility/application/interfaces/facility.repository.interface";
+import type { ProfessionalRepository } from "../professional/application/interfaces/professional.repository.interface";
+import type { FacilityProfessionalRepository } from "../facility/application/interfaces/facility-professional.repository.interface";
 import type { IngestionSuggestionRepository } from "./application/interfaces/ingestion.repository.interface";
 
 const fixturesDir = join(
@@ -14,35 +15,36 @@ const fixturesDir = join(
 );
 
 describe("Registry ingestion Integration Tests", () => {
-  let clinicRepository: ClinicRepository;
-  let doctorRepository: DoctorRepository;
-  let associationRepository: DoctorClinicAssociationRepository;
+  let facilityRepository: FacilityRepository;
+  let professionalRepository: ProfessionalRepository;
+  let facilityProfessionalRepository: FacilityProfessionalRepository;
   let suggestionRepository: IngestionSuggestionRepository;
-  let clinics: Map<string, any>;
+  let facilities: Map<string, any>;
   let doctors: Map<string, any>;
   let associations: Map<string, any>;
   let suggestions: any[];
 
   beforeEach(() => {
-    clinics = new Map();
+    facilities = new Map();
     doctors = new Map();
     associations = new Map();
     suggestions = [];
 
-    clinicRepository = {
+    facilityRepository = {
+      findById: mock(async (id) => [...facilities.values()].find((f) => f.id === id) ?? null),
       findByExternalId: mock(async (provider, externalSourceId) => {
         const key = `${provider}:${externalSourceId}`;
-        return clinics.get(key) ?? null;
+        return facilities.get(key) ?? null;
       }),
       findSourceTrackedByProvider: mock(async (provider) =>
-        [...clinics.values()].filter((c) => c.sourceProvider === provider && c.sourceTracked)
+        [...facilities.values()].filter((c) => c.sourceProvider === provider && c.sourceTracked)
       ),
       upsertFromSource: mock(async (input) => {
         const key = `${input.sourceProvider}:${input.externalSourceId}`;
-        const existing = clinics.get(key);
+        const existing = facilities.get(key);
         if (!existing) {
           const clinic = {
-            id: `clinic-${clinics.size + 1}`,
+            id: `clinic-${facilities.size + 1}`,
             ...input,
             sourcePresent: true,
             sourceTracked: true,
@@ -51,8 +53,8 @@ describe("Registry ingestion Integration Tests", () => {
             createdAt: new Date(),
             updatedAt: new Date(),
           };
-          clinics.set(key, clinic);
-          return { clinic, created: true, updated: false };
+          facilities.set(key, clinic);
+          return { facility: clinic, created: true, updated: false };
         }
 
         const clinic = {
@@ -64,31 +66,31 @@ describe("Registry ingestion Integration Tests", () => {
           name: existing.manuallyEditedAt ? existing.name : input.name,
           address: existing.manuallyEditedAt ? existing.address : input.address,
         };
-        clinics.set(key, clinic);
-        return { clinic, created: false, updated: true };
+        facilities.set(key, clinic);
+        return { facility: clinic, created: false, updated: true };
       }),
       markSourceAbsent: mock(async (id, sourceLastSeenAt) => {
-        const clinic = [...clinics.values()].find((c) => c.id === id);
+        const clinic = [...facilities.values()].find((c) => c.id === id);
         if (clinic) {
           clinic.sourcePresent = false;
           clinic.sourceLastSeenAt = sourceLastSeenAt;
         }
       }),
       softDelete: mock(async (id) => {
-        const clinic = [...clinics.values()].find((c) => c.id === id);
+        const clinic = [...facilities.values()].find((c) => c.id === id);
         if (clinic) {
           clinic.deletedAt = new Date();
         }
       }),
       reactivate: mock(async (id) => {
-        const clinic = [...clinics.values()].find((c) => c.id === id);
+        const clinic = [...facilities.values()].find((c) => c.id === id);
         if (clinic) {
           clinic.deletedAt = null;
         }
       }),
-    } as unknown as ClinicRepository;
+    } as unknown as FacilityRepository;
 
-    doctorRepository = {
+    professionalRepository = {
       upsertFromSource: mock(async (input) => {
         const key = `${input.sourceProvider}:${input.externalSourceId}`;
         const existing = doctors.get(key);
@@ -100,26 +102,26 @@ describe("Registry ingestion Integration Tests", () => {
             sourceTracked: true,
             manuallyEditedAt: null,
             deletedAt: null,
-            clinicIds: [],
+            facilityIds: [],
             createdAt: new Date(),
             updatedAt: new Date(),
           };
           doctors.set(key, doctor);
-          return { doctor, created: true, updated: false };
+          return { professional: doctor, created: true, updated: false };
         }
         const doctor = { ...existing, sourcePresent: true, sourceLastSeenAt: input.sourceLastSeenAt };
         doctors.set(key, doctor);
-        return { doctor, created: false, updated: true };
+        return { professional: doctor, created: false, updated: true };
       }),
       findSourceTrackedByProvider: mock(async (provider) =>
         [...doctors.values()].filter((d) => d.sourceProvider === provider && d.sourceTracked)
       ),
       markSourceAbsent: mock(async () => {}),
-    } as unknown as DoctorRepository;
+    } as unknown as ProfessionalRepository;
 
-    associationRepository = {
-      upsertSourceAssociation: mock(async ({ doctorId, clinicId, sourceLastSeenAt }) => {
-        const key = `${doctorId}:${clinicId}`;
+    facilityProfessionalRepository = {
+      upsertSourceAssociation: mock(async ({ professionalId, facilityId, sourceLastSeenAt }) => {
+        const key = `${professionalId}:${facilityId}`;
         const existing = associations.get(key);
         if (existing) {
           existing.sourceActive = true;
@@ -129,8 +131,8 @@ describe("Registry ingestion Integration Tests", () => {
         }
         const association = {
           id: `assoc-${associations.size + 1}`,
-          doctorId,
-          clinicId,
+          professionalId,
+          facilityId,
           sourceActive: true,
           sourceFirstSeenAt: sourceLastSeenAt,
           sourceLastSeenAt,
@@ -149,18 +151,18 @@ describe("Registry ingestion Integration Tests", () => {
         [...associations.values()]
           .filter((a) => a.sourceActive && !a.endedAt)
           .map((association) => {
-            const doctor = [...doctors.values()].find((d) => d.id === association.doctorId);
-            const clinic = [...clinics.values()].find((c) => c.id === association.clinicId);
+            const doctor = [...doctors.values()].find((d) => d.id === association.professionalId);
+            const clinic = [...facilities.values()].find((c) => c.id === association.facilityId);
             return {
               association,
-              doctorExternalSourceId: doctor?.externalSourceId,
-              clinicExternalSourceId: clinic?.externalSourceId,
+              professionalExternalSourceId: doctor?.externalSourceId,
+              facilityExternalSourceId: clinic?.externalSourceId,
             };
           })
-          .filter((row) => row.doctorExternalSourceId && row.clinicExternalSourceId)
+          .filter((row) => row.professionalExternalSourceId && row.facilityExternalSourceId)
       ),
-      markSourceInactive: mock(async ({ associationId, sourceLastSeenAt }) => {
-        const association = [...associations.values()].find((a) => a.id === associationId);
+      markSourceInactive: mock(async ({ facilityProfessionalId, sourceLastSeenAt }) => {
+        const association = [...associations.values()].find((a) => a.id === facilityProfessionalId);
         if (!association) throw new Error("missing");
         association.sourceActive = false;
         association.sourceLastSeenAt = sourceLastSeenAt;
@@ -172,7 +174,7 @@ describe("Registry ingestion Integration Tests", () => {
       endAssociationById: mock(async () => {
         throw new Error("not used");
       }),
-    } as unknown as DoctorClinicAssociationRepository;
+    } as unknown as FacilityProfessionalRepository;
 
     suggestionRepository = {
       create: mock(async (input) => {
@@ -198,13 +200,22 @@ describe("Registry ingestion Integration Tests", () => {
     } as unknown as IngestionSuggestionRepository;
   });
 
-  it("creates removal suggestion without deactivating clinic", async () => {
-    const sync = new RegistrySyncService({
-      clinicRepository,
-      doctorRepository,
-      associationRepository,
+  function createSyncService() {
+    const registryDiffService = new RegistryDiffService({
+      facilityRepository,
       suggestionRepository,
     });
+    return new RegistrySyncService({
+      facilityRepository,
+      professionalRepository,
+      facilityProfessionalRepository,
+      suggestionRepository,
+      registryDiffService,
+    });
+  }
+
+  it("creates removal suggestion without deactivating facility", async () => {
+    const sync = createSyncService();
 
     const v1 = await new MockRegistrySourceAdapter(
       "snapshot-v1.json",
@@ -218,22 +229,17 @@ describe("Registry ingestion Integration Tests", () => {
     ).fetchSnapshot();
     await sync.syncSnapshot({ snapshot: v2, ingestionRunId: "run-2" });
 
-    const removedClinic = [...clinics.values()].find(
+    const removedFacility = [...facilities.values()].find(
       (c) => c.externalSourceId === "mock-clinic-001"
     );
 
-    expect(removedClinic?.sourcePresent).toBe(false);
-    expect(removedClinic?.deletedAt).toBeNull();
-    expect(suggestions.some((s) => s.type === "CLINIC_REMOVAL")).toBe(true);
+    expect(removedFacility?.sourcePresent).toBe(false);
+    expect(removedFacility?.deletedAt).toBeNull();
+    expect(suggestions.some((s) => s.type === "FACILITY_REGISTRY_DEACTIVATED")).toBe(true);
   });
 
-  it("creates association removal suggestion without deleting doctor", async () => {
-    const sync = new RegistrySyncService({
-      clinicRepository,
-      doctorRepository,
-      associationRepository,
-      suggestionRepository,
-    });
+  it("creates association removal suggestion without deleting professional", async () => {
+    const sync = createSyncService();
 
     const v1 = await new MockRegistrySourceAdapter(
       "snapshot-v1.json",
@@ -249,20 +255,15 @@ describe("Registry ingestion Integration Tests", () => {
 
     expect(doctors.size).toBeGreaterThan(0);
     expect(
-      suggestions.some((s) => s.type === "DOCTOR_CLINIC_REMOVAL")
+      suggestions.some((s) => s.type === "FACILITY_PROFESSIONAL_REMOVAL")
     ).toBe(true);
     expect(
       [...associations.values()].some((a) => a.sourceActive === false && !a.endedAt)
     ).toBe(true);
   });
 
-  it("creates reactivation suggestion when soft-deleted clinic reappears in source", async () => {
-    const sync = new RegistrySyncService({
-      clinicRepository,
-      doctorRepository,
-      associationRepository,
-      suggestionRepository,
-    });
+  it("creates reactivation suggestion when soft-deleted facility reappears in source", async () => {
+    const sync = createSyncService();
 
     const v1 = await new MockRegistrySourceAdapter(
       "snapshot-v1.json",
@@ -270,7 +271,7 @@ describe("Registry ingestion Integration Tests", () => {
     ).fetchSnapshot();
     await sync.syncSnapshot({ snapshot: v1, ingestionRunId: "run-1" });
 
-    const clinic = [...clinics.values()].find(
+    const clinic = [...facilities.values()].find(
       (c) => c.externalSourceId === "mock-clinic-001"
     );
     clinic!.deletedAt = new Date();
@@ -283,7 +284,7 @@ describe("Registry ingestion Integration Tests", () => {
 
     expect(clinic?.deletedAt).not.toBeNull();
     expect(
-      suggestions.some((s) => s.type === "CLINIC_REACTIVATION" && s.clinicId === clinic?.id)
+      suggestions.some((s) => s.type === "FACILITY_REGISTRY_REACTIVATED" && s.facilityId === clinic?.id)
     ).toBe(true);
   });
 });

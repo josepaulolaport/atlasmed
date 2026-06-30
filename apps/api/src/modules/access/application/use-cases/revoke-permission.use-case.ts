@@ -1,5 +1,5 @@
 import type { AccessGrantService } from "../services/access-grant.service";
-import { Role } from "@atlasmed/access";
+import { Role, normalizeGrantResource } from "@atlasmed/access";
 import { InsufficientPermissionsError } from "../../../../shared/errors";
 
 interface Dependencies {
@@ -26,7 +26,7 @@ export class RevokePermissionUseCase {
 
     await this.deps.accessGrantService.revokePermission({
       userId: params.targetUserId,
-      resource: params.resource,
+      resource: normalizeGrantResource(params.resource),
       resourceId: params.resourceId,
       action: params.action,
       revokedBy: params.revokedBy,
