@@ -1,25 +1,70 @@
 import type { ScopeContext } from "@atlasmed/access";
+import type { ProfessionalProfile } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
-import type { ProfessionalRepository } from "../interfaces/professional.repository.interface";
+import type {
+  ProfessionalCreateInput,
+  ProfessionalRecord,
+  ProfessionalRepository,
+  ProfessionalUpdateInput,
+} from "../interfaces/professional.repository.interface";
 
-function serializeDoctor(doctor: {
-  id: string;
-  firstName: string;
-  lastName: string;
-  specialty: string | null;
-  facilityIds: string[];
-  createdAt: Date;
-  updatedAt: Date;
-}) {
+function formatDate(value: Date | null): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return value.toISOString().slice(0, 10);
+}
+
+async function serializeProfessionalProfile(
+  professional: ProfessionalRecord,
+  repository: ProfessionalRepository
+): Promise<ProfessionalProfile> {
+  const facilities = await repository.findActiveFacilities(professional.id);
+
   return {
-    id: doctor.id,
-    firstName: doctor.firstName,
-    lastName: doctor.lastName,
-    specialty: doctor.specialty ?? undefined,
-    facilityIds: doctor.facilityIds,
-    createdAt: doctor.createdAt.toISOString(),
-    updatedAt: doctor.updatedAt.toISOString(),
+    id: professional.id,
+    firstName: professional.firstName,
+    lastName: professional.lastName,
+    fullName: professional.fullName ?? undefined,
+    socialName: professional.socialName ?? undefined,
+    taxId: professional.taxId ?? undefined,
+    birthDate: formatDate(professional.birthDate),
+    mobilePhone: professional.mobilePhone ?? undefined,
+    landlinePhone: professional.landlinePhone ?? undefined,
+    email: professional.email ?? undefined,
+    websiteUrl: professional.websiteUrl ?? undefined,
+    imageUrl: professional.imageUrl ?? undefined,
+    primarySpecialtyLabel: professional.specialty ?? undefined,
+    specialty: professional.specialty ?? undefined,
+    crmCouncil: professional.crmCouncil ?? undefined,
+    crmNumber: professional.crmNumber ?? undefined,
+    crmState: professional.crmState ?? undefined,
+    favoriteTeam: professional.favoriteTeam ?? undefined,
+    favoriteSport: professional.favoriteSport ?? undefined,
+    hobbies: professional.hobbies ?? undefined,
+    notes: professional.notes ?? undefined,
+    facilityIds: professional.facilityIds,
+    facilities,
+    createdAt: professional.createdAt.toISOString(),
+    updatedAt: professional.updatedAt.toISOString(),
+  };
+}
+
+function serializeProfessionalSummary(professional: ProfessionalRecord) {
+  return {
+    id: professional.id,
+    firstName: professional.firstName,
+    lastName: professional.lastName,
+    fullName: professional.fullName ?? undefined,
+    specialty: professional.specialty ?? undefined,
+    primarySpecialtyLabel: professional.specialty ?? undefined,
+    crmNumber: professional.crmNumber ?? undefined,
+    crmState: professional.crmState ?? undefined,
+    facilityIds: professional.facilityIds,
+    createdAt: professional.createdAt.toISOString(),
+    updatedAt: professional.updatedAt.toISOString(),
   };
 }
 
@@ -45,6 +90,114 @@ function assertProfessionalAccessible(scope: ScopeContext, facilityIds: string[]
   if (!hasAccessibleFacility) {
     throw new ForbiddenError("Professional outside scope");
   }
+}
+
+function parseBirthDate(value?: string | null): Date | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function buildCreateInput(input: {
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  socialName?: string;
+  taxId?: string;
+  birthDate?: string;
+  mobilePhone?: string;
+  landlinePhone?: string;
+  email?: string;
+  websiteUrl?: string;
+  imageUrl?: string;
+  primarySpecialtyLabel?: string;
+  specialty?: string;
+  crmCouncil?: string;
+  crmNumber?: string;
+  crmState?: string;
+  favoriteTeam?: string;
+  favoriteSport?: string;
+  hobbies?: string;
+  notes?: string;
+  facilityIds?: string[];
+}): ProfessionalCreateInput {
+  return {
+    firstName: input.firstName,
+    lastName: input.lastName,
+    fullName: input.fullName ?? null,
+    socialName: input.socialName ?? null,
+    taxId: input.taxId ?? null,
+    birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00.000Z`) : null,
+    mobilePhone: input.mobilePhone ?? null,
+    landlinePhone: input.landlinePhone ?? null,
+    email: input.email ?? null,
+    websiteUrl: input.websiteUrl ?? null,
+    imageUrl: input.imageUrl ?? null,
+    specialty: input.primarySpecialtyLabel ?? input.specialty ?? null,
+    crmCouncil: input.crmCouncil ?? null,
+    crmNumber: input.crmNumber ?? null,
+    crmState: input.crmState ?? null,
+    favoriteTeam: input.favoriteTeam ?? null,
+    favoriteSport: input.favoriteSport ?? null,
+    hobbies: input.hobbies ?? null,
+    notes: input.notes ?? null,
+    facilityIds: input.facilityIds ?? [],
+  };
+}
+
+function buildUpdateInput(input: {
+  firstName?: string;
+  lastName?: string;
+  fullName?: string | null;
+  socialName?: string | null;
+  taxId?: string | null;
+  birthDate?: string | null;
+  mobilePhone?: string | null;
+  landlinePhone?: string | null;
+  email?: string | null;
+  websiteUrl?: string | null;
+  imageUrl?: string | null;
+  primarySpecialtyLabel?: string | null;
+  specialty?: string | null;
+  crmCouncil?: string | null;
+  crmNumber?: string | null;
+  crmState?: string | null;
+  favoriteTeam?: string | null;
+  favoriteSport?: string | null;
+  hobbies?: string | null;
+  notes?: string | null;
+}): ProfessionalUpdateInput {
+  return {
+    firstName: input.firstName,
+    lastName: input.lastName,
+    fullName: input.fullName,
+    socialName: input.socialName,
+    taxId: input.taxId,
+    birthDate: parseBirthDate(input.birthDate),
+    mobilePhone: input.mobilePhone,
+    landlinePhone: input.landlinePhone,
+    email: input.email,
+    websiteUrl: input.websiteUrl,
+    imageUrl: input.imageUrl,
+    specialty:
+      input.primarySpecialtyLabel !== undefined
+        ? input.primarySpecialtyLabel
+        : input.specialty,
+    crmCouncil: input.crmCouncil,
+    crmNumber: input.crmNumber,
+    crmState: input.crmState,
+    favoriteTeam: input.favoriteTeam,
+    favoriteSport: input.favoriteSport,
+    hobbies: input.hobbies,
+    notes: input.notes,
+    manuallyEditedAt: new Date(),
+  };
 }
 
 interface Dependencies {
@@ -79,7 +232,7 @@ export class ListProfessionalsUseCase {
     });
 
     return {
-      data: professionals.map(serializeDoctor),
+      data: professionals.map(serializeProfessionalSummary),
       pagination: {
         page,
         limit,
@@ -94,64 +247,56 @@ export class GetProfessionalUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: { professionalId: string; scope: ScopeContext }) {
-    const doctor = await this.deps.doctorRepository.findById(input.professionalId);
+    const professional = await this.deps.doctorRepository.findById(input.professionalId);
 
-    if (!doctor) {
+    if (!professional) {
       return null;
     }
 
-    assertProfessionalAccessible(input.scope, doctor.facilityIds);
+    assertProfessionalAccessible(input.scope, professional.facilityIds);
 
-    return serializeDoctor(doctor);
+    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
   }
 }
 
 export class CreateDoctorUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: {
-    firstName: string;
-    lastName: string;
-    specialty?: string;
-    facilityIds?: string[];
-    scope: ScopeContext;
-  }) {
+  async execute(
+    input: Parameters<typeof buildCreateInput>[0] & { scope: ScopeContext }
+  ) {
     const facilityIds = input.facilityIds ?? [];
 
     if (facilityIds.length > 0) {
       assertFacilityIdsInScope(input.scope, facilityIds);
 
-      const existingClinicIds = await this.deps.doctorRepository.findExistingClinicIds(
+      const existingFacilityIds = await this.deps.doctorRepository.findExistingFacilityIds(
         facilityIds
       );
 
-      if (existingClinicIds.length !== facilityIds.length) {
-        throw new ResourceNotFoundError("Clinic", "one or more facilityIds");
+      if (existingFacilityIds.length !== facilityIds.length) {
+        throw new ResourceNotFoundError("Facility", "one or more facilityIds");
       }
     }
 
-    const doctor = await this.deps.doctorRepository.create({
-      firstName: input.firstName,
-      lastName: input.lastName,
-      specialty: input.specialty ?? null,
-      facilityIds,
-    });
+    const professional = await this.deps.doctorRepository.create(
+      buildCreateInput(input)
+    );
 
-    return serializeDoctor(doctor);
+    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
   }
 }
 
 export class UpdateDoctorUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: {
-    professionalId: string;
-    scope: ScopeContext;
-    firstName?: string;
-    lastName?: string;
-    specialty?: string | null;
-    facilityIds?: string[];
-  }) {
+  async execute(
+    input: {
+      professionalId: string;
+      scope: ScopeContext;
+      facilityIds?: string[];
+    } & Parameters<typeof buildUpdateInput>[0]
+  ) {
     const existing = await this.deps.doctorRepository.findById(input.professionalId);
 
     if (!existing) {
@@ -165,19 +310,17 @@ export class UpdateDoctorUseCase {
         {
           field: "facilityIds",
           message:
-            "Use clinic association endpoints to manage facility-professional links",
+            "Use facility association endpoints to manage facility-professional links",
         },
       ]);
     }
 
-    const doctor = await this.deps.doctorRepository.update(input.professionalId, {
-      firstName: input.firstName,
-      lastName: input.lastName,
-      specialty: input.specialty,
-      manuallyEditedAt: new Date(),
-    });
+    const professional = await this.deps.doctorRepository.update(
+      input.professionalId,
+      buildUpdateInput(input)
+    );
 
-    return serializeDoctor(doctor);
+    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
   }
 }
 

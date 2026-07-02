@@ -8,6 +8,8 @@ import {
 } from "bun:test";
 import { access } from "../access/index";
 import { facility } from "../facility/index";
+import { professional } from "../professional/index";
+import { prisma } from "../../infrastructure/database/prisma.client";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -28,6 +30,7 @@ describe("Facility HTTP auth integration", () => {
   let dbReady = false;
   let fixtures: ScopeIntegrationFixtures;
   let app: HttpIntegrationApp;
+  let contextProfessionalId: string;
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
@@ -35,8 +38,25 @@ describe("Facility HTTP auth integration", () => {
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
-    app = createHttpIntegrationApp(access, facility);
+    app = createHttpIntegrationApp(access, facility, professional);
     await redis.flushdb();
+
+    const professionalRecord = await prisma.professional.create({
+      data: {
+        firstName: "Facility",
+        lastName: `Context ${uniqueId}`,
+        taxId: "52998224725",
+      },
+    });
+    await prisma.facilityProfessional.create({
+      data: {
+        facilityId: fixtures.inScopeFacilityId,
+        professionalId: professionalRecord.id,
+        confirmedAt: new Date(),
+        isPartner: false,
+      },
+    });
+    contextProfessionalId = professionalRecord.id;
   });
 
   beforeEach(async () => {
@@ -50,6 +70,19 @@ describe("Facility HTTP auth integration", () => {
 
   afterAll(async () => {
     if (!dbReady || !fixtures) return;
+
+    await prisma.facilityProfessional.deleteMany({
+      where: {
+        professional: {
+          lastName: { contains: fixtures.uniqueId },
+        },
+      },
+    });
+    await prisma.professional.deleteMany({
+      where: {
+        lastName: { contains: fixtures.uniqueId },
+      },
+    });
     await cleanupScopeIntegrationFixtures(fixtures.uniqueId);
   });
 
@@ -159,5 +192,75 @@ describe("Facility HTTP auth integration", () => {
     const ids = body.data.map((row) => row.id);
     expect(ids).toContain(fixtures.inScopeFacilityId);
     expect(ids).not.toContain(fixtures.outOfScopeFacilityId);
+  });
+
+  it("scoped field USER can read facility professional context", async () => {
+    if (!dbReady) return;
+
+    const token = await loginToken(fixtures.fieldUser.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`,
+      token
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      professional: { id: string; taxId?: string };
+      association: { facilityId: string };
+    };
+    expect(body.professional.id).toBe(contextProfessionalId);
+    expect(body.professional.taxId).toBe("52998224725");
+    expect(body.association.facilityId).toBe(fixtures.inScopeFacilityId);
+  });
+
+  it("allows ADMIN to patch facility professional role flags", async () => {
+    if (!dbReady) return;
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          isPartner: true,
+          relationshipLevel: "HIGH",
+          notes: "Primary partner",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      isPartner: boolean;
+      relationshipLevel?: string;
+      notes?: string;
+    };
+    expect(body.isPartner).toBe(true);
+    expect(body.relationshipLevel).toBe("HIGH");
+    expect(body.notes).toBe("Primary partner");
+  });
+
+  it("rejects invalid relationship level on facility professional patch", async () => {
+    if (!dbReady) return;
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          relationshipLevel: "INVALID",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(400);
   });
 });

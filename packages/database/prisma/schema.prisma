@@ -130,6 +130,13 @@ enum ContactType {
   @@schema("public")
 }
 
+enum RelationshipLevel {
+  LOW
+  MEDIUM
+  HIGH
+  @@schema("public")
+}
+
 enum HealthcareProviderType {
   PRIVATE
   PUBLIC
@@ -712,33 +719,45 @@ model Facility {
 }
 
 model Professional {
-  id                   String                 @id @default(cuid())
-  firstName            String
-  lastName             String
-  fullName             String?                @map("full_name")
-  socialName           String?                @map("social_name")
-  primarySpecialtyLabel String?               @map("primary_specialty_label")
-  crmCouncil           String?                @map("crm_council")
-  crmNumber            String?                @map("crm_number")
-  crmState             String?                @map("crm_state")
-  sourceProvider       String?
-  externalSourceId     String?
-  sourceContentHash    String?
-  sourceFirstSeenAt    DateTime?
-  sourceLastSeenAt     DateTime?
-  sourcePresent        Boolean                @default(false)
-  sourceTracked        Boolean                @default(false)
-  manuallyEditedAt     DateTime?
-  deletedAt            DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  facilityAssociations FacilityProfessional[]
-  ingestionSuggestions IngestionSuggestion[]
+  id                    String                 @id @default(cuid())
+  firstName             String
+  lastName              String
+  fullName              String?                @map("full_name")
+  socialName            String?                @map("social_name")
+  taxId                 String?                @map("tax_id")
+  birthDate             DateTime?              @map("birth_date") @db.Date
+  mobilePhone           String?                @map("mobile_phone")
+  landlinePhone         String?                @map("landline_phone")
+  email                 String?
+  websiteUrl            String?                @map("website_url")
+  imageUrl              String?                @map("image_url")
+  favoriteTeam          String?                @map("favorite_team")
+  favoriteSport         String?                @map("favorite_sport")
+  hobbies               String?
+  notes                 String?
+  primarySpecialtyLabel String?                @map("primary_specialty_label")
+  crmCouncil            String?                @map("crm_council")
+  crmNumber             String?                @map("crm_number")
+  crmState              String?                @map("crm_state")
+  sourceProvider        String?
+  externalSourceId      String?
+  sourceContentHash     String?
+  sourceFirstSeenAt     DateTime?
+  sourceLastSeenAt      DateTime?
+  sourcePresent         Boolean                @default(false)
+  sourceTracked         Boolean                @default(false)
+  manuallyEditedAt      DateTime?
+  deletedAt             DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  facilityAssociations  FacilityProfessional[]
+  ingestionSuggestions  IngestionSuggestion[]
 
   @@unique([sourceProvider, externalSourceId])
   @@index([deletedAt])
   @@index([lastName, firstName])
   @@index([sourceProvider, sourcePresent])
+  @@index([taxId])
   @@schema("public")
   @@map("professionals")
 }
@@ -753,10 +772,12 @@ model FacilityProfessional {
   specialtyLabel      String?   @map("specialty_label")
   employmentTypeCode  String?   @map("employment_type_code")
   sourceOccupationCode String?  @map("source_occupation_code")
-  isPrescriber        Boolean   @default(false) @map("is_prescriber")
-  isBuyer             Boolean   @default(false) @map("is_buyer")
-  isDecisionMaker     Boolean   @default(false) @map("is_decision_maker")
-  relationshipLevel   String?   @map("relationship_level")
+  isPrescriber         Boolean            @default(false) @map("is_prescriber")
+  isBuyer              Boolean            @default(false) @map("is_buyer")
+  isDecisionMaker      Boolean            @default(false) @map("is_decision_maker")
+  isPartner            Boolean            @default(false) @map("is_partner")
+  relationshipLevel    RelationshipLevel? @map("relationship_level")
+  notes                String?
   sourceActive        Boolean   @default(false)
   sourceFirstSeenAt   DateTime?
   sourceLastSeenAt    DateTime?

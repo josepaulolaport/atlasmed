@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { doctorsApi } from "@/lib/api/professionals";
-import { clinicsApi } from "@/lib/api/facilities";
+import { professionalsApi } from "@/lib/api/professionals";
+import { facilitiesApi } from "@/lib/api/facilities";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { canManageProfessionals, canReadProfessionals } from "@/lib/permissions";
 import type { Facility, Professional } from "@/types/facility";
 import { Button } from "@/components/ui/button";
@@ -29,21 +31,21 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 
-export default function DoctorsPage() {
+export default function ProfessionalsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [doctors, setDoctors] = useState<Professional[]>([]);
-  const [clinics, setClinics] = useState<Facility[]>([]);
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProfessional, setEditingDoctor] = useState<Professional | null>(null);
+  const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   const [formFirstName, setFormFirstName] = useState("");
   const [formLastName, setFormLastName] = useState("");
   const [formSpecialty, setFormSpecialty] = useState("");
-  const [formClinicIds, setFormClinicIds] = useState<string[]>([]);
+  const [formFacilityIds, setFormFacilityIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -62,22 +64,22 @@ export default function DoctorsPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [doctorsResponse, clinicsResponse] = await Promise.all([
-          doctorsApi.getProfessionals({
+        const [professionalsResponse, facilitiesResponse] = await Promise.all([
+          professionalsApi.getProfessionals({
             page,
             limit: 10,
             search: search || undefined,
           }),
-          clinicsApi.getFacilitys({ limit: 100 }),
+          facilitiesApi.getFacilities({ limit: 100 }),
         ]);
 
-        setDoctors(doctorsResponse.data);
-        setTotalPages(doctorsResponse.pagination.totalPages);
-        setClinics(clinicsResponse.data);
-      } catch {
+        setProfessionals(professionalsResponse.data);
+        setTotalPages(professionalsResponse.pagination.totalPages);
+        setFacilities(facilitiesResponse.data);
+      } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load doctors",
+          description: getApiErrorMessage(error, "Failed to load professionals"),
           variant: "destructive",
         });
       } finally {
@@ -88,29 +90,29 @@ export default function DoctorsPage() {
     void loadData();
   }, [page, search, refreshKey, canRead]);
 
-  const clinicNameById = (facilityId: string) =>
-    clinics.find((clinic) => clinic.id === facilityId)?.name ?? facilityId;
+  const facilityNameById = (facilityId: string) =>
+    facilities.find((facility) => facility.id === facilityId)?.name ?? facilityId;
 
   const openCreateDialog = () => {
-    setEditingDoctor(null);
+    setEditingProfessional(null);
     setFormFirstName("");
     setFormLastName("");
     setFormSpecialty("");
-    setFormClinicIds([]);
+    setFormFacilityIds([]);
     setDialogOpen(true);
   };
 
-  const openEditDialog = (doctor: Doctor) => {
-    setEditingDoctor(doctor);
-    setFormFirstName(doctor.firstName);
-    setFormLastName(doctor.lastName);
-    setFormSpecialty(doctor.specialty ?? "");
-    setFormClinicIds(doctor.facilityIds);
+  const openEditDialog = (professional: Professional) => {
+    setEditingProfessional(professional);
+    setFormFirstName(professional.firstName);
+    setFormLastName(professional.lastName);
+    setFormSpecialty(professional.specialty ?? professional.primarySpecialtyLabel ?? "");
+    setFormFacilityIds(professional.facilityIds);
     setDialogOpen(true);
   };
 
-  const toggleClinicSelection = (facilityId: string) => {
-    setFormClinicIds((current) =>
+  const toggleFacilitySelection = (facilityId: string) => {
+    setFormFacilityIds((current) =>
       current.includes(facilityId)
         ? current.filter((id) => id !== facilityId)
         : [...current, facilityId]
@@ -129,29 +131,30 @@ export default function DoctorsPage() {
 
     setSaving(true);
     try {
-      if (editingDoctor) {
-        await doctorsApi.updateDoctor(editingDoctor.id, {
+      if (editingProfessional) {
+        await professionalsApi.updateProfessional(editingProfessional.id, {
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
-          specialty: formSpecialty.trim() || null,
+          primarySpecialtyLabel: formSpecialty.trim() || null,
         });
-        toast({ title: "Success", description: "Professional updated", variant: "success" });
+        toast({ title: "Success", description: "Professional updated" });
+        setDialogOpen(false);
+        setRefreshKey((value) => value + 1);
       } else {
-        await doctorsApi.createDoctor({
+        const created = await professionalsApi.createProfessional({
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
-          specialty: formSpecialty.trim() || undefined,
-          ...(formClinicIds.length > 0 ? { facilityIds: formClinicIds } : {}),
+          primarySpecialtyLabel: formSpecialty.trim() || undefined,
+          facilityIds: formFacilityIds,
         });
-        toast({ title: "Success", description: "Professional created", variant: "success" });
+        toast({ title: "Success", description: "Professional created" });
+        setDialogOpen(false);
+        router.push(`/professionals/${created.id}`);
       }
-
-      setDialogOpen(false);
-      setRefreshKey((value) => value + 1);
-    } catch {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to save doctor",
+        description: getApiErrorMessage(error, "Failed to save professional"),
         variant: "destructive",
       });
     } finally {
@@ -159,17 +162,17 @@ export default function DoctorsPage() {
     }
   };
 
-  const handleDelete = async (doctor: Doctor) => {
-    if (!confirm(`Delete Dr. ${doctor.lastName}?`)) return;
+  const handleDelete = async (professional: Professional) => {
+    if (!confirm(`Delete ${professional.firstName} ${professional.lastName}?`)) return;
 
     try {
-      await doctorsApi.deleteDoctor(doctor.id);
-      toast({ title: "Success", description: "Professional deleted", variant: "success" });
+      await professionalsApi.deleteProfessional(professional.id);
+      toast({ title: "Success", description: "Professional deleted" });
       setRefreshKey((value) => value + 1);
-    } catch {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to delete doctor",
+        description: getApiErrorMessage(error, "Failed to delete professional"),
         variant: "destructive",
       });
     }
@@ -183,13 +186,13 @@ export default function DoctorsPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Doctors</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage doctors and clinic assignments</p>
+          <h1 className="text-3xl font-bold text-gray-900">Professionals</h1>
+          <p className="mt-1 text-sm text-gray-500">Manage professionals and facility assignments</p>
         </div>
         {canManage && (
           <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Doctor
+            Add professional
           </Button>
         )}
       </div>
@@ -199,7 +202,7 @@ export default function DoctorsPage() {
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
-              placeholder="Search doctors..."
+              placeholder="Search professionals..."
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
@@ -211,7 +214,7 @@ export default function DoctorsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="py-8 text-center text-gray-500">Loading doctors...</div>
+            <div className="py-8 text-center text-gray-500">Loading professionals...</div>
           ) : (
             <>
               <Table>
@@ -219,26 +222,36 @@ export default function DoctorsPage() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Specialty</TableHead>
-                    <TableHead>Clinics</TableHead>
+                    <TableHead>Facilities</TableHead>
                     {canManage && <TableHead className="w-[120px]">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {doctors.length === 0 ? (
+                  {professionals.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={canManage ? 4 : 3} className="text-center text-gray-500">
-                        No doctors found
+                      <TableCell
+                        colSpan={canManage ? 4 : 3}
+                        className="text-center text-gray-500"
+                      >
+                        No professionals found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    doctors.map((doctor) => (
-                      <TableRow key={doctor.id}>
+                    professionals.map((professional) => (
+                      <TableRow key={professional.id}>
                         <TableCell className="font-medium">
-                          {doctor.firstName} {doctor.lastName}
+                          <Link
+                            href={`/professionals/${professional.id}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {professional.firstName} {professional.lastName}
+                          </Link>
                         </TableCell>
-                        <TableCell>{doctor.specialty || "—"}</TableCell>
                         <TableCell>
-                          {doctor.facilityIds.map(clinicNameById).join(", ") || "—"}
+                          {professional.specialty || professional.primarySpecialtyLabel || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {professional.facilityIds.map(facilityNameById).join(", ") || "—"}
                         </TableCell>
                         {canManage && (
                           <TableCell>
@@ -246,14 +259,14 @@ export default function DoctorsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => openEditDialog(doctor)}
+                                onClick={() => openEditDialog(professional)}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDelete(doctor)}
+                                onClick={() => handleDelete(professional)}
                               >
                                 <Trash2 className="h-4 w-4 text-red-600" />
                               </Button>
@@ -293,56 +306,59 @@ export default function DoctorsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingProfessional ? "Edit Doctor" : "Create Doctor"}</DialogTitle>
+            <DialogTitle>
+              {editingProfessional ? "Edit professional" : "Create professional"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="doctor-first-name">First Name</Label>
+              <Label htmlFor="professional-first-name">First name</Label>
               <Input
-                id="doctor-first-name"
+                id="professional-first-name"
                 value={formFirstName}
                 onChange={(event) => setFormFirstName(event.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="doctor-last-name">Last Name</Label>
+              <Label htmlFor="professional-last-name">Last name</Label>
               <Input
-                id="doctor-last-name"
+                id="professional-last-name"
                 value={formLastName}
                 onChange={(event) => setFormLastName(event.target.value)}
               />
             </div>
             <div>
-              <Label htmlFor="doctor-specialty">Specialty</Label>
+              <Label htmlFor="professional-specialty">Specialty</Label>
               <Input
-                id="doctor-specialty"
+                id="professional-specialty"
                 value={formSpecialty}
                 onChange={(event) => setFormSpecialty(event.target.value)}
               />
             </div>
             {!editingProfessional && (
-            <div>
-              <Label>Clinics (optional)</Label>
-              <p className="mt-1 text-xs text-gray-500">
-                Leave unselected to add the doctor without clinic links. Associate later from a clinic page.
-              </p>
-              <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
-                {clinics.length === 0 ? (
-                  <p className="text-sm text-gray-500">No clinics available</p>
-                ) : (
-                  clinics.map((clinic) => (
-                    <label key={clinic.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={formClinicIds.includes(clinic.id)}
-                        onChange={() => toggleClinicSelection(clinic.id)}
-                      />
-                      {clinic.name}
-                    </label>
-                  ))
-                )}
+              <div>
+                <Label>Facilities (optional)</Label>
+                <p className="mt-1 text-xs text-gray-500">
+                  Leave unselected to create without facility links. Associate later from a facility
+                  page.
+                </p>
+                <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
+                  {facilities.length === 0 ? (
+                    <p className="text-sm text-gray-500">No facilities available</p>
+                  ) : (
+                    facilities.map((facility) => (
+                      <label key={facility.id} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={formFacilityIds.includes(facility.id)}
+                          onChange={() => toggleFacilitySelection(facility.id)}
+                        />
+                        {facility.name}
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
             )}
           </div>
           <DialogFooter>

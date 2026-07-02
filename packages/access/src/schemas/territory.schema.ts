@@ -81,4 +81,6 @@ export type TerritoryRollupLinkInput = z.infer<typeof territoryRollupLinkSchema>
 export type UpdateTerritoryInput = z.infer<typeof updateTerritorySchema>;
 export type TerritoryBoundaryInput = z.infer<typeof territoryBoundarySchema>;
 export type TerritoryApprovalRequestInput = z.infer<typeof territoryApprovalRequestSchema>;
-export type ClinicTerritoryOverrideInput = z.infer<typeof clinicTerritoryOverrideSchema>;
+export type FacilityTerritoryOverrideInput = z.infer<typeof facilityTerritoryOverrideSchema>;
+/** @deprecated Use FacilityTerritoryOverrideInput */
+export type ClinicTerritoryOverrideInput = FacilityTerritoryOverrideInput;

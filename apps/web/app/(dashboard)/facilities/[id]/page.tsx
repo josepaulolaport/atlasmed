@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { clinicsApi } from "@/lib/api/facilities";
-import { clinicDoctorsApi } from "@/lib/api/registry";
-import { doctorsApi } from "@/lib/api/professionals";
+import { facilitiesApi } from "@/lib/api/facilities";
+import { facilityProfessionalsApi } from "@/lib/api/facility-professionals";
+import { professionalsApi } from "@/lib/api/professionals";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import type {
   Facility,
   FacilityProfessionalListItem,
@@ -30,7 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Check, Link2, Unlink } from "lucide-react";
+import { ArrowLeft, Check, Link2, Pencil, Unlink } from "lucide-react";
 
 const VIEWS: { value: FacilityProfessionalView; label: string }[] = [
   { value: "all", label: "All active" },
@@ -39,108 +40,119 @@ const VIEWS: { value: FacilityProfessionalView; label: string }[] = [
   { value: "pending", label: "Pending confirmation" },
 ];
 
-export default function ClinicDetailPage() {
+export default function FacilityDetailPage() {
   const params = useParams<{ id: string }>();
   const facilityId = params.id;
   const { toast } = useToast();
 
-  const [clinic, setClinic] = useState<Facility | null>(null);
+  const [facility, setFacility] = useState<Facility | null>(null);
   const [view, setView] = useState<FacilityProfessionalView>("all");
-  const [doctors, setDoctors] = useState<FacilityProfessionalListItem[]>([]);
-  const [allDoctors, setAllDoctors] = useState<Professional[]>([]);
-  const [associateDoctorId, setAssociateDoctorId] = useState("");
+  const [professionals, setProfessionals] = useState<FacilityProfessionalListItem[]>([]);
+  const [allProfessionals, setAllProfessionals] = useState<Professional[]>([]);
+  const [associateProfessionalId, setAssociateProfessionalId] = useState("");
   const [loading, setLoading] = useState(true);
-  const [loadingDoctors, setLoadingDoctors] = useState(false);
+  const [loadingProfessionals, setLoadingProfessionals] = useState(false);
 
   const loadFacility = useCallback(async () => {
     try {
-      const data = await clinicsApi.getFacility(facilityId);
-      setClinic(data);
-    } catch {
-      toast({ title: "Error", description: "Failed to load clinic", variant: "destructive" });
+      const data = await facilitiesApi.getFacility(facilityId);
+      setFacility(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to load facility"),
+        variant: "destructive",
+      });
     }
   }, [facilityId, toast]);
 
-  const loadDoctors = useCallback(async () => {
-    setLoadingDoctors(true);
+  const loadProfessionals = useCallback(async () => {
+    setLoadingProfessionals(true);
     try {
-      const response = await clinicDoctorsApi.listProfessionals(facilityId, { view, limit: 100 });
-      setDoctors(response.data);
-    } catch {
+      const response = await facilityProfessionalsApi.listProfessionals(facilityId, {
+        view,
+        limit: 100,
+      });
+      setProfessionals(response.data);
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load clinic doctors",
+        description: getApiErrorMessage(error, "Failed to load facility professionals"),
         variant: "destructive",
       });
     } finally {
-      setLoadingDoctors(false);
+      setLoadingProfessionals(false);
     }
   }, [facilityId, view, toast]);
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
-      await loadClinic();
+      await loadFacility();
       setLoading(false);
     })();
-  }, [loadClinic]);
+  }, [loadFacility]);
 
   useEffect(() => {
-    void loadDoctors();
-  }, [loadDoctors]);
+    void loadProfessionals();
+  }, [loadProfessionals]);
 
   useEffect(() => {
-    void doctorsApi.getProfessionals({ limit: 100 }).then((response) => {
-      setAllDoctors(response.data);
+    void professionalsApi.getProfessionals({ limit: 100 }).then((response) => {
+      setAllProfessionals(response.data);
     });
   }, []);
 
   const handleConfirm = async (professionalId: string) => {
     try {
-      await clinicDoctorsApi.confirmDoctor(facilityId, professionalId);
-      toast({ title: "Confirmed", description: "Professional confirmed at clinic" });
-      await loadDoctors();
-    } catch {
-      toast({ title: "Error", description: "Failed to confirm doctor", variant: "destructive" });
+      await facilityProfessionalsApi.confirmProfessional(facilityId, professionalId);
+      toast({ title: "Confirmed", description: "Professional confirmed at facility" });
+      await loadProfessionals();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: getApiErrorMessage(error, "Failed to confirm professional"),
+        variant: "destructive",
+      });
     }
   };
 
   const handleAssociate = async () => {
-    if (!associateDoctorId) return;
+    if (!associateProfessionalId) return;
     try {
-      await clinicDoctorsApi.associateDoctor(facilityId, associateDoctorId);
-      toast({ title: "Associated", description: "Professional linked to clinic" });
-      setAssociateDoctorId("");
-      await loadDoctors();
-    } catch {
+      await facilityProfessionalsApi.associateProfessional(facilityId, associateProfessionalId);
+      toast({ title: "Associated", description: "Professional linked to facility" });
+      setAssociateProfessionalId("");
+      await loadProfessionals();
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to associate doctor",
+        description: getApiErrorMessage(error, "Failed to associate professional"),
         variant: "destructive",
       });
     }
   };
 
   const handleEndAssociation = async (professionalId: string) => {
-    if (!confirm("Remove this doctor from the clinic roster?")) return;
+    if (!confirm("Remove this professional from the facility roster?")) return;
     try {
-      await clinicDoctorsApi.endAssociation(facilityId, professionalId);
+      await facilityProfessionalsApi.endAssociation(facilityId, professionalId);
       toast({ title: "Removed", description: "Association ended" });
-      await loadDoctors();
-    } catch {
+      await loadProfessionals();
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to end association",
+        description: getApiErrorMessage(error, "Failed to end association"),
         variant: "destructive",
       });
     }
   };
 
   if (loading) {
-    return <div className="py-8 text-center text-gray-500">Loading clinic...</div>;
+    return <div className="py-8 text-center text-gray-500">Loading facility...</div>;
   }
 
-  if (!clinic) {
+  if (!facility) {
     return <div className="py-8 text-center text-gray-500">Facility not found</div>;
   }
 
@@ -154,8 +166,8 @@ export default function ClinicDetailPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{clinic.name}</h1>
-          <p className="text-sm text-gray-500">{clinic.address || "No address"}</p>
+          <h1 className="text-2xl font-bold text-gray-900">{facility.name}</h1>
+          <p className="text-sm text-gray-500">{facility.address || "No address"}</p>
         </div>
       </div>
 
@@ -178,21 +190,21 @@ export default function ClinicDetailPage() {
 
         <div className="flex flex-1 flex-wrap items-end gap-2">
           <div className="min-w-[220px] flex-1">
-            <p className="mb-1 text-xs font-medium text-gray-500">Associate existing doctor</p>
-            <Select value={associateDoctorId} onValueChange={setAssociateDoctorId}>
+            <p className="mb-1 text-xs font-medium text-gray-500">Associate existing professional</p>
+            <Select value={associateProfessionalId} onValueChange={setAssociateProfessionalId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select doctor" />
+                <SelectValue placeholder="Select professional" />
               </SelectTrigger>
               <SelectContent>
-                {allDoctors.map((doctor) => (
-                  <SelectItem key={doctor.id} value={doctor.id}>
-                    {doctor.lastName}, {doctor.firstName}
+                {allProfessionals.map((professional) => (
+                  <SelectItem key={professional.id} value={professional.id}>
+                    {professional.lastName}, {professional.firstName}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleAssociate} disabled={!associateDoctorId}>
+          <Button onClick={handleAssociate} disabled={!associateProfessionalId}>
             <Link2 className="mr-2 h-4 w-4" />
             Associate
           </Button>
@@ -200,13 +212,13 @@ export default function ClinicDetailPage() {
       </div>
 
       <div className="rounded-lg border bg-white">
-        {loadingDoctors ? (
-          <div className="py-8 text-center text-gray-500">Loading doctors...</div>
+        {loadingProfessionals ? (
+          <div className="py-8 text-center text-gray-500">Loading professionals...</div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Doctor</TableHead>
+                <TableHead>Professional</TableHead>
                 <TableHead>Specialty</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Confirmed</TableHead>
@@ -214,19 +226,24 @@ export default function ClinicDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {doctors.length === 0 ? (
+              {professionals.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="py-8 text-center text-gray-500">
-                    No doctors in this view
+                    No professionals in this view
                   </TableCell>
                 </TableRow>
               ) : (
-                doctors.map((row) => (
+                professionals.map((row) => (
                   <TableRow key={row.facilityProfessionalId}>
                     <TableCell className="font-medium">
-                      {row.doctor.lastName}, {row.doctor.firstName}
+                      <Link
+                        href={`/facilities/${facilityId}/professionals/${row.professional.id}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {row.professional.lastName}, {row.professional.firstName}
+                      </Link>
                     </TableCell>
-                    <TableCell>{row.doctor.specialty || "—"}</TableCell>
+                    <TableCell>{row.professional.specialty || "—"}</TableCell>
                     <TableCell>
                       {row.association.sourceActive ? (
                         <Badge variant="secondary">Source</Badge>
@@ -243,12 +260,20 @@ export default function ClinicDetailPage() {
                         "—"
                       )}
                     </TableCell>
-                    <TableCell className="text-right space-x-2">
+                    <TableCell className="space-x-2 text-right">
+                      <Button size="sm" variant="outline" asChild>
+                        <Link
+                          href={`/facilities/${facilityId}/professionals/${row.professional.id}`}
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />
+                          Edit registration
+                        </Link>
+                      </Button>
                       {row.association.pendingConfirmation && (
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleConfirm(row.doctor.id)}
+                          onClick={() => handleConfirm(row.professional.id)}
                         >
                           <Check className="mr-1 h-4 w-4" />
                           Confirm
@@ -257,7 +282,7 @@ export default function ClinicDetailPage() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => handleEndAssociation(row.doctor.id)}
+                        onClick={() => handleEndAssociation(row.professional.id)}
                       >
                         <Unlink className="mr-1 h-4 w-4" />
                         Remove

@@ -14,8 +14,10 @@ import {
 import {
   ConfirmProfessionalAtFacilityUseCase,
   EndFacilityProfessionalUseCase,
+  GetFacilityProfessionalContextUseCase,
   ListFacilityProfessionalsUseCase,
   ManuallyAssociateProfessionalUseCase,
+  UpdateFacilityProfessionalRoleUseCase,
 } from "./application/use-cases/facility-professional.use-cases";
 import {
   AssignFacilityConsultantUseCase,
@@ -34,6 +36,7 @@ import {
 import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
 import { PrismaRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/prisma/prisma-registry-read.repository";
+import { professionalRepositories } from "../professional/composition";
 
 const registryReadRepository = new PrismaRegistryReadRepository();
 
@@ -85,6 +88,15 @@ export const facilityUseCases = {
     }),
   endFacilityProfessional: () =>
     new EndFacilityProfessionalUseCase({
+      facilityProfessionalRepository: facilityRepositories.association,
+    }),
+  getFacilityProfessionalContext: () =>
+    new GetFacilityProfessionalContextUseCase({
+      facilityProfessionalRepository: facilityRepositories.association,
+      professionalRepository: professionalRepositories.professional,
+    }),
+  updateFacilityProfessionalRole: () =>
+    new UpdateFacilityProfessionalRoleUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
     }),
   confirmRegistryProfessional: () =>

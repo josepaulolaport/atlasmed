@@ -1,3 +1,13 @@
+import type {
+  CreateProfessionalInput,
+  FacilityProfessionalRole,
+  ProfessionalFacilityContext,
+  ProfessionalFacilitySummary,
+  ProfessionalProfile,
+  UpdateFacilityProfessionalInput,
+  UpdateProfessionalInput,
+} from "@atlasmed/access";
+
 export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
 
 export interface Facility {
@@ -12,15 +22,36 @@ export interface Facility {
   updatedAt: string;
 }
 
+export type {
+  ProfessionalProfile,
+  ProfessionalFacilityContext,
+  FacilityProfessionalRole,
+  ProfessionalFacilitySummary,
+  CreateProfessionalInput,
+  UpdateProfessionalInput,
+  UpdateFacilityProfessionalInput,
+};
+
+/** List item shape returned by GET /professionals */
 export interface Professional {
   id: string;
   firstName: string;
   lastName: string;
+  fullName?: string;
   specialty?: string;
+  primarySpecialtyLabel?: string;
+  crmNumber?: string;
+  crmState?: string;
   facilityIds: string[];
   createdAt: string;
   updatedAt: string;
 }
+
+/** @deprecated Use CreateProfessionalInput */
+export type CreateDoctorRequest = CreateProfessionalInput;
+
+/** @deprecated Use UpdateProfessionalInput */
+export type UpdateDoctorRequest = UpdateProfessionalInput;
 
 export interface CreateClinicRequest {
   name: string;
@@ -36,23 +67,9 @@ export interface UpdateClinicRequest {
   lng?: number | null;
 }
 
-export interface CreateDoctorRequest {
-  firstName: string;
-  lastName: string;
-  specialty?: string;
-  facilityIds?: string[];
-}
-
-export interface UpdateDoctorRequest {
-  firstName?: string;
-  lastName?: string;
-  specialty?: string | null;
-  facilityIds?: string[];
-}
-
 export type FacilityProfessionalView = "source" | "confirmed" | "pending" | "all";
 
-export interface FacilityProfessionalAssociationView {
+export interface FacilityProfessionalAssociationView extends FacilityProfessionalRole {
   sourceActive: boolean;
   sourceFirstSeenAt?: string;
   sourceLastSeenAt?: string;
@@ -63,7 +80,17 @@ export interface FacilityProfessionalAssociationView {
 
 export interface FacilityProfessionalListItem {
   facilityProfessionalId: string;
-  doctor: Doctor;
+  professional: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName?: string;
+    specialty?: string;
+    crmNumber?: string;
+    crmState?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
   association: FacilityProfessionalAssociationView;
 }
 

@@ -6,11 +6,10 @@ export type {
   Invitation,
   PasswordReset,
   AuditLog,
-  Prisma,
 } from "./generated/prisma";
 
 // Export PrismaClient as both type and value
-export { PrismaClient } from "./generated/prisma";
+export { PrismaClient, Prisma } from "./generated/prisma";
 
 // Export enums that frontend/mobile might need
 export { 
@@ -33,5 +32,6 @@ export {
   TerritoryRollupLinkSource,
   TerritoryParentAssignmentStatus,
   TerritoryParentAssignmentSource,
+  RelationshipLevel,
 } from "./generated/prisma";
 

@@ -420,6 +420,15 @@ export const ContactType: {
 export type ContactType = (typeof ContactType)[keyof typeof ContactType]
 
 
+export const RelationshipLevel: {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH'
+};
+
+export type RelationshipLevel = (typeof RelationshipLevel)[keyof typeof RelationshipLevel]
+
+
 export const HealthcareProviderType: {
   PRIVATE: 'PRIVATE',
   PUBLIC: 'PUBLIC',
@@ -610,6 +619,10 @@ export const CommercialStatus: typeof $Enums.CommercialStatus
 export type ContactType = $Enums.ContactType
 
 export const ContactType: typeof $Enums.ContactType
+
+export type RelationshipLevel = $Enums.RelationshipLevel
+
+export const RelationshipLevel: typeof $Enums.RelationshipLevel
 
 export type HealthcareProviderType = $Enums.HealthcareProviderType
 
@@ -53559,6 +53572,17 @@ export namespace Prisma {
     lastName: string | null
     fullName: string | null
     socialName: string | null
+    taxId: string | null
+    birthDate: Date | null
+    mobilePhone: string | null
+    landlinePhone: string | null
+    email: string | null
+    websiteUrl: string | null
+    imageUrl: string | null
+    favoriteTeam: string | null
+    favoriteSport: string | null
+    hobbies: string | null
+    notes: string | null
     primarySpecialtyLabel: string | null
     crmCouncil: string | null
     crmNumber: string | null
@@ -53582,6 +53606,17 @@ export namespace Prisma {
     lastName: string | null
     fullName: string | null
     socialName: string | null
+    taxId: string | null
+    birthDate: Date | null
+    mobilePhone: string | null
+    landlinePhone: string | null
+    email: string | null
+    websiteUrl: string | null
+    imageUrl: string | null
+    favoriteTeam: string | null
+    favoriteSport: string | null
+    hobbies: string | null
+    notes: string | null
     primarySpecialtyLabel: string | null
     crmCouncil: string | null
     crmNumber: string | null
@@ -53605,6 +53640,17 @@ export namespace Prisma {
     lastName: number
     fullName: number
     socialName: number
+    taxId: number
+    birthDate: number
+    mobilePhone: number
+    landlinePhone: number
+    email: number
+    websiteUrl: number
+    imageUrl: number
+    favoriteTeam: number
+    favoriteSport: number
+    hobbies: number
+    notes: number
     primarySpecialtyLabel: number
     crmCouncil: number
     crmNumber: number
@@ -53630,6 +53676,17 @@ export namespace Prisma {
     lastName?: true
     fullName?: true
     socialName?: true
+    taxId?: true
+    birthDate?: true
+    mobilePhone?: true
+    landlinePhone?: true
+    email?: true
+    websiteUrl?: true
+    imageUrl?: true
+    favoriteTeam?: true
+    favoriteSport?: true
+    hobbies?: true
+    notes?: true
     primarySpecialtyLabel?: true
     crmCouncil?: true
     crmNumber?: true
@@ -53653,6 +53710,17 @@ export namespace Prisma {
     lastName?: true
     fullName?: true
     socialName?: true
+    taxId?: true
+    birthDate?: true
+    mobilePhone?: true
+    landlinePhone?: true
+    email?: true
+    websiteUrl?: true
+    imageUrl?: true
+    favoriteTeam?: true
+    favoriteSport?: true
+    hobbies?: true
+    notes?: true
     primarySpecialtyLabel?: true
     crmCouncil?: true
     crmNumber?: true
@@ -53676,6 +53744,17 @@ export namespace Prisma {
     lastName?: true
     fullName?: true
     socialName?: true
+    taxId?: true
+    birthDate?: true
+    mobilePhone?: true
+    landlinePhone?: true
+    email?: true
+    websiteUrl?: true
+    imageUrl?: true
+    favoriteTeam?: true
+    favoriteSport?: true
+    hobbies?: true
+    notes?: true
     primarySpecialtyLabel?: true
     crmCouncil?: true
     crmNumber?: true
@@ -53772,6 +53851,17 @@ export namespace Prisma {
     lastName: string
     fullName: string | null
     socialName: string | null
+    taxId: string | null
+    birthDate: Date | null
+    mobilePhone: string | null
+    landlinePhone: string | null
+    email: string | null
+    websiteUrl: string | null
+    imageUrl: string | null
+    favoriteTeam: string | null
+    favoriteSport: string | null
+    hobbies: string | null
+    notes: string | null
     primarySpecialtyLabel: string | null
     crmCouncil: string | null
     crmNumber: string | null
@@ -53812,6 +53902,17 @@ export namespace Prisma {
     lastName?: boolean
     fullName?: boolean
     socialName?: boolean
+    taxId?: boolean
+    birthDate?: boolean
+    mobilePhone?: boolean
+    landlinePhone?: boolean
+    email?: boolean
+    websiteUrl?: boolean
+    imageUrl?: boolean
+    favoriteTeam?: boolean
+    favoriteSport?: boolean
+    hobbies?: boolean
+    notes?: boolean
     primarySpecialtyLabel?: boolean
     crmCouncil?: boolean
     crmNumber?: boolean
@@ -53838,6 +53939,17 @@ export namespace Prisma {
     lastName?: boolean
     fullName?: boolean
     socialName?: boolean
+    taxId?: boolean
+    birthDate?: boolean
+    mobilePhone?: boolean
+    landlinePhone?: boolean
+    email?: boolean
+    websiteUrl?: boolean
+    imageUrl?: boolean
+    favoriteTeam?: boolean
+    favoriteSport?: boolean
+    hobbies?: boolean
+    notes?: boolean
     primarySpecialtyLabel?: boolean
     crmCouncil?: boolean
     crmNumber?: boolean
@@ -53861,6 +53973,17 @@ export namespace Prisma {
     lastName?: boolean
     fullName?: boolean
     socialName?: boolean
+    taxId?: boolean
+    birthDate?: boolean
+    mobilePhone?: boolean
+    landlinePhone?: boolean
+    email?: boolean
+    websiteUrl?: boolean
+    imageUrl?: boolean
+    favoriteTeam?: boolean
+    favoriteSport?: boolean
+    hobbies?: boolean
+    notes?: boolean
     primarySpecialtyLabel?: boolean
     crmCouncil?: boolean
     crmNumber?: boolean
@@ -53884,6 +54007,17 @@ export namespace Prisma {
     lastName?: boolean
     fullName?: boolean
     socialName?: boolean
+    taxId?: boolean
+    birthDate?: boolean
+    mobilePhone?: boolean
+    landlinePhone?: boolean
+    email?: boolean
+    websiteUrl?: boolean
+    imageUrl?: boolean
+    favoriteTeam?: boolean
+    favoriteSport?: boolean
+    hobbies?: boolean
+    notes?: boolean
     primarySpecialtyLabel?: boolean
     crmCouncil?: boolean
     crmNumber?: boolean
@@ -53901,7 +54035,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type ProfessionalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "firstName" | "lastName" | "fullName" | "socialName" | "primarySpecialtyLabel" | "crmCouncil" | "crmNumber" | "crmState" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["professional"]>
+  export type ProfessionalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "firstName" | "lastName" | "fullName" | "socialName" | "taxId" | "birthDate" | "mobilePhone" | "landlinePhone" | "email" | "websiteUrl" | "imageUrl" | "favoriteTeam" | "favoriteSport" | "hobbies" | "notes" | "primarySpecialtyLabel" | "crmCouncil" | "crmNumber" | "crmState" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["professional"]>
   export type ProfessionalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     facilityAssociations?: boolean | Professional$facilityAssociationsArgs<ExtArgs>
     ingestionSuggestions?: boolean | Professional$ingestionSuggestionsArgs<ExtArgs>
@@ -53922,6 +54056,17 @@ export namespace Prisma {
       lastName: string
       fullName: string | null
       socialName: string | null
+      taxId: string | null
+      birthDate: Date | null
+      mobilePhone: string | null
+      landlinePhone: string | null
+      email: string | null
+      websiteUrl: string | null
+      imageUrl: string | null
+      favoriteTeam: string | null
+      favoriteSport: string | null
+      hobbies: string | null
+      notes: string | null
       primarySpecialtyLabel: string | null
       crmCouncil: string | null
       crmNumber: string | null
@@ -54367,6 +54512,17 @@ export namespace Prisma {
     readonly lastName: FieldRef<"Professional", 'String'>
     readonly fullName: FieldRef<"Professional", 'String'>
     readonly socialName: FieldRef<"Professional", 'String'>
+    readonly taxId: FieldRef<"Professional", 'String'>
+    readonly birthDate: FieldRef<"Professional", 'DateTime'>
+    readonly mobilePhone: FieldRef<"Professional", 'String'>
+    readonly landlinePhone: FieldRef<"Professional", 'String'>
+    readonly email: FieldRef<"Professional", 'String'>
+    readonly websiteUrl: FieldRef<"Professional", 'String'>
+    readonly imageUrl: FieldRef<"Professional", 'String'>
+    readonly favoriteTeam: FieldRef<"Professional", 'String'>
+    readonly favoriteSport: FieldRef<"Professional", 'String'>
+    readonly hobbies: FieldRef<"Professional", 'String'>
+    readonly notes: FieldRef<"Professional", 'String'>
     readonly primarySpecialtyLabel: FieldRef<"Professional", 'String'>
     readonly crmCouncil: FieldRef<"Professional", 'String'>
     readonly crmNumber: FieldRef<"Professional", 'String'>
@@ -54862,7 +55018,9 @@ export namespace Prisma {
     isPrescriber: boolean | null
     isBuyer: boolean | null
     isDecisionMaker: boolean | null
-    relationshipLevel: string | null
+    isPartner: boolean | null
+    relationshipLevel: $Enums.RelationshipLevel | null
+    notes: string | null
     sourceActive: boolean | null
     sourceFirstSeenAt: Date | null
     sourceLastSeenAt: Date | null
@@ -54886,7 +55044,9 @@ export namespace Prisma {
     isPrescriber: boolean | null
     isBuyer: boolean | null
     isDecisionMaker: boolean | null
-    relationshipLevel: string | null
+    isPartner: boolean | null
+    relationshipLevel: $Enums.RelationshipLevel | null
+    notes: string | null
     sourceActive: boolean | null
     sourceFirstSeenAt: Date | null
     sourceLastSeenAt: Date | null
@@ -54910,7 +55070,9 @@ export namespace Prisma {
     isPrescriber: number
     isBuyer: number
     isDecisionMaker: number
+    isPartner: number
     relationshipLevel: number
+    notes: number
     sourceActive: number
     sourceFirstSeenAt: number
     sourceLastSeenAt: number
@@ -54936,7 +55098,9 @@ export namespace Prisma {
     isPrescriber?: true
     isBuyer?: true
     isDecisionMaker?: true
+    isPartner?: true
     relationshipLevel?: true
+    notes?: true
     sourceActive?: true
     sourceFirstSeenAt?: true
     sourceLastSeenAt?: true
@@ -54960,7 +55124,9 @@ export namespace Prisma {
     isPrescriber?: true
     isBuyer?: true
     isDecisionMaker?: true
+    isPartner?: true
     relationshipLevel?: true
+    notes?: true
     sourceActive?: true
     sourceFirstSeenAt?: true
     sourceLastSeenAt?: true
@@ -54984,7 +55150,9 @@ export namespace Prisma {
     isPrescriber?: true
     isBuyer?: true
     isDecisionMaker?: true
+    isPartner?: true
     relationshipLevel?: true
+    notes?: true
     sourceActive?: true
     sourceFirstSeenAt?: true
     sourceLastSeenAt?: true
@@ -55081,7 +55249,9 @@ export namespace Prisma {
     isPrescriber: boolean
     isBuyer: boolean
     isDecisionMaker: boolean
-    relationshipLevel: string | null
+    isPartner: boolean
+    relationshipLevel: $Enums.RelationshipLevel | null
+    notes: string | null
     sourceActive: boolean
     sourceFirstSeenAt: Date | null
     sourceLastSeenAt: Date | null
@@ -55122,7 +55292,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
+    isPartner?: boolean
     relationshipLevel?: boolean
+    notes?: boolean
     sourceActive?: boolean
     sourceFirstSeenAt?: boolean
     sourceLastSeenAt?: boolean
@@ -55150,7 +55322,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
+    isPartner?: boolean
     relationshipLevel?: boolean
+    notes?: boolean
     sourceActive?: boolean
     sourceFirstSeenAt?: boolean
     sourceLastSeenAt?: boolean
@@ -55176,7 +55350,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
+    isPartner?: boolean
     relationshipLevel?: boolean
+    notes?: boolean
     sourceActive?: boolean
     sourceFirstSeenAt?: boolean
     sourceLastSeenAt?: boolean
@@ -55202,7 +55378,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
+    isPartner?: boolean
     relationshipLevel?: boolean
+    notes?: boolean
     sourceActive?: boolean
     sourceFirstSeenAt?: boolean
     sourceLastSeenAt?: boolean
@@ -55215,7 +55393,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type FacilityProfessionalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "professionalId" | "facilityId" | "occupationCode" | "specialtyLabel" | "employmentTypeCode" | "sourceOccupationCode" | "isPrescriber" | "isBuyer" | "isDecisionMaker" | "relationshipLevel" | "sourceActive" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "confirmedAt" | "confirmedByUserId" | "endedAt" | "endedByUserId" | "endReason" | "createdAt" | "updatedAt", ExtArgs["result"]["facilityProfessional"]>
+  export type FacilityProfessionalOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "professionalId" | "facilityId" | "occupationCode" | "specialtyLabel" | "employmentTypeCode" | "sourceOccupationCode" | "isPrescriber" | "isBuyer" | "isDecisionMaker" | "isPartner" | "relationshipLevel" | "notes" | "sourceActive" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "confirmedAt" | "confirmedByUserId" | "endedAt" | "endedByUserId" | "endReason" | "createdAt" | "updatedAt", ExtArgs["result"]["facilityProfessional"]>
   export type FacilityProfessionalInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     professional?: boolean | ProfessionalDefaultArgs<ExtArgs>
     facility?: boolean | FacilityDefaultArgs<ExtArgs>
@@ -55249,7 +55427,9 @@ export namespace Prisma {
       isPrescriber: boolean
       isBuyer: boolean
       isDecisionMaker: boolean
-      relationshipLevel: string | null
+      isPartner: boolean
+      relationshipLevel: $Enums.RelationshipLevel | null
+      notes: string | null
       sourceActive: boolean
       sourceFirstSeenAt: Date | null
       sourceLastSeenAt: Date | null
@@ -55696,7 +55876,9 @@ export namespace Prisma {
     readonly isPrescriber: FieldRef<"FacilityProfessional", 'Boolean'>
     readonly isBuyer: FieldRef<"FacilityProfessional", 'Boolean'>
     readonly isDecisionMaker: FieldRef<"FacilityProfessional", 'Boolean'>
-    readonly relationshipLevel: FieldRef<"FacilityProfessional", 'String'>
+    readonly isPartner: FieldRef<"FacilityProfessional", 'Boolean'>
+    readonly relationshipLevel: FieldRef<"FacilityProfessional", 'RelationshipLevel'>
+    readonly notes: FieldRef<"FacilityProfessional", 'String'>
     readonly sourceActive: FieldRef<"FacilityProfessional", 'Boolean'>
     readonly sourceFirstSeenAt: FieldRef<"FacilityProfessional", 'DateTime'>
     readonly sourceLastSeenAt: FieldRef<"FacilityProfessional", 'DateTime'>
@@ -68356,6 +68538,17 @@ export namespace Prisma {
     lastName: 'lastName',
     fullName: 'fullName',
     socialName: 'socialName',
+    taxId: 'taxId',
+    birthDate: 'birthDate',
+    mobilePhone: 'mobilePhone',
+    landlinePhone: 'landlinePhone',
+    email: 'email',
+    websiteUrl: 'websiteUrl',
+    imageUrl: 'imageUrl',
+    favoriteTeam: 'favoriteTeam',
+    favoriteSport: 'favoriteSport',
+    hobbies: 'hobbies',
+    notes: 'notes',
     primarySpecialtyLabel: 'primarySpecialtyLabel',
     crmCouncil: 'crmCouncil',
     crmNumber: 'crmNumber',
@@ -68387,7 +68580,9 @@ export namespace Prisma {
     isPrescriber: 'isPrescriber',
     isBuyer: 'isBuyer',
     isDecisionMaker: 'isDecisionMaker',
+    isPartner: 'isPartner',
     relationshipLevel: 'relationshipLevel',
+    notes: 'notes',
     sourceActive: 'sourceActive',
     sourceFirstSeenAt: 'sourceFirstSeenAt',
     sourceLastSeenAt: 'sourceLastSeenAt',
@@ -68951,6 +69146,20 @@ export namespace Prisma {
    * Reference to a field of type 'TerritoryAssignmentSource[]'
    */
   export type ListEnumTerritoryAssignmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryAssignmentSource[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'RelationshipLevel'
+   */
+  export type EnumRelationshipLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RelationshipLevel'>
+    
+
+
+  /**
+   * Reference to a field of type 'RelationshipLevel[]'
+   */
+  export type ListEnumRelationshipLevelFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RelationshipLevel[]'>
     
 
 
@@ -72685,6 +72894,17 @@ export namespace Prisma {
     lastName?: StringFilter<"Professional"> | string
     fullName?: StringNullableFilter<"Professional"> | string | null
     socialName?: StringNullableFilter<"Professional"> | string | null
+    taxId?: StringNullableFilter<"Professional"> | string | null
+    birthDate?: DateTimeNullableFilter<"Professional"> | Date | string | null
+    mobilePhone?: StringNullableFilter<"Professional"> | string | null
+    landlinePhone?: StringNullableFilter<"Professional"> | string | null
+    email?: StringNullableFilter<"Professional"> | string | null
+    websiteUrl?: StringNullableFilter<"Professional"> | string | null
+    imageUrl?: StringNullableFilter<"Professional"> | string | null
+    favoriteTeam?: StringNullableFilter<"Professional"> | string | null
+    favoriteSport?: StringNullableFilter<"Professional"> | string | null
+    hobbies?: StringNullableFilter<"Professional"> | string | null
+    notes?: StringNullableFilter<"Professional"> | string | null
     primarySpecialtyLabel?: StringNullableFilter<"Professional"> | string | null
     crmCouncil?: StringNullableFilter<"Professional"> | string | null
     crmNumber?: StringNullableFilter<"Professional"> | string | null
@@ -72710,6 +72930,17 @@ export namespace Prisma {
     lastName?: SortOrder
     fullName?: SortOrderInput | SortOrder
     socialName?: SortOrderInput | SortOrder
+    taxId?: SortOrderInput | SortOrder
+    birthDate?: SortOrderInput | SortOrder
+    mobilePhone?: SortOrderInput | SortOrder
+    landlinePhone?: SortOrderInput | SortOrder
+    email?: SortOrderInput | SortOrder
+    websiteUrl?: SortOrderInput | SortOrder
+    imageUrl?: SortOrderInput | SortOrder
+    favoriteTeam?: SortOrderInput | SortOrder
+    favoriteSport?: SortOrderInput | SortOrder
+    hobbies?: SortOrderInput | SortOrder
+    notes?: SortOrderInput | SortOrder
     primarySpecialtyLabel?: SortOrderInput | SortOrder
     crmCouncil?: SortOrderInput | SortOrder
     crmNumber?: SortOrderInput | SortOrder
@@ -72739,6 +72970,17 @@ export namespace Prisma {
     lastName?: StringFilter<"Professional"> | string
     fullName?: StringNullableFilter<"Professional"> | string | null
     socialName?: StringNullableFilter<"Professional"> | string | null
+    taxId?: StringNullableFilter<"Professional"> | string | null
+    birthDate?: DateTimeNullableFilter<"Professional"> | Date | string | null
+    mobilePhone?: StringNullableFilter<"Professional"> | string | null
+    landlinePhone?: StringNullableFilter<"Professional"> | string | null
+    email?: StringNullableFilter<"Professional"> | string | null
+    websiteUrl?: StringNullableFilter<"Professional"> | string | null
+    imageUrl?: StringNullableFilter<"Professional"> | string | null
+    favoriteTeam?: StringNullableFilter<"Professional"> | string | null
+    favoriteSport?: StringNullableFilter<"Professional"> | string | null
+    hobbies?: StringNullableFilter<"Professional"> | string | null
+    notes?: StringNullableFilter<"Professional"> | string | null
     primarySpecialtyLabel?: StringNullableFilter<"Professional"> | string | null
     crmCouncil?: StringNullableFilter<"Professional"> | string | null
     crmNumber?: StringNullableFilter<"Professional"> | string | null
@@ -72764,6 +73006,17 @@ export namespace Prisma {
     lastName?: SortOrder
     fullName?: SortOrderInput | SortOrder
     socialName?: SortOrderInput | SortOrder
+    taxId?: SortOrderInput | SortOrder
+    birthDate?: SortOrderInput | SortOrder
+    mobilePhone?: SortOrderInput | SortOrder
+    landlinePhone?: SortOrderInput | SortOrder
+    email?: SortOrderInput | SortOrder
+    websiteUrl?: SortOrderInput | SortOrder
+    imageUrl?: SortOrderInput | SortOrder
+    favoriteTeam?: SortOrderInput | SortOrder
+    favoriteSport?: SortOrderInput | SortOrder
+    hobbies?: SortOrderInput | SortOrder
+    notes?: SortOrderInput | SortOrder
     primarySpecialtyLabel?: SortOrderInput | SortOrder
     crmCouncil?: SortOrderInput | SortOrder
     crmNumber?: SortOrderInput | SortOrder
@@ -72793,6 +73046,17 @@ export namespace Prisma {
     lastName?: StringWithAggregatesFilter<"Professional"> | string
     fullName?: StringNullableWithAggregatesFilter<"Professional"> | string | null
     socialName?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    taxId?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    birthDate?: DateTimeNullableWithAggregatesFilter<"Professional"> | Date | string | null
+    mobilePhone?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    landlinePhone?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    email?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    websiteUrl?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    imageUrl?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    favoriteTeam?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    favoriteSport?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    hobbies?: StringNullableWithAggregatesFilter<"Professional"> | string | null
+    notes?: StringNullableWithAggregatesFilter<"Professional"> | string | null
     primarySpecialtyLabel?: StringNullableWithAggregatesFilter<"Professional"> | string | null
     crmCouncil?: StringNullableWithAggregatesFilter<"Professional"> | string | null
     crmNumber?: StringNullableWithAggregatesFilter<"Professional"> | string | null
@@ -72824,7 +73088,9 @@ export namespace Prisma {
     isPrescriber?: BoolFilter<"FacilityProfessional"> | boolean
     isBuyer?: BoolFilter<"FacilityProfessional"> | boolean
     isDecisionMaker?: BoolFilter<"FacilityProfessional"> | boolean
-    relationshipLevel?: StringNullableFilter<"FacilityProfessional"> | string | null
+    isPartner?: BoolFilter<"FacilityProfessional"> | boolean
+    relationshipLevel?: EnumRelationshipLevelNullableFilter<"FacilityProfessional"> | $Enums.RelationshipLevel | null
+    notes?: StringNullableFilter<"FacilityProfessional"> | string | null
     sourceActive?: BoolFilter<"FacilityProfessional"> | boolean
     sourceFirstSeenAt?: DateTimeNullableFilter<"FacilityProfessional"> | Date | string | null
     sourceLastSeenAt?: DateTimeNullableFilter<"FacilityProfessional"> | Date | string | null
@@ -72851,7 +73117,9 @@ export namespace Prisma {
     isPrescriber?: SortOrder
     isBuyer?: SortOrder
     isDecisionMaker?: SortOrder
+    isPartner?: SortOrder
     relationshipLevel?: SortOrderInput | SortOrder
+    notes?: SortOrderInput | SortOrder
     sourceActive?: SortOrder
     sourceFirstSeenAt?: SortOrderInput | SortOrder
     sourceLastSeenAt?: SortOrderInput | SortOrder
@@ -72882,7 +73150,9 @@ export namespace Prisma {
     isPrescriber?: BoolFilter<"FacilityProfessional"> | boolean
     isBuyer?: BoolFilter<"FacilityProfessional"> | boolean
     isDecisionMaker?: BoolFilter<"FacilityProfessional"> | boolean
-    relationshipLevel?: StringNullableFilter<"FacilityProfessional"> | string | null
+    isPartner?: BoolFilter<"FacilityProfessional"> | boolean
+    relationshipLevel?: EnumRelationshipLevelNullableFilter<"FacilityProfessional"> | $Enums.RelationshipLevel | null
+    notes?: StringNullableFilter<"FacilityProfessional"> | string | null
     sourceActive?: BoolFilter<"FacilityProfessional"> | boolean
     sourceFirstSeenAt?: DateTimeNullableFilter<"FacilityProfessional"> | Date | string | null
     sourceLastSeenAt?: DateTimeNullableFilter<"FacilityProfessional"> | Date | string | null
@@ -72909,7 +73179,9 @@ export namespace Prisma {
     isPrescriber?: SortOrder
     isBuyer?: SortOrder
     isDecisionMaker?: SortOrder
+    isPartner?: SortOrder
     relationshipLevel?: SortOrderInput | SortOrder
+    notes?: SortOrderInput | SortOrder
     sourceActive?: SortOrder
     sourceFirstSeenAt?: SortOrderInput | SortOrder
     sourceLastSeenAt?: SortOrderInput | SortOrder
@@ -72939,7 +73211,9 @@ export namespace Prisma {
     isPrescriber?: BoolWithAggregatesFilter<"FacilityProfessional"> | boolean
     isBuyer?: BoolWithAggregatesFilter<"FacilityProfessional"> | boolean
     isDecisionMaker?: BoolWithAggregatesFilter<"FacilityProfessional"> | boolean
-    relationshipLevel?: StringNullableWithAggregatesFilter<"FacilityProfessional"> | string | null
+    isPartner?: BoolWithAggregatesFilter<"FacilityProfessional"> | boolean
+    relationshipLevel?: EnumRelationshipLevelNullableWithAggregatesFilter<"FacilityProfessional"> | $Enums.RelationshipLevel | null
+    notes?: StringNullableWithAggregatesFilter<"FacilityProfessional"> | string | null
     sourceActive?: BoolWithAggregatesFilter<"FacilityProfessional"> | boolean
     sourceFirstSeenAt?: DateTimeNullableWithAggregatesFilter<"FacilityProfessional"> | Date | string | null
     sourceLastSeenAt?: DateTimeNullableWithAggregatesFilter<"FacilityProfessional"> | Date | string | null
@@ -77945,6 +78219,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -77970,6 +78255,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -77995,6 +78291,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -78020,6 +78327,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -78045,6 +78363,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -78068,6 +78397,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -78091,6 +78431,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -78117,7 +78468,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -78144,7 +78497,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -78167,7 +78522,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -78194,7 +78551,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -78219,7 +78578,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -78241,7 +78602,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -78265,7 +78628,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -82073,6 +82438,17 @@ export namespace Prisma {
     lastName?: SortOrder
     fullName?: SortOrder
     socialName?: SortOrder
+    taxId?: SortOrder
+    birthDate?: SortOrder
+    mobilePhone?: SortOrder
+    landlinePhone?: SortOrder
+    email?: SortOrder
+    websiteUrl?: SortOrder
+    imageUrl?: SortOrder
+    favoriteTeam?: SortOrder
+    favoriteSport?: SortOrder
+    hobbies?: SortOrder
+    notes?: SortOrder
     primarySpecialtyLabel?: SortOrder
     crmCouncil?: SortOrder
     crmNumber?: SortOrder
@@ -82096,6 +82472,17 @@ export namespace Prisma {
     lastName?: SortOrder
     fullName?: SortOrder
     socialName?: SortOrder
+    taxId?: SortOrder
+    birthDate?: SortOrder
+    mobilePhone?: SortOrder
+    landlinePhone?: SortOrder
+    email?: SortOrder
+    websiteUrl?: SortOrder
+    imageUrl?: SortOrder
+    favoriteTeam?: SortOrder
+    favoriteSport?: SortOrder
+    hobbies?: SortOrder
+    notes?: SortOrder
     primarySpecialtyLabel?: SortOrder
     crmCouncil?: SortOrder
     crmNumber?: SortOrder
@@ -82119,6 +82506,17 @@ export namespace Prisma {
     lastName?: SortOrder
     fullName?: SortOrder
     socialName?: SortOrder
+    taxId?: SortOrder
+    birthDate?: SortOrder
+    mobilePhone?: SortOrder
+    landlinePhone?: SortOrder
+    email?: SortOrder
+    websiteUrl?: SortOrder
+    imageUrl?: SortOrder
+    favoriteTeam?: SortOrder
+    favoriteSport?: SortOrder
+    hobbies?: SortOrder
+    notes?: SortOrder
     primarySpecialtyLabel?: SortOrder
     crmCouncil?: SortOrder
     crmNumber?: SortOrder
@@ -82134,6 +82532,13 @@ export namespace Prisma {
     deletedAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type EnumRelationshipLevelNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.RelationshipLevel | EnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    in?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumRelationshipLevelNullableFilter<$PrismaModel> | $Enums.RelationshipLevel | null
   }
 
   export type ProfessionalScalarRelationFilter = {
@@ -82163,7 +82568,9 @@ export namespace Prisma {
     isPrescriber?: SortOrder
     isBuyer?: SortOrder
     isDecisionMaker?: SortOrder
+    isPartner?: SortOrder
     relationshipLevel?: SortOrder
+    notes?: SortOrder
     sourceActive?: SortOrder
     sourceFirstSeenAt?: SortOrder
     sourceLastSeenAt?: SortOrder
@@ -82187,7 +82594,9 @@ export namespace Prisma {
     isPrescriber?: SortOrder
     isBuyer?: SortOrder
     isDecisionMaker?: SortOrder
+    isPartner?: SortOrder
     relationshipLevel?: SortOrder
+    notes?: SortOrder
     sourceActive?: SortOrder
     sourceFirstSeenAt?: SortOrder
     sourceLastSeenAt?: SortOrder
@@ -82211,7 +82620,9 @@ export namespace Prisma {
     isPrescriber?: SortOrder
     isBuyer?: SortOrder
     isDecisionMaker?: SortOrder
+    isPartner?: SortOrder
     relationshipLevel?: SortOrder
+    notes?: SortOrder
     sourceActive?: SortOrder
     sourceFirstSeenAt?: SortOrder
     sourceLastSeenAt?: SortOrder
@@ -82222,6 +82633,16 @@ export namespace Prisma {
     endReason?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type EnumRelationshipLevelNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.RelationshipLevel | EnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    in?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumRelationshipLevelNullableWithAggregatesFilter<$PrismaModel> | $Enums.RelationshipLevel | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumRelationshipLevelNullableFilter<$PrismaModel>
+    _max?: NestedEnumRelationshipLevelNullableFilter<$PrismaModel>
   }
 
   export type EnumContactTypeFilter<$PrismaModel = never> = {
@@ -84662,6 +85083,10 @@ export namespace Prisma {
     connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
   }
 
+  export type NullableEnumRelationshipLevelFieldUpdateOperationsInput = {
+    set?: $Enums.RelationshipLevel | null
+  }
+
   export type ProfessionalUpdateOneRequiredWithoutFacilityAssociationsNestedInput = {
     create?: XOR<ProfessionalCreateWithoutFacilityAssociationsInput, ProfessionalUncheckedCreateWithoutFacilityAssociationsInput>
     connectOrCreate?: ProfessionalCreateOrConnectWithoutFacilityAssociationsInput
@@ -85762,6 +86187,23 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel>
     _max?: NestedEnumTerritoryAssignmentSourceFilter<$PrismaModel>
+  }
+
+  export type NestedEnumRelationshipLevelNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.RelationshipLevel | EnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    in?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumRelationshipLevelNullableFilter<$PrismaModel> | $Enums.RelationshipLevel | null
+  }
+
+  export type NestedEnumRelationshipLevelNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.RelationshipLevel | EnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    in?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.RelationshipLevel[] | ListEnumRelationshipLevelFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumRelationshipLevelNullableWithAggregatesFilter<$PrismaModel> | $Enums.RelationshipLevel | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumRelationshipLevelNullableFilter<$PrismaModel>
+    _max?: NestedEnumRelationshipLevelNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumContactTypeFilter<$PrismaModel = never> = {
@@ -91111,7 +91553,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -91136,7 +91580,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -91542,7 +91988,9 @@ export namespace Prisma {
     isPrescriber?: BoolFilter<"FacilityProfessional"> | boolean
     isBuyer?: BoolFilter<"FacilityProfessional"> | boolean
     isDecisionMaker?: BoolFilter<"FacilityProfessional"> | boolean
-    relationshipLevel?: StringNullableFilter<"FacilityProfessional"> | string | null
+    isPartner?: BoolFilter<"FacilityProfessional"> | boolean
+    relationshipLevel?: EnumRelationshipLevelNullableFilter<"FacilityProfessional"> | $Enums.RelationshipLevel | null
+    notes?: StringNullableFilter<"FacilityProfessional"> | string | null
     sourceActive?: BoolFilter<"FacilityProfessional"> | boolean
     sourceFirstSeenAt?: DateTimeNullableFilter<"FacilityProfessional"> | Date | string | null
     sourceLastSeenAt?: DateTimeNullableFilter<"FacilityProfessional"> | Date | string | null
@@ -91751,7 +92199,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -91776,7 +92226,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -91878,6 +92330,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -91902,6 +92365,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -92089,6 +92563,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -92113,6 +92598,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -93913,6 +94409,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -93937,6 +94444,17 @@ export namespace Prisma {
     lastName: string
     fullName?: string | null
     socialName?: string | null
+    taxId?: string | null
+    birthDate?: Date | string | null
+    mobilePhone?: string | null
+    landlinePhone?: string | null
+    email?: string | null
+    websiteUrl?: string | null
+    imageUrl?: string | null
+    favoriteTeam?: string | null
+    favoriteSport?: string | null
+    hobbies?: string | null
+    notes?: string | null
     primarySpecialtyLabel?: string | null
     crmCouncil?: string | null
     crmNumber?: string | null
@@ -93969,7 +94487,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -93995,7 +94515,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -94174,6 +94696,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -94198,6 +94731,17 @@ export namespace Prisma {
     lastName?: StringFieldUpdateOperationsInput | string
     fullName?: NullableStringFieldUpdateOperationsInput | string | null
     socialName?: NullableStringFieldUpdateOperationsInput | string | null
+    taxId?: NullableStringFieldUpdateOperationsInput | string | null
+    birthDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mobilePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    landlinePhone?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    websiteUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteTeam?: NullableStringFieldUpdateOperationsInput | string | null
+    favoriteSport?: NullableStringFieldUpdateOperationsInput | string | null
+    hobbies?: NullableStringFieldUpdateOperationsInput | string | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     primarySpecialtyLabel?: NullableStringFieldUpdateOperationsInput | string | null
     crmCouncil?: NullableStringFieldUpdateOperationsInput | string | null
     crmNumber?: NullableStringFieldUpdateOperationsInput | string | null
@@ -94236,7 +94780,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -94262,7 +94808,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -95881,7 +96429,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -95991,7 +96541,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -96016,7 +96568,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -96040,7 +96594,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -96329,7 +96885,9 @@ export namespace Prisma {
     isPrescriber?: boolean
     isBuyer?: boolean
     isDecisionMaker?: boolean
-    relationshipLevel?: string | null
+    isPartner?: boolean
+    relationshipLevel?: $Enums.RelationshipLevel | null
+    notes?: string | null
     sourceActive?: boolean
     sourceFirstSeenAt?: Date | string | null
     sourceLastSeenAt?: Date | string | null
@@ -96366,7 +96924,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -96391,7 +96951,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -96415,7 +96977,9 @@ export namespace Prisma {
     isPrescriber?: BoolFieldUpdateOperationsInput | boolean
     isBuyer?: BoolFieldUpdateOperationsInput | boolean
     isDecisionMaker?: BoolFieldUpdateOperationsInput | boolean
-    relationshipLevel?: NullableStringFieldUpdateOperationsInput | string | null
+    isPartner?: BoolFieldUpdateOperationsInput | boolean
+    relationshipLevel?: NullableEnumRelationshipLevelFieldUpdateOperationsInput | $Enums.RelationshipLevel | null
+    notes?: NullableStringFieldUpdateOperationsInput | string | null
     sourceActive?: BoolFieldUpdateOperationsInput | boolean
     sourceFirstSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     sourceLastSeenAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

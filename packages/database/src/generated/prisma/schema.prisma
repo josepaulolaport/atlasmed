@@ -528,6 +528,14 @@ enum ContactType {
   @@schema("public")
 }
 
+enum RelationshipLevel {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@schema("public")
+}
+
 enum HealthcareProviderType {
   PRIVATE
   PUBLIC
@@ -1131,6 +1139,17 @@ model Professional {
   lastName              String
   fullName              String?                @map("full_name")
   socialName            String?                @map("social_name")
+  taxId                 String?                @map("tax_id")
+  birthDate             DateTime?              @map("birth_date") @db.Date
+  mobilePhone           String?                @map("mobile_phone")
+  landlinePhone         String?                @map("landline_phone")
+  email                 String?
+  websiteUrl            String?                @map("website_url")
+  imageUrl              String?                @map("image_url")
+  favoriteTeam          String?                @map("favorite_team")
+  favoriteSport         String?                @map("favorite_sport")
+  hobbies               String?
+  notes                 String?
   primarySpecialtyLabel String?                @map("primary_specialty_label")
   crmCouncil            String?                @map("crm_council")
   crmNumber             String?                @map("crm_number")
@@ -1153,6 +1172,7 @@ model Professional {
   @@index([deletedAt])
   @@index([lastName, firstName])
   @@index([sourceProvider, sourcePresent])
+  @@index([taxId])
   @@map("professionals")
   @@schema("public")
 }
@@ -1170,7 +1190,9 @@ model FacilityProfessional {
   isPrescriber         Boolean               @default(false) @map("is_prescriber")
   isBuyer              Boolean               @default(false) @map("is_buyer")
   isDecisionMaker      Boolean               @default(false) @map("is_decision_maker")
-  relationshipLevel    String?               @map("relationship_level")
+  isPartner            Boolean               @default(false) @map("is_partner")
+  relationshipLevel    RelationshipLevel?    @map("relationship_level")
+  notes                String?
   sourceActive         Boolean               @default(false)
   sourceFirstSeenAt    DateTime?
   sourceLastSeenAt     DateTime?

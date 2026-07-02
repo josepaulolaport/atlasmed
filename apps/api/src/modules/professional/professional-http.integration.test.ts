@@ -188,4 +188,59 @@ describe("Professional HTTP auth integration", () => {
 
     expect(response.status).toBe(403);
   });
+
+  it("allows ADMIN to update professional profile with CRM fields", async () => {
+    if (!dbReady) return;
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/professionals/${inScopeProfessionalId}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          taxId: "52998224725",
+          mobilePhone: "11999998888",
+          crmNumber: "123456",
+          crmState: "SP",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      taxId?: string;
+      mobilePhone?: string;
+      crmNumber?: string;
+      crmState?: string;
+    };
+    expect(body.taxId).toBe("52998224725");
+    expect(body.mobilePhone).toBe("11999998888");
+    expect(body.crmNumber).toBe("123456");
+    expect(body.crmState).toBe("SP");
+  });
+
+  it("rejects invalid CPF on professional create", async () => {
+    if (!dbReady) return;
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      app,
+      "http://localhost/api/v1/professionals",
+      token,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          firstName: "Invalid",
+          lastName: `CPF ${fixtures.uniqueId}`,
+          taxId: "11111111111",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(400);
+  });
 });

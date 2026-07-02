@@ -710,6 +710,17 @@ exports.Prisma.ProfessionalScalarFieldEnum = {
   lastName: 'lastName',
   fullName: 'fullName',
   socialName: 'socialName',
+  taxId: 'taxId',
+  birthDate: 'birthDate',
+  mobilePhone: 'mobilePhone',
+  landlinePhone: 'landlinePhone',
+  email: 'email',
+  websiteUrl: 'websiteUrl',
+  imageUrl: 'imageUrl',
+  favoriteTeam: 'favoriteTeam',
+  favoriteSport: 'favoriteSport',
+  hobbies: 'hobbies',
+  notes: 'notes',
   primarySpecialtyLabel: 'primarySpecialtyLabel',
   crmCouncil: 'crmCouncil',
   crmNumber: 'crmNumber',
@@ -738,7 +749,9 @@ exports.Prisma.FacilityProfessionalScalarFieldEnum = {
   isPrescriber: 'isPrescriber',
   isBuyer: 'isBuyer',
   isDecisionMaker: 'isDecisionMaker',
+  isPartner: 'isPartner',
   relationshipLevel: 'relationshipLevel',
+  notes: 'notes',
   sourceActive: 'sourceActive',
   sourceFirstSeenAt: 'sourceFirstSeenAt',
   sourceLastSeenAt: 'sourceLastSeenAt',
@@ -1057,6 +1070,12 @@ exports.TerritoryAssignmentStatus = exports.$Enums.TerritoryAssignmentStatus = {
 exports.TerritoryAssignmentSource = exports.$Enums.TerritoryAssignmentSource = {
   geo: 'geo',
   manual: 'manual'
+};
+
+exports.RelationshipLevel = exports.$Enums.RelationshipLevel = {
+  LOW: 'LOW',
+  MEDIUM: 'MEDIUM',
+  HIGH: 'HIGH'
 };
 
 exports.ContactType = exports.$Enums.ContactType = {

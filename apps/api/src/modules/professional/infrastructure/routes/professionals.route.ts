@@ -1,8 +1,51 @@
 import { Elysia, t } from "elysia";
+import {
+  createProfessionalSchema,
+  updateProfessionalSchema,
+} from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { doctorUseCases } from "../../composition";
-import { ResourceNotFoundError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import type { z } from "zod";
+
+function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
+  const parsed = schema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues.map((issue) => ({
+        field: issue.path.join(".") || "body",
+        message: issue.message,
+      }))
+    );
+  }
+
+  return parsed.data;
+}
+
+const professionalPersonBody = {
+  firstName: t.Optional(t.String()),
+  lastName: t.Optional(t.String()),
+  fullName: t.Optional(t.Union([t.String(), t.Null()])),
+  socialName: t.Optional(t.Union([t.String(), t.Null()])),
+  taxId: t.Optional(t.Union([t.String(), t.Null()])),
+  birthDate: t.Optional(t.Union([t.String(), t.Null()])),
+  mobilePhone: t.Optional(t.Union([t.String(), t.Null()])),
+  landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
+  email: t.Optional(t.Union([t.String(), t.Null()])),
+  websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  imageUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  primarySpecialtyLabel: t.Optional(t.Union([t.String(), t.Null()])),
+  specialty: t.Optional(t.Union([t.String(), t.Null()])),
+  crmCouncil: t.Optional(t.Union([t.String(), t.Null()])),
+  crmNumber: t.Optional(t.Union([t.String(), t.Null()])),
+  crmState: t.Optional(t.Union([t.String(), t.Null()])),
+  favoriteTeam: t.Optional(t.Union([t.String(), t.Null()])),
+  favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
+  hobbies: t.Optional(t.Union([t.String(), t.Null()])),
+  notes: t.Optional(t.Union([t.String(), t.Null()])),
+};
 
 const listProfessionalsRoute = new Elysia()
   .use(auth)
@@ -21,8 +64,8 @@ const listProfessionalsRoute = new Elysia()
     },
     {
       detail: {
-        summary: "List doctors",
-        tags: ["Doctors"],
+        summary: "List professionals",
+        tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
       query: t.Object({
@@ -41,21 +84,22 @@ const createDoctorRoute = new Elysia()
     "/professionals",
     async ({ body, getScope }) => {
       const scope = await getScope();
+      const parsed = parseSchema(createProfessionalSchema, body);
       return doctorUseCases.createDoctor().execute({
-        ...body,
+        ...parsed,
         scope,
       });
     },
     {
       detail: {
-        summary: "Create doctor",
-        tags: ["Doctors"],
+        summary: "Create professional",
+        tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
         firstName: t.String(),
         lastName: t.String(),
-        specialty: t.Optional(t.String()),
+        ...professionalPersonBody,
         facilityIds: t.Optional(t.Array(t.String())),
       }),
     }
@@ -68,21 +112,21 @@ const getProfessionalRoute = new Elysia()
     "/professionals/:id",
     async ({ params, getScope }) => {
       const scope = await getScope();
-      const doctor = await doctorUseCases.getProfessional().execute({
+      const professional = await doctorUseCases.getProfessional().execute({
         professionalId: params.id,
         scope,
       });
 
-      if (!doctor) {
-        throw new ResourceNotFoundError("Doctor", params.id);
+      if (!professional) {
+        throw new ResourceNotFoundError("Professional", params.id);
       }
 
-      return doctor;
+      return professional;
     },
     {
       detail: {
-        summary: "Get doctor by id",
-        tags: ["Doctors"],
+        summary: "Get professional by id",
+        tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
     }
@@ -95,28 +139,27 @@ const updateDoctorRoute = new Elysia()
     "/professionals/:id",
     async ({ params, body, getScope }) => {
       const scope = await getScope();
-      const doctor = await doctorUseCases.updateDoctor().execute({
+      const parsed = parseSchema(updateProfessionalSchema, body);
+      const professional = await doctorUseCases.updateDoctor().execute({
         professionalId: params.id,
         scope,
-        ...body,
+        ...parsed,
       });
 
-      if (!doctor) {
-        throw new ResourceNotFoundError("Doctor", params.id);
+      if (!professional) {
+        throw new ResourceNotFoundError("Professional", params.id);
       }
 
-      return doctor;
+      return professional;
     },
     {
       detail: {
-        summary: "Update doctor",
-        tags: ["Doctors"],
+        summary: "Update professional",
+        tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
-        firstName: t.Optional(t.String()),
-        lastName: t.Optional(t.String()),
-        specialty: t.Optional(t.Union([t.String(), t.Null()])),
+        ...professionalPersonBody,
         facilityIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
       }),
     }
@@ -135,15 +178,15 @@ const deleteDoctorRoute = new Elysia()
       });
 
       if (!deleted) {
-        throw new ResourceNotFoundError("Doctor", params.id);
+        throw new ResourceNotFoundError("Professional", params.id);
       }
 
       return { message: "Professional deleted successfully" };
     },
     {
       detail: {
-        summary: "Delete doctor",
-        tags: ["Doctors"],
+        summary: "Delete professional",
+        tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
     }
