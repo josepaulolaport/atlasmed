@@ -211,23 +211,10 @@ export function CreateTerritoryDialog({
         });
       } else {
         const resolution = result.boundaryResolution;
-        if (resolution?.mode === "operational") {
+        if (resolution?.mode === "rep_patch") {
           toast({
             title: "Territory created",
-            description: `Boundary indexed across ${resolution.membershipCount} reference region(s).`,
-            variant: "success",
-          });
-        } else if (resolution?.mode === "reference" && resolution.parentAssignmentStatus === "ambiguous") {
-          toast({
-            title: "Territory created — review parent",
-            description:
-              "The boundary overlaps multiple parents. Resolve it from the ambiguous parents queue.",
-            variant: "destructive",
-          });
-        } else if (resolution?.mode === "reference" && resolution.rollupAncestorIds.length > 0) {
-          toast({
-            title: "Territory created",
-            description: `Geo-linked to parent with ${resolution.rollupAncestorIds.length} secondary rollup link(s).`,
+            description: `Rep patch linked to manager zone ${resolution.managerTerritoryId}.`,
             variant: "success",
           });
         } else {

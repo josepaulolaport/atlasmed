@@ -1,8 +1,17 @@
+import type { RelationshipLevel } from "@atlasmed/database";
+
 export interface FacilityProfessionalRecord {
   id: string;
   professionalId: string;
   facilityId: string;
   occupationCode: string;
+  specialtyLabel: string | null;
+  isPartner: boolean;
+  isPrescriber: boolean;
+  isBuyer: boolean;
+  isDecisionMaker: boolean;
+  relationshipLevel: RelationshipLevel | null;
+  notes: string | null;
   sourceActive: boolean;
   sourceFirstSeenAt: Date | null;
   sourceLastSeenAt: Date | null;
@@ -21,7 +30,38 @@ export interface FacilityProfessionalWithProfessionalRecord
     id: string;
     firstName: string;
     lastName: string;
+    fullName: string | null;
     specialty: string | null;
+    crmNumber: string | null;
+    crmState: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+}
+
+export interface FacilityProfessionalContextRecord {
+  association: FacilityProfessionalRecord;
+  professional: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName: string | null;
+    socialName: string | null;
+    taxId: string | null;
+    birthDate: Date | null;
+    mobilePhone: string | null;
+    landlinePhone: string | null;
+    email: string | null;
+    websiteUrl: string | null;
+    imageUrl: string | null;
+    primarySpecialtyLabel: string | null;
+    crmCouncil: string | null;
+    crmNumber: string | null;
+    crmState: string | null;
+    favoriteTeam: string | null;
+    favoriteSport: string | null;
+    hobbies: string | null;
+    notes: string | null;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -29,12 +69,28 @@ export interface FacilityProfessionalWithProfessionalRecord
 
 export type FacilityProfessionalView = "source" | "confirmed" | "pending" | "all";
 
+export interface FacilityProfessionalRoleUpdateInput {
+  isPartner?: boolean;
+  isPrescriber?: boolean;
+  isBuyer?: boolean;
+  isDecisionMaker?: boolean;
+  relationshipLevel?: RelationshipLevel | null;
+  specialtyLabel?: string | null;
+  notes?: string | null;
+}
+
 export interface FacilityProfessionalRepository {
   findByProfessionalAndFacility(
     professionalId: string,
     facilityId: string,
     occupationCode?: string
   ): Promise<FacilityProfessionalRecord | null>;
+
+  findActiveWithProfessional(
+    facilityId: string,
+    professionalId: string,
+    occupationCode?: string
+  ): Promise<FacilityProfessionalContextRecord | null>;
 
   findActiveByFacilityWithProfessionals(params: {
     facilityId: string;
@@ -75,6 +131,13 @@ export interface FacilityProfessionalRepository {
     occupationCode?: string;
     endedByUserId: string;
     endReason: string;
+  }): Promise<FacilityProfessionalRecord | null>;
+
+  updateAssociationRoles(params: {
+    professionalId: string;
+    facilityId: string;
+    occupationCode?: string;
+    data: FacilityProfessionalRoleUpdateInput;
   }): Promise<FacilityProfessionalRecord | null>;
 
   upsertSourceAssociation(params: {

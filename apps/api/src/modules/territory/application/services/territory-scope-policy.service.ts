@@ -191,10 +191,10 @@ export async function assertManagerTerritoryApprovalRequest(input: {
       return;
     }
 
-    case "facility_territory_change": {
+    case "clinic_territory_change": {
       if (!input.facilityId || !input.toTerritoryId) {
         throw new OperationNotAllowedError(
-          "facility_territory_change",
+          "clinic_territory_change",
           "Facility and target territory are required"
         );
       }
@@ -205,7 +205,7 @@ export async function assertManagerTerritoryApprovalRequest(input: {
           : true
       ) {
         throw new OperationNotAllowedError(
-          "facility_territory_change",
+          "clinic_territory_change",
           "Facility is outside your scope"
         );
       }
@@ -214,7 +214,7 @@ export async function assertManagerTerritoryApprovalRequest(input: {
         scope: input.scope,
         territoryRepository: input.territoryRepository,
         territoryId: input.toTerritoryId,
-        operation: "facility_territory_change",
+        operation: "clinic_territory_change",
       });
       return;
     }

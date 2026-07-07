@@ -10,7 +10,6 @@ import { territoriesApi } from "@/lib/api/territories";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { TerritoryBoundarySection } from "@/components/territory/territory-boundary-section";
-import { TerritoryRollupLinksSection } from "@/components/territory/territory-rollup-links-section";
 import { AssignUserToTerritoryDialog } from "@/components/territory/assign-user-to-territory-dialog";
 import { isApprovalRequest } from "@/components/territory/territory-utils";
 import { Loader2 } from "lucide-react";
@@ -168,11 +167,11 @@ export function TerritoryDetailPanel({
                 {territory.isCountryLevel && <Badge variant="outline">country</Badge>}
                 {territory.isLeaf && <Badge variant="outline">leaf</Badge>}
                 {territory.hasBoundary && <Badge variant="outline">has boundary</Badge>}
-                {territory.parentAssignmentStatus === "ambiguous" && (
-                  <Badge variant="destructive">ambiguous parent</Badge>
+                {territory.managerTerritoryId && (
+                  <Badge variant="outline">manager zone linked</Badge>
                 )}
-                {territory.parentAssignmentSource && (
-                  <Badge variant="outline">parent: {territory.parentAssignmentSource}</Badge>
+                {typeof territory.repPatchCount === "number" && territory.repPatchCount > 0 && (
+                  <Badge variant="outline">{territory.repPatchCount} rep patches</Badge>
                 )}
                 {!territory.isActive && <Badge variant="destructive">inactive</Badge>}
               </div>
@@ -183,7 +182,7 @@ export function TerritoryDetailPanel({
                   Assign user
                 </Button>
               )}
-              {canUpdate && (
+              {canUpdate && territory.territoryType.participatesInGroupingHierarchy && (
                 <Button size="sm" variant="outline" onClick={onReparent}>
                   Reparent
                 </Button>
@@ -219,6 +218,12 @@ export function TerritoryDetailPanel({
               <span className="text-gray-500">Assigned users:</span>{" "}
               {territory.assignedUserCount}
             </div>
+            {territory.managerTerritoryId && (
+              <div>
+                <span className="text-gray-500">Manager zone:</span>{" "}
+                {territory.managerTerritoryId}
+              </div>
+            )}
             <div>
               <span className="text-gray-500">Created:</span>{" "}
               {formatDateTime(territory.createdAt)}
@@ -270,13 +275,6 @@ export function TerritoryDetailPanel({
               <p className="text-sm text-gray-700">{descendantIds.length} descendant(s)</p>
             )}
           </div>
-
-          {territory.territoryType && !territory.territoryType.isCountryLevel && (
-            <TerritoryRollupLinksSection
-              territoryId={territory.id}
-              canManage={canManage}
-            />
-          )}
         </CardContent>
       </Card>
 

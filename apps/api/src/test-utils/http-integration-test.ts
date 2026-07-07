@@ -10,7 +10,7 @@ export function createHttpIntegrationApp(...modules: AnyElysia[]) {
   }
 
   return new Elysia()
-    .onError(({ error, set }) => {
+    .onError(({ code, error, set }) => {
       if (error instanceof AppError) {
         set.status = error.statusCode;
         return { error: error.toClientJSON() };
@@ -19,6 +19,16 @@ export function createHttpIntegrationApp(...modules: AnyElysia[]) {
       if (error instanceof HttpError) {
         set.status = error.statusCode;
         return { error: error.toJSON() };
+      }
+
+      if (code === "VALIDATION") {
+        set.status = 400;
+        return {
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "Invalid request data",
+          },
+        };
       }
 
       set.status = 500;

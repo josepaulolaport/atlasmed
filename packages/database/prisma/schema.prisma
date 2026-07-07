@@ -92,8 +92,28 @@ enum IngestionRunStatus {
   @@schema("public")
 }
 
+enum IngestionRunPhase {
+  DISCOVERING
+  DOWNLOADING
+  PARSING
+  LOADING
+  VALIDATING
+  RECONCILING
+  PROMOTING
+  SYNCING
+  FAILED
+  @@schema("public")
+}
+
+enum IngestionDiffScope {
+  WAREHOUSE
+  CRM
+  @@schema("public")
+}
+
 enum IngestionSuggestionType {
   FACILITY_FIELD_UPDATE
+  PROFESSIONAL_FIELD_UPDATE
   FACILITY_REGISTRY_DEACTIVATED
   FACILITY_REGISTRY_REACTIVATED
   FACILITY_PROFESSIONAL_REMOVAL
@@ -127,6 +147,13 @@ enum ContactType {
   PROFESSIONAL
   DECISOR
   COMPRADOR
+  @@schema("public")
+}
+
+enum RelationshipLevel {
+  LOW
+  MEDIUM
+  HIGH
   @@schema("public")
 }
 
@@ -184,38 +211,6 @@ enum TerritoryNodeType {
   state
   intermediate
   patch
-  @@schema("public")
-}
-
-enum TerritoryRollupRelationshipType {
-  reporting
-  @@schema("public")
-}
-
-enum TerritoryRollupLinkSource {
-  geo
-  manual
-  @@schema("public")
-}
-
-enum TerritoryParentAssignmentStatus {
-  resolved
-  ambiguous
-  manual
-  @@schema("public")
-}
-
-enum TerritoryParentAssignmentSource {
-  geo
-  inferred
-  manual
-  @@schema("public")
-}
-
-enum TerritoryGeoMembershipStatus {
-  pending
-  ready
-  failed
   @@schema("public")
 }
 
@@ -323,9 +318,10 @@ model TerritoryType {
   assignsClinics       Boolean     @default(false)
   assignableToUsers    Boolean     @default(false)
   assignableToManagers Boolean     @default(false)
-  isCountryLevel       Boolean     @default(false)
-  blockSiblingOverlap  Boolean     @default(false)
-  sortOrder            Int         @default(0)
+  isCountryLevel                   Boolean     @default(false)
+  blockSiblingOverlap              Boolean     @default(false)
+  participatesInGroupingHierarchy  Boolean     @default(false)
+  sortOrder                        Int         @default(0)
   isActive             Boolean     @default(true)
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
@@ -350,11 +346,11 @@ model Territory {
   parentId                 String?
   parent                   Territory?                     @relation("TerritoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children                 Territory[]                    @relation("TerritoryHierarchy")
+  managerTerritoryId       String?
+  managerTerritory         Territory?                     @relation("ManagerZonePatches", fields: [managerTerritoryId], references: [id], onDelete: Restrict)
+  repPatches               Territory[]                    @relation("ManagerZonePatches")
   isActive                 Boolean                        @default(true)
-  parentAssignmentStatus   TerritoryParentAssignmentStatus @default(resolved)
-  parentAssignmentSource   TerritoryParentAssignmentSource?
   organizationId           String?
-  geoMembershipStatus      TerritoryGeoMembershipStatus?
   boundaryMinLng           Float?
   boundaryMinLat           Float?
   boundaryMaxLng           Float?
@@ -369,18 +365,14 @@ model Territory {
   closureAsDescendant          TerritoryClosure[]         @relation("ClosureDescendant")
   approvalRequests             TerritoryApprovalRequest[] @relation("ApprovalTargetTerritory")
   facilityApprovalRequests     TerritoryApprovalRequest[] @relation("ApprovalFacilityTerritory")
-  rollupLinksAsTerritory       TerritoryRollupLink[]      @relation("RollupTerritory")
-  rollupLinksAsAncestor        TerritoryRollupLink[]      @relation("RollupAncestor")
-  geoMembershipAsOperational   TerritoryGeoMembership[]   @relation("GeoMembershipOperational")
-  geoMembershipAsReference     TerritoryGeoMembership[]   @relation("GeoMembershipReference")
 
   @@unique([parentId, name])
   @@unique([slug])
   @@index([parentId])
+  @@index([managerTerritoryId])
   @@index([isActive])
   @@index([nodeType])
   @@index([countryCode])
-  @@index([parentAssignmentStatus])
   @@index([territoryTypeId])
   @@schema("public")
   @@map("territories")
@@ -397,41 +389,6 @@ model TerritoryClosure {
   @@index([descendantId])
   @@schema("public")
   @@map("territory_closure")
-}
-
-model TerritoryRollupLink {
-  id               String                        @id @default(cuid())
-  territoryId      String
-  ancestorId       String
-  relationshipType TerritoryRollupRelationshipType @default(reporting)
-  source           TerritoryRollupLinkSource     @default(manual)
-  territory        Territory                     @relation("RollupTerritory", fields: [territoryId], references: [id], onDelete: Cascade)
-  ancestor         Territory                     @relation("RollupAncestor", fields: [ancestorId], references: [id], onDelete: Cascade)
-  createdAt        DateTime                      @default(now())
-
-  @@unique([territoryId, ancestorId, relationshipType])
-  @@index([ancestorId])
-  @@index([territoryId, source])
-  @@schema("public")
-  @@map("territory_rollup_links")
-}
-
-model TerritoryGeoMembership {
-  id                     String   @id @default(cuid())
-  operationalTerritoryId String
-  referenceTerritoryId   String
-  referenceTypeSlug      String
-  overlapRatio           Float
-  intersectionAreaSqKm   Float
-  computedAt             DateTime @default(now())
-  operationalTerritory   Territory @relation("GeoMembershipOperational", fields: [operationalTerritoryId], references: [id], onDelete: Cascade)
-  referenceTerritory     Territory @relation("GeoMembershipReference", fields: [referenceTerritoryId], references: [id], onDelete: Cascade)
-
-  @@unique([operationalTerritoryId, referenceTerritoryId])
-  @@index([referenceTerritoryId])
-  @@index([operationalTerritoryId])
-  @@schema("public")
-  @@map("territory_geo_membership")
 }
 
 model TerritoryApprovalRequest {
@@ -712,33 +669,45 @@ model Facility {
 }
 
 model Professional {
-  id                   String                 @id @default(cuid())
-  firstName            String
-  lastName             String
-  fullName             String?                @map("full_name")
-  socialName           String?                @map("social_name")
-  primarySpecialtyLabel String?               @map("primary_specialty_label")
-  crmCouncil           String?                @map("crm_council")
-  crmNumber            String?                @map("crm_number")
-  crmState             String?                @map("crm_state")
-  sourceProvider       String?
-  externalSourceId     String?
-  sourceContentHash    String?
-  sourceFirstSeenAt    DateTime?
-  sourceLastSeenAt     DateTime?
-  sourcePresent        Boolean                @default(false)
-  sourceTracked        Boolean                @default(false)
-  manuallyEditedAt     DateTime?
-  deletedAt            DateTime?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  facilityAssociations FacilityProfessional[]
-  ingestionSuggestions IngestionSuggestion[]
+  id                    String                 @id @default(cuid())
+  firstName             String
+  lastName              String
+  fullName              String?                @map("full_name")
+  socialName            String?                @map("social_name")
+  taxId                 String?                @map("tax_id")
+  birthDate             DateTime?              @map("birth_date") @db.Date
+  mobilePhone           String?                @map("mobile_phone")
+  landlinePhone         String?                @map("landline_phone")
+  email                 String?
+  websiteUrl            String?                @map("website_url")
+  imageUrl              String?                @map("image_url")
+  favoriteTeam          String?                @map("favorite_team")
+  favoriteSport         String?                @map("favorite_sport")
+  hobbies               String?
+  notes                 String?
+  primarySpecialtyLabel String?                @map("primary_specialty_label")
+  crmCouncil            String?                @map("crm_council")
+  crmNumber             String?                @map("crm_number")
+  crmState              String?                @map("crm_state")
+  sourceProvider        String?
+  externalSourceId      String?
+  sourceContentHash     String?
+  sourceFirstSeenAt     DateTime?
+  sourceLastSeenAt      DateTime?
+  sourcePresent         Boolean                @default(false)
+  sourceTracked         Boolean                @default(false)
+  manuallyEditedAt      DateTime?
+  deletedAt             DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  facilityAssociations  FacilityProfessional[]
+  ingestionSuggestions  IngestionSuggestion[]
 
   @@unique([sourceProvider, externalSourceId])
   @@index([deletedAt])
   @@index([lastName, firstName])
   @@index([sourceProvider, sourcePresent])
+  @@index([taxId])
   @@schema("public")
   @@map("professionals")
 }
@@ -753,10 +722,12 @@ model FacilityProfessional {
   specialtyLabel      String?   @map("specialty_label")
   employmentTypeCode  String?   @map("employment_type_code")
   sourceOccupationCode String?  @map("source_occupation_code")
-  isPrescriber        Boolean   @default(false) @map("is_prescriber")
-  isBuyer             Boolean   @default(false) @map("is_buyer")
-  isDecisionMaker     Boolean   @default(false) @map("is_decision_maker")
-  relationshipLevel   String?   @map("relationship_level")
+  isPrescriber         Boolean            @default(false) @map("is_prescriber")
+  isBuyer              Boolean            @default(false) @map("is_buyer")
+  isDecisionMaker      Boolean            @default(false) @map("is_decision_maker")
+  isPartner            Boolean            @default(false) @map("is_partner")
+  relationshipLevel    RelationshipLevel? @map("relationship_level")
+  notes                String?
   sourceActive        Boolean   @default(false)
   sourceFirstSeenAt   DateTime?
   sourceLastSeenAt    DateTime?
@@ -935,19 +906,46 @@ model ConformityRecord {
 }
 
 model IngestionRun {
-  id             String             @id @default(cuid())
-  sourceProvider String
-  status         IngestionRunStatus @default(RUNNING)
-  startedAt      DateTime           @default(now())
-  completedAt    DateTime?
-  stats          Json?
-  error          String?
-  suggestions    IngestionSuggestion[]
+  id                 String              @id @default(cuid())
+  sourceProvider     String
+  status             IngestionRunStatus  @default(RUNNING)
+  phase              IngestionRunPhase?
+  phaseStartedAt     DateTime?
+  temporalWorkflowId String?
+  referenceAno       Int?
+  referenceMes       Int?
+  startedAt          DateTime            @default(now())
+  completedAt        DateTime?
+  promotedAt         DateTime?
+  stats              Json?
+  validationReport   Json?
+  archiveManifest    Json?
+  error              String?
+  suggestions        IngestionSuggestion[]
+  diffs              IngestionDiff[]
 
   @@index([sourceProvider, startedAt])
   @@index([status])
+  @@index([temporalWorkflowId])
   @@schema("public")
   @@map("ingestion_runs")
+}
+
+model IngestionDiff {
+  id               String            @id @default(cuid())
+  ingestionRunId   String
+  ingestionRun     IngestionRun      @relation(fields: [ingestionRunId], references: [id], onDelete: Cascade)
+  scope            IngestionDiffScope
+  entityType       String
+  externalSourceId String?
+  diffType         String
+  payload          Json              @default("{}")
+  createdAt        DateTime          @default(now())
+
+  @@index([ingestionRunId])
+  @@index([scope, entityType])
+  @@schema("public")
+  @@map("ingestion_diffs")
 }
 
 model IngestionSuggestion {

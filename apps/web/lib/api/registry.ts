@@ -1,11 +1,8 @@
 import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
-import type {
-  FacilityProfessionalListItem,
-  FacilityProfessionalView,
-  RegistryDemoResult,
-  RegistrySuggestion,
-} from "@/types/facility";
+import type { RegistryDemoResult, RegistrySuggestion } from "@/types/facility";
+
+export { facilityProfessionalsApi, facilityDoctorsApi, clinicDoctorsApi } from "./facility-professionals";
 
 export const registryApi = {
   runIngestion: async () => {
@@ -42,45 +39,6 @@ export const registryApi = {
     const response = await apiClient.post(`/registry-suggestions/${id}/reject`, {
       resolutionNote,
     });
-    return response.data;
-  },
-};
-
-export const facilityDoctorsApi = {
-  listProfessionals: async (
-    facilityId: string,
-    params?: {
-      view?: FacilityProfessionalView;
-      page?: number;
-      limit?: number;
-      search?: string;
-    }
-  ): Promise<PaginatedResponse<FacilityProfessionalListItem>> => {
-    const response = await apiClient.get<PaginatedResponse<FacilityProfessionalListItem>>(
-      `/clinic/facilities/${facilityId}/professionals`,
-      { params }
-    );
-    return response.data;
-  },
-
-  confirmDoctor: async (facilityId: string, professionalId: string) => {
-    const response = await apiClient.post(
-      `/clinic/facilities/${facilityId}/professionals/${professionalId}/confirm`
-    );
-    return response.data;
-  },
-
-  associateDoctor: async (facilityId: string, professionalId: string) => {
-    const response = await apiClient.post(
-      `/clinic/facilities/${facilityId}/professionals/${professionalId}/associate`
-    );
-    return response.data;
-  },
-
-  endAssociation: async (facilityId: string, professionalId: string) => {
-    const response = await apiClient.delete(
-      `/clinic/facilities/${facilityId}/professionals/${professionalId}`
-    );
     return response.data;
   },
 };

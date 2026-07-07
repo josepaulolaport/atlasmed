@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { createGlobalScopeContext } from "@atlasmed/access";
+import { createGlobalScopeContext, withTerritoryScopeAliases } from "@atlasmed/access";
 import type { ScopeContext } from "@atlasmed/access";
 import {
   ApproveSuggestionUseCase,
@@ -287,16 +287,19 @@ describe("Suggestion use cases", () => {
   });
 
   it("list suggestions uses deny-by-default facility scope when manager has no facilities", async () => {
-    const scopedManager: ScopeContext = {
+    const scopedManager: ScopeContext = withTerritoryScopeAliases({
       isGlobal: false,
-      roleName: "MANAGER",
+      assignedTerritoryIds: ["territory-1"],
       effectiveTerritoryIds: ["territory-1"],
       facilityIds: [],
       managedUserIds: ["user-1"],
-    };
+      isOperationallyActive: true,
+    });
 
     const useCase = new ListSuggestionsUseCase({
       suggestionRepository,
+      facilityRepository,
+      facilityProfessionalRepository,
     });
 
     await useCase.execute({

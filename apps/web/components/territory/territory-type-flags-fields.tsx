@@ -34,6 +34,11 @@ const FLAG_FIELDS: Array<{
     description: "Top-level country territory; cannot have a parent.",
   },
   {
+    key: "participatesInGroupingHierarchy",
+    label: "Grouping hierarchy",
+    description: "Territories of this type appear in the grouping tree for filters and analytics.",
+  },
+  {
     key: "blockSiblingOverlap",
     label: "Block sibling overlap",
     description: "Reject boundaries that overlap siblings of the same type.",

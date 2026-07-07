@@ -27,6 +27,7 @@ export {
   InvitationStatus as InviteStatus,
   AuthSessionDeviceType as DeviceType,
   AuthSessionType as SessionType,
+  RelationshipLevel,
 } from "@atlasmed/database";
 
 // Application-level role enum (not a Prisma enum)
@@ -69,6 +70,8 @@ export {
   canManageFacilities,
   canReadProfessionals,
   canManageProfessionals,
+  canUpdateProfessionals,
+  canUpdateFacilities,
   canReadTerritories,
   canManageTerritories,
   canCreateTerritories,

@@ -36,6 +36,16 @@ export function canManageProfessionals(role: Role): boolean {
   return ability.can("create", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
 }
 
+export function canUpdateProfessionals(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("update", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
+}
+
+export function canUpdateFacilities(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("update", "FACILITY") || ability.can("manage", "FACILITY");
+}
+
 export function canReadTerritories(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
   return ability.can("read", "TERRITORY") || ability.can("manage", "TERRITORY");

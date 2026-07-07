@@ -1,3 +1,4 @@
+import type { RelationshipLevel } from "@atlasmed/database";
 import { prisma } from "../../../../../infrastructure/database/prisma.client";
 import type {
   FacilityProfessionalRecord,
@@ -23,6 +24,13 @@ function mapAssociation(association: {
   professionalId: string;
   facilityId: string;
   occupationCode: string;
+  specialtyLabel: string | null;
+  isPartner: boolean;
+  isPrescriber: boolean;
+  isBuyer: boolean;
+  isDecisionMaker: boolean;
+  relationshipLevel: RelationshipLevel | null;
+  notes: string | null;
   sourceActive: boolean;
   sourceFirstSeenAt: Date | null;
   sourceLastSeenAt: Date | null;
@@ -39,6 +47,13 @@ function mapAssociation(association: {
     professionalId: association.professionalId,
     facilityId: association.facilityId,
     occupationCode: association.occupationCode,
+    specialtyLabel: association.specialtyLabel,
+    isPartner: association.isPartner,
+    isPrescriber: association.isPrescriber,
+    isBuyer: association.isBuyer,
+    isDecisionMaker: association.isDecisionMaker,
+    relationshipLevel: association.relationshipLevel,
+    notes: association.notes,
     sourceActive: association.sourceActive,
     sourceFirstSeenAt: association.sourceFirstSeenAt,
     sourceLastSeenAt: association.sourceLastSeenAt,
@@ -89,6 +104,59 @@ export class PrismaFacilityProfessionalRepository
     });
 
     return association ? mapAssociation(association) : null;
+  }
+
+  async findActiveWithProfessional(
+    facilityId: string,
+    professionalId: string,
+    occupationCode = LEGACY_OCCUPATION_CODE
+  ) {
+    const association = await prisma.facilityProfessional.findFirst({
+      where: {
+        facilityId,
+        professionalId,
+        occupationCode,
+        endedAt: null,
+        professional: { deletedAt: null },
+      },
+      include: {
+        professional: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            fullName: true,
+            socialName: true,
+            taxId: true,
+            birthDate: true,
+            mobilePhone: true,
+            landlinePhone: true,
+            email: true,
+            websiteUrl: true,
+            imageUrl: true,
+            primarySpecialtyLabel: true,
+            crmCouncil: true,
+            crmNumber: true,
+            crmState: true,
+            favoriteTeam: true,
+            favoriteSport: true,
+            hobbies: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    if (!association) {
+      return null;
+    }
+
+    return {
+      association: mapAssociation(association),
+      professional: association.professional,
+    };
   }
 
   async findActiveByFacilityWithProfessionals(params: {
@@ -143,7 +211,10 @@ export class PrismaFacilityProfessionalRepository
               id: true,
               firstName: true,
               lastName: true,
+              fullName: true,
               primarySpecialtyLabel: true,
+              crmNumber: true,
+              crmState: true,
               createdAt: true,
               updatedAt: true,
             },
@@ -166,7 +237,10 @@ export class PrismaFacilityProfessionalRepository
           id: row.professional.id,
           firstName: row.professional.firstName,
           lastName: row.professional.lastName,
+          fullName: row.professional.fullName,
           specialty: row.professional.primarySpecialtyLabel,
+          crmNumber: row.professional.crmNumber,
+          crmState: row.professional.crmState,
           createdAt: row.professional.createdAt,
           updatedAt: row.professional.updatedAt,
         },
@@ -266,6 +340,56 @@ export class PrismaFacilityProfessionalRepository
       endedByUserId: params.endedByUserId,
       endReason: params.endReason,
     });
+  }
+
+  async updateAssociationRoles(params: {
+    professionalId: string;
+    facilityId: string;
+    occupationCode?: string;
+    data: {
+      isPartner?: boolean;
+      isPrescriber?: boolean;
+      isBuyer?: boolean;
+      isDecisionMaker?: boolean;
+      relationshipLevel?: RelationshipLevel | null;
+      specialtyLabel?: string | null;
+      notes?: string | null;
+    };
+  }): Promise<FacilityProfessionalRecord | null> {
+    const existing = await this.findByProfessionalAndFacility(
+      params.professionalId,
+      params.facilityId,
+      params.occupationCode
+    );
+
+    if (!existing || existing.endedAt) {
+      return null;
+    }
+
+    const association = await prisma.facilityProfessional.update({
+      where: { id: existing.id },
+      data: {
+        ...(params.data.isPartner !== undefined
+          ? { isPartner: params.data.isPartner }
+          : {}),
+        ...(params.data.isPrescriber !== undefined
+          ? { isPrescriber: params.data.isPrescriber }
+          : {}),
+        ...(params.data.isBuyer !== undefined ? { isBuyer: params.data.isBuyer } : {}),
+        ...(params.data.isDecisionMaker !== undefined
+          ? { isDecisionMaker: params.data.isDecisionMaker }
+          : {}),
+        ...(params.data.relationshipLevel !== undefined
+          ? { relationshipLevel: params.data.relationshipLevel }
+          : {}),
+        ...(params.data.specialtyLabel !== undefined
+          ? { specialtyLabel: params.data.specialtyLabel }
+          : {}),
+        ...(params.data.notes !== undefined ? { notes: params.data.notes } : {}),
+      },
+    });
+
+    return mapAssociation(association);
   }
 
   async upsertSourceAssociation(params: {

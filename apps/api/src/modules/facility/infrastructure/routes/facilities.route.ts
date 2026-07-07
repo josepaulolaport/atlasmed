@@ -1,9 +1,26 @@
 import { Elysia, t } from "elysia";
+import { updateFacilityProfessionalSchema } from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
-import { ResourceNotFoundError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import type { z } from "zod";
+
+function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
+  const parsed = schema.safeParse(body);
+
+  if (!parsed.success) {
+    throw new ValidationError(
+      parsed.error.issues.map((issue) => ({
+        field: issue.path.join(".") || "body",
+        message: issue.message,
+      }))
+    );
+  }
+
+  return parsed.data;
+}
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -223,10 +240,84 @@ const associateDoctorRoute = new Elysia()
     },
     {
       detail: {
-        summary: "Manually associate a doctor with a clinic",
-        tags: ["Clinics"],
+        summary: "Manually associate a professional with a facility",
+        tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+    }
+  );
+
+const getFacilityProfessionalContextRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/professionals/:professionalId",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      const context = await facilityUseCases.getFacilityProfessionalContext().execute({
+        facilityId: params.id,
+        professionalId: params.professionalId,
+        scope,
+      });
+
+      if (!context) {
+        throw new ResourceNotFoundError("FacilityProfessional", params.professionalId);
+      }
+
+      return context;
+    },
+    {
+      detail: {
+        summary: "Get professional registration context for a facility",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const updateFacilityProfessionalRoleRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .patch(
+    "/facilities/:id/professionals/:professionalId",
+    async ({ params, body, getScope }) => {
+      const scope = await getScope();
+      const parsed = parseSchema(updateFacilityProfessionalSchema, body);
+      const association = await facilityUseCases.updateFacilityProfessionalRole().execute({
+        facilityId: params.id,
+        professionalId: params.professionalId,
+        scope,
+        ...parsed,
+      });
+
+      if (!association) {
+        throw new ResourceNotFoundError("FacilityProfessional", params.professionalId);
+      }
+
+      return association;
+    },
+    {
+      detail: {
+        summary: "Update facility-scoped professional role flags",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        isPartner: t.Optional(t.Boolean()),
+        isPrescriber: t.Optional(t.Boolean()),
+        isBuyer: t.Optional(t.Boolean()),
+        isDecisionMaker: t.Optional(t.Boolean()),
+        relationshipLevel: t.Optional(
+          t.Union([
+            t.Literal("LOW"),
+            t.Literal("MEDIUM"),
+            t.Literal("HIGH"),
+            t.Null(),
+          ])
+        ),
+        specialtyLabel: t.Optional(t.Union([t.String(), t.Null()])),
+        notes: t.Optional(t.Union([t.String(), t.Null()])),
+      }),
     }
   );
 
@@ -497,6 +588,8 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilityProfessionalsRoute)
   .use(confirmDoctorRoute)
   .use(associateDoctorRoute)
+  .use(getFacilityProfessionalContextRoute)
+  .use(updateFacilityProfessionalRoleRoute)
   .use(endDoctorAssociationRoute)
   .use(getRegistryFacilityRoute)
   .use(getRegistryProfessionalsRoute)

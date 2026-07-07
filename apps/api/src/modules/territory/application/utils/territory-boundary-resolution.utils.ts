@@ -1,23 +1,26 @@
 import type { TerritoryBoundaryResolution } from "../services/territory-boundary.application";
 
 export function serializeBoundaryResolution(resolution: TerritoryBoundaryResolution) {
-  if (resolution.mode === "operational") {
+  if (resolution.mode === "rep_patch") {
     return {
       success: true as const,
-      mode: "operational" as const,
-      geoMembershipStatus: resolution.geoMembershipStatus,
-      membershipCount: resolution.membershipCount,
-      referenceTerritoryIds: resolution.referenceTerritoryIds,
+      mode: "rep_patch" as const,
+      managerTerritoryId: resolution.managerTerritoryId,
+      managerZoneCandidates: resolution.managerZoneCandidates,
+      clinicRecomputeEnqueued: resolution.clinicRecomputeEnqueued,
+    };
+  }
+
+  if (resolution.mode === "manager_zone") {
+    return {
+      success: true as const,
+      mode: "manager_zone" as const,
+      repPatchCount: resolution.repPatchCount,
     };
   }
 
   return {
     success: true as const,
-    mode: "reference" as const,
-    parentAssignmentStatus: resolution.parentAssignmentStatus,
-    parentAssignmentSource: resolution.parentAssignmentSource,
-    primaryParentId: resolution.primaryParentId,
-    rollupAncestorIds: resolution.rollupAncestorIds,
-    candidates: resolution.candidates,
+    mode: "grouping" as const,
   };
 }

@@ -25,7 +25,7 @@ export interface ClinicMembershipWriter {
     facilityIds?: string[];
     territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
-  }): Promise<FacilityMembershipTarget[]>;
+  }): Promise<ClinicMembershipTarget[]>;
 }
 
 interface Dependencies {

@@ -2,11 +2,9 @@ import type { ScopeContext } from "@atlasmed/access";
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
-import type { TerritoryGeoMembershipRepository } from "../interfaces/territory-geo-membership.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
-import {
-  isReferenceMembershipTarget,
-} from "../constants/territory-geo-membership.constants";
+import type { TerritoryHierarchyPort } from "../interfaces/territory-hierarchy.port.interface";
+import { isGroupingHierarchyType } from "../constants/territory-roles.constants";
 import {
   OperationNotAllowedError,
   ResourceNotFoundError,
@@ -46,49 +44,58 @@ export class TerritoryCoverageUseCases {
     private readonly deps: {
       territoryRepository: TerritoryRepository;
       territoryTypeRepository: TerritoryTypeRepository;
-      geoMembershipRepository: TerritoryGeoMembershipRepository;
       spatialRepository: TerritorySpatialRepository;
       closureRepository: TerritoryClosureRepository;
+      hierarchyPort: TerritoryHierarchyPort;
     }
   ) {}
 
-  async getReferenceCoverage(input: { referenceTerritoryId: string; scope: ScopeContext }) {
-    const reference = await this.assertReadableReference(input.referenceTerritoryId, input.scope);
+  async getAnalyticsView(input: {
+    groupingTerritoryId: string;
+    scope: ScopeContext;
+  }) {
+    const grouping = await this.assertReadableGrouping(
+      input.groupingTerritoryId,
+      input.scope
+    );
 
-    const [boundary, memberships, clinics] = await Promise.all([
-      this.deps.spatialRepository.getBoundaryAsGeoJson(input.referenceTerritoryId),
-      this.deps.geoMembershipRepository.listByReferenceTerritoryId(input.referenceTerritoryId),
-      this.deps.spatialRepository.findAssignedClinicsInReferenceTerritory(
-        input.referenceTerritoryId
-      ),
+    const scopedRepPatchIds = await this.resolveScopedRepPatchIds(input.scope);
+
+    const [boundary, clinics] = await Promise.all([
+      this.deps.spatialRepository.getBoundaryAsGeoJson(input.groupingTerritoryId),
+      this.deps.spatialRepository.findAssignedClinicsInGroupingTerritory({
+        groupingTerritoryId: input.groupingTerritoryId,
+        scopedPatchIds: scopedRepPatchIds,
+      }),
     ]);
 
     const clinicsByPatch = groupClinicsByTerritoryId(clinics);
+    const patchIdsInResult = [...new Set(clinics.map((clinic) => clinic.territoryId))];
 
     const patches = await Promise.all(
-      memberships.map(async (membership) => {
-        const clippedBoundary = await this.deps.spatialRepository.getClippedBoundaryAsGeoJson(
-          membership.operationalTerritoryId,
-          input.referenceTerritoryId
-        );
-
+      patchIdsInResult.map(async (patchId) => {
+        const patch = await this.deps.territoryRepository.findById(patchId);
         return {
-          operationalTerritoryId: membership.operationalTerritoryId,
-          operationalTerritory: membership.operationalTerritory,
-          overlapRatio: membership.overlapRatio,
-          intersectionAreaSqKm: membership.intersectionAreaSqKm,
-          clippedBoundary,
-          facilities: clinicsByPatch.get(membership.operationalTerritoryId) ?? [],
+          repPatchId: patchId,
+          repPatch: patch
+            ? {
+                id: patch.id,
+                name: patch.name,
+                code: patch.code,
+                slug: patch.slug,
+              }
+            : null,
+          facilities: clinicsByPatch.get(patchId) ?? [],
         };
       })
     );
 
     return {
-      reference: {
-        id: reference.id,
-        name: reference.name,
-        slug: reference.slug,
-        code: reference.code,
+      grouping: {
+        id: grouping.id,
+        name: grouping.name,
+        slug: grouping.slug,
+        code: grouping.code,
         boundary,
       },
       patches,
@@ -97,30 +104,46 @@ export class TerritoryCoverageUseCases {
     };
   }
 
-  private async assertReadableReference(referenceTerritoryId: string, scope: ScopeContext) {
-    const reference = await this.deps.territoryRepository.findById(referenceTerritoryId);
-    if (!reference) {
-      throw new ResourceNotFoundError("Territory", referenceTerritoryId);
+  private async resolveScopedRepPatchIds(scope: ScopeContext): Promise<string[]> {
+    if (scope.isGlobal) {
+      return (
+        await this.deps.territoryRepository.findActiveByTypeSlug("patch")
+      ).map((territory) => territory.id);
+    }
+
+    const patchTerritories = await this.deps.territoryRepository.findByIds(
+      scope.effectiveTerritoryIds
+    );
+
+    return patchTerritories
+      .filter((territory) => territory.territoryType?.assignsClinics)
+      .map((territory) => territory.id);
+  }
+
+  private async assertReadableGrouping(groupingTerritoryId: string, scope: ScopeContext) {
+    const grouping = await this.deps.territoryRepository.findById(groupingTerritoryId);
+    if (!grouping) {
+      throw new ResourceNotFoundError("Territory", groupingTerritoryId);
     }
 
     const type =
-      reference.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(reference.territoryTypeId));
-    if (!type || !isReferenceMembershipTarget(type)) {
+      grouping.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(grouping.territoryTypeId));
+    if (!type || !isGroupingHierarchyType(type)) {
       throw new OperationNotAllowedError(
-        "coverage_view",
-        "Coverage view is only available for state and municipality reference territories"
+        "analytics_view",
+        "Analytics view is only available for grouping hierarchy territories"
       );
     }
 
     if (!scope.isGlobal) {
       await assertManagerReadableTerritory(
         scope,
-        referenceTerritoryId,
+        groupingTerritoryId,
         this.deps.closureRepository
       );
     }
 
-    return reference;
+    return grouping;
   }
 }

@@ -1,3 +1,8 @@
+import {
+  createProfessionalSchema,
+  updateFacilityProfessionalSchema,
+  updateProfessionalSchema,
+} from "@atlasmed/access";
 import { z } from "zod";
 
 export const inviteTokenSchema = z.object({
@@ -128,3 +133,7 @@ export const grantPermissionSchema = z.object({
 export const changeUserRoleSchema = z.object({
   roleId: z.string().min(1, "Role is required"),
 });
+
+export const createProfessionalFormSchema = createProfessionalSchema;
+export const updateProfessionalFormSchema = updateProfessionalSchema;
+export const updateFacilityProfessionalFormSchema = updateFacilityProfessionalSchema;

@@ -164,8 +164,6 @@ async function ensureTerritory(
             parentId: input.parentId,
             regionSlug: input.regionSlug ?? null,
             stateCode: input.stateCode ?? null,
-            parentAssignmentStatus: "resolved",
-            parentAssignmentSource: "manual",
             isActive: true,
           },
         });
@@ -203,8 +201,6 @@ async function ensureTerritory(
     regionSlug: input.regionSlug ?? null,
     stateCode: input.stateCode ?? null,
     parentId: input.parentId,
-    parentAssignmentStatus: "resolved",
-    parentAssignmentSource: "manual",
   });
 
   await spatialRepository.saveBoundary(territory.id, input.geometry, { repairInvalid: true });

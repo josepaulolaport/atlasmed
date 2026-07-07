@@ -11,6 +11,31 @@ import {
   projectRegistryRepresentative,
 } from "../../../application/services/registry-projection.service";
 
+function pickWorkloadCrm(
+  workloads: Array<{
+    professionalCouncilCode: string | null;
+    licenseNumber: string | null;
+    licenseState: string | null;
+    occupationCode: string;
+    employmentTypeCode: string;
+    serviceType: string;
+  }>,
+  occupationCode: string,
+  employmentTypeCode: string | null
+) {
+  const matching = workloads.filter((row) => row.occupationCode === occupationCode);
+  const candidates =
+    employmentTypeCode === null
+      ? matching
+      : matching.filter((row) => row.employmentTypeCode === employmentTypeCode);
+
+  const withLicense = candidates.find(
+    (row) => row.licenseNumber || row.licenseState || row.professionalCouncilCode
+  );
+
+  return withLicense ?? candidates[0] ?? matching[0] ?? workloads[0] ?? null;
+}
+
 export class PrismaRegistryReadRepository implements RegistryReadRepository {
   async findFacilityByRegistryId(
     registryFacilityId: string
@@ -34,11 +59,26 @@ export class PrismaRegistryReadRepository implements RegistryReadRepository {
     }
 
     const professionalIds = [...new Set(associations.map((a) => a.professionalId))];
-    const professionals = await prisma.registryProfessional.findMany({
-      where: { professionalId: { in: professionalIds } },
-    });
+    const [professionals, workloads] = await Promise.all([
+      prisma.registryProfessional.findMany({
+        where: { professionalId: { in: professionalIds } },
+      }),
+      prisma.registryProfessionalWorkload.findMany({
+        where: {
+          facilityId: registryFacilityId,
+          professionalId: { in: professionalIds },
+        },
+      }),
+    ]);
 
     const professionalById = new Map(professionals.map((p) => [p.professionalId, p]));
+    const workloadsByProfessionalId = new Map<string, typeof workloads>();
+
+    for (const workload of workloads) {
+      const existing = workloadsByProfessionalId.get(workload.professionalId) ?? [];
+      existing.push(workload);
+      workloadsByProfessionalId.set(workload.professionalId, existing);
+    }
 
     return associations
       .map((association) => {
@@ -47,16 +87,26 @@ export class PrismaRegistryReadRepository implements RegistryReadRepository {
           return null;
         }
 
+        const workload = pickWorkloadCrm(
+          workloadsByProfessionalId.get(association.professionalId) ?? [],
+          association.occupationCode,
+          association.employmentTypeCode
+        );
+
         return projectRegistryProfessional({
           professionalId: professional.professionalId,
           fullName: professional.fullName,
           socialName: professional.socialName,
+          taxId: professional.taxId,
           occupationCode: association.occupationCode,
           municipalityId: association.municipalityId,
           employmentTypeCode: association.employmentTypeCode,
           startDate: association.startDate,
           terminationDate: association.terminationDate,
           lastUpdatedDate: association.lastUpdatedDate,
+          crmCouncil: workload?.professionalCouncilCode ?? null,
+          crmNumber: workload?.licenseNumber ?? null,
+          crmState: workload?.licenseState ?? null,
         });
       })
       .filter((row): row is RegistryProfessionalProjection => row !== null);

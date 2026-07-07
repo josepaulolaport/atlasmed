@@ -9,6 +9,7 @@ export interface TerritoryTypeRecord {
   assignableToManagers: boolean;
   isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
+  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -25,6 +26,7 @@ export interface CreateTerritoryTypeInput {
   assignableToManagers?: boolean;
   isCountryLevel?: boolean;
   blockSiblingOverlap?: boolean;
+  participatesInGroupingHierarchy?: boolean;
   sortOrder?: number;
 }
 
@@ -37,6 +39,7 @@ export interface UpdateTerritoryTypeInput {
   assignableToManagers?: boolean;
   isCountryLevel?: boolean;
   blockSiblingOverlap?: boolean;
+  participatesInGroupingHierarchy?: boolean;
   sortOrder?: number;
   isActive?: boolean;
 }

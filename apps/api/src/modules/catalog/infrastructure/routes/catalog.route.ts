@@ -202,13 +202,13 @@ const updateHealthcareProviderRoute = new Elysia()
 
 const listFacilitySharesRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "facilityId" }))
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
-    "/facilities/:facilityId/healthcare-provider-shares",
+    "/facilities/:id/healthcare-provider-shares",
     async ({ params, getScope }) => {
       const scope = await getScope();
       return catalogUseCases.listFacilityShares().execute({
-        facilityId: params.facilityId,
+        facilityId: params.id,
         scope,
       });
     },
@@ -223,13 +223,13 @@ const listFacilitySharesRoute = new Elysia()
 
 const createFacilityShareRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "facilityId" }))
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .post(
-    "/facilities/:facilityId/healthcare-provider-shares",
+    "/facilities/:id/healthcare-provider-shares",
     async ({ params, body, getScope }) => {
       const scope = await getScope();
       return catalogUseCases.createFacilityShare().execute({
-        facilityId: params.facilityId,
+        facilityId: params.id,
         healthcareProviderId: body.healthcareProviderId,
         sharePercent: body.sharePercent,
         scope,

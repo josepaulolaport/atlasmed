@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { clinicsApi } from "@/lib/api/facilities";
+import { facilitiesApi } from "@/lib/api/facilities";
 import { mapsApi } from "@/lib/api/maps";
+import { getApiErrorMessage } from "@/lib/api/errors";
 import { canManageFacilities, canReadFacilities } from "@/lib/permissions";
 import { useTerritoryLabels } from "@/components/territory/territory-picker";
 import type { Facility } from "@/types/facility";
@@ -33,7 +34,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Search } from "lucide-react";
 
-function territoryStatusBadge(status?: Clinic["territoryAssignmentStatus"]) {
+function territoryStatusBadge(status?: Facility["territoryAssignmentStatus"]) {
   if (!status || status === "assigned") return null;
   return (
     <Badge variant={status === "ambiguous" ? "secondary" : "outline"} className="ml-2 text-xs">
@@ -42,16 +43,16 @@ function territoryStatusBadge(status?: Clinic["territoryAssignmentStatus"]) {
   );
 }
 
-export default function ClinicsPage() {
+export default function FacilitiesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [clinics, setClinics] = useState<Facility[]>([]);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingFacility, setEditingClinic] = useState<Facility | null>(null);
+  const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
   const [formLat, setFormLat] = useState("");
@@ -73,20 +74,20 @@ export default function ClinicsPage() {
   useEffect(() => {
     if (!canRead) return;
 
-    const loadClinics = async () => {
+    const loadFacilities = async () => {
       setLoading(true);
       try {
-        const response = await clinicsApi.getFacilitys({
+        const response = await facilitiesApi.getFacilities({
           page,
           limit: 10,
           search: search || undefined,
         });
-        setClinics(response.data);
+        setFacilities(response.data);
         setTotalPages(response.pagination.totalPages);
-      } catch {
+      } catch (error) {
         toast({
           title: "Error",
-          description: "Failed to load clinics",
+          description: getApiErrorMessage(error, "Failed to load facilities"),
           variant: "destructive",
         });
       } finally {
@@ -94,11 +95,11 @@ export default function ClinicsPage() {
       }
     };
 
-    void loadClinics();
+    void loadFacilities();
   }, [page, search, refreshKey, canRead]);
 
   const openCreateDialog = () => {
-    setEditingClinic(null);
+    setEditingFacility(null);
     setFormName("");
     setFormAddress("");
     setFormLat("");
@@ -106,12 +107,12 @@ export default function ClinicsPage() {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (clinic: Clinic) => {
-    setEditingClinic(clinic);
-    setFormName(clinic.name);
-    setFormAddress(clinic.address ?? "");
-    setFormLat(clinic.lat != null ? String(clinic.lat) : "");
-    setFormLng(clinic.lng != null ? String(clinic.lng) : "");
+  const openEditDialog = (facility: Facility) => {
+    setEditingFacility(facility);
+    setFormName(facility.name);
+    setFormAddress(facility.address ?? "");
+    setFormLat(facility.lat != null ? String(facility.lat) : "");
+    setFormLng(facility.lng != null ? String(facility.lng) : "");
     setDialogOpen(true);
   };
 
@@ -194,8 +195,8 @@ export default function ClinicsPage() {
 
     setSaving(true);
     try {
-      if (editingClinic) {
-        await clinicsApi.updateFacility(editingClinic.id, {
+      if (editingFacility) {
+        await facilitiesApi.updateFacility(editingFacility.id, {
           name: formName.trim(),
           address: formAddress.trim() || null,
           lat,
@@ -207,7 +208,7 @@ export default function ClinicsPage() {
           variant: "success",
         });
       } else {
-        await clinicsApi.createFacility({
+        await facilitiesApi.createFacility({
           name: formName.trim(),
           address: formAddress.trim() || undefined,
           lat: lat ?? undefined,
@@ -222,10 +223,10 @@ export default function ClinicsPage() {
 
       setDialogOpen(false);
       setRefreshKey((value) => value + 1);
-    } catch {
+    } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to save clinic",
+        description: getApiErrorMessage(error, "Failed to save facility"),
         variant: "destructive",
       });
     } finally {
@@ -233,11 +234,11 @@ export default function ClinicsPage() {
     }
   };
 
-  const handleDelete = async (clinic: Clinic) => {
-    if (!confirm(`Delete clinic "${clinic.name}"?`)) return;
+  const handleDelete = async (facility: Facility) => {
+    if (!confirm(`Delete facility "${facility.name}"?`)) return;
 
     try {
-      await clinicsApi.deleteFacility(clinic.id);
+      await facilitiesApi.deleteFacility(facility.id);
       toast({ title: "Success", description: "Facility deleted", variant: "success" });
       setRefreshKey((value) => value + 1);
     } catch {
@@ -257,15 +258,15 @@ export default function ClinicsPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Clinics</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Facilities</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Clinics are assigned to territories automatically from coordinates
+            Facilities are assigned to territories automatically from coordinates
           </p>
         </div>
         {canManage && (
           <Button onClick={openCreateDialog}>
             <Plus className="mr-2 h-4 w-4" />
-            Add Clinic
+            Add facility
           </Button>
         )}
       </div>
@@ -275,7 +276,7 @@ export default function ClinicsPage() {
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <Input
-              placeholder="Search clinics..."
+              placeholder="Search facilities..."
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
@@ -287,7 +288,7 @@ export default function ClinicsPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="py-8 text-center text-gray-500">Loading clinics...</div>
+            <div className="py-8 text-center text-gray-500">Loading facilities...</div>
           ) : (
             <>
               <Table>
@@ -301,37 +302,37 @@ export default function ClinicsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clinics.length === 0 ? (
+                  {facilities.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={canManage ? 5 : 4}
                         className="text-center text-gray-500"
                       >
-                        No clinics found
+                        No facilities found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    clinics.map((clinic) => (
-                      <TableRow key={clinic.id}>
+                    facilities.map((facility) => (
+                      <TableRow key={facility.id}>
                         <TableCell className="font-medium">
                           <Link
-                            href={`/facilities/${clinic.id}`}
+                            href={`/facilities/${facility.id}`}
                             className="text-blue-600 hover:underline"
                           >
-                            {clinic.name}
+                            {facility.name}
                           </Link>
                         </TableCell>
-                        <TableCell>{clinic.address || "—"}</TableCell>
+                        <TableCell>{facility.address || "—"}</TableCell>
                         <TableCell className="text-sm">
-                          {clinic.lat != null && clinic.lng != null
-                            ? `${clinic.lat.toFixed(4)}, ${clinic.lng.toFixed(4)}`
+                          {facility.lat != null && facility.lng != null
+                            ? `${facility.lat.toFixed(4)}, ${facility.lng.toFixed(4)}`
                             : "—"}
                         </TableCell>
                         <TableCell>
                           <span>
-                            {clinic.territoryId ? getLabel(clinic.territoryId) : "—"}
+                            {facility.territoryId ? getLabel(facility.territoryId) : "—"}
                           </span>
-                          {territoryStatusBadge(clinic.territoryAssignmentStatus)}
+                          {territoryStatusBadge(facility.territoryAssignmentStatus)}
                         </TableCell>
                         {canManage && (
                           <TableCell>
@@ -339,14 +340,14 @@ export default function ClinicsPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => openEditDialog(clinic)}
+                                onClick={() => openEditDialog(facility)}
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDelete(clinic)}
+                                onClick={() => handleDelete(facility)}
                               >
                                 <Trash2 className="h-4 w-4 text-red-600" />
                               </Button>
@@ -386,7 +387,7 @@ export default function ClinicsPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingFacility ? "Edit Clinic" : "Create Clinic"}</DialogTitle>
+            <DialogTitle>{editingFacility ? "Edit facility" : "Create facility"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -439,9 +440,9 @@ export default function ClinicsPage() {
                 />
               </div>
             </div>
-            {editingClinic?.territoryId && (
+            {editingFacility?.territoryId && (
               <p className="text-sm text-gray-600">
-                Current territory: {getLabel(editingClinic.territoryId)} (assigned automatically)
+                Current territory: {getLabel(editingFacility.territoryId)} (assigned automatically)
               </p>
             )}
             <p className="text-xs text-gray-500">

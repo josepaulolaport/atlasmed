@@ -2,41 +2,40 @@ import { describe, expect, it } from "bun:test";
 import { serializeBoundaryResolution } from "./territory-boundary-resolution.utils";
 
 describe("serializeBoundaryResolution", () => {
-  it("serializes operational patch resolution", () => {
-    const result = serializeBoundaryResolution({
-      mode: "operational",
-      geoMembershipStatus: "ready",
-      membershipCount: 2,
-      referenceTerritoryIds: ["sp", "mun-1"],
-    });
-
-    expect(result).toEqual({
+  it("serializes rep patch resolution", () => {
+    expect(
+      serializeBoundaryResolution({
+        mode: "rep_patch",
+        managerTerritoryId: "zone-1",
+        managerZoneCandidates: [{ id: "zone-1", code: "ZONE-1", name: "Zone 1" }],
+        clinicRecomputeEnqueued: true,
+      })
+    ).toEqual({
       success: true,
-      mode: "operational",
-      geoMembershipStatus: "ready",
-      membershipCount: 2,
-      referenceTerritoryIds: ["sp", "mun-1"],
+      mode: "rep_patch",
+      managerTerritoryId: "zone-1",
+      managerZoneCandidates: [{ id: "zone-1", code: "ZONE-1", name: "Zone 1" }],
+      clinicRecomputeEnqueued: true,
     });
   });
 
-  it("serializes reference geography resolution", () => {
-    const result = serializeBoundaryResolution({
-      mode: "reference",
-      parentAssignmentStatus: "resolved",
-      parentAssignmentSource: "geo",
-      primaryParentId: "parent-1",
-      rollupAncestorIds: ["rollup-1"],
-      candidates: [{ id: "c-1", code: "BR-UF-SP", overlapRatio: 0.9 }],
-    });
-
-    expect(result).toEqual({
+  it("serializes manager zone resolution", () => {
+    expect(
+      serializeBoundaryResolution({
+        mode: "manager_zone",
+        repPatchCount: 3,
+      })
+    ).toEqual({
       success: true,
-      mode: "reference",
-      parentAssignmentStatus: "resolved",
-      parentAssignmentSource: "geo",
-      primaryParentId: "parent-1",
-      rollupAncestorIds: ["rollup-1"],
-      candidates: [{ id: "c-1", code: "BR-UF-SP", overlapRatio: 0.9 }],
+      mode: "manager_zone",
+      repPatchCount: 3,
+    });
+  });
+
+  it("serializes grouping resolution", () => {
+    expect(serializeBoundaryResolution({ mode: "grouping" })).toEqual({
+      success: true,
+      mode: "grouping",
     });
   });
 });

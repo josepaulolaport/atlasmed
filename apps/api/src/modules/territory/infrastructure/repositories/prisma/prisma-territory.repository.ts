@@ -17,6 +17,7 @@ function mapType(record: {
   assignableToManagers: boolean;
   isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
+  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -37,9 +38,8 @@ function mapTerritory(territory: {
   regionSlug: string | null;
   stateCode: string | null;
   parentId: string | null;
+  managerTerritoryId: string | null;
   isActive: boolean;
-  parentAssignmentStatus: TerritoryRecord["parentAssignmentStatus"];
-  parentAssignmentSource: TerritoryRecord["parentAssignmentSource"];
   organizationId: string | null;
   createdAt: Date;
   updatedAt: Date;
@@ -56,9 +56,8 @@ function mapTerritory(territory: {
     regionSlug: territory.regionSlug,
     stateCode: territory.stateCode,
     parentId: territory.parentId,
+    managerTerritoryId: territory.managerTerritoryId,
     isActive: territory.isActive,
-    parentAssignmentStatus: territory.parentAssignmentStatus,
-    parentAssignmentSource: territory.parentAssignmentSource,
     organizationId: territory.organizationId,
     createdAt: territory.createdAt,
     updatedAt: territory.updatedAt,
@@ -92,11 +91,35 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
     return territory ? mapTerritory(territory) : null;
   }
 
+  async findByIds(ids: string[]): Promise<TerritoryRecord[]> {
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const territories = await prisma.territory.findMany({
+      where: { id: { in: ids } },
+      include: territoryInclude,
+    });
+    return territories.map(mapTerritory);
+  }
+
   async findAllActive(): Promise<TerritoryRecord[]> {
     const territories = await prisma.territory.findMany({
       where: { isActive: true },
       include: territoryInclude,
       orderBy: [{ code: "asc" }],
+    });
+    return territories.map(mapTerritory);
+  }
+
+  async findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]> {
+    const territories = await prisma.territory.findMany({
+      where: {
+        isActive: true,
+        territoryType: { slug: typeSlug },
+      },
+      include: territoryInclude,
+      orderBy: [{ name: "asc" }],
     });
     return territories.map(mapTerritory);
   }
@@ -119,21 +142,23 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
     });
   }
 
-  async countClinics(territoryId: string): Promise<number> {
-    const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-      SELECT COUNT(*)::bigint AS count
-      FROM facilities c
-      WHERE c."deletedAt" IS NULL
-        AND c."territoryId" IS NOT NULL
-        AND EXISTS (
-          SELECT 1
-          FROM territory_closure tc
-          WHERE tc."ancestorId" = ${territoryId}
-            AND tc."descendantId" = c."territoryId"
-        )
-    `;
+  async countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number> {
+    return prisma.territory.count({
+      where: {
+        managerTerritoryId,
+        isActive: true,
+        territoryType: { assignsClinics: true },
+      },
+    });
+  }
 
-    return Number(rows[0]?.count ?? 0);
+  async countClinics(territoryId: string): Promise<number> {
+    return prisma.facility.count({
+      where: {
+        deletedAt: null,
+        territoryId,
+      },
+    });
   }
 
   async countAssignedUsers(territoryId: string): Promise<number> {
@@ -154,8 +179,7 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
         regionSlug: input.regionSlug ?? null,
         stateCode: input.stateCode ?? null,
         parentId: input.parentId ?? null,
-        parentAssignmentStatus: input.parentAssignmentStatus ?? "resolved",
-        parentAssignmentSource: input.parentAssignmentSource ?? null,
+        managerTerritoryId: input.managerTerritoryId ?? null,
         organizationId: input.organizationId ?? null,
       },
       include: territoryInclude,
@@ -168,11 +192,9 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
     data: {
       name?: string;
       parentId?: string | null;
+      managerTerritoryId?: string | null;
       isActive?: boolean;
       countryCode?: string | null;
-      parentAssignmentStatus?: TerritoryRecord["parentAssignmentStatus"];
-      parentAssignmentSource?: TerritoryRecord["parentAssignmentSource"];
-      geoMembershipStatus?: "pending" | "ready" | "failed" | null;
     }
   ): Promise<TerritoryRecord> {
     const territory = await prisma.territory.update({
@@ -195,15 +217,20 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
     return territory ? mapTerritory(territory) : null;
   }
 
-  async findAmbiguousParentAssignments(): Promise<TerritoryRecord[]> {
-    const territories = await prisma.territory.findMany({
+  async findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]> {
+    if (managerTerritoryIds.length === 0) {
+      return [];
+    }
+
+    const patches = await prisma.territory.findMany({
       where: {
         isActive: true,
-        parentAssignmentStatus: "ambiguous",
+        managerTerritoryId: { in: managerTerritoryIds },
+        territoryType: { assignsClinics: true },
       },
-      include: territoryInclude,
-      orderBy: [{ updatedAt: "desc" }],
+      select: { id: true },
     });
-    return territories.map(mapTerritory);
+
+    return patches.map((patch) => patch.id);
   }
 }

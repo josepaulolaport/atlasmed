@@ -1,9 +1,3 @@
-export interface ParentOverlapCandidate {
-  id: string;
-  code: string;
-  overlapRatio: number;
-}
-
 export interface SiblingOverlapConflict {
   id: string;
   code: string;
@@ -27,14 +21,20 @@ export interface GeoJsonGeometry {
   coordinates: unknown;
 }
 
-export interface ClinicInReferenceTerritory {
+export interface ManagerZoneCandidate {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface FacilityInGroupingTerritory {
   id: string;
   name: string;
   lat: number;
   lng: number;
   territoryId: string;
-  operationalTerritoryCode: string;
-  operationalTerritoryName: string;
+  repPatchCode: string;
+  repPatchName: string;
 }
 
 export interface TerritorySpatialRepository {
@@ -59,13 +59,6 @@ export interface TerritorySpatialRepository {
 
   findContainingClinicAssignmentTerritoryIds(lng: number, lat: number): Promise<string[]>;
 
-  scoreParentCandidates(input: {
-    territoryId: string;
-    geoJson: GeoJsonGeometry;
-    countryCode: string;
-    excludeTerritoryIds: string[];
-  }): Promise<ParentOverlapCandidate[]>;
-
   findOverlappingSiblingTerritories(input: {
     territoryId: string;
     territoryTypeId: string;
@@ -73,14 +66,20 @@ export interface TerritorySpatialRepository {
     geoJson: GeoJsonGeometry;
   }): Promise<SiblingOverlapConflict[]>;
 
+  findContainingManagerZones(input: {
+    geoJson: GeoJsonGeometry;
+    countryCode: string;
+  }): Promise<ManagerZoneCandidate[]>;
+
+  findRepPatchesOutsideManagerZone(input: {
+    managerZoneId: string;
+    managerZoneGeoJson: GeoJsonGeometry;
+  }): Promise<Array<{ id: string; code: string }>>;
+
   updateBoundaryMetadata(territoryId: string): Promise<void>;
 
-  getClippedBoundaryAsGeoJson(
-    operationalTerritoryId: string,
-    referenceTerritoryId: string
-  ): Promise<GeoJsonGeometry | null>;
-
-  findAssignedClinicsInReferenceTerritory(
-    referenceTerritoryId: string
-  ): Promise<FacilityInReferenceTerritory[]>;
+  findAssignedClinicsInGroupingTerritory(input: {
+    groupingTerritoryId: string;
+    scopedPatchIds: string[];
+  }): Promise<FacilityInGroupingTerritory[]>;
 }

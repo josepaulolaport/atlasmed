@@ -50,10 +50,10 @@ export function Navbar() {
       ? [{ name: "Users", href: "/users", icon: Users }]
       : []),
     ...(canReadFacilities(user.role.name)
-      ? [{ name: "Clinics", href: "/facilities", icon: Building2 }]
+      ? [{ name: "Facilities", href: "/facilities", icon: Building2 }]
       : []),
     ...(canReadProfessionals(user.role.name)
-      ? [{ name: "Doctors", href: "/professionals", icon: Stethoscope }]
+      ? [{ name: "Professionals", href: "/professionals", icon: Stethoscope }]
       : []),
     ...(canReadTerritories(user.role.name)
       ? [{ name: "Territories", href: "/territories", icon: MapPin }]

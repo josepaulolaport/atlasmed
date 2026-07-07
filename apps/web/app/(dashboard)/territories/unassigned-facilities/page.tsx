@@ -39,11 +39,11 @@ import type { UnassignedFacility } from "@/types/territory";
 export default function UnassignedFacilitiesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [clinics, setClinics] = useState<UnassignedClinic[]>([]);
+  const [facilities, setFacilities] = useState<UnassignedFacility[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [overrideFacility, setOverrideClinic] = useState<UnassignedFacility | null>(null);
+  const [overrideFacility, setOverrideFacility] = useState<UnassignedFacility | null>(null);
   const [overrideTerritoryId, setOverrideTerritoryId] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
   const [saving, setSaving] = useState(false);
@@ -52,16 +52,16 @@ export default function UnassignedFacilitiesPage() {
   const canRead = user ? canReadTerritories(user.role.name) : false;
   const userIsAdmin = user ? isAdmin(user.role.name) : false;
 
-  const loadClinics = useCallback(async () => {
+  const loadFacilities = useCallback(async () => {
     setLoading(true);
     try {
       const response = await territoriesApi.listUnassignedFacilities({ page, limit: 20 });
-      setClinics(response.data);
+      setFacilities(response.data);
       setTotalPages(response.pagination.totalPages);
     } catch {
       toast({
         title: "Error",
-        description: "Failed to load unassigned clinics",
+        description: "Failed to load unassigned facilities",
         variant: "destructive",
       });
     } finally {
@@ -77,16 +77,16 @@ export default function UnassignedFacilitiesPage() {
 
   useEffect(() => {
     if (canRead) {
-      void loadClinics();
+      void loadFacilities();
     }
-  }, [canRead, loadClinics]);
+  }, [canRead, loadFacilities]);
 
   const handleOverride = async () => {
     if (!overrideFacility || !overrideTerritoryId) return;
 
     setSaving(true);
     try {
-      await territoriesApi.overrideClinicTerritory(overrideClinic.id, {
+      await territoriesApi.overrideClinicTerritory(overrideFacility.id, {
         territoryId: overrideTerritoryId,
         reason: overrideReason.trim() || undefined,
       });
@@ -95,10 +95,10 @@ export default function UnassignedFacilitiesPage() {
         description: "Facility territory overridden",
         variant: "success",
       });
-      setOverrideClinic(null);
+      setOverrideFacility(null);
       setOverrideTerritoryId("");
       setOverrideReason("");
-      await loadClinics();
+      await loadFacilities();
     } catch (err) {
       toast({
         title: "Error",
@@ -119,7 +119,7 @@ export default function UnassignedFacilitiesPage() {
         description: "Facility geo lock removed",
         variant: "success",
       });
-      await loadClinics();
+      await loadFacilities();
     } catch (err) {
       toast({
         title: "Error",
@@ -167,7 +167,7 @@ export default function UnassignedFacilitiesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {clinics.length === 0 ? (
+                  {facilities.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={userIsAdmin ? 4 : 3}
@@ -177,30 +177,30 @@ export default function UnassignedFacilitiesPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    clinics.map((clinic) => (
-                      <TableRow key={clinic.id}>
+                    facilities.map((facility) => (
+                      <TableRow key={facility.id}>
                         <TableCell>
                           <Link
-                            href={`/facilities/${clinic.id}`}
+                            href={`/facilities/${facility.id}`}
                             className="font-medium text-blue-600 hover:underline"
                           >
-                            {clinic.id}
+                            {facility.id}
                           </Link>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {clinic.lat != null && clinic.lng != null
-                            ? `${clinic.lat.toFixed(4)}, ${clinic.lng.toFixed(4)}`
+                          {facility.lat != null && facility.lng != null
+                            ? `${facility.lat.toFixed(4)}, ${facility.lng.toFixed(4)}`
                             : "—"}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              clinic.territoryAssignmentStatus === "ambiguous"
+                              facility.territoryAssignmentStatus === "ambiguous"
                                 ? "secondary"
                                 : "destructive"
                             }
                           >
-                            {clinic.territoryAssignmentStatus}
+                            {facility.territoryAssignmentStatus}
                           </Badge>
                         </TableCell>
                         {userIsAdmin && (
@@ -210,7 +210,7 @@ export default function UnassignedFacilitiesPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
-                                  setOverrideClinic(clinic);
+                                  setOverrideFacility(facility);
                                   setOverrideTerritoryId("");
                                   setOverrideReason("");
                                 }}
@@ -220,10 +220,10 @@ export default function UnassignedFacilitiesPage() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => handleUnlock(clinic.id)}
-                                disabled={unlockingId === clinic.id}
+                                onClick={() => handleUnlock(facility.id)}
+                                disabled={unlockingId === facility.id}
                               >
-                                {unlockingId === clinic.id ? "..." : "Unlock geo"}
+                                {unlockingId === facility.id ? "..." : "Unlock geo"}
                               </Button>
                             </div>
                           </TableCell>
@@ -260,14 +260,14 @@ export default function UnassignedFacilitiesPage() {
 
       <Dialog
         open={overrideFacility !== null}
-        onOpenChange={(open) => !open && setOverrideClinic(null)}
+        onOpenChange={(open) => !open && setOverrideFacility(null)}
       >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Override clinic territory</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">Clinic: {overrideClinic?.id}</p>
+            <p className="text-sm text-gray-600">Facility: {overrideFacility?.id}</p>
             <div>
               <Label>Territory</Label>
               <TerritoryPicker
@@ -286,7 +286,7 @@ export default function UnassignedFacilitiesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOverrideClinic(null)}>
+            <Button variant="outline" onClick={() => setOverrideFacility(null)}>
               Cancel
             </Button>
             <Button

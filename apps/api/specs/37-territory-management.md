@@ -1,15 +1,15 @@
 # Spec 37 — Territory Management
 
-**Domain:** Territory Management (Hierarchy · Boundaries · Assignments · Geo Membership · Coverage Analytics)  
-**Status:** Implemented (backend); partial web admin  
-**Last Updated:** 2026-06-19  
-**Scope:** API, PostGIS, scope resolver, geo membership index, Brazil reference geography ingestion, web boundary editor (Mapbox).
+**Domain:** Territory Management (Assignment · Grouping · Boundaries · Scope · Analytics)  
+**Status:** Implemented (backend); web admin updated for dual-graph model  
+**Last Updated:** 2026-07-07  
+**Scope:** API, PostGIS, scope resolver, Brazil reference geography ingestion, web boundary editor (Mapbox).
 
 **Replaces / supersedes:** F-101 appendix in [Spec 00 — Platform Foundation](./00-platform-foundation.md#territory-entity-requirements)  
 **Depends on:** [Spec 00 — Platform Foundation](./00-platform-foundation.md) (F-008 scope system, F-009 user management)  
 **Prerequisite for:** [Spec 10 — Market Segmentation](./10-market-segmentation.md), [Spec 11 — Visit Lifecycle](./11-visit-lifecycle-frequency.md), [Spec 05 — Territory Map](./05-territory-map.md), [Spec 06 — Orders](./06-orders.md), [Spec 25 — Admin Analytics](./25-admin-marketing-analytics.md)
 
-> **Implementation status:** Core backend is live. `Territory`, `TerritoryType`, `TerritoryClosure`, `TerritoryGeoMembership`, PostGIS boundaries, clinic geo assignment, scope expansion via closure + geo membership, Brazil IBGE ingestion, and REST APIs are implemented. Web admin includes territory CRUD dialogs and a Mapbox boundary editor. State/municipality **coverage map UI** (clipped patches + clinic markers) is deferred; the `GET /territories/:id/coverage-view` API is implemented.
+> **Implementation status:** Core backend is live. The system uses a **dual-graph territory model**: flat manager zones → rep patches for assignment/scope, and a separate grouping tree (region/state/municipality) for filter drill-down and analytics. Geo membership, geo-parenting, rollup links, and ambiguous-parent queues have been removed.
 
 ---
 
@@ -17,10 +17,10 @@
 
 Territory management defines **where** commercial activity happens in Atlasmed. It answers four distinct questions:
 
-1. **Structure** — How territories are organized (reference geography tree + operational patches).
-2. **Geo linkage** — Which reference regions (states, municipalities) each operational patch intersects.
-3. **Membership** — Which establishments belong to which operational patch (geo-driven, not rep-assigned).
-4. **Access** — Which representatives and managers can operate on which territories (assignment with descendant + geo-membership expansion).
+1. **Assignment** — Which manager zones contain which rep patches (flat containment graph).
+2. **Grouping** — How administrative shapes are organized for filter navigation (tree only).
+3. **Membership** — Which clinics belong to which rep patch (geo-driven on write).
+4. **Access** — Which representatives and managers can operate on which territories (FK-based scope expansion).
 
 Territory is the **first access-control axis**. Market segmentation (Spec 10) is the second axis and is applied **after** territory scope is resolved.
 
@@ -29,63 +29,59 @@ Territory is the **first access-control axis**. Market segmentation (Spec 10) is
 | Rule | Description |
 |------|-------------|
 | **Reps are assigned to territories, not clinics** | `UserTerritoryAssignment` links users to territory nodes. Reps never receive direct clinic assignments. |
-| **Clinics belong to exactly one operational patch** | `Clinic.territoryId` FK to a territory with `TerritoryType.assignsFacilities = true` (slug `patch`). |
-| **Parent assignment expands downward** | User scope includes closure descendants of assigned territories **plus** operational patches linked via `territory_geo_membership` when assigned to a reference territory. |
-| **Geo assigns membership; FK stores it** | Point-in-polygon runs on write (ingest, create, boundary change). Reads filter on `Clinic.territoryId` — never recompute polygons per request. |
-| **Reference geography uses manual tree parents** | Country, macro-region, state, and municipality nodes keep admin-defined `parentId`; boundaries do not auto-reparent them. |
-| **Operational patches use geo membership, not tree parent for scope** | A patch may span multiple states/municipalities; intersections are stored in `territory_geo_membership` and drive scope + analytics. |
+| **Clinics belong to exactly one rep patch** | `Clinic.territoryId` FK to a territory with `TerritoryType.assignsClinics = true`. |
+| **Manager scope expands via FK** | Manager assigned to a manager zone sees rep patches where `rep_patch.managerTerritoryId` matches. No closure or geometry at login. |
+| **Grouping tree does not drive scope** | `parentId` + closure apply only to types with `participatesInGroupingHierarchy = true`. |
+| **Geo assigns membership; FK stores it** | Point-in-polygon runs on write (ingest, create, boundary change). Reads filter on `Clinic.territoryId`. |
+| **Rep patches must be fully inside one manager zone** | On boundary save, `ST_CoveredBy(patch, manager_zone)` must resolve to exactly one active manager zone. |
 | **Transactions snapshot territory** | Orders and visits store `territoryId` at creation time for accurate historical roll-up (Spec 06 / 11 — when those specs ship). |
 
-### Dual-layer model (reference vs operational)
+### Dual-graph model (assignment vs grouping)
 
-The system uses **two complementary layers**, not a single fixed 4-level tree:
+The system uses **two independent spatial graphs**:
 
-| Layer | Territory types (slug) | Parent | Boundary | Clinics |
-|-------|------------------------|--------|----------|---------|
-| **Reference geography** | `country`, `region`, `state`, `intermediate` | Manual tree (`parentId` + closure) | Full IBGE/admin boundary | No |
-| **Operational** | `patch` (`assignsFacilities: true`) | Defaults to active country (`br`) | Full patch boundary (may be MultiPolygon) | Yes |
+| Graph | Structure | Drives scope? | Drives analytics filter? |
+|-------|-----------|---------------|--------------------------|
+| **Assignment** | Flat manager zones → rep patches via `managerTerritoryId` | Yes | No |
+| **Grouping** | Tree (`parentId` + closure) for region/state/municipality types | No | Yes (UI drill-down + `ST_Covers` on clinic point) |
 
-**Geo membership** (`territory_geo_membership`) links operational patches to reference `state` and `intermediate` (municipality) territories. Membership rows are **computed automatically** when a patch boundary is saved — admins do not declare intersections manually.
+**Manager zones** (`manager_zone` type slug) are flat — no tree parent. Sibling overlap is blocked.
 
-| Field | Purpose |
-|-------|---------|
-| `overlapRatio` | Share of patch area inside the reference region (min 1% threshold) |
-| `intersectionAreaSqKm` | Absolute intersection area for ranking/debug |
-| `referenceTypeSlug` | `state` or `intermediate` |
+**Rep patches** (`rep_patch` / legacy `patch` slug) link to exactly one manager zone. Sibling overlap is blocked.
 
-**Clipped geometry** (patch ∩ reference) is computed **on demand** via `ST_Intersection` for map display and coverage APIs. A persistent clipped-geometry cache is **deferred** until measured performance requires it.
+**Grouping territories** (`region`, `state`, `intermediate`/`municipality`, `country`) use the tree for navigation. Overlapping grouping boundaries are allowed; analytics filter uses the selected node's own polygon.
 
-### Territory types (replaces fixed levels 0–3)
+### Territory types
 
-Types are configurable via `TerritoryType` records. Brazil seed types:
+Types are configurable via `TerritoryType` records. Key flags:
 
-| Slug | `assignsFacilities` | `canHaveBoundary` | `isCountryLevel` | Role |
-|------|------------------|-------------------|------------------|------|
-| `country` | false | true | true | Root (`BR`) |
-| `region` | false | true | false | IBGE macro-region |
-| `state` | false | true | false | UF |
-| `intermediate` | false | true | false | Municipality |
-| `patch` | true | true | false | Sales territory |
+| Flag | Purpose |
+|------|---------|
+| `assignsClinics` | Rep patch — receives clinic FK assignments |
+| `assignableToManagers` | Manager zone — managers can be assigned here |
+| `assignableToUsers` | Rep patch — field reps can be assigned here |
+| `participatesInGroupingHierarchy` | Appears in grouping tree; supports `parentId` + closure |
+| `blockSiblingOverlap` | Reject overlapping sibling boundaries of the same type |
+| `canHaveBoundary` | Supports PostGIS polygon boundary |
+| `isCountryLevel` | Root grouping node per country |
 
-Type flags also control: `assignableToUsers`, `assignableToManagers`, `blockSiblingOverlap` (patches block overlapping siblings).
+Suggested Brazil seed configuration:
+
+| Slug | assignsClinics | assignableToManagers | assignableToUsers | participatesInGroupingHierarchy | blockSiblingOverlap |
+|------|----------------|----------------------|-------------------|--------------------------------|---------------------|
+| `manager_zone` | false | true | false | false | true |
+| `rep_patch` / `patch` | true | false | true | false | true |
+| `country` | false | false | false | true | false |
+| `region` | false | false | false | true | false |
+| `state` | false | false | false | true | false |
+| `intermediate` | false | false | false | true | false |
 
 ### Brazil reference geography
 
 Script: `apps/api/src/scripts/ingest-brazil-geography.ts`  
 Run: `bun run db:ingest:brazil` (from `apps/api`)
 
-Hierarchy ingested from IBGE API v3:
-
-```
-Brasil (BR)
- └── 5 macro-regions (BR-MACRO-{sigla})
-      └── 27 states (BR-UF-{UF})
-           └── ~5,570 municipalities (IBGE code)
-```
-
-- Invalid IBGE geometries are repaired with `ST_MakeValid` on save.
-- Legacy `brasil` country root is deactivated; active root is `br` / `BR`.
-- Closure table is rebuilt after ingestion.
+IBGE-aligned grouping shapes are ingested as optional seed data. Ingestion uses the same create/boundary path as manual admin entry — no special runtime geo-parent behavior.
 
 ### Relationship to other specs
 
@@ -96,7 +92,7 @@ Brasil (BR)
 | **Spec 33** | CNES ingestion triggers geo assignment when clinic coordinates are present. |
 | **Spec 05** | Map pins filtered by effective territory scope (+ segments after Spec 10). |
 | **Spec 06 / 11** | Orders and visits snapshot `territoryId` from clinic at creation. |
-| **Spec 25** | Admin analytics filter by territory node includes descendants + geo-linked patches. |
+| **Spec 25** | Admin analytics: scoped rep patches AND optional grouping spatial filter. |
 
 ---
 
@@ -105,16 +101,16 @@ Brasil (BR)
 ### Territory structure (admin)
 
 **US-TERR-01 — Create territory hierarchy**  
-As an admin, I want to create territories with configurable types, so that reference geography and operational patches coexist.
+As an admin, I want to create grouping territories with configurable types, so that filter navigation matches administrative structure.
 
-**US-TERR-02 — Reparent territories**  
-As an admin, I want to change a territory's parent, so that I can reorganize reference geography without recreating data.
+**US-TERR-02 — Reparent grouping territories**  
+As an admin, I want to change a grouping territory's parent, so that I can reorganize reference geography without recreating data.
 
-**US-TERR-03 — Add operational patches**  
-As an admin, I want to add patch territories that may span multiple states/municipalities, so that sales coverage matches real boundaries.
+**US-TERR-03 — Add manager zones and rep patches**  
+As an admin, I want flat manager zones and rep patches fully contained in a zone, so that assignment scope is unambiguous.
 
 **US-TERR-04 — Submit territory boundary**  
-As an admin or manager, I want to submit GeoJSON for a territory, so that clinics are assigned (patches) or reference shapes are stored (IBGE layers).
+As an admin or manager, I want to submit GeoJSON for a territory, so that clinics are assigned (patches), manager containment is validated (patches), or grouping shapes are stored.
 
 **US-TERR-05 — Deactivate a territory**  
 As an admin, I want to deactivate a territory that is no longer used, so that it cannot receive new assignments while history is preserved.
@@ -122,10 +118,10 @@ As an admin, I want to deactivate a territory that is no longer used, so that it
 ### Representative & manager assignment
 
 **US-TERR-06 — Assign rep to territory**  
-As an admin, I want to assign a representative to one or more territories, so that they only see establishments in their coverage area.
+As an admin, I want to assign a representative to one or more rep patches, so that they only see establishments in their coverage area.
 
-**US-TERR-07 — Regional manager sees all children**  
-As a manager assigned to São Paulo state, I want to see clinics in patches that intersect SP **and** whose coordinates fall inside SP, so that I can oversee the state portion of cross-boundary patches.
+**US-TERR-07 — Regional manager sees zone patches**  
+As a manager assigned to a manager zone, I want to see clinics in rep patches linked to that zone.
 
 **US-TERR-08 — View my territory on profile**  
 As a representative, I want to see which territories I am assigned to, so that I understand my coverage scope.
@@ -133,18 +129,18 @@ As a representative, I want to see which territories I am assigned to, so that I
 ### Facility membership (automatic + override)
 
 **US-TERR-09 — Auto-assign clinic by location**  
-As the system, when a clinic is created or ingested with coordinates, I want to assign it to the patch whose boundary contains the point.
+As the system, when a clinic is created or ingested with coordinates, I want to assign it to the rep patch whose boundary contains the point.
 
 **US-TERR-10 — Manual override with approval**  
 As an admin, I want to move a clinic to a different patch when geo assignment is wrong, with an auditable approval trail.
 
 **US-TERR-11 — Recompute on boundary change**  
-As an admin, when I change a patch boundary, I want affected clinics re-evaluated and geo membership rebuilt.
+As an admin, when I change a rep patch boundary, I want affected clinics re-evaluated.
 
 ### Coverage analytics
 
-**US-TERR-12 — State coverage view**  
-As a manager, I want to see a state's outline, each intersecting patch clipped to that state, and clinics physically inside the state, so that I can analyze coverage within administrative boundaries.
+**US-TERR-12 — Grouping analytics view**  
+As a manager, I want to filter analytics by a grouping shape and see clinics in my scoped rep patches that fall inside that shape.
 
 **US-TERR-13 — Historical accuracy after moves**  
 As an admin, I want past orders and visits to retain the territory that applied at transaction time (when Spec 06/11 ship).
@@ -156,82 +152,73 @@ As an admin, I want past orders and visits to retain the territory that applied 
 ### Territory entity & hierarchy
 
 **AC-TERR-01**  
-WHEN an admin creates a territory THEN the system SHALL require: `name`, `territoryTypeId`, optional `parentId` (required for non-country types unless operational default applies), and `countryCode`. `slug` and `code` are derived from name/country rules.
+WHEN an admin creates a territory THEN the system SHALL require: `name`, `territoryTypeId`, optional `parentId` (required for grouping types except country), and `countryCode`.
 
 **AC-TERR-02**  
-WHEN a territory is created with a `parentId` THEN the parent SHALL exist and be active. The system SHALL prevent cycles.
+WHEN a grouping territory is created with a `parentId` THEN the parent SHALL exist, be active, and participate in the grouping hierarchy. The system SHALL prevent cycles.
 
 **AC-TERR-03**  
-WHEN `GET /territories?format=tree` is called THEN the system SHALL return a nested JSON tree with id, name, code, type, parentId, and active status.
+WHEN `GET /territories?format=tree` is called THEN the system SHALL return a nested JSON tree of all active territories readable in scope.
 
 **AC-TERR-04**  
-WHEN an admin reparents a territory THEN the system SHALL update `parentId`, rebuild closure for the subtree, and invalidate scope caches for affected users.
+WHEN `GET /territories/grouping-tree` is called THEN the system SHALL return only territories whose type has `participatesInGroupingHierarchy = true`.
 
 **AC-TERR-05**  
-WHEN an admin deactivates a territory THEN the system SHALL block deactivation when active children, assigned users, or assigned clinics still exist.
+WHEN an admin reparents a grouping territory THEN the system SHALL update `parentId`, rebuild closure for the subtree, and invalidate scope caches for affected users.
 
 **AC-TERR-06**  
-WHEN a country-level territory exists for a `countryCode` THEN exactly one active country root SHALL exist per country (MVP: `BR` / `br`).
+WHEN an admin deactivates a territory THEN the system SHALL block deactivation when active children (grouping), assigned users, assigned clinics, or child rep patches (manager zones) still exist.
 
 **AC-TERR-07**  
-WHEN a territory has `TerritoryType.assignsFacilities = true` THEN it MAY receive clinic assignments. Reference geography types SHALL NOT receive clinic FK assignments.
+WHEN a territory has `TerritoryType.assignsClinics = true` THEN it MAY receive clinic assignments. Manager zones and grouping types SHALL NOT receive clinic FK assignments.
 
 ---
 
 ### Boundary API (PostGIS)
 
 **AC-TERR-08**  
-WHEN `PUT /territories/:id/boundary` is called for a type with `canHaveBoundary` THEN the system SHALL accept GeoJSON `Polygon` or `MultiPolygon`, validate geometry, persist in PostGIS, update bounding-box metadata, and run the appropriate post-save flow:
+WHEN `PUT /territories/:id/boundary` is called for a type with `canHaveBoundary` THEN the system SHALL accept GeoJSON `Polygon` or `MultiPolygon`, validate geometry, persist in PostGIS, update bounding-box metadata, and run the role-based post-save flow:
 
-| Territory kind | Post-save behavior |
+| Territory role | Post-save behavior |
 |----------------|-------------------|
-| Operational (`patch`) | Rebuild `territory_geo_membership`; enqueue clinic membership recompute; invalidate scope |
-| Reference geography | Store boundary only (no geo auto-parent) |
-| Other (legacy geo-parent types) | Run geo parent resolution + rollup links |
+| Rep patch (`assignsClinics`) | Resolve exactly one containing manager zone → set `managerTerritoryId`; enqueue clinic membership recompute; invalidate scope |
+| Manager zone (`assignableToManagers`) | Validate no rep patches would be orphaned; block sibling overlap |
+| Grouping (`participatesInGroupingHierarchy`) | Store boundary only; rebuild closure if needed |
 
 **AC-TERR-09**  
-Invalid geometry SHALL be rejected with `422`. Reference geography ingestion MAY pass `repairInvalid: true` (IBGE data).
+Invalid geometry SHALL be rejected with `422`. IBGE ingestion MAY pass `repairInvalid: true`.
 
 **AC-TERR-10**  
-WHEN a patch boundary overlaps a sibling patch (`blockSiblingOverlap`) THEN the save SHALL be hard-blocked with conflicting territory ids/codes.
+WHEN a rep patch or manager zone boundary overlaps a sibling (`blockSiblingOverlap`) THEN the save SHALL be hard-blocked with conflicting territory ids/codes.
 
 **AC-TERR-11**  
-WHEN a patch boundary is saved THEN geo membership SHALL be computed via `ST_Intersection` against all active `state` and `intermediate` territories in the same country. Rows below `GEO_MEMBERSHIP_MIN_OVERLAP_RATIO` (1%) are excluded.
+WHEN a rep patch boundary is saved THEN the system SHALL require exactly one active manager zone whose boundary fully contains the patch (`ST_CoveredBy`). Zero or multiple matches SHALL reject the save.
 
 ---
 
-### Geo membership & scope
+### Scope resolution
 
 **AC-TERR-12**  
-`territory_geo_membership` SHALL store operational↔reference links with `overlapRatio` and `intersectionAreaSqKm`.
-
-**AC-TERR-13**  
 WHEN scope is resolved THEN `effectiveTerritoryIds` SHALL include:
 
-1. Assigned territory IDs  
-2. All active closure descendants  
-3. Operational patch IDs linked via geo membership to any assigned reference territory  
+1. Directly assigned territory IDs  
+2. For manager zone assignments: all active rep patch IDs where `managerTerritoryId` is in assigned manager zone IDs  
+3. For rep patch assignments: the patch ID itself  
 
-**AC-TERR-14**  
+Grouping closure and geo membership SHALL NOT expand scope.
+
+**AC-TERR-13**  
 WHEN a user's territory assignment changes THEN Redis `ScopeContext` cache SHALL be invalidated.
 
-**AC-TERR-15**  
-`GET /territories/:id/operational-members` SHALL list patches intersecting a reference territory.  
-`GET /territories/:id/geo-memberships` SHALL list reference regions intersecting a patch.  
-`GET /territories/:operationalId/clipped-boundary/:referenceId` SHALL return patch geometry clipped to the reference region.
-
-**AC-TERR-16**  
-`GET /territories/:id/coverage-view` (reference territory only: `state` or `intermediate`) SHALL return:
-
-- Reference boundary (full)  
-- Per-patch: membership stats, clipped boundary, clinics assigned to the patch **and** physically inside the reference (`ST_Covers`)  
+**AC-TERR-14**  
+`GET /territories/:id/analytics-view` (grouping territory) SHALL return clinics in the caller's scoped rep patches whose coordinates fall inside the grouping boundary (`ST_Covers`).
 
 ---
 
 ### Facility membership (geo assignment)
 
 **AC-TERR-19**  
-WHEN a clinic has valid `lat`/`lng` and `territoryAssignmentSource = 'geo'` THEN the system SHALL assign it to the containing active patch via `ST_Covers`.
+WHEN a clinic has valid `lat`/`lng` and `territoryAssignmentSource = 'geo'` THEN the system SHALL assign it to the containing active rep patch via `ST_Covers`.
 
 **AC-TERR-20**  
 WHEN no patch contains the point THEN `territoryId = null`, `territoryAssignmentStatus = unassigned` (or `ambiguous` if multiple — should not occur with overlap block).
@@ -267,6 +254,7 @@ ADMIN users SHALL have global territory scope unless restricted by segments.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/territories` | List tree or flat |
+| GET | `/territories/grouping-tree` | Grouping hierarchy only |
 | POST | `/territories` | Create territory |
 | GET | `/territories/:id` | Detail |
 | PATCH | `/territories/:id` | Update |
@@ -274,16 +262,14 @@ ADMIN users SHALL have global territory scope unless restricted by segments.
 | GET | `/territories/:id/boundary` | GeoJSON boundary |
 | PUT | `/territories/:id/boundary` | Save boundary |
 | DELETE | `/territories/:id/boundary` | Remove boundary |
-| GET | `/territories/:id/descendants` | Descendant IDs |
-| GET | `/territories/:id/operational-members` | Patches intersecting reference |
-| GET | `/territories/:id/geo-memberships` | References intersecting patch |
-| GET | `/territories/:operationalId/clipped-boundary/:referenceId` | Clipped geometry |
-| GET | `/territories/:id/coverage-view` | State/municipality coverage payload |
+| GET | `/territories/:id/descendants` | Descendant IDs (grouping) |
+| GET | `/territories/:id/analytics-view` | Scoped clinics inside grouping shape |
 | POST | `/territories/recompute-membership` | Force clinic geo recompute |
 | GET | `/territories/unassigned-facilities` | Unassigned/ambiguous clinics |
 | GET/POST | `/territory-types` | Type CRUD |
-| GET/POST/DELETE | `/territories/:id/rollup-links` | Reporting rollups |
 | POST | `/territories/approval-requests` | Territory approval workflow |
+
+**Removed endpoints:** `geo-memberships`, `operational-members`, `clipped-boundary`, `coverage-view`, `ambiguous-parents`, `rollup-links`.
 
 **AC-TERR-35**  
 Managers have read access to territories in scope; boundary write on patches in scope per permission rules.
@@ -296,14 +282,12 @@ Managers have read access to territories in scope; boundary write on patches in 
 
 Key models in `packages/database/prisma/schema.prisma`:
 
-- `TerritoryType` — capability flags per type  
-- `Territory` — node with `territoryTypeId`, `parentId`, PostGIS `boundary`, metadata (`boundaryMinLng`, etc.), `geoMembershipStatus`  
-- `TerritoryClosure` — ancestor/descendant pairs for scope expansion  
-- `TerritoryGeoMembership` — operational↔reference intersection index  
-- `TerritoryRollupLink` — optional reporting ancestors beyond tree parent  
+- `TerritoryType` — capability flags including `participatesInGroupingHierarchy`  
+- `Territory` — node with `territoryTypeId`, optional `parentId` (grouping only), `managerTerritoryId` (rep patches only), PostGIS `boundary`  
+- `TerritoryClosure` — ancestor/descendant pairs for grouping scope expansion in tree queries only  
 - `Clinic` — `territoryId`, `territoryAssignmentStatus`, `territoryAssignmentSource`  
 
-PostGIS `boundary` column on `territories`; reads/writes via `ST_GeomFromGeoJSON` / `ST_AsGeoJSON`.
+**Removed:** `TerritoryGeoMembership`, `TerritoryRollupLink`, `parentAssignmentStatus`, `parentAssignmentSource`, `geoMembershipStatus`.
 
 ### Scope resolution
 
@@ -311,42 +295,27 @@ PostGIS `boundary` column on `territories`; reads/writes via `ST_GeomFromGeoJSON
 interface ScopeContext {
   isGlobal: boolean;
   assignedTerritoryIds: string[];
-  effectiveTerritoryIds: string[];  // closure descendants ∪ geo-linked patches
+  effectiveTerritoryIds: string[];  // assigned + FK-linked rep patches for manager zones
   facilityIds: string[];
   managedUserIds: string[];
   segmentIds: string[];
 }
 ```
 
-`PrismaTerritoryHierarchyPort.resolveDescendantIds` unions closure descendants with operational patch IDs from `territory_geo_membership` when resolving scope for reference territories.
+`PrismaTerritoryHierarchyPort.resolveEffectiveTerritoryIds` expands manager zone assignments to contained rep patches via `managerTerritoryId` FK lookup.
 
-### Geo membership algorithm
+### Analytics query pattern
 
-On patch boundary save:
-
-```
-1. Normalize GeoJSON (single-part MultiPolygon → Polygon)
-2. Save boundary + update bbox metadata
-3. DELETE existing membership rows for patch
-4. PostGIS: ST_Intersection(patch, reference.boundary) for each state/intermediate in country
-5. INSERT rows where overlapRatio >= 0.01
-6. Set geoMembershipStatus = ready
-7. Enqueue clinic membership recompute; invalidate scope caches
-```
-
-### Coverage view query pattern
-
-Clinics in reference region (single batch query):
+Clinics in scoped patches AND inside grouping filter:
 
 ```sql
-SELECT c.*, op.code
+SELECT c.*
 FROM clinics c
-JOIN territories op ON op.id = c."territoryId"
-JOIN territory_geo_membership m ON m."operationalTerritoryId" = op.id
-JOIN territories ref ON ref.id = m."referenceTerritoryId"
-WHERE m."referenceTerritoryId" = :refId
+JOIN territories patch ON patch.id = c."territoryId"
+JOIN territories grouping ON grouping.id = :groupingTerritoryId
+WHERE c."territoryId" = ANY(:scopedPatchIds)
   AND c."territoryAssignmentStatus" = 'assigned'
-  AND ST_Covers(ref.boundary, ST_MakePoint(c.lng, c.lat))
+  AND ST_Covers(grouping.boundary, ST_SetSRID(ST_MakePoint(c.lng, c.lat), 4326))
 ```
 
 ### Module layout
@@ -354,30 +323,31 @@ WHERE m."referenceTerritoryId" = :refId
 ```
 apps/api/src/modules/territory/
   application/
-    constants/territory-geo-membership.constants.ts
+    constants/territory-roles.constants.ts
     services/
-      territory-boundary.application.ts      # applyTerritoryBoundary
-      territory-geo-membership.service.ts
-      territory-geo-parent.service.ts
+      territory-boundary.application.ts
+      territory-containment.service.ts
       territory-membership.service.ts
     use-cases/
-      territory-coverage.use-cases.ts        # coverage-view
-      territory-geo-membership.use-cases.ts
-      territory-boundary.use-cases.ts
-    utils/
-      territory-boundary.utils.ts
-      territory-boundary-resolution.utils.ts
+      territory-coverage.use-cases.ts        # analytics-view
+      territory-crud.use-cases.ts
   infrastructure/
     repositories/prisma/prisma-territory-spatial.repository.ts
     ports/prisma-territory-hierarchy.port.ts
 ```
 
-### Web (partial)
+### Web
 
-- Territory create/edit dialogs with type selection  
+- Territory admin: **Grouping**, **Manager zones**, and **Rep patches** view tabs on `/territories`  
 - Mapbox boundary editor (`territory-boundary-section.tsx`)  
-- API client methods for geo membership endpoints  
-- **Deferred:** coverage map UI consuming `coverage-view`
+- Grouping tree API for filter UIs  
+- **Deferred:** full analytics map UI consuming `analytics-view`
+
+### Migration
+
+- `20260707120000_territory_dual_graph` — `managerTerritoryId`, `participatesInGroupingHierarchy`, `manager_zone` type seed  
+- `20260707130000_territory_drop_legacy_geo` — drop geo membership, rollup links, parent-assignment columns  
+- Backfill script: `apps/api/src/scripts/backfill-patch-manager-zones.ts`
 
 ---
 
@@ -385,18 +355,14 @@ apps/api/src/modules/territory/
 
 | Phase | Status | Notes |
 |-------|--------|-------|
-| PostGIS + data model | Done | Territory, types, closure, geo membership migration |
-| Territory CRUD API | Done | Type-aware create/update |
-| Boundary API | Done | Operational vs reference flows |
-| Brazil IBGE ingestion | Done | ~5,604 territories |
-| Geo membership index | Done | Auto on patch save |
-| Scope resolver + cache invalidation | Done | Membership-aware hierarchy port |
-| Facility geo assignment + recompute job | Done | BullMQ queue |
-| Coverage view API | Done | `GET /territories/:id/coverage-view` |
-| Coverage map UI | Deferred | API ready |
-| Clipped geometry cache | Deferred | On-demand ST_Intersection |
+| Dual-graph schema | Done | managerTerritoryId + grouping flag |
+| Containment service | Done | Exactly-one manager zone on patch save |
+| FK-based scope | Done | No geo membership expansion |
+| Analytics view API | Done | `GET /territories/:id/analytics-view` |
+| Legacy cleanup | Done | Geo membership, rollups, ambiguous parents removed |
+| Web admin tabs | Done | Grouping / manager zones / rep patches |
 | Order/visit territory snapshots | Deferred | Spec 06 / 11 |
-| `POST /territories/:id/split` | Deferred | Manual workflow |
+| Analytics map UI | Deferred | API ready |
 
 ---
 
@@ -404,16 +370,14 @@ apps/api/src/modules/territory/
 
 | # | Decision |
 |---|----------|
-| 1 | **Dual model:** Reference geography (IBGE tree) + operational patches with geo membership |
-| 2 | **No fixed 4 levels:** `TerritoryType` flags replace level 0–3 |
-| 3 | **Patch overlaps:** Hard-block sibling patch overlaps; cross-state patches allowed via membership |
-| 4 | **Geo membership:** Automatic on boundary save; 1% minimum overlap |
-| 5 | **Clipped geometry:** On demand; cache deferred |
-| 6 | **Scope:** Closure ∪ geo-linked operational patches |
-| 7 | **Brazil codes:** `BR`, `BR-MACRO-*`, `BR-UF-*`, IBGE municipality code |
-| 8 | **Map UI:** Web boundary editor implemented (Mapbox) |
-| 9 | **Point assignment:** `ST_Covers` |
-| 10 | **Manual clinic lock:** `territoryAssignmentSource = 'manual'` until unlock |
+| 1 | **Dual graph:** Flat assignment (manager zone → rep patch) + grouping tree for filters |
+| 2 | **Scope:** FK on `managerTerritoryId`, not closure or geo membership |
+| 3 | **Patch overlaps:** Hard-block sibling rep patch and manager zone overlaps |
+| 4 | **Grouping overlaps:** Allowed — analytics uses point-in-polygon on selected shape |
+| 5 | **Analytics semantics:** `scope AND filter` on clinic coordinates |
+| 6 | **Brazil codes:** `BR`, `BR-MACRO-*`, `BR-UF-*`, IBGE municipality code |
+| 7 | **Point assignment:** `ST_Covers` on rep patch boundaries |
+| 8 | **Manual clinic lock:** `territoryAssignmentSource = 'manual'` until unlock |
 
 ---
 
@@ -421,7 +385,6 @@ apps/api/src/modules/territory/
 
 | Item | Default |
 |------|---------|
-| Coverage map UI (SP view with clipped layers) | Build when analytics UX is prioritized |
-| Persistent clipped-geometry cache | Add when profiling shows need |
+| Analytics map UI | Build when analytics UX is prioritized |
+| Order/visit territory snapshots | When Spec 06 / 11 ship |
 | `POST /territories/:id/split` | Manual migration workflow |
-| Transaction territory snapshots | When Spec 06 / 11 ship |
