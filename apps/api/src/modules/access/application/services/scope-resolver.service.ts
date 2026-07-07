@@ -24,7 +24,7 @@ export class ScopeResolver {
       const assignedTerritoryIds =
         await this.deps.scopeRepository.findTerritoryIdsByUserId(userId);
       const effectiveTerritoryIds =
-        await this.deps.territoryHierarchyPort.resolveDescendantIds(
+        await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
           assignedTerritoryIds,
           true
         );
@@ -56,12 +56,12 @@ export class ScopeResolver {
 
       const oversightTerritoryIds =
         ownAssignments.length > 0
-          ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+          ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
               ownAssignments,
               true
             )
           : reportAssignments.length > 0
-            ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+            ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
                 reportAssignments,
                 true
               )
@@ -69,7 +69,7 @@ export class ScopeResolver {
 
       const analyticsEffectiveTerritoryIds =
         reportAssignments.length > 0
-          ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+          ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
               reportAssignments,
               true
             )

@@ -21,8 +21,29 @@ import { ReparentTerritoryDialog } from "@/components/territory/reparent-territo
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Loader2, Plus, RefreshCw } from "lucide-react";
 import type { Territory, TerritoryTreeNode } from "@/types/territory";
+
+type TerritoryView = "grouping" | "manager-zones" | "rep-patches";
+
+const VIEW_OPTIONS: Array<{ id: TerritoryView; label: string; description: string }> = [
+  {
+    id: "grouping",
+    label: "Grouping",
+    description: "Region, state, and municipality tree for filters and analytics.",
+  },
+  {
+    id: "manager-zones",
+    label: "Manager zones",
+    description: "Flat manager assignment areas that contain rep patches.",
+  },
+  {
+    id: "rep-patches",
+    label: "Rep patches",
+    description: "Operational territories where clinics are assigned.",
+  },
+];
 
 function findTerritoryInTree(
   nodes: TerritoryTreeNode[],
@@ -36,11 +57,24 @@ function findTerritoryInTree(
   return null;
 }
 
+function toFlatTreeNodes(territories: Territory[]): TerritoryTreeNode[] {
+  return territories.map((territory) => ({
+    ...territory,
+    children: [],
+  }));
+}
+
 export default function TerritoriesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedSelection = searchParams.get("selected") ?? undefined;
+  const requestedView = searchParams.get("view") as TerritoryView | null;
+  const [view, setView] = useState<TerritoryView>(
+    requestedView && VIEW_OPTIONS.some((option) => option.id === requestedView)
+      ? requestedView
+      : "grouping"
+  );
   const [tree, setTree] = useState<TerritoryTreeNode[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
@@ -58,10 +92,28 @@ export default function TerritoriesPage() {
   const loadTree = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await territoriesApi.listTerritories("tree");
-      const nodes = response.data as TerritoryTreeNode[];
+      let nodes: TerritoryTreeNode[] = [];
+
+      if (view === "grouping") {
+        const response = await territoriesApi.listGroupingTree();
+        nodes = response.data;
+      } else {
+        const response = await territoriesApi.listTerritories("flat");
+        const territories = response.data as Territory[];
+        const filtered =
+          view === "manager-zones"
+            ? territories.filter((territory) => territory.territoryType.assignableToManagers)
+            : territories.filter((territory) => territory.territoryType.assignsClinics);
+        nodes = toFlatTreeNodes(filtered);
+      }
+
       setTree(nodes);
-      setSelectedId((current) => current ?? requestedSelection ?? nodes[0]?.id);
+      setSelectedId((current) => {
+        if (current && nodes.some((node) => node.id === current)) {
+          return current;
+        }
+        return requestedSelection ?? nodes[0]?.id;
+      });
     } catch {
       toast({
         title: "Error",
@@ -71,7 +123,7 @@ export default function TerritoriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [requestedSelection]);
+  }, [requestedSelection, view]);
 
   useEffect(() => {
     if (requestedSelection) {
@@ -92,6 +144,7 @@ export default function TerritoriesPage() {
   }, [canRead, loadTree]);
 
   const selectedTerritory = selectedId ? findTerritoryInTree(tree, selectedId) : null;
+  const activeView = VIEW_OPTIONS.find((option) => option.id === view)!;
 
   const handleRecompute = async () => {
     if (!confirm("Recompute clinic territory membership for all clinics?")) return;
@@ -126,8 +179,8 @@ export default function TerritoriesPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Territories</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Hierarchy is geo-linked from boundaries. Create territories with their polygon to
-            establish parents automatically.
+            Manager zones and rep patches drive assignment scope. Grouping areas are used for
+            filters and analytics only.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -156,16 +209,39 @@ export default function TerritoriesPage() {
 
       <TerritorySubnav />
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        {VIEW_OPTIONS.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setView(option.id)}
+            className={cn(
+              "rounded-md border px-3 py-2 text-left text-sm",
+              view === option.id
+                ? "border-blue-200 bg-blue-50 text-blue-800"
+                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+            )}
+          >
+            <span className="block font-medium">{option.label}</span>
+            <span className="block text-xs text-gray-500">{option.description}</span>
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Hierarchy</CardTitle>
+            <CardTitle>{activeView.label}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               </div>
+            ) : tree.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-500">
+                No {activeView.label.toLowerCase()} found.
+              </p>
             ) : (
               <TerritoryTree
                 nodes={tree}
@@ -189,7 +265,7 @@ export default function TerritoriesPage() {
       <CreateTerritoryDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        parentId={selectedId}
+        parentId={view === "grouping" ? selectedId : undefined}
         isAdmin={userIsAdmin}
         onSuccess={loadTree}
       />

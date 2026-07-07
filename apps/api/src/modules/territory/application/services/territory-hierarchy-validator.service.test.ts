@@ -13,6 +13,7 @@ const countryType = {
   assignableToManagers: false,
   isCountryLevel: true,
   blockSiblingOverlap: false,
+  participatesInGroupingHierarchy: true,
   sortOrder: 10,
   isActive: true,
   createdAt: new Date(),
@@ -25,6 +26,16 @@ const regionType = {
   slug: "region",
   name: "Region",
   isCountryLevel: false,
+  assignableToManagers: true,
+};
+
+const managerZoneType = {
+  ...countryType,
+  id: "tt_manager_zone",
+  slug: "manager_zone",
+  name: "Manager Zone",
+  isCountryLevel: false,
+  participatesInGroupingHierarchy: false,
   assignableToManagers: true,
 };
 
@@ -43,7 +54,19 @@ describe("TerritoryHierarchyValidator", () => {
     ).not.toThrow();
   });
 
-  it("allows typed territory with optional parent before geo linking", () => {
+  it("allows manager zones without a tree parent", () => {
+    expect(() =>
+      validator.validateCreate({
+        type: managerZoneType,
+        slug: "zone-sudeste",
+        countryCode: "BR",
+        parent: null,
+        hasActiveCountryForCode: true,
+      })
+    ).not.toThrow();
+  });
+
+  it("requires a parent for grouping hierarchy territories", () => {
     expect(() =>
       validator.validateCreate({
         type: regionType,
@@ -52,7 +75,7 @@ describe("TerritoryHierarchyValidator", () => {
         parent: null,
         hasActiveCountryForCode: true,
       })
-    ).not.toThrow();
+    ).toThrow(OperationNotAllowedError);
   });
 
   it("rejects duplicate country for same country code", () => {

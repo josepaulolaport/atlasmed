@@ -91,17 +91,9 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "domain-policy",
     patterns: ["assertManagerReadableTerritory", "resolveReadableTerritoryIds"],
   },
-  "modules/territory/application/use-cases/territory-geo-membership.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertManagerReadableTerritory"],
-  },
   "modules/territory/application/use-cases/territory-membership.use-cases.ts": {
     kind: "inline-scope",
     patterns: ["scope.isGlobal", "facilityIds"],
-  },
-  "modules/territory/application/use-cases/territory-rollup.use-cases.ts": {
-    kind: "domain-policy",
-    patterns: ["assertManagerReadableTerritory"],
   },
 };
 

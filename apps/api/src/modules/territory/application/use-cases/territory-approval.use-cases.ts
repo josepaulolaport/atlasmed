@@ -202,7 +202,7 @@ export class TerritoryApprovalUseCases {
         await this.deps.territoryCrud.deactivateTerritory(request.targetTerritoryId);
         await this.deps.invalidateScopeForTerritories?.([request.targetTerritoryId]);
         break;
-      case "facility_territory_change":
+      case "clinic_territory_change":
         if (!request.facilityId || !request.toTerritoryId) {
           throw new OperationNotAllowedError(
             "approve_request",

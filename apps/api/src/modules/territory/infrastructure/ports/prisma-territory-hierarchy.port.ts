@@ -1,13 +1,52 @@
 import { prisma } from "../../../../infrastructure/database/prisma.client";
 import type { TerritoryHierarchyPort } from "../../application/interfaces/territory-hierarchy.port.interface";
 import type { TerritoryClosureRepository } from "../../application/interfaces/territory-closure.repository.interface";
-import type { TerritoryGeoMembershipRepository } from "../../application/interfaces/territory-geo-membership.repository.interface";
+import type { TerritoryRepository } from "../../application/interfaces/territory.repository.interface";
+import { MANAGER_ZONE_TYPE_SLUG } from "../../application/constants/territory-roles.constants";
 
 export class PrismaTerritoryHierarchyPort implements TerritoryHierarchyPort {
   constructor(
     private readonly closureRepository: TerritoryClosureRepository,
-    private readonly geoMembershipRepository: TerritoryGeoMembershipRepository
+    private readonly territoryRepository: TerritoryRepository
   ) {}
+
+  async resolveEffectiveTerritoryIds(
+    assignedTerritoryIds: string[],
+    activeOnly = true
+  ): Promise<string[]> {
+    if (assignedTerritoryIds.length === 0) {
+      return [];
+    }
+
+    const assignedTerritories = await this.territoryRepository.findByIds(
+      assignedTerritoryIds
+    );
+
+    const effective = new Set<string>();
+    const managerZoneIds: string[] = [];
+
+    for (const territory of assignedTerritories) {
+      if (!territory.isActive && activeOnly) {
+        continue;
+      }
+
+      effective.add(territory.id);
+
+      if (territory.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG) {
+        managerZoneIds.push(territory.id);
+      }
+    }
+
+    if (managerZoneIds.length > 0) {
+      const patchIds =
+        await this.territoryRepository.findRepPatchIdsByManagerTerritoryIds(managerZoneIds);
+      for (const patchId of patchIds) {
+        effective.add(patchId);
+      }
+    }
+
+    return [...effective];
+  }
 
   async resolveDescendantIds(
     ancestorIds: string[],
@@ -22,11 +61,7 @@ export class PrismaTerritoryHierarchyPort implements TerritoryHierarchyPort {
       activeOnly
     );
 
-    const baseIds = [...new Set([...ancestorIds, ...descendants])];
-    const operationalIds =
-      await this.geoMembershipRepository.findOperationalTerritoryIdsByReferenceIds(baseIds);
-
-    return [...new Set([...baseIds, ...operationalIds])];
+    return [...new Set([...ancestorIds, ...descendants])];
   }
 
   async findUsersAssignedToTerritoryAncestors(territoryIds: string[]): Promise<string[]> {
@@ -34,13 +69,23 @@ export class PrismaTerritoryHierarchyPort implements TerritoryHierarchyPort {
       return [];
     }
 
+    const territories = await this.territoryRepository.findByIds(territoryIds);
+    const relatedTerritoryIds = new Set<string>(territoryIds);
+
+    for (const territory of territories) {
+      if (territory.managerTerritoryId) {
+        relatedTerritoryIds.add(territory.managerTerritoryId);
+      }
+    }
+
     const ancestorIds = await this.closureRepository.findAncestorIds(territoryIds);
-    const geoReferenceIds =
-      await this.geoMembershipRepository.findReferenceTerritoryIdsByOperationalIds(territoryIds);
+    for (const ancestorId of ancestorIds) {
+      relatedTerritoryIds.add(ancestorId);
+    }
 
     const assignments = await prisma.userTerritoryAssignment.findMany({
       where: {
-        territoryId: { in: [...territoryIds, ...ancestorIds, ...geoReferenceIds] },
+        territoryId: { in: [...relatedTerritoryIds] },
       },
       select: { userId: true },
     });

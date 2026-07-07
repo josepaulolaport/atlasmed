@@ -17,6 +17,7 @@ function mapType(record: {
   assignableToManagers: boolean;
   isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
+  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -58,6 +59,7 @@ export class PrismaTerritoryTypeRepository implements TerritoryTypeRepository {
         assignableToManagers: input.assignableToManagers ?? false,
         isCountryLevel: input.isCountryLevel ?? false,
         blockSiblingOverlap: input.blockSiblingOverlap ?? false,
+        participatesInGroupingHierarchy: input.participatesInGroupingHierarchy ?? false,
         sortOrder: input.sortOrder ?? 0,
       },
     });

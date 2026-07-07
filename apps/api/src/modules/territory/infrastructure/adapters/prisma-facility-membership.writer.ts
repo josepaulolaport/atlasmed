@@ -27,7 +27,7 @@ export class PrismaClinicMembershipWriter implements ClinicMembershipWriter {
     facilityIds?: string[];
     territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
-  }): Promise<FacilityMembershipTarget[]> {
+  }): Promise<ClinicMembershipTarget[]> {
     const clinics = await prisma.facility.findMany({
       where: {
         deletedAt: null,

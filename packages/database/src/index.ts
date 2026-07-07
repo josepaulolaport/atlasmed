@@ -28,10 +28,6 @@ export {
   TerritoryAssignmentSource,
   TerritoryApprovalType,
   TerritoryApprovalStatus,
-  TerritoryRollupRelationshipType,
-  TerritoryRollupLinkSource,
-  TerritoryParentAssignmentStatus,
-  TerritoryParentAssignmentSource,
   RelationshipLevel,
 } from "./generated/prisma";
 

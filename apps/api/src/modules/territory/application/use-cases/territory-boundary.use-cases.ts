@@ -4,8 +4,7 @@ import type { TerritoryClosureRepository } from "../interfaces/territory-closure
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
-import type { TerritoryGeoParentService } from "../services/territory-geo-parent.service";
-import type { TerritoryGeoMembershipService } from "../services/territory-geo-membership.service";
+import type { TerritoryContainmentService } from "../services/territory-containment.service";
 import { TerritoryHierarchyValidator } from "../services/territory-hierarchy-validator.service";
 import { applyTerritoryBoundary } from "../services/territory-boundary.application";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
@@ -21,10 +20,10 @@ interface Dependencies {
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
   closureRepository: TerritoryClosureRepository;
-  geoParentService: TerritoryGeoParentService;
-  geoMembershipService: TerritoryGeoMembershipService;
+  containmentService: TerritoryContainmentService;
   hierarchyValidator?: TerritoryHierarchyValidator;
   onBoundaryChanged?: (territoryId: string) => Promise<void>;
+  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
 }
 
 export class TerritoryBoundaryUseCases {
@@ -61,9 +60,9 @@ export class TerritoryBoundaryUseCases {
         territoryRepository: this.deps.territoryRepository,
         territoryTypeRepository: this.deps.territoryTypeRepository,
         spatialRepository: this.deps.spatialRepository,
-        geoParentService: this.deps.geoParentService,
-        geoMembershipService: this.deps.geoMembershipService,
+        containmentService: this.deps.containmentService,
         onBoundaryChanged: this.deps.onBoundaryChanged,
+        onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged,
       },
       territory,
       input.geoJson

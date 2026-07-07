@@ -97,23 +97,16 @@ export function TerritoryBoundarySection({
       setBoundary(payload);
       setDraft(payload);
 
-      if (result.mode === "operational") {
+      if (result.mode === "rep_patch") {
         toast({
           title: "Boundary saved",
-          description: `Indexed across ${result.membershipCount} reference region(s).`,
+          description: `Linked to manager zone ${result.managerTerritoryId}.`,
           variant: "success",
         });
-      } else if (result.parentAssignmentStatus === "ambiguous") {
-        toast({
-          title: "Boundary saved — review parent",
-          description:
-            "This territory overlaps multiple parents. Primary parent was not changed automatically.",
-          variant: "destructive",
-        });
-      } else if (result.rollupAncestorIds.length > 0) {
+      } else if (result.mode === "manager_zone") {
         toast({
           title: "Boundary saved",
-          description: `Linked to parent and ${result.rollupAncestorIds.length} secondary rollup region(s).`,
+          description: `Manager zone contains ${result.repPatchCount} rep patch(es).`,
           variant: "success",
         });
       } else {

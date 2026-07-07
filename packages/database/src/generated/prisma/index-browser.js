@@ -473,6 +473,7 @@ exports.Prisma.TerritoryTypeScalarFieldEnum = {
   assignableToManagers: 'assignableToManagers',
   isCountryLevel: 'isCountryLevel',
   blockSiblingOverlap: 'blockSiblingOverlap',
+  participatesInGroupingHierarchy: 'participatesInGroupingHierarchy',
   sortOrder: 'sortOrder',
   isActive: 'isActive',
   createdAt: 'createdAt',
@@ -490,11 +491,9 @@ exports.Prisma.TerritoryScalarFieldEnum = {
   regionSlug: 'regionSlug',
   stateCode: 'stateCode',
   parentId: 'parentId',
+  managerTerritoryId: 'managerTerritoryId',
   isActive: 'isActive',
-  parentAssignmentStatus: 'parentAssignmentStatus',
-  parentAssignmentSource: 'parentAssignmentSource',
   organizationId: 'organizationId',
-  geoMembershipStatus: 'geoMembershipStatus',
   boundaryMinLng: 'boundaryMinLng',
   boundaryMinLat: 'boundaryMinLat',
   boundaryMaxLng: 'boundaryMaxLng',
@@ -508,25 +507,6 @@ exports.Prisma.TerritoryClosureScalarFieldEnum = {
   ancestorId: 'ancestorId',
   descendantId: 'descendantId',
   depth: 'depth'
-};
-
-exports.Prisma.TerritoryRollupLinkScalarFieldEnum = {
-  id: 'id',
-  territoryId: 'territoryId',
-  ancestorId: 'ancestorId',
-  relationshipType: 'relationshipType',
-  source: 'source',
-  createdAt: 'createdAt'
-};
-
-exports.Prisma.TerritoryGeoMembershipScalarFieldEnum = {
-  id: 'id',
-  operationalTerritoryId: 'operationalTerritoryId',
-  referenceTerritoryId: 'referenceTerritoryId',
-  referenceTypeSlug: 'referenceTypeSlug',
-  overlapRatio: 'overlapRatio',
-  intersectionAreaSqKm: 'intersectionAreaSqKm',
-  computedAt: 'computedAt'
 };
 
 exports.Prisma.TerritoryApprovalRequestScalarFieldEnum = {
@@ -867,10 +847,29 @@ exports.Prisma.IngestionRunScalarFieldEnum = {
   id: 'id',
   sourceProvider: 'sourceProvider',
   status: 'status',
+  phase: 'phase',
+  phaseStartedAt: 'phaseStartedAt',
+  temporalWorkflowId: 'temporalWorkflowId',
+  referenceAno: 'referenceAno',
+  referenceMes: 'referenceMes',
   startedAt: 'startedAt',
   completedAt: 'completedAt',
+  promotedAt: 'promotedAt',
   stats: 'stats',
+  validationReport: 'validationReport',
+  archiveManifest: 'archiveManifest',
   error: 'error'
+};
+
+exports.Prisma.IngestionDiffScalarFieldEnum = {
+  id: 'id',
+  ingestionRunId: 'ingestionRunId',
+  scope: 'scope',
+  entityType: 'entityType',
+  externalSourceId: 'externalSourceId',
+  diffType: 'diffType',
+  payload: 'payload',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.IngestionSuggestionScalarFieldEnum = {
@@ -931,33 +930,6 @@ exports.TerritoryNodeType = exports.$Enums.TerritoryNodeType = {
   state: 'state',
   intermediate: 'intermediate',
   patch: 'patch'
-};
-
-exports.TerritoryParentAssignmentStatus = exports.$Enums.TerritoryParentAssignmentStatus = {
-  resolved: 'resolved',
-  ambiguous: 'ambiguous',
-  manual: 'manual'
-};
-
-exports.TerritoryParentAssignmentSource = exports.$Enums.TerritoryParentAssignmentSource = {
-  geo: 'geo',
-  inferred: 'inferred',
-  manual: 'manual'
-};
-
-exports.TerritoryGeoMembershipStatus = exports.$Enums.TerritoryGeoMembershipStatus = {
-  pending: 'pending',
-  ready: 'ready',
-  failed: 'failed'
-};
-
-exports.TerritoryRollupRelationshipType = exports.$Enums.TerritoryRollupRelationshipType = {
-  reporting: 'reporting'
-};
-
-exports.TerritoryRollupLinkSource = exports.$Enums.TerritoryRollupLinkSource = {
-  geo: 'geo',
-  manual: 'manual'
 };
 
 exports.TerritoryApprovalType = exports.$Enums.TerritoryApprovalType = {
@@ -1111,8 +1083,26 @@ exports.IngestionRunStatus = exports.$Enums.IngestionRunStatus = {
   FAILED: 'FAILED'
 };
 
+exports.IngestionRunPhase = exports.$Enums.IngestionRunPhase = {
+  DISCOVERING: 'DISCOVERING',
+  DOWNLOADING: 'DOWNLOADING',
+  PARSING: 'PARSING',
+  LOADING: 'LOADING',
+  VALIDATING: 'VALIDATING',
+  RECONCILING: 'RECONCILING',
+  PROMOTING: 'PROMOTING',
+  SYNCING: 'SYNCING',
+  FAILED: 'FAILED'
+};
+
+exports.IngestionDiffScope = exports.$Enums.IngestionDiffScope = {
+  WAREHOUSE: 'WAREHOUSE',
+  CRM: 'CRM'
+};
+
 exports.IngestionSuggestionType = exports.$Enums.IngestionSuggestionType = {
   FACILITY_FIELD_UPDATE: 'FACILITY_FIELD_UPDATE',
+  PROFESSIONAL_FIELD_UPDATE: 'PROFESSIONAL_FIELD_UPDATE',
   FACILITY_REGISTRY_DEACTIVATED: 'FACILITY_REGISTRY_DEACTIVATED',
   FACILITY_REGISTRY_REACTIVATED: 'FACILITY_REGISTRY_REACTIVATED',
   FACILITY_PROFESSIONAL_REMOVAL: 'FACILITY_PROFESSIONAL_REMOVAL',
@@ -1164,8 +1154,6 @@ exports.Prisma.ModelName = {
   TerritoryType: 'TerritoryType',
   Territory: 'Territory',
   TerritoryClosure: 'TerritoryClosure',
-  TerritoryRollupLink: 'TerritoryRollupLink',
-  TerritoryGeoMembership: 'TerritoryGeoMembership',
   TerritoryApprovalRequest: 'TerritoryApprovalRequest',
   Role: 'Role',
   Session: 'Session',
@@ -1186,6 +1174,7 @@ exports.Prisma.ModelName = {
   ConformityRequirement: 'ConformityRequirement',
   ConformityRecord: 'ConformityRecord',
   IngestionRun: 'IngestionRun',
+  IngestionDiff: 'IngestionDiff',
   IngestionSuggestion: 'IngestionSuggestion'
 };
 

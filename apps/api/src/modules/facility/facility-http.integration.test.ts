@@ -137,7 +137,7 @@ describe("Facility HTTP auth integration", () => {
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
       app,
-      "http://localhost/api/v1/facilities",
+      `http://localhost/api/v1/facilities?search=${encodeURIComponent(`Scope Facility In ${fixtures.uniqueId}`)}`,
       token
     );
 

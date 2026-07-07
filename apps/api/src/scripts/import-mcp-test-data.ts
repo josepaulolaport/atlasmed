@@ -449,16 +449,6 @@ async function cleanOperationalData(adminUserId: string, dryRun: boolean) {
             OR: [{ ancestorId: { in: ids } }, { descendantId: { in: ids } }],
           },
         });
-        await prisma.territoryRollupLink.deleteMany({
-          where: {
-            OR: [{ territoryId: { in: ids } }, { ancestorId: { in: ids } }],
-          },
-        });
-        await prisma.territoryGeoMembership.deleteMany({
-          where: {
-            OR: [{ operationalTerritoryId: { in: ids } }, { referenceTerritoryId: { in: ids } }],
-          },
-        });
 
         return { count: (await prisma.territory.deleteMany({ where: { id: { in: ids } } })).count };
       },

@@ -82,11 +82,6 @@ function TerritoryTreeNodeRow({
           <Badge variant="secondary" className="text-xs">
             {node.territoryType.name}
           </Badge>
-          {node.parentAssignmentStatus === "ambiguous" && (
-            <Badge variant="destructive" className="text-xs">
-              ambiguous parent
-            </Badge>
-          )}
           {node.isLeaf && (
             <Badge variant="outline" className="text-xs">
               leaf

@@ -7,6 +7,7 @@ export const territoryTypeFlagSchema = z.object({
   assignableToManagers: z.boolean().optional(),
   isCountryLevel: z.boolean().optional(),
   blockSiblingOverlap: z.boolean().optional(),
+  participatesInGroupingHierarchy: z.boolean().optional(),
 });
 
 export const createTerritoryTypeSchema = z
@@ -43,11 +44,6 @@ export const createTerritorySchema = z.object({
   boundary: territoryBoundarySchema.optional(),
 });
 
-export const territoryRollupLinkSchema = z.object({
-  ancestorId: z.string().trim().min(1),
-  relationshipType: z.literal("reporting").optional(),
-});
-
 export const updateTerritorySchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   parentId: z.union([z.string().trim().min(1), z.null()]).optional(),
@@ -77,7 +73,6 @@ export const facilityTerritoryOverrideSchema = z.object({
 export type CreateTerritoryTypeInput = z.infer<typeof createTerritoryTypeSchema>;
 export type UpdateTerritoryTypeInput = z.infer<typeof updateTerritoryTypeSchema>;
 export type CreateTerritoryInput = z.infer<typeof createTerritorySchema>;
-export type TerritoryRollupLinkInput = z.infer<typeof territoryRollupLinkSchema>;
 export type UpdateTerritoryInput = z.infer<typeof updateTerritorySchema>;
 export type TerritoryBoundaryInput = z.infer<typeof territoryBoundarySchema>;
 export type TerritoryApprovalRequestInput = z.infer<typeof territoryApprovalRequestSchema>;

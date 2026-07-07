@@ -164,16 +164,6 @@ export type Territory = $Result.DefaultSelection<Prisma.$TerritoryPayload>
  */
 export type TerritoryClosure = $Result.DefaultSelection<Prisma.$TerritoryClosurePayload>
 /**
- * Model TerritoryRollupLink
- * 
- */
-export type TerritoryRollupLink = $Result.DefaultSelection<Prisma.$TerritoryRollupLinkPayload>
-/**
- * Model TerritoryGeoMembership
- * 
- */
-export type TerritoryGeoMembership = $Result.DefaultSelection<Prisma.$TerritoryGeoMembershipPayload>
-/**
  * Model TerritoryApprovalRequest
  * 
  */
@@ -273,6 +263,11 @@ export type ConformityRecord = $Result.DefaultSelection<Prisma.$ConformityRecord
  * 
  */
 export type IngestionRun = $Result.DefaultSelection<Prisma.$IngestionRunPayload>
+/**
+ * Model IngestionDiff
+ * 
+ */
+export type IngestionDiff = $Result.DefaultSelection<Prisma.$IngestionDiffPayload>
 /**
  * Model IngestionSuggestion
  * 
@@ -374,8 +369,32 @@ export const IngestionRunStatus: {
 export type IngestionRunStatus = (typeof IngestionRunStatus)[keyof typeof IngestionRunStatus]
 
 
+export const IngestionRunPhase: {
+  DISCOVERING: 'DISCOVERING',
+  DOWNLOADING: 'DOWNLOADING',
+  PARSING: 'PARSING',
+  LOADING: 'LOADING',
+  VALIDATING: 'VALIDATING',
+  RECONCILING: 'RECONCILING',
+  PROMOTING: 'PROMOTING',
+  SYNCING: 'SYNCING',
+  FAILED: 'FAILED'
+};
+
+export type IngestionRunPhase = (typeof IngestionRunPhase)[keyof typeof IngestionRunPhase]
+
+
+export const IngestionDiffScope: {
+  WAREHOUSE: 'WAREHOUSE',
+  CRM: 'CRM'
+};
+
+export type IngestionDiffScope = (typeof IngestionDiffScope)[keyof typeof IngestionDiffScope]
+
+
 export const IngestionSuggestionType: {
   FACILITY_FIELD_UPDATE: 'FACILITY_FIELD_UPDATE',
+  PROFESSIONAL_FIELD_UPDATE: 'PROFESSIONAL_FIELD_UPDATE',
   FACILITY_REGISTRY_DEACTIVATED: 'FACILITY_REGISTRY_DEACTIVATED',
   FACILITY_REGISTRY_REACTIVATED: 'FACILITY_REGISTRY_REACTIVATED',
   FACILITY_PROFESSIONAL_REMOVAL: 'FACILITY_PROFESSIONAL_REMOVAL',
@@ -500,48 +519,6 @@ export const TerritoryNodeType: {
 export type TerritoryNodeType = (typeof TerritoryNodeType)[keyof typeof TerritoryNodeType]
 
 
-export const TerritoryRollupRelationshipType: {
-  reporting: 'reporting'
-};
-
-export type TerritoryRollupRelationshipType = (typeof TerritoryRollupRelationshipType)[keyof typeof TerritoryRollupRelationshipType]
-
-
-export const TerritoryRollupLinkSource: {
-  geo: 'geo',
-  manual: 'manual'
-};
-
-export type TerritoryRollupLinkSource = (typeof TerritoryRollupLinkSource)[keyof typeof TerritoryRollupLinkSource]
-
-
-export const TerritoryParentAssignmentStatus: {
-  resolved: 'resolved',
-  ambiguous: 'ambiguous',
-  manual: 'manual'
-};
-
-export type TerritoryParentAssignmentStatus = (typeof TerritoryParentAssignmentStatus)[keyof typeof TerritoryParentAssignmentStatus]
-
-
-export const TerritoryParentAssignmentSource: {
-  geo: 'geo',
-  inferred: 'inferred',
-  manual: 'manual'
-};
-
-export type TerritoryParentAssignmentSource = (typeof TerritoryParentAssignmentSource)[keyof typeof TerritoryParentAssignmentSource]
-
-
-export const TerritoryGeoMembershipStatus: {
-  pending: 'pending',
-  ready: 'ready',
-  failed: 'failed'
-};
-
-export type TerritoryGeoMembershipStatus = (typeof TerritoryGeoMembershipStatus)[keyof typeof TerritoryGeoMembershipStatus]
-
-
 export const TerritoryAssignmentStatus: {
   assigned: 'assigned',
   unassigned: 'unassigned',
@@ -604,6 +581,14 @@ export type IngestionRunStatus = $Enums.IngestionRunStatus
 
 export const IngestionRunStatus: typeof $Enums.IngestionRunStatus
 
+export type IngestionRunPhase = $Enums.IngestionRunPhase
+
+export const IngestionRunPhase: typeof $Enums.IngestionRunPhase
+
+export type IngestionDiffScope = $Enums.IngestionDiffScope
+
+export const IngestionDiffScope: typeof $Enums.IngestionDiffScope
+
 export type IngestionSuggestionType = $Enums.IngestionSuggestionType
 
 export const IngestionSuggestionType: typeof $Enums.IngestionSuggestionType
@@ -651,26 +636,6 @@ export const VerificationTokenType: typeof $Enums.VerificationTokenType
 export type TerritoryNodeType = $Enums.TerritoryNodeType
 
 export const TerritoryNodeType: typeof $Enums.TerritoryNodeType
-
-export type TerritoryRollupRelationshipType = $Enums.TerritoryRollupRelationshipType
-
-export const TerritoryRollupRelationshipType: typeof $Enums.TerritoryRollupRelationshipType
-
-export type TerritoryRollupLinkSource = $Enums.TerritoryRollupLinkSource
-
-export const TerritoryRollupLinkSource: typeof $Enums.TerritoryRollupLinkSource
-
-export type TerritoryParentAssignmentStatus = $Enums.TerritoryParentAssignmentStatus
-
-export const TerritoryParentAssignmentStatus: typeof $Enums.TerritoryParentAssignmentStatus
-
-export type TerritoryParentAssignmentSource = $Enums.TerritoryParentAssignmentSource
-
-export const TerritoryParentAssignmentSource: typeof $Enums.TerritoryParentAssignmentSource
-
-export type TerritoryGeoMembershipStatus = $Enums.TerritoryGeoMembershipStatus
-
-export const TerritoryGeoMembershipStatus: typeof $Enums.TerritoryGeoMembershipStatus
 
 export type TerritoryAssignmentStatus = $Enums.TerritoryAssignmentStatus
 
@@ -1110,26 +1075,6 @@ export class PrismaClient<
   get territoryClosure(): Prisma.TerritoryClosureDelegate<ExtArgs, ClientOptions>;
 
   /**
-   * `prisma.territoryRollupLink`: Exposes CRUD operations for the **TerritoryRollupLink** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more TerritoryRollupLinks
-    * const territoryRollupLinks = await prisma.territoryRollupLink.findMany()
-    * ```
-    */
-  get territoryRollupLink(): Prisma.TerritoryRollupLinkDelegate<ExtArgs, ClientOptions>;
-
-  /**
-   * `prisma.territoryGeoMembership`: Exposes CRUD operations for the **TerritoryGeoMembership** model.
-    * Example usage:
-    * ```ts
-    * // Fetch zero or more TerritoryGeoMemberships
-    * const territoryGeoMemberships = await prisma.territoryGeoMembership.findMany()
-    * ```
-    */
-  get territoryGeoMembership(): Prisma.TerritoryGeoMembershipDelegate<ExtArgs, ClientOptions>;
-
-  /**
    * `prisma.territoryApprovalRequest`: Exposes CRUD operations for the **TerritoryApprovalRequest** model.
     * Example usage:
     * ```ts
@@ -1328,6 +1273,16 @@ export class PrismaClient<
     * ```
     */
   get ingestionRun(): Prisma.IngestionRunDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.ingestionDiff`: Exposes CRUD operations for the **IngestionDiff** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more IngestionDiffs
+    * const ingestionDiffs = await prisma.ingestionDiff.findMany()
+    * ```
+    */
+  get ingestionDiff(): Prisma.IngestionDiffDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.ingestionSuggestion`: Exposes CRUD operations for the **IngestionSuggestion** model.
@@ -1802,8 +1757,6 @@ export namespace Prisma {
     TerritoryType: 'TerritoryType',
     Territory: 'Territory',
     TerritoryClosure: 'TerritoryClosure',
-    TerritoryRollupLink: 'TerritoryRollupLink',
-    TerritoryGeoMembership: 'TerritoryGeoMembership',
     TerritoryApprovalRequest: 'TerritoryApprovalRequest',
     Role: 'Role',
     Session: 'Session',
@@ -1824,6 +1777,7 @@ export namespace Prisma {
     ConformityRequirement: 'ConformityRequirement',
     ConformityRecord: 'ConformityRecord',
     IngestionRun: 'IngestionRun',
+    IngestionDiff: 'IngestionDiff',
     IngestionSuggestion: 'IngestionSuggestion'
   };
 
@@ -1840,7 +1794,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "registryAgreementType" | "registryCareType" | "registryDeactivationReason" | "registryEquipmentCatalog" | "registryEquipmentCategory" | "registryFacility" | "registryFacilityAgreement" | "registryFacilityEquipment" | "registryFacilityPhysicalInstallation" | "registryFacilityProfessional" | "registryFacilityRepresentative" | "registryFacilityService" | "registryFacilityType" | "registryInstallationSubtype" | "registryMaintainer" | "registryMunicipality" | "registryOccupation" | "registryPhysicalInstallationType" | "registryPhysicalInstallation" | "registryProfessionalCouncil" | "registryProfessionalWorkload" | "registryProfessional" | "registryServiceClassification" | "registryServiceSpecialty" | "registryState" | "user" | "userTerritoryAssignment" | "territoryType" | "territory" | "territoryClosure" | "territoryRollupLink" | "territoryGeoMembership" | "territoryApprovalRequest" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "facility" | "professional" | "facilityProfessional" | "facilityRepresentative" | "facilityConsultantAssignment" | "sector" | "product" | "healthcareProvider" | "facilityHealthcareProviderShare" | "conformityRequirement" | "conformityRecord" | "ingestionRun" | "ingestionSuggestion"
+      modelProps: "registryAgreementType" | "registryCareType" | "registryDeactivationReason" | "registryEquipmentCatalog" | "registryEquipmentCategory" | "registryFacility" | "registryFacilityAgreement" | "registryFacilityEquipment" | "registryFacilityPhysicalInstallation" | "registryFacilityProfessional" | "registryFacilityRepresentative" | "registryFacilityService" | "registryFacilityType" | "registryInstallationSubtype" | "registryMaintainer" | "registryMunicipality" | "registryOccupation" | "registryPhysicalInstallationType" | "registryPhysicalInstallation" | "registryProfessionalCouncil" | "registryProfessionalWorkload" | "registryProfessional" | "registryServiceClassification" | "registryServiceSpecialty" | "registryState" | "user" | "userTerritoryAssignment" | "territoryType" | "territory" | "territoryClosure" | "territoryApprovalRequest" | "role" | "session" | "invitation" | "passwordReset" | "auditLog" | "verificationToken" | "permission" | "facility" | "professional" | "facilityProfessional" | "facilityRepresentative" | "facilityConsultantAssignment" | "sector" | "product" | "healthcareProvider" | "facilityHealthcareProviderShare" | "conformityRequirement" | "conformityRecord" | "ingestionRun" | "ingestionDiff" | "ingestionSuggestion"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -4064,154 +4018,6 @@ export namespace Prisma {
           }
         }
       }
-      TerritoryRollupLink: {
-        payload: Prisma.$TerritoryRollupLinkPayload<ExtArgs>
-        fields: Prisma.TerritoryRollupLinkFieldRefs
-        operations: {
-          findUnique: {
-            args: Prisma.TerritoryRollupLinkFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload> | null
-          }
-          findUniqueOrThrow: {
-            args: Prisma.TerritoryRollupLinkFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>
-          }
-          findFirst: {
-            args: Prisma.TerritoryRollupLinkFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload> | null
-          }
-          findFirstOrThrow: {
-            args: Prisma.TerritoryRollupLinkFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>
-          }
-          findMany: {
-            args: Prisma.TerritoryRollupLinkFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>[]
-          }
-          create: {
-            args: Prisma.TerritoryRollupLinkCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>
-          }
-          createMany: {
-            args: Prisma.TerritoryRollupLinkCreateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          createManyAndReturn: {
-            args: Prisma.TerritoryRollupLinkCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>[]
-          }
-          delete: {
-            args: Prisma.TerritoryRollupLinkDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>
-          }
-          update: {
-            args: Prisma.TerritoryRollupLinkUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>
-          }
-          deleteMany: {
-            args: Prisma.TerritoryRollupLinkDeleteManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateMany: {
-            args: Prisma.TerritoryRollupLinkUpdateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.TerritoryRollupLinkUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>[]
-          }
-          upsert: {
-            args: Prisma.TerritoryRollupLinkUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryRollupLinkPayload>
-          }
-          aggregate: {
-            args: Prisma.TerritoryRollupLinkAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateTerritoryRollupLink>
-          }
-          groupBy: {
-            args: Prisma.TerritoryRollupLinkGroupByArgs<ExtArgs>
-            result: $Utils.Optional<TerritoryRollupLinkGroupByOutputType>[]
-          }
-          count: {
-            args: Prisma.TerritoryRollupLinkCountArgs<ExtArgs>
-            result: $Utils.Optional<TerritoryRollupLinkCountAggregateOutputType> | number
-          }
-        }
-      }
-      TerritoryGeoMembership: {
-        payload: Prisma.$TerritoryGeoMembershipPayload<ExtArgs>
-        fields: Prisma.TerritoryGeoMembershipFieldRefs
-        operations: {
-          findUnique: {
-            args: Prisma.TerritoryGeoMembershipFindUniqueArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload> | null
-          }
-          findUniqueOrThrow: {
-            args: Prisma.TerritoryGeoMembershipFindUniqueOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>
-          }
-          findFirst: {
-            args: Prisma.TerritoryGeoMembershipFindFirstArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload> | null
-          }
-          findFirstOrThrow: {
-            args: Prisma.TerritoryGeoMembershipFindFirstOrThrowArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>
-          }
-          findMany: {
-            args: Prisma.TerritoryGeoMembershipFindManyArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>[]
-          }
-          create: {
-            args: Prisma.TerritoryGeoMembershipCreateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>
-          }
-          createMany: {
-            args: Prisma.TerritoryGeoMembershipCreateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          createManyAndReturn: {
-            args: Prisma.TerritoryGeoMembershipCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>[]
-          }
-          delete: {
-            args: Prisma.TerritoryGeoMembershipDeleteArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>
-          }
-          update: {
-            args: Prisma.TerritoryGeoMembershipUpdateArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>
-          }
-          deleteMany: {
-            args: Prisma.TerritoryGeoMembershipDeleteManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateMany: {
-            args: Prisma.TerritoryGeoMembershipUpdateManyArgs<ExtArgs>
-            result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.TerritoryGeoMembershipUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>[]
-          }
-          upsert: {
-            args: Prisma.TerritoryGeoMembershipUpsertArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TerritoryGeoMembershipPayload>
-          }
-          aggregate: {
-            args: Prisma.TerritoryGeoMembershipAggregateArgs<ExtArgs>
-            result: $Utils.Optional<AggregateTerritoryGeoMembership>
-          }
-          groupBy: {
-            args: Prisma.TerritoryGeoMembershipGroupByArgs<ExtArgs>
-            result: $Utils.Optional<TerritoryGeoMembershipGroupByOutputType>[]
-          }
-          count: {
-            args: Prisma.TerritoryGeoMembershipCountArgs<ExtArgs>
-            result: $Utils.Optional<TerritoryGeoMembershipCountAggregateOutputType> | number
-          }
-        }
-      }
       TerritoryApprovalRequest: {
         payload: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>
         fields: Prisma.TerritoryApprovalRequestFieldRefs
@@ -5692,6 +5498,80 @@ export namespace Prisma {
           }
         }
       }
+      IngestionDiff: {
+        payload: Prisma.$IngestionDiffPayload<ExtArgs>
+        fields: Prisma.IngestionDiffFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.IngestionDiffFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.IngestionDiffFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>
+          }
+          findFirst: {
+            args: Prisma.IngestionDiffFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.IngestionDiffFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>
+          }
+          findMany: {
+            args: Prisma.IngestionDiffFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>[]
+          }
+          create: {
+            args: Prisma.IngestionDiffCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>
+          }
+          createMany: {
+            args: Prisma.IngestionDiffCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.IngestionDiffCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>[]
+          }
+          delete: {
+            args: Prisma.IngestionDiffDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>
+          }
+          update: {
+            args: Prisma.IngestionDiffUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>
+          }
+          deleteMany: {
+            args: Prisma.IngestionDiffDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.IngestionDiffUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.IngestionDiffUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>[]
+          }
+          upsert: {
+            args: Prisma.IngestionDiffUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$IngestionDiffPayload>
+          }
+          aggregate: {
+            args: Prisma.IngestionDiffAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateIngestionDiff>
+          }
+          groupBy: {
+            args: Prisma.IngestionDiffGroupByArgs<ExtArgs>
+            result: $Utils.Optional<IngestionDiffGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.IngestionDiffCountArgs<ExtArgs>
+            result: $Utils.Optional<IngestionDiffCountAggregateOutputType> | number
+          }
+        }
+      }
       IngestionSuggestion: {
         payload: Prisma.$IngestionSuggestionPayload<ExtArgs>
         fields: Prisma.IngestionSuggestionFieldRefs
@@ -5904,8 +5784,6 @@ export namespace Prisma {
     territoryType?: TerritoryTypeOmit
     territory?: TerritoryOmit
     territoryClosure?: TerritoryClosureOmit
-    territoryRollupLink?: TerritoryRollupLinkOmit
-    territoryGeoMembership?: TerritoryGeoMembershipOmit
     territoryApprovalRequest?: TerritoryApprovalRequestOmit
     role?: RoleOmit
     session?: SessionOmit
@@ -5926,6 +5804,7 @@ export namespace Prisma {
     conformityRequirement?: ConformityRequirementOmit
     conformityRecord?: ConformityRecordOmit
     ingestionRun?: IngestionRunOmit
+    ingestionDiff?: IngestionDiffOmit
     ingestionSuggestion?: IngestionSuggestionOmit
   }
 
@@ -6133,30 +6012,24 @@ export namespace Prisma {
 
   export type TerritoryCountOutputType = {
     children: number
+    repPatches: number
     facilities: number
     userAssignments: number
     closureAsAncestor: number
     closureAsDescendant: number
     approvalRequests: number
     facilityApprovalRequests: number
-    rollupLinksAsTerritory: number
-    rollupLinksAsAncestor: number
-    geoMembershipAsOperational: number
-    geoMembershipAsReference: number
   }
 
   export type TerritoryCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     children?: boolean | TerritoryCountOutputTypeCountChildrenArgs
+    repPatches?: boolean | TerritoryCountOutputTypeCountRepPatchesArgs
     facilities?: boolean | TerritoryCountOutputTypeCountFacilitiesArgs
     userAssignments?: boolean | TerritoryCountOutputTypeCountUserAssignmentsArgs
     closureAsAncestor?: boolean | TerritoryCountOutputTypeCountClosureAsAncestorArgs
     closureAsDescendant?: boolean | TerritoryCountOutputTypeCountClosureAsDescendantArgs
     approvalRequests?: boolean | TerritoryCountOutputTypeCountApprovalRequestsArgs
     facilityApprovalRequests?: boolean | TerritoryCountOutputTypeCountFacilityApprovalRequestsArgs
-    rollupLinksAsTerritory?: boolean | TerritoryCountOutputTypeCountRollupLinksAsTerritoryArgs
-    rollupLinksAsAncestor?: boolean | TerritoryCountOutputTypeCountRollupLinksAsAncestorArgs
-    geoMembershipAsOperational?: boolean | TerritoryCountOutputTypeCountGeoMembershipAsOperationalArgs
-    geoMembershipAsReference?: boolean | TerritoryCountOutputTypeCountGeoMembershipAsReferenceArgs
   }
 
   // Custom InputTypes
@@ -6174,6 +6047,13 @@ export namespace Prisma {
    * TerritoryCountOutputType without action
    */
   export type TerritoryCountOutputTypeCountChildrenArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: TerritoryWhereInput
+  }
+
+  /**
+   * TerritoryCountOutputType without action
+   */
+  export type TerritoryCountOutputTypeCountRepPatchesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: TerritoryWhereInput
   }
 
@@ -6217,34 +6097,6 @@ export namespace Prisma {
    */
   export type TerritoryCountOutputTypeCountFacilityApprovalRequestsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: TerritoryApprovalRequestWhereInput
-  }
-
-  /**
-   * TerritoryCountOutputType without action
-   */
-  export type TerritoryCountOutputTypeCountRollupLinksAsTerritoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: TerritoryRollupLinkWhereInput
-  }
-
-  /**
-   * TerritoryCountOutputType without action
-   */
-  export type TerritoryCountOutputTypeCountRollupLinksAsAncestorArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: TerritoryRollupLinkWhereInput
-  }
-
-  /**
-   * TerritoryCountOutputType without action
-   */
-  export type TerritoryCountOutputTypeCountGeoMembershipAsOperationalArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: TerritoryGeoMembershipWhereInput
-  }
-
-  /**
-   * TerritoryCountOutputType without action
-   */
-  export type TerritoryCountOutputTypeCountGeoMembershipAsReferenceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: TerritoryGeoMembershipWhereInput
   }
 
 
@@ -6592,10 +6444,12 @@ export namespace Prisma {
 
   export type IngestionRunCountOutputType = {
     suggestions: number
+    diffs: number
   }
 
   export type IngestionRunCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     suggestions?: boolean | IngestionRunCountOutputTypeCountSuggestionsArgs
+    diffs?: boolean | IngestionRunCountOutputTypeCountDiffsArgs
   }
 
   // Custom InputTypes
@@ -6614,6 +6468,13 @@ export namespace Prisma {
    */
   export type IngestionRunCountOutputTypeCountSuggestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: IngestionSuggestionWhereInput
+  }
+
+  /**
+   * IngestionRunCountOutputType without action
+   */
+  export type IngestionRunCountOutputTypeCountDiffsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionDiffWhereInput
   }
 
 
@@ -35955,6 +35816,7 @@ export namespace Prisma {
     assignableToManagers: boolean | null
     isCountryLevel: boolean | null
     blockSiblingOverlap: boolean | null
+    participatesInGroupingHierarchy: boolean | null
     sortOrder: number | null
     isActive: boolean | null
     createdAt: Date | null
@@ -35972,6 +35834,7 @@ export namespace Prisma {
     assignableToManagers: boolean | null
     isCountryLevel: boolean | null
     blockSiblingOverlap: boolean | null
+    participatesInGroupingHierarchy: boolean | null
     sortOrder: number | null
     isActive: boolean | null
     createdAt: Date | null
@@ -35989,6 +35852,7 @@ export namespace Prisma {
     assignableToManagers: number
     isCountryLevel: number
     blockSiblingOverlap: number
+    participatesInGroupingHierarchy: number
     sortOrder: number
     isActive: number
     createdAt: number
@@ -36016,6 +35880,7 @@ export namespace Prisma {
     assignableToManagers?: true
     isCountryLevel?: true
     blockSiblingOverlap?: true
+    participatesInGroupingHierarchy?: true
     sortOrder?: true
     isActive?: true
     createdAt?: true
@@ -36033,6 +35898,7 @@ export namespace Prisma {
     assignableToManagers?: true
     isCountryLevel?: true
     blockSiblingOverlap?: true
+    participatesInGroupingHierarchy?: true
     sortOrder?: true
     isActive?: true
     createdAt?: true
@@ -36050,6 +35916,7 @@ export namespace Prisma {
     assignableToManagers?: true
     isCountryLevel?: true
     blockSiblingOverlap?: true
+    participatesInGroupingHierarchy?: true
     sortOrder?: true
     isActive?: true
     createdAt?: true
@@ -36154,6 +36021,7 @@ export namespace Prisma {
     assignableToManagers: boolean
     isCountryLevel: boolean
     blockSiblingOverlap: boolean
+    participatesInGroupingHierarchy: boolean
     sortOrder: number
     isActive: boolean
     createdAt: Date
@@ -36190,6 +36058,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: boolean
     isActive?: boolean
     createdAt?: boolean
@@ -36209,6 +36078,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: boolean
     isActive?: boolean
     createdAt?: boolean
@@ -36226,6 +36096,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: boolean
     isActive?: boolean
     createdAt?: boolean
@@ -36243,13 +36114,14 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: boolean
     isActive?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type TerritoryTypeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "name" | "description" | "canHaveBoundary" | "assignsClinics" | "assignableToUsers" | "assignableToManagers" | "isCountryLevel" | "blockSiblingOverlap" | "sortOrder" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["territoryType"]>
+  export type TerritoryTypeOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "name" | "description" | "canHaveBoundary" | "assignsClinics" | "assignableToUsers" | "assignableToManagers" | "isCountryLevel" | "blockSiblingOverlap" | "participatesInGroupingHierarchy" | "sortOrder" | "isActive" | "createdAt" | "updatedAt", ExtArgs["result"]["territoryType"]>
   export type TerritoryTypeInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     territories?: boolean | TerritoryType$territoriesArgs<ExtArgs>
     _count?: boolean | TerritoryTypeCountOutputTypeDefaultArgs<ExtArgs>
@@ -36273,6 +36145,7 @@ export namespace Prisma {
       assignableToManagers: boolean
       isCountryLevel: boolean
       blockSiblingOverlap: boolean
+      participatesInGroupingHierarchy: boolean
       sortOrder: number
       isActive: boolean
       createdAt: Date
@@ -36711,6 +36584,7 @@ export namespace Prisma {
     readonly assignableToManagers: FieldRef<"TerritoryType", 'Boolean'>
     readonly isCountryLevel: FieldRef<"TerritoryType", 'Boolean'>
     readonly blockSiblingOverlap: FieldRef<"TerritoryType", 'Boolean'>
+    readonly participatesInGroupingHierarchy: FieldRef<"TerritoryType", 'Boolean'>
     readonly sortOrder: FieldRef<"TerritoryType", 'Int'>
     readonly isActive: FieldRef<"TerritoryType", 'Boolean'>
     readonly createdAt: FieldRef<"TerritoryType", 'DateTime'>
@@ -37189,11 +37063,9 @@ export namespace Prisma {
     regionSlug: string | null
     stateCode: string | null
     parentId: string | null
+    managerTerritoryId: string | null
     isActive: boolean | null
-    parentAssignmentStatus: $Enums.TerritoryParentAssignmentStatus | null
-    parentAssignmentSource: $Enums.TerritoryParentAssignmentSource | null
     organizationId: string | null
-    geoMembershipStatus: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng: number | null
     boundaryMinLat: number | null
     boundaryMaxLng: number | null
@@ -37214,11 +37086,9 @@ export namespace Prisma {
     regionSlug: string | null
     stateCode: string | null
     parentId: string | null
+    managerTerritoryId: string | null
     isActive: boolean | null
-    parentAssignmentStatus: $Enums.TerritoryParentAssignmentStatus | null
-    parentAssignmentSource: $Enums.TerritoryParentAssignmentSource | null
     organizationId: string | null
-    geoMembershipStatus: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng: number | null
     boundaryMinLat: number | null
     boundaryMaxLng: number | null
@@ -37239,11 +37109,9 @@ export namespace Prisma {
     regionSlug: number
     stateCode: number
     parentId: number
+    managerTerritoryId: number
     isActive: number
-    parentAssignmentStatus: number
-    parentAssignmentSource: number
     organizationId: number
-    geoMembershipStatus: number
     boundaryMinLng: number
     boundaryMinLat: number
     boundaryMaxLng: number
@@ -37282,11 +37150,9 @@ export namespace Prisma {
     regionSlug?: true
     stateCode?: true
     parentId?: true
+    managerTerritoryId?: true
     isActive?: true
-    parentAssignmentStatus?: true
-    parentAssignmentSource?: true
     organizationId?: true
-    geoMembershipStatus?: true
     boundaryMinLng?: true
     boundaryMinLat?: true
     boundaryMaxLng?: true
@@ -37307,11 +37173,9 @@ export namespace Prisma {
     regionSlug?: true
     stateCode?: true
     parentId?: true
+    managerTerritoryId?: true
     isActive?: true
-    parentAssignmentStatus?: true
-    parentAssignmentSource?: true
     organizationId?: true
-    geoMembershipStatus?: true
     boundaryMinLng?: true
     boundaryMinLat?: true
     boundaryMaxLng?: true
@@ -37332,11 +37196,9 @@ export namespace Prisma {
     regionSlug?: true
     stateCode?: true
     parentId?: true
+    managerTerritoryId?: true
     isActive?: true
-    parentAssignmentStatus?: true
-    parentAssignmentSource?: true
     organizationId?: true
-    geoMembershipStatus?: true
     boundaryMinLng?: true
     boundaryMinLat?: true
     boundaryMaxLng?: true
@@ -37444,11 +37306,9 @@ export namespace Prisma {
     regionSlug: string | null
     stateCode: string | null
     parentId: string | null
+    managerTerritoryId: string | null
     isActive: boolean
-    parentAssignmentStatus: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource: $Enums.TerritoryParentAssignmentSource | null
     organizationId: string | null
-    geoMembershipStatus: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng: number | null
     boundaryMinLat: number | null
     boundaryMaxLng: number | null
@@ -37488,11 +37348,9 @@ export namespace Prisma {
     regionSlug?: boolean
     stateCode?: boolean
     parentId?: boolean
+    managerTerritoryId?: boolean
     isActive?: boolean
-    parentAssignmentStatus?: boolean
-    parentAssignmentSource?: boolean
     organizationId?: boolean
-    geoMembershipStatus?: boolean
     boundaryMinLng?: boolean
     boundaryMinLat?: boolean
     boundaryMaxLng?: boolean
@@ -37503,16 +37361,14 @@ export namespace Prisma {
     territoryType?: boolean | TerritoryTypeDefaultArgs<ExtArgs>
     parent?: boolean | Territory$parentArgs<ExtArgs>
     children?: boolean | Territory$childrenArgs<ExtArgs>
+    managerTerritory?: boolean | Territory$managerTerritoryArgs<ExtArgs>
+    repPatches?: boolean | Territory$repPatchesArgs<ExtArgs>
     facilities?: boolean | Territory$facilitiesArgs<ExtArgs>
     userAssignments?: boolean | Territory$userAssignmentsArgs<ExtArgs>
     closureAsAncestor?: boolean | Territory$closureAsAncestorArgs<ExtArgs>
     closureAsDescendant?: boolean | Territory$closureAsDescendantArgs<ExtArgs>
     approvalRequests?: boolean | Territory$approvalRequestsArgs<ExtArgs>
     facilityApprovalRequests?: boolean | Territory$facilityApprovalRequestsArgs<ExtArgs>
-    rollupLinksAsTerritory?: boolean | Territory$rollupLinksAsTerritoryArgs<ExtArgs>
-    rollupLinksAsAncestor?: boolean | Territory$rollupLinksAsAncestorArgs<ExtArgs>
-    geoMembershipAsOperational?: boolean | Territory$geoMembershipAsOperationalArgs<ExtArgs>
-    geoMembershipAsReference?: boolean | Territory$geoMembershipAsReferenceArgs<ExtArgs>
     _count?: boolean | TerritoryCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["territory"]>
 
@@ -37527,11 +37383,9 @@ export namespace Prisma {
     regionSlug?: boolean
     stateCode?: boolean
     parentId?: boolean
+    managerTerritoryId?: boolean
     isActive?: boolean
-    parentAssignmentStatus?: boolean
-    parentAssignmentSource?: boolean
     organizationId?: boolean
-    geoMembershipStatus?: boolean
     boundaryMinLng?: boolean
     boundaryMinLat?: boolean
     boundaryMaxLng?: boolean
@@ -37541,6 +37395,7 @@ export namespace Prisma {
     updatedAt?: boolean
     territoryType?: boolean | TerritoryTypeDefaultArgs<ExtArgs>
     parent?: boolean | Territory$parentArgs<ExtArgs>
+    managerTerritory?: boolean | Territory$managerTerritoryArgs<ExtArgs>
   }, ExtArgs["result"]["territory"]>
 
   export type TerritorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -37554,11 +37409,9 @@ export namespace Prisma {
     regionSlug?: boolean
     stateCode?: boolean
     parentId?: boolean
+    managerTerritoryId?: boolean
     isActive?: boolean
-    parentAssignmentStatus?: boolean
-    parentAssignmentSource?: boolean
     organizationId?: boolean
-    geoMembershipStatus?: boolean
     boundaryMinLng?: boolean
     boundaryMinLat?: boolean
     boundaryMaxLng?: boolean
@@ -37568,6 +37421,7 @@ export namespace Prisma {
     updatedAt?: boolean
     territoryType?: boolean | TerritoryTypeDefaultArgs<ExtArgs>
     parent?: boolean | Territory$parentArgs<ExtArgs>
+    managerTerritory?: boolean | Territory$managerTerritoryArgs<ExtArgs>
   }, ExtArgs["result"]["territory"]>
 
   export type TerritorySelectScalar = {
@@ -37581,11 +37435,9 @@ export namespace Prisma {
     regionSlug?: boolean
     stateCode?: boolean
     parentId?: boolean
+    managerTerritoryId?: boolean
     isActive?: boolean
-    parentAssignmentStatus?: boolean
-    parentAssignmentSource?: boolean
     organizationId?: boolean
-    geoMembershipStatus?: boolean
     boundaryMinLng?: boolean
     boundaryMinLat?: boolean
     boundaryMaxLng?: boolean
@@ -37595,30 +37447,30 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type TerritoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "slug" | "code" | "nodeType" | "territoryTypeId" | "countryCode" | "regionSlug" | "stateCode" | "parentId" | "isActive" | "parentAssignmentStatus" | "parentAssignmentSource" | "organizationId" | "geoMembershipStatus" | "boundaryMinLng" | "boundaryMinLat" | "boundaryMaxLng" | "boundaryMaxLat" | "boundaryAreaSqKm" | "createdAt" | "updatedAt", ExtArgs["result"]["territory"]>
+  export type TerritoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "slug" | "code" | "nodeType" | "territoryTypeId" | "countryCode" | "regionSlug" | "stateCode" | "parentId" | "managerTerritoryId" | "isActive" | "organizationId" | "boundaryMinLng" | "boundaryMinLat" | "boundaryMaxLng" | "boundaryMaxLat" | "boundaryAreaSqKm" | "createdAt" | "updatedAt", ExtArgs["result"]["territory"]>
   export type TerritoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     territoryType?: boolean | TerritoryTypeDefaultArgs<ExtArgs>
     parent?: boolean | Territory$parentArgs<ExtArgs>
     children?: boolean | Territory$childrenArgs<ExtArgs>
+    managerTerritory?: boolean | Territory$managerTerritoryArgs<ExtArgs>
+    repPatches?: boolean | Territory$repPatchesArgs<ExtArgs>
     facilities?: boolean | Territory$facilitiesArgs<ExtArgs>
     userAssignments?: boolean | Territory$userAssignmentsArgs<ExtArgs>
     closureAsAncestor?: boolean | Territory$closureAsAncestorArgs<ExtArgs>
     closureAsDescendant?: boolean | Territory$closureAsDescendantArgs<ExtArgs>
     approvalRequests?: boolean | Territory$approvalRequestsArgs<ExtArgs>
     facilityApprovalRequests?: boolean | Territory$facilityApprovalRequestsArgs<ExtArgs>
-    rollupLinksAsTerritory?: boolean | Territory$rollupLinksAsTerritoryArgs<ExtArgs>
-    rollupLinksAsAncestor?: boolean | Territory$rollupLinksAsAncestorArgs<ExtArgs>
-    geoMembershipAsOperational?: boolean | Territory$geoMembershipAsOperationalArgs<ExtArgs>
-    geoMembershipAsReference?: boolean | Territory$geoMembershipAsReferenceArgs<ExtArgs>
     _count?: boolean | TerritoryCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type TerritoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     territoryType?: boolean | TerritoryTypeDefaultArgs<ExtArgs>
     parent?: boolean | Territory$parentArgs<ExtArgs>
+    managerTerritory?: boolean | Territory$managerTerritoryArgs<ExtArgs>
   }
   export type TerritoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     territoryType?: boolean | TerritoryTypeDefaultArgs<ExtArgs>
     parent?: boolean | Territory$parentArgs<ExtArgs>
+    managerTerritory?: boolean | Territory$managerTerritoryArgs<ExtArgs>
   }
 
   export type $TerritoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -37627,16 +37479,14 @@ export namespace Prisma {
       territoryType: Prisma.$TerritoryTypePayload<ExtArgs>
       parent: Prisma.$TerritoryPayload<ExtArgs> | null
       children: Prisma.$TerritoryPayload<ExtArgs>[]
+      managerTerritory: Prisma.$TerritoryPayload<ExtArgs> | null
+      repPatches: Prisma.$TerritoryPayload<ExtArgs>[]
       facilities: Prisma.$FacilityPayload<ExtArgs>[]
       userAssignments: Prisma.$UserTerritoryAssignmentPayload<ExtArgs>[]
       closureAsAncestor: Prisma.$TerritoryClosurePayload<ExtArgs>[]
       closureAsDescendant: Prisma.$TerritoryClosurePayload<ExtArgs>[]
       approvalRequests: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>[]
       facilityApprovalRequests: Prisma.$TerritoryApprovalRequestPayload<ExtArgs>[]
-      rollupLinksAsTerritory: Prisma.$TerritoryRollupLinkPayload<ExtArgs>[]
-      rollupLinksAsAncestor: Prisma.$TerritoryRollupLinkPayload<ExtArgs>[]
-      geoMembershipAsOperational: Prisma.$TerritoryGeoMembershipPayload<ExtArgs>[]
-      geoMembershipAsReference: Prisma.$TerritoryGeoMembershipPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -37649,11 +37499,9 @@ export namespace Prisma {
       regionSlug: string | null
       stateCode: string | null
       parentId: string | null
+      managerTerritoryId: string | null
       isActive: boolean
-      parentAssignmentStatus: $Enums.TerritoryParentAssignmentStatus
-      parentAssignmentSource: $Enums.TerritoryParentAssignmentSource | null
       organizationId: string | null
-      geoMembershipStatus: $Enums.TerritoryGeoMembershipStatus | null
       boundaryMinLng: number | null
       boundaryMinLat: number | null
       boundaryMaxLng: number | null
@@ -38058,16 +37906,14 @@ export namespace Prisma {
     territoryType<T extends TerritoryTypeDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryTypeDefaultArgs<ExtArgs>>): Prisma__TerritoryTypeClient<$Result.GetResult<Prisma.$TerritoryTypePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     parent<T extends Territory$parentArgs<ExtArgs> = {}>(args?: Subset<T, Territory$parentArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     children<T extends Territory$childrenArgs<ExtArgs> = {}>(args?: Subset<T, Territory$childrenArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    managerTerritory<T extends Territory$managerTerritoryArgs<ExtArgs> = {}>(args?: Subset<T, Territory$managerTerritoryArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+    repPatches<T extends Territory$repPatchesArgs<ExtArgs> = {}>(args?: Subset<T, Territory$repPatchesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     facilities<T extends Territory$facilitiesArgs<ExtArgs> = {}>(args?: Subset<T, Territory$facilitiesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FacilityPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     userAssignments<T extends Territory$userAssignmentsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$userAssignmentsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UserTerritoryAssignmentPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     closureAsAncestor<T extends Territory$closureAsAncestorArgs<ExtArgs> = {}>(args?: Subset<T, Territory$closureAsAncestorArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     closureAsDescendant<T extends Territory$closureAsDescendantArgs<ExtArgs> = {}>(args?: Subset<T, Territory$closureAsDescendantArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryClosurePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     approvalRequests<T extends Territory$approvalRequestsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$approvalRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     facilityApprovalRequests<T extends Territory$facilityApprovalRequestsArgs<ExtArgs> = {}>(args?: Subset<T, Territory$facilityApprovalRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryApprovalRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    rollupLinksAsTerritory<T extends Territory$rollupLinksAsTerritoryArgs<ExtArgs> = {}>(args?: Subset<T, Territory$rollupLinksAsTerritoryArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    rollupLinksAsAncestor<T extends Territory$rollupLinksAsAncestorArgs<ExtArgs> = {}>(args?: Subset<T, Territory$rollupLinksAsAncestorArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    geoMembershipAsOperational<T extends Territory$geoMembershipAsOperationalArgs<ExtArgs> = {}>(args?: Subset<T, Territory$geoMembershipAsOperationalArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
-    geoMembershipAsReference<T extends Territory$geoMembershipAsReferenceArgs<ExtArgs> = {}>(args?: Subset<T, Territory$geoMembershipAsReferenceArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -38107,11 +37953,9 @@ export namespace Prisma {
     readonly regionSlug: FieldRef<"Territory", 'String'>
     readonly stateCode: FieldRef<"Territory", 'String'>
     readonly parentId: FieldRef<"Territory", 'String'>
+    readonly managerTerritoryId: FieldRef<"Territory", 'String'>
     readonly isActive: FieldRef<"Territory", 'Boolean'>
-    readonly parentAssignmentStatus: FieldRef<"Territory", 'TerritoryParentAssignmentStatus'>
-    readonly parentAssignmentSource: FieldRef<"Territory", 'TerritoryParentAssignmentSource'>
     readonly organizationId: FieldRef<"Territory", 'String'>
-    readonly geoMembershipStatus: FieldRef<"Territory", 'TerritoryGeoMembershipStatus'>
     readonly boundaryMinLng: FieldRef<"Territory", 'Float'>
     readonly boundaryMinLat: FieldRef<"Territory", 'Float'>
     readonly boundaryMaxLng: FieldRef<"Territory", 'Float'>
@@ -38563,6 +38407,49 @@ export namespace Prisma {
   }
 
   /**
+   * Territory.managerTerritory
+   */
+  export type Territory$managerTerritoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+  }
+
+  /**
+   * Territory.repPatches
+   */
+  export type Territory$repPatchesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Territory
+     */
+    select?: TerritorySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the Territory
+     */
+    omit?: TerritoryOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: TerritoryInclude<ExtArgs> | null
+    where?: TerritoryWhereInput
+    orderBy?: TerritoryOrderByWithRelationInput | TerritoryOrderByWithRelationInput[]
+    cursor?: TerritoryWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: TerritoryScalarFieldEnum | TerritoryScalarFieldEnum[]
+  }
+
+  /**
    * Territory.facilities
    */
   export type Territory$facilitiesArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -38704,102 +38591,6 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: TerritoryApprovalRequestScalarFieldEnum | TerritoryApprovalRequestScalarFieldEnum[]
-  }
-
-  /**
-   * Territory.rollupLinksAsTerritory
-   */
-  export type Territory$rollupLinksAsTerritoryArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    where?: TerritoryRollupLinkWhereInput
-    orderBy?: TerritoryRollupLinkOrderByWithRelationInput | TerritoryRollupLinkOrderByWithRelationInput[]
-    cursor?: TerritoryRollupLinkWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: TerritoryRollupLinkScalarFieldEnum | TerritoryRollupLinkScalarFieldEnum[]
-  }
-
-  /**
-   * Territory.rollupLinksAsAncestor
-   */
-  export type Territory$rollupLinksAsAncestorArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    where?: TerritoryRollupLinkWhereInput
-    orderBy?: TerritoryRollupLinkOrderByWithRelationInput | TerritoryRollupLinkOrderByWithRelationInput[]
-    cursor?: TerritoryRollupLinkWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: TerritoryRollupLinkScalarFieldEnum | TerritoryRollupLinkScalarFieldEnum[]
-  }
-
-  /**
-   * Territory.geoMembershipAsOperational
-   */
-  export type Territory$geoMembershipAsOperationalArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    where?: TerritoryGeoMembershipWhereInput
-    orderBy?: TerritoryGeoMembershipOrderByWithRelationInput | TerritoryGeoMembershipOrderByWithRelationInput[]
-    cursor?: TerritoryGeoMembershipWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: TerritoryGeoMembershipScalarFieldEnum | TerritoryGeoMembershipScalarFieldEnum[]
-  }
-
-  /**
-   * Territory.geoMembershipAsReference
-   */
-  export type Territory$geoMembershipAsReferenceArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    where?: TerritoryGeoMembershipWhereInput
-    orderBy?: TerritoryGeoMembershipOrderByWithRelationInput | TerritoryGeoMembershipOrderByWithRelationInput[]
-    cursor?: TerritoryGeoMembershipWhereUniqueInput
-    take?: number
-    skip?: number
-    distinct?: TerritoryGeoMembershipScalarFieldEnum | TerritoryGeoMembershipScalarFieldEnum[]
   }
 
   /**
@@ -39897,2225 +39688,6 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: TerritoryClosureInclude<ExtArgs> | null
-  }
-
-
-  /**
-   * Model TerritoryRollupLink
-   */
-
-  export type AggregateTerritoryRollupLink = {
-    _count: TerritoryRollupLinkCountAggregateOutputType | null
-    _min: TerritoryRollupLinkMinAggregateOutputType | null
-    _max: TerritoryRollupLinkMaxAggregateOutputType | null
-  }
-
-  export type TerritoryRollupLinkMinAggregateOutputType = {
-    id: string | null
-    territoryId: string | null
-    ancestorId: string | null
-    relationshipType: $Enums.TerritoryRollupRelationshipType | null
-    source: $Enums.TerritoryRollupLinkSource | null
-    createdAt: Date | null
-  }
-
-  export type TerritoryRollupLinkMaxAggregateOutputType = {
-    id: string | null
-    territoryId: string | null
-    ancestorId: string | null
-    relationshipType: $Enums.TerritoryRollupRelationshipType | null
-    source: $Enums.TerritoryRollupLinkSource | null
-    createdAt: Date | null
-  }
-
-  export type TerritoryRollupLinkCountAggregateOutputType = {
-    id: number
-    territoryId: number
-    ancestorId: number
-    relationshipType: number
-    source: number
-    createdAt: number
-    _all: number
-  }
-
-
-  export type TerritoryRollupLinkMinAggregateInputType = {
-    id?: true
-    territoryId?: true
-    ancestorId?: true
-    relationshipType?: true
-    source?: true
-    createdAt?: true
-  }
-
-  export type TerritoryRollupLinkMaxAggregateInputType = {
-    id?: true
-    territoryId?: true
-    ancestorId?: true
-    relationshipType?: true
-    source?: true
-    createdAt?: true
-  }
-
-  export type TerritoryRollupLinkCountAggregateInputType = {
-    id?: true
-    territoryId?: true
-    ancestorId?: true
-    relationshipType?: true
-    source?: true
-    createdAt?: true
-    _all?: true
-  }
-
-  export type TerritoryRollupLinkAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which TerritoryRollupLink to aggregate.
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryRollupLinks to fetch.
-     */
-    orderBy?: TerritoryRollupLinkOrderByWithRelationInput | TerritoryRollupLinkOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the start position
-     */
-    cursor?: TerritoryRollupLinkWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryRollupLinks from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryRollupLinks.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Count returned TerritoryRollupLinks
-    **/
-    _count?: true | TerritoryRollupLinkCountAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the minimum value
-    **/
-    _min?: TerritoryRollupLinkMinAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the maximum value
-    **/
-    _max?: TerritoryRollupLinkMaxAggregateInputType
-  }
-
-  export type GetTerritoryRollupLinkAggregateType<T extends TerritoryRollupLinkAggregateArgs> = {
-        [P in keyof T & keyof AggregateTerritoryRollupLink]: P extends '_count' | 'count'
-      ? T[P] extends true
-        ? number
-        : GetScalarType<T[P], AggregateTerritoryRollupLink[P]>
-      : GetScalarType<T[P], AggregateTerritoryRollupLink[P]>
-  }
-
-
-
-
-  export type TerritoryRollupLinkGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: TerritoryRollupLinkWhereInput
-    orderBy?: TerritoryRollupLinkOrderByWithAggregationInput | TerritoryRollupLinkOrderByWithAggregationInput[]
-    by: TerritoryRollupLinkScalarFieldEnum[] | TerritoryRollupLinkScalarFieldEnum
-    having?: TerritoryRollupLinkScalarWhereWithAggregatesInput
-    take?: number
-    skip?: number
-    _count?: TerritoryRollupLinkCountAggregateInputType | true
-    _min?: TerritoryRollupLinkMinAggregateInputType
-    _max?: TerritoryRollupLinkMaxAggregateInputType
-  }
-
-  export type TerritoryRollupLinkGroupByOutputType = {
-    id: string
-    territoryId: string
-    ancestorId: string
-    relationshipType: $Enums.TerritoryRollupRelationshipType
-    source: $Enums.TerritoryRollupLinkSource
-    createdAt: Date
-    _count: TerritoryRollupLinkCountAggregateOutputType | null
-    _min: TerritoryRollupLinkMinAggregateOutputType | null
-    _max: TerritoryRollupLinkMaxAggregateOutputType | null
-  }
-
-  type GetTerritoryRollupLinkGroupByPayload<T extends TerritoryRollupLinkGroupByArgs> = Prisma.PrismaPromise<
-    Array<
-      PickEnumerable<TerritoryRollupLinkGroupByOutputType, T['by']> &
-        {
-          [P in ((keyof T) & (keyof TerritoryRollupLinkGroupByOutputType))]: P extends '_count'
-            ? T[P] extends boolean
-              ? number
-              : GetScalarType<T[P], TerritoryRollupLinkGroupByOutputType[P]>
-            : GetScalarType<T[P], TerritoryRollupLinkGroupByOutputType[P]>
-        }
-      >
-    >
-
-
-  export type TerritoryRollupLinkSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    territoryId?: boolean
-    ancestorId?: boolean
-    relationshipType?: boolean
-    source?: boolean
-    createdAt?: boolean
-    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["territoryRollupLink"]>
-
-  export type TerritoryRollupLinkSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    territoryId?: boolean
-    ancestorId?: boolean
-    relationshipType?: boolean
-    source?: boolean
-    createdAt?: boolean
-    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["territoryRollupLink"]>
-
-  export type TerritoryRollupLinkSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    territoryId?: boolean
-    ancestorId?: boolean
-    relationshipType?: boolean
-    source?: boolean
-    createdAt?: boolean
-    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["territoryRollupLink"]>
-
-  export type TerritoryRollupLinkSelectScalar = {
-    id?: boolean
-    territoryId?: boolean
-    ancestorId?: boolean
-    relationshipType?: boolean
-    source?: boolean
-    createdAt?: boolean
-  }
-
-  export type TerritoryRollupLinkOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "territoryId" | "ancestorId" | "relationshipType" | "source" | "createdAt", ExtArgs["result"]["territoryRollupLink"]>
-  export type TerritoryRollupLinkInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }
-  export type TerritoryRollupLinkIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }
-  export type TerritoryRollupLinkIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    territory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    ancestor?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }
-
-  export type $TerritoryRollupLinkPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "TerritoryRollupLink"
-    objects: {
-      territory: Prisma.$TerritoryPayload<ExtArgs>
-      ancestor: Prisma.$TerritoryPayload<ExtArgs>
-    }
-    scalars: $Extensions.GetPayloadResult<{
-      id: string
-      territoryId: string
-      ancestorId: string
-      relationshipType: $Enums.TerritoryRollupRelationshipType
-      source: $Enums.TerritoryRollupLinkSource
-      createdAt: Date
-    }, ExtArgs["result"]["territoryRollupLink"]>
-    composites: {}
-  }
-
-  type TerritoryRollupLinkGetPayload<S extends boolean | null | undefined | TerritoryRollupLinkDefaultArgs> = $Result.GetResult<Prisma.$TerritoryRollupLinkPayload, S>
-
-  type TerritoryRollupLinkCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<TerritoryRollupLinkFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: TerritoryRollupLinkCountAggregateInputType | true
-    }
-
-  export interface TerritoryRollupLinkDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TerritoryRollupLink'], meta: { name: 'TerritoryRollupLink' } }
-    /**
-     * Find zero or one TerritoryRollupLink that matches the filter.
-     * @param {TerritoryRollupLinkFindUniqueArgs} args - Arguments to find a TerritoryRollupLink
-     * @example
-     * // Get one TerritoryRollupLink
-     * const territoryRollupLink = await prisma.territoryRollupLink.findUnique({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUnique<T extends TerritoryRollupLinkFindUniqueArgs>(args: SelectSubset<T, TerritoryRollupLinkFindUniqueArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find one TerritoryRollupLink that matches the filter or throw an error with `error.code='P2025'`
-     * if no matches were found.
-     * @param {TerritoryRollupLinkFindUniqueOrThrowArgs} args - Arguments to find a TerritoryRollupLink
-     * @example
-     * // Get one TerritoryRollupLink
-     * const territoryRollupLink = await prisma.territoryRollupLink.findUniqueOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUniqueOrThrow<T extends TerritoryRollupLinkFindUniqueOrThrowArgs>(args: SelectSubset<T, TerritoryRollupLinkFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first TerritoryRollupLink that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkFindFirstArgs} args - Arguments to find a TerritoryRollupLink
-     * @example
-     * // Get one TerritoryRollupLink
-     * const territoryRollupLink = await prisma.territoryRollupLink.findFirst({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirst<T extends TerritoryRollupLinkFindFirstArgs>(args?: SelectSubset<T, TerritoryRollupLinkFindFirstArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first TerritoryRollupLink that matches the filter or
-     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkFindFirstOrThrowArgs} args - Arguments to find a TerritoryRollupLink
-     * @example
-     * // Get one TerritoryRollupLink
-     * const territoryRollupLink = await prisma.territoryRollupLink.findFirstOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirstOrThrow<T extends TerritoryRollupLinkFindFirstOrThrowArgs>(args?: SelectSubset<T, TerritoryRollupLinkFindFirstOrThrowArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find zero or more TerritoryRollupLinks that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkFindManyArgs} args - Arguments to filter and select certain fields only.
-     * @example
-     * // Get all TerritoryRollupLinks
-     * const territoryRollupLinks = await prisma.territoryRollupLink.findMany()
-     * 
-     * // Get first 10 TerritoryRollupLinks
-     * const territoryRollupLinks = await prisma.territoryRollupLink.findMany({ take: 10 })
-     * 
-     * // Only select the `id`
-     * const territoryRollupLinkWithIdOnly = await prisma.territoryRollupLink.findMany({ select: { id: true } })
-     * 
-     */
-    findMany<T extends TerritoryRollupLinkFindManyArgs>(args?: SelectSubset<T, TerritoryRollupLinkFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
-
-    /**
-     * Create a TerritoryRollupLink.
-     * @param {TerritoryRollupLinkCreateArgs} args - Arguments to create a TerritoryRollupLink.
-     * @example
-     * // Create one TerritoryRollupLink
-     * const TerritoryRollupLink = await prisma.territoryRollupLink.create({
-     *   data: {
-     *     // ... data to create a TerritoryRollupLink
-     *   }
-     * })
-     * 
-     */
-    create<T extends TerritoryRollupLinkCreateArgs>(args: SelectSubset<T, TerritoryRollupLinkCreateArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Create many TerritoryRollupLinks.
-     * @param {TerritoryRollupLinkCreateManyArgs} args - Arguments to create many TerritoryRollupLinks.
-     * @example
-     * // Create many TerritoryRollupLinks
-     * const territoryRollupLink = await prisma.territoryRollupLink.createMany({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     *     
-     */
-    createMany<T extends TerritoryRollupLinkCreateManyArgs>(args?: SelectSubset<T, TerritoryRollupLinkCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create many TerritoryRollupLinks and returns the data saved in the database.
-     * @param {TerritoryRollupLinkCreateManyAndReturnArgs} args - Arguments to create many TerritoryRollupLinks.
-     * @example
-     * // Create many TerritoryRollupLinks
-     * const territoryRollupLink = await prisma.territoryRollupLink.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many TerritoryRollupLinks and only return the `id`
-     * const territoryRollupLinkWithIdOnly = await prisma.territoryRollupLink.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends TerritoryRollupLinkCreateManyAndReturnArgs>(args?: SelectSubset<T, TerritoryRollupLinkCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Delete a TerritoryRollupLink.
-     * @param {TerritoryRollupLinkDeleteArgs} args - Arguments to delete one TerritoryRollupLink.
-     * @example
-     * // Delete one TerritoryRollupLink
-     * const TerritoryRollupLink = await prisma.territoryRollupLink.delete({
-     *   where: {
-     *     // ... filter to delete one TerritoryRollupLink
-     *   }
-     * })
-     * 
-     */
-    delete<T extends TerritoryRollupLinkDeleteArgs>(args: SelectSubset<T, TerritoryRollupLinkDeleteArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Update one TerritoryRollupLink.
-     * @param {TerritoryRollupLinkUpdateArgs} args - Arguments to update one TerritoryRollupLink.
-     * @example
-     * // Update one TerritoryRollupLink
-     * const territoryRollupLink = await prisma.territoryRollupLink.update({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    update<T extends TerritoryRollupLinkUpdateArgs>(args: SelectSubset<T, TerritoryRollupLinkUpdateArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Delete zero or more TerritoryRollupLinks.
-     * @param {TerritoryRollupLinkDeleteManyArgs} args - Arguments to filter TerritoryRollupLinks to delete.
-     * @example
-     * // Delete a few TerritoryRollupLinks
-     * const { count } = await prisma.territoryRollupLink.deleteMany({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     * 
-     */
-    deleteMany<T extends TerritoryRollupLinkDeleteManyArgs>(args?: SelectSubset<T, TerritoryRollupLinkDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more TerritoryRollupLinks.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkUpdateManyArgs} args - Arguments to update one or more rows.
-     * @example
-     * // Update many TerritoryRollupLinks
-     * const territoryRollupLink = await prisma.territoryRollupLink.updateMany({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    updateMany<T extends TerritoryRollupLinkUpdateManyArgs>(args: SelectSubset<T, TerritoryRollupLinkUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more TerritoryRollupLinks and returns the data updated in the database.
-     * @param {TerritoryRollupLinkUpdateManyAndReturnArgs} args - Arguments to update many TerritoryRollupLinks.
-     * @example
-     * // Update many TerritoryRollupLinks
-     * const territoryRollupLink = await prisma.territoryRollupLink.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more TerritoryRollupLinks and only return the `id`
-     * const territoryRollupLinkWithIdOnly = await prisma.territoryRollupLink.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends TerritoryRollupLinkUpdateManyAndReturnArgs>(args: SelectSubset<T, TerritoryRollupLinkUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Create or update one TerritoryRollupLink.
-     * @param {TerritoryRollupLinkUpsertArgs} args - Arguments to update or create a TerritoryRollupLink.
-     * @example
-     * // Update or create a TerritoryRollupLink
-     * const territoryRollupLink = await prisma.territoryRollupLink.upsert({
-     *   create: {
-     *     // ... data to create a TerritoryRollupLink
-     *   },
-     *   update: {
-     *     // ... in case it already exists, update
-     *   },
-     *   where: {
-     *     // ... the filter for the TerritoryRollupLink we want to update
-     *   }
-     * })
-     */
-    upsert<T extends TerritoryRollupLinkUpsertArgs>(args: SelectSubset<T, TerritoryRollupLinkUpsertArgs<ExtArgs>>): Prisma__TerritoryRollupLinkClient<$Result.GetResult<Prisma.$TerritoryRollupLinkPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-
-    /**
-     * Count the number of TerritoryRollupLinks.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkCountArgs} args - Arguments to filter TerritoryRollupLinks to count.
-     * @example
-     * // Count the number of TerritoryRollupLinks
-     * const count = await prisma.territoryRollupLink.count({
-     *   where: {
-     *     // ... the filter for the TerritoryRollupLinks we want to count
-     *   }
-     * })
-    **/
-    count<T extends TerritoryRollupLinkCountArgs>(
-      args?: Subset<T, TerritoryRollupLinkCountArgs>,
-    ): Prisma.PrismaPromise<
-      T extends $Utils.Record<'select', any>
-        ? T['select'] extends true
-          ? number
-          : GetScalarType<T['select'], TerritoryRollupLinkCountAggregateOutputType>
-        : number
-    >
-
-    /**
-     * Allows you to perform aggregations operations on a TerritoryRollupLink.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
-     * @example
-     * // Ordered by age ascending
-     * // Where email contains prisma.io
-     * // Limited to the 10 users
-     * const aggregations = await prisma.user.aggregate({
-     *   _avg: {
-     *     age: true,
-     *   },
-     *   where: {
-     *     email: {
-     *       contains: "prisma.io",
-     *     },
-     *   },
-     *   orderBy: {
-     *     age: "asc",
-     *   },
-     *   take: 10,
-     * })
-    **/
-    aggregate<T extends TerritoryRollupLinkAggregateArgs>(args: Subset<T, TerritoryRollupLinkAggregateArgs>): Prisma.PrismaPromise<GetTerritoryRollupLinkAggregateType<T>>
-
-    /**
-     * Group by TerritoryRollupLink.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryRollupLinkGroupByArgs} args - Group by arguments.
-     * @example
-     * // Group by city, order by createdAt, get count
-     * const result = await prisma.user.groupBy({
-     *   by: ['city', 'createdAt'],
-     *   orderBy: {
-     *     createdAt: true
-     *   },
-     *   _count: {
-     *     _all: true
-     *   },
-     * })
-     * 
-    **/
-    groupBy<
-      T extends TerritoryRollupLinkGroupByArgs,
-      HasSelectOrTake extends Or<
-        Extends<'skip', Keys<T>>,
-        Extends<'take', Keys<T>>
-      >,
-      OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: TerritoryRollupLinkGroupByArgs['orderBy'] }
-        : { orderBy?: TerritoryRollupLinkGroupByArgs['orderBy'] },
-      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
-      ByFields extends MaybeTupleToUnion<T['by']>,
-      ByValid extends Has<ByFields, OrderFields>,
-      HavingFields extends GetHavingFields<T['having']>,
-      HavingValid extends Has<ByFields, HavingFields>,
-      ByEmpty extends T['by'] extends never[] ? True : False,
-      InputErrors extends ByEmpty extends True
-      ? `Error: "by" must not be empty.`
-      : HavingValid extends False
-      ? {
-          [P in HavingFields]: P extends ByFields
-            ? never
-            : P extends string
-            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
-            : [
-                Error,
-                'Field ',
-                P,
-                ` in "having" needs to be provided in "by"`,
-              ]
-        }[HavingFields]
-      : 'take' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "take", you also need to provide "orderBy"'
-      : 'skip' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "skip", you also need to provide "orderBy"'
-      : ByValid extends True
-      ? {}
-      : {
-          [P in OrderFields]: P extends ByFields
-            ? never
-            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-        }[OrderFields]
-    >(args: SubsetIntersection<T, TerritoryRollupLinkGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTerritoryRollupLinkGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
-  /**
-   * Fields of the TerritoryRollupLink model
-   */
-  readonly fields: TerritoryRollupLinkFieldRefs;
-  }
-
-  /**
-   * The delegate class that acts as a "Promise-like" for TerritoryRollupLink.
-   * Why is this prefixed with `Prisma__`?
-   * Because we want to prevent naming conflicts as mentioned in
-   * https://github.com/prisma/prisma-client-js/issues/707
-   */
-  export interface Prisma__TerritoryRollupLinkClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
-    readonly [Symbol.toStringTag]: "PrismaPromise"
-    territory<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    ancestor<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    /**
-     * Attaches callbacks for the resolution and/or rejection of the Promise.
-     * @param onfulfilled The callback to execute when the Promise is resolved.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of which ever callback is executed.
-     */
-    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
-    /**
-     * Attaches a callback for only the rejection of the Promise.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of the callback.
-     */
-    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
-    /**
-     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
-     * resolved value cannot be modified from the callback.
-     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
-     * @returns A Promise for the completion of the callback.
-     */
-    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
-  }
-
-
-
-
-  /**
-   * Fields of the TerritoryRollupLink model
-   */
-  interface TerritoryRollupLinkFieldRefs {
-    readonly id: FieldRef<"TerritoryRollupLink", 'String'>
-    readonly territoryId: FieldRef<"TerritoryRollupLink", 'String'>
-    readonly ancestorId: FieldRef<"TerritoryRollupLink", 'String'>
-    readonly relationshipType: FieldRef<"TerritoryRollupLink", 'TerritoryRollupRelationshipType'>
-    readonly source: FieldRef<"TerritoryRollupLink", 'TerritoryRollupLinkSource'>
-    readonly createdAt: FieldRef<"TerritoryRollupLink", 'DateTime'>
-  }
-    
-
-  // Custom InputTypes
-  /**
-   * TerritoryRollupLink findUnique
-   */
-  export type TerritoryRollupLinkFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryRollupLink to fetch.
-     */
-    where: TerritoryRollupLinkWhereUniqueInput
-  }
-
-  /**
-   * TerritoryRollupLink findUniqueOrThrow
-   */
-  export type TerritoryRollupLinkFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryRollupLink to fetch.
-     */
-    where: TerritoryRollupLinkWhereUniqueInput
-  }
-
-  /**
-   * TerritoryRollupLink findFirst
-   */
-  export type TerritoryRollupLinkFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryRollupLink to fetch.
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryRollupLinks to fetch.
-     */
-    orderBy?: TerritoryRollupLinkOrderByWithRelationInput | TerritoryRollupLinkOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for TerritoryRollupLinks.
-     */
-    cursor?: TerritoryRollupLinkWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryRollupLinks from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryRollupLinks.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of TerritoryRollupLinks.
-     */
-    distinct?: TerritoryRollupLinkScalarFieldEnum | TerritoryRollupLinkScalarFieldEnum[]
-  }
-
-  /**
-   * TerritoryRollupLink findFirstOrThrow
-   */
-  export type TerritoryRollupLinkFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryRollupLink to fetch.
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryRollupLinks to fetch.
-     */
-    orderBy?: TerritoryRollupLinkOrderByWithRelationInput | TerritoryRollupLinkOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for TerritoryRollupLinks.
-     */
-    cursor?: TerritoryRollupLinkWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryRollupLinks from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryRollupLinks.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of TerritoryRollupLinks.
-     */
-    distinct?: TerritoryRollupLinkScalarFieldEnum | TerritoryRollupLinkScalarFieldEnum[]
-  }
-
-  /**
-   * TerritoryRollupLink findMany
-   */
-  export type TerritoryRollupLinkFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryRollupLinks to fetch.
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryRollupLinks to fetch.
-     */
-    orderBy?: TerritoryRollupLinkOrderByWithRelationInput | TerritoryRollupLinkOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for listing TerritoryRollupLinks.
-     */
-    cursor?: TerritoryRollupLinkWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryRollupLinks from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryRollupLinks.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of TerritoryRollupLinks.
-     */
-    distinct?: TerritoryRollupLinkScalarFieldEnum | TerritoryRollupLinkScalarFieldEnum[]
-  }
-
-  /**
-   * TerritoryRollupLink create
-   */
-  export type TerritoryRollupLinkCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * The data needed to create a TerritoryRollupLink.
-     */
-    data: XOR<TerritoryRollupLinkCreateInput, TerritoryRollupLinkUncheckedCreateInput>
-  }
-
-  /**
-   * TerritoryRollupLink createMany
-   */
-  export type TerritoryRollupLinkCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to create many TerritoryRollupLinks.
-     */
-    data: TerritoryRollupLinkCreateManyInput | TerritoryRollupLinkCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
-   * TerritoryRollupLink createManyAndReturn
-   */
-  export type TerritoryRollupLinkCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * The data used to create many TerritoryRollupLinks.
-     */
-    data: TerritoryRollupLinkCreateManyInput | TerritoryRollupLinkCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * TerritoryRollupLink update
-   */
-  export type TerritoryRollupLinkUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * The data needed to update a TerritoryRollupLink.
-     */
-    data: XOR<TerritoryRollupLinkUpdateInput, TerritoryRollupLinkUncheckedUpdateInput>
-    /**
-     * Choose, which TerritoryRollupLink to update.
-     */
-    where: TerritoryRollupLinkWhereUniqueInput
-  }
-
-  /**
-   * TerritoryRollupLink updateMany
-   */
-  export type TerritoryRollupLinkUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update TerritoryRollupLinks.
-     */
-    data: XOR<TerritoryRollupLinkUpdateManyMutationInput, TerritoryRollupLinkUncheckedUpdateManyInput>
-    /**
-     * Filter which TerritoryRollupLinks to update
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * Limit how many TerritoryRollupLinks to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * TerritoryRollupLink updateManyAndReturn
-   */
-  export type TerritoryRollupLinkUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * The data used to update TerritoryRollupLinks.
-     */
-    data: XOR<TerritoryRollupLinkUpdateManyMutationInput, TerritoryRollupLinkUncheckedUpdateManyInput>
-    /**
-     * Filter which TerritoryRollupLinks to update
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * Limit how many TerritoryRollupLinks to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkIncludeUpdateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * TerritoryRollupLink upsert
-   */
-  export type TerritoryRollupLinkUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * The filter to search for the TerritoryRollupLink to update in case it exists.
-     */
-    where: TerritoryRollupLinkWhereUniqueInput
-    /**
-     * In case the TerritoryRollupLink found by the `where` argument doesn't exist, create a new TerritoryRollupLink with this data.
-     */
-    create: XOR<TerritoryRollupLinkCreateInput, TerritoryRollupLinkUncheckedCreateInput>
-    /**
-     * In case the TerritoryRollupLink was found with the provided `where` argument, update it with this data.
-     */
-    update: XOR<TerritoryRollupLinkUpdateInput, TerritoryRollupLinkUncheckedUpdateInput>
-  }
-
-  /**
-   * TerritoryRollupLink delete
-   */
-  export type TerritoryRollupLinkDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-    /**
-     * Filter which TerritoryRollupLink to delete.
-     */
-    where: TerritoryRollupLinkWhereUniqueInput
-  }
-
-  /**
-   * TerritoryRollupLink deleteMany
-   */
-  export type TerritoryRollupLinkDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which TerritoryRollupLinks to delete
-     */
-    where?: TerritoryRollupLinkWhereInput
-    /**
-     * Limit how many TerritoryRollupLinks to delete.
-     */
-    limit?: number
-  }
-
-  /**
-   * TerritoryRollupLink without action
-   */
-  export type TerritoryRollupLinkDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryRollupLink
-     */
-    select?: TerritoryRollupLinkSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryRollupLink
-     */
-    omit?: TerritoryRollupLinkOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryRollupLinkInclude<ExtArgs> | null
-  }
-
-
-  /**
-   * Model TerritoryGeoMembership
-   */
-
-  export type AggregateTerritoryGeoMembership = {
-    _count: TerritoryGeoMembershipCountAggregateOutputType | null
-    _avg: TerritoryGeoMembershipAvgAggregateOutputType | null
-    _sum: TerritoryGeoMembershipSumAggregateOutputType | null
-    _min: TerritoryGeoMembershipMinAggregateOutputType | null
-    _max: TerritoryGeoMembershipMaxAggregateOutputType | null
-  }
-
-  export type TerritoryGeoMembershipAvgAggregateOutputType = {
-    overlapRatio: number | null
-    intersectionAreaSqKm: number | null
-  }
-
-  export type TerritoryGeoMembershipSumAggregateOutputType = {
-    overlapRatio: number | null
-    intersectionAreaSqKm: number | null
-  }
-
-  export type TerritoryGeoMembershipMinAggregateOutputType = {
-    id: string | null
-    operationalTerritoryId: string | null
-    referenceTerritoryId: string | null
-    referenceTypeSlug: string | null
-    overlapRatio: number | null
-    intersectionAreaSqKm: number | null
-    computedAt: Date | null
-  }
-
-  export type TerritoryGeoMembershipMaxAggregateOutputType = {
-    id: string | null
-    operationalTerritoryId: string | null
-    referenceTerritoryId: string | null
-    referenceTypeSlug: string | null
-    overlapRatio: number | null
-    intersectionAreaSqKm: number | null
-    computedAt: Date | null
-  }
-
-  export type TerritoryGeoMembershipCountAggregateOutputType = {
-    id: number
-    operationalTerritoryId: number
-    referenceTerritoryId: number
-    referenceTypeSlug: number
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt: number
-    _all: number
-  }
-
-
-  export type TerritoryGeoMembershipAvgAggregateInputType = {
-    overlapRatio?: true
-    intersectionAreaSqKm?: true
-  }
-
-  export type TerritoryGeoMembershipSumAggregateInputType = {
-    overlapRatio?: true
-    intersectionAreaSqKm?: true
-  }
-
-  export type TerritoryGeoMembershipMinAggregateInputType = {
-    id?: true
-    operationalTerritoryId?: true
-    referenceTerritoryId?: true
-    referenceTypeSlug?: true
-    overlapRatio?: true
-    intersectionAreaSqKm?: true
-    computedAt?: true
-  }
-
-  export type TerritoryGeoMembershipMaxAggregateInputType = {
-    id?: true
-    operationalTerritoryId?: true
-    referenceTerritoryId?: true
-    referenceTypeSlug?: true
-    overlapRatio?: true
-    intersectionAreaSqKm?: true
-    computedAt?: true
-  }
-
-  export type TerritoryGeoMembershipCountAggregateInputType = {
-    id?: true
-    operationalTerritoryId?: true
-    referenceTerritoryId?: true
-    referenceTypeSlug?: true
-    overlapRatio?: true
-    intersectionAreaSqKm?: true
-    computedAt?: true
-    _all?: true
-  }
-
-  export type TerritoryGeoMembershipAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which TerritoryGeoMembership to aggregate.
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryGeoMemberships to fetch.
-     */
-    orderBy?: TerritoryGeoMembershipOrderByWithRelationInput | TerritoryGeoMembershipOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the start position
-     */
-    cursor?: TerritoryGeoMembershipWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryGeoMemberships from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryGeoMemberships.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Count returned TerritoryGeoMemberships
-    **/
-    _count?: true | TerritoryGeoMembershipCountAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to average
-    **/
-    _avg?: TerritoryGeoMembershipAvgAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to sum
-    **/
-    _sum?: TerritoryGeoMembershipSumAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the minimum value
-    **/
-    _min?: TerritoryGeoMembershipMinAggregateInputType
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
-     * 
-     * Select which fields to find the maximum value
-    **/
-    _max?: TerritoryGeoMembershipMaxAggregateInputType
-  }
-
-  export type GetTerritoryGeoMembershipAggregateType<T extends TerritoryGeoMembershipAggregateArgs> = {
-        [P in keyof T & keyof AggregateTerritoryGeoMembership]: P extends '_count' | 'count'
-      ? T[P] extends true
-        ? number
-        : GetScalarType<T[P], AggregateTerritoryGeoMembership[P]>
-      : GetScalarType<T[P], AggregateTerritoryGeoMembership[P]>
-  }
-
-
-
-
-  export type TerritoryGeoMembershipGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    where?: TerritoryGeoMembershipWhereInput
-    orderBy?: TerritoryGeoMembershipOrderByWithAggregationInput | TerritoryGeoMembershipOrderByWithAggregationInput[]
-    by: TerritoryGeoMembershipScalarFieldEnum[] | TerritoryGeoMembershipScalarFieldEnum
-    having?: TerritoryGeoMembershipScalarWhereWithAggregatesInput
-    take?: number
-    skip?: number
-    _count?: TerritoryGeoMembershipCountAggregateInputType | true
-    _avg?: TerritoryGeoMembershipAvgAggregateInputType
-    _sum?: TerritoryGeoMembershipSumAggregateInputType
-    _min?: TerritoryGeoMembershipMinAggregateInputType
-    _max?: TerritoryGeoMembershipMaxAggregateInputType
-  }
-
-  export type TerritoryGeoMembershipGroupByOutputType = {
-    id: string
-    operationalTerritoryId: string
-    referenceTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt: Date
-    _count: TerritoryGeoMembershipCountAggregateOutputType | null
-    _avg: TerritoryGeoMembershipAvgAggregateOutputType | null
-    _sum: TerritoryGeoMembershipSumAggregateOutputType | null
-    _min: TerritoryGeoMembershipMinAggregateOutputType | null
-    _max: TerritoryGeoMembershipMaxAggregateOutputType | null
-  }
-
-  type GetTerritoryGeoMembershipGroupByPayload<T extends TerritoryGeoMembershipGroupByArgs> = Prisma.PrismaPromise<
-    Array<
-      PickEnumerable<TerritoryGeoMembershipGroupByOutputType, T['by']> &
-        {
-          [P in ((keyof T) & (keyof TerritoryGeoMembershipGroupByOutputType))]: P extends '_count'
-            ? T[P] extends boolean
-              ? number
-              : GetScalarType<T[P], TerritoryGeoMembershipGroupByOutputType[P]>
-            : GetScalarType<T[P], TerritoryGeoMembershipGroupByOutputType[P]>
-        }
-      >
-    >
-
-
-  export type TerritoryGeoMembershipSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    operationalTerritoryId?: boolean
-    referenceTerritoryId?: boolean
-    referenceTypeSlug?: boolean
-    overlapRatio?: boolean
-    intersectionAreaSqKm?: boolean
-    computedAt?: boolean
-    operationalTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    referenceTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["territoryGeoMembership"]>
-
-  export type TerritoryGeoMembershipSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    operationalTerritoryId?: boolean
-    referenceTerritoryId?: boolean
-    referenceTypeSlug?: boolean
-    overlapRatio?: boolean
-    intersectionAreaSqKm?: boolean
-    computedAt?: boolean
-    operationalTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    referenceTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["territoryGeoMembership"]>
-
-  export type TerritoryGeoMembershipSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    operationalTerritoryId?: boolean
-    referenceTerritoryId?: boolean
-    referenceTypeSlug?: boolean
-    overlapRatio?: boolean
-    intersectionAreaSqKm?: boolean
-    computedAt?: boolean
-    operationalTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    referenceTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["territoryGeoMembership"]>
-
-  export type TerritoryGeoMembershipSelectScalar = {
-    id?: boolean
-    operationalTerritoryId?: boolean
-    referenceTerritoryId?: boolean
-    referenceTypeSlug?: boolean
-    overlapRatio?: boolean
-    intersectionAreaSqKm?: boolean
-    computedAt?: boolean
-  }
-
-  export type TerritoryGeoMembershipOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "operationalTerritoryId" | "referenceTerritoryId" | "referenceTypeSlug" | "overlapRatio" | "intersectionAreaSqKm" | "computedAt", ExtArgs["result"]["territoryGeoMembership"]>
-  export type TerritoryGeoMembershipInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    operationalTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    referenceTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }
-  export type TerritoryGeoMembershipIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    operationalTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    referenceTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }
-  export type TerritoryGeoMembershipIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    operationalTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-    referenceTerritory?: boolean | TerritoryDefaultArgs<ExtArgs>
-  }
-
-  export type $TerritoryGeoMembershipPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    name: "TerritoryGeoMembership"
-    objects: {
-      operationalTerritory: Prisma.$TerritoryPayload<ExtArgs>
-      referenceTerritory: Prisma.$TerritoryPayload<ExtArgs>
-    }
-    scalars: $Extensions.GetPayloadResult<{
-      id: string
-      operationalTerritoryId: string
-      referenceTerritoryId: string
-      referenceTypeSlug: string
-      overlapRatio: number
-      intersectionAreaSqKm: number
-      computedAt: Date
-    }, ExtArgs["result"]["territoryGeoMembership"]>
-    composites: {}
-  }
-
-  type TerritoryGeoMembershipGetPayload<S extends boolean | null | undefined | TerritoryGeoMembershipDefaultArgs> = $Result.GetResult<Prisma.$TerritoryGeoMembershipPayload, S>
-
-  type TerritoryGeoMembershipCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
-    Omit<TerritoryGeoMembershipFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
-      select?: TerritoryGeoMembershipCountAggregateInputType | true
-    }
-
-  export interface TerritoryGeoMembershipDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
-    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['TerritoryGeoMembership'], meta: { name: 'TerritoryGeoMembership' } }
-    /**
-     * Find zero or one TerritoryGeoMembership that matches the filter.
-     * @param {TerritoryGeoMembershipFindUniqueArgs} args - Arguments to find a TerritoryGeoMembership
-     * @example
-     * // Get one TerritoryGeoMembership
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.findUnique({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUnique<T extends TerritoryGeoMembershipFindUniqueArgs>(args: SelectSubset<T, TerritoryGeoMembershipFindUniqueArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find one TerritoryGeoMembership that matches the filter or throw an error with `error.code='P2025'`
-     * if no matches were found.
-     * @param {TerritoryGeoMembershipFindUniqueOrThrowArgs} args - Arguments to find a TerritoryGeoMembership
-     * @example
-     * // Get one TerritoryGeoMembership
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.findUniqueOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findUniqueOrThrow<T extends TerritoryGeoMembershipFindUniqueOrThrowArgs>(args: SelectSubset<T, TerritoryGeoMembershipFindUniqueOrThrowArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first TerritoryGeoMembership that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipFindFirstArgs} args - Arguments to find a TerritoryGeoMembership
-     * @example
-     * // Get one TerritoryGeoMembership
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.findFirst({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirst<T extends TerritoryGeoMembershipFindFirstArgs>(args?: SelectSubset<T, TerritoryGeoMembershipFindFirstArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find the first TerritoryGeoMembership that matches the filter or
-     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipFindFirstOrThrowArgs} args - Arguments to find a TerritoryGeoMembership
-     * @example
-     * // Get one TerritoryGeoMembership
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.findFirstOrThrow({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     */
-    findFirstOrThrow<T extends TerritoryGeoMembershipFindFirstOrThrowArgs>(args?: SelectSubset<T, TerritoryGeoMembershipFindFirstOrThrowArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Find zero or more TerritoryGeoMemberships that matches the filter.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipFindManyArgs} args - Arguments to filter and select certain fields only.
-     * @example
-     * // Get all TerritoryGeoMemberships
-     * const territoryGeoMemberships = await prisma.territoryGeoMembership.findMany()
-     * 
-     * // Get first 10 TerritoryGeoMemberships
-     * const territoryGeoMemberships = await prisma.territoryGeoMembership.findMany({ take: 10 })
-     * 
-     * // Only select the `id`
-     * const territoryGeoMembershipWithIdOnly = await prisma.territoryGeoMembership.findMany({ select: { id: true } })
-     * 
-     */
-    findMany<T extends TerritoryGeoMembershipFindManyArgs>(args?: SelectSubset<T, TerritoryGeoMembershipFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
-
-    /**
-     * Create a TerritoryGeoMembership.
-     * @param {TerritoryGeoMembershipCreateArgs} args - Arguments to create a TerritoryGeoMembership.
-     * @example
-     * // Create one TerritoryGeoMembership
-     * const TerritoryGeoMembership = await prisma.territoryGeoMembership.create({
-     *   data: {
-     *     // ... data to create a TerritoryGeoMembership
-     *   }
-     * })
-     * 
-     */
-    create<T extends TerritoryGeoMembershipCreateArgs>(args: SelectSubset<T, TerritoryGeoMembershipCreateArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Create many TerritoryGeoMemberships.
-     * @param {TerritoryGeoMembershipCreateManyArgs} args - Arguments to create many TerritoryGeoMemberships.
-     * @example
-     * // Create many TerritoryGeoMemberships
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.createMany({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     *     
-     */
-    createMany<T extends TerritoryGeoMembershipCreateManyArgs>(args?: SelectSubset<T, TerritoryGeoMembershipCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Create many TerritoryGeoMemberships and returns the data saved in the database.
-     * @param {TerritoryGeoMembershipCreateManyAndReturnArgs} args - Arguments to create many TerritoryGeoMemberships.
-     * @example
-     * // Create many TerritoryGeoMemberships
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many TerritoryGeoMemberships and only return the `id`
-     * const territoryGeoMembershipWithIdOnly = await prisma.territoryGeoMembership.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends TerritoryGeoMembershipCreateManyAndReturnArgs>(args?: SelectSubset<T, TerritoryGeoMembershipCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Delete a TerritoryGeoMembership.
-     * @param {TerritoryGeoMembershipDeleteArgs} args - Arguments to delete one TerritoryGeoMembership.
-     * @example
-     * // Delete one TerritoryGeoMembership
-     * const TerritoryGeoMembership = await prisma.territoryGeoMembership.delete({
-     *   where: {
-     *     // ... filter to delete one TerritoryGeoMembership
-     *   }
-     * })
-     * 
-     */
-    delete<T extends TerritoryGeoMembershipDeleteArgs>(args: SelectSubset<T, TerritoryGeoMembershipDeleteArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Update one TerritoryGeoMembership.
-     * @param {TerritoryGeoMembershipUpdateArgs} args - Arguments to update one TerritoryGeoMembership.
-     * @example
-     * // Update one TerritoryGeoMembership
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.update({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    update<T extends TerritoryGeoMembershipUpdateArgs>(args: SelectSubset<T, TerritoryGeoMembershipUpdateArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-    /**
-     * Delete zero or more TerritoryGeoMemberships.
-     * @param {TerritoryGeoMembershipDeleteManyArgs} args - Arguments to filter TerritoryGeoMemberships to delete.
-     * @example
-     * // Delete a few TerritoryGeoMemberships
-     * const { count } = await prisma.territoryGeoMembership.deleteMany({
-     *   where: {
-     *     // ... provide filter here
-     *   }
-     * })
-     * 
-     */
-    deleteMany<T extends TerritoryGeoMembershipDeleteManyArgs>(args?: SelectSubset<T, TerritoryGeoMembershipDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more TerritoryGeoMemberships.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipUpdateManyArgs} args - Arguments to update one or more rows.
-     * @example
-     * // Update many TerritoryGeoMemberships
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.updateMany({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: {
-     *     // ... provide data here
-     *   }
-     * })
-     * 
-     */
-    updateMany<T extends TerritoryGeoMembershipUpdateManyArgs>(args: SelectSubset<T, TerritoryGeoMembershipUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more TerritoryGeoMemberships and returns the data updated in the database.
-     * @param {TerritoryGeoMembershipUpdateManyAndReturnArgs} args - Arguments to update many TerritoryGeoMemberships.
-     * @example
-     * // Update many TerritoryGeoMemberships
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more TerritoryGeoMemberships and only return the `id`
-     * const territoryGeoMembershipWithIdOnly = await prisma.territoryGeoMembership.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends TerritoryGeoMembershipUpdateManyAndReturnArgs>(args: SelectSubset<T, TerritoryGeoMembershipUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
-
-    /**
-     * Create or update one TerritoryGeoMembership.
-     * @param {TerritoryGeoMembershipUpsertArgs} args - Arguments to update or create a TerritoryGeoMembership.
-     * @example
-     * // Update or create a TerritoryGeoMembership
-     * const territoryGeoMembership = await prisma.territoryGeoMembership.upsert({
-     *   create: {
-     *     // ... data to create a TerritoryGeoMembership
-     *   },
-     *   update: {
-     *     // ... in case it already exists, update
-     *   },
-     *   where: {
-     *     // ... the filter for the TerritoryGeoMembership we want to update
-     *   }
-     * })
-     */
-    upsert<T extends TerritoryGeoMembershipUpsertArgs>(args: SelectSubset<T, TerritoryGeoMembershipUpsertArgs<ExtArgs>>): Prisma__TerritoryGeoMembershipClient<$Result.GetResult<Prisma.$TerritoryGeoMembershipPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
-
-
-    /**
-     * Count the number of TerritoryGeoMemberships.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipCountArgs} args - Arguments to filter TerritoryGeoMemberships to count.
-     * @example
-     * // Count the number of TerritoryGeoMemberships
-     * const count = await prisma.territoryGeoMembership.count({
-     *   where: {
-     *     // ... the filter for the TerritoryGeoMemberships we want to count
-     *   }
-     * })
-    **/
-    count<T extends TerritoryGeoMembershipCountArgs>(
-      args?: Subset<T, TerritoryGeoMembershipCountArgs>,
-    ): Prisma.PrismaPromise<
-      T extends $Utils.Record<'select', any>
-        ? T['select'] extends true
-          ? number
-          : GetScalarType<T['select'], TerritoryGeoMembershipCountAggregateOutputType>
-        : number
-    >
-
-    /**
-     * Allows you to perform aggregations operations on a TerritoryGeoMembership.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
-     * @example
-     * // Ordered by age ascending
-     * // Where email contains prisma.io
-     * // Limited to the 10 users
-     * const aggregations = await prisma.user.aggregate({
-     *   _avg: {
-     *     age: true,
-     *   },
-     *   where: {
-     *     email: {
-     *       contains: "prisma.io",
-     *     },
-     *   },
-     *   orderBy: {
-     *     age: "asc",
-     *   },
-     *   take: 10,
-     * })
-    **/
-    aggregate<T extends TerritoryGeoMembershipAggregateArgs>(args: Subset<T, TerritoryGeoMembershipAggregateArgs>): Prisma.PrismaPromise<GetTerritoryGeoMembershipAggregateType<T>>
-
-    /**
-     * Group by TerritoryGeoMembership.
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * @param {TerritoryGeoMembershipGroupByArgs} args - Group by arguments.
-     * @example
-     * // Group by city, order by createdAt, get count
-     * const result = await prisma.user.groupBy({
-     *   by: ['city', 'createdAt'],
-     *   orderBy: {
-     *     createdAt: true
-     *   },
-     *   _count: {
-     *     _all: true
-     *   },
-     * })
-     * 
-    **/
-    groupBy<
-      T extends TerritoryGeoMembershipGroupByArgs,
-      HasSelectOrTake extends Or<
-        Extends<'skip', Keys<T>>,
-        Extends<'take', Keys<T>>
-      >,
-      OrderByArg extends True extends HasSelectOrTake
-        ? { orderBy: TerritoryGeoMembershipGroupByArgs['orderBy'] }
-        : { orderBy?: TerritoryGeoMembershipGroupByArgs['orderBy'] },
-      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
-      ByFields extends MaybeTupleToUnion<T['by']>,
-      ByValid extends Has<ByFields, OrderFields>,
-      HavingFields extends GetHavingFields<T['having']>,
-      HavingValid extends Has<ByFields, HavingFields>,
-      ByEmpty extends T['by'] extends never[] ? True : False,
-      InputErrors extends ByEmpty extends True
-      ? `Error: "by" must not be empty.`
-      : HavingValid extends False
-      ? {
-          [P in HavingFields]: P extends ByFields
-            ? never
-            : P extends string
-            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
-            : [
-                Error,
-                'Field ',
-                P,
-                ` in "having" needs to be provided in "by"`,
-              ]
-        }[HavingFields]
-      : 'take' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "take", you also need to provide "orderBy"'
-      : 'skip' extends Keys<T>
-      ? 'orderBy' extends Keys<T>
-        ? ByValid extends True
-          ? {}
-          : {
-              [P in OrderFields]: P extends ByFields
-                ? never
-                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-            }[OrderFields]
-        : 'Error: If you provide "skip", you also need to provide "orderBy"'
-      : ByValid extends True
-      ? {}
-      : {
-          [P in OrderFields]: P extends ByFields
-            ? never
-            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
-        }[OrderFields]
-    >(args: SubsetIntersection<T, TerritoryGeoMembershipGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetTerritoryGeoMembershipGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
-  /**
-   * Fields of the TerritoryGeoMembership model
-   */
-  readonly fields: TerritoryGeoMembershipFieldRefs;
-  }
-
-  /**
-   * The delegate class that acts as a "Promise-like" for TerritoryGeoMembership.
-   * Why is this prefixed with `Prisma__`?
-   * Because we want to prevent naming conflicts as mentioned in
-   * https://github.com/prisma/prisma-client-js/issues/707
-   */
-  export interface Prisma__TerritoryGeoMembershipClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
-    readonly [Symbol.toStringTag]: "PrismaPromise"
-    operationalTerritory<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    referenceTerritory<T extends TerritoryDefaultArgs<ExtArgs> = {}>(args?: Subset<T, TerritoryDefaultArgs<ExtArgs>>): Prisma__TerritoryClient<$Result.GetResult<Prisma.$TerritoryPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
-    /**
-     * Attaches callbacks for the resolution and/or rejection of the Promise.
-     * @param onfulfilled The callback to execute when the Promise is resolved.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of which ever callback is executed.
-     */
-    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
-    /**
-     * Attaches a callback for only the rejection of the Promise.
-     * @param onrejected The callback to execute when the Promise is rejected.
-     * @returns A Promise for the completion of the callback.
-     */
-    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
-    /**
-     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
-     * resolved value cannot be modified from the callback.
-     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
-     * @returns A Promise for the completion of the callback.
-     */
-    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
-  }
-
-
-
-
-  /**
-   * Fields of the TerritoryGeoMembership model
-   */
-  interface TerritoryGeoMembershipFieldRefs {
-    readonly id: FieldRef<"TerritoryGeoMembership", 'String'>
-    readonly operationalTerritoryId: FieldRef<"TerritoryGeoMembership", 'String'>
-    readonly referenceTerritoryId: FieldRef<"TerritoryGeoMembership", 'String'>
-    readonly referenceTypeSlug: FieldRef<"TerritoryGeoMembership", 'String'>
-    readonly overlapRatio: FieldRef<"TerritoryGeoMembership", 'Float'>
-    readonly intersectionAreaSqKm: FieldRef<"TerritoryGeoMembership", 'Float'>
-    readonly computedAt: FieldRef<"TerritoryGeoMembership", 'DateTime'>
-  }
-    
-
-  // Custom InputTypes
-  /**
-   * TerritoryGeoMembership findUnique
-   */
-  export type TerritoryGeoMembershipFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryGeoMembership to fetch.
-     */
-    where: TerritoryGeoMembershipWhereUniqueInput
-  }
-
-  /**
-   * TerritoryGeoMembership findUniqueOrThrow
-   */
-  export type TerritoryGeoMembershipFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryGeoMembership to fetch.
-     */
-    where: TerritoryGeoMembershipWhereUniqueInput
-  }
-
-  /**
-   * TerritoryGeoMembership findFirst
-   */
-  export type TerritoryGeoMembershipFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryGeoMembership to fetch.
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryGeoMemberships to fetch.
-     */
-    orderBy?: TerritoryGeoMembershipOrderByWithRelationInput | TerritoryGeoMembershipOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for TerritoryGeoMemberships.
-     */
-    cursor?: TerritoryGeoMembershipWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryGeoMemberships from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryGeoMemberships.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of TerritoryGeoMemberships.
-     */
-    distinct?: TerritoryGeoMembershipScalarFieldEnum | TerritoryGeoMembershipScalarFieldEnum[]
-  }
-
-  /**
-   * TerritoryGeoMembership findFirstOrThrow
-   */
-  export type TerritoryGeoMembershipFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryGeoMembership to fetch.
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryGeoMemberships to fetch.
-     */
-    orderBy?: TerritoryGeoMembershipOrderByWithRelationInput | TerritoryGeoMembershipOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for searching for TerritoryGeoMemberships.
-     */
-    cursor?: TerritoryGeoMembershipWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryGeoMemberships from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryGeoMemberships.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of TerritoryGeoMemberships.
-     */
-    distinct?: TerritoryGeoMembershipScalarFieldEnum | TerritoryGeoMembershipScalarFieldEnum[]
-  }
-
-  /**
-   * TerritoryGeoMembership findMany
-   */
-  export type TerritoryGeoMembershipFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * Filter, which TerritoryGeoMemberships to fetch.
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
-     * 
-     * Determine the order of TerritoryGeoMemberships to fetch.
-     */
-    orderBy?: TerritoryGeoMembershipOrderByWithRelationInput | TerritoryGeoMembershipOrderByWithRelationInput[]
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
-     * 
-     * Sets the position for listing TerritoryGeoMemberships.
-     */
-    cursor?: TerritoryGeoMembershipWhereUniqueInput
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Take `±n` TerritoryGeoMemberships from the position of the cursor.
-     */
-    take?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
-     * 
-     * Skip the first `n` TerritoryGeoMemberships.
-     */
-    skip?: number
-    /**
-     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
-     * 
-     * Filter by unique combinations of TerritoryGeoMemberships.
-     */
-    distinct?: TerritoryGeoMembershipScalarFieldEnum | TerritoryGeoMembershipScalarFieldEnum[]
-  }
-
-  /**
-   * TerritoryGeoMembership create
-   */
-  export type TerritoryGeoMembershipCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * The data needed to create a TerritoryGeoMembership.
-     */
-    data: XOR<TerritoryGeoMembershipCreateInput, TerritoryGeoMembershipUncheckedCreateInput>
-  }
-
-  /**
-   * TerritoryGeoMembership createMany
-   */
-  export type TerritoryGeoMembershipCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to create many TerritoryGeoMemberships.
-     */
-    data: TerritoryGeoMembershipCreateManyInput | TerritoryGeoMembershipCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
-   * TerritoryGeoMembership createManyAndReturn
-   */
-  export type TerritoryGeoMembershipCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * The data used to create many TerritoryGeoMemberships.
-     */
-    data: TerritoryGeoMembershipCreateManyInput | TerritoryGeoMembershipCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * TerritoryGeoMembership update
-   */
-  export type TerritoryGeoMembershipUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * The data needed to update a TerritoryGeoMembership.
-     */
-    data: XOR<TerritoryGeoMembershipUpdateInput, TerritoryGeoMembershipUncheckedUpdateInput>
-    /**
-     * Choose, which TerritoryGeoMembership to update.
-     */
-    where: TerritoryGeoMembershipWhereUniqueInput
-  }
-
-  /**
-   * TerritoryGeoMembership updateMany
-   */
-  export type TerritoryGeoMembershipUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update TerritoryGeoMemberships.
-     */
-    data: XOR<TerritoryGeoMembershipUpdateManyMutationInput, TerritoryGeoMembershipUncheckedUpdateManyInput>
-    /**
-     * Filter which TerritoryGeoMemberships to update
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * Limit how many TerritoryGeoMemberships to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * TerritoryGeoMembership updateManyAndReturn
-   */
-  export type TerritoryGeoMembershipUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * The data used to update TerritoryGeoMemberships.
-     */
-    data: XOR<TerritoryGeoMembershipUpdateManyMutationInput, TerritoryGeoMembershipUncheckedUpdateManyInput>
-    /**
-     * Filter which TerritoryGeoMemberships to update
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * Limit how many TerritoryGeoMemberships to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipIncludeUpdateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
-   * TerritoryGeoMembership upsert
-   */
-  export type TerritoryGeoMembershipUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * The filter to search for the TerritoryGeoMembership to update in case it exists.
-     */
-    where: TerritoryGeoMembershipWhereUniqueInput
-    /**
-     * In case the TerritoryGeoMembership found by the `where` argument doesn't exist, create a new TerritoryGeoMembership with this data.
-     */
-    create: XOR<TerritoryGeoMembershipCreateInput, TerritoryGeoMembershipUncheckedCreateInput>
-    /**
-     * In case the TerritoryGeoMembership was found with the provided `where` argument, update it with this data.
-     */
-    update: XOR<TerritoryGeoMembershipUpdateInput, TerritoryGeoMembershipUncheckedUpdateInput>
-  }
-
-  /**
-   * TerritoryGeoMembership delete
-   */
-  export type TerritoryGeoMembershipDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
-    /**
-     * Filter which TerritoryGeoMembership to delete.
-     */
-    where: TerritoryGeoMembershipWhereUniqueInput
-  }
-
-  /**
-   * TerritoryGeoMembership deleteMany
-   */
-  export type TerritoryGeoMembershipDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Filter which TerritoryGeoMemberships to delete
-     */
-    where?: TerritoryGeoMembershipWhereInput
-    /**
-     * Limit how many TerritoryGeoMemberships to delete.
-     */
-    limit?: number
-  }
-
-  /**
-   * TerritoryGeoMembership without action
-   */
-  export type TerritoryGeoMembershipDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TerritoryGeoMembership
-     */
-    select?: TerritoryGeoMembershipSelect<ExtArgs> | null
-    /**
-     * Omit specific fields from the TerritoryGeoMembership
-     */
-    omit?: TerritoryGeoMembershipOmit<ExtArgs> | null
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TerritoryGeoMembershipInclude<ExtArgs> | null
   }
 
 
@@ -65476,16 +63048,34 @@ export namespace Prisma {
 
   export type AggregateIngestionRun = {
     _count: IngestionRunCountAggregateOutputType | null
+    _avg: IngestionRunAvgAggregateOutputType | null
+    _sum: IngestionRunSumAggregateOutputType | null
     _min: IngestionRunMinAggregateOutputType | null
     _max: IngestionRunMaxAggregateOutputType | null
+  }
+
+  export type IngestionRunAvgAggregateOutputType = {
+    referenceAno: number | null
+    referenceMes: number | null
+  }
+
+  export type IngestionRunSumAggregateOutputType = {
+    referenceAno: number | null
+    referenceMes: number | null
   }
 
   export type IngestionRunMinAggregateOutputType = {
     id: string | null
     sourceProvider: string | null
     status: $Enums.IngestionRunStatus | null
+    phase: $Enums.IngestionRunPhase | null
+    phaseStartedAt: Date | null
+    temporalWorkflowId: string | null
+    referenceAno: number | null
+    referenceMes: number | null
     startedAt: Date | null
     completedAt: Date | null
+    promotedAt: Date | null
     error: string | null
   }
 
@@ -65493,8 +63083,14 @@ export namespace Prisma {
     id: string | null
     sourceProvider: string | null
     status: $Enums.IngestionRunStatus | null
+    phase: $Enums.IngestionRunPhase | null
+    phaseStartedAt: Date | null
+    temporalWorkflowId: string | null
+    referenceAno: number | null
+    referenceMes: number | null
     startedAt: Date | null
     completedAt: Date | null
+    promotedAt: Date | null
     error: string | null
   }
 
@@ -65502,20 +63098,44 @@ export namespace Prisma {
     id: number
     sourceProvider: number
     status: number
+    phase: number
+    phaseStartedAt: number
+    temporalWorkflowId: number
+    referenceAno: number
+    referenceMes: number
     startedAt: number
     completedAt: number
+    promotedAt: number
     stats: number
+    validationReport: number
+    archiveManifest: number
     error: number
     _all: number
   }
 
 
+  export type IngestionRunAvgAggregateInputType = {
+    referenceAno?: true
+    referenceMes?: true
+  }
+
+  export type IngestionRunSumAggregateInputType = {
+    referenceAno?: true
+    referenceMes?: true
+  }
+
   export type IngestionRunMinAggregateInputType = {
     id?: true
     sourceProvider?: true
     status?: true
+    phase?: true
+    phaseStartedAt?: true
+    temporalWorkflowId?: true
+    referenceAno?: true
+    referenceMes?: true
     startedAt?: true
     completedAt?: true
+    promotedAt?: true
     error?: true
   }
 
@@ -65523,8 +63143,14 @@ export namespace Prisma {
     id?: true
     sourceProvider?: true
     status?: true
+    phase?: true
+    phaseStartedAt?: true
+    temporalWorkflowId?: true
+    referenceAno?: true
+    referenceMes?: true
     startedAt?: true
     completedAt?: true
+    promotedAt?: true
     error?: true
   }
 
@@ -65532,9 +63158,17 @@ export namespace Prisma {
     id?: true
     sourceProvider?: true
     status?: true
+    phase?: true
+    phaseStartedAt?: true
+    temporalWorkflowId?: true
+    referenceAno?: true
+    referenceMes?: true
     startedAt?: true
     completedAt?: true
+    promotedAt?: true
     stats?: true
+    validationReport?: true
+    archiveManifest?: true
     error?: true
     _all?: true
   }
@@ -65577,6 +63211,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: IngestionRunAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: IngestionRunSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: IngestionRunMinAggregateInputType
@@ -65607,6 +63253,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: IngestionRunCountAggregateInputType | true
+    _avg?: IngestionRunAvgAggregateInputType
+    _sum?: IngestionRunSumAggregateInputType
     _min?: IngestionRunMinAggregateInputType
     _max?: IngestionRunMaxAggregateInputType
   }
@@ -65615,11 +63263,21 @@ export namespace Prisma {
     id: string
     sourceProvider: string
     status: $Enums.IngestionRunStatus
+    phase: $Enums.IngestionRunPhase | null
+    phaseStartedAt: Date | null
+    temporalWorkflowId: string | null
+    referenceAno: number | null
+    referenceMes: number | null
     startedAt: Date
     completedAt: Date | null
+    promotedAt: Date | null
     stats: JsonValue | null
+    validationReport: JsonValue | null
+    archiveManifest: JsonValue | null
     error: string | null
     _count: IngestionRunCountAggregateOutputType | null
+    _avg: IngestionRunAvgAggregateOutputType | null
+    _sum: IngestionRunSumAggregateOutputType | null
     _min: IngestionRunMinAggregateOutputType | null
     _max: IngestionRunMaxAggregateOutputType | null
   }
@@ -65642,11 +63300,20 @@ export namespace Prisma {
     id?: boolean
     sourceProvider?: boolean
     status?: boolean
+    phase?: boolean
+    phaseStartedAt?: boolean
+    temporalWorkflowId?: boolean
+    referenceAno?: boolean
+    referenceMes?: boolean
     startedAt?: boolean
     completedAt?: boolean
+    promotedAt?: boolean
     stats?: boolean
+    validationReport?: boolean
+    archiveManifest?: boolean
     error?: boolean
     suggestions?: boolean | IngestionRun$suggestionsArgs<ExtArgs>
+    diffs?: boolean | IngestionRun$diffsArgs<ExtArgs>
     _count?: boolean | IngestionRunCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["ingestionRun"]>
 
@@ -65654,9 +63321,17 @@ export namespace Prisma {
     id?: boolean
     sourceProvider?: boolean
     status?: boolean
+    phase?: boolean
+    phaseStartedAt?: boolean
+    temporalWorkflowId?: boolean
+    referenceAno?: boolean
+    referenceMes?: boolean
     startedAt?: boolean
     completedAt?: boolean
+    promotedAt?: boolean
     stats?: boolean
+    validationReport?: boolean
+    archiveManifest?: boolean
     error?: boolean
   }, ExtArgs["result"]["ingestionRun"]>
 
@@ -65664,9 +63339,17 @@ export namespace Prisma {
     id?: boolean
     sourceProvider?: boolean
     status?: boolean
+    phase?: boolean
+    phaseStartedAt?: boolean
+    temporalWorkflowId?: boolean
+    referenceAno?: boolean
+    referenceMes?: boolean
     startedAt?: boolean
     completedAt?: boolean
+    promotedAt?: boolean
     stats?: boolean
+    validationReport?: boolean
+    archiveManifest?: boolean
     error?: boolean
   }, ExtArgs["result"]["ingestionRun"]>
 
@@ -65674,15 +63357,24 @@ export namespace Prisma {
     id?: boolean
     sourceProvider?: boolean
     status?: boolean
+    phase?: boolean
+    phaseStartedAt?: boolean
+    temporalWorkflowId?: boolean
+    referenceAno?: boolean
+    referenceMes?: boolean
     startedAt?: boolean
     completedAt?: boolean
+    promotedAt?: boolean
     stats?: boolean
+    validationReport?: boolean
+    archiveManifest?: boolean
     error?: boolean
   }
 
-  export type IngestionRunOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sourceProvider" | "status" | "startedAt" | "completedAt" | "stats" | "error", ExtArgs["result"]["ingestionRun"]>
+  export type IngestionRunOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "sourceProvider" | "status" | "phase" | "phaseStartedAt" | "temporalWorkflowId" | "referenceAno" | "referenceMes" | "startedAt" | "completedAt" | "promotedAt" | "stats" | "validationReport" | "archiveManifest" | "error", ExtArgs["result"]["ingestionRun"]>
   export type IngestionRunInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     suggestions?: boolean | IngestionRun$suggestionsArgs<ExtArgs>
+    diffs?: boolean | IngestionRun$diffsArgs<ExtArgs>
     _count?: boolean | IngestionRunCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type IngestionRunIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -65692,14 +63384,23 @@ export namespace Prisma {
     name: "IngestionRun"
     objects: {
       suggestions: Prisma.$IngestionSuggestionPayload<ExtArgs>[]
+      diffs: Prisma.$IngestionDiffPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
       sourceProvider: string
       status: $Enums.IngestionRunStatus
+      phase: $Enums.IngestionRunPhase | null
+      phaseStartedAt: Date | null
+      temporalWorkflowId: string | null
+      referenceAno: number | null
+      referenceMes: number | null
       startedAt: Date
       completedAt: Date | null
+      promotedAt: Date | null
       stats: Prisma.JsonValue | null
+      validationReport: Prisma.JsonValue | null
+      archiveManifest: Prisma.JsonValue | null
       error: string | null
     }, ExtArgs["result"]["ingestionRun"]>
     composites: {}
@@ -66096,6 +63797,7 @@ export namespace Prisma {
   export interface Prisma__IngestionRunClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     suggestions<T extends IngestionRun$suggestionsArgs<ExtArgs> = {}>(args?: Subset<T, IngestionRun$suggestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionSuggestionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    diffs<T extends IngestionRun$diffsArgs<ExtArgs> = {}>(args?: Subset<T, IngestionRun$diffsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -66128,9 +63830,17 @@ export namespace Prisma {
     readonly id: FieldRef<"IngestionRun", 'String'>
     readonly sourceProvider: FieldRef<"IngestionRun", 'String'>
     readonly status: FieldRef<"IngestionRun", 'IngestionRunStatus'>
+    readonly phase: FieldRef<"IngestionRun", 'IngestionRunPhase'>
+    readonly phaseStartedAt: FieldRef<"IngestionRun", 'DateTime'>
+    readonly temporalWorkflowId: FieldRef<"IngestionRun", 'String'>
+    readonly referenceAno: FieldRef<"IngestionRun", 'Int'>
+    readonly referenceMes: FieldRef<"IngestionRun", 'Int'>
     readonly startedAt: FieldRef<"IngestionRun", 'DateTime'>
     readonly completedAt: FieldRef<"IngestionRun", 'DateTime'>
+    readonly promotedAt: FieldRef<"IngestionRun", 'DateTime'>
     readonly stats: FieldRef<"IngestionRun", 'Json'>
+    readonly validationReport: FieldRef<"IngestionRun", 'Json'>
+    readonly archiveManifest: FieldRef<"IngestionRun", 'Json'>
     readonly error: FieldRef<"IngestionRun", 'String'>
   }
     
@@ -66549,6 +64259,30 @@ export namespace Prisma {
   }
 
   /**
+   * IngestionRun.diffs
+   */
+  export type IngestionRun$diffsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    where?: IngestionDiffWhereInput
+    orderBy?: IngestionDiffOrderByWithRelationInput | IngestionDiffOrderByWithRelationInput[]
+    cursor?: IngestionDiffWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: IngestionDiffScalarFieldEnum | IngestionDiffScalarFieldEnum[]
+  }
+
+  /**
    * IngestionRun without action
    */
   export type IngestionRunDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -66564,6 +64298,1104 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: IngestionRunInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model IngestionDiff
+   */
+
+  export type AggregateIngestionDiff = {
+    _count: IngestionDiffCountAggregateOutputType | null
+    _min: IngestionDiffMinAggregateOutputType | null
+    _max: IngestionDiffMaxAggregateOutputType | null
+  }
+
+  export type IngestionDiffMinAggregateOutputType = {
+    id: string | null
+    ingestionRunId: string | null
+    scope: $Enums.IngestionDiffScope | null
+    entityType: string | null
+    externalSourceId: string | null
+    diffType: string | null
+    createdAt: Date | null
+  }
+
+  export type IngestionDiffMaxAggregateOutputType = {
+    id: string | null
+    ingestionRunId: string | null
+    scope: $Enums.IngestionDiffScope | null
+    entityType: string | null
+    externalSourceId: string | null
+    diffType: string | null
+    createdAt: Date | null
+  }
+
+  export type IngestionDiffCountAggregateOutputType = {
+    id: number
+    ingestionRunId: number
+    scope: number
+    entityType: number
+    externalSourceId: number
+    diffType: number
+    payload: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type IngestionDiffMinAggregateInputType = {
+    id?: true
+    ingestionRunId?: true
+    scope?: true
+    entityType?: true
+    externalSourceId?: true
+    diffType?: true
+    createdAt?: true
+  }
+
+  export type IngestionDiffMaxAggregateInputType = {
+    id?: true
+    ingestionRunId?: true
+    scope?: true
+    entityType?: true
+    externalSourceId?: true
+    diffType?: true
+    createdAt?: true
+  }
+
+  export type IngestionDiffCountAggregateInputType = {
+    id?: true
+    ingestionRunId?: true
+    scope?: true
+    entityType?: true
+    externalSourceId?: true
+    diffType?: true
+    payload?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type IngestionDiffAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IngestionDiff to aggregate.
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionDiffs to fetch.
+     */
+    orderBy?: IngestionDiffOrderByWithRelationInput | IngestionDiffOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: IngestionDiffWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionDiffs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionDiffs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned IngestionDiffs
+    **/
+    _count?: true | IngestionDiffCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: IngestionDiffMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: IngestionDiffMaxAggregateInputType
+  }
+
+  export type GetIngestionDiffAggregateType<T extends IngestionDiffAggregateArgs> = {
+        [P in keyof T & keyof AggregateIngestionDiff]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateIngestionDiff[P]>
+      : GetScalarType<T[P], AggregateIngestionDiff[P]>
+  }
+
+
+
+
+  export type IngestionDiffGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: IngestionDiffWhereInput
+    orderBy?: IngestionDiffOrderByWithAggregationInput | IngestionDiffOrderByWithAggregationInput[]
+    by: IngestionDiffScalarFieldEnum[] | IngestionDiffScalarFieldEnum
+    having?: IngestionDiffScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: IngestionDiffCountAggregateInputType | true
+    _min?: IngestionDiffMinAggregateInputType
+    _max?: IngestionDiffMaxAggregateInputType
+  }
+
+  export type IngestionDiffGroupByOutputType = {
+    id: string
+    ingestionRunId: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId: string | null
+    diffType: string
+    payload: JsonValue
+    createdAt: Date
+    _count: IngestionDiffCountAggregateOutputType | null
+    _min: IngestionDiffMinAggregateOutputType | null
+    _max: IngestionDiffMaxAggregateOutputType | null
+  }
+
+  type GetIngestionDiffGroupByPayload<T extends IngestionDiffGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<IngestionDiffGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof IngestionDiffGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], IngestionDiffGroupByOutputType[P]>
+            : GetScalarType<T[P], IngestionDiffGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type IngestionDiffSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ingestionRunId?: boolean
+    scope?: boolean
+    entityType?: boolean
+    externalSourceId?: boolean
+    diffType?: boolean
+    payload?: boolean
+    createdAt?: boolean
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionDiff"]>
+
+  export type IngestionDiffSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ingestionRunId?: boolean
+    scope?: boolean
+    entityType?: boolean
+    externalSourceId?: boolean
+    diffType?: boolean
+    payload?: boolean
+    createdAt?: boolean
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionDiff"]>
+
+  export type IngestionDiffSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    ingestionRunId?: boolean
+    scope?: boolean
+    entityType?: boolean
+    externalSourceId?: boolean
+    diffType?: boolean
+    payload?: boolean
+    createdAt?: boolean
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["ingestionDiff"]>
+
+  export type IngestionDiffSelectScalar = {
+    id?: boolean
+    ingestionRunId?: boolean
+    scope?: boolean
+    entityType?: boolean
+    externalSourceId?: boolean
+    diffType?: boolean
+    payload?: boolean
+    createdAt?: boolean
+  }
+
+  export type IngestionDiffOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "ingestionRunId" | "scope" | "entityType" | "externalSourceId" | "diffType" | "payload" | "createdAt", ExtArgs["result"]["ingestionDiff"]>
+  export type IngestionDiffInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+  }
+  export type IngestionDiffIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+  }
+  export type IngestionDiffIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    ingestionRun?: boolean | IngestionRunDefaultArgs<ExtArgs>
+  }
+
+  export type $IngestionDiffPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "IngestionDiff"
+    objects: {
+      ingestionRun: Prisma.$IngestionRunPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      ingestionRunId: string
+      scope: $Enums.IngestionDiffScope
+      entityType: string
+      externalSourceId: string | null
+      diffType: string
+      payload: Prisma.JsonValue
+      createdAt: Date
+    }, ExtArgs["result"]["ingestionDiff"]>
+    composites: {}
+  }
+
+  type IngestionDiffGetPayload<S extends boolean | null | undefined | IngestionDiffDefaultArgs> = $Result.GetResult<Prisma.$IngestionDiffPayload, S>
+
+  type IngestionDiffCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<IngestionDiffFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: IngestionDiffCountAggregateInputType | true
+    }
+
+  export interface IngestionDiffDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['IngestionDiff'], meta: { name: 'IngestionDiff' } }
+    /**
+     * Find zero or one IngestionDiff that matches the filter.
+     * @param {IngestionDiffFindUniqueArgs} args - Arguments to find a IngestionDiff
+     * @example
+     * // Get one IngestionDiff
+     * const ingestionDiff = await prisma.ingestionDiff.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends IngestionDiffFindUniqueArgs>(args: SelectSubset<T, IngestionDiffFindUniqueArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one IngestionDiff that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {IngestionDiffFindUniqueOrThrowArgs} args - Arguments to find a IngestionDiff
+     * @example
+     * // Get one IngestionDiff
+     * const ingestionDiff = await prisma.ingestionDiff.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends IngestionDiffFindUniqueOrThrowArgs>(args: SelectSubset<T, IngestionDiffFindUniqueOrThrowArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first IngestionDiff that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffFindFirstArgs} args - Arguments to find a IngestionDiff
+     * @example
+     * // Get one IngestionDiff
+     * const ingestionDiff = await prisma.ingestionDiff.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends IngestionDiffFindFirstArgs>(args?: SelectSubset<T, IngestionDiffFindFirstArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first IngestionDiff that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffFindFirstOrThrowArgs} args - Arguments to find a IngestionDiff
+     * @example
+     * // Get one IngestionDiff
+     * const ingestionDiff = await prisma.ingestionDiff.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends IngestionDiffFindFirstOrThrowArgs>(args?: SelectSubset<T, IngestionDiffFindFirstOrThrowArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more IngestionDiffs that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all IngestionDiffs
+     * const ingestionDiffs = await prisma.ingestionDiff.findMany()
+     * 
+     * // Get first 10 IngestionDiffs
+     * const ingestionDiffs = await prisma.ingestionDiff.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const ingestionDiffWithIdOnly = await prisma.ingestionDiff.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends IngestionDiffFindManyArgs>(args?: SelectSubset<T, IngestionDiffFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a IngestionDiff.
+     * @param {IngestionDiffCreateArgs} args - Arguments to create a IngestionDiff.
+     * @example
+     * // Create one IngestionDiff
+     * const IngestionDiff = await prisma.ingestionDiff.create({
+     *   data: {
+     *     // ... data to create a IngestionDiff
+     *   }
+     * })
+     * 
+     */
+    create<T extends IngestionDiffCreateArgs>(args: SelectSubset<T, IngestionDiffCreateArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many IngestionDiffs.
+     * @param {IngestionDiffCreateManyArgs} args - Arguments to create many IngestionDiffs.
+     * @example
+     * // Create many IngestionDiffs
+     * const ingestionDiff = await prisma.ingestionDiff.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends IngestionDiffCreateManyArgs>(args?: SelectSubset<T, IngestionDiffCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many IngestionDiffs and returns the data saved in the database.
+     * @param {IngestionDiffCreateManyAndReturnArgs} args - Arguments to create many IngestionDiffs.
+     * @example
+     * // Create many IngestionDiffs
+     * const ingestionDiff = await prisma.ingestionDiff.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many IngestionDiffs and only return the `id`
+     * const ingestionDiffWithIdOnly = await prisma.ingestionDiff.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends IngestionDiffCreateManyAndReturnArgs>(args?: SelectSubset<T, IngestionDiffCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a IngestionDiff.
+     * @param {IngestionDiffDeleteArgs} args - Arguments to delete one IngestionDiff.
+     * @example
+     * // Delete one IngestionDiff
+     * const IngestionDiff = await prisma.ingestionDiff.delete({
+     *   where: {
+     *     // ... filter to delete one IngestionDiff
+     *   }
+     * })
+     * 
+     */
+    delete<T extends IngestionDiffDeleteArgs>(args: SelectSubset<T, IngestionDiffDeleteArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one IngestionDiff.
+     * @param {IngestionDiffUpdateArgs} args - Arguments to update one IngestionDiff.
+     * @example
+     * // Update one IngestionDiff
+     * const ingestionDiff = await prisma.ingestionDiff.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends IngestionDiffUpdateArgs>(args: SelectSubset<T, IngestionDiffUpdateArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more IngestionDiffs.
+     * @param {IngestionDiffDeleteManyArgs} args - Arguments to filter IngestionDiffs to delete.
+     * @example
+     * // Delete a few IngestionDiffs
+     * const { count } = await prisma.ingestionDiff.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends IngestionDiffDeleteManyArgs>(args?: SelectSubset<T, IngestionDiffDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IngestionDiffs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many IngestionDiffs
+     * const ingestionDiff = await prisma.ingestionDiff.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends IngestionDiffUpdateManyArgs>(args: SelectSubset<T, IngestionDiffUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more IngestionDiffs and returns the data updated in the database.
+     * @param {IngestionDiffUpdateManyAndReturnArgs} args - Arguments to update many IngestionDiffs.
+     * @example
+     * // Update many IngestionDiffs
+     * const ingestionDiff = await prisma.ingestionDiff.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more IngestionDiffs and only return the `id`
+     * const ingestionDiffWithIdOnly = await prisma.ingestionDiff.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends IngestionDiffUpdateManyAndReturnArgs>(args: SelectSubset<T, IngestionDiffUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one IngestionDiff.
+     * @param {IngestionDiffUpsertArgs} args - Arguments to update or create a IngestionDiff.
+     * @example
+     * // Update or create a IngestionDiff
+     * const ingestionDiff = await prisma.ingestionDiff.upsert({
+     *   create: {
+     *     // ... data to create a IngestionDiff
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the IngestionDiff we want to update
+     *   }
+     * })
+     */
+    upsert<T extends IngestionDiffUpsertArgs>(args: SelectSubset<T, IngestionDiffUpsertArgs<ExtArgs>>): Prisma__IngestionDiffClient<$Result.GetResult<Prisma.$IngestionDiffPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of IngestionDiffs.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffCountArgs} args - Arguments to filter IngestionDiffs to count.
+     * @example
+     * // Count the number of IngestionDiffs
+     * const count = await prisma.ingestionDiff.count({
+     *   where: {
+     *     // ... the filter for the IngestionDiffs we want to count
+     *   }
+     * })
+    **/
+    count<T extends IngestionDiffCountArgs>(
+      args?: Subset<T, IngestionDiffCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], IngestionDiffCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a IngestionDiff.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends IngestionDiffAggregateArgs>(args: Subset<T, IngestionDiffAggregateArgs>): Prisma.PrismaPromise<GetIngestionDiffAggregateType<T>>
+
+    /**
+     * Group by IngestionDiff.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {IngestionDiffGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends IngestionDiffGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: IngestionDiffGroupByArgs['orderBy'] }
+        : { orderBy?: IngestionDiffGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, IngestionDiffGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetIngestionDiffGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the IngestionDiff model
+   */
+  readonly fields: IngestionDiffFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for IngestionDiff.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__IngestionDiffClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    ingestionRun<T extends IngestionRunDefaultArgs<ExtArgs> = {}>(args?: Subset<T, IngestionRunDefaultArgs<ExtArgs>>): Prisma__IngestionRunClient<$Result.GetResult<Prisma.$IngestionRunPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the IngestionDiff model
+   */
+  interface IngestionDiffFieldRefs {
+    readonly id: FieldRef<"IngestionDiff", 'String'>
+    readonly ingestionRunId: FieldRef<"IngestionDiff", 'String'>
+    readonly scope: FieldRef<"IngestionDiff", 'IngestionDiffScope'>
+    readonly entityType: FieldRef<"IngestionDiff", 'String'>
+    readonly externalSourceId: FieldRef<"IngestionDiff", 'String'>
+    readonly diffType: FieldRef<"IngestionDiff", 'String'>
+    readonly payload: FieldRef<"IngestionDiff", 'Json'>
+    readonly createdAt: FieldRef<"IngestionDiff", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * IngestionDiff findUnique
+   */
+  export type IngestionDiffFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionDiff to fetch.
+     */
+    where: IngestionDiffWhereUniqueInput
+  }
+
+  /**
+   * IngestionDiff findUniqueOrThrow
+   */
+  export type IngestionDiffFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionDiff to fetch.
+     */
+    where: IngestionDiffWhereUniqueInput
+  }
+
+  /**
+   * IngestionDiff findFirst
+   */
+  export type IngestionDiffFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionDiff to fetch.
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionDiffs to fetch.
+     */
+    orderBy?: IngestionDiffOrderByWithRelationInput | IngestionDiffOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IngestionDiffs.
+     */
+    cursor?: IngestionDiffWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionDiffs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionDiffs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionDiffs.
+     */
+    distinct?: IngestionDiffScalarFieldEnum | IngestionDiffScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionDiff findFirstOrThrow
+   */
+  export type IngestionDiffFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionDiff to fetch.
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionDiffs to fetch.
+     */
+    orderBy?: IngestionDiffOrderByWithRelationInput | IngestionDiffOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for IngestionDiffs.
+     */
+    cursor?: IngestionDiffWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionDiffs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionDiffs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionDiffs.
+     */
+    distinct?: IngestionDiffScalarFieldEnum | IngestionDiffScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionDiff findMany
+   */
+  export type IngestionDiffFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * Filter, which IngestionDiffs to fetch.
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of IngestionDiffs to fetch.
+     */
+    orderBy?: IngestionDiffOrderByWithRelationInput | IngestionDiffOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing IngestionDiffs.
+     */
+    cursor?: IngestionDiffWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` IngestionDiffs from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` IngestionDiffs.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of IngestionDiffs.
+     */
+    distinct?: IngestionDiffScalarFieldEnum | IngestionDiffScalarFieldEnum[]
+  }
+
+  /**
+   * IngestionDiff create
+   */
+  export type IngestionDiffCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * The data needed to create a IngestionDiff.
+     */
+    data: XOR<IngestionDiffCreateInput, IngestionDiffUncheckedCreateInput>
+  }
+
+  /**
+   * IngestionDiff createMany
+   */
+  export type IngestionDiffCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many IngestionDiffs.
+     */
+    data: IngestionDiffCreateManyInput | IngestionDiffCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * IngestionDiff createManyAndReturn
+   */
+  export type IngestionDiffCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * The data used to create many IngestionDiffs.
+     */
+    data: IngestionDiffCreateManyInput | IngestionDiffCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * IngestionDiff update
+   */
+  export type IngestionDiffUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * The data needed to update a IngestionDiff.
+     */
+    data: XOR<IngestionDiffUpdateInput, IngestionDiffUncheckedUpdateInput>
+    /**
+     * Choose, which IngestionDiff to update.
+     */
+    where: IngestionDiffWhereUniqueInput
+  }
+
+  /**
+   * IngestionDiff updateMany
+   */
+  export type IngestionDiffUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update IngestionDiffs.
+     */
+    data: XOR<IngestionDiffUpdateManyMutationInput, IngestionDiffUncheckedUpdateManyInput>
+    /**
+     * Filter which IngestionDiffs to update
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * Limit how many IngestionDiffs to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionDiff updateManyAndReturn
+   */
+  export type IngestionDiffUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * The data used to update IngestionDiffs.
+     */
+    data: XOR<IngestionDiffUpdateManyMutationInput, IngestionDiffUncheckedUpdateManyInput>
+    /**
+     * Filter which IngestionDiffs to update
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * Limit how many IngestionDiffs to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * IngestionDiff upsert
+   */
+  export type IngestionDiffUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * The filter to search for the IngestionDiff to update in case it exists.
+     */
+    where: IngestionDiffWhereUniqueInput
+    /**
+     * In case the IngestionDiff found by the `where` argument doesn't exist, create a new IngestionDiff with this data.
+     */
+    create: XOR<IngestionDiffCreateInput, IngestionDiffUncheckedCreateInput>
+    /**
+     * In case the IngestionDiff was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<IngestionDiffUpdateInput, IngestionDiffUncheckedUpdateInput>
+  }
+
+  /**
+   * IngestionDiff delete
+   */
+  export type IngestionDiffDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
+    /**
+     * Filter which IngestionDiff to delete.
+     */
+    where: IngestionDiffWhereUniqueInput
+  }
+
+  /**
+   * IngestionDiff deleteMany
+   */
+  export type IngestionDiffDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which IngestionDiffs to delete
+     */
+    where?: IngestionDiffWhereInput
+    /**
+     * Limit how many IngestionDiffs to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * IngestionDiff without action
+   */
+  export type IngestionDiffDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the IngestionDiff
+     */
+    select?: IngestionDiffSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the IngestionDiff
+     */
+    omit?: IngestionDiffOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: IngestionDiffInclude<ExtArgs> | null
   }
 
 
@@ -68259,6 +67091,7 @@ export namespace Prisma {
     assignableToManagers: 'assignableToManagers',
     isCountryLevel: 'isCountryLevel',
     blockSiblingOverlap: 'blockSiblingOverlap',
+    participatesInGroupingHierarchy: 'participatesInGroupingHierarchy',
     sortOrder: 'sortOrder',
     isActive: 'isActive',
     createdAt: 'createdAt',
@@ -68279,11 +67112,9 @@ export namespace Prisma {
     regionSlug: 'regionSlug',
     stateCode: 'stateCode',
     parentId: 'parentId',
+    managerTerritoryId: 'managerTerritoryId',
     isActive: 'isActive',
-    parentAssignmentStatus: 'parentAssignmentStatus',
-    parentAssignmentSource: 'parentAssignmentSource',
     organizationId: 'organizationId',
-    geoMembershipStatus: 'geoMembershipStatus',
     boundaryMinLng: 'boundaryMinLng',
     boundaryMinLat: 'boundaryMinLat',
     boundaryMaxLng: 'boundaryMaxLng',
@@ -68303,31 +67134,6 @@ export namespace Prisma {
   };
 
   export type TerritoryClosureScalarFieldEnum = (typeof TerritoryClosureScalarFieldEnum)[keyof typeof TerritoryClosureScalarFieldEnum]
-
-
-  export const TerritoryRollupLinkScalarFieldEnum: {
-    id: 'id',
-    territoryId: 'territoryId',
-    ancestorId: 'ancestorId',
-    relationshipType: 'relationshipType',
-    source: 'source',
-    createdAt: 'createdAt'
-  };
-
-  export type TerritoryRollupLinkScalarFieldEnum = (typeof TerritoryRollupLinkScalarFieldEnum)[keyof typeof TerritoryRollupLinkScalarFieldEnum]
-
-
-  export const TerritoryGeoMembershipScalarFieldEnum: {
-    id: 'id',
-    operationalTerritoryId: 'operationalTerritoryId',
-    referenceTerritoryId: 'referenceTerritoryId',
-    referenceTypeSlug: 'referenceTypeSlug',
-    overlapRatio: 'overlapRatio',
-    intersectionAreaSqKm: 'intersectionAreaSqKm',
-    computedAt: 'computedAt'
-  };
-
-  export type TerritoryGeoMembershipScalarFieldEnum = (typeof TerritoryGeoMembershipScalarFieldEnum)[keyof typeof TerritoryGeoMembershipScalarFieldEnum]
 
 
   export const TerritoryApprovalRequestScalarFieldEnum: {
@@ -68725,13 +67531,35 @@ export namespace Prisma {
     id: 'id',
     sourceProvider: 'sourceProvider',
     status: 'status',
+    phase: 'phase',
+    phaseStartedAt: 'phaseStartedAt',
+    temporalWorkflowId: 'temporalWorkflowId',
+    referenceAno: 'referenceAno',
+    referenceMes: 'referenceMes',
     startedAt: 'startedAt',
     completedAt: 'completedAt',
+    promotedAt: 'promotedAt',
     stats: 'stats',
+    validationReport: 'validationReport',
+    archiveManifest: 'archiveManifest',
     error: 'error'
   };
 
   export type IngestionRunScalarFieldEnum = (typeof IngestionRunScalarFieldEnum)[keyof typeof IngestionRunScalarFieldEnum]
+
+
+  export const IngestionDiffScalarFieldEnum: {
+    id: 'id',
+    ingestionRunId: 'ingestionRunId',
+    scope: 'scope',
+    entityType: 'entityType',
+    externalSourceId: 'externalSourceId',
+    diffType: 'diffType',
+    payload: 'payload',
+    createdAt: 'createdAt'
+  };
+
+  export type IngestionDiffScalarFieldEnum = (typeof IngestionDiffScalarFieldEnum)[keyof typeof IngestionDiffScalarFieldEnum]
 
 
   export const IngestionSuggestionScalarFieldEnum: {
@@ -68908,76 +67736,6 @@ export namespace Prisma {
    * Reference to a field of type 'TerritoryNodeType[]'
    */
   export type ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryNodeType[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryParentAssignmentStatus'
-   */
-  export type EnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryParentAssignmentStatus'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryParentAssignmentStatus[]'
-   */
-  export type ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryParentAssignmentStatus[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryParentAssignmentSource'
-   */
-  export type EnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryParentAssignmentSource'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryParentAssignmentSource[]'
-   */
-  export type ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryParentAssignmentSource[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryGeoMembershipStatus'
-   */
-  export type EnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryGeoMembershipStatus'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryGeoMembershipStatus[]'
-   */
-  export type ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryGeoMembershipStatus[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryRollupRelationshipType'
-   */
-  export type EnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryRollupRelationshipType'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryRollupRelationshipType[]'
-   */
-  export type ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryRollupRelationshipType[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryRollupLinkSource'
-   */
-  export type EnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryRollupLinkSource'>
-    
-
-
-  /**
-   * Reference to a field of type 'TerritoryRollupLinkSource[]'
-   */
-  export type ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'TerritoryRollupLinkSource[]'>
     
 
 
@@ -69230,6 +67988,34 @@ export namespace Prisma {
    * Reference to a field of type 'IngestionRunStatus[]'
    */
   export type ListEnumIngestionRunStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionRunStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionRunPhase'
+   */
+  export type EnumIngestionRunPhaseFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionRunPhase'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionRunPhase[]'
+   */
+  export type ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionRunPhase[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionDiffScope'
+   */
+  export type EnumIngestionDiffScopeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionDiffScope'>
+    
+
+
+  /**
+   * Reference to a field of type 'IngestionDiffScope[]'
+   */
+  export type ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'IngestionDiffScope[]'>
     
 
 
@@ -71371,6 +70157,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFilter<"TerritoryType"> | boolean
     isCountryLevel?: BoolFilter<"TerritoryType"> | boolean
     blockSiblingOverlap?: BoolFilter<"TerritoryType"> | boolean
+    participatesInGroupingHierarchy?: BoolFilter<"TerritoryType"> | boolean
     sortOrder?: IntFilter<"TerritoryType"> | number
     isActive?: BoolFilter<"TerritoryType"> | boolean
     createdAt?: DateTimeFilter<"TerritoryType"> | Date | string
@@ -71389,6 +70176,7 @@ export namespace Prisma {
     assignableToManagers?: SortOrder
     isCountryLevel?: SortOrder
     blockSiblingOverlap?: SortOrder
+    participatesInGroupingHierarchy?: SortOrder
     sortOrder?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
@@ -71410,6 +70198,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFilter<"TerritoryType"> | boolean
     isCountryLevel?: BoolFilter<"TerritoryType"> | boolean
     blockSiblingOverlap?: BoolFilter<"TerritoryType"> | boolean
+    participatesInGroupingHierarchy?: BoolFilter<"TerritoryType"> | boolean
     sortOrder?: IntFilter<"TerritoryType"> | number
     isActive?: BoolFilter<"TerritoryType"> | boolean
     createdAt?: DateTimeFilter<"TerritoryType"> | Date | string
@@ -71428,6 +70217,7 @@ export namespace Prisma {
     assignableToManagers?: SortOrder
     isCountryLevel?: SortOrder
     blockSiblingOverlap?: SortOrder
+    participatesInGroupingHierarchy?: SortOrder
     sortOrder?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
@@ -71453,6 +70243,7 @@ export namespace Prisma {
     assignableToManagers?: BoolWithAggregatesFilter<"TerritoryType"> | boolean
     isCountryLevel?: BoolWithAggregatesFilter<"TerritoryType"> | boolean
     blockSiblingOverlap?: BoolWithAggregatesFilter<"TerritoryType"> | boolean
+    participatesInGroupingHierarchy?: BoolWithAggregatesFilter<"TerritoryType"> | boolean
     sortOrder?: IntWithAggregatesFilter<"TerritoryType"> | number
     isActive?: BoolWithAggregatesFilter<"TerritoryType"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"TerritoryType"> | Date | string
@@ -71473,11 +70264,9 @@ export namespace Prisma {
     regionSlug?: StringNullableFilter<"Territory"> | string | null
     stateCode?: StringNullableFilter<"Territory"> | string | null
     parentId?: StringNullableFilter<"Territory"> | string | null
+    managerTerritoryId?: StringNullableFilter<"Territory"> | string | null
     isActive?: BoolFilter<"Territory"> | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFilter<"Territory"> | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: EnumTerritoryParentAssignmentSourceNullableFilter<"Territory"> | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: StringNullableFilter<"Territory"> | string | null
-    geoMembershipStatus?: EnumTerritoryGeoMembershipStatusNullableFilter<"Territory"> | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: FloatNullableFilter<"Territory"> | number | null
     boundaryMinLat?: FloatNullableFilter<"Territory"> | number | null
     boundaryMaxLng?: FloatNullableFilter<"Territory"> | number | null
@@ -71488,16 +70277,14 @@ export namespace Prisma {
     territoryType?: XOR<TerritoryTypeScalarRelationFilter, TerritoryTypeWhereInput>
     parent?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
     children?: TerritoryListRelationFilter
+    managerTerritory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    repPatches?: TerritoryListRelationFilter
     facilities?: FacilityListRelationFilter
     userAssignments?: UserTerritoryAssignmentListRelationFilter
     closureAsAncestor?: TerritoryClosureListRelationFilter
     closureAsDescendant?: TerritoryClosureListRelationFilter
     approvalRequests?: TerritoryApprovalRequestListRelationFilter
     facilityApprovalRequests?: TerritoryApprovalRequestListRelationFilter
-    rollupLinksAsTerritory?: TerritoryRollupLinkListRelationFilter
-    rollupLinksAsAncestor?: TerritoryRollupLinkListRelationFilter
-    geoMembershipAsOperational?: TerritoryGeoMembershipListRelationFilter
-    geoMembershipAsReference?: TerritoryGeoMembershipListRelationFilter
   }
 
   export type TerritoryOrderByWithRelationInput = {
@@ -71511,11 +70298,9 @@ export namespace Prisma {
     regionSlug?: SortOrderInput | SortOrder
     stateCode?: SortOrderInput | SortOrder
     parentId?: SortOrderInput | SortOrder
+    managerTerritoryId?: SortOrderInput | SortOrder
     isActive?: SortOrder
-    parentAssignmentStatus?: SortOrder
-    parentAssignmentSource?: SortOrderInput | SortOrder
     organizationId?: SortOrderInput | SortOrder
-    geoMembershipStatus?: SortOrderInput | SortOrder
     boundaryMinLng?: SortOrderInput | SortOrder
     boundaryMinLat?: SortOrderInput | SortOrder
     boundaryMaxLng?: SortOrderInput | SortOrder
@@ -71526,16 +70311,14 @@ export namespace Prisma {
     territoryType?: TerritoryTypeOrderByWithRelationInput
     parent?: TerritoryOrderByWithRelationInput
     children?: TerritoryOrderByRelationAggregateInput
+    managerTerritory?: TerritoryOrderByWithRelationInput
+    repPatches?: TerritoryOrderByRelationAggregateInput
     facilities?: FacilityOrderByRelationAggregateInput
     userAssignments?: UserTerritoryAssignmentOrderByRelationAggregateInput
     closureAsAncestor?: TerritoryClosureOrderByRelationAggregateInput
     closureAsDescendant?: TerritoryClosureOrderByRelationAggregateInput
     approvalRequests?: TerritoryApprovalRequestOrderByRelationAggregateInput
     facilityApprovalRequests?: TerritoryApprovalRequestOrderByRelationAggregateInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkOrderByRelationAggregateInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkOrderByRelationAggregateInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipOrderByRelationAggregateInput
-    geoMembershipAsReference?: TerritoryGeoMembershipOrderByRelationAggregateInput
   }
 
   export type TerritoryWhereUniqueInput = Prisma.AtLeast<{
@@ -71553,11 +70336,9 @@ export namespace Prisma {
     regionSlug?: StringNullableFilter<"Territory"> | string | null
     stateCode?: StringNullableFilter<"Territory"> | string | null
     parentId?: StringNullableFilter<"Territory"> | string | null
+    managerTerritoryId?: StringNullableFilter<"Territory"> | string | null
     isActive?: BoolFilter<"Territory"> | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFilter<"Territory"> | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: EnumTerritoryParentAssignmentSourceNullableFilter<"Territory"> | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: StringNullableFilter<"Territory"> | string | null
-    geoMembershipStatus?: EnumTerritoryGeoMembershipStatusNullableFilter<"Territory"> | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: FloatNullableFilter<"Territory"> | number | null
     boundaryMinLat?: FloatNullableFilter<"Territory"> | number | null
     boundaryMaxLng?: FloatNullableFilter<"Territory"> | number | null
@@ -71568,16 +70349,14 @@ export namespace Prisma {
     territoryType?: XOR<TerritoryTypeScalarRelationFilter, TerritoryTypeWhereInput>
     parent?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
     children?: TerritoryListRelationFilter
+    managerTerritory?: XOR<TerritoryNullableScalarRelationFilter, TerritoryWhereInput> | null
+    repPatches?: TerritoryListRelationFilter
     facilities?: FacilityListRelationFilter
     userAssignments?: UserTerritoryAssignmentListRelationFilter
     closureAsAncestor?: TerritoryClosureListRelationFilter
     closureAsDescendant?: TerritoryClosureListRelationFilter
     approvalRequests?: TerritoryApprovalRequestListRelationFilter
     facilityApprovalRequests?: TerritoryApprovalRequestListRelationFilter
-    rollupLinksAsTerritory?: TerritoryRollupLinkListRelationFilter
-    rollupLinksAsAncestor?: TerritoryRollupLinkListRelationFilter
-    geoMembershipAsOperational?: TerritoryGeoMembershipListRelationFilter
-    geoMembershipAsReference?: TerritoryGeoMembershipListRelationFilter
   }, "id" | "code" | "parentId_name" | "slug">
 
   export type TerritoryOrderByWithAggregationInput = {
@@ -71591,11 +70370,9 @@ export namespace Prisma {
     regionSlug?: SortOrderInput | SortOrder
     stateCode?: SortOrderInput | SortOrder
     parentId?: SortOrderInput | SortOrder
+    managerTerritoryId?: SortOrderInput | SortOrder
     isActive?: SortOrder
-    parentAssignmentStatus?: SortOrder
-    parentAssignmentSource?: SortOrderInput | SortOrder
     organizationId?: SortOrderInput | SortOrder
-    geoMembershipStatus?: SortOrderInput | SortOrder
     boundaryMinLng?: SortOrderInput | SortOrder
     boundaryMinLat?: SortOrderInput | SortOrder
     boundaryMaxLng?: SortOrderInput | SortOrder
@@ -71624,11 +70401,9 @@ export namespace Prisma {
     regionSlug?: StringNullableWithAggregatesFilter<"Territory"> | string | null
     stateCode?: StringNullableWithAggregatesFilter<"Territory"> | string | null
     parentId?: StringNullableWithAggregatesFilter<"Territory"> | string | null
+    managerTerritoryId?: StringNullableWithAggregatesFilter<"Territory"> | string | null
     isActive?: BoolWithAggregatesFilter<"Territory"> | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusWithAggregatesFilter<"Territory"> | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: EnumTerritoryParentAssignmentSourceNullableWithAggregatesFilter<"Territory"> | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: StringNullableWithAggregatesFilter<"Territory"> | string | null
-    geoMembershipStatus?: EnumTerritoryGeoMembershipStatusNullableWithAggregatesFilter<"Territory"> | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: FloatNullableWithAggregatesFilter<"Territory"> | number | null
     boundaryMinLat?: FloatNullableWithAggregatesFilter<"Territory"> | number | null
     boundaryMaxLng?: FloatNullableWithAggregatesFilter<"Territory"> | number | null
@@ -71687,141 +70462,6 @@ export namespace Prisma {
     ancestorId?: StringWithAggregatesFilter<"TerritoryClosure"> | string
     descendantId?: StringWithAggregatesFilter<"TerritoryClosure"> | string
     depth?: IntWithAggregatesFilter<"TerritoryClosure"> | number
-  }
-
-  export type TerritoryRollupLinkWhereInput = {
-    AND?: TerritoryRollupLinkWhereInput | TerritoryRollupLinkWhereInput[]
-    OR?: TerritoryRollupLinkWhereInput[]
-    NOT?: TerritoryRollupLinkWhereInput | TerritoryRollupLinkWhereInput[]
-    id?: StringFilter<"TerritoryRollupLink"> | string
-    territoryId?: StringFilter<"TerritoryRollupLink"> | string
-    ancestorId?: StringFilter<"TerritoryRollupLink"> | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFilter<"TerritoryRollupLink"> | Date | string
-    territory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-    ancestor?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-  }
-
-  export type TerritoryRollupLinkOrderByWithRelationInput = {
-    id?: SortOrder
-    territoryId?: SortOrder
-    ancestorId?: SortOrder
-    relationshipType?: SortOrder
-    source?: SortOrder
-    createdAt?: SortOrder
-    territory?: TerritoryOrderByWithRelationInput
-    ancestor?: TerritoryOrderByWithRelationInput
-  }
-
-  export type TerritoryRollupLinkWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
-    territoryId_ancestorId_relationshipType?: TerritoryRollupLinkTerritoryIdAncestorIdRelationshipTypeCompoundUniqueInput
-    AND?: TerritoryRollupLinkWhereInput | TerritoryRollupLinkWhereInput[]
-    OR?: TerritoryRollupLinkWhereInput[]
-    NOT?: TerritoryRollupLinkWhereInput | TerritoryRollupLinkWhereInput[]
-    territoryId?: StringFilter<"TerritoryRollupLink"> | string
-    ancestorId?: StringFilter<"TerritoryRollupLink"> | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFilter<"TerritoryRollupLink"> | Date | string
-    territory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-    ancestor?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-  }, "id" | "territoryId_ancestorId_relationshipType">
-
-  export type TerritoryRollupLinkOrderByWithAggregationInput = {
-    id?: SortOrder
-    territoryId?: SortOrder
-    ancestorId?: SortOrder
-    relationshipType?: SortOrder
-    source?: SortOrder
-    createdAt?: SortOrder
-    _count?: TerritoryRollupLinkCountOrderByAggregateInput
-    _max?: TerritoryRollupLinkMaxOrderByAggregateInput
-    _min?: TerritoryRollupLinkMinOrderByAggregateInput
-  }
-
-  export type TerritoryRollupLinkScalarWhereWithAggregatesInput = {
-    AND?: TerritoryRollupLinkScalarWhereWithAggregatesInput | TerritoryRollupLinkScalarWhereWithAggregatesInput[]
-    OR?: TerritoryRollupLinkScalarWhereWithAggregatesInput[]
-    NOT?: TerritoryRollupLinkScalarWhereWithAggregatesInput | TerritoryRollupLinkScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"TerritoryRollupLink"> | string
-    territoryId?: StringWithAggregatesFilter<"TerritoryRollupLink"> | string
-    ancestorId?: StringWithAggregatesFilter<"TerritoryRollupLink"> | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeWithAggregatesFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceWithAggregatesFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeWithAggregatesFilter<"TerritoryRollupLink"> | Date | string
-  }
-
-  export type TerritoryGeoMembershipWhereInput = {
-    AND?: TerritoryGeoMembershipWhereInput | TerritoryGeoMembershipWhereInput[]
-    OR?: TerritoryGeoMembershipWhereInput[]
-    NOT?: TerritoryGeoMembershipWhereInput | TerritoryGeoMembershipWhereInput[]
-    id?: StringFilter<"TerritoryGeoMembership"> | string
-    operationalTerritoryId?: StringFilter<"TerritoryGeoMembership"> | string
-    referenceTerritoryId?: StringFilter<"TerritoryGeoMembership"> | string
-    referenceTypeSlug?: StringFilter<"TerritoryGeoMembership"> | string
-    overlapRatio?: FloatFilter<"TerritoryGeoMembership"> | number
-    intersectionAreaSqKm?: FloatFilter<"TerritoryGeoMembership"> | number
-    computedAt?: DateTimeFilter<"TerritoryGeoMembership"> | Date | string
-    operationalTerritory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-    referenceTerritory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-  }
-
-  export type TerritoryGeoMembershipOrderByWithRelationInput = {
-    id?: SortOrder
-    operationalTerritoryId?: SortOrder
-    referenceTerritoryId?: SortOrder
-    referenceTypeSlug?: SortOrder
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-    computedAt?: SortOrder
-    operationalTerritory?: TerritoryOrderByWithRelationInput
-    referenceTerritory?: TerritoryOrderByWithRelationInput
-  }
-
-  export type TerritoryGeoMembershipWhereUniqueInput = Prisma.AtLeast<{
-    id?: string
-    operationalTerritoryId_referenceTerritoryId?: TerritoryGeoMembershipOperationalTerritoryIdReferenceTerritoryIdCompoundUniqueInput
-    AND?: TerritoryGeoMembershipWhereInput | TerritoryGeoMembershipWhereInput[]
-    OR?: TerritoryGeoMembershipWhereInput[]
-    NOT?: TerritoryGeoMembershipWhereInput | TerritoryGeoMembershipWhereInput[]
-    operationalTerritoryId?: StringFilter<"TerritoryGeoMembership"> | string
-    referenceTerritoryId?: StringFilter<"TerritoryGeoMembership"> | string
-    referenceTypeSlug?: StringFilter<"TerritoryGeoMembership"> | string
-    overlapRatio?: FloatFilter<"TerritoryGeoMembership"> | number
-    intersectionAreaSqKm?: FloatFilter<"TerritoryGeoMembership"> | number
-    computedAt?: DateTimeFilter<"TerritoryGeoMembership"> | Date | string
-    operationalTerritory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-    referenceTerritory?: XOR<TerritoryScalarRelationFilter, TerritoryWhereInput>
-  }, "id" | "operationalTerritoryId_referenceTerritoryId">
-
-  export type TerritoryGeoMembershipOrderByWithAggregationInput = {
-    id?: SortOrder
-    operationalTerritoryId?: SortOrder
-    referenceTerritoryId?: SortOrder
-    referenceTypeSlug?: SortOrder
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-    computedAt?: SortOrder
-    _count?: TerritoryGeoMembershipCountOrderByAggregateInput
-    _avg?: TerritoryGeoMembershipAvgOrderByAggregateInput
-    _max?: TerritoryGeoMembershipMaxOrderByAggregateInput
-    _min?: TerritoryGeoMembershipMinOrderByAggregateInput
-    _sum?: TerritoryGeoMembershipSumOrderByAggregateInput
-  }
-
-  export type TerritoryGeoMembershipScalarWhereWithAggregatesInput = {
-    AND?: TerritoryGeoMembershipScalarWhereWithAggregatesInput | TerritoryGeoMembershipScalarWhereWithAggregatesInput[]
-    OR?: TerritoryGeoMembershipScalarWhereWithAggregatesInput[]
-    NOT?: TerritoryGeoMembershipScalarWhereWithAggregatesInput | TerritoryGeoMembershipScalarWhereWithAggregatesInput[]
-    id?: StringWithAggregatesFilter<"TerritoryGeoMembership"> | string
-    operationalTerritoryId?: StringWithAggregatesFilter<"TerritoryGeoMembership"> | string
-    referenceTerritoryId?: StringWithAggregatesFilter<"TerritoryGeoMembership"> | string
-    referenceTypeSlug?: StringWithAggregatesFilter<"TerritoryGeoMembership"> | string
-    overlapRatio?: FloatWithAggregatesFilter<"TerritoryGeoMembership"> | number
-    intersectionAreaSqKm?: FloatWithAggregatesFilter<"TerritoryGeoMembership"> | number
-    computedAt?: DateTimeWithAggregatesFilter<"TerritoryGeoMembership"> | Date | string
   }
 
   export type TerritoryApprovalRequestWhereInput = {
@@ -73868,22 +72508,40 @@ export namespace Prisma {
     id?: StringFilter<"IngestionRun"> | string
     sourceProvider?: StringFilter<"IngestionRun"> | string
     status?: EnumIngestionRunStatusFilter<"IngestionRun"> | $Enums.IngestionRunStatus
+    phase?: EnumIngestionRunPhaseNullableFilter<"IngestionRun"> | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
+    temporalWorkflowId?: StringNullableFilter<"IngestionRun"> | string | null
+    referenceAno?: IntNullableFilter<"IngestionRun"> | number | null
+    referenceMes?: IntNullableFilter<"IngestionRun"> | number | null
     startedAt?: DateTimeFilter<"IngestionRun"> | Date | string
     completedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
+    promotedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
     stats?: JsonNullableFilter<"IngestionRun">
+    validationReport?: JsonNullableFilter<"IngestionRun">
+    archiveManifest?: JsonNullableFilter<"IngestionRun">
     error?: StringNullableFilter<"IngestionRun"> | string | null
     suggestions?: IngestionSuggestionListRelationFilter
+    diffs?: IngestionDiffListRelationFilter
   }
 
   export type IngestionRunOrderByWithRelationInput = {
     id?: SortOrder
     sourceProvider?: SortOrder
     status?: SortOrder
+    phase?: SortOrderInput | SortOrder
+    phaseStartedAt?: SortOrderInput | SortOrder
+    temporalWorkflowId?: SortOrderInput | SortOrder
+    referenceAno?: SortOrderInput | SortOrder
+    referenceMes?: SortOrderInput | SortOrder
     startedAt?: SortOrder
     completedAt?: SortOrderInput | SortOrder
+    promotedAt?: SortOrderInput | SortOrder
     stats?: SortOrderInput | SortOrder
+    validationReport?: SortOrderInput | SortOrder
+    archiveManifest?: SortOrderInput | SortOrder
     error?: SortOrderInput | SortOrder
     suggestions?: IngestionSuggestionOrderByRelationAggregateInput
+    diffs?: IngestionDiffOrderByRelationAggregateInput
   }
 
   export type IngestionRunWhereUniqueInput = Prisma.AtLeast<{
@@ -73893,24 +72551,43 @@ export namespace Prisma {
     NOT?: IngestionRunWhereInput | IngestionRunWhereInput[]
     sourceProvider?: StringFilter<"IngestionRun"> | string
     status?: EnumIngestionRunStatusFilter<"IngestionRun"> | $Enums.IngestionRunStatus
+    phase?: EnumIngestionRunPhaseNullableFilter<"IngestionRun"> | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
+    temporalWorkflowId?: StringNullableFilter<"IngestionRun"> | string | null
+    referenceAno?: IntNullableFilter<"IngestionRun"> | number | null
+    referenceMes?: IntNullableFilter<"IngestionRun"> | number | null
     startedAt?: DateTimeFilter<"IngestionRun"> | Date | string
     completedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
+    promotedAt?: DateTimeNullableFilter<"IngestionRun"> | Date | string | null
     stats?: JsonNullableFilter<"IngestionRun">
+    validationReport?: JsonNullableFilter<"IngestionRun">
+    archiveManifest?: JsonNullableFilter<"IngestionRun">
     error?: StringNullableFilter<"IngestionRun"> | string | null
     suggestions?: IngestionSuggestionListRelationFilter
+    diffs?: IngestionDiffListRelationFilter
   }, "id">
 
   export type IngestionRunOrderByWithAggregationInput = {
     id?: SortOrder
     sourceProvider?: SortOrder
     status?: SortOrder
+    phase?: SortOrderInput | SortOrder
+    phaseStartedAt?: SortOrderInput | SortOrder
+    temporalWorkflowId?: SortOrderInput | SortOrder
+    referenceAno?: SortOrderInput | SortOrder
+    referenceMes?: SortOrderInput | SortOrder
     startedAt?: SortOrder
     completedAt?: SortOrderInput | SortOrder
+    promotedAt?: SortOrderInput | SortOrder
     stats?: SortOrderInput | SortOrder
+    validationReport?: SortOrderInput | SortOrder
+    archiveManifest?: SortOrderInput | SortOrder
     error?: SortOrderInput | SortOrder
     _count?: IngestionRunCountOrderByAggregateInput
+    _avg?: IngestionRunAvgOrderByAggregateInput
     _max?: IngestionRunMaxOrderByAggregateInput
     _min?: IngestionRunMinOrderByAggregateInput
+    _sum?: IngestionRunSumOrderByAggregateInput
   }
 
   export type IngestionRunScalarWhereWithAggregatesInput = {
@@ -73920,10 +72597,88 @@ export namespace Prisma {
     id?: StringWithAggregatesFilter<"IngestionRun"> | string
     sourceProvider?: StringWithAggregatesFilter<"IngestionRun"> | string
     status?: EnumIngestionRunStatusWithAggregatesFilter<"IngestionRun"> | $Enums.IngestionRunStatus
+    phase?: EnumIngestionRunPhaseNullableWithAggregatesFilter<"IngestionRun"> | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: DateTimeNullableWithAggregatesFilter<"IngestionRun"> | Date | string | null
+    temporalWorkflowId?: StringNullableWithAggregatesFilter<"IngestionRun"> | string | null
+    referenceAno?: IntNullableWithAggregatesFilter<"IngestionRun"> | number | null
+    referenceMes?: IntNullableWithAggregatesFilter<"IngestionRun"> | number | null
     startedAt?: DateTimeWithAggregatesFilter<"IngestionRun"> | Date | string
     completedAt?: DateTimeNullableWithAggregatesFilter<"IngestionRun"> | Date | string | null
+    promotedAt?: DateTimeNullableWithAggregatesFilter<"IngestionRun"> | Date | string | null
     stats?: JsonNullableWithAggregatesFilter<"IngestionRun">
+    validationReport?: JsonNullableWithAggregatesFilter<"IngestionRun">
+    archiveManifest?: JsonNullableWithAggregatesFilter<"IngestionRun">
     error?: StringNullableWithAggregatesFilter<"IngestionRun"> | string | null
+  }
+
+  export type IngestionDiffWhereInput = {
+    AND?: IngestionDiffWhereInput | IngestionDiffWhereInput[]
+    OR?: IngestionDiffWhereInput[]
+    NOT?: IngestionDiffWhereInput | IngestionDiffWhereInput[]
+    id?: StringFilter<"IngestionDiff"> | string
+    ingestionRunId?: StringFilter<"IngestionDiff"> | string
+    scope?: EnumIngestionDiffScopeFilter<"IngestionDiff"> | $Enums.IngestionDiffScope
+    entityType?: StringFilter<"IngestionDiff"> | string
+    externalSourceId?: StringNullableFilter<"IngestionDiff"> | string | null
+    diffType?: StringFilter<"IngestionDiff"> | string
+    payload?: JsonFilter<"IngestionDiff">
+    createdAt?: DateTimeFilter<"IngestionDiff"> | Date | string
+    ingestionRun?: XOR<IngestionRunScalarRelationFilter, IngestionRunWhereInput>
+  }
+
+  export type IngestionDiffOrderByWithRelationInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    scope?: SortOrder
+    entityType?: SortOrder
+    externalSourceId?: SortOrderInput | SortOrder
+    diffType?: SortOrder
+    payload?: SortOrder
+    createdAt?: SortOrder
+    ingestionRun?: IngestionRunOrderByWithRelationInput
+  }
+
+  export type IngestionDiffWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: IngestionDiffWhereInput | IngestionDiffWhereInput[]
+    OR?: IngestionDiffWhereInput[]
+    NOT?: IngestionDiffWhereInput | IngestionDiffWhereInput[]
+    ingestionRunId?: StringFilter<"IngestionDiff"> | string
+    scope?: EnumIngestionDiffScopeFilter<"IngestionDiff"> | $Enums.IngestionDiffScope
+    entityType?: StringFilter<"IngestionDiff"> | string
+    externalSourceId?: StringNullableFilter<"IngestionDiff"> | string | null
+    diffType?: StringFilter<"IngestionDiff"> | string
+    payload?: JsonFilter<"IngestionDiff">
+    createdAt?: DateTimeFilter<"IngestionDiff"> | Date | string
+    ingestionRun?: XOR<IngestionRunScalarRelationFilter, IngestionRunWhereInput>
+  }, "id">
+
+  export type IngestionDiffOrderByWithAggregationInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    scope?: SortOrder
+    entityType?: SortOrder
+    externalSourceId?: SortOrderInput | SortOrder
+    diffType?: SortOrder
+    payload?: SortOrder
+    createdAt?: SortOrder
+    _count?: IngestionDiffCountOrderByAggregateInput
+    _max?: IngestionDiffMaxOrderByAggregateInput
+    _min?: IngestionDiffMinOrderByAggregateInput
+  }
+
+  export type IngestionDiffScalarWhereWithAggregatesInput = {
+    AND?: IngestionDiffScalarWhereWithAggregatesInput | IngestionDiffScalarWhereWithAggregatesInput[]
+    OR?: IngestionDiffScalarWhereWithAggregatesInput[]
+    NOT?: IngestionDiffScalarWhereWithAggregatesInput | IngestionDiffScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"IngestionDiff"> | string
+    ingestionRunId?: StringWithAggregatesFilter<"IngestionDiff"> | string
+    scope?: EnumIngestionDiffScopeWithAggregatesFilter<"IngestionDiff"> | $Enums.IngestionDiffScope
+    entityType?: StringWithAggregatesFilter<"IngestionDiff"> | string
+    externalSourceId?: StringNullableWithAggregatesFilter<"IngestionDiff"> | string | null
+    diffType?: StringWithAggregatesFilter<"IngestionDiff"> | string
+    payload?: JsonWithAggregatesFilter<"IngestionDiff">
+    createdAt?: DateTimeWithAggregatesFilter<"IngestionDiff"> | Date | string
   }
 
   export type IngestionSuggestionWhereInput = {
@@ -76463,6 +75218,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: number
     isActive?: boolean
     createdAt?: Date | string
@@ -76481,6 +75237,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: number
     isActive?: boolean
     createdAt?: Date | string
@@ -76499,6 +75256,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFieldUpdateOperationsInput | boolean
     isCountryLevel?: BoolFieldUpdateOperationsInput | boolean
     blockSiblingOverlap?: BoolFieldUpdateOperationsInput | boolean
+    participatesInGroupingHierarchy?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -76517,6 +75275,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFieldUpdateOperationsInput | boolean
     isCountryLevel?: BoolFieldUpdateOperationsInput | boolean
     blockSiblingOverlap?: BoolFieldUpdateOperationsInput | boolean
+    participatesInGroupingHierarchy?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -76535,6 +75294,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: number
     isActive?: boolean
     createdAt?: Date | string
@@ -76552,6 +75312,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFieldUpdateOperationsInput | boolean
     isCountryLevel?: BoolFieldUpdateOperationsInput | boolean
     blockSiblingOverlap?: BoolFieldUpdateOperationsInput | boolean
+    participatesInGroupingHierarchy?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -76569,6 +75330,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFieldUpdateOperationsInput | boolean
     isCountryLevel?: BoolFieldUpdateOperationsInput | boolean
     blockSiblingOverlap?: BoolFieldUpdateOperationsInput | boolean
+    participatesInGroupingHierarchy?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -76585,10 +75347,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -76599,16 +75358,14 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateInput = {
@@ -76622,11 +75379,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -76635,16 +75390,13 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUpdateInput = {
@@ -76657,10 +75409,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -76671,16 +75420,14 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateInput = {
@@ -76694,11 +75441,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -76707,16 +75452,13 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryCreateManyInput = {
@@ -76730,11 +75472,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -76754,10 +75494,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -76778,11 +75515,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -76830,135 +75565,6 @@ export namespace Prisma {
     ancestorId?: StringFieldUpdateOperationsInput | string
     descendantId?: StringFieldUpdateOperationsInput | string
     depth?: IntFieldUpdateOperationsInput | number
-  }
-
-  export type TerritoryRollupLinkCreateInput = {
-    id?: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-    territory: TerritoryCreateNestedOneWithoutRollupLinksAsTerritoryInput
-    ancestor: TerritoryCreateNestedOneWithoutRollupLinksAsAncestorInput
-  }
-
-  export type TerritoryRollupLinkUncheckedCreateInput = {
-    id?: string
-    territoryId: string
-    ancestorId: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-  }
-
-  export type TerritoryRollupLinkUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    territory?: TerritoryUpdateOneRequiredWithoutRollupLinksAsTerritoryNestedInput
-    ancestor?: TerritoryUpdateOneRequiredWithoutRollupLinksAsAncestorNestedInput
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
-    ancestorId?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryRollupLinkCreateManyInput = {
-    id?: string
-    territoryId: string
-    ancestorId: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-  }
-
-  export type TerritoryRollupLinkUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
-    ancestorId?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipCreateInput = {
-    id?: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-    operationalTerritory: TerritoryCreateNestedOneWithoutGeoMembershipAsOperationalInput
-    referenceTerritory: TerritoryCreateNestedOneWithoutGeoMembershipAsReferenceInput
-  }
-
-  export type TerritoryGeoMembershipUncheckedCreateInput = {
-    id?: string
-    operationalTerritoryId: string
-    referenceTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-  }
-
-  export type TerritoryGeoMembershipUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    operationalTerritory?: TerritoryUpdateOneRequiredWithoutGeoMembershipAsOperationalNestedInput
-    referenceTerritory?: TerritoryUpdateOneRequiredWithoutGeoMembershipAsReferenceNestedInput
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    operationalTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipCreateManyInput = {
-    id?: string
-    operationalTerritoryId: string
-    referenceTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-  }
-
-  export type TerritoryGeoMembershipUpdateManyMutationInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateManyInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    operationalTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type TerritoryApprovalRequestCreateInput = {
@@ -79352,53 +77958,97 @@ export namespace Prisma {
     id?: string
     sourceProvider: string
     status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
     startedAt?: Date | string
     completedAt?: Date | string | null
+    promotedAt?: Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: string | null
     suggestions?: IngestionSuggestionCreateNestedManyWithoutIngestionRunInput
+    diffs?: IngestionDiffCreateNestedManyWithoutIngestionRunInput
   }
 
   export type IngestionRunUncheckedCreateInput = {
     id?: string
     sourceProvider: string
     status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
     startedAt?: Date | string
     completedAt?: Date | string | null
+    promotedAt?: Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: string | null
     suggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutIngestionRunInput
+    diffs?: IngestionDiffUncheckedCreateNestedManyWithoutIngestionRunInput
   }
 
   export type IngestionRunUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     sourceProvider?: StringFieldUpdateOperationsInput | string
     status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: NullableStringFieldUpdateOperationsInput | string | null
     suggestions?: IngestionSuggestionUpdateManyWithoutIngestionRunNestedInput
+    diffs?: IngestionDiffUpdateManyWithoutIngestionRunNestedInput
   }
 
   export type IngestionRunUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     sourceProvider?: StringFieldUpdateOperationsInput | string
     status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: NullableStringFieldUpdateOperationsInput | string | null
     suggestions?: IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunNestedInput
+    diffs?: IngestionDiffUncheckedUpdateManyWithoutIngestionRunNestedInput
   }
 
   export type IngestionRunCreateManyInput = {
     id?: string
     sourceProvider: string
     status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
     startedAt?: Date | string
     completedAt?: Date | string | null
+    promotedAt?: Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: string | null
   }
 
@@ -79406,9 +78056,17 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     sourceProvider?: StringFieldUpdateOperationsInput | string
     status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
@@ -79416,10 +78074,94 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     sourceProvider?: StringFieldUpdateOperationsInput | string
     status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionDiffCreateInput = {
+    id?: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId?: string | null
+    diffType: string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+    ingestionRun: IngestionRunCreateNestedOneWithoutDiffsInput
+  }
+
+  export type IngestionDiffUncheckedCreateInput = {
+    id?: string
+    ingestionRunId: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId?: string | null
+    diffType: string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type IngestionDiffUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    ingestionRun?: IngestionRunUpdateOneRequiredWithoutDiffsNestedInput
+  }
+
+  export type IngestionDiffUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IngestionDiffCreateManyInput = {
+    id?: string
+    ingestionRunId: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId?: string | null
+    diffType: string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type IngestionDiffUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IngestionDiffUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    ingestionRunId?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type IngestionSuggestionCreateInput = {
@@ -81097,6 +79839,7 @@ export namespace Prisma {
     assignableToManagers?: SortOrder
     isCountryLevel?: SortOrder
     blockSiblingOverlap?: SortOrder
+    participatesInGroupingHierarchy?: SortOrder
     sortOrder?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
@@ -81118,6 +79861,7 @@ export namespace Prisma {
     assignableToManagers?: SortOrder
     isCountryLevel?: SortOrder
     blockSiblingOverlap?: SortOrder
+    participatesInGroupingHierarchy?: SortOrder
     sortOrder?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
@@ -81135,6 +79879,7 @@ export namespace Prisma {
     assignableToManagers?: SortOrder
     isCountryLevel?: SortOrder
     blockSiblingOverlap?: SortOrder
+    participatesInGroupingHierarchy?: SortOrder
     sortOrder?: SortOrder
     isActive?: SortOrder
     createdAt?: SortOrder
@@ -81150,27 +79895,6 @@ export namespace Prisma {
     in?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
     notIn?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
     not?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel> | $Enums.TerritoryNodeType
-  }
-
-  export type EnumTerritoryParentAssignmentStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentStatus | EnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentStatus
-  }
-
-  export type EnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentSource | EnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentSource | null
-  }
-
-  export type EnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryGeoMembershipStatus | EnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel> | $Enums.TerritoryGeoMembershipStatus | null
   }
 
   export type TerritoryTypeScalarRelationFilter = {
@@ -81201,18 +79925,6 @@ export namespace Prisma {
     none?: TerritoryApprovalRequestWhereInput
   }
 
-  export type TerritoryRollupLinkListRelationFilter = {
-    every?: TerritoryRollupLinkWhereInput
-    some?: TerritoryRollupLinkWhereInput
-    none?: TerritoryRollupLinkWhereInput
-  }
-
-  export type TerritoryGeoMembershipListRelationFilter = {
-    every?: TerritoryGeoMembershipWhereInput
-    some?: TerritoryGeoMembershipWhereInput
-    none?: TerritoryGeoMembershipWhereInput
-  }
-
   export type FacilityOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -81222,14 +79934,6 @@ export namespace Prisma {
   }
 
   export type TerritoryApprovalRequestOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type TerritoryRollupLinkOrderByRelationAggregateInput = {
-    _count?: SortOrder
-  }
-
-  export type TerritoryGeoMembershipOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -81249,11 +79953,9 @@ export namespace Prisma {
     regionSlug?: SortOrder
     stateCode?: SortOrder
     parentId?: SortOrder
+    managerTerritoryId?: SortOrder
     isActive?: SortOrder
-    parentAssignmentStatus?: SortOrder
-    parentAssignmentSource?: SortOrder
     organizationId?: SortOrder
-    geoMembershipStatus?: SortOrder
     boundaryMinLng?: SortOrder
     boundaryMinLat?: SortOrder
     boundaryMaxLng?: SortOrder
@@ -81282,11 +79984,9 @@ export namespace Prisma {
     regionSlug?: SortOrder
     stateCode?: SortOrder
     parentId?: SortOrder
+    managerTerritoryId?: SortOrder
     isActive?: SortOrder
-    parentAssignmentStatus?: SortOrder
-    parentAssignmentSource?: SortOrder
     organizationId?: SortOrder
-    geoMembershipStatus?: SortOrder
     boundaryMinLng?: SortOrder
     boundaryMinLat?: SortOrder
     boundaryMaxLng?: SortOrder
@@ -81307,11 +80007,9 @@ export namespace Prisma {
     regionSlug?: SortOrder
     stateCode?: SortOrder
     parentId?: SortOrder
+    managerTerritoryId?: SortOrder
     isActive?: SortOrder
-    parentAssignmentStatus?: SortOrder
-    parentAssignmentSource?: SortOrder
     organizationId?: SortOrder
-    geoMembershipStatus?: SortOrder
     boundaryMinLng?: SortOrder
     boundaryMinLat?: SortOrder
     boundaryMaxLng?: SortOrder
@@ -81337,36 +80035,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
     _max?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
-  }
-
-  export type EnumTerritoryParentAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentStatus | EnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryParentAssignmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel>
-  }
-
-  export type EnumTerritoryParentAssignmentSourceNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentSource | EnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryParentAssignmentSourceNullableWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentSource | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel>
-  }
-
-  export type EnumTerritoryGeoMembershipStatusNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryGeoMembershipStatus | EnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryGeoMembershipStatusNullableWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryGeoMembershipStatus | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel>
   }
 
   export type TerritoryClosureAncestorIdDescendantIdCompoundUniqueInput = {
@@ -81398,145 +80066,6 @@ export namespace Prisma {
 
   export type TerritoryClosureSumOrderByAggregateInput = {
     depth?: SortOrder
-  }
-
-  export type EnumTerritoryRollupRelationshipTypeFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupRelationshipType | EnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel> | $Enums.TerritoryRollupRelationshipType
-  }
-
-  export type EnumTerritoryRollupLinkSourceFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupLinkSource | EnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel> | $Enums.TerritoryRollupLinkSource
-  }
-
-  export type TerritoryRollupLinkTerritoryIdAncestorIdRelationshipTypeCompoundUniqueInput = {
-    territoryId: string
-    ancestorId: string
-    relationshipType: $Enums.TerritoryRollupRelationshipType
-  }
-
-  export type TerritoryRollupLinkCountOrderByAggregateInput = {
-    id?: SortOrder
-    territoryId?: SortOrder
-    ancestorId?: SortOrder
-    relationshipType?: SortOrder
-    source?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type TerritoryRollupLinkMaxOrderByAggregateInput = {
-    id?: SortOrder
-    territoryId?: SortOrder
-    ancestorId?: SortOrder
-    relationshipType?: SortOrder
-    source?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type TerritoryRollupLinkMinOrderByAggregateInput = {
-    id?: SortOrder
-    territoryId?: SortOrder
-    ancestorId?: SortOrder
-    relationshipType?: SortOrder
-    source?: SortOrder
-    createdAt?: SortOrder
-  }
-
-  export type EnumTerritoryRollupRelationshipTypeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupRelationshipType | EnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupRelationshipTypeWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryRollupRelationshipType
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel>
-  }
-
-  export type EnumTerritoryRollupLinkSourceWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupLinkSource | EnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupLinkSourceWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryRollupLinkSource
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel>
-  }
-
-  export type FloatFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatFilter<$PrismaModel> | number
-  }
-
-  export type TerritoryGeoMembershipOperationalTerritoryIdReferenceTerritoryIdCompoundUniqueInput = {
-    operationalTerritoryId: string
-    referenceTerritoryId: string
-  }
-
-  export type TerritoryGeoMembershipCountOrderByAggregateInput = {
-    id?: SortOrder
-    operationalTerritoryId?: SortOrder
-    referenceTerritoryId?: SortOrder
-    referenceTypeSlug?: SortOrder
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-    computedAt?: SortOrder
-  }
-
-  export type TerritoryGeoMembershipAvgOrderByAggregateInput = {
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-  }
-
-  export type TerritoryGeoMembershipMaxOrderByAggregateInput = {
-    id?: SortOrder
-    operationalTerritoryId?: SortOrder
-    referenceTerritoryId?: SortOrder
-    referenceTypeSlug?: SortOrder
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-    computedAt?: SortOrder
-  }
-
-  export type TerritoryGeoMembershipMinOrderByAggregateInput = {
-    id?: SortOrder
-    operationalTerritoryId?: SortOrder
-    referenceTerritoryId?: SortOrder
-    referenceTypeSlug?: SortOrder
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-    computedAt?: SortOrder
-  }
-
-  export type TerritoryGeoMembershipSumOrderByAggregateInput = {
-    overlapRatio?: SortOrder
-    intersectionAreaSqKm?: SortOrder
-  }
-
-  export type FloatWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedFloatFilter<$PrismaModel>
-    _min?: NestedFloatFilter<$PrismaModel>
-    _max?: NestedFloatFilter<$PrismaModel>
   }
 
   export type EnumTerritoryApprovalTypeFilter<$PrismaModel = never> = {
@@ -82895,6 +81424,17 @@ export namespace Prisma {
     _max?: NestedEnumHealthcareProviderTypeFilter<$PrismaModel>
   }
 
+  export type FloatFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatFilter<$PrismaModel> | number
+  }
+
   export type EnumHealthcareProviderShareSourceFilter<$PrismaModel = never> = {
     equals?: $Enums.HealthcareProviderShareSource | EnumHealthcareProviderShareSourceFieldRefInput<$PrismaModel>
     in?: $Enums.HealthcareProviderShareSource[] | ListEnumHealthcareProviderShareSourceFieldRefInput<$PrismaModel>
@@ -82957,6 +81497,22 @@ export namespace Prisma {
 
   export type FacilityHealthcareProviderShareSumOrderByAggregateInput = {
     sharePercent?: SortOrder
+  }
+
+  export type FloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
   }
 
   export type EnumHealthcareProviderShareSourceWithAggregatesFilter<$PrismaModel = never> = {
@@ -83075,22 +81631,58 @@ export namespace Prisma {
     not?: NestedEnumIngestionRunStatusFilter<$PrismaModel> | $Enums.IngestionRunStatus
   }
 
+  export type EnumIngestionRunPhaseNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunPhase | EnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    in?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel> | $Enums.IngestionRunPhase | null
+  }
+
+  export type IngestionDiffListRelationFilter = {
+    every?: IngestionDiffWhereInput
+    some?: IngestionDiffWhereInput
+    none?: IngestionDiffWhereInput
+  }
+
+  export type IngestionDiffOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type IngestionRunCountOrderByAggregateInput = {
     id?: SortOrder
     sourceProvider?: SortOrder
     status?: SortOrder
+    phase?: SortOrder
+    phaseStartedAt?: SortOrder
+    temporalWorkflowId?: SortOrder
+    referenceAno?: SortOrder
+    referenceMes?: SortOrder
     startedAt?: SortOrder
     completedAt?: SortOrder
+    promotedAt?: SortOrder
     stats?: SortOrder
+    validationReport?: SortOrder
+    archiveManifest?: SortOrder
     error?: SortOrder
+  }
+
+  export type IngestionRunAvgOrderByAggregateInput = {
+    referenceAno?: SortOrder
+    referenceMes?: SortOrder
   }
 
   export type IngestionRunMaxOrderByAggregateInput = {
     id?: SortOrder
     sourceProvider?: SortOrder
     status?: SortOrder
+    phase?: SortOrder
+    phaseStartedAt?: SortOrder
+    temporalWorkflowId?: SortOrder
+    referenceAno?: SortOrder
+    referenceMes?: SortOrder
     startedAt?: SortOrder
     completedAt?: SortOrder
+    promotedAt?: SortOrder
     error?: SortOrder
   }
 
@@ -83098,9 +81690,20 @@ export namespace Prisma {
     id?: SortOrder
     sourceProvider?: SortOrder
     status?: SortOrder
+    phase?: SortOrder
+    phaseStartedAt?: SortOrder
+    temporalWorkflowId?: SortOrder
+    referenceAno?: SortOrder
+    referenceMes?: SortOrder
     startedAt?: SortOrder
     completedAt?: SortOrder
+    promotedAt?: SortOrder
     error?: SortOrder
+  }
+
+  export type IngestionRunSumOrderByAggregateInput = {
+    referenceAno?: SortOrder
+    referenceMes?: SortOrder
   }
 
   export type EnumIngestionRunStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -83111,6 +81714,69 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
     _max?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
+  }
+
+  export type EnumIngestionRunPhaseNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunPhase | EnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    in?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumIngestionRunPhaseNullableWithAggregatesFilter<$PrismaModel> | $Enums.IngestionRunPhase | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel>
+    _max?: NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel>
+  }
+
+  export type EnumIngestionDiffScopeFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionDiffScope | EnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionDiffScopeFilter<$PrismaModel> | $Enums.IngestionDiffScope
+  }
+
+  export type IngestionRunScalarRelationFilter = {
+    is?: IngestionRunWhereInput
+    isNot?: IngestionRunWhereInput
+  }
+
+  export type IngestionDiffCountOrderByAggregateInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    scope?: SortOrder
+    entityType?: SortOrder
+    externalSourceId?: SortOrder
+    diffType?: SortOrder
+    payload?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type IngestionDiffMaxOrderByAggregateInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    scope?: SortOrder
+    entityType?: SortOrder
+    externalSourceId?: SortOrder
+    diffType?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type IngestionDiffMinOrderByAggregateInput = {
+    id?: SortOrder
+    ingestionRunId?: SortOrder
+    scope?: SortOrder
+    entityType?: SortOrder
+    externalSourceId?: SortOrder
+    diffType?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type EnumIngestionDiffScopeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionDiffScope | EnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionDiffScopeWithAggregatesFilter<$PrismaModel> | $Enums.IngestionDiffScope
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionDiffScopeFilter<$PrismaModel>
+    _max?: NestedEnumIngestionDiffScopeFilter<$PrismaModel>
   }
 
   export type EnumIngestionSuggestionTypeFilter<$PrismaModel = never> = {
@@ -83125,11 +81791,6 @@ export namespace Prisma {
     in?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
     notIn?: $Enums.IngestionSuggestionStatus[] | ListEnumIngestionSuggestionStatusFieldRefInput<$PrismaModel>
     not?: NestedEnumIngestionSuggestionStatusFilter<$PrismaModel> | $Enums.IngestionSuggestionStatus
-  }
-
-  export type IngestionRunScalarRelationFilter = {
-    is?: IngestionRunWhereInput
-    isNot?: IngestionRunWhereInput
   }
 
   export type ProfessionalNullableScalarRelationFilter = {
@@ -83720,6 +82381,19 @@ export namespace Prisma {
     connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
   }
 
+  export type TerritoryCreateNestedOneWithoutRepPatchesInput = {
+    create?: XOR<TerritoryCreateWithoutRepPatchesInput, TerritoryUncheckedCreateWithoutRepPatchesInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutRepPatchesInput
+    connect?: TerritoryWhereUniqueInput
+  }
+
+  export type TerritoryCreateNestedManyWithoutManagerTerritoryInput = {
+    create?: XOR<TerritoryCreateWithoutManagerTerritoryInput, TerritoryUncheckedCreateWithoutManagerTerritoryInput> | TerritoryCreateWithoutManagerTerritoryInput[] | TerritoryUncheckedCreateWithoutManagerTerritoryInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutManagerTerritoryInput | TerritoryCreateOrConnectWithoutManagerTerritoryInput[]
+    createMany?: TerritoryCreateManyManagerTerritoryInputEnvelope
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+  }
+
   export type FacilityCreateNestedManyWithoutTerritoryInput = {
     create?: XOR<FacilityCreateWithoutTerritoryInput, FacilityUncheckedCreateWithoutTerritoryInput> | FacilityCreateWithoutTerritoryInput[] | FacilityUncheckedCreateWithoutTerritoryInput[]
     connectOrCreate?: FacilityCreateOrConnectWithoutTerritoryInput | FacilityCreateOrConnectWithoutTerritoryInput[]
@@ -83762,38 +82436,17 @@ export namespace Prisma {
     connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
   }
 
-  export type TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutTerritoryInput, TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput> | TerritoryRollupLinkCreateWithoutTerritoryInput[] | TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput | TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput[]
-    createMany?: TerritoryRollupLinkCreateManyTerritoryInputEnvelope
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-  }
-
-  export type TerritoryRollupLinkCreateNestedManyWithoutAncestorInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutAncestorInput, TerritoryRollupLinkUncheckedCreateWithoutAncestorInput> | TerritoryRollupLinkCreateWithoutAncestorInput[] | TerritoryRollupLinkUncheckedCreateWithoutAncestorInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutAncestorInput | TerritoryRollupLinkCreateOrConnectWithoutAncestorInput[]
-    createMany?: TerritoryRollupLinkCreateManyAncestorInputEnvelope
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-  }
-
-  export type TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput> | TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyOperationalTerritoryInputEnvelope
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-  }
-
-  export type TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput> | TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyReferenceTerritoryInputEnvelope
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-  }
-
   export type TerritoryUncheckedCreateNestedManyWithoutParentInput = {
     create?: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput> | TerritoryCreateWithoutParentInput[] | TerritoryUncheckedCreateWithoutParentInput[]
     connectOrCreate?: TerritoryCreateOrConnectWithoutParentInput | TerritoryCreateOrConnectWithoutParentInput[]
     createMany?: TerritoryCreateManyParentInputEnvelope
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+  }
+
+  export type TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput = {
+    create?: XOR<TerritoryCreateWithoutManagerTerritoryInput, TerritoryUncheckedCreateWithoutManagerTerritoryInput> | TerritoryCreateWithoutManagerTerritoryInput[] | TerritoryUncheckedCreateWithoutManagerTerritoryInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutManagerTerritoryInput | TerritoryCreateOrConnectWithoutManagerTerritoryInput[]
+    createMany?: TerritoryCreateManyManagerTerritoryInputEnvelope
     connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
   }
 
@@ -83839,48 +82492,8 @@ export namespace Prisma {
     connect?: TerritoryApprovalRequestWhereUniqueInput | TerritoryApprovalRequestWhereUniqueInput[]
   }
 
-  export type TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutTerritoryInput, TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput> | TerritoryRollupLinkCreateWithoutTerritoryInput[] | TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput | TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput[]
-    createMany?: TerritoryRollupLinkCreateManyTerritoryInputEnvelope
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-  }
-
-  export type TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutAncestorInput, TerritoryRollupLinkUncheckedCreateWithoutAncestorInput> | TerritoryRollupLinkCreateWithoutAncestorInput[] | TerritoryRollupLinkUncheckedCreateWithoutAncestorInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutAncestorInput | TerritoryRollupLinkCreateOrConnectWithoutAncestorInput[]
-    createMany?: TerritoryRollupLinkCreateManyAncestorInputEnvelope
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-  }
-
-  export type TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput> | TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyOperationalTerritoryInputEnvelope
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-  }
-
-  export type TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput> | TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyReferenceTerritoryInputEnvelope
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-  }
-
   export type EnumTerritoryNodeTypeFieldUpdateOperationsInput = {
     set?: $Enums.TerritoryNodeType
-  }
-
-  export type EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput = {
-    set?: $Enums.TerritoryParentAssignmentStatus
-  }
-
-  export type NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput = {
-    set?: $Enums.TerritoryParentAssignmentSource | null
-  }
-
-  export type NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput = {
-    set?: $Enums.TerritoryGeoMembershipStatus | null
   }
 
   export type TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput = {
@@ -83912,6 +82525,30 @@ export namespace Prisma {
     connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
     update?: TerritoryUpdateWithWhereUniqueWithoutParentInput | TerritoryUpdateWithWhereUniqueWithoutParentInput[]
     updateMany?: TerritoryUpdateManyWithWhereWithoutParentInput | TerritoryUpdateManyWithWhereWithoutParentInput[]
+    deleteMany?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
+  }
+
+  export type TerritoryUpdateOneWithoutRepPatchesNestedInput = {
+    create?: XOR<TerritoryCreateWithoutRepPatchesInput, TerritoryUncheckedCreateWithoutRepPatchesInput>
+    connectOrCreate?: TerritoryCreateOrConnectWithoutRepPatchesInput
+    upsert?: TerritoryUpsertWithoutRepPatchesInput
+    disconnect?: TerritoryWhereInput | boolean
+    delete?: TerritoryWhereInput | boolean
+    connect?: TerritoryWhereUniqueInput
+    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutRepPatchesInput, TerritoryUpdateWithoutRepPatchesInput>, TerritoryUncheckedUpdateWithoutRepPatchesInput>
+  }
+
+  export type TerritoryUpdateManyWithoutManagerTerritoryNestedInput = {
+    create?: XOR<TerritoryCreateWithoutManagerTerritoryInput, TerritoryUncheckedCreateWithoutManagerTerritoryInput> | TerritoryCreateWithoutManagerTerritoryInput[] | TerritoryUncheckedCreateWithoutManagerTerritoryInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutManagerTerritoryInput | TerritoryCreateOrConnectWithoutManagerTerritoryInput[]
+    upsert?: TerritoryUpsertWithWhereUniqueWithoutManagerTerritoryInput | TerritoryUpsertWithWhereUniqueWithoutManagerTerritoryInput[]
+    createMany?: TerritoryCreateManyManagerTerritoryInputEnvelope
+    set?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    disconnect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    delete?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    update?: TerritoryUpdateWithWhereUniqueWithoutManagerTerritoryInput | TerritoryUpdateWithWhereUniqueWithoutManagerTerritoryInput[]
+    updateMany?: TerritoryUpdateManyWithWhereWithoutManagerTerritoryInput | TerritoryUpdateManyWithWhereWithoutManagerTerritoryInput[]
     deleteMany?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
   }
 
@@ -83999,62 +82636,6 @@ export namespace Prisma {
     deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
   }
 
-  export type TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutTerritoryInput, TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput> | TerritoryRollupLinkCreateWithoutTerritoryInput[] | TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput | TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput[]
-    upsert?: TerritoryRollupLinkUpsertWithWhereUniqueWithoutTerritoryInput | TerritoryRollupLinkUpsertWithWhereUniqueWithoutTerritoryInput[]
-    createMany?: TerritoryRollupLinkCreateManyTerritoryInputEnvelope
-    set?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    disconnect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    delete?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    update?: TerritoryRollupLinkUpdateWithWhereUniqueWithoutTerritoryInput | TerritoryRollupLinkUpdateWithWhereUniqueWithoutTerritoryInput[]
-    updateMany?: TerritoryRollupLinkUpdateManyWithWhereWithoutTerritoryInput | TerritoryRollupLinkUpdateManyWithWhereWithoutTerritoryInput[]
-    deleteMany?: TerritoryRollupLinkScalarWhereInput | TerritoryRollupLinkScalarWhereInput[]
-  }
-
-  export type TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutAncestorInput, TerritoryRollupLinkUncheckedCreateWithoutAncestorInput> | TerritoryRollupLinkCreateWithoutAncestorInput[] | TerritoryRollupLinkUncheckedCreateWithoutAncestorInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutAncestorInput | TerritoryRollupLinkCreateOrConnectWithoutAncestorInput[]
-    upsert?: TerritoryRollupLinkUpsertWithWhereUniqueWithoutAncestorInput | TerritoryRollupLinkUpsertWithWhereUniqueWithoutAncestorInput[]
-    createMany?: TerritoryRollupLinkCreateManyAncestorInputEnvelope
-    set?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    disconnect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    delete?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    update?: TerritoryRollupLinkUpdateWithWhereUniqueWithoutAncestorInput | TerritoryRollupLinkUpdateWithWhereUniqueWithoutAncestorInput[]
-    updateMany?: TerritoryRollupLinkUpdateManyWithWhereWithoutAncestorInput | TerritoryRollupLinkUpdateManyWithWhereWithoutAncestorInput[]
-    deleteMany?: TerritoryRollupLinkScalarWhereInput | TerritoryRollupLinkScalarWhereInput[]
-  }
-
-  export type TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput> | TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput[]
-    upsert?: TerritoryGeoMembershipUpsertWithWhereUniqueWithoutOperationalTerritoryInput | TerritoryGeoMembershipUpsertWithWhereUniqueWithoutOperationalTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyOperationalTerritoryInputEnvelope
-    set?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    disconnect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    delete?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    update?: TerritoryGeoMembershipUpdateWithWhereUniqueWithoutOperationalTerritoryInput | TerritoryGeoMembershipUpdateWithWhereUniqueWithoutOperationalTerritoryInput[]
-    updateMany?: TerritoryGeoMembershipUpdateManyWithWhereWithoutOperationalTerritoryInput | TerritoryGeoMembershipUpdateManyWithWhereWithoutOperationalTerritoryInput[]
-    deleteMany?: TerritoryGeoMembershipScalarWhereInput | TerritoryGeoMembershipScalarWhereInput[]
-  }
-
-  export type TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput> | TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput[]
-    upsert?: TerritoryGeoMembershipUpsertWithWhereUniqueWithoutReferenceTerritoryInput | TerritoryGeoMembershipUpsertWithWhereUniqueWithoutReferenceTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyReferenceTerritoryInputEnvelope
-    set?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    disconnect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    delete?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    update?: TerritoryGeoMembershipUpdateWithWhereUniqueWithoutReferenceTerritoryInput | TerritoryGeoMembershipUpdateWithWhereUniqueWithoutReferenceTerritoryInput[]
-    updateMany?: TerritoryGeoMembershipUpdateManyWithWhereWithoutReferenceTerritoryInput | TerritoryGeoMembershipUpdateManyWithWhereWithoutReferenceTerritoryInput[]
-    deleteMany?: TerritoryGeoMembershipScalarWhereInput | TerritoryGeoMembershipScalarWhereInput[]
-  }
-
   export type TerritoryUncheckedUpdateManyWithoutParentNestedInput = {
     create?: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput> | TerritoryCreateWithoutParentInput[] | TerritoryUncheckedCreateWithoutParentInput[]
     connectOrCreate?: TerritoryCreateOrConnectWithoutParentInput | TerritoryCreateOrConnectWithoutParentInput[]
@@ -84066,6 +82647,20 @@ export namespace Prisma {
     connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
     update?: TerritoryUpdateWithWhereUniqueWithoutParentInput | TerritoryUpdateWithWhereUniqueWithoutParentInput[]
     updateMany?: TerritoryUpdateManyWithWhereWithoutParentInput | TerritoryUpdateManyWithWhereWithoutParentInput[]
+    deleteMany?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
+  }
+
+  export type TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput = {
+    create?: XOR<TerritoryCreateWithoutManagerTerritoryInput, TerritoryUncheckedCreateWithoutManagerTerritoryInput> | TerritoryCreateWithoutManagerTerritoryInput[] | TerritoryUncheckedCreateWithoutManagerTerritoryInput[]
+    connectOrCreate?: TerritoryCreateOrConnectWithoutManagerTerritoryInput | TerritoryCreateOrConnectWithoutManagerTerritoryInput[]
+    upsert?: TerritoryUpsertWithWhereUniqueWithoutManagerTerritoryInput | TerritoryUpsertWithWhereUniqueWithoutManagerTerritoryInput[]
+    createMany?: TerritoryCreateManyManagerTerritoryInputEnvelope
+    set?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    disconnect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    delete?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    connect?: TerritoryWhereUniqueInput | TerritoryWhereUniqueInput[]
+    update?: TerritoryUpdateWithWhereUniqueWithoutManagerTerritoryInput | TerritoryUpdateWithWhereUniqueWithoutManagerTerritoryInput[]
+    updateMany?: TerritoryUpdateManyWithWhereWithoutManagerTerritoryInput | TerritoryUpdateManyWithWhereWithoutManagerTerritoryInput[]
     deleteMany?: TerritoryScalarWhereInput | TerritoryScalarWhereInput[]
   }
 
@@ -84153,62 +82748,6 @@ export namespace Prisma {
     deleteMany?: TerritoryApprovalRequestScalarWhereInput | TerritoryApprovalRequestScalarWhereInput[]
   }
 
-  export type TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutTerritoryInput, TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput> | TerritoryRollupLinkCreateWithoutTerritoryInput[] | TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput | TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput[]
-    upsert?: TerritoryRollupLinkUpsertWithWhereUniqueWithoutTerritoryInput | TerritoryRollupLinkUpsertWithWhereUniqueWithoutTerritoryInput[]
-    createMany?: TerritoryRollupLinkCreateManyTerritoryInputEnvelope
-    set?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    disconnect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    delete?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    update?: TerritoryRollupLinkUpdateWithWhereUniqueWithoutTerritoryInput | TerritoryRollupLinkUpdateWithWhereUniqueWithoutTerritoryInput[]
-    updateMany?: TerritoryRollupLinkUpdateManyWithWhereWithoutTerritoryInput | TerritoryRollupLinkUpdateManyWithWhereWithoutTerritoryInput[]
-    deleteMany?: TerritoryRollupLinkScalarWhereInput | TerritoryRollupLinkScalarWhereInput[]
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput = {
-    create?: XOR<TerritoryRollupLinkCreateWithoutAncestorInput, TerritoryRollupLinkUncheckedCreateWithoutAncestorInput> | TerritoryRollupLinkCreateWithoutAncestorInput[] | TerritoryRollupLinkUncheckedCreateWithoutAncestorInput[]
-    connectOrCreate?: TerritoryRollupLinkCreateOrConnectWithoutAncestorInput | TerritoryRollupLinkCreateOrConnectWithoutAncestorInput[]
-    upsert?: TerritoryRollupLinkUpsertWithWhereUniqueWithoutAncestorInput | TerritoryRollupLinkUpsertWithWhereUniqueWithoutAncestorInput[]
-    createMany?: TerritoryRollupLinkCreateManyAncestorInputEnvelope
-    set?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    disconnect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    delete?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    connect?: TerritoryRollupLinkWhereUniqueInput | TerritoryRollupLinkWhereUniqueInput[]
-    update?: TerritoryRollupLinkUpdateWithWhereUniqueWithoutAncestorInput | TerritoryRollupLinkUpdateWithWhereUniqueWithoutAncestorInput[]
-    updateMany?: TerritoryRollupLinkUpdateManyWithWhereWithoutAncestorInput | TerritoryRollupLinkUpdateManyWithWhereWithoutAncestorInput[]
-    deleteMany?: TerritoryRollupLinkScalarWhereInput | TerritoryRollupLinkScalarWhereInput[]
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput> | TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput[]
-    upsert?: TerritoryGeoMembershipUpsertWithWhereUniqueWithoutOperationalTerritoryInput | TerritoryGeoMembershipUpsertWithWhereUniqueWithoutOperationalTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyOperationalTerritoryInputEnvelope
-    set?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    disconnect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    delete?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    update?: TerritoryGeoMembershipUpdateWithWhereUniqueWithoutOperationalTerritoryInput | TerritoryGeoMembershipUpdateWithWhereUniqueWithoutOperationalTerritoryInput[]
-    updateMany?: TerritoryGeoMembershipUpdateManyWithWhereWithoutOperationalTerritoryInput | TerritoryGeoMembershipUpdateManyWithWhereWithoutOperationalTerritoryInput[]
-    deleteMany?: TerritoryGeoMembershipScalarWhereInput | TerritoryGeoMembershipScalarWhereInput[]
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput = {
-    create?: XOR<TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput> | TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput[] | TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput[]
-    connectOrCreate?: TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput | TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput[]
-    upsert?: TerritoryGeoMembershipUpsertWithWhereUniqueWithoutReferenceTerritoryInput | TerritoryGeoMembershipUpsertWithWhereUniqueWithoutReferenceTerritoryInput[]
-    createMany?: TerritoryGeoMembershipCreateManyReferenceTerritoryInputEnvelope
-    set?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    disconnect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    delete?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    connect?: TerritoryGeoMembershipWhereUniqueInput | TerritoryGeoMembershipWhereUniqueInput[]
-    update?: TerritoryGeoMembershipUpdateWithWhereUniqueWithoutReferenceTerritoryInput | TerritoryGeoMembershipUpdateWithWhereUniqueWithoutReferenceTerritoryInput[]
-    updateMany?: TerritoryGeoMembershipUpdateManyWithWhereWithoutReferenceTerritoryInput | TerritoryGeoMembershipUpdateManyWithWhereWithoutReferenceTerritoryInput[]
-    deleteMany?: TerritoryGeoMembershipScalarWhereInput | TerritoryGeoMembershipScalarWhereInput[]
-  }
-
   export type TerritoryCreateNestedOneWithoutClosureAsAncestorInput = {
     create?: XOR<TerritoryCreateWithoutClosureAsAncestorInput, TerritoryUncheckedCreateWithoutClosureAsAncestorInput>
     connectOrCreate?: TerritoryCreateOrConnectWithoutClosureAsAncestorInput
@@ -84235,78 +82774,6 @@ export namespace Prisma {
     upsert?: TerritoryUpsertWithoutClosureAsDescendantInput
     connect?: TerritoryWhereUniqueInput
     update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutClosureAsDescendantInput, TerritoryUpdateWithoutClosureAsDescendantInput>, TerritoryUncheckedUpdateWithoutClosureAsDescendantInput>
-  }
-
-  export type TerritoryCreateNestedOneWithoutRollupLinksAsTerritoryInput = {
-    create?: XOR<TerritoryCreateWithoutRollupLinksAsTerritoryInput, TerritoryUncheckedCreateWithoutRollupLinksAsTerritoryInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutRollupLinksAsTerritoryInput
-    connect?: TerritoryWhereUniqueInput
-  }
-
-  export type TerritoryCreateNestedOneWithoutRollupLinksAsAncestorInput = {
-    create?: XOR<TerritoryCreateWithoutRollupLinksAsAncestorInput, TerritoryUncheckedCreateWithoutRollupLinksAsAncestorInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutRollupLinksAsAncestorInput
-    connect?: TerritoryWhereUniqueInput
-  }
-
-  export type EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput = {
-    set?: $Enums.TerritoryRollupRelationshipType
-  }
-
-  export type EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput = {
-    set?: $Enums.TerritoryRollupLinkSource
-  }
-
-  export type TerritoryUpdateOneRequiredWithoutRollupLinksAsTerritoryNestedInput = {
-    create?: XOR<TerritoryCreateWithoutRollupLinksAsTerritoryInput, TerritoryUncheckedCreateWithoutRollupLinksAsTerritoryInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutRollupLinksAsTerritoryInput
-    upsert?: TerritoryUpsertWithoutRollupLinksAsTerritoryInput
-    connect?: TerritoryWhereUniqueInput
-    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutRollupLinksAsTerritoryInput, TerritoryUpdateWithoutRollupLinksAsTerritoryInput>, TerritoryUncheckedUpdateWithoutRollupLinksAsTerritoryInput>
-  }
-
-  export type TerritoryUpdateOneRequiredWithoutRollupLinksAsAncestorNestedInput = {
-    create?: XOR<TerritoryCreateWithoutRollupLinksAsAncestorInput, TerritoryUncheckedCreateWithoutRollupLinksAsAncestorInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutRollupLinksAsAncestorInput
-    upsert?: TerritoryUpsertWithoutRollupLinksAsAncestorInput
-    connect?: TerritoryWhereUniqueInput
-    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutRollupLinksAsAncestorInput, TerritoryUpdateWithoutRollupLinksAsAncestorInput>, TerritoryUncheckedUpdateWithoutRollupLinksAsAncestorInput>
-  }
-
-  export type TerritoryCreateNestedOneWithoutGeoMembershipAsOperationalInput = {
-    create?: XOR<TerritoryCreateWithoutGeoMembershipAsOperationalInput, TerritoryUncheckedCreateWithoutGeoMembershipAsOperationalInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutGeoMembershipAsOperationalInput
-    connect?: TerritoryWhereUniqueInput
-  }
-
-  export type TerritoryCreateNestedOneWithoutGeoMembershipAsReferenceInput = {
-    create?: XOR<TerritoryCreateWithoutGeoMembershipAsReferenceInput, TerritoryUncheckedCreateWithoutGeoMembershipAsReferenceInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutGeoMembershipAsReferenceInput
-    connect?: TerritoryWhereUniqueInput
-  }
-
-  export type FloatFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
-  }
-
-  export type TerritoryUpdateOneRequiredWithoutGeoMembershipAsOperationalNestedInput = {
-    create?: XOR<TerritoryCreateWithoutGeoMembershipAsOperationalInput, TerritoryUncheckedCreateWithoutGeoMembershipAsOperationalInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutGeoMembershipAsOperationalInput
-    upsert?: TerritoryUpsertWithoutGeoMembershipAsOperationalInput
-    connect?: TerritoryWhereUniqueInput
-    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutGeoMembershipAsOperationalInput, TerritoryUpdateWithoutGeoMembershipAsOperationalInput>, TerritoryUncheckedUpdateWithoutGeoMembershipAsOperationalInput>
-  }
-
-  export type TerritoryUpdateOneRequiredWithoutGeoMembershipAsReferenceNestedInput = {
-    create?: XOR<TerritoryCreateWithoutGeoMembershipAsReferenceInput, TerritoryUncheckedCreateWithoutGeoMembershipAsReferenceInput>
-    connectOrCreate?: TerritoryCreateOrConnectWithoutGeoMembershipAsReferenceInput
-    upsert?: TerritoryUpsertWithoutGeoMembershipAsReferenceInput
-    connect?: TerritoryWhereUniqueInput
-    update?: XOR<XOR<TerritoryUpdateToOneWithWhereWithoutGeoMembershipAsReferenceInput, TerritoryUpdateWithoutGeoMembershipAsReferenceInput>, TerritoryUncheckedUpdateWithoutGeoMembershipAsReferenceInput>
   }
 
   export type TerritoryCreateNestedOneWithoutApprovalRequestsInput = {
@@ -85361,6 +83828,14 @@ export namespace Prisma {
     connect?: HealthcareProviderWhereUniqueInput
   }
 
+  export type FloatFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
   export type EnumHealthcareProviderShareSourceFieldUpdateOperationsInput = {
     set?: $Enums.HealthcareProviderShareSource
   }
@@ -85478,6 +83953,13 @@ export namespace Prisma {
     connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
   }
 
+  export type IngestionDiffCreateNestedManyWithoutIngestionRunInput = {
+    create?: XOR<IngestionDiffCreateWithoutIngestionRunInput, IngestionDiffUncheckedCreateWithoutIngestionRunInput> | IngestionDiffCreateWithoutIngestionRunInput[] | IngestionDiffUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionDiffCreateOrConnectWithoutIngestionRunInput | IngestionDiffCreateOrConnectWithoutIngestionRunInput[]
+    createMany?: IngestionDiffCreateManyIngestionRunInputEnvelope
+    connect?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+  }
+
   export type IngestionSuggestionUncheckedCreateNestedManyWithoutIngestionRunInput = {
     create?: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput> | IngestionSuggestionCreateWithoutIngestionRunInput[] | IngestionSuggestionUncheckedCreateWithoutIngestionRunInput[]
     connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutIngestionRunInput | IngestionSuggestionCreateOrConnectWithoutIngestionRunInput[]
@@ -85485,8 +83967,19 @@ export namespace Prisma {
     connect?: IngestionSuggestionWhereUniqueInput | IngestionSuggestionWhereUniqueInput[]
   }
 
+  export type IngestionDiffUncheckedCreateNestedManyWithoutIngestionRunInput = {
+    create?: XOR<IngestionDiffCreateWithoutIngestionRunInput, IngestionDiffUncheckedCreateWithoutIngestionRunInput> | IngestionDiffCreateWithoutIngestionRunInput[] | IngestionDiffUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionDiffCreateOrConnectWithoutIngestionRunInput | IngestionDiffCreateOrConnectWithoutIngestionRunInput[]
+    createMany?: IngestionDiffCreateManyIngestionRunInputEnvelope
+    connect?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+  }
+
   export type EnumIngestionRunStatusFieldUpdateOperationsInput = {
     set?: $Enums.IngestionRunStatus
+  }
+
+  export type NullableEnumIngestionRunPhaseFieldUpdateOperationsInput = {
+    set?: $Enums.IngestionRunPhase | null
   }
 
   export type IngestionSuggestionUpdateManyWithoutIngestionRunNestedInput = {
@@ -85503,6 +83996,20 @@ export namespace Prisma {
     deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
   }
 
+  export type IngestionDiffUpdateManyWithoutIngestionRunNestedInput = {
+    create?: XOR<IngestionDiffCreateWithoutIngestionRunInput, IngestionDiffUncheckedCreateWithoutIngestionRunInput> | IngestionDiffCreateWithoutIngestionRunInput[] | IngestionDiffUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionDiffCreateOrConnectWithoutIngestionRunInput | IngestionDiffCreateOrConnectWithoutIngestionRunInput[]
+    upsert?: IngestionDiffUpsertWithWhereUniqueWithoutIngestionRunInput | IngestionDiffUpsertWithWhereUniqueWithoutIngestionRunInput[]
+    createMany?: IngestionDiffCreateManyIngestionRunInputEnvelope
+    set?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    disconnect?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    delete?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    connect?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    update?: IngestionDiffUpdateWithWhereUniqueWithoutIngestionRunInput | IngestionDiffUpdateWithWhereUniqueWithoutIngestionRunInput[]
+    updateMany?: IngestionDiffUpdateManyWithWhereWithoutIngestionRunInput | IngestionDiffUpdateManyWithWhereWithoutIngestionRunInput[]
+    deleteMany?: IngestionDiffScalarWhereInput | IngestionDiffScalarWhereInput[]
+  }
+
   export type IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunNestedInput = {
     create?: XOR<IngestionSuggestionCreateWithoutIngestionRunInput, IngestionSuggestionUncheckedCreateWithoutIngestionRunInput> | IngestionSuggestionCreateWithoutIngestionRunInput[] | IngestionSuggestionUncheckedCreateWithoutIngestionRunInput[]
     connectOrCreate?: IngestionSuggestionCreateOrConnectWithoutIngestionRunInput | IngestionSuggestionCreateOrConnectWithoutIngestionRunInput[]
@@ -85515,6 +84022,38 @@ export namespace Prisma {
     update?: IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput | IngestionSuggestionUpdateWithWhereUniqueWithoutIngestionRunInput[]
     updateMany?: IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput | IngestionSuggestionUpdateManyWithWhereWithoutIngestionRunInput[]
     deleteMany?: IngestionSuggestionScalarWhereInput | IngestionSuggestionScalarWhereInput[]
+  }
+
+  export type IngestionDiffUncheckedUpdateManyWithoutIngestionRunNestedInput = {
+    create?: XOR<IngestionDiffCreateWithoutIngestionRunInput, IngestionDiffUncheckedCreateWithoutIngestionRunInput> | IngestionDiffCreateWithoutIngestionRunInput[] | IngestionDiffUncheckedCreateWithoutIngestionRunInput[]
+    connectOrCreate?: IngestionDiffCreateOrConnectWithoutIngestionRunInput | IngestionDiffCreateOrConnectWithoutIngestionRunInput[]
+    upsert?: IngestionDiffUpsertWithWhereUniqueWithoutIngestionRunInput | IngestionDiffUpsertWithWhereUniqueWithoutIngestionRunInput[]
+    createMany?: IngestionDiffCreateManyIngestionRunInputEnvelope
+    set?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    disconnect?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    delete?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    connect?: IngestionDiffWhereUniqueInput | IngestionDiffWhereUniqueInput[]
+    update?: IngestionDiffUpdateWithWhereUniqueWithoutIngestionRunInput | IngestionDiffUpdateWithWhereUniqueWithoutIngestionRunInput[]
+    updateMany?: IngestionDiffUpdateManyWithWhereWithoutIngestionRunInput | IngestionDiffUpdateManyWithWhereWithoutIngestionRunInput[]
+    deleteMany?: IngestionDiffScalarWhereInput | IngestionDiffScalarWhereInput[]
+  }
+
+  export type IngestionRunCreateNestedOneWithoutDiffsInput = {
+    create?: XOR<IngestionRunCreateWithoutDiffsInput, IngestionRunUncheckedCreateWithoutDiffsInput>
+    connectOrCreate?: IngestionRunCreateOrConnectWithoutDiffsInput
+    connect?: IngestionRunWhereUniqueInput
+  }
+
+  export type EnumIngestionDiffScopeFieldUpdateOperationsInput = {
+    set?: $Enums.IngestionDiffScope
+  }
+
+  export type IngestionRunUpdateOneRequiredWithoutDiffsNestedInput = {
+    create?: XOR<IngestionRunCreateWithoutDiffsInput, IngestionRunUncheckedCreateWithoutDiffsInput>
+    connectOrCreate?: IngestionRunCreateOrConnectWithoutDiffsInput
+    upsert?: IngestionRunUpsertWithoutDiffsInput
+    connect?: IngestionRunWhereUniqueInput
+    update?: XOR<XOR<IngestionRunUpdateToOneWithWhereWithoutDiffsInput, IngestionRunUpdateWithoutDiffsInput>, IngestionRunUncheckedUpdateWithoutDiffsInput>
   }
 
   export type IngestionRunCreateNestedOneWithoutSuggestionsInput = {
@@ -85851,27 +84390,6 @@ export namespace Prisma {
     not?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel> | $Enums.TerritoryNodeType
   }
 
-  export type NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentStatus | EnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentStatus
-  }
-
-  export type NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentSource | EnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentSource | null
-  }
-
-  export type NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryGeoMembershipStatus | EnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel> | $Enums.TerritoryGeoMembershipStatus | null
-  }
-
   export type NestedEnumTerritoryNodeTypeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.TerritoryNodeType | EnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
     in?: $Enums.TerritoryNodeType[] | ListEnumTerritoryNodeTypeFieldRefInput<$PrismaModel>
@@ -85880,86 +84398,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
     _max?: NestedEnumTerritoryNodeTypeFilter<$PrismaModel>
-  }
-
-  export type NestedEnumTerritoryParentAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentStatus | EnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryParentAssignmentStatus[] | ListEnumTerritoryParentAssignmentStatusFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryParentAssignmentStatusWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentStatus
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryParentAssignmentStatusFilter<$PrismaModel>
-  }
-
-  export type NestedEnumTerritoryParentAssignmentSourceNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryParentAssignmentSource | EnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryParentAssignmentSource[] | ListEnumTerritoryParentAssignmentSourceFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryParentAssignmentSourceNullableWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryParentAssignmentSource | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryParentAssignmentSourceNullableFilter<$PrismaModel>
-  }
-
-  export type NestedEnumTerritoryGeoMembershipStatusNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryGeoMembershipStatus | EnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    in?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    notIn?: $Enums.TerritoryGeoMembershipStatus[] | ListEnumTerritoryGeoMembershipStatusFieldRefInput<$PrismaModel> | null
-    not?: NestedEnumTerritoryGeoMembershipStatusNullableWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryGeoMembershipStatus | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryGeoMembershipStatusNullableFilter<$PrismaModel>
-  }
-
-  export type NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupRelationshipType | EnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel> | $Enums.TerritoryRollupRelationshipType
-  }
-
-  export type NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupLinkSource | EnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel> | $Enums.TerritoryRollupLinkSource
-  }
-
-  export type NestedEnumTerritoryRollupRelationshipTypeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupRelationshipType | EnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupRelationshipType[] | ListEnumTerritoryRollupRelationshipTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupRelationshipTypeWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryRollupRelationshipType
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryRollupRelationshipTypeFilter<$PrismaModel>
-  }
-
-  export type NestedEnumTerritoryRollupLinkSourceWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.TerritoryRollupLinkSource | EnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    in?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    notIn?: $Enums.TerritoryRollupLinkSource[] | ListEnumTerritoryRollupLinkSourceFieldRefInput<$PrismaModel>
-    not?: NestedEnumTerritoryRollupLinkSourceWithAggregatesFilter<$PrismaModel> | $Enums.TerritoryRollupLinkSource
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel>
-    _max?: NestedEnumTerritoryRollupLinkSourceFilter<$PrismaModel>
-  }
-
-  export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedFloatFilter<$PrismaModel>
-    _min?: NestedFloatFilter<$PrismaModel>
-    _max?: NestedFloatFilter<$PrismaModel>
   }
 
   export type NestedEnumTerritoryApprovalTypeFilter<$PrismaModel = never> = {
@@ -86247,6 +84685,22 @@ export namespace Prisma {
     not?: NestedEnumHealthcareProviderShareSourceFilter<$PrismaModel> | $Enums.HealthcareProviderShareSource
   }
 
+  export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel>
+    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedFloatFilter<$PrismaModel>
+    _min?: NestedFloatFilter<$PrismaModel>
+    _max?: NestedFloatFilter<$PrismaModel>
+  }
+
   export type NestedEnumHealthcareProviderShareSourceWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.HealthcareProviderShareSource | EnumHealthcareProviderShareSourceFieldRefInput<$PrismaModel>
     in?: $Enums.HealthcareProviderShareSource[] | ListEnumHealthcareProviderShareSourceFieldRefInput<$PrismaModel>
@@ -86281,6 +84735,13 @@ export namespace Prisma {
     not?: NestedEnumIngestionRunStatusFilter<$PrismaModel> | $Enums.IngestionRunStatus
   }
 
+  export type NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunPhase | EnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    in?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel> | $Enums.IngestionRunPhase | null
+  }
+
   export type NestedEnumIngestionRunStatusWithAggregatesFilter<$PrismaModel = never> = {
     equals?: $Enums.IngestionRunStatus | EnumIngestionRunStatusFieldRefInput<$PrismaModel>
     in?: $Enums.IngestionRunStatus[] | ListEnumIngestionRunStatusFieldRefInput<$PrismaModel>
@@ -86289,6 +84750,33 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
     _max?: NestedEnumIngestionRunStatusFilter<$PrismaModel>
+  }
+
+  export type NestedEnumIngestionRunPhaseNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionRunPhase | EnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    in?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.IngestionRunPhase[] | ListEnumIngestionRunPhaseFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumIngestionRunPhaseNullableWithAggregatesFilter<$PrismaModel> | $Enums.IngestionRunPhase | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel>
+    _max?: NestedEnumIngestionRunPhaseNullableFilter<$PrismaModel>
+  }
+
+  export type NestedEnumIngestionDiffScopeFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionDiffScope | EnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionDiffScopeFilter<$PrismaModel> | $Enums.IngestionDiffScope
+  }
+
+  export type NestedEnumIngestionDiffScopeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.IngestionDiffScope | EnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    in?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    notIn?: $Enums.IngestionDiffScope[] | ListEnumIngestionDiffScopeFieldRefInput<$PrismaModel>
+    not?: NestedEnumIngestionDiffScopeWithAggregatesFilter<$PrismaModel> | $Enums.IngestionDiffScope
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedEnumIngestionDiffScopeFilter<$PrismaModel>
+    _max?: NestedEnumIngestionDiffScopeFilter<$PrismaModel>
   }
 
   export type NestedEnumIngestionSuggestionTypeFilter<$PrismaModel = never> = {
@@ -87292,10 +85780,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87306,15 +85791,13 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutUserAssignmentsInput = {
@@ -87328,11 +85811,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87341,15 +85822,12 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutUserAssignmentsInput = {
@@ -87463,10 +85941,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -87477,15 +85952,13 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutUserAssignmentsInput = {
@@ -87499,11 +85972,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -87512,15 +85983,12 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryCreateWithoutTerritoryTypeInput = {
@@ -87533,10 +86001,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87546,16 +86011,14 @@ export namespace Prisma {
     updatedAt?: Date | string
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutTerritoryTypeInput = {
@@ -87568,11 +86031,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87581,16 +86042,13 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutTerritoryTypeInput = {
@@ -87633,11 +86091,9 @@ export namespace Prisma {
     regionSlug?: StringNullableFilter<"Territory"> | string | null
     stateCode?: StringNullableFilter<"Territory"> | string | null
     parentId?: StringNullableFilter<"Territory"> | string | null
+    managerTerritoryId?: StringNullableFilter<"Territory"> | string | null
     isActive?: BoolFilter<"Territory"> | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFilter<"Territory"> | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: EnumTerritoryParentAssignmentSourceNullableFilter<"Territory"> | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: StringNullableFilter<"Territory"> | string | null
-    geoMembershipStatus?: EnumTerritoryGeoMembershipStatusNullableFilter<"Territory"> | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: FloatNullableFilter<"Territory"> | number | null
     boundaryMinLat?: FloatNullableFilter<"Territory"> | number | null
     boundaryMaxLng?: FloatNullableFilter<"Territory"> | number | null
@@ -87658,6 +86114,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: number
     isActive?: boolean
     createdAt?: Date | string
@@ -87675,6 +86132,7 @@ export namespace Prisma {
     assignableToManagers?: boolean
     isCountryLevel?: boolean
     blockSiblingOverlap?: boolean
+    participatesInGroupingHierarchy?: boolean
     sortOrder?: number
     isActive?: boolean
     createdAt?: Date | string
@@ -87696,10 +86154,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87709,16 +86164,14 @@ export namespace Prisma {
     updatedAt?: Date | string
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutChildrenInput = {
@@ -87732,11 +86185,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87744,16 +86195,13 @@ export namespace Prisma {
     boundaryAreaSqKm?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutChildrenInput = {
@@ -87771,10 +86219,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87784,16 +86229,14 @@ export namespace Prisma {
     updatedAt?: Date | string
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutParentInput = {
@@ -87806,11 +86249,80 @@ export namespace Prisma {
     countryCode?: string | null
     regionSlug?: string | null
     stateCode?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
+    boundaryMinLng?: number | null
+    boundaryMinLat?: number | null
+    boundaryMaxLng?: number | null
+    boundaryMaxLat?: number | null
+    boundaryAreaSqKm?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
+    facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutParentInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput>
+  }
+
+  export type TerritoryCreateManyParentInputEnvelope = {
+    data: TerritoryCreateManyParentInput | TerritoryCreateManyParentInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type TerritoryCreateWithoutRepPatchesInput = {
+    id?: string
+    name: string
+    slug: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    countryCode?: string | null
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    boundaryMinLng?: number | null
+    boundaryMinLat?: number | null
+    boundaryMaxLng?: number | null
+    boundaryMaxLat?: number | null
+    boundaryAreaSqKm?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    facilities?: FacilityCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutRepPatchesInput = {
+    id?: string
+    name: string
+    slug: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    territoryTypeId: string
+    countryCode?: string | null
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    managerTerritoryId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -87825,19 +86337,80 @@ export namespace Prisma {
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
-  export type TerritoryCreateOrConnectWithoutParentInput = {
+  export type TerritoryCreateOrConnectWithoutRepPatchesInput = {
     where: TerritoryWhereUniqueInput
-    create: XOR<TerritoryCreateWithoutParentInput, TerritoryUncheckedCreateWithoutParentInput>
+    create: XOR<TerritoryCreateWithoutRepPatchesInput, TerritoryUncheckedCreateWithoutRepPatchesInput>
   }
 
-  export type TerritoryCreateManyParentInputEnvelope = {
-    data: TerritoryCreateManyParentInput | TerritoryCreateManyParentInput[]
+  export type TerritoryCreateWithoutManagerTerritoryInput = {
+    id?: string
+    name: string
+    slug: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    countryCode?: string | null
+    regionSlug?: string | null
+    stateCode?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    boundaryMinLng?: number | null
+    boundaryMinLat?: number | null
+    boundaryMaxLng?: number | null
+    boundaryMaxLat?: number | null
+    boundaryAreaSqKm?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
+    parent?: TerritoryCreateNestedOneWithoutChildrenInput
+    children?: TerritoryCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
+    facilities?: FacilityCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
+    facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryUncheckedCreateWithoutManagerTerritoryInput = {
+    id?: string
+    name: string
+    slug: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    territoryTypeId: string
+    countryCode?: string | null
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
+    boundaryMinLng?: number | null
+    boundaryMinLat?: number | null
+    boundaryMaxLng?: number | null
+    boundaryMaxLat?: number | null
+    boundaryAreaSqKm?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
+    facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
+    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
+    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
+    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
+    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
+  }
+
+  export type TerritoryCreateOrConnectWithoutManagerTerritoryInput = {
+    where: TerritoryWhereUniqueInput
+    create: XOR<TerritoryCreateWithoutManagerTerritoryInput, TerritoryUncheckedCreateWithoutManagerTerritoryInput>
+  }
+
+  export type TerritoryCreateManyManagerTerritoryInputEnvelope = {
+    data: TerritoryCreateManyManagerTerritoryInput | TerritoryCreateManyManagerTerritoryInput[]
     skipDuplicates?: boolean
   }
 
@@ -88111,114 +86684,6 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
-  export type TerritoryRollupLinkCreateWithoutTerritoryInput = {
-    id?: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-    ancestor: TerritoryCreateNestedOneWithoutRollupLinksAsAncestorInput
-  }
-
-  export type TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput = {
-    id?: string
-    ancestorId: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-  }
-
-  export type TerritoryRollupLinkCreateOrConnectWithoutTerritoryInput = {
-    where: TerritoryRollupLinkWhereUniqueInput
-    create: XOR<TerritoryRollupLinkCreateWithoutTerritoryInput, TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput>
-  }
-
-  export type TerritoryRollupLinkCreateManyTerritoryInputEnvelope = {
-    data: TerritoryRollupLinkCreateManyTerritoryInput | TerritoryRollupLinkCreateManyTerritoryInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type TerritoryRollupLinkCreateWithoutAncestorInput = {
-    id?: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-    territory: TerritoryCreateNestedOneWithoutRollupLinksAsTerritoryInput
-  }
-
-  export type TerritoryRollupLinkUncheckedCreateWithoutAncestorInput = {
-    id?: string
-    territoryId: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-  }
-
-  export type TerritoryRollupLinkCreateOrConnectWithoutAncestorInput = {
-    where: TerritoryRollupLinkWhereUniqueInput
-    create: XOR<TerritoryRollupLinkCreateWithoutAncestorInput, TerritoryRollupLinkUncheckedCreateWithoutAncestorInput>
-  }
-
-  export type TerritoryRollupLinkCreateManyAncestorInputEnvelope = {
-    data: TerritoryRollupLinkCreateManyAncestorInput | TerritoryRollupLinkCreateManyAncestorInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput = {
-    id?: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-    referenceTerritory: TerritoryCreateNestedOneWithoutGeoMembershipAsReferenceInput
-  }
-
-  export type TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput = {
-    id?: string
-    referenceTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-  }
-
-  export type TerritoryGeoMembershipCreateOrConnectWithoutOperationalTerritoryInput = {
-    where: TerritoryGeoMembershipWhereUniqueInput
-    create: XOR<TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipCreateManyOperationalTerritoryInputEnvelope = {
-    data: TerritoryGeoMembershipCreateManyOperationalTerritoryInput | TerritoryGeoMembershipCreateManyOperationalTerritoryInput[]
-    skipDuplicates?: boolean
-  }
-
-  export type TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput = {
-    id?: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-    operationalTerritory: TerritoryCreateNestedOneWithoutGeoMembershipAsOperationalInput
-  }
-
-  export type TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput = {
-    id?: string
-    operationalTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-  }
-
-  export type TerritoryGeoMembershipCreateOrConnectWithoutReferenceTerritoryInput = {
-    where: TerritoryGeoMembershipWhereUniqueInput
-    create: XOR<TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipCreateManyReferenceTerritoryInputEnvelope = {
-    data: TerritoryGeoMembershipCreateManyReferenceTerritoryInput | TerritoryGeoMembershipCreateManyReferenceTerritoryInput[]
-    skipDuplicates?: boolean
-  }
-
   export type TerritoryTypeUpsertWithoutTerritoriesInput = {
     update: XOR<TerritoryTypeUpdateWithoutTerritoriesInput, TerritoryTypeUncheckedUpdateWithoutTerritoriesInput>
     create: XOR<TerritoryTypeCreateWithoutTerritoriesInput, TerritoryTypeUncheckedCreateWithoutTerritoriesInput>
@@ -88241,6 +86706,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFieldUpdateOperationsInput | boolean
     isCountryLevel?: BoolFieldUpdateOperationsInput | boolean
     blockSiblingOverlap?: BoolFieldUpdateOperationsInput | boolean
+    participatesInGroupingHierarchy?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -88258,6 +86724,7 @@ export namespace Prisma {
     assignableToManagers?: BoolFieldUpdateOperationsInput | boolean
     isCountryLevel?: BoolFieldUpdateOperationsInput | boolean
     blockSiblingOverlap?: BoolFieldUpdateOperationsInput | boolean
+    participatesInGroupingHierarchy?: BoolFieldUpdateOperationsInput | boolean
     sortOrder?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -88285,10 +86752,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -88298,16 +86762,14 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutChildrenInput = {
@@ -88321,11 +86783,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -88333,16 +86793,13 @@ export namespace Prisma {
     boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUpsertWithWhereUniqueWithoutParentInput = {
@@ -88359,6 +86816,93 @@ export namespace Prisma {
   export type TerritoryUpdateManyWithWhereWithoutParentInput = {
     where: TerritoryScalarWhereInput
     data: XOR<TerritoryUpdateManyMutationInput, TerritoryUncheckedUpdateManyWithoutParentInput>
+  }
+
+  export type TerritoryUpsertWithoutRepPatchesInput = {
+    update: XOR<TerritoryUpdateWithoutRepPatchesInput, TerritoryUncheckedUpdateWithoutRepPatchesInput>
+    create: XOR<TerritoryCreateWithoutRepPatchesInput, TerritoryUncheckedCreateWithoutRepPatchesInput>
+    where?: TerritoryWhereInput
+  }
+
+  export type TerritoryUpdateToOneWithWhereWithoutRepPatchesInput = {
+    where?: TerritoryWhereInput
+    data: XOR<TerritoryUpdateWithoutRepPatchesInput, TerritoryUncheckedUpdateWithoutRepPatchesInput>
+  }
+
+  export type TerritoryUpdateWithoutRepPatchesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutRepPatchesInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    territoryTypeId?: StringFieldUpdateOperationsInput | string
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUpsertWithWhereUniqueWithoutManagerTerritoryInput = {
+    where: TerritoryWhereUniqueInput
+    update: XOR<TerritoryUpdateWithoutManagerTerritoryInput, TerritoryUncheckedUpdateWithoutManagerTerritoryInput>
+    create: XOR<TerritoryCreateWithoutManagerTerritoryInput, TerritoryUncheckedCreateWithoutManagerTerritoryInput>
+  }
+
+  export type TerritoryUpdateWithWhereUniqueWithoutManagerTerritoryInput = {
+    where: TerritoryWhereUniqueInput
+    data: XOR<TerritoryUpdateWithoutManagerTerritoryInput, TerritoryUncheckedUpdateWithoutManagerTerritoryInput>
+  }
+
+  export type TerritoryUpdateManyWithWhereWithoutManagerTerritoryInput = {
+    where: TerritoryScalarWhereInput
+    data: XOR<TerritoryUpdateManyMutationInput, TerritoryUncheckedUpdateManyWithoutManagerTerritoryInput>
   }
 
   export type FacilityUpsertWithWhereUniqueWithoutTerritoryInput = {
@@ -88535,95 +87079,6 @@ export namespace Prisma {
     data: XOR<TerritoryApprovalRequestUpdateManyMutationInput, TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryInput>
   }
 
-  export type TerritoryRollupLinkUpsertWithWhereUniqueWithoutTerritoryInput = {
-    where: TerritoryRollupLinkWhereUniqueInput
-    update: XOR<TerritoryRollupLinkUpdateWithoutTerritoryInput, TerritoryRollupLinkUncheckedUpdateWithoutTerritoryInput>
-    create: XOR<TerritoryRollupLinkCreateWithoutTerritoryInput, TerritoryRollupLinkUncheckedCreateWithoutTerritoryInput>
-  }
-
-  export type TerritoryRollupLinkUpdateWithWhereUniqueWithoutTerritoryInput = {
-    where: TerritoryRollupLinkWhereUniqueInput
-    data: XOR<TerritoryRollupLinkUpdateWithoutTerritoryInput, TerritoryRollupLinkUncheckedUpdateWithoutTerritoryInput>
-  }
-
-  export type TerritoryRollupLinkUpdateManyWithWhereWithoutTerritoryInput = {
-    where: TerritoryRollupLinkScalarWhereInput
-    data: XOR<TerritoryRollupLinkUpdateManyMutationInput, TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryInput>
-  }
-
-  export type TerritoryRollupLinkScalarWhereInput = {
-    AND?: TerritoryRollupLinkScalarWhereInput | TerritoryRollupLinkScalarWhereInput[]
-    OR?: TerritoryRollupLinkScalarWhereInput[]
-    NOT?: TerritoryRollupLinkScalarWhereInput | TerritoryRollupLinkScalarWhereInput[]
-    id?: StringFilter<"TerritoryRollupLink"> | string
-    territoryId?: StringFilter<"TerritoryRollupLink"> | string
-    ancestorId?: StringFilter<"TerritoryRollupLink"> | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFilter<"TerritoryRollupLink"> | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFilter<"TerritoryRollupLink"> | Date | string
-  }
-
-  export type TerritoryRollupLinkUpsertWithWhereUniqueWithoutAncestorInput = {
-    where: TerritoryRollupLinkWhereUniqueInput
-    update: XOR<TerritoryRollupLinkUpdateWithoutAncestorInput, TerritoryRollupLinkUncheckedUpdateWithoutAncestorInput>
-    create: XOR<TerritoryRollupLinkCreateWithoutAncestorInput, TerritoryRollupLinkUncheckedCreateWithoutAncestorInput>
-  }
-
-  export type TerritoryRollupLinkUpdateWithWhereUniqueWithoutAncestorInput = {
-    where: TerritoryRollupLinkWhereUniqueInput
-    data: XOR<TerritoryRollupLinkUpdateWithoutAncestorInput, TerritoryRollupLinkUncheckedUpdateWithoutAncestorInput>
-  }
-
-  export type TerritoryRollupLinkUpdateManyWithWhereWithoutAncestorInput = {
-    where: TerritoryRollupLinkScalarWhereInput
-    data: XOR<TerritoryRollupLinkUpdateManyMutationInput, TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorInput>
-  }
-
-  export type TerritoryGeoMembershipUpsertWithWhereUniqueWithoutOperationalTerritoryInput = {
-    where: TerritoryGeoMembershipWhereUniqueInput
-    update: XOR<TerritoryGeoMembershipUpdateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedUpdateWithoutOperationalTerritoryInput>
-    create: XOR<TerritoryGeoMembershipCreateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutOperationalTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipUpdateWithWhereUniqueWithoutOperationalTerritoryInput = {
-    where: TerritoryGeoMembershipWhereUniqueInput
-    data: XOR<TerritoryGeoMembershipUpdateWithoutOperationalTerritoryInput, TerritoryGeoMembershipUncheckedUpdateWithoutOperationalTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipUpdateManyWithWhereWithoutOperationalTerritoryInput = {
-    where: TerritoryGeoMembershipScalarWhereInput
-    data: XOR<TerritoryGeoMembershipUpdateManyMutationInput, TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipScalarWhereInput = {
-    AND?: TerritoryGeoMembershipScalarWhereInput | TerritoryGeoMembershipScalarWhereInput[]
-    OR?: TerritoryGeoMembershipScalarWhereInput[]
-    NOT?: TerritoryGeoMembershipScalarWhereInput | TerritoryGeoMembershipScalarWhereInput[]
-    id?: StringFilter<"TerritoryGeoMembership"> | string
-    operationalTerritoryId?: StringFilter<"TerritoryGeoMembership"> | string
-    referenceTerritoryId?: StringFilter<"TerritoryGeoMembership"> | string
-    referenceTypeSlug?: StringFilter<"TerritoryGeoMembership"> | string
-    overlapRatio?: FloatFilter<"TerritoryGeoMembership"> | number
-    intersectionAreaSqKm?: FloatFilter<"TerritoryGeoMembership"> | number
-    computedAt?: DateTimeFilter<"TerritoryGeoMembership"> | Date | string
-  }
-
-  export type TerritoryGeoMembershipUpsertWithWhereUniqueWithoutReferenceTerritoryInput = {
-    where: TerritoryGeoMembershipWhereUniqueInput
-    update: XOR<TerritoryGeoMembershipUpdateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedUpdateWithoutReferenceTerritoryInput>
-    create: XOR<TerritoryGeoMembershipCreateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedCreateWithoutReferenceTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipUpdateWithWhereUniqueWithoutReferenceTerritoryInput = {
-    where: TerritoryGeoMembershipWhereUniqueInput
-    data: XOR<TerritoryGeoMembershipUpdateWithoutReferenceTerritoryInput, TerritoryGeoMembershipUncheckedUpdateWithoutReferenceTerritoryInput>
-  }
-
-  export type TerritoryGeoMembershipUpdateManyWithWhereWithoutReferenceTerritoryInput = {
-    where: TerritoryGeoMembershipScalarWhereInput
-    data: XOR<TerritoryGeoMembershipUpdateManyMutationInput, TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryInput>
-  }
-
   export type TerritoryCreateWithoutClosureAsAncestorInput = {
     id?: string
     name: string
@@ -88634,10 +87089,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -88648,15 +87100,13 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutClosureAsAncestorInput = {
@@ -88670,11 +87120,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -88683,15 +87131,12 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutClosureAsAncestorInput = {
@@ -88709,10 +87154,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -88723,15 +87165,13 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutClosureAsDescendantInput = {
@@ -88745,11 +87185,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -88758,15 +87196,12 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutClosureAsDescendantInput = {
@@ -88795,10 +87230,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -88809,15 +87241,13 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutClosureAsAncestorInput = {
@@ -88831,11 +87261,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -88844,15 +87272,12 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUpsertWithoutClosureAsDescendantInput = {
@@ -88876,10 +87301,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -88890,15 +87312,13 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutClosureAsDescendantInput = {
@@ -88912,11 +87332,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -88925,639 +87343,12 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryCreateWithoutRollupLinksAsTerritoryInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
-    parent?: TerritoryCreateNestedOneWithoutChildrenInput
-    children?: TerritoryCreateNestedManyWithoutParentInput
-    facilities?: FacilityCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
-  }
-
-  export type TerritoryUncheckedCreateWithoutRollupLinksAsTerritoryInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    territoryTypeId: string
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    parentId?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
-    facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
-  }
-
-  export type TerritoryCreateOrConnectWithoutRollupLinksAsTerritoryInput = {
-    where: TerritoryWhereUniqueInput
-    create: XOR<TerritoryCreateWithoutRollupLinksAsTerritoryInput, TerritoryUncheckedCreateWithoutRollupLinksAsTerritoryInput>
-  }
-
-  export type TerritoryCreateWithoutRollupLinksAsAncestorInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
-    parent?: TerritoryCreateNestedOneWithoutChildrenInput
-    children?: TerritoryCreateNestedManyWithoutParentInput
-    facilities?: FacilityCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
-  }
-
-  export type TerritoryUncheckedCreateWithoutRollupLinksAsAncestorInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    territoryTypeId: string
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    parentId?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
-    facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
-  }
-
-  export type TerritoryCreateOrConnectWithoutRollupLinksAsAncestorInput = {
-    where: TerritoryWhereUniqueInput
-    create: XOR<TerritoryCreateWithoutRollupLinksAsAncestorInput, TerritoryUncheckedCreateWithoutRollupLinksAsAncestorInput>
-  }
-
-  export type TerritoryUpsertWithoutRollupLinksAsTerritoryInput = {
-    update: XOR<TerritoryUpdateWithoutRollupLinksAsTerritoryInput, TerritoryUncheckedUpdateWithoutRollupLinksAsTerritoryInput>
-    create: XOR<TerritoryCreateWithoutRollupLinksAsTerritoryInput, TerritoryUncheckedCreateWithoutRollupLinksAsTerritoryInput>
-    where?: TerritoryWhereInput
-  }
-
-  export type TerritoryUpdateToOneWithWhereWithoutRollupLinksAsTerritoryInput = {
-    where?: TerritoryWhereInput
-    data: XOR<TerritoryUpdateWithoutRollupLinksAsTerritoryInput, TerritoryUncheckedUpdateWithoutRollupLinksAsTerritoryInput>
-  }
-
-  export type TerritoryUpdateWithoutRollupLinksAsTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
-    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
-    children?: TerritoryUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryUncheckedUpdateWithoutRollupLinksAsTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    territoryTypeId?: StringFieldUpdateOperationsInput | string
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    parentId?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryUpsertWithoutRollupLinksAsAncestorInput = {
-    update: XOR<TerritoryUpdateWithoutRollupLinksAsAncestorInput, TerritoryUncheckedUpdateWithoutRollupLinksAsAncestorInput>
-    create: XOR<TerritoryCreateWithoutRollupLinksAsAncestorInput, TerritoryUncheckedCreateWithoutRollupLinksAsAncestorInput>
-    where?: TerritoryWhereInput
-  }
-
-  export type TerritoryUpdateToOneWithWhereWithoutRollupLinksAsAncestorInput = {
-    where?: TerritoryWhereInput
-    data: XOR<TerritoryUpdateWithoutRollupLinksAsAncestorInput, TerritoryUncheckedUpdateWithoutRollupLinksAsAncestorInput>
-  }
-
-  export type TerritoryUpdateWithoutRollupLinksAsAncestorInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
-    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
-    children?: TerritoryUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryUncheckedUpdateWithoutRollupLinksAsAncestorInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    territoryTypeId?: StringFieldUpdateOperationsInput | string
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    parentId?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryCreateWithoutGeoMembershipAsOperationalInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
-    parent?: TerritoryCreateNestedOneWithoutChildrenInput
-    children?: TerritoryCreateNestedManyWithoutParentInput
-    facilities?: FacilityCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
-  }
-
-  export type TerritoryUncheckedCreateWithoutGeoMembershipAsOperationalInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    territoryTypeId: string
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    parentId?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
-    facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
-  }
-
-  export type TerritoryCreateOrConnectWithoutGeoMembershipAsOperationalInput = {
-    where: TerritoryWhereUniqueInput
-    create: XOR<TerritoryCreateWithoutGeoMembershipAsOperationalInput, TerritoryUncheckedCreateWithoutGeoMembershipAsOperationalInput>
-  }
-
-  export type TerritoryCreateWithoutGeoMembershipAsReferenceInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
-    parent?: TerritoryCreateNestedOneWithoutChildrenInput
-    children?: TerritoryCreateNestedManyWithoutParentInput
-    facilities?: FacilityCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-  }
-
-  export type TerritoryUncheckedCreateWithoutGeoMembershipAsReferenceInput = {
-    id?: string
-    name: string
-    slug: string
-    code: string
-    nodeType: $Enums.TerritoryNodeType
-    territoryTypeId: string
-    countryCode?: string | null
-    regionSlug?: string | null
-    stateCode?: string | null
-    parentId?: string | null
-    isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: number | null
-    boundaryMinLat?: number | null
-    boundaryMaxLng?: number | null
-    boundaryMaxLat?: number | null
-    boundaryAreaSqKm?: number | null
-    createdAt?: Date | string
-    updatedAt?: Date | string
-    children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
-    facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
-    userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
-    closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
-    closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-  }
-
-  export type TerritoryCreateOrConnectWithoutGeoMembershipAsReferenceInput = {
-    where: TerritoryWhereUniqueInput
-    create: XOR<TerritoryCreateWithoutGeoMembershipAsReferenceInput, TerritoryUncheckedCreateWithoutGeoMembershipAsReferenceInput>
-  }
-
-  export type TerritoryUpsertWithoutGeoMembershipAsOperationalInput = {
-    update: XOR<TerritoryUpdateWithoutGeoMembershipAsOperationalInput, TerritoryUncheckedUpdateWithoutGeoMembershipAsOperationalInput>
-    create: XOR<TerritoryCreateWithoutGeoMembershipAsOperationalInput, TerritoryUncheckedCreateWithoutGeoMembershipAsOperationalInput>
-    where?: TerritoryWhereInput
-  }
-
-  export type TerritoryUpdateToOneWithWhereWithoutGeoMembershipAsOperationalInput = {
-    where?: TerritoryWhereInput
-    data: XOR<TerritoryUpdateWithoutGeoMembershipAsOperationalInput, TerritoryUncheckedUpdateWithoutGeoMembershipAsOperationalInput>
-  }
-
-  export type TerritoryUpdateWithoutGeoMembershipAsOperationalInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
-    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
-    children?: TerritoryUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryUncheckedUpdateWithoutGeoMembershipAsOperationalInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    territoryTypeId?: StringFieldUpdateOperationsInput | string
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    parentId?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
-  }
-
-  export type TerritoryUpsertWithoutGeoMembershipAsReferenceInput = {
-    update: XOR<TerritoryUpdateWithoutGeoMembershipAsReferenceInput, TerritoryUncheckedUpdateWithoutGeoMembershipAsReferenceInput>
-    create: XOR<TerritoryCreateWithoutGeoMembershipAsReferenceInput, TerritoryUncheckedCreateWithoutGeoMembershipAsReferenceInput>
-    where?: TerritoryWhereInput
-  }
-
-  export type TerritoryUpdateToOneWithWhereWithoutGeoMembershipAsReferenceInput = {
-    where?: TerritoryWhereInput
-    data: XOR<TerritoryUpdateWithoutGeoMembershipAsReferenceInput, TerritoryUncheckedUpdateWithoutGeoMembershipAsReferenceInput>
-  }
-
-  export type TerritoryUpdateWithoutGeoMembershipAsReferenceInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
-    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
-    children?: TerritoryUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-  }
-
-  export type TerritoryUncheckedUpdateWithoutGeoMembershipAsReferenceInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    name?: StringFieldUpdateOperationsInput | string
-    slug?: StringFieldUpdateOperationsInput | string
-    code?: StringFieldUpdateOperationsInput | string
-    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
-    territoryTypeId?: StringFieldUpdateOperationsInput | string
-    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
-    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
-    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
-    parentId?: NullableStringFieldUpdateOperationsInput | string | null
-    isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
-    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
-    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
-    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
-    facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
-    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
-    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
-    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
-    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
-    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
   }
 
   export type TerritoryCreateWithoutApprovalRequestsInput = {
@@ -89570,10 +87361,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -89584,15 +87372,13 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutApprovalRequestsInput = {
@@ -89606,11 +87392,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -89619,15 +87403,12 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutApprovalRequestsInput = {
@@ -89752,10 +87533,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -89766,15 +87544,13 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutFacilityApprovalRequestsInput = {
@@ -89788,11 +87564,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -89801,15 +87575,12 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     facilities?: FacilityUncheckedCreateNestedManyWithoutTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutFacilityApprovalRequestsInput = {
@@ -89925,10 +87696,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -89939,15 +87707,13 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutApprovalRequestsInput = {
@@ -89961,11 +87727,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -89974,15 +87738,12 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type FacilityUpsertWithoutTerritoryApprovalRequestsInput = {
@@ -90119,10 +87880,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -90133,15 +87891,13 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutFacilityApprovalRequestsInput = {
@@ -90155,11 +87911,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -90168,15 +87922,12 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryApprovalRequestUpsertWithoutSupersedesInput = {
@@ -91479,10 +89230,7 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -91493,15 +89241,13 @@ export namespace Prisma {
     territoryType: TerritoryTypeCreateNestedOneWithoutTerritoriesInput
     parent?: TerritoryCreateNestedOneWithoutChildrenInput
     children?: TerritoryCreateNestedManyWithoutParentInput
+    managerTerritory?: TerritoryCreateNestedOneWithoutRepPatchesInput
+    repPatches?: TerritoryCreateNestedManyWithoutManagerTerritoryInput
     userAssignments?: UserTerritoryAssignmentCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryUncheckedCreateWithoutFacilitiesInput = {
@@ -91515,11 +89261,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -91528,15 +89272,12 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     children?: TerritoryUncheckedCreateNestedManyWithoutParentInput
+    repPatches?: TerritoryUncheckedCreateNestedManyWithoutManagerTerritoryInput
     userAssignments?: UserTerritoryAssignmentUncheckedCreateNestedManyWithoutTerritoryInput
     closureAsAncestor?: TerritoryClosureUncheckedCreateNestedManyWithoutAncestorInput
     closureAsDescendant?: TerritoryClosureUncheckedCreateNestedManyWithoutDescendantInput
     approvalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutTargetTerritoryInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedCreateNestedManyWithoutToTerritoryInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutTerritoryInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedCreateNestedManyWithoutAncestorInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutOperationalTerritoryInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedCreateNestedManyWithoutReferenceTerritoryInput
   }
 
   export type TerritoryCreateOrConnectWithoutFacilitiesInput = {
@@ -91898,10 +89639,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -91912,15 +89650,13 @@ export namespace Prisma {
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutFacilitiesInput = {
@@ -91934,11 +89670,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -91947,15 +89681,12 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type FacilityProfessionalUpsertWithWhereUniqueWithoutFacilityInput = {
@@ -94255,6 +91986,36 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type IngestionDiffCreateWithoutIngestionRunInput = {
+    id?: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId?: string | null
+    diffType: string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type IngestionDiffUncheckedCreateWithoutIngestionRunInput = {
+    id?: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId?: string | null
+    diffType: string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
+  export type IngestionDiffCreateOrConnectWithoutIngestionRunInput = {
+    where: IngestionDiffWhereUniqueInput
+    create: XOR<IngestionDiffCreateWithoutIngestionRunInput, IngestionDiffUncheckedCreateWithoutIngestionRunInput>
+  }
+
+  export type IngestionDiffCreateManyIngestionRunInputEnvelope = {
+    data: IngestionDiffCreateManyIngestionRunInput | IngestionDiffCreateManyIngestionRunInput[]
+    skipDuplicates?: boolean
+  }
+
   export type IngestionSuggestionUpsertWithWhereUniqueWithoutIngestionRunInput = {
     where: IngestionSuggestionWhereUniqueInput
     update: XOR<IngestionSuggestionUpdateWithoutIngestionRunInput, IngestionSuggestionUncheckedUpdateWithoutIngestionRunInput>
@@ -94271,24 +92032,164 @@ export namespace Prisma {
     data: XOR<IngestionSuggestionUpdateManyMutationInput, IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunInput>
   }
 
+  export type IngestionDiffUpsertWithWhereUniqueWithoutIngestionRunInput = {
+    where: IngestionDiffWhereUniqueInput
+    update: XOR<IngestionDiffUpdateWithoutIngestionRunInput, IngestionDiffUncheckedUpdateWithoutIngestionRunInput>
+    create: XOR<IngestionDiffCreateWithoutIngestionRunInput, IngestionDiffUncheckedCreateWithoutIngestionRunInput>
+  }
+
+  export type IngestionDiffUpdateWithWhereUniqueWithoutIngestionRunInput = {
+    where: IngestionDiffWhereUniqueInput
+    data: XOR<IngestionDiffUpdateWithoutIngestionRunInput, IngestionDiffUncheckedUpdateWithoutIngestionRunInput>
+  }
+
+  export type IngestionDiffUpdateManyWithWhereWithoutIngestionRunInput = {
+    where: IngestionDiffScalarWhereInput
+    data: XOR<IngestionDiffUpdateManyMutationInput, IngestionDiffUncheckedUpdateManyWithoutIngestionRunInput>
+  }
+
+  export type IngestionDiffScalarWhereInput = {
+    AND?: IngestionDiffScalarWhereInput | IngestionDiffScalarWhereInput[]
+    OR?: IngestionDiffScalarWhereInput[]
+    NOT?: IngestionDiffScalarWhereInput | IngestionDiffScalarWhereInput[]
+    id?: StringFilter<"IngestionDiff"> | string
+    ingestionRunId?: StringFilter<"IngestionDiff"> | string
+    scope?: EnumIngestionDiffScopeFilter<"IngestionDiff"> | $Enums.IngestionDiffScope
+    entityType?: StringFilter<"IngestionDiff"> | string
+    externalSourceId?: StringNullableFilter<"IngestionDiff"> | string | null
+    diffType?: StringFilter<"IngestionDiff"> | string
+    payload?: JsonFilter<"IngestionDiff">
+    createdAt?: DateTimeFilter<"IngestionDiff"> | Date | string
+  }
+
+  export type IngestionRunCreateWithoutDiffsInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    promotedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+    suggestions?: IngestionSuggestionCreateNestedManyWithoutIngestionRunInput
+  }
+
+  export type IngestionRunUncheckedCreateWithoutDiffsInput = {
+    id?: string
+    sourceProvider: string
+    status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
+    startedAt?: Date | string
+    completedAt?: Date | string | null
+    promotedAt?: Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
+    error?: string | null
+    suggestions?: IngestionSuggestionUncheckedCreateNestedManyWithoutIngestionRunInput
+  }
+
+  export type IngestionRunCreateOrConnectWithoutDiffsInput = {
+    where: IngestionRunWhereUniqueInput
+    create: XOR<IngestionRunCreateWithoutDiffsInput, IngestionRunUncheckedCreateWithoutDiffsInput>
+  }
+
+  export type IngestionRunUpsertWithoutDiffsInput = {
+    update: XOR<IngestionRunUpdateWithoutDiffsInput, IngestionRunUncheckedUpdateWithoutDiffsInput>
+    create: XOR<IngestionRunCreateWithoutDiffsInput, IngestionRunUncheckedCreateWithoutDiffsInput>
+    where?: IngestionRunWhereInput
+  }
+
+  export type IngestionRunUpdateToOneWithWhereWithoutDiffsInput = {
+    where?: IngestionRunWhereInput
+    data: XOR<IngestionRunUpdateWithoutDiffsInput, IngestionRunUncheckedUpdateWithoutDiffsInput>
+  }
+
+  export type IngestionRunUpdateWithoutDiffsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestions?: IngestionSuggestionUpdateManyWithoutIngestionRunNestedInput
+  }
+
+  export type IngestionRunUncheckedUpdateWithoutDiffsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sourceProvider?: StringFieldUpdateOperationsInput | string
+    status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
+    error?: NullableStringFieldUpdateOperationsInput | string | null
+    suggestions?: IngestionSuggestionUncheckedUpdateManyWithoutIngestionRunNestedInput
+  }
+
   export type IngestionRunCreateWithoutSuggestionsInput = {
     id?: string
     sourceProvider: string
     status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
     startedAt?: Date | string
     completedAt?: Date | string | null
+    promotedAt?: Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: string | null
+    diffs?: IngestionDiffCreateNestedManyWithoutIngestionRunInput
   }
 
   export type IngestionRunUncheckedCreateWithoutSuggestionsInput = {
     id?: string
     sourceProvider: string
     status?: $Enums.IngestionRunStatus
+    phase?: $Enums.IngestionRunPhase | null
+    phaseStartedAt?: Date | string | null
+    temporalWorkflowId?: string | null
+    referenceAno?: number | null
+    referenceMes?: number | null
     startedAt?: Date | string
     completedAt?: Date | string | null
+    promotedAt?: Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: string | null
+    diffs?: IngestionDiffUncheckedCreateNestedManyWithoutIngestionRunInput
   }
 
   export type IngestionRunCreateOrConnectWithoutSuggestionsInput = {
@@ -94550,20 +92451,38 @@ export namespace Prisma {
     id?: StringFieldUpdateOperationsInput | string
     sourceProvider?: StringFieldUpdateOperationsInput | string
     status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: NullableStringFieldUpdateOperationsInput | string | null
+    diffs?: IngestionDiffUpdateManyWithoutIngestionRunNestedInput
   }
 
   export type IngestionRunUncheckedUpdateWithoutSuggestionsInput = {
     id?: StringFieldUpdateOperationsInput | string
     sourceProvider?: StringFieldUpdateOperationsInput | string
     status?: EnumIngestionRunStatusFieldUpdateOperationsInput | $Enums.IngestionRunStatus
+    phase?: NullableEnumIngestionRunPhaseFieldUpdateOperationsInput | $Enums.IngestionRunPhase | null
+    phaseStartedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    temporalWorkflowId?: NullableStringFieldUpdateOperationsInput | string | null
+    referenceAno?: NullableIntFieldUpdateOperationsInput | number | null
+    referenceMes?: NullableIntFieldUpdateOperationsInput | number | null
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     completedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    promotedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     stats?: NullableJsonNullValueInput | InputJsonValue
+    validationReport?: NullableJsonNullValueInput | InputJsonValue
+    archiveManifest?: NullableJsonNullValueInput | InputJsonValue
     error?: NullableStringFieldUpdateOperationsInput | string | null
+    diffs?: IngestionDiffUncheckedUpdateManyWithoutIngestionRunNestedInput
   }
 
   export type FacilityUpsertWithoutIngestionSuggestionsInput = {
@@ -95385,11 +93304,9 @@ export namespace Prisma {
     regionSlug?: string | null
     stateCode?: string | null
     parentId?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -95409,10 +93326,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -95422,16 +93336,14 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     parent?: TerritoryUpdateOneWithoutChildrenNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutTerritoryTypeInput = {
@@ -95444,11 +93356,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -95457,16 +93367,13 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateManyWithoutTerritoryTypeInput = {
@@ -95479,11 +93386,9 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -95503,11 +93408,31 @@ export namespace Prisma {
     countryCode?: string | null
     regionSlug?: string | null
     stateCode?: string | null
+    managerTerritoryId?: string | null
     isActive?: boolean
-    parentAssignmentStatus?: $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: $Enums.TerritoryParentAssignmentSource | null
     organizationId?: string | null
-    geoMembershipStatus?: $Enums.TerritoryGeoMembershipStatus | null
+    boundaryMinLng?: number | null
+    boundaryMinLat?: number | null
+    boundaryMaxLng?: number | null
+    boundaryMaxLat?: number | null
+    boundaryAreaSqKm?: number | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type TerritoryCreateManyManagerTerritoryInput = {
+    id?: string
+    name: string
+    slug: string
+    code: string
+    nodeType: $Enums.TerritoryNodeType
+    territoryTypeId: string
+    countryCode?: string | null
+    regionSlug?: string | null
+    stateCode?: string | null
+    parentId?: string | null
+    isActive?: boolean
+    organizationId?: string | null
     boundaryMinLng?: number | null
     boundaryMinLat?: number | null
     boundaryMaxLng?: number | null
@@ -95613,40 +93538,6 @@ export namespace Prisma {
     updatedAt?: Date | string
   }
 
-  export type TerritoryRollupLinkCreateManyTerritoryInput = {
-    id?: string
-    ancestorId: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-  }
-
-  export type TerritoryRollupLinkCreateManyAncestorInput = {
-    id?: string
-    territoryId: string
-    relationshipType?: $Enums.TerritoryRollupRelationshipType
-    source?: $Enums.TerritoryRollupLinkSource
-    createdAt?: Date | string
-  }
-
-  export type TerritoryGeoMembershipCreateManyOperationalTerritoryInput = {
-    id?: string
-    referenceTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-  }
-
-  export type TerritoryGeoMembershipCreateManyReferenceTerritoryInput = {
-    id?: string
-    operationalTerritoryId: string
-    referenceTypeSlug: string
-    overlapRatio: number
-    intersectionAreaSqKm: number
-    computedAt?: Date | string
-  }
-
   export type TerritoryUpdateWithoutParentInput = {
     id?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
@@ -95657,10 +93548,7 @@ export namespace Prisma {
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -95670,16 +93558,14 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
     children?: TerritoryUpdateManyWithoutParentNestedInput
+    managerTerritory?: TerritoryUpdateOneWithoutRepPatchesNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateWithoutParentInput = {
@@ -95692,11 +93578,9 @@ export namespace Prisma {
     countryCode?: NullableStringFieldUpdateOperationsInput | string | null
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -95705,16 +93589,13 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
     facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
     userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
     closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
     closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
     approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
     facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
-    rollupLinksAsTerritory?: TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryNestedInput
-    rollupLinksAsAncestor?: TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorNestedInput
-    geoMembershipAsOperational?: TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryNestedInput
-    geoMembershipAsReference?: TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryNestedInput
   }
 
   export type TerritoryUncheckedUpdateManyWithoutParentInput = {
@@ -95727,11 +93608,91 @@ export namespace Prisma {
     countryCode?: NullableStringFieldUpdateOperationsInput | string | null
     regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
     stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    managerTerritoryId?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
-    parentAssignmentStatus?: EnumTerritoryParentAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentStatus
-    parentAssignmentSource?: NullableEnumTerritoryParentAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryParentAssignmentSource | null
     organizationId?: NullableStringFieldUpdateOperationsInput | string | null
-    geoMembershipStatus?: NullableEnumTerritoryGeoMembershipStatusFieldUpdateOperationsInput | $Enums.TerritoryGeoMembershipStatus | null
+    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type TerritoryUpdateWithoutManagerTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    territoryType?: TerritoryTypeUpdateOneRequiredWithoutTerritoriesNestedInput
+    parent?: TerritoryUpdateOneWithoutChildrenNestedInput
+    children?: TerritoryUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUpdateManyWithoutManagerTerritoryNestedInput
+    facilities?: FacilityUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUpdateManyWithoutTargetTerritoryNestedInput
+    facilityApprovalRequests?: TerritoryApprovalRequestUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateWithoutManagerTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    territoryTypeId?: StringFieldUpdateOperationsInput | string
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
+    boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryMaxLat?: NullableFloatFieldUpdateOperationsInput | number | null
+    boundaryAreaSqKm?: NullableFloatFieldUpdateOperationsInput | number | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    children?: TerritoryUncheckedUpdateManyWithoutParentNestedInput
+    repPatches?: TerritoryUncheckedUpdateManyWithoutManagerTerritoryNestedInput
+    facilities?: FacilityUncheckedUpdateManyWithoutTerritoryNestedInput
+    userAssignments?: UserTerritoryAssignmentUncheckedUpdateManyWithoutTerritoryNestedInput
+    closureAsAncestor?: TerritoryClosureUncheckedUpdateManyWithoutAncestorNestedInput
+    closureAsDescendant?: TerritoryClosureUncheckedUpdateManyWithoutDescendantNestedInput
+    approvalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutTargetTerritoryNestedInput
+    facilityApprovalRequests?: TerritoryApprovalRequestUncheckedUpdateManyWithoutToTerritoryNestedInput
+  }
+
+  export type TerritoryUncheckedUpdateManyWithoutManagerTerritoryInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    slug?: StringFieldUpdateOperationsInput | string
+    code?: StringFieldUpdateOperationsInput | string
+    nodeType?: EnumTerritoryNodeTypeFieldUpdateOperationsInput | $Enums.TerritoryNodeType
+    territoryTypeId?: StringFieldUpdateOperationsInput | string
+    countryCode?: NullableStringFieldUpdateOperationsInput | string | null
+    regionSlug?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
+    parentId?: NullableStringFieldUpdateOperationsInput | string | null
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    organizationId?: NullableStringFieldUpdateOperationsInput | string | null
     boundaryMinLng?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMinLat?: NullableFloatFieldUpdateOperationsInput | number | null
     boundaryMaxLng?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -96045,108 +94006,6 @@ export namespace Prisma {
     resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryRollupLinkUpdateWithoutTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    ancestor?: TerritoryUpdateOneRequiredWithoutRollupLinksAsAncestorNestedInput
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateWithoutTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    ancestorId?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateManyWithoutTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    ancestorId?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryRollupLinkUpdateWithoutAncestorInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    territory?: TerritoryUpdateOneRequiredWithoutRollupLinksAsTerritoryNestedInput
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateWithoutAncestorInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryRollupLinkUncheckedUpdateManyWithoutAncestorInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    territoryId?: StringFieldUpdateOperationsInput | string
-    relationshipType?: EnumTerritoryRollupRelationshipTypeFieldUpdateOperationsInput | $Enums.TerritoryRollupRelationshipType
-    source?: EnumTerritoryRollupLinkSourceFieldUpdateOperationsInput | $Enums.TerritoryRollupLinkSource
-    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipUpdateWithoutOperationalTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    referenceTerritory?: TerritoryUpdateOneRequiredWithoutGeoMembershipAsReferenceNestedInput
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateWithoutOperationalTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    referenceTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateManyWithoutOperationalTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    referenceTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipUpdateWithoutReferenceTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    operationalTerritory?: TerritoryUpdateOneRequiredWithoutGeoMembershipAsOperationalNestedInput
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateWithoutReferenceTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    operationalTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
-  }
-
-  export type TerritoryGeoMembershipUncheckedUpdateManyWithoutReferenceTerritoryInput = {
-    id?: StringFieldUpdateOperationsInput | string
-    operationalTerritoryId?: StringFieldUpdateOperationsInput | string
-    referenceTypeSlug?: StringFieldUpdateOperationsInput | string
-    overlapRatio?: FloatFieldUpdateOperationsInput | number
-    intersectionAreaSqKm?: FloatFieldUpdateOperationsInput | number
-    computedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type TerritoryApprovalRequestCreateManySupersededByInput = {
@@ -97476,6 +95335,16 @@ export namespace Prisma {
     resolutionNote?: string | null
   }
 
+  export type IngestionDiffCreateManyIngestionRunInput = {
+    id?: string
+    scope: $Enums.IngestionDiffScope
+    entityType: string
+    externalSourceId?: string | null
+    diffType: string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: Date | string
+  }
+
   export type IngestionSuggestionUpdateWithoutIngestionRunInput = {
     id?: StringFieldUpdateOperationsInput | string
     type?: EnumIngestionSuggestionTypeFieldUpdateOperationsInput | $Enums.IngestionSuggestionType
@@ -97519,6 +95388,36 @@ export namespace Prisma {
     resolvedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     resolvedByUserId?: NullableStringFieldUpdateOperationsInput | string | null
     resolutionNote?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type IngestionDiffUpdateWithoutIngestionRunInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IngestionDiffUncheckedUpdateWithoutIngestionRunInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type IngestionDiffUncheckedUpdateManyWithoutIngestionRunInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    scope?: EnumIngestionDiffScopeFieldUpdateOperationsInput | $Enums.IngestionDiffScope
+    entityType?: StringFieldUpdateOperationsInput | string
+    externalSourceId?: NullableStringFieldUpdateOperationsInput | string | null
+    diffType?: StringFieldUpdateOperationsInput | string
+    payload?: JsonNullValueInput | InputJsonValue
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
 
