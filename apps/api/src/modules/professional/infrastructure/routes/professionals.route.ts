@@ -25,8 +25,6 @@ function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<
 }
 
 const professionalPersonBody = {
-  firstName: t.Optional(t.String()),
-  lastName: t.Optional(t.String()),
   fullName: t.Optional(t.Union([t.String(), t.Null()])),
   socialName: t.Optional(t.Union([t.String(), t.Null()])),
   taxId: t.Optional(t.Union([t.String(), t.Null()])),
@@ -159,6 +157,8 @@ const updateDoctorRoute = new Elysia()
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
+        firstName: t.Optional(t.String()),
+        lastName: t.Optional(t.String()),
         ...professionalPersonBody,
         facilityIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
       }),
