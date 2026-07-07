@@ -16,6 +16,7 @@
       "dependencies": {
         "@atlasmed/access": "workspace:*",
         "@atlasmed/config": "workspace:*",
+        "@atlasmed/database": "workspace:*",
         "@atlasmed/mapbox": "workspace:*",
         "@elysiajs/cookie": "^0.8.0",
         "@elysiajs/cors": "^1.4.2",
@@ -124,9 +125,11 @@
       "version": "0.0.0",
       "dependencies": {
         "@prisma/client": "^7.8.0",
+        "@prisma/client-runtime-utils": "7.8.0",
       },
       "devDependencies": {
         "@types/bun": "^1.3.14",
+        "dotenv": "^17.4.2",
         "prisma": "^7.8.0",
         "typescript": "^5.9.3",
       },

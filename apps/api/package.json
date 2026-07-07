@@ -27,6 +27,7 @@
   "dependencies": {
     "@atlasmed/access": "workspace:*",
     "@atlasmed/config": "workspace:*",
+    "@atlasmed/database": "workspace:*",
     "@atlasmed/mapbox": "workspace:*",
     "@elysiajs/cookie": "^0.8.0",
     "@elysiajs/cors": "^1.4.2",
