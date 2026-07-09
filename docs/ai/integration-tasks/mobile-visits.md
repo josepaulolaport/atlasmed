@@ -7,18 +7,16 @@ Use when a task changes the visit-logging flow, geofence, visit forms, visit his
 **Always:**
 - `AGENTS.md`
 - `apps/mobile/AGENTS.md`
-- `skills/procedure/add-ui-screen/SKILL.md`
-- `skills/cross-cutting/keep-docs-current/SKILL.md`
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
 | Backend sync needed | `docs/ai/integration-tasks/api-mobile.md` |
-| `authorization`, `security` | `packages/access/AGENTS.md`, `skills/cross-cutting/check-permissions/SKILL.md` |
+| authorization / security | `packages/access/AGENTS.md` |
 | Map/route behavior | `docs/specs/0003-territory-management/requirements.md` |
 | Product feature definition | TODO `docs/product/visits.md` |
-| `testing` (api-side) | `skills/procedure/run-api-tests/SKILL.md` |
+| testing (api-side) | `apps/api/TESTING.md` |
 
 ## Work order
 
@@ -28,7 +26,6 @@ Use when a task changes the visit-logging flow, geofence, visit forms, visit his
 4. Preserve fast route recalculation and map interaction — profile before adding heavy widgets.
 5. If sync to backend is needed, escalate to `api-mobile` integration.
 6. Add tests for the offline path and the reconnect path.
-7. Run `keep-docs-current`.
 
 ## Rules
 

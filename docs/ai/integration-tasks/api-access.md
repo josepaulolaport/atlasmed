@@ -9,18 +9,15 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 - `apps/api/AGENTS.md`
 - `packages/access/AGENTS.md`
 - `docs/architecture/features/access-auth.md`
-- `skills/procedure/modify-permissions/SKILL.md`
-- `skills/cross-cutting/check-permissions/SKILL.md`
-- `skills/cross-cutting/keep-docs-current/SKILL.md`
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
-| `observability`, `audit` | `packages/observability/AGENTS.md` |
-| Change surfaces in web UI | `apps/web/AGENTS.md`, `skills/procedure/add-ui-screen/SKILL.md` |
+| observability / audit | `packages/observability/AGENTS.md` |
+| Change surfaces in web UI | `apps/web/AGENTS.md` |
 | Change surfaces in mobile UI | `apps/mobile/AGENTS.md` |
-| `testing` | `skills/procedure/run-api-tests/SKILL.md` |
+| testing | `apps/api/TESTING.md` |
 
 ## Work order
 
@@ -30,7 +27,7 @@ Use when a task changes authorization behavior (roles, CASL rules, permission he
 4. Update frontend gates so UI matches — hide/disable, not enforce.
 5. Add unit tests for the ability and integration tests for the enforcement path.
 6. Emit audit log entries for permission-sensitive events.
-7. Run `keep-docs-current`.
+7. Update matching AGENTS.md / docs in same PR if conventions shifted.
 
 ## Rules
 

@@ -48,19 +48,44 @@ A production-ready Next.js frontend application for the AtlasMed healthcare mana
 
 ## Getting Started
 
-Full setup procedure — prerequisites, env, dev/build/start, ports, troubleshooting — lives in the skill:
+### Prerequisites
 
-**→ `skills/procedure/web-dev-setup/SKILL.md`**
+- Bun runtime installed.
+- Backend API running (default `http://localhost:3000` — start API on another port if running both locally).
 
-Quick reference:
+### Installation
 
 ```bash
 cd apps/web && bun install
-# create .env.local with NEXT_PUBLIC_API_URL + NEXT_PUBLIC_APP_NAME
-bun dev
 ```
 
-Available at `http://localhost:3000` (start API on another port if using both locally).
+### Environment
+
+Create `apps/web/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_APP_NAME=AtlasMed
+```
+
+Additional variables — see `apps/web/.env.local.example` for the current full list; only the ones above are required for local dev.
+
+### Commands
+
+| Command | Purpose |
+|---|---|
+| `bun dev` | Dev server |
+| `bun run build` | Production build |
+| `bun start` | Serve production build |
+| `bun run lint` | ESLint |
+
+If running the API on `3000`, start web on a different port: `PORT=3001 bun dev`.
+
+### Rules
+
+- Do NOT commit `.env.local`.
+- Do NOT hardcode the API URL in code — always go through `NEXT_PUBLIC_API_URL`.
+- Do NOT default `NEXT_PUBLIC_API_URL` in production builds — CI must inject it explicitly.
 
 ## Project Structure
 

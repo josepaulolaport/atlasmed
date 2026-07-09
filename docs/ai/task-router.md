@@ -1,6 +1,6 @@
 # AI Task Router
 
-Worked examples for the six-step task lifecycle from root `AGENTS.md`. Use as templates when classifying a new task.
+Worked examples for the task lifecycle from root `AGENTS.md`. Use as templates when classifying a new task.
 
 Each example ends with the exact "Loading:" announcement the AI should output BEFORE editing.
 
@@ -10,9 +10,8 @@ Each example ends with the exact "Loading:" announcement the AI should output BE
 
 **Classify:**
 ```
-domain(s):   [api, web]
-procedure(s): [create-endpoint, add-ui-screen]
-concerns:    [authorization, data-fetching, state-management, docs, testing]
+domain(s):  [api, web]
+concerns:   [authorization, data-fetching, state-management, docs, testing, api-contract]
 ```
 
 **Cross-boundary → load integration doc first.**
@@ -24,12 +23,8 @@ Tier 1: docs/ai/integration-tasks/api-web.md
         apps/api/AGENTS.md
         apps/web/AGENTS.md
         packages/access/AGENTS.md          (authorization concern)
-Tier 2: skills/procedure/create-endpoint/SKILL.md
-        skills/procedure/add-ui-screen/SKILL.md
-Tier 3: skills/cross-cutting/check-permissions/SKILL.md
-        skills/cross-cutting/keep-docs-current/SKILL.md
 ```
-**Total: 9 files. Under 15-file cross-boundary budget.**
+**Total: 5 files.**
 
 **NOT loaded:** `apps/mobile/*`, `apps/workers/*`, `packages/database/*` (no schema change), `docs/product/*`.
 
@@ -39,9 +34,8 @@ Tier 3: skills/cross-cutting/check-permissions/SKILL.md
 
 **Classify:**
 ```
-domain(s):   [web]
-procedure(s): [add-ui-screen]
-concerns:    [styling, layout, interaction, state-management]
+domain(s):  [web]
+concerns:   [styling, layout, interaction, state-management]
 ```
 
 **Single-domain → skip integration doc.**
@@ -50,14 +44,10 @@ concerns:    [styling, layout, interaction, state-management]
 ```
 Tier 0: AGENTS.md
 Tier 1: apps/web/AGENTS.md
-Tier 2: skills/procedure/add-ui-screen/SKILL.md
-Tier 3: skills/cross-cutting/keep-docs-current/SKILL.md
 ```
-**Total: 4 files.**
+**Total: 2 files.**
 
-**NOT loaded:** integration docs, api/mobile/workers AGENTS, product docs, `check-permissions` (no auth concern).
-
-Design tokens (zinc palette + section-card pattern) come from `apps/web/AGENTS.md` § Conventions — not a separate skill.
+Design tokens (zinc palette + section-card pattern) come from `apps/web/AGENTS.md` § Conventions.
 
 ---
 
@@ -65,21 +55,18 @@ Design tokens (zinc palette + section-card pattern) come from `apps/web/AGENTS.m
 
 **Classify:**
 ```
-domain(s):   [shared-package]
-procedure(s): [add-migration]
-concerns:    [persistence, domain-model, api-contract]
+domain(s):  [shared-package]
+concerns:   [persistence, domain-model, api-contract]
 ```
 
 **Loading:**
 ```
 Tier 0: AGENTS.md
 Tier 1: packages/database/AGENTS.md
-Tier 2: skills/procedure/add-migration/SKILL.md
-Tier 3: skills/cross-cutting/keep-docs-current/SKILL.md
 ```
-**Total: 4 files.**
+**Total: 2 files.**
 
-**Follow-up:** if backfill volume >1M rows, chain to `procedure/add-workflow` and load `apps/workers/AGENTS.md`.
+**Follow-up:** if backfill volume >1M rows, load `apps/workers/AGENTS.md` for the Temporal workflow side.
 
 ---
 
@@ -87,19 +74,16 @@ Tier 3: skills/cross-cutting/keep-docs-current/SKILL.md
 
 **Classify:**
 ```
-domain(s):   [mobile]
-procedure(s): [add-ui-screen]
-concerns:    [offline-first, forms, state-management, data-fetching, error-handling]
+domain(s):  [mobile]
+concerns:   [offline-first, forms, state-management, data-fetching, error-handling]
 ```
 
 **Loading:**
 ```
 Tier 0: AGENTS.md
 Tier 1: apps/mobile/AGENTS.md
-Tier 2: skills/procedure/add-ui-screen/SKILL.md   (repurposable to mobile screen conventions)
-Tier 3: skills/cross-cutting/keep-docs-current/SKILL.md
 ```
-**Total: 4 files.**
+**Total: 2 files.**
 
 If the sync surfaces a new API endpoint, escalate to Example 5.
 
@@ -109,9 +93,8 @@ If the sync surfaces a new API endpoint, escalate to Example 5.
 
 **Classify:**
 ```
-domain(s):   [api, mobile]
-procedure(s): [create-endpoint, add-ui-screen]
-concerns:    [offline-first, business-logic, authorization, api-contract, testing, docs]
+domain(s):  [api, mobile]
+concerns:   [offline-first, business-logic, authorization, api-contract, testing, docs]
 ```
 
 **Cross-boundary api + mobile → load integration doc.**
@@ -123,12 +106,8 @@ Tier 1: docs/ai/integration-tasks/api-mobile.md
         apps/api/AGENTS.md
         apps/mobile/AGENTS.md
         packages/access/AGENTS.md         (authorization)
-Tier 2: skills/procedure/create-endpoint/SKILL.md
-        skills/procedure/add-ui-screen/SKILL.md
-Tier 3: skills/cross-cutting/check-permissions/SKILL.md
-        skills/cross-cutting/keep-docs-current/SKILL.md
 ```
-**Total: 9 files.**
+**Total: 5 files.**
 
 ---
 
@@ -136,9 +115,8 @@ Tier 3: skills/cross-cutting/check-permissions/SKILL.md
 
 **Classify:**
 ```
-domain(s):   [shared-package, workers]
-procedure(s): [add-ingestion, add-workflow]
-concerns:    [data-pipeline, integration, business-logic, observability, testing, docs]
+domain(s):  [shared-package, workers]
+concerns:   [data-pipeline, integration, business-logic, observability, testing, docs]
 ```
 
 **Loading:**
@@ -147,12 +125,9 @@ Tier 0: AGENTS.md
 Tier 1: apps/workers/AGENTS.md
         packages/cnes-ingestion/AGENTS.md
         packages/observability/AGENTS.md
-Tier 2: skills/procedure/add-ingestion/SKILL.md
-        skills/procedure/add-workflow/SKILL.md
-Tier 3: skills/cross-cutting/keep-docs-current/SKILL.md
-Tier 4: docs/architecture/features/clinic-doctor-registry.md
+Tier 3: docs/architecture/features/clinic-doctor-registry.md
 ```
-**Total: 8 files.**
+**Total: 5 files.**
 
 ---
 
@@ -160,19 +135,17 @@ Tier 4: docs/architecture/features/clinic-doctor-registry.md
 
 **Classify:**
 ```
-domain(s):   [api]
-procedure(s): [run-api-tests]
-concerns:    [testing, configuration, persistence]
+domain(s):  [api]
+concerns:   [testing, configuration, persistence]
 ```
 
 **Loading:**
 ```
 Tier 0: AGENTS.md
-Tier 2: skills/procedure/run-api-tests/SKILL.md
+Tier 1: apps/api/AGENTS.md
+        apps/api/TESTING.md
 ```
-**Total: 2 files.**
-
-`apps/api/TESTING.md` is a pointer — don't load it directly.
+**Total: 3 files.**
 
 ---
 

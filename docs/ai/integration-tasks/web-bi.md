@@ -7,16 +7,14 @@ Use when a task adds or modifies a BI dashboard card, KPI, manager view, or admi
 **Always:**
 - `AGENTS.md`
 - `apps/web/AGENTS.md`
-- `skills/procedure/add-ui-screen/SKILL.md`
-- `skills/cross-cutting/keep-docs-current/SKILL.md`
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
 | Backend metric doesn't exist yet | `docs/ai/integration-tasks/api-web.md` (escalate to cross-boundary) |
-| `authorization`, `security` | `packages/access/AGENTS.md`, `skills/cross-cutting/check-permissions/SKILL.md` |
-| `performance` (heavy query) | `packages/observability/AGENTS.md` |
+| authorization / security | `packages/access/AGENTS.md` |
+| performance (heavy query) | `packages/observability/AGENTS.md` |
 | Product KPI definition | `docs/product/overview.md` (bi-kpis doc doesn't exist yet) |
 
 ## Work order
@@ -28,7 +26,6 @@ Use when a task adds or modifies a BI dashboard card, KPI, manager view, or admi
 5. Add loading, empty, and error states.
 6. Ensure manager/admin visibility rules are respected.
 7. Verify the card renders correctly with real data.
-8. Run `keep-docs-current`.
 
 ## Rules
 

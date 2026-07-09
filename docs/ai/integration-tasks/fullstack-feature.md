@@ -8,26 +8,17 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 - `AGENTS.md`
 - `docs/ai/integration-tasks/api-web.md` OR `docs/ai/integration-tasks/api-mobile.md` (pick the frontend side)
 - Affected app `AGENTS.md` files — do NOT load unrelated apps
-- `skills/cross-cutting/keep-docs-current/SKILL.md`
-
-**Procedure skills (pick applicable):**
-- `skills/procedure/create-endpoint/SKILL.md`
-- `skills/procedure/add-migration/SKILL.md`
-- `skills/procedure/add-ui-screen/SKILL.md`
-- `skills/procedure/modify-permissions/SKILL.md`
-- `skills/procedure/add-workflow/SKILL.md` (if background jobs)
-- `skills/procedure/add-ingestion/SKILL.md` (if data pipeline)
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
-| `authorization`, `security` | `packages/access/AGENTS.md`, `skills/cross-cutting/check-permissions/SKILL.md` |
-| `persistence`, `domain-model` | `packages/database/AGENTS.md` |
-| `background-jobs`, `messaging` | `apps/workers/AGENTS.md`, `skills/procedure/add-workflow/SKILL.md` |
-| `observability`, `audit` | `packages/observability/AGENTS.md` |
+| authorization / security | `packages/access/AGENTS.md` |
+| persistence / domain model | `packages/database/AGENTS.md` |
+| background jobs / messaging | `apps/workers/AGENTS.md` |
+| observability / audit | `packages/observability/AGENTS.md` |
 | Feature-domain | Relevant `docs/architecture/features/*.md` or `docs/specs/*/design.md` |
-| `testing` (api-side) | `skills/procedure/run-api-tests/SKILL.md` |
+| testing (api-side) | `apps/api/TESTING.md` |
 
 ## Work order
 
@@ -40,7 +31,7 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 7. Frontend: fetch → state → UI → loading/empty/error states.
 8. Observability + audit for permission-sensitive events.
 9. Verify permissions end-to-end.
-10. Run `keep-docs-current`.
+10. Update matching AGENTS.md / docs in same PR if conventions shifted.
 
 ## Rules
 

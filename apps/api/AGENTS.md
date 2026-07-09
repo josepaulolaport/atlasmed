@@ -44,7 +44,7 @@ Routes import wired use-cases from `../composition`. Never instantiate a reposit
 
 ## Authorization invariants (do not bypass)
 
-These come from `apps/api/src/modules/access/composition.ts`. Skills like `procedure/create-endpoint` and `cross-cutting/check-permissions` enforce them. Bypassing any of them is a security regression.
+These come from `apps/api/src/modules/access/composition.ts`. Bypassing any of them is a security regression.
 
 1. **CASL via `requirePermission` after `auth`.** Every protected route:
    ```ts
