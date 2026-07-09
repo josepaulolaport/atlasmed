@@ -7,6 +7,7 @@ import type {
   CreateSuggestionInput,
 } from "../../../application/interfaces/ingestion.repository.interface";
 import type {
+  IngestionRunPhase,
   IngestionRunStatus,
   IngestionSuggestionStatus,
   IngestionSuggestionType,
@@ -16,18 +17,32 @@ function mapRun(run: {
   id: string;
   sourceProvider: string;
   status: IngestionRunStatus;
+  phase: IngestionRunPhase | null;
+  temporalWorkflowId: string | null;
+  referenceAno: number | null;
+  referenceMes: number | null;
   startedAt: Date;
   completedAt: Date | null;
+  promotedAt: Date | null;
   stats: unknown;
+  validationReport: unknown;
+  archiveManifest: unknown;
   error: string | null;
 }): IngestionRunRecord {
   return {
     id: run.id,
     sourceProvider: run.sourceProvider,
     status: run.status,
+    phase: run.phase,
+    temporalWorkflowId: run.temporalWorkflowId,
+    referenceAno: run.referenceAno,
+    referenceMes: run.referenceMes,
     startedAt: run.startedAt,
     completedAt: run.completedAt,
+    promotedAt: run.promotedAt,
     stats: (run.stats as Record<string, unknown> | null) ?? null,
+    validationReport: (run.validationReport as Record<string, unknown> | null) ?? null,
+    archiveManifest: (run.archiveManifest as Record<string, unknown> | null) ?? null,
     error: run.error,
   };
 }
@@ -65,12 +80,29 @@ function mapSuggestion(suggestion: {
 }
 
 export class PrismaIngestionRunRepository implements IngestionRunRepository {
-  async create(sourceProvider: string): Promise<IngestionRunRecord> {
+  async create(
+    sourceProvider: string,
+    options?: {
+      temporalWorkflowId?: string;
+      referenceAno?: number;
+      referenceMes?: number;
+    }
+  ): Promise<IngestionRunRecord> {
     const run = await prisma.ingestionRun.create({
-      data: { sourceProvider },
+      data: {
+        sourceProvider,
+        temporalWorkflowId: options?.temporalWorkflowId,
+        referenceAno: options?.referenceAno,
+        referenceMes: options?.referenceMes,
+      },
     });
 
     return mapRun(run);
+  }
+
+  async findById(id: string): Promise<IngestionRunRecord | null> {
+    const run = await prisma.ingestionRun.findUnique({ where: { id } });
+    return run ? mapRun(run) : null;
   }
 
   async complete(
@@ -94,6 +126,7 @@ export class PrismaIngestionRunRepository implements IngestionRunRepository {
       where: { id },
       data: {
         status: "FAILED",
+        phase: "FAILED",
         completedAt: new Date(),
         error,
       },

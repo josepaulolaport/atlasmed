@@ -14,7 +14,6 @@ import type { Facility } from "@/types/facility";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -255,40 +254,47 @@ export default function FacilitiesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Facilities</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Facilities are assigned to territories automatically from coordinates
-          </p>
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+              Facilities
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Facilities are assigned to territories automatically from coordinates.
+            </p>
+          </div>
+          {canManage && (
+            <Button onClick={openCreateDialog}>
+              <Plus className="h-4 w-4" />
+              Add facility
+            </Button>
+          )}
         </div>
-        {canManage && (
-          <Button onClick={openCreateDialog}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add facility
-          </Button>
-        )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              placeholder="Search facilities..."
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                setPage(1);
-              }}
-              className="pl-10"
-            />
+      <div className="p-6 max-w-6xl mx-auto w-full">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50/50">
+            <div className="relative max-w-sm">
+              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <Input
+                placeholder="Search facilities..."
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setPage(1);
+                }}
+                className="pl-8"
+              />
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
+          <div className="p-0">
           {loading ? (
-            <div className="py-8 text-center text-gray-500">Loading facilities...</div>
+            <div className="py-10 text-center text-sm text-zinc-500">
+              Loading facilities…
+            </div>
           ) : (
             <>
               <Table>
@@ -360,19 +366,21 @@ export default function FacilitiesPage() {
                 </TableBody>
               </Table>
 
-              <div className="mt-4 flex items-center justify-between">
+              <div className="px-5 py-3 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                 <Button
                   variant="outline"
+                  size="sm"
                   disabled={page <= 1}
                   onClick={() => setPage((value) => value - 1)}
                 >
                   Previous
                 </Button>
-                <span className="text-sm text-gray-500">
+                <span className="text-xs text-zinc-500">
                   Page {page} of {totalPages}
                 </span>
                 <Button
                   variant="outline"
+                  size="sm"
                   disabled={page >= totalPages}
                   onClick={() => setPage((value) => value + 1)}
                 >
@@ -381,8 +389,9 @@ export default function FacilitiesPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+        </div>
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
@@ -460,6 +469,6 @@ export default function FacilitiesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

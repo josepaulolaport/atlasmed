@@ -73,6 +73,31 @@ const listRunsRoute = new Elysia()
     }
   );
 
+const getRunStatusRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("manage", "REGISTRY_INGESTION"))
+  .get(
+    "/registry-ingestion/runs/:id/status",
+    async ({ params }) => {
+      const result = await registryIngestionUseCases.getRunStatus().execute({
+        runId: params.id,
+      });
+
+      if (!result) {
+        throw new ResourceNotFoundError("IngestionRun", params.id);
+      }
+
+      return result;
+    },
+    {
+      detail: {
+        summary: "Get registry ingestion run status",
+        tags: ["Registry Ingestion"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
 const listSuggestionsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "REGISTRY_SUGGESTION"))
@@ -179,6 +204,7 @@ export const registryIngestionRoutes = new Elysia()
   .use(runIngestionRoute)
   .use(runDemoRoute)
   .use(listRunsRoute)
+  .use(getRunStatusRoute)
   .use(listSuggestionsRoute)
   .use(approveSuggestionRoute)
   .use(rejectSuggestionRoute);

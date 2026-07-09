@@ -105,4 +105,33 @@ export class PrismaFacilityRepresentativeRepository implements FacilityRepresent
 
     return mapRepresentative(representative);
   }
+
+  async endSourceRepresentative(params: {
+    facilityId: string;
+    externalSourceKey: string;
+    endedByUserId: string;
+    endReason?: string;
+  }): Promise<FacilityRepresentativeRecord | null> {
+    const existing = await prisma.facilityRepresentative.findFirst({
+      where: {
+        facilityId: params.facilityId,
+        externalSourceKey: params.externalSourceKey,
+        endedAt: null,
+      },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    const representative = await prisma.facilityRepresentative.update({
+      where: { id: existing.id },
+      data: {
+        endedAt: new Date(),
+        sourceActive: false,
+      },
+    });
+
+    return mapRepresentative(representative);
+  }
 }

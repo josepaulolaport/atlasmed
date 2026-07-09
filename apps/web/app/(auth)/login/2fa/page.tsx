@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -10,15 +10,6 @@ import { totpCodeSchema } from "@/lib/validators";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
 import { z } from "zod";
 
 const verify2FASchema = z.object({
@@ -28,6 +19,20 @@ const verify2FASchema = z.object({
 type Verify2FAForm = z.infer<typeof verify2FASchema>;
 
 export default function Verify2FALoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+        </div>
+      }
+    >
+      <Verify2FALoginInner />
+    </Suspense>
+  );
+}
+
+function Verify2FALoginInner() {
   const searchParams = useSearchParams();
   const pendingToken = searchParams.get("pending");
   const { complete2FALogin } = useAuth();
@@ -66,40 +71,66 @@ export default function Verify2FALoginPage() {
 
   if (!pendingToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle>Verification session expired</CardTitle>
-            <CardDescription>
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-xl font-semibold tracking-tighter text-zinc-900">
+              ATLASMED
+            </h1>
+            <p className="text-sm text-zinc-500 mt-2">
+              Healthcare Commercial Operations
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6 text-center">
+            <h2 className="text-lg font-medium text-zinc-900">
+              Verification session expired
+            </h2>
+            <p className="text-sm text-zinc-500 mt-1">
               Start over from the sign-in page to continue.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter className="justify-center">
-            <Link href="/login" className="text-blue-600 hover:underline">
-              Back to sign in
-            </Link>
-          </CardFooter>
-        </Card>
+            </p>
+            <div className="mt-6">
+              <Link
+                href="/login"
+                className="text-sm text-blue-600 hover:underline font-medium"
+              >
+                Back to sign in
+              </Link>
+            </div>
+          </div>
+          <p className="text-center text-xs text-zinc-500 mt-6">
+            &copy; AtlasMed 2026
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-xl font-semibold tracking-tighter text-zinc-900">
+            ATLASMED
+          </h1>
+          <p className="text-sm text-zinc-500 mt-2">
+            Healthcare Commercial Operations
+          </p>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
+          <h2 className="text-lg font-medium text-zinc-900">
             Two-factor authentication
-          </CardTitle>
-          <CardDescription>
+          </h2>
+          <p className="text-sm text-zinc-500 mt-1">
             Enter the 6-digit code from your authenticator app
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          </p>
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             {error && (
-              <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4" />
+              <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-100 p-3 text-sm text-red-600">
+                <iconify-icon
+                  icon="solar:danger-circle-linear"
+                  stroke-width="1.5"
+                  className="text-base mt-0.5"
+                />
                 <p>{error}</p>
               </div>
             )}
@@ -117,25 +148,31 @@ export default function Verify2FALoginPage() {
                 disabled={isLoading}
               />
               {errors.code && (
-                <p className="text-sm text-red-600">{errors.code.message}</p>
+                <p className="text-xs text-red-600">{errors.code.message}</p>
               )}
             </div>
-          </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={isLoading}
+            >
               {isLoading ? "Verifying..." : "Verify and sign in"}
             </Button>
 
             <Link
               href="/login"
-              className="text-center text-sm text-blue-600 hover:underline"
+              className="block text-center text-sm text-blue-600 hover:underline font-medium"
             >
               Back to sign in
             </Link>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </div>
+        <p className="text-center text-xs text-zinc-500 mt-6">
+          &copy; AtlasMed 2026
+        </p>
+      </div>
     </div>
   );
 }

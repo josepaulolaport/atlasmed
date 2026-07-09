@@ -49,6 +49,7 @@ export function createRegistryIngestionRunner(fixtureName: string) {
     auditLogService,
     acquireLock: async () => true,
     releaseLock: async () => {},
+    registrySourceMode: "mock",
   });
 }
 

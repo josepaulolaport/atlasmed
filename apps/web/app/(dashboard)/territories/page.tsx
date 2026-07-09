@@ -19,10 +19,8 @@ import { TerritoryDetailPanel } from "@/components/territory/territory-detail-pa
 import { CreateTerritoryDialog } from "@/components/territory/create-territory-dialog";
 import { ReparentTerritoryDialog } from "@/components/territory/reparent-territory-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { Loader2, Plus, RefreshCw } from "lucide-react";
 import type { Territory, TerritoryTreeNode } from "@/types/territory";
 
 type TerritoryView = "grouping" | "manager-zones" | "rep-patches";
@@ -174,92 +172,114 @@ export default function TerritoriesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Territories</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Manager zones and rep patches drive assignment scope. Grouping areas are used for
-            filters and analytics only.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => loadTree()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Refresh
-          </Button>
-          {canManage && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRecompute}
-              disabled={recomputing}
-            >
-              {recomputing ? "Recomputing..." : "Recompute membership"}
-            </Button>
-          )}
-          {canCreate && (
-            <Button size="sm" onClick={() => setCreateOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create territory
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <TerritorySubnav />
-
-      <div className="mb-4 flex flex-wrap gap-2">
-        {VIEW_OPTIONS.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => setView(option.id)}
-            className={cn(
-              "rounded-md border px-3 py-2 text-left text-sm",
-              view === option.id
-                ? "border-blue-200 bg-blue-50 text-blue-800"
-                : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-            )}
-          >
-            <span className="block font-medium">{option.label}</span>
-            <span className="block text-xs text-gray-500">{option.description}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>{activeView.label}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-              </div>
-            ) : tree.length === 0 ? (
-              <p className="py-8 text-center text-sm text-gray-500">
-                No {activeView.label.toLowerCase()} found.
-              </p>
-            ) : (
-              <TerritoryTree
-                nodes={tree}
-                selectedId={selectedId}
-                onSelect={setSelectedId}
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+              Territories
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Manager zones and rep patches drive assignment scope. Grouping
+              areas are used for filters and analytics only.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => loadTree()}>
+              <iconify-icon
+                icon="solar:refresh-linear"
+                stroke-width="1.5"
+                className="text-base"
               />
+              Refresh
+            </Button>
+            {canManage && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRecompute}
+                disabled={recomputing}
+              >
+                {recomputing ? "Recomputing..." : "Recompute membership"}
+              </Button>
             )}
-          </CardContent>
-        </Card>
+            {canCreate && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setCreateOpen(true)}
+              >
+                <iconify-icon
+                  icon="solar:add-circle-linear"
+                  stroke-width="1.5"
+                  className="text-base"
+                />
+                Create territory
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
 
-        <TerritoryDetailPanel
-          territory={selectedTerritory}
-          canManage={canAssignUsers}
-          canUpdate={canUpdate}
-          isAdmin={userIsAdmin}
-          onRefresh={loadTree}
-          onReparent={() => setReparentOpen(true)}
-        />
+      <div className="p-6 max-w-6xl mx-auto w-full">
+        <TerritorySubnav />
+
+        <div className="mb-4 mt-4 flex flex-wrap gap-2">
+          {VIEW_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => setView(option.id)}
+              className={cn(
+                "rounded-md border px-3 py-2 text-left text-sm transition-colors",
+                view === option.id
+                  ? "border-blue-200 bg-blue-50 text-blue-800"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+              )}
+            >
+              <span className="block font-medium">{option.label}</span>
+              <span className="block text-xs text-zinc-500">
+                {option.description}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+              <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                {activeView.label}
+              </h3>
+            </div>
+            <div className="p-5">
+              {loading ? (
+                <div className="py-10 text-center text-sm text-zinc-500">
+                  Loading…
+                </div>
+              ) : tree.length === 0 ? (
+                <p className="py-10 text-center text-sm text-zinc-500">
+                  No {activeView.label.toLowerCase()} found.
+                </p>
+              ) : (
+                <TerritoryTree
+                  nodes={tree}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                />
+              )}
+            </div>
+          </div>
+
+          <TerritoryDetailPanel
+            territory={selectedTerritory}
+            canManage={canAssignUsers}
+            canUpdate={canUpdate}
+            isAdmin={userIsAdmin}
+            onRefresh={loadTree}
+            onReparent={() => setReparentOpen(true)}
+          />
+        </div>
       </div>
 
       <CreateTerritoryDialog
@@ -277,6 +297,6 @@ export default function TerritoriesPage() {
         isAdmin={userIsAdmin}
         onSuccess={loadTree}
       />
-    </div>
+    </>
   );
 }

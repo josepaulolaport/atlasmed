@@ -12,7 +12,6 @@ import { ProfessionalProfileForm } from "@/components/professionals/professional
 import { LinkedFacilitiesCard } from "@/components/professionals/linked-facilities-card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
 
 export default function ProfessionalDetailPage() {
   const params = useParams<{ id: string }>();
@@ -78,11 +77,17 @@ export default function ProfessionalDetailPage() {
   }
 
   if (loading) {
-    return <div className="py-8 text-center text-gray-500">Loading professional...</div>;
+    return (
+      <div className="py-10 text-center text-sm text-zinc-500">Loading…</div>
+    );
   }
 
   if (!professional) {
-    return <div className="py-8 text-center text-gray-500">Professional not found</div>;
+    return (
+      <div className="py-10 text-center text-sm text-zinc-500">
+        Professional not found
+      </div>
+    );
   }
 
   const displayName =
@@ -90,32 +95,44 @@ export default function ProfessionalDetailPage() {
     `${professional.firstName} ${professional.lastName}`.trim();
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/professionals">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
-          <p className="text-sm text-gray-500">Professional profile</p>
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/professionals">
+                <iconify-icon
+                  icon="solar:arrow-left-linear"
+                  stroke-width="1.5"
+                  className="text-base"
+                />
+                Back
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+                {displayName}
+              </h1>
+              <p className="text-sm text-zinc-500 mt-1">Professional profile</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <ProfessionalProfileForm
-          professional={professional}
-          canEdit={canEdit}
-          saving={saving}
-          onSubmit={handleSaveProfile}
-        />
-        <LinkedFacilitiesCard
-          facilities={professional.facilities}
-          professionalId={professional.id}
-        />
+      <div className="p-6 max-w-6xl mx-auto w-full">
+        <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <ProfessionalProfileForm
+            professional={professional}
+            canEdit={canEdit}
+            saving={saving}
+            onSubmit={handleSaveProfile}
+          />
+          <LinkedFacilitiesCard
+            facilities={professional.facilities}
+            professionalId={professional.id}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

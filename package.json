@@ -6,6 +6,7 @@
   "description": "AtlasMed - Sales Application Monorepo",
   "workspaces": [
     "apps/*",
+    "apps/workers/*",
     "packages/*"
   ],
   "scripts": {
@@ -19,7 +20,10 @@
     "lint:mobile": "cd apps/mobile && flutter analyze",
     "test": "turbo test",
     "test:mobile": "cd apps/mobile && flutter test",
-    "clean": "rm -rf .turbo"
+    "clean": "rm -rf .turbo",
+    "temporal:up": "docker compose -f docker-compose.temporal.yml up -d",
+    "temporal:down": "docker compose -f docker-compose.temporal.yml down",
+    "dev:cnes-worker": "turbo dev --filter=@atlasmed/cnes-ingestion-worker"
   },
   "devDependencies": {
     "@types/bun": "latest",

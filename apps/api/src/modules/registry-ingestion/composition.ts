@@ -3,8 +3,13 @@ import { fileURLToPath } from "node:url";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { auditLogService } from "../../infrastructure/audit/audit-log.service";
 import { environment } from "../../app/config/environment";
+import {
+  describeCnesIngestionWorkflow,
+  startCnesIngestionWorkflow,
+} from "../../infrastructure/temporal/temporal.client";
 import { PrismaFacilityRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility.repository";
 import { PrismaFacilityProfessionalRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility-professional.repository";
+import { PrismaFacilityRepresentativeRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility-representative.repository";
 import { PrismaProfessionalRepository } from "../professional/infrastructure/repositories/prisma/prisma-professional.repository";
 import { MockRegistrySourceAdapter } from "./infrastructure/adapters/mock-registry-source.adapter";
 import {
@@ -23,6 +28,7 @@ import {
   RejectSuggestionUseCase,
 } from "./application/use-cases/suggestion.use-cases";
 import { ListIngestionRunsUseCase } from "./application/use-cases/list-ingestion-runs.use-case";
+import { GetIngestionRunStatusUseCase } from "./application/use-cases/get-ingestion-run-status.use-case";
 import { RunRegistryDemoUseCase } from "./application/use-cases/run-registry-demo.use-case";
 import { cleanupMockRegistryData } from "./infrastructure/demo/registry-mock-cleanup";
 import {
@@ -95,10 +101,23 @@ export const registryIngestionUseCases = {
       auditLogService,
       acquireLock: acquireIngestionLock,
       releaseLock: releaseIngestionLock,
+      registrySourceMode: environment.REGISTRY_SOURCE,
+      startTemporalWorkflow: startCnesIngestionWorkflow,
     }),
   listRuns: () =>
     new ListIngestionRunsUseCase({
       ingestionRunRepository: registryIngestionRepositories.ingestionRun,
+    }),
+  getRunStatus: () =>
+    new GetIngestionRunStatusUseCase({
+      ingestionRunRepository: registryIngestionRepositories.ingestionRun,
+      describeWorkflow: async (workflowId) => {
+        const description = await describeCnesIngestionWorkflow(workflowId);
+        return {
+          status: { name: description.status.name },
+          runId: description.runId,
+        };
+      },
     }),
   listSuggestions: () =>
     new ListSuggestionsUseCase({
@@ -116,7 +135,9 @@ export const registryIngestionUseCases = {
     new ApproveSuggestionUseCase({
       suggestionRepository: registryIngestionRepositories.suggestion,
       facilityRepository: registryIngestionRepositories.facility,
+      professionalRepository: registryIngestionRepositories.professional,
       facilityProfessionalRepository: registryIngestionRepositories.association,
+      facilityRepresentativeRepository: new PrismaFacilityRepresentativeRepository(),
       facilityGeocodingService,
       auditLogService,
     }),

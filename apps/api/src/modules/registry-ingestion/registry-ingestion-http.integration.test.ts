@@ -295,6 +295,48 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
   });
 
+  it("allows ADMIN to list registry ingestion runs with phase fields", async () => {
+    if (!dbReady) return;
+
+    const run = await prisma.ingestionRun.create({
+      data: {
+        sourceProvider: "cnes",
+        status: "RUNNING",
+        phase: "LOADING",
+        referenceAno: 2026,
+        referenceMes: 6,
+        temporalWorkflowId: "cnes-ingestion-2026-06",
+      },
+    });
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      "http://localhost/api/v1/registry-ingestion/runs",
+      token
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      data: Array<{ id: string; phase: string | null; referenceAno: number | null }>;
+    };
+    const listed = body.data.find((item) => item.id === run.id);
+    expect(listed?.phase).toBe("LOADING");
+    expect(listed?.referenceAno).toBe(2026);
+
+    const statusResponse = await authRequest(
+      `http://localhost/api/v1/registry-ingestion/runs/${run.id}/status`,
+      token
+    );
+    expect(statusResponse.status).toBe(200);
+    const statusBody = (await statusResponse.json()) as {
+      run: { id: string; temporalWorkflowId: string | null };
+    };
+    expect(statusBody.run.id).toBe(run.id);
+    expect(statusBody.run.temporalWorkflowId).toBe("cnes-ingestion-2026-06");
+
+    await prisma.ingestionRun.delete({ where: { id: run.id } });
+  });
+
   it("returns 401 for unauthenticated clinic doctors list", async () => {
     if (!dbReady) return;
 

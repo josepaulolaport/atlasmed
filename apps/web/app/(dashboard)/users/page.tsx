@@ -5,7 +5,6 @@ import { useAuth } from "@/contexts/auth-context";
 import { usersApi } from "@/lib/api/users";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -24,19 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
-import {
-  MoreVertical,
-  Search,
-  UserPlus,
-  CheckCircle2,
-  XCircle,
-  Ban,
-  PlayCircle,
-  Pause,
-  MapPin,
-  Shield,
-  UserCog,
-} from "lucide-react";
 import type { User } from "@/types/auth";
 import { canManageUsers, isAdmin } from "@/lib/permissions";
 import { useRouter } from "next/navigation";
@@ -91,7 +77,7 @@ export default function UsersPage() {
         setLoading(false);
       }
     };
-    
+
     loadUsers();
   }, [page, search, refreshKey]);
 
@@ -144,250 +130,313 @@ export default function UsersPage() {
 
   return (
     <>
-    <ManageAssignmentsDialog
-      user={assignmentsUser}
-      open={assignmentsOpen}
-      onOpenChange={(open) => {
-        setAssignmentsOpen(open);
-        if (!open) setAssignmentsUser(null);
-      }}
-    />
-    <ChangeRoleDialog
-      user={roleUser}
-      open={roleOpen}
-      onOpenChange={(open) => {
-        setRoleOpen(open);
-        if (!open) setRoleUser(null);
-      }}
-      onUpdated={() => setRefreshKey((k) => k + 1)}
-    />
-    <ManagePermissionsDialog
-      user={permissionsUser}
-      open={permissionsOpen}
-      onOpenChange={(open) => {
-        setPermissionsOpen(open);
-        if (!open) setPermissionsUser(null);
-      }}
-    />
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="mt-2 text-gray-600">
-            Manage users, invitations, and permissions
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/users/invites">
-            <Button variant="outline">
-              View Invitations
-            </Button>
-          </Link>
-          <Link href="/users/invite">
-            <Button>
-              <UserPlus className="mr-2 h-4 w-4" />
-              Invite User
-            </Button>
-          </Link>
+      <ManageAssignmentsDialog
+        user={assignmentsUser}
+        open={assignmentsOpen}
+        onOpenChange={(open) => {
+          setAssignmentsOpen(open);
+          if (!open) setAssignmentsUser(null);
+        }}
+      />
+      <ChangeRoleDialog
+        user={roleUser}
+        open={roleOpen}
+        onOpenChange={(open) => {
+          setRoleOpen(open);
+          if (!open) setRoleUser(null);
+        }}
+        onUpdated={() => setRefreshKey((k) => k + 1)}
+      />
+      <ManagePermissionsDialog
+        user={permissionsUser}
+        open={permissionsOpen}
+        onOpenChange={(open) => {
+          setPermissionsOpen(open);
+          if (!open) setPermissionsUser(null);
+        }}
+      />
+
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+              User Management
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Manage users, invitations, and permissions
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Link href="/users/invites">
+              <Button variant="outline">View invitations</Button>
+            </Link>
+            <Link href="/users/invite">
+              <Button variant="primary">
+                <iconify-icon
+                  icon="solar:user-plus-linear"
+                  stroke-width="1.5"
+                  className="text-base"
+                />
+                Invite user
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+      <div className="p-6 max-w-6xl mx-auto w-full">
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+            <div className="relative max-w-sm">
+              <iconify-icon
+                icon="solar:magnifer-linear"
+                stroke-width="1.5"
+                className="text-base absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+              />
               <Input
                 placeholder="Search by username or email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
+                className="pl-9"
               />
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-            </div>
-          ) : users.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              No users found
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Verified</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{user.username}</div>
-                          {user.firstName && user.lastName && (
-                            <div className="text-sm text-gray-500">
-                              {user.firstName} {user.lastName}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{user.role.name}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            user.status === "ACTIVE"
-                              ? "success"
-                              : user.status === "SUSPENDED"
-                              ? "destructive"
-                              : "secondary"
-                          }
-                        >
-                          {user.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          {user.emailVerified ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-gray-400" />
-                          )}
-                          {user.phoneVerified ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-gray-400" />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {userIsAdmin && (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setRoleUser(user);
-                                    setRoleOpen(true);
-                                  }}
-                                >
-                                  <UserCog className="mr-2 h-4 w-4" />
-                                  Change role
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setPermissionsUser(user);
-                                    setPermissionsOpen(true);
-                                  }}
-                                >
-                                  <Shield className="mr-2 h-4 w-4" />
-                                  Manage permissions
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setAssignmentsUser(user);
-                                    setAssignmentsOpen(true);
-                                  }}
-                                >
-                                  <MapPin className="mr-2 h-4 w-4" />
-                                  Manage assignments
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {userIsAdmin && user.status === "INACTIVE" && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleUserAction(user.id, "activate")
-                                }
-                              >
-                                <PlayCircle className="mr-2 h-4 w-4" />
-                                Activate
-                              </DropdownMenuItem>
-                            )}
-                            {user.status === "ACTIVE" && (
-                              <>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUserAction(user.id, "suspend")
-                                  }
-                                >
-                                  <Pause className="mr-2 h-4 w-4" />
-                                  Suspend
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUserAction(user.id, "deactivate")
-                                  }
-                                  className="text-red-600"
-                                >
-                                  <Ban className="mr-2 h-4 w-4" />
-                                  Deactivate
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {user.status === "SUSPENDED" && (
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  handleUserAction(user.id, "unsuspend")
-                                }
-                              >
-                                <PlayCircle className="mr-2 h-4 w-4" />
-                                Unsuspend
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+          <div className="p-5">
+            {loading ? (
+              <div className="py-10 text-center text-sm text-zinc-500">
+                Loading…
+              </div>
+            ) : users.length === 0 ? (
+              <div className="py-10 text-center text-sm text-zinc-500">
+                No users found
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Verified</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium text-zinc-900">
+                              {user.username}
+                            </div>
+                            {user.firstName && user.lastName && (
+                              <div className="text-xs text-zinc-500">
+                                {user.firstName} {user.lastName}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-zinc-700">
+                          {user.email}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{user.role.name}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              user.status === "ACTIVE"
+                                ? "success"
+                                : user.status === "SUSPENDED"
+                                ? "destructive"
+                                : "secondary"
+                            }
+                          >
+                            {user.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <iconify-icon
+                              icon={
+                                user.emailVerified
+                                  ? "solar:check-circle-linear"
+                                  : "solar:close-circle-linear"
+                              }
+                              stroke-width="1.5"
+                              className={
+                                user.emailVerified
+                                  ? "text-base text-emerald-600"
+                                  : "text-base text-zinc-400"
+                              }
+                            />
+                            <iconify-icon
+                              icon={
+                                user.phoneVerified
+                                  ? "solar:check-circle-linear"
+                                  : "solar:close-circle-linear"
+                              }
+                              stroke-width="1.5"
+                              className={
+                                user.phoneVerified
+                                  ? "text-base text-emerald-600"
+                                  : "text-base text-zinc-400"
+                              }
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <iconify-icon
+                                  icon="solar:menu-dots-linear"
+                                  stroke-width="1.5"
+                                  className="text-base"
+                                />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              {userIsAdmin && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setRoleUser(user);
+                                      setRoleOpen(true);
+                                    }}
+                                  >
+                                    <iconify-icon
+                                      icon="solar:user-linear"
+                                      stroke-width="1.5"
+                                      className="text-base mr-2"
+                                    />
+                                    Change role
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setPermissionsUser(user);
+                                      setPermissionsOpen(true);
+                                    }}
+                                  >
+                                    <iconify-icon
+                                      icon="solar:shield-check-linear"
+                                      stroke-width="1.5"
+                                      className="text-base mr-2"
+                                    />
+                                    Manage permissions
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setAssignmentsUser(user);
+                                      setAssignmentsOpen(true);
+                                    }}
+                                  >
+                                    <iconify-icon
+                                      icon="solar:map-point-linear"
+                                      stroke-width="1.5"
+                                      className="text-base mr-2"
+                                    />
+                                    Manage assignments
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {userIsAdmin && user.status === "INACTIVE" && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUserAction(user.id, "activate")
+                                  }
+                                >
+                                  <iconify-icon
+                                    icon="solar:play-circle-linear"
+                                    stroke-width="1.5"
+                                    className="text-base mr-2"
+                                  />
+                                  Activate
+                                </DropdownMenuItem>
+                              )}
+                              {user.status === "ACTIVE" && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleUserAction(user.id, "suspend")
+                                    }
+                                  >
+                                    <iconify-icon
+                                      icon="solar:pause-circle-linear"
+                                      stroke-width="1.5"
+                                      className="text-base mr-2"
+                                    />
+                                    Suspend
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      handleUserAction(user.id, "deactivate")
+                                    }
+                                    className="text-red-600"
+                                  >
+                                    <iconify-icon
+                                      icon="solar:forbidden-circle-linear"
+                                      stroke-width="1.5"
+                                      className="text-base mr-2"
+                                    />
+                                    Deactivate
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                              {user.status === "SUSPENDED" && (
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    handleUserAction(user.id, "unsuspend")
+                                  }
+                                >
+                                  <iconify-icon
+                                    icon="solar:play-circle-linear"
+                                    stroke-width="1.5"
+                                    className="text-base mr-2"
+                                  />
+                                  Unsuspend
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
 
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="text-sm text-gray-600">
-                    Page {page} of {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                {totalPages > 1 && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <Button
+                      variant="outline"
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      disabled={page === 1}
+                    >
+                      Previous
+                    </Button>
+                    <span className="text-sm text-zinc-500">
+                      Page {page} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
+                      disabled={page === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </>
   );
 }

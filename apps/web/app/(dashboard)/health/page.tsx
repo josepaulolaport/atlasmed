@@ -4,23 +4,39 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { healthApi } from "@/lib/api/health";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import {
-  Activity,
-  Database,
-  Server,
-  Users,
-  Shield,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  TrendingUp,
-} from "lucide-react";
 import type { HealthStatus } from "@/types/api";
 import { canViewHealth } from "@/lib/permissions";
 import { formatDateTime } from "@/lib/utils";
+
+const statusIcons: Record<HealthStatus["status"], string> = {
+  healthy: "solar:check-circle-linear",
+  degraded: "solar:danger-triangle-linear",
+  unhealthy: "solar:close-circle-linear",
+};
+
+const statusIconColors: Record<HealthStatus["status"], string> = {
+  healthy: "text-emerald-600",
+  degraded: "text-amber-500",
+  unhealthy: "text-red-600",
+};
+
+function StatusBadge({ status }: { status: HealthStatus["status"] }) {
+  if (status === "healthy") return <Badge variant="success">Healthy</Badge>;
+  if (status === "degraded") return <Badge variant="warning">Degraded</Badge>;
+  return <Badge variant="destructive">Unhealthy</Badge>;
+}
+
+function StatusIcon({ status }: { status: HealthStatus["status"] }) {
+  return (
+    <iconify-icon
+      icon={statusIcons[status]}
+      stroke-width="1.5"
+      className={`text-xl ${statusIconColors[status]}`}
+    />
+  );
+}
 
 export default function HealthPage() {
   const { user } = useAuth();
@@ -60,252 +76,285 @@ export default function HealthPage() {
     return null;
   }
 
-  if (loading || !health) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
-  const statusIcon = {
-    healthy: <CheckCircle2 className="h-6 w-6 text-green-600" />,
-    degraded: <AlertTriangle className="h-6 w-6 text-yellow-600" />,
-    unhealthy: <XCircle className="h-6 w-6 text-red-600" />,
-  };
-
-  const statusBadge = {
-    healthy: <Badge variant="success">Healthy</Badge>,
-    degraded: <Badge variant="warning">Degraded</Badge>,
-    unhealthy: <Badge variant="destructive">Unhealthy</Badge>,
-  };
-
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">System Health</h1>
-        <p className="mt-2 text-gray-600">
-          Monitor system status and performance metrics
-        </p>
-        <p className="mt-1 text-sm text-gray-500">
-          Last updated: {formatDateTime(health.timestamp)}
-        </p>
-      </div>
-
-      <div className="mb-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                Overall Status
-              </span>
-              {statusBadge[health.status]}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4">
-              {statusIcon[health.status]}
-              <div>
-                <p className="text-lg font-semibold capitalize">
-                  {health.status}
-                </p>
-                <p className="text-sm text-gray-600">
-                  All systems are{" "}
-                  {health.status === "healthy"
-                    ? "operating normally"
-                    : health.status === "degraded"
-                    ? "experiencing some issues"
-                    : "experiencing critical issues"}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Database</CardTitle>
-            <Database className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                {statusBadge[health.checks.database.status]}
-                {health.checks.database.responseTime && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    Response time: {health.checks.database.responseTime}ms
-                  </p>
-                )}
-              </div>
-              {statusIcon[health.checks.database.status]}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Redis Cache</CardTitle>
-            <Server className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                {statusBadge[health.checks.redis.status]}
-                {health.checks.redis.responseTime && (
-                  <p className="mt-2 text-xs text-gray-500">
-                    Response time: {health.checks.redis.responseTime}ms
-                  </p>
-                )}
-              </div>
-              {statusIcon[health.checks.redis.status]}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
-            <Activity className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div>
-              <div className="text-2xl font-bold">
-                {health.checks.memory.percentage.toFixed(1)}%
-              </div>
-              <p className="text-xs text-gray-500">
-                {(health.checks.memory.used / 1024 / 1024 / 1024).toFixed(2)} GB /{" "}
-                {(health.checks.memory.total / 1024 / 1024 / 1024).toFixed(2)} GB
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+              System Health
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Monitor system status and performance metrics
+            </p>
+            {health && (
+              <p className="text-xs text-zinc-400 mt-1">
+                Last updated: {formatDateTime(health.timestamp)}
               </p>
-              <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                <div
-                  className={`h-full ${
-                    health.checks.memory.percentage > 80
-                      ? "bg-red-600"
-                      : health.checks.memory.percentage > 60
-                      ? "bg-yellow-500"
-                      : "bg-green-600"
-                  }`}
-                  style={{ width: `${health.checks.memory.percentage}%` }}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          </div>
+        </div>
       </div>
 
-      {health.metrics && (
-        <>
-          <div className="mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Application Metrics
-            </h2>
+      <div className="p-6 max-w-6xl mx-auto w-full space-y-6">
+        {loading || !health ? (
+          <div className="py-10 text-center text-sm text-zinc-500">
+            Loading…
           </div>
-
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Active Users
-                </CardTitle>
-                <Users className="h-4 w-4 text-gray-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {health.metrics.activeUsers}
+        ) : (
+          <>
+            <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <iconify-icon
+                    icon="solar:pulse-linear"
+                    stroke-width="1.5"
+                    className="text-base text-zinc-500"
+                  />
+                  <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                    Overall Status
+                  </h3>
                 </div>
-                <p className="text-xs text-gray-500">Currently online</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Active Sessions
-                </CardTitle>
-                <Shield className="h-4 w-4 text-gray-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {health.metrics.activeSessions}
+                <StatusBadge status={health.status} />
+              </div>
+              <div className="p-5">
+                <div className="flex items-center gap-4">
+                  <StatusIcon status={health.status} />
+                  <div>
+                    <p className="text-base font-medium text-zinc-900 capitalize">
+                      {health.status}
+                    </p>
+                    <p className="text-sm text-zinc-500">
+                      All systems are{" "}
+                      {health.status === "healthy"
+                        ? "operating normally"
+                        : health.status === "degraded"
+                        ? "experiencing some issues"
+                        : "experiencing critical issues"}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500">Total sessions</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Login Success Rate
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-gray-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {(health.metrics.loginSuccessRate * 100).toFixed(1)}%
-                </div>
-                <p className="text-xs text-gray-500">Successful logins</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Password Resets
-                </CardTitle>
-                <Activity className="h-4 w-4 text-gray-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {health.metrics.passwordResets}
-                </div>
-                <p className="text-xs text-gray-500">This period</p>
-              </CardContent>
-            </Card>
-          </div>
-        </>
-      )}
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Health Check Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 text-sm">
-            <div>
-              <h4 className="font-medium text-gray-900">Monitoring Interval</h4>
-              <p className="text-gray-600">
-                Health status is automatically refreshed every 30 seconds
-              </p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-medium text-gray-900">Status Definitions</h4>
-              <ul className="mt-2 space-y-1 text-gray-600">
-                <li>
-                  <Badge variant="success" className="mr-2">
-                    Healthy
-                  </Badge>
-                  All systems operating normally
-                </li>
-                <li>
-                  <Badge variant="warning" className="mr-2">
-                    Degraded
-                  </Badge>
-                  Some services experiencing issues
-                </li>
-                <li>
-                  <Badge variant="destructive" className="mr-2">
-                    Unhealthy
-                  </Badge>
-                  Critical systems are down
-                </li>
-              </ul>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                    Database
+                  </h3>
+                  <iconify-icon
+                    icon="solar:database-linear"
+                    stroke-width="1.5"
+                    className="text-base text-zinc-500"
+                  />
+                </div>
+                <div className="p-5 flex items-center justify-between">
+                  <div>
+                    <StatusBadge status={health.checks.database.status} />
+                    {health.checks.database.responseTime && (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Response time: {health.checks.database.responseTime}ms
+                      </p>
+                    )}
+                  </div>
+                  <StatusIcon status={health.checks.database.status} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                    Redis Cache
+                  </h3>
+                  <iconify-icon
+                    icon="solar:server-linear"
+                    stroke-width="1.5"
+                    className="text-base text-zinc-500"
+                  />
+                </div>
+                <div className="p-5 flex items-center justify-between">
+                  <div>
+                    <StatusBadge status={health.checks.redis.status} />
+                    {health.checks.redis.responseTime && (
+                      <p className="mt-2 text-xs text-zinc-500">
+                        Response time: {health.checks.redis.responseTime}ms
+                      </p>
+                    )}
+                  </div>
+                  <StatusIcon status={health.checks.redis.status} />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                    Memory Usage
+                  </h3>
+                  <iconify-icon
+                    icon="solar:pulse-linear"
+                    stroke-width="1.5"
+                    className="text-base text-zinc-500"
+                  />
+                </div>
+                <div className="p-5">
+                  <div className="text-2xl font-medium tracking-tight text-zinc-900">
+                    {health.checks.memory.percentage.toFixed(1)}%
+                  </div>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    {(health.checks.memory.used / 1024 / 1024 / 1024).toFixed(2)}{" "}
+                    GB /{" "}
+                    {(health.checks.memory.total / 1024 / 1024 / 1024).toFixed(2)}{" "}
+                    GB
+                  </p>
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-zinc-100">
+                    <div
+                      className={`h-full ${
+                        health.checks.memory.percentage > 80
+                          ? "bg-red-500"
+                          : health.checks.memory.percentage > 60
+                          ? "bg-amber-500"
+                          : "bg-emerald-500"
+                      }`}
+                      style={{ width: `${health.checks.memory.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+
+            {health.metrics && (
+              <>
+                <h2 className="text-base font-medium text-zinc-900 tracking-tight">
+                  Application Metrics
+                </h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                        Active Users
+                      </h3>
+                      <iconify-icon
+                        icon="solar:users-group-two-linear"
+                        stroke-width="1.5"
+                        className="text-base text-zinc-500"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <div className="text-2xl font-medium tracking-tight text-zinc-900">
+                        {health.metrics.activeUsers}
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Currently online
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                        Active Sessions
+                      </h3>
+                      <iconify-icon
+                        icon="solar:shield-check-linear"
+                        stroke-width="1.5"
+                        className="text-base text-zinc-500"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <div className="text-2xl font-medium tracking-tight text-zinc-900">
+                        {health.metrics.activeSessions}
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Total sessions
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                        Login Success Rate
+                      </h3>
+                      <iconify-icon
+                        icon="solar:graph-up-linear"
+                        stroke-width="1.5"
+                        className="text-base text-zinc-500"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <div className="text-2xl font-medium tracking-tight text-zinc-900">
+                        {(health.metrics.loginSuccessRate * 100).toFixed(1)}%
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Successful logins
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+                      <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                        Password Resets
+                      </h3>
+                      <iconify-icon
+                        icon="solar:pulse-linear"
+                        stroke-width="1.5"
+                        className="text-base text-zinc-500"
+                      />
+                    </div>
+                    <div className="p-5">
+                      <div className="text-2xl font-medium tracking-tight text-zinc-900">
+                        {health.metrics.passwordResets}
+                      </div>
+                      <p className="text-xs text-zinc-500 mt-1">This period</p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+                <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                  Health Check Details
+                </h3>
+              </div>
+              <div className="p-5">
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h4 className="font-medium text-zinc-900">
+                      Monitoring interval
+                    </h4>
+                    <p className="text-zinc-500 mt-1">
+                      Health status is automatically refreshed every 30 seconds
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-zinc-900">
+                      Status definitions
+                    </h4>
+                    <ul className="mt-2 space-y-2 text-zinc-500">
+                      <li className="flex items-center gap-2">
+                        <Badge variant="success">Healthy</Badge>
+                        All systems operating normally
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge variant="warning">Degraded</Badge>
+                        Some services experiencing issues
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <Badge variant="destructive">Unhealthy</Badge>
+                        Critical systems are down
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </>
   );
 }

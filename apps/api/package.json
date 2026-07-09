@@ -30,8 +30,10 @@
   },
   "dependencies": {
     "@atlasmed/access": "workspace:*",
+    "@atlasmed/cnes-ingestion": "workspace:*",
     "@atlasmed/config": "workspace:*",
     "@atlasmed/mapbox": "workspace:*",
+    "@temporalio/client": "^1.11.7",
     "@elysiajs/cookie": "^0.8.0",
     "@elysiajs/cors": "^1.4.2",
     "@elysiajs/openapi": "^1.4.15",

@@ -7,7 +7,9 @@ import {
 } from "../../../../shared/errors";
 import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
 import type { FacilityProfessionalRepository } from "../../../facility/application/interfaces/facility-professional.repository.interface";
+import type { FacilityRepresentativeRepository } from "../../../facility/application/interfaces/facility-representative.repository.interface";
 import type { FacilityGeocodingService } from "../../../facility/application/services/facility-geocoding.service";
+import type { ProfessionalRepository } from "../../../professional/application/interfaces/professional.repository.interface";
 import type {
   IngestionSuggestionRecord,
   IngestionSuggestionRepository,
@@ -33,7 +35,11 @@ function assertSuggestionInScope(
 interface Dependencies {
   suggestionRepository: IngestionSuggestionRepository;
   facilityRepository: FacilityRepository;
+  // Only required for suggestion types that mutate professionals / representatives.
+  // Read/list/reject and facility-only approvals do not need them.
+  professionalRepository?: ProfessionalRepository;
   facilityProfessionalRepository: FacilityProfessionalRepository;
+  facilityRepresentativeRepository?: FacilityRepresentativeRepository;
   facilityGeocodingService?: FacilityGeocodingService;
   auditLogService?: AuditLogService;
 }
@@ -71,6 +77,40 @@ function parseFieldUpdatePayload(payload: Record<string, unknown>): {
     }
     if (field === "lng") {
       updates.lng = typeof proposed === "number" ? proposed : null;
+    }
+  }
+
+  return updates;
+}
+
+function parseProfessionalFieldUpdatePayload(payload: Record<string, unknown>): {
+  firstName?: string;
+  lastName?: string;
+  email?: string | null;
+} {
+  const changes = Array.isArray(payload.changes) ? payload.changes : [];
+  const updates: {
+    firstName?: string;
+    lastName?: string;
+    email?: string | null;
+  } = {};
+
+  for (const change of changes) {
+    if (!change || typeof change !== "object") {
+      continue;
+    }
+
+    const field = (change as { field?: string }).field;
+    const proposed = (change as { proposed?: unknown }).proposed;
+
+    if (field === "firstName" && typeof proposed === "string") {
+      updates.firstName = proposed;
+    }
+    if (field === "lastName" && typeof proposed === "string") {
+      updates.lastName = proposed;
+    }
+    if (field === "email") {
+      updates.email = typeof proposed === "string" ? proposed : null;
     }
   }
 
@@ -216,6 +256,103 @@ export class ApproveSuggestionUseCase {
             suggestion.facilityId
           );
         }
+        break;
+      }
+      case "PROFESSIONAL_FIELD_UPDATE": {
+        if (!suggestion.professionalId) {
+          throw new ValidationError([
+            {
+              field: "professionalId",
+              message: "Professional field update suggestion missing professionalId",
+            },
+          ]);
+        }
+
+        if (!this.deps.professionalRepository) {
+          throw new Error("professionalRepository is required to approve professional field updates");
+        }
+
+        const updates = parseProfessionalFieldUpdatePayload(suggestion.payload);
+        await this.deps.professionalRepository.update(suggestion.professionalId, updates);
+        break;
+      }
+      case "FACILITY_PROFESSIONAL_ADD": {
+        if (!suggestion.facilityId || !suggestion.professionalId) {
+          throw new ValidationError([
+            {
+              field: "association",
+              message: "Association add suggestion missing facilityId or professionalId",
+            },
+          ]);
+        }
+
+        await this.deps.facilityProfessionalRepository.upsertSourceAssociation({
+          facilityId: suggestion.facilityId,
+          professionalId: suggestion.professionalId,
+          sourceLastSeenAt: new Date(),
+        });
+        break;
+      }
+      case "FACILITY_REPRESENTATIVE_ADD":
+      case "FACILITY_REPRESENTATIVE_FIELD_UPDATE": {
+        if (!this.deps.facilityRepresentativeRepository) {
+          throw new Error("facilityRepresentativeRepository is required to approve representative suggestions");
+        }
+        if (!suggestion.facilityId) {
+          throw new ValidationError([
+            { field: "facilityId", message: "Representative suggestion missing facilityId" },
+          ]);
+        }
+
+        const payload = suggestion.payload;
+        const externalSourceKey =
+          typeof payload.externalSourceKey === "string" ? payload.externalSourceKey : null;
+        const representativeName =
+          typeof payload.representativeName === "string" ? payload.representativeName : null;
+
+        if (!externalSourceKey || !representativeName) {
+          throw new ValidationError([
+            { field: "payload", message: "Representative suggestion missing registry payload" },
+          ]);
+        }
+
+        await this.deps.facilityRepresentativeRepository.upsertFromRegistry({
+          facilityId: suggestion.facilityId,
+          externalSourceKey,
+          representativeName,
+          roleTitle:
+            typeof payload.roleTitle === "string" ? payload.roleTitle : null,
+          email: typeof payload.email === "string" ? payload.email : null,
+          taxId: typeof payload.taxId === "string" ? payload.taxId : null,
+        });
+        break;
+      }
+      case "FACILITY_REPRESENTATIVE_REMOVAL": {
+        if (!this.deps.facilityRepresentativeRepository) {
+          throw new Error("facilityRepresentativeRepository is required to approve representative suggestions");
+        }
+        if (!suggestion.facilityId) {
+          throw new ValidationError([
+            { field: "facilityId", message: "Representative removal suggestion missing facilityId" },
+          ]);
+        }
+
+        const payload = suggestion.payload;
+        const externalSourceKey =
+          typeof payload.externalSourceKey === "string" ? payload.externalSourceKey : null;
+
+        if (!externalSourceKey) {
+          throw new ValidationError([
+            { field: "payload", message: "Representative removal suggestion missing externalSourceKey" },
+          ]);
+        }
+
+        await this.deps.facilityRepresentativeRepository.endSourceRepresentative({
+          facilityId: suggestion.facilityId,
+          externalSourceKey,
+          endedByUserId: input.userId,
+          endReason: "suggestion_approved",
+        });
         break;
       }
     }

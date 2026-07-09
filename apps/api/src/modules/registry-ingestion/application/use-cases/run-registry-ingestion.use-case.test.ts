@@ -14,6 +14,7 @@ describe("RunRegistryIngestionUseCase", () => {
       auditLogService: { log: mock(async () => {}) } as unknown as AuditLogService,
       acquireLock: async () => false,
       releaseLock: mock(async () => {}),
+      registrySourceMode: "mock",
     });
 
     const result = await useCase.execute();
@@ -51,18 +52,33 @@ describe("RunRegistryIngestionUseCase", () => {
         id: "run-1",
         sourceProvider: "mock_registry",
         status: "RUNNING" as const,
+        phase: null,
+        temporalWorkflowId: null,
+        referenceAno: null,
+        referenceMes: null,
         startedAt: new Date("2024-01-01"),
         completedAt: null,
+        promotedAt: null,
         stats: null,
+        validationReport: null,
+        archiveManifest: null,
         error: null,
       })),
+      findById: mock(async () => null),
       complete: mock(async (_id, stats) => ({
         id: "run-1",
         sourceProvider: "mock_registry",
         status: "COMPLETED" as const,
+        phase: null,
+        temporalWorkflowId: null,
+        referenceAno: null,
+        referenceMes: null,
         startedAt: new Date("2024-01-01"),
         completedAt: new Date("2024-01-01"),
+        promotedAt: null,
         stats,
+        validationReport: null,
+        archiveManifest: null,
         error: null,
       })),
       fail: mock(async () => {
@@ -101,6 +117,7 @@ describe("RunRegistryIngestionUseCase", () => {
       auditLogService: { log: auditLog } as unknown as AuditLogService,
       acquireLock: async () => true,
       releaseLock,
+      registrySourceMode: "mock",
     });
 
     const result = await useCase.execute({ actorUserId: "admin-1" });
@@ -112,5 +129,61 @@ describe("RunRegistryIngestionUseCase", () => {
     expect(registrySyncService.syncSnapshot).toHaveBeenCalled();
     expect(releaseLock).toHaveBeenCalled();
     expect(auditLog).toHaveBeenCalled();
+  });
+
+  it("starts temporal workflow when registry source mode is temporal", async () => {
+    const startTemporalWorkflow = mock(async () => ({
+      workflowId: "cnes-ingestion-2026-06",
+    }));
+
+    const ingestionRunRepository: IngestionRunRepository = {
+      create: mock(async () => ({
+        id: "run-temporal",
+        sourceProvider: "cnes",
+        status: "RUNNING" as const,
+        phase: null,
+        temporalWorkflowId: "cnes-ingestion-2026-06",
+        referenceAno: 2026,
+        referenceMes: 6,
+        startedAt: new Date("2024-01-01"),
+        completedAt: null,
+        promotedAt: null,
+        stats: null,
+        validationReport: null,
+        archiveManifest: null,
+        error: null,
+      })),
+      findById: mock(async () => null),
+      complete: mock(async () => {
+        throw new Error("not used");
+      }),
+      fail: mock(async () => {
+        throw new Error("not used");
+      }),
+      findRecent: mock(async () => ({ runs: [], total: 0 })),
+    };
+
+    const useCase = new RunRegistryIngestionUseCase({
+      registrySource: { fetchSnapshot: mock(async () => { throw new Error("not called"); }) } as RegistrySourcePort,
+      ingestionRunRepository,
+      registrySyncService: {} as RegistrySyncService,
+      auditLogService: { log: mock(async () => {}) } as unknown as AuditLogService,
+      acquireLock: async () => true,
+      releaseLock: mock(async () => {}),
+      registrySourceMode: "temporal",
+      startTemporalWorkflow,
+    });
+
+    const result = await useCase.execute({ actorUserId: "admin-1", ano: 2026, mes: 6 });
+
+    expect(result.skipped).toBe(false);
+    if (!result.skipped && result.mode === "temporal") {
+      expect(result.workflowId).toBe("cnes-ingestion-2026-06");
+    }
+    expect(startTemporalWorkflow).toHaveBeenCalledWith({
+      ingestionRunId: "run-temporal",
+      ano: 2026,
+      mes: 6,
+    });
   });
 });

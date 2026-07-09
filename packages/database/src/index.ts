@@ -21,6 +21,7 @@ export {
   AuditEventSeverity,
   VerificationTokenType,
   IngestionRunStatus,
+  IngestionRunPhase,
   IngestionSuggestionType,
   IngestionSuggestionStatus,
   TerritoryNodeType,

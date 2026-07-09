@@ -34,4 +34,11 @@ export interface FacilityRepresentativeRepository {
     externalSourceKey: string;
     confirmedByUserId: string;
   }): Promise<FacilityRepresentativeRecord>;
+
+  endSourceRepresentative(params: {
+    facilityId: string;
+    externalSourceKey: string;
+    endedByUserId: string;
+    endReason?: string;
+  }): Promise<FacilityRepresentativeRecord | null>;
 }

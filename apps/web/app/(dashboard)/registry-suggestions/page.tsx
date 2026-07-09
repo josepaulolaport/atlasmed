@@ -1,30 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { registryApi } from "@/lib/api/registry";
 import type { RegistryDemoResult, RegistrySuggestion } from "@/types/facility";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { hasMinimumRole } from "@/lib/permissions";
+import { cn } from "@/lib/utils";
 
 const TYPE_LABELS: Record<RegistrySuggestion["type"], string> = {
-  FACILITY_REGISTRY_DEACTIVATED: "Remove clinic",
-  FACILITY_REGISTRY_REACTIVATED: "Reactivate clinic",
-  DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Remove doctor from clinic",
+  FACILITY_REGISTRY_DEACTIVATED: "Facility Deactivation",
+  FACILITY_REGISTRY_REACTIVATED: "Facility Reactivation",
+  DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Professional Removal",
 };
 
-function getPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
+const DOT_COLOR: Record<RegistrySuggestion["type"], string> = {
+  FACILITY_REGISTRY_DEACTIVATED: "bg-amber-500",
+  FACILITY_REGISTRY_REACTIVATED: "bg-emerald-500",
+  DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "bg-blue-500",
+};
+
+function getPayloadString(
+  payload: Record<string, unknown>,
+  key: string
+): string | undefined {
   const value = payload[key];
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
@@ -38,20 +39,25 @@ function getFacilityLabel(suggestion: RegistrySuggestion): string {
   );
 }
 
-function getProfessionalLabel(suggestion: RegistrySuggestion): string {
+function getProfessionalLabel(
+  suggestion: RegistrySuggestion
+): string | undefined {
   const firstName = getPayloadString(suggestion.payload, "firstName");
   const lastName = getPayloadString(suggestion.payload, "lastName");
   if (firstName || lastName) {
     return [firstName, lastName].filter(Boolean).join(" ");
   }
-
-  return getPayloadString(suggestion.payload, "doctorExternalSourceId") || suggestion.professionalId || "—";
+  return (
+    getPayloadString(suggestion.payload, "doctorExternalSourceId") ||
+    suggestion.professionalId
+  );
 }
 
 export default function RegistrySuggestionsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [suggestions, setSuggestions] = useState<RegistrySuggestion[]>([]);
+  const [history, setHistory] = useState<RegistrySuggestion[]>([]);
   const [demoResult, setDemoResult] = useState<RegistryDemoResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [runningDemo, setRunningDemo] = useState(false);
@@ -59,11 +65,14 @@ export default function RegistrySuggestionsPage() {
   const loadSuggestions = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await registryApi.getSuggestions({
-        status: "PENDING",
-        limit: 100,
-      });
-      setSuggestions(response.data);
+      const [pending, resolved] = await Promise.all([
+        registryApi.getSuggestions({ status: "PENDING", limit: 100 }),
+        registryApi.getSuggestions({ limit: 20 }),
+      ]);
+      setSuggestions(pending.data);
+      setHistory(
+        resolved.data.filter((s) => s.status !== "PENDING").slice(0, 10)
+      );
     } catch {
       toast({
         title: "Error",
@@ -82,20 +91,28 @@ export default function RegistrySuggestionsPage() {
   const handleApprove = async (id: string) => {
     try {
       await registryApi.approveSuggestion(id);
-      toast({ title: "Approved", description: "Suggestion approved" });
+      toast({ title: "Approved", description: "Suggestion applied" });
       await loadSuggestions();
     } catch {
-      toast({ title: "Error", description: "Failed to approve suggestion", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to approve suggestion",
+        variant: "destructive",
+      });
     }
   };
 
   const handleReject = async (id: string) => {
     try {
       await registryApi.rejectSuggestion(id);
-      toast({ title: "Rejected", description: "Suggestion rejected" });
+      toast({ title: "Rejected", description: "Suggestion dismissed" });
       await loadSuggestions();
     } catch {
-      toast({ title: "Error", description: "Failed to reject suggestion", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to reject suggestion",
+        variant: "destructive",
+      });
     }
   };
 
@@ -108,7 +125,6 @@ export default function RegistrySuggestionsPage() {
       toast({
         title: "Demo scenario complete",
         description: `${result.summary.pendingCount} pending suggestion(s) generated`,
-        variant: "success",
       });
     } catch {
       toast({
@@ -121,138 +137,309 @@ export default function RegistrySuggestionsPage() {
     }
   };
 
-  if (!user) return null;
+  const isAdmin = user && hasMinimumRole(user.role.name, "ADMIN");
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Registry Suggestions</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Review source-driven clinic and facility-professional changes before applying them
-          </p>
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+              Registry Suggestions
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Review source-driven facility and professional changes before
+              applying them.
+            </p>
+          </div>
+          {isAdmin && (
+            <Button onClick={handleRunDemo} disabled={runningDemo}>
+              <iconify-icon icon="solar:play-circle-linear" stroke-width="1.5" />
+              {runningDemo ? "Running…" : "Run demo scenario"}
+            </Button>
+          )}
         </div>
-        {hasMinimumRole(user.role.name, "ADMIN") && (
-          <Button onClick={handleRunDemo} disabled={runningDemo}>
-            {runningDemo ? "Running demo..." : "Run demo scenario"}
-          </Button>
-        )}
       </div>
 
-      {hasMinimumRole(user.role.name, "ADMIN") && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Mock ingestion demo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-gray-600">
-            <p>
-              Click <strong>Run demo scenario</strong> to reset mock registry data and replay three
-              snapshots:
+      <div className="p-6 max-w-5xl mx-auto w-full">
+        <div className="mb-6 p-4 rounded-lg bg-zinc-50 border border-zinc-200 flex items-start gap-3">
+          <iconify-icon
+            icon="solar:info-circle-linear"
+            stroke-width="1.5"
+            className="text-zinc-400 text-lg mt-0.5"
+          />
+          <div>
+            <h4 className="text-sm font-medium text-zinc-900">
+              Registry Review
+            </h4>
+            <p className="text-sm text-zinc-500 mt-1">
+              CNES data is imported and compared against your CRM truth.
+              Approve or reject suggested changes below. Your manual edits are
+              always protected and never silently overwritten.
             </p>
-            <ol className="list-decimal space-y-1 pl-5">
-              <li>Load baseline clinics and doctors</li>
-              <li>Remove Alpha Medical Center from the source feed</li>
-              <li>Drop John Doe&apos;s link to Alpha Medical Center</li>
-            </ol>
-            <p>
-              That produces pending suggestions you can approve or reject below without touching real
-              data outside the mock provider.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
 
-      {demoResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Last demo run</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary">
-                {demoResult.summary.pendingCount} pending
-              </Badge>
-              <Badge variant="outline">
-                {demoResult.summary.clinicRemovals} clinic removal
-                {demoResult.summary.clinicRemovals === 1 ? "" : "s"}
-              </Badge>
-              <Badge variant="outline">
-                {demoResult.summary.doctorClinicRemovals} facility-professional removal
-                {demoResult.summary.doctorClinicRemovals === 1 ? "" : "s"}
-              </Badge>
+        {demoResult && (
+          <div className="mb-6 rounded-xl border border-zinc-200 bg-white shadow-sm">
+            <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50/50">
+              <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                Last demo run
+              </h3>
             </div>
-            <ul className="space-y-2 text-sm text-gray-600">
-              {demoResult.steps.map((step) => (
-                <li key={step.fixture}>
-                  {step.skipped ? (
-                    <span>{step.label} — skipped ({step.reason})</span>
-                  ) : (
-                    <span>
-                      {step.label}
-                      {typeof step.suggestionsCreated === "number" &&
-                        step.suggestionsCreated > 0 &&
-                        ` — ${step.suggestionsCreated} suggestion(s) created`}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="rounded-lg border bg-white">
-        {loading ? (
-          <div className="py-8 text-center text-gray-500">Loading suggestions...</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Clinic</TableHead>
-                <TableHead>Doctor</TableHead>
-                <TableHead>Suggested</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {suggestions.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-8 text-center text-gray-500">
-                    No pending suggestions. Run the demo scenario to generate sample items.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                suggestions.map((suggestion) => (
-                  <TableRow key={suggestion.id}>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {TYPE_LABELS[suggestion.type] ?? suggestion.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{suggestion.reason || "—"}</TableCell>
-                    <TableCell>{getFacilityLabel(suggestion)}</TableCell>
-                    <TableCell>{getProfessionalLabel(suggestion)}</TableCell>
-                    <TableCell>{new Date(suggestion.suggestedAt).toLocaleString()}</TableCell>
-                    <TableCell className="space-x-2 text-right">
-                      <Button size="sm" onClick={() => handleApprove(suggestion.id)}>
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleReject(suggestion.id)}
-                      >
-                        Reject
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+            <div className="p-5 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="info">
+                  {demoResult.summary.pendingCount} pending
+                </Badge>
+                <Badge variant="secondary">
+                  {demoResult.summary.clinicRemovals} facility removal
+                  {demoResult.summary.clinicRemovals === 1 ? "" : "s"}
+                </Badge>
+                <Badge variant="secondary">
+                  {demoResult.summary.doctorClinicRemovals} professional link
+                  {demoResult.summary.doctorClinicRemovals === 1 ? "" : "s"}
+                </Badge>
+              </div>
+              <ul className="space-y-1 text-sm text-zinc-600">
+                {demoResult.steps.map((step) => (
+                  <li key={step.fixture}>
+                    {step.skipped
+                      ? `${step.label} — skipped (${step.reason})`
+                      : `${step.label}${
+                          typeof step.suggestionsCreated === "number" &&
+                          step.suggestionsCreated > 0
+                            ? ` — ${step.suggestionsCreated} suggestion(s) created`
+                            : ""
+                        }`}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         )}
+
+        {loading ? (
+          <div className="py-10 text-center text-sm text-zinc-500">
+            Loading suggestions…
+          </div>
+        ) : suggestions.length === 0 ? (
+          <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
+            <iconify-icon
+              icon="solar:check-circle-linear"
+              stroke-width="1.5"
+              className="text-emerald-500 text-3xl"
+            />
+            <h4 className="mt-3 text-sm font-medium text-zinc-900">
+              No pending suggestions
+            </h4>
+            <p className="mt-1 text-sm text-zinc-500">
+              {isAdmin
+                ? "Run the demo scenario to generate sample items."
+                : "You are up to date."}
+            </p>
+          </div>
+        ) : (
+          suggestions.map((s) => (
+            <SuggestionCard
+              key={s.id}
+              suggestion={s}
+              onApprove={() => handleApprove(s.id)}
+              onReject={() => handleReject(s.id)}
+            />
+          ))
+        )}
+
+        {history.length > 0 && (
+          <div className="mt-12">
+            <h3 className="text-sm font-medium text-zinc-900 mb-4 tracking-tight">
+              Recent Registry Activity
+            </h3>
+            <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-zinc-50 border-b border-zinc-200">
+                    <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
+                      Event
+                    </th>
+                    <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
+                      Entity
+                    </th>
+                    <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
+                      Resolution
+                    </th>
+                    <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 text-sm text-zinc-700">
+                  {history.map((h) => (
+                    <tr
+                      key={h.id}
+                      className="hover:bg-zinc-50/50 transition-colors"
+                    >
+                      <td className="py-3 px-4 flex items-center gap-2">
+                        <iconify-icon
+                          icon={
+                            h.status === "APPROVED"
+                              ? "solar:check-circle-linear"
+                              : "solar:close-circle-linear"
+                          }
+                          className={cn(
+                            "text-base",
+                            h.status === "APPROVED"
+                              ? "text-emerald-500"
+                              : "text-zinc-400"
+                          )}
+                        />
+                        {TYPE_LABELS[h.type]}
+                      </td>
+                      <td className="py-3 px-4 text-zinc-900">
+                        {getProfessionalLabel(h) ?? getFacilityLabel(h)}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge
+                          variant={
+                            h.status === "APPROVED" ? "success" : "secondary"
+                          }
+                        >
+                          {h.status.charAt(0) + h.status.slice(1).toLowerCase()}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-zinc-500 text-xs">
+                        {new Date(h.resolvedAt ?? h.suggestedAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function SuggestionCard({
+  suggestion,
+  onApprove,
+  onReject,
+}: {
+  suggestion: RegistrySuggestion;
+  onApprove: () => void;
+  onReject: () => void;
+}) {
+  const facilityLabel = useMemo(
+    () => getFacilityLabel(suggestion),
+    [suggestion]
+  );
+  const professionalLabel = useMemo(
+    () => getProfessionalLabel(suggestion),
+    [suggestion]
+  );
+
+  return (
+    <div className="border border-zinc-200 rounded-xl overflow-hidden mb-6 bg-white shadow-sm">
+      <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span
+            className={cn("w-2 h-2 rounded-full", DOT_COLOR[suggestion.type])}
+          />
+          <h3 className="text-sm font-medium text-zinc-900">
+            {TYPE_LABELS[suggestion.type]}
+          </h3>
+          <span className="text-xs text-zinc-400 ml-2">
+            Run #{suggestion.ingestionRunId.slice(0, 8)} •{" "}
+            {new Date(suggestion.suggestedAt).toLocaleString()}
+          </span>
+        </div>
+        <Badge variant="secondary">Pending</Badge>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200">
+        <div className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-zinc-700">
+              <iconify-icon
+                icon="solar:lock-linear"
+                stroke-width="1.5"
+                className="text-zinc-400"
+              />
+              Current CRM Truth
+            </div>
+          </div>
+          <div className="space-y-3">
+            <FieldRow label="Facility" value={facilityLabel} />
+            {professionalLabel && (
+              <FieldRow label="Professional" value={professionalLabel} />
+            )}
+            <FieldRow
+              label="Reason"
+              value={suggestion.reason || "Registry mismatch"}
+            />
+          </div>
+        </div>
+
+        <div className="p-5 bg-blue-50/20 relative">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-blue-700">
+              <iconify-icon
+                icon="solar:magic-stick-3-linear"
+                stroke-width="1.5"
+                className="text-blue-500"
+              />
+              Registry Suggestion
+            </div>
+          </div>
+          <div className="space-y-3">
+            <FieldRow label="Action" value={TYPE_LABELS[suggestion.type]} highlight />
+            <div>
+              <label className="block text-xs font-medium text-blue-600/70 mb-1">
+                Payload
+              </label>
+              <pre className="text-xs text-zinc-700 bg-white border border-blue-200 rounded-md p-3 overflow-auto max-h-40">
+                {JSON.stringify(suggestion.payload, null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-5 py-4 border-t border-zinc-200 bg-white flex items-center justify-end gap-3">
+        <Button variant="ghost" onClick={onReject}>
+          Dismiss
+        </Button>
+        <Button onClick={onApprove}>Apply Suggestion</Button>
+      </div>
+    </div>
+  );
+}
+
+function FieldRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-zinc-500 mb-1">
+        {label}
+      </label>
+      <div
+        className={cn(
+          "text-sm text-zinc-900 rounded-md px-3 py-2 border",
+          highlight
+            ? "bg-blue-50 border-blue-200 shadow-sm ring-1 ring-blue-500/20"
+            : "bg-white border-zinc-200"
+        )}
+      >
+        {value}
       </div>
     </div>
   );

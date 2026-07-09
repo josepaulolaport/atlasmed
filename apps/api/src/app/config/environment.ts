@@ -304,14 +304,29 @@ const EnvironmentSchema = Type.Object({
     description: 'Days to retain INFO audit logs before cleanup',
   }),
 
-  REGISTRY_SOURCE: Type.String({
-    default: 'mock',
-    description: 'Registry ingestion source adapter (mock only for now)',
+  REGISTRY_SOURCE: Type.Union([Type.Literal("mock"), Type.Literal("temporal")], {
+    default: "temporal",
+    description: "Registry ingestion source: temporal workflow or mock fixture adapter",
   }),
 
   REGISTRY_MOCK_FIXTURE: Type.String({
     default: 'snapshot-v1.json',
     description: 'Mock registry fixture filename under registry-ingestion/fixtures',
+  }),
+
+  TEMPORAL_ADDRESS: Type.String({
+    default: 'localhost:7233',
+    description: 'Temporal gRPC address',
+  }),
+
+  TEMPORAL_NAMESPACE: Type.String({
+    default: 'default',
+    description: 'Temporal namespace',
+  }),
+
+  TEMPORAL_TASK_QUEUE: Type.String({
+    default: 'cnes-ingestion',
+    description: 'Temporal task queue for CNES ingestion worker',
   }),
 });
 
@@ -380,8 +395,13 @@ const processEnv = {
   SIEM_WEBHOOK_URL: process.env.SIEM_WEBHOOK_URL,
   SIEM_WEBHOOK_SECRET: process.env.SIEM_WEBHOOK_SECRET,
   AUDIT_LOG_RETENTION_DAYS: Number(process.env.AUDIT_LOG_RETENTION_DAYS ?? 90),
-  REGISTRY_SOURCE: process.env.REGISTRY_SOURCE ?? 'mock',
+  REGISTRY_SOURCE: (process.env.REGISTRY_SOURCE === 'temporal'
+    ? 'temporal'
+    : 'mock') as 'mock' | 'temporal',
   REGISTRY_MOCK_FIXTURE: process.env.REGISTRY_MOCK_FIXTURE ?? 'snapshot-v1.json',
+  TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS ?? 'localhost:7233',
+  TEMPORAL_NAMESPACE: process.env.TEMPORAL_NAMESPACE ?? 'default',
+  TEMPORAL_TASK_QUEUE: process.env.TEMPORAL_TASK_QUEUE ?? 'cnes-ingestion',
   MAPBOX_SECRET_TOKEN: process.env.MAPBOX_SECRET_TOKEN,
   MAPBOX_PUBLIC_TOKEN: process.env.MAPBOX_PUBLIC_TOKEN,
   MAPBOX_USERNAME: process.env.MAPBOX_USERNAME ?? 'mapbox',
