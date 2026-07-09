@@ -44,46 +44,23 @@ A production-ready Next.js frontend application for the AtlasMed healthcare mana
 - **Forms**: React Hook Form + Zod
 - **HTTP Client**: Axios with interceptors
 - **State Management**: React Context API
-- **Icons**: Lucide React
+- **Icons**: `iconify-icon` web component (Solar linear set)
 
 ## Getting Started
 
-### Prerequisites
+Full setup procedure — prerequisites, env, dev/build/start, ports, troubleshooting — lives in the skill:
 
-- Bun runtime installed
-- Backend API running on `http://localhost:3000`
+**→ `skills/procedure/web-dev-setup/SKILL.md`**
 
-### Installation
-
-```bash
-# Install dependencies
-cd apps/web
-bun install
-```
-
-### Environment Variables
-
-Create a `.env.local` file:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME=AtlasMed
-```
-
-### Development
+Quick reference:
 
 ```bash
-# Start development server
+cd apps/web && bun install
+# create .env.local with NEXT_PUBLIC_API_URL + NEXT_PUBLIC_APP_NAME
 bun dev
-
-# Build for production
-bun build
-
-# Start production server
-bun start
 ```
 
-The application will be available at `http://localhost:3000`.
+Available at `http://localhost:3000` (start API on another port if using both locally).
 
 ## Project Structure
 
@@ -95,7 +72,7 @@ apps/web/
 │   └── page.tsx           # Landing page
 ├── components/            # React components
 │   ├── auth/              # Auth-related components
-│   ├── layout/            # Layout components (navbar)
+│   ├── layout/            # Layout components (sidebar, top-header)
 │   └── ui/                # Reusable UI components
 ├── contexts/              # React contexts
 │   └── auth-context.tsx   # Authentication state
@@ -171,7 +148,7 @@ The application connects to the backend API at the configured `NEXT_PUBLIC_API_U
 3. **API Calls**: Use the API client functions in `lib/api/`
 4. **State**: Use the AuthContext for auth state
 5. **Styling**: Use TailwindCSS utility classes
-6. **Icons**: Use Lucide React icons
+6. **Icons**: Use `iconify-icon` with Solar linear icon set (`solar:xxx-linear`, `stroke-width="1.5"`)
 
 ## Production Deployment
 
