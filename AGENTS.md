@@ -14,8 +14,6 @@ Tool-specific configs (CLAUDE.md, .cursor/rules/*, etc.) should point here inste
 - `apps/workers` — Temporal workflow workers (registry ingestion, background jobs).
 - `packages/database` — Prisma schema, migrations, generated client, database helpers.
 - `packages/access` — CASL authorization rules, roles, row-level access.
-- `packages/auth` — Auth primitives (hashing, tokens, sessions, 2FA).
-- `packages/permissions` — High-level permission composition.
 - `packages/cnes-ingestion` — CNES / DataSUS adapters (FTP, parsing).
 - `packages/mapbox` — Mapbox API client wrappers.
 - `packages/config` — Shared runtime configuration.
@@ -24,16 +22,16 @@ Tool-specific configs (CLAUDE.md, .cursor/rules/*, etc.) should point here inste
 
 ## Task lifecycle (mandatory)
 
-Every AI editing session runs these six steps in order. No editing until step 5 is announced.
+Every AI editing session runs these steps in order. No editing until step 4 is announced.
 
 ### Step 1 — Classify
 
-Tag the task with three axes:
+Tag the task with two axes:
 
 ```
 domain(s):   web | api | mobile | workers | shared-package    (1 or more)
-procedure(s): create-endpoint | add-ui-screen | add-migration | …  (1–2)
-concerns:    from skills/CONCERNS.md                          (0–N)
+concerns:    what the task deals with — authorization, persistence, styling,
+             testing, docs, api-contract, background-jobs, offline-first, etc.
 ```
 
 ### Step 2 — Route
@@ -43,28 +41,20 @@ concerns:    from skills/CONCERNS.md                          (0–N)
 | Always | root `AGENTS.md` (Tier 0) |
 | Single domain | that domain's app/package `AGENTS.md` (Tier 1) |
 | Cross-boundary (2+ domains) | matching `docs/ai/integration-tasks/<combo>.md` FIRST — it names exact next-step files |
-| Concern in `[authorization, security]` | `packages/access/AGENTS.md` + `skills/cross-cutting/check-permissions` |
-| Concern in `[persistence, domain-model]` | `packages/database/AGENTS.md` |
-| Concern in `[messaging, background-jobs]` | `apps/workers/AGENTS.md` |
-| Concern in `[docs]` | `skills/cross-cutting/keep-docs-current` |
-| Concern in `[testing]` | `skills/procedure/run-api-tests` (api-side) |
-| Concern in `[observability, audit]` | `packages/observability/AGENTS.md` |
-| Concern in `[api-contract]` | affected app AGENTS |
-| Concern in `[configuration]` and bootstrapping web | `skills/procedure/web-dev-setup` |
+| Concern involves authorization or security | `packages/access/AGENTS.md` |
+| Concern involves persistence or domain model | `packages/database/AGENTS.md` |
+| Concern involves background jobs / messaging | `apps/workers/AGENTS.md` |
+| Concern involves observability or audit | `packages/observability/AGENTS.md` |
+| Concern involves configuration | `packages/config/AGENTS.md` |
+| Concern involves API contract | affected app AGENTS |
 
-### Step 3 — Select skills
+`docs/ai/context-map.md` is a fuller dispatch table by domain, procedure, and concern.
 
-- 1–2 procedure skills that match the change type.
-- All cross-cutting skills whose trigger fires.
-- Skills that declare `autoAttach: on-concern-match` attach automatically. Others must be invoked by name.
-- Domain context comes from the affected app/package `AGENTS.md` files (loaded in Step 2), NOT from separate "domain skills."
-- Cross-boundary orchestration comes from `docs/ai/integration-tasks/*`, NOT from composite "fullstack skills."
+### Step 3 — Load docs (only when named)
 
-### Step 4 — Docs
+Load `docs/product/*`, `docs/architecture/*`, or `docs/specs/*` ONLY when a loaded AGENTS.md file explicitly names them. Never load "just in case."
 
-Load `docs/product/*`, `docs/architecture/*`, or `docs/specs/*` ONLY when a loaded skill or AGENTS.md file names them. Never load "just in case."
-
-### Step 5 — Announce load list
+### Step 4 — Announce load list
 
 Before editing, output:
 
@@ -77,9 +67,9 @@ Loading:
 
 User can veto or add files. If the list exceeds the budget (see below), prune before continuing.
 
-### Step 6 — Post-work update
+### Step 5 — Post-work update
 
-Run every attached `cross-cutting/keep-docs-current` sub-step. Update every AGENTS.md / docs file the executed skills' "Docs to update after" sections name.
+When behavior or a convention changes, update the matching AGENTS.md / docs in the same PR. Do not defer.
 
 ## Budget
 
@@ -93,57 +83,8 @@ Tier hierarchy (drop from highest tier down under pressure):
 |---|---|---|
 | 0 | root `AGENTS.md` | never |
 | 1 | affected app/package AGENTS + integration doc (if cross-boundary) | never |
-| 2 | procedure skills | rarely |
-| 3 | cross-cutting skills triggered by concerns | rarely |
-| 4 | product/architecture/spec docs | first |
-
-## Skill categories
-
-| Category | Count per task | Role | Example |
-|---|---|---|---|
-| `procedure` | 1–2 | Type of change (AtlasMed-specific recipe) | `create-endpoint`, `add-migration`, `add-ui-screen`, `run-api-tests` |
-| `cross-cutting` | 0–N | Side-effect concerns that layer across procedures | `check-permissions`, `keep-docs-current` |
-
-Domain context lives in per-app / per-package `AGENTS.md` files. Cross-boundary orchestration lives in `docs/ai/integration-tasks/`. Neither is a "skill."
-
-Precedence on conflict: `procedure` > `cross-cutting`.
-
-## Concerns vocabulary
-
-Locked in `skills/CONCERNS.md`. Skills declare `appliesTo.concerns` from that list only. Adding a new concern requires editing that file first.
-
-## Skill body discipline
-
-Every `SKILL.md` follows the same shape. No prose overhead.
-
-```md
----
-name: <name>
-category: <domain | procedure | principle | cross-cutting>
-scope: <domain(s), if applicable>
-description: One-liner trigger.
-appliesTo:
-  concerns: [<from skills/CONCERNS.md>]
-  domains: [<optional narrow domains>]
-autoAttach: <on-concern-match | manual>
-combinesWith: [<sibling skills>]
-conflictsWith: [<incompatible skills>]
----
-
-## Attach when
-- <crisp trigger 1>
-- <crisp trigger 2>
-
-## Do (max 10 steps)
-1. …
-
-## Rules
-- …
-
-## Docs to update after
-- <AGENTS.md paths>
-- <docs/ paths>
-```
+| 2 | package AGENTS triggered by concerns | rarely |
+| 3 | product/architecture/spec docs | first |
 
 ## Repository structure rules
 
@@ -211,17 +152,12 @@ For `experiment/` branches older than 7 days, delete regardless of merge status.
 
 Pre-commit + pre-push hooks reject direct commits to `main` and branch names that don't match the pattern. Install with `./scripts/install-git-hooks.sh` (run once per clone / worktree).
 
-### Skills
-
-- `skills/procedure/start-task/SKILL.md` — creates the worktree + branch and sets up the environment.
-- `skills/procedure/finish-task/SKILL.md` — opens the PR, squash-merges, deletes the branch, prunes the worktree.
-
 ## Behavior rules
 
 - Prefer small, focused changes.
 - Preserve existing architecture unless explicitly asked to refactor.
 - Use existing project patterns before inventing new ones.
-- Update nearby docs when behavior changes (`cross-cutting/keep-docs-current` handles this).
+- Update nearby docs when behavior changes.
 - Do not add dependencies without explaining why.
 - Do not touch unrelated files.
 

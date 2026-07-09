@@ -8,31 +8,28 @@ Use when a task touches BOTH `apps/api` and `apps/web`.
 - `AGENTS.md`
 - `apps/api/AGENTS.md`
 - `apps/web/AGENTS.md`
-- `skills/procedure/create-endpoint/SKILL.md` (if backend changes)
-- `skills/procedure/add-ui-screen/SKILL.md` (if UI changes)
-- `skills/cross-cutting/keep-docs-current/SKILL.md`
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
-| `authorization`, `security` | `packages/access/AGENTS.md`, `skills/cross-cutting/check-permissions/SKILL.md` |
-| `persistence`, `domain-model` | `packages/database/AGENTS.md`, `skills/procedure/add-migration/SKILL.md` |
-| `observability`, `audit` | `packages/observability/AGENTS.md` |
-| `testing` | `skills/procedure/run-api-tests/SKILL.md` (for api-side) |
+| authorization / security | `packages/access/AGENTS.md` |
+| persistence / domain model | `packages/database/AGENTS.md` |
+| observability / audit | `packages/observability/AGENTS.md` |
+| testing (api-side) | `apps/api/TESTING.md` |
 
 ## Work order
 
 1. Define the API contract first. Name the endpoint, request shape, response shape.
 2. If a shared DTO is needed, place it in a shared location the web can import.
 3. Update / add Prisma schema if persistence changes. Generate migration.
-4. Implement backend per `create-endpoint`: Zod validation → `requirePermission` → `getScope()` → use-case → DTO mapping → tests.
+4. Implement backend: Zod validation → `requirePermission` → `getScope()` → use-case → DTO mapping → tests.
 5. Update web data-fetching client under `apps/web/lib/api/*`.
-6. Update web UI per `add-ui-screen`.
+6. Update web UI.
 7. Add loading, empty, and error states.
 8. Verify permissions match end-to-end (backend enforces, frontend hides).
 9. Run tests on both sides.
-10. Run `keep-docs-current`.
+10. Update matching AGENTS.md / docs in same PR if conventions shifted.
 
 ## Rules
 

@@ -8,18 +8,15 @@ Use when a task touches `apps/api` AND requires a schema change under `packages/
 - `AGENTS.md`
 - `apps/api/AGENTS.md`
 - `packages/database/AGENTS.md`
-- `skills/procedure/add-migration/SKILL.md`
-- `skills/procedure/create-endpoint/SKILL.md` (if a route consumes the new column)
-- `skills/cross-cutting/keep-docs-current/SKILL.md`
 
 **Conditional:**
 
 | Concern | Load |
 |---|---|
-| `authorization`, `security` | `packages/access/AGENTS.md`, `skills/cross-cutting/check-permissions/SKILL.md` |
-| `observability`, `audit` | `packages/observability/AGENTS.md` |
-| Large backfill (>1M rows) | `apps/workers/AGENTS.md`, `skills/procedure/add-workflow/SKILL.md` |
-| `testing` | `skills/procedure/run-api-tests/SKILL.md` |
+| authorization / security | `packages/access/AGENTS.md` |
+| observability / audit | `packages/observability/AGENTS.md` |
+| Large backfill (>1M rows) | `apps/workers/AGENTS.md` |
+| testing | `apps/api/TESTING.md` |
 
 ## Work order
 
@@ -29,8 +26,8 @@ Use when a task touches `apps/api` AND requires a schema change under `packages/
 4. Regenerate the client: `bun run db:generate`. Commit `packages/database/src/generated/prisma/*`.
 5. Re-export new types/enums from `packages/database/src/index.ts` if consumers outside the package need them.
 6. Update `apps/api` use-cases / repositories. Map to DTOs.
-7. Add tests via `run-api-tests`.
-8. Run `keep-docs-current`.
+7. Add tests.
+8. Update matching AGENTS.md / docs in same PR if conventions shifted.
 
 ## Rules
 
