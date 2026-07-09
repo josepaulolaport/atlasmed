@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AtlasMed — Healthcare Commercial Operations",
-  description: "Healthcare commercial operations platform",
+  title: "AtlasMed — Operações Comerciais em Saúde",
+  description: "Plataforma de operações comerciais em saúde",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >

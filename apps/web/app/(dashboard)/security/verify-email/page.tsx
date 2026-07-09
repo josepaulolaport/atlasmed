@@ -57,9 +57,9 @@ function VerifyEmailForm() {
     <div className="mx-auto max-w-md px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Verify email</CardTitle>
+          <CardTitle>Verificar email</CardTitle>
           <CardDescription>
-            Enter the verification token from your email, or use the link we sent you.
+            Insira o token de verificação do seu email ou use o link que enviamos.
           </CardDescription>
         </CardHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -71,7 +71,7 @@ function VerifyEmailForm() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="token">Verification token</Label>
+              <Label htmlFor="token">Token de verificação</Label>
               <Input id="token" {...form.register("token")} disabled={loading} />
               {form.formState.errors.token && (
                 <p className="text-sm text-red-600">{form.formState.errors.token.message}</p>
@@ -80,10 +80,10 @@ function VerifyEmailForm() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Verifying..." : "Verify email"}
+              {loading ? "Verificando..." : "Verificar email"}
             </Button>
             <Link href="/security" className="text-sm text-blue-600 hover:underline">
-              Back to security settings
+              Voltar para configurações de segurança
             </Link>
           </CardFooter>
         </form>
@@ -94,7 +94,7 @@ function VerifyEmailForm() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+    <Suspense fallback={<div className="p-8 text-center">Carregando…</div>}>
       <VerifyEmailForm />
     </Suspense>
   );

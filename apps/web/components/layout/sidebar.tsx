@@ -43,11 +43,11 @@ export function Sidebar() {
   const roleName = user.role.name;
 
   const overview: NavItem[] = [
-    { name: "Dashboard", href: "/dashboard", icon: "solar:widget-linear" },
+    { name: "Painel", href: "/dashboard", icon: "solar:widget-linear" },
     ...(hasMinimumRole(roleName, "MANAGER")
       ? [
           {
-            name: "Suggestions",
+            name: "Sugestões de cadastro",
             href: "/registry-suggestions",
             icon: "solar:inbox-in-linear",
           } as NavItem,
@@ -57,19 +57,19 @@ export function Sidebar() {
 
   const directory: NavItem[] = [
     ...(canReadFacilities(roleName)
-      ? [{ name: "Facilities", href: "/facilities", icon: "solar:buildings-linear" } as NavItem]
+      ? [{ name: "Unidades de saúde", href: "/facilities", icon: "solar:buildings-linear" } as NavItem]
       : []),
     ...(canReadProfessionals(roleName)
       ? [
           {
-            name: "Professionals",
+            name: "Profissionais",
             href: "/professionals",
             icon: "solar:stethoscope-linear",
           } as NavItem,
         ]
       : []),
     ...(canReadTerritories(roleName)
-      ? [{ name: "Territories", href: "/territories", icon: "solar:map-point-linear" } as NavItem]
+      ? [{ name: "Territórios", href: "/territories", icon: "solar:map-point-linear" } as NavItem]
       : []),
   ];
 
@@ -77,7 +77,7 @@ export function Sidebar() {
     ...(hasMinimumRole(roleName, "MANAGER")
       ? [
           {
-            name: "Registry Ingestion",
+            name: "Ingestão de cadastro",
             href: "/registry-suggestions",
             icon: "solar:database-linear",
           } as NavItem,
@@ -86,7 +86,7 @@ export function Sidebar() {
     ...(canManageUsers(roleName)
       ? [
           {
-            name: "Users & Roles",
+            name: "Usuários e funções",
             href: "/users",
             icon: "solar:users-group-two-linear",
           } as NavItem,
@@ -95,7 +95,7 @@ export function Sidebar() {
     ...(canViewHealth(roleName)
       ? [
           {
-            name: "Compliance",
+            name: "Conformidade",
             href: "/health",
             icon: "solar:shield-check-linear",
           } as NavItem,
@@ -104,9 +104,9 @@ export function Sidebar() {
   ];
 
   const groups: NavGroup[] = [
-    { label: "Overview", items: overview },
-    { label: "Directory", items: directory },
-    { label: "Administration", items: administration },
+    { label: "Visão geral", items: overview },
+    { label: "Diretório", items: directory },
+    { label: "Administração", items: administration },
   ].filter((g) => g.items.length > 0);
 
   const displayName =
@@ -207,16 +207,16 @@ export function Sidebar() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/profile">Profile</Link>
+              <Link href="/profile">Perfil</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/sessions">Sessions</Link>
+              <Link href="/sessions">Sessões</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/security">Security</Link>
+              <Link href="/security">Segurança</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
+            <DropdownMenuItem onClick={logout}>Sair</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

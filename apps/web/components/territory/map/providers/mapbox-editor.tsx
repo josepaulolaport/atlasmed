@@ -46,7 +46,7 @@ function MapboxTerritoryEditorInner({
       const token = config.publicToken;
 
       if (!token) {
-        setError("Mapbox public token is not configured. Set MAPBOX_PUBLIC_TOKEN on the API.");
+        setError("O token público do Mapbox não está configurado. Defina MAPBOX_PUBLIC_TOKEN na API.");
         return;
       }
 
@@ -100,7 +100,7 @@ function MapboxTerritoryEditorInner({
 
     initMap().catch(() => {
       onValidationErrorRef.current?.("Failed to initialize Mapbox editor");
-      setError("Failed to initialize Mapbox editor");
+      setError("Falha ao inicializar o editor do Mapbox");
     });
 
     return () => {
@@ -155,7 +155,7 @@ function MapboxTerritoryEditorInner({
       <div ref={containerRef} className="h-[420px] w-full rounded-md border" />
       {!readOnly ? (
         <p className="mt-2 text-xs text-gray-500">
-          Draw multiple polygons to define non-contiguous parts of the same territory.
+          Desenhe múltiplos polígonos para definir partes não contíguas do mesmo território.
         </p>
       ) : null}
     </div>

@@ -53,9 +53,9 @@ export default function VerifyPhonePage() {
     <div className="mx-auto max-w-md px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Verify phone</CardTitle>
+          <CardTitle>Verificar telefone</CardTitle>
           <CardDescription>
-            Enter the 6-digit code sent to your phone number.
+            Insira o código de 6 dígitos enviado ao seu telefone.
           </CardDescription>
         </CardHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -67,7 +67,7 @@ export default function VerifyPhonePage() {
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="code">Verification code</Label>
+              <Label htmlFor="code">Código de verificação</Label>
               <Input
                 id="code"
                 inputMode="numeric"
@@ -82,10 +82,10 @@ export default function VerifyPhonePage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Verifying..." : "Verify phone"}
+              {loading ? "Verificando..." : "Verificar telefone"}
             </Button>
             <Link href="/security" className="text-sm text-blue-600 hover:underline">
-              Back to security settings
+              Voltar para configurações de segurança
             </Link>
           </CardFooter>
         </form>

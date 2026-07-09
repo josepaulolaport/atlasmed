@@ -234,7 +234,7 @@ export default function FacilitiesPage() {
   };
 
   const handleDelete = async (facility: Facility) => {
-    if (!confirm(`Delete facility "${facility.name}"?`)) return;
+    if (!confirm(`Excluir a unidade "${facility.name}"?`)) return;
 
     try {
       await facilitiesApi.deleteFacility(facility.id);
@@ -259,16 +259,16 @@ export default function FacilitiesPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Facilities
+              Unidades de saúde
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Facilities are assigned to territories automatically from coordinates.
+              As unidades são atribuídas a territórios automaticamente a partir das coordenadas.
             </p>
           </div>
           {canManage && (
             <Button onClick={openCreateDialog}>
               <Plus className="h-4 w-4" />
-              Add facility
+              Adicionar unidade
             </Button>
           )}
         </div>
@@ -280,7 +280,7 @@ export default function FacilitiesPage() {
             <div className="relative max-w-sm">
               <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
               <Input
-                placeholder="Search facilities..."
+                placeholder="Buscar unidades..."
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -293,18 +293,18 @@ export default function FacilitiesPage() {
           <div className="p-0">
           {loading ? (
             <div className="py-10 text-center text-sm text-zinc-500">
-              Loading facilities…
+              Carregando unidades…
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Coordinates</TableHead>
-                    <TableHead>Territory</TableHead>
-                    {canManage && <TableHead className="w-[120px]">Actions</TableHead>}
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Endereço</TableHead>
+                    <TableHead>Coordenadas</TableHead>
+                    <TableHead>Território</TableHead>
+                    {canManage && <TableHead className="w-[120px]">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -314,7 +314,7 @@ export default function FacilitiesPage() {
                         colSpan={canManage ? 5 : 4}
                         className="text-center text-gray-500"
                       >
-                        No facilities found
+                        Nenhuma unidade encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -373,10 +373,10 @@ export default function FacilitiesPage() {
                   disabled={page <= 1}
                   onClick={() => setPage((value) => value - 1)}
                 >
-                  Previous
+                  Anterior
                 </Button>
                 <span className="text-xs text-zinc-500">
-                  Page {page} of {totalPages}
+                  Página {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
@@ -384,7 +384,7 @@ export default function FacilitiesPage() {
                   disabled={page >= totalPages}
                   onClick={() => setPage((value) => value + 1)}
                 >
-                  Next
+                  Próximo
                 </Button>
               </div>
             </>
@@ -396,11 +396,11 @@ export default function FacilitiesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingFacility ? "Edit facility" : "Create facility"}</DialogTitle>
+            <DialogTitle>{editingFacility ? "Editar unidade" : "Criar unidade"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="clinic-name">Name</Label>
+              <Label htmlFor="clinic-name">Nome</Label>
               <Input
                 id="clinic-name"
                 value={formName}
@@ -408,7 +408,7 @@ export default function FacilitiesPage() {
               />
             </div>
             <div>
-              <Label htmlFor="clinic-address">Address</Label>
+              <Label htmlFor="clinic-address">Endereço</Label>
               <div className="flex gap-2">
                 <Input
                   id="clinic-address"
@@ -421,7 +421,7 @@ export default function FacilitiesPage() {
                   onClick={handleGeocodeAddress}
                   disabled={geocoding}
                 >
-                  {geocoding ? "Geocoding..." : "Geocode"}
+                  {geocoding ? "Geocodificando..." : "Geocodificar"}
                 </Button>
               </div>
             </div>
@@ -451,20 +451,20 @@ export default function FacilitiesPage() {
             </div>
             {editingFacility?.territoryId && (
               <p className="text-sm text-gray-600">
-                Current territory: {getLabel(editingFacility.territoryId)} (assigned automatically)
+                Território atual: {getLabel(editingFacility.territoryId)} (atribuído automaticamente)
               </p>
             )}
             <p className="text-xs text-gray-500">
-              Coordinates are saved to the clinic record when geocoded (preview or on save).
-              Territory assignment runs automatically from stored coordinates.
+              As coordenadas são salvas no cadastro da unidade quando geocodificadas (na prévia ou ao salvar).
+              A atribuição de território é executada automaticamente a partir das coordenadas armazenadas.
             </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -39,11 +39,13 @@ Next.js 16 admin/web app. Applies when modifying:
 
 ## Conventions
 
+- **Language: Brazilian Portuguese (pt-BR) only.** All user-visible UI text (labels, buttons, headings, placeholders, nav, empty/loading states, table headers, dialogs, `aria-label`/`title`, page metadata) MUST be in pt-BR. `<html lang="pt-BR">` is set in `app/layout.tsx`. No i18n framework — strings live in-place. New UI ships translated; do not add English copy.
+- Dates/numbers use the `pt-BR` locale (dd/mm/aaaa). Prefer the `formatDate`/`formatDateTime` helpers in `lib/utils.ts`; any inline `toLocaleDateString`/`toLocaleString` must pass `"pt-BR"`.
 - Design tokens are zinc palette + blue accent + Inter font. Do not introduce ad-hoc colors.
 - Use `iconify-icon` with Solar linear icons; do not re-introduce lucide-react.
 - Section cards: `rounded-xl border border-zinc-200 bg-white shadow-sm`, header `px-5 py-4 border-b border-zinc-200 bg-zinc-50/50`, body `p-5`.
 - Page shell: `<div className="px-6 py-8 border-b border-zinc-100">` header row, then `<div className="p-6 max-w-6xl mx-auto w-full">` content.
-- Loading state: `<div className="py-10 text-center text-sm text-zinc-500">Loading…</div>`.
+- Loading state: `<div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>`.
 - Sidebar + top-header layout is applied via `app/(dashboard)/layout.tsx`. Do not re-wrap pages with their own outer max-width containers.
 - Client components only where interactivity is needed. Do not add `"use client"` speculatively.
 - Reuse shared types from `packages/types` when a DTO is shared with the API. Do not manually duplicate API response shapes.

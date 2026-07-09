@@ -28,18 +28,18 @@ type TerritoryView = "grouping" | "manager-zones" | "rep-patches";
 const VIEW_OPTIONS: Array<{ id: TerritoryView; label: string; description: string }> = [
   {
     id: "grouping",
-    label: "Grouping",
-    description: "Region, state, and municipality tree for filters and analytics.",
+    label: "Agrupamento",
+    description: "Árvore de região, estado e município para filtros e análises.",
   },
   {
     id: "manager-zones",
-    label: "Manager zones",
-    description: "Flat manager assignment areas that contain rep patches.",
+    label: "Zonas de gerente",
+    description: "Áreas planas de atribuição de gerente que contêm áreas de representante.",
   },
   {
     id: "rep-patches",
-    label: "Rep patches",
-    description: "Operational territories where clinics are assigned.",
+    label: "Áreas de representante",
+    description: "Territórios operacionais onde as clínicas são atribuídas.",
   },
 ];
 
@@ -145,7 +145,7 @@ export default function TerritoriesPage() {
   const activeView = VIEW_OPTIONS.find((option) => option.id === view)!;
 
   const handleRecompute = async () => {
-    if (!confirm("Recompute clinic territory membership for all clinics?")) return;
+    if (!confirm("Recalcular a associação de território das clínicas para todas as clínicas?")) return;
 
     setRecomputing(true);
     try {
@@ -177,11 +177,12 @@ export default function TerritoriesPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Territories
+              Territórios
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Manager zones and rep patches drive assignment scope. Grouping
-              areas are used for filters and analytics only.
+              Zonas de gerente e áreas de representante definem o escopo de
+              atribuição. As áreas de agrupamento são usadas apenas para filtros
+              e análises.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -191,7 +192,7 @@ export default function TerritoriesPage() {
                 stroke-width="1.5"
                 className="text-base"
               />
-              Refresh
+              Atualizar
             </Button>
             {canManage && (
               <Button
@@ -200,7 +201,7 @@ export default function TerritoriesPage() {
                 onClick={handleRecompute}
                 disabled={recomputing}
               >
-                {recomputing ? "Recomputing..." : "Recompute membership"}
+                {recomputing ? "Recalculando..." : "Recalcular associação"}
               </Button>
             )}
             {canCreate && (
@@ -214,7 +215,7 @@ export default function TerritoriesPage() {
                   stroke-width="1.5"
                   className="text-base"
                 />
-                Create territory
+                Criar território
               </Button>
             )}
           </div>
@@ -255,11 +256,11 @@ export default function TerritoriesPage() {
             <div className="p-5">
               {loading ? (
                 <div className="py-10 text-center text-sm text-zinc-500">
-                  Loading…
+                  Carregando…
                 </div>
               ) : tree.length === 0 ? (
                 <p className="py-10 text-center text-sm text-zinc-500">
-                  No {activeView.label.toLowerCase()} found.
+                  Nenhum registro encontrado para {activeView.label.toLowerCase()}.
                 </p>
               ) : (
                 <TerritoryTree

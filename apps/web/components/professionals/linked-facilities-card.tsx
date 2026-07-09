@@ -14,11 +14,11 @@ export function LinkedFacilitiesCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Linked facilities</CardTitle>
+        <CardTitle className="text-lg">Unidades vinculadas</CardTitle>
       </CardHeader>
       <CardContent>
         {facilities.length === 0 ? (
-          <p className="text-sm text-gray-500">No active facility links</p>
+          <p className="text-sm text-gray-500">Nenhum vínculo de unidade ativo</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {facilities.map((facility) => (

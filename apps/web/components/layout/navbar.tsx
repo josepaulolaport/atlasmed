@@ -43,26 +43,26 @@ export function Navbar() {
   if (!user || !user.role) return null;
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Activity },
-    { name: "Profile", href: "/profile", icon: User },
-    { name: "Sessions", href: "/sessions", icon: Shield },
+    { name: "Painel", href: "/dashboard", icon: Activity },
+    { name: "Perfil", href: "/profile", icon: User },
+    { name: "Sessões", href: "/sessions", icon: Shield },
     ...(canManageUsers(user.role.name)
-      ? [{ name: "Users", href: "/users", icon: Users }]
+      ? [{ name: "Usuários", href: "/users", icon: Users }]
       : []),
     ...(canReadFacilities(user.role.name)
-      ? [{ name: "Facilities", href: "/facilities", icon: Building2 }]
+      ? [{ name: "Unidades de saúde", href: "/facilities", icon: Building2 }]
       : []),
     ...(canReadProfessionals(user.role.name)
-      ? [{ name: "Professionals", href: "/professionals", icon: Stethoscope }]
+      ? [{ name: "Profissionais", href: "/professionals", icon: Stethoscope }]
       : []),
     ...(canReadTerritories(user.role.name)
-      ? [{ name: "Territories", href: "/territories", icon: MapPin }]
+      ? [{ name: "Territórios", href: "/territories", icon: MapPin }]
       : []),
     ...(hasMinimumRole(user.role.name, "MANAGER")
-      ? [{ name: "Registry", href: "/registry-suggestions", icon: Shield }]
+      ? [{ name: "Sugestões de cadastro", href: "/registry-suggestions", icon: Shield }]
       : []),
     ...(canViewHealth(user.role.name)
-      ? [{ name: "Health", href: "/health", icon: Activity }]
+      ? [{ name: "Saúde", href: "/health", icon: Activity }]
       : []),
   ];
 
@@ -129,25 +129,25 @@ export function Navbar() {
                 <DropdownMenuItem asChild>
                   <Link href="/profile">
                     <User className="mr-2 h-4 w-4" />
-                    Profile
+                    Perfil
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/sessions">
                     <Shield className="mr-2 h-4 w-4" />
-                    Sessions
+                    Sessões
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/security">
                     <Settings className="mr-2 h-4 w-4" />
-                    Security
+                    Segurança
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Log out
+                  Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -138,9 +138,9 @@ export default function UnassignedFacilitiesPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Unassigned clinics</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Clínicas não atribuídas</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Clinics without a resolved territory assignment
+          Clínicas sem atribuição de território resolvida
         </p>
       </div>
 
@@ -148,7 +148,7 @@ export default function UnassignedFacilitiesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Clinics needing territory</CardTitle>
+          <CardTitle>Clínicas que precisam de território</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -160,10 +160,10 @@ export default function UnassignedFacilitiesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Clinic</TableHead>
-                    <TableHead>Coordinates</TableHead>
+                    <TableHead>Clínica</TableHead>
+                    <TableHead>Coordenadas</TableHead>
                     <TableHead>Status</TableHead>
-                    {userIsAdmin && <TableHead className="w-[200px]">Actions</TableHead>}
+                    {userIsAdmin && <TableHead className="w-[200px]">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -173,7 +173,7 @@ export default function UnassignedFacilitiesPage() {
                         colSpan={userIsAdmin ? 4 : 3}
                         className="text-center text-gray-500"
                       >
-                        No unassigned clinics found
+                        Nenhuma clínica não atribuída encontrada
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -215,7 +215,7 @@ export default function UnassignedFacilitiesPage() {
                                   setOverrideReason("");
                                 }}
                               >
-                                Override
+                                Substituir
                               </Button>
                               <Button
                                 size="sm"
@@ -223,7 +223,7 @@ export default function UnassignedFacilitiesPage() {
                                 onClick={() => handleUnlock(facility.id)}
                                 disabled={unlockingId === facility.id}
                               >
-                                {unlockingId === facility.id ? "..." : "Unlock geo"}
+                                {unlockingId === facility.id ? "..." : "Desbloquear geo"}
                               </Button>
                             </div>
                           </TableCell>
@@ -240,17 +240,17 @@ export default function UnassignedFacilitiesPage() {
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
                 >
-                  Previous
+                  Anterior
                 </Button>
                 <span className="text-sm text-gray-500">
-                  Page {page} of {totalPages}
+                  Página {page} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
                 >
-                  Next
+                  Próxima
                 </Button>
               </div>
             </>
@@ -264,12 +264,12 @@ export default function UnassignedFacilitiesPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Override clinic territory</DialogTitle>
+            <DialogTitle>Substituir território da clínica</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">Facility: {overrideFacility?.id}</p>
+            <p className="text-sm text-gray-600">Unidade: {overrideFacility?.id}</p>
             <div>
-              <Label>Territory</Label>
+              <Label>Território</Label>
               <TerritoryPicker
                 value={overrideTerritoryId}
                 onChange={setOverrideTerritoryId}
@@ -277,7 +277,7 @@ export default function UnassignedFacilitiesPage() {
               />
             </div>
             <div>
-              <Label htmlFor="override-reason">Reason (optional)</Label>
+              <Label htmlFor="override-reason">Motivo (opcional)</Label>
               <Input
                 id="override-reason"
                 value={overrideReason}
@@ -287,13 +287,13 @@ export default function UnassignedFacilitiesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOverrideFacility(null)}>
-              Cancel
+              Cancelar
             </Button>
             <Button
               onClick={handleOverride}
               disabled={saving || !overrideTerritoryId}
             >
-              {saving ? "Saving..." : "Override"}
+              {saving ? "Salvando..." : "Substituir"}
             </Button>
           </DialogFooter>
         </DialogContent>

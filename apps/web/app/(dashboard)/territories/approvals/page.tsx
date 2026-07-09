@@ -68,9 +68,9 @@ export default function TerritoryApprovalsPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Territory approvals</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Aprovações de território</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Review and resolve pending territory structure changes
+          Revise e resolva alterações pendentes na estrutura de territórios
         </p>
       </div>
 
@@ -78,21 +78,21 @@ export default function TerritoryApprovalsPage() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Approval queue</CardTitle>
+          <CardTitle>Fila de aprovação</CardTitle>
           <div className="flex gap-2">
             <Button
               size="sm"
               variant={statusFilter === "pending" ? "default" : "outline"}
               onClick={() => setStatusFilter("pending")}
             >
-              Pending
+              Pendentes
             </Button>
             <Button
               size="sm"
               variant={statusFilter === "all" ? "default" : "outline"}
               onClick={() => setStatusFilter("all")}
             >
-              All
+              Todas
             </Button>
           </div>
         </CardHeader>

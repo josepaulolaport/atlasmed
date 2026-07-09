@@ -74,11 +74,11 @@ export default function ChangePhonePage() {
     <div className="mx-auto max-w-md px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Change phone number</CardTitle>
+          <CardTitle>Alterar telefone</CardTitle>
           <CardDescription>
             {step === "request"
-              ? "Request a change to your account phone number."
-              : "Enter the verification code sent to your new phone."}
+              ? "Solicite a alteração do telefone da sua conta."
+              : "Insira o código de verificação enviado ao seu novo telefone."}
           </CardDescription>
         </CardHeader>
 
@@ -87,16 +87,16 @@ export default function ChangePhonePage() {
             <CardContent className="space-y-4">
               {error && <ErrorBox message={error} />}
               <div className="space-y-2">
-                <Label htmlFor="newPhone">New phone number</Label>
+                <Label htmlFor="newPhone">Novo telefone</Label>
                 <Input id="newPhone" type="tel" {...requestForm.register("newPhone")} disabled={loading} />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending..." : "Send verification code"}
+                {loading ? "Enviando..." : "Enviar código de verificação"}
               </Button>
               <Link href="/security" className="text-sm text-blue-600 hover:underline">
-                Back to security settings
+                Voltar para configurações de segurança
               </Link>
             </CardFooter>
           </form>
@@ -105,11 +105,11 @@ export default function ChangePhonePage() {
             <CardContent className="space-y-4">
               {error && <ErrorBox message={error} />}
               <div className="space-y-2">
-                <Label htmlFor="confirmPhone">New phone number</Label>
+                <Label htmlFor="confirmPhone">Novo telefone</Label>
                 <Input id="confirmPhone" type="tel" {...confirmForm.register("newPhone")} disabled={loading} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmCode">Verification code</Label>
+                <Label htmlFor="confirmCode">Código de verificação</Label>
                 <Input
                   id="confirmCode"
                   inputMode="numeric"
@@ -121,10 +121,10 @@ export default function ChangePhonePage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Confirming..." : "Confirm new phone"}
+                {loading ? "Confirmando..." : "Confirmar novo telefone"}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setStep("request")} disabled={loading}>
-                Start over
+                Recomeçar
               </Button>
             </CardFooter>
           </form>

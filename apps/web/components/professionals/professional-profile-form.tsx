@@ -74,26 +74,26 @@ export function ProfessionalProfileForm({
       <div className="flex flex-col gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Identity</CardTitle>
+            <CardTitle className="text-lg">Identidade</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="firstName">First name</Label>
+              <Label htmlFor="firstName">Nome</Label>
               <Input id="firstName" disabled={!canEdit} {...register("firstName")} />
               <FieldError message={errors.firstName?.message} />
             </div>
             <div>
-              <Label htmlFor="lastName">Last name</Label>
+              <Label htmlFor="lastName">Sobrenome</Label>
               <Input id="lastName" disabled={!canEdit} {...register("lastName")} />
               <FieldError message={errors.lastName?.message} />
             </div>
             <div>
-              <Label htmlFor="fullName">Full name</Label>
+              <Label htmlFor="fullName">Nome completo</Label>
               <Input id="fullName" disabled={!canEdit} {...register("fullName")} />
               <FieldError message={errors.fullName?.message} />
             </div>
             <div>
-              <Label htmlFor="socialName">Social name</Label>
+              <Label htmlFor="socialName">Nome social</Label>
               <Input id="socialName" disabled={!canEdit} {...register("socialName")} />
               <FieldError message={errors.socialName?.message} />
             </div>
@@ -103,7 +103,7 @@ export function ProfessionalProfileForm({
               <FieldError message={errors.taxId?.message} />
             </div>
             <div>
-              <Label htmlFor="birthDate">Birth date</Label>
+              <Label htmlFor="birthDate">Data de nascimento</Label>
               <Input id="birthDate" type="date" disabled={!canEdit} {...register("birthDate")} />
               <FieldError message={errors.birthDate?.message} />
             </div>
@@ -112,16 +112,16 @@ export function ProfessionalProfileForm({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Contact</CardTitle>
+            <CardTitle className="text-lg">Contato</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="mobilePhone">Mobile phone</Label>
+              <Label htmlFor="mobilePhone">Telefone celular</Label>
               <Input id="mobilePhone" disabled={!canEdit} {...register("mobilePhone")} />
               <FieldError message={errors.mobilePhone?.message} />
             </div>
             <div>
-              <Label htmlFor="landlinePhone">Landline phone</Label>
+              <Label htmlFor="landlinePhone">Telefone fixo</Label>
               <Input id="landlinePhone" disabled={!canEdit} {...register("landlinePhone")} />
               <FieldError message={errors.landlinePhone?.message} />
             </div>
@@ -131,12 +131,12 @@ export function ProfessionalProfileForm({
               <FieldError message={errors.email?.message} />
             </div>
             <div>
-              <Label htmlFor="websiteUrl">Website</Label>
+              <Label htmlFor="websiteUrl">Site</Label>
               <Input id="websiteUrl" disabled={!canEdit} {...register("websiteUrl")} />
               <FieldError message={errors.websiteUrl?.message} />
             </div>
             <div className="md:col-span-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
+              <Label htmlFor="imageUrl">URL da imagem</Label>
               <Input id="imageUrl" disabled={!canEdit} {...register("imageUrl")} />
               <FieldError message={errors.imageUrl?.message} />
             </div>
@@ -145,26 +145,26 @@ export function ProfessionalProfileForm({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">CRM & specialty</CardTitle>
+            <CardTitle className="text-lg">CRM e especialidade</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="crmCouncil">Council</Label>
+              <Label htmlFor="crmCouncil">Conselho</Label>
               <Input id="crmCouncil" disabled={!canEdit} {...register("crmCouncil")} />
               <FieldError message={errors.crmCouncil?.message} />
             </div>
             <div>
-              <Label htmlFor="crmNumber">CRM number</Label>
+              <Label htmlFor="crmNumber">Número do CRM</Label>
               <Input id="crmNumber" disabled={!canEdit} {...register("crmNumber")} />
               <FieldError message={errors.crmNumber?.message} />
             </div>
             <div>
-              <Label htmlFor="crmState">CRM state</Label>
+              <Label htmlFor="crmState">Estado do CRM</Label>
               <Input id="crmState" maxLength={2} disabled={!canEdit} {...register("crmState")} />
               <FieldError message={errors.crmState?.message} />
             </div>
             <div>
-              <Label htmlFor="primarySpecialtyLabel">Primary specialty</Label>
+              <Label htmlFor="primarySpecialtyLabel">Especialidade principal</Label>
               <Input
                 id="primarySpecialtyLabel"
                 disabled={!canEdit}
@@ -177,26 +177,26 @@ export function ProfessionalProfileForm({
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Preferences & notes</CardTitle>
+            <CardTitle className="text-lg">Preferências e observações</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
             <div>
-              <Label htmlFor="favoriteTeam">Favorite team</Label>
+              <Label htmlFor="favoriteTeam">Time favorito</Label>
               <Input id="favoriteTeam" disabled={!canEdit} {...register("favoriteTeam")} />
               <FieldError message={errors.favoriteTeam?.message} />
             </div>
             <div>
-              <Label htmlFor="favoriteSport">Favorite sport</Label>
+              <Label htmlFor="favoriteSport">Esporte favorito</Label>
               <Input id="favoriteSport" disabled={!canEdit} {...register("favoriteSport")} />
               <FieldError message={errors.favoriteSport?.message} />
             </div>
             <div className="md:col-span-2">
-              <Label htmlFor="hobbies">Hobbies</Label>
+              <Label htmlFor="hobbies">Passatempos</Label>
               <Textarea id="hobbies" disabled={!canEdit} {...register("hobbies")} />
               <FieldError message={errors.hobbies?.message} />
             </div>
             <div className="md:col-span-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">Observações</Label>
               <Textarea id="notes" disabled={!canEdit} {...register("notes")} />
               <FieldError message={errors.notes?.message} />
             </div>
@@ -204,7 +204,7 @@ export function ProfessionalProfileForm({
           {canEdit && (
             <CardFooter>
               <Button type="submit" disabled={saving}>
-                {saving ? "Saving..." : "Save profile"}
+                {saving ? "Salvando..." : "Salvar perfil"}
               </Button>
             </CardFooter>
           )}

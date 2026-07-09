@@ -75,7 +75,7 @@ export function ApprovalRequestsTable({ requests, onRefresh }: ApprovalRequestsT
   };
 
   if (requests.length === 0) {
-    return <p className="text-sm text-gray-500">No approval requests found.</p>;
+    return <p className="text-sm text-gray-500">Nenhuma solicitação de aprovação encontrada.</p>;
   }
 
   return (
@@ -83,12 +83,12 @@ export function ApprovalRequestsTable({ requests, onRefresh }: ApprovalRequestsT
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Type</TableHead>
+            <TableHead>Tipo</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Requester</TableHead>
-            <TableHead>Target</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="w-[160px]">Actions</TableHead>
+            <TableHead>Solicitante</TableHead>
+            <TableHead>Alvo</TableHead>
+            <TableHead>Criado</TableHead>
+            <TableHead className="w-[160px]">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -119,14 +119,14 @@ export function ApprovalRequestsTable({ requests, onRefresh }: ApprovalRequestsT
                 {req.status === "pending" ? (
                   <div className="flex gap-1">
                     <Button size="sm" onClick={() => openAction(req.id, "approve")}>
-                      Approve
+                      Aprovar
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => openAction(req.id, "reject")}
                     >
-                      Reject
+                      Rejeitar
                     </Button>
                   </div>
                 ) : (
@@ -142,11 +142,11 @@ export function ApprovalRequestsTable({ requests, onRefresh }: ApprovalRequestsT
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === "approve" ? "Approve request" : "Reject request"}
+              {actionType === "approve" ? "Aprovar solicitação" : "Rejeitar solicitação"}
             </DialogTitle>
           </DialogHeader>
           <div>
-            <Label htmlFor="approval-note">Note (optional)</Label>
+            <Label htmlFor="approval-note">Nota (opcional)</Label>
             <Input
               id="approval-note"
               value={note}
@@ -155,10 +155,10 @@ export function ApprovalRequestsTable({ requests, onRefresh }: ApprovalRequestsT
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeAction}>
-              Cancel
+              Cancelar
             </Button>
             <Button onClick={handleConfirm} disabled={saving}>
-              {saving ? "Saving..." : "Confirm"}
+              {saving ? "Salvando..." : "Confirmar"}
             </Button>
           </DialogFooter>
         </DialogContent>

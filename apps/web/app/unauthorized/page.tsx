@@ -11,19 +11,19 @@ export default function UnauthorizedPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
             <ShieldAlert className="h-8 w-8 text-red-600" />
           </div>
-          <CardTitle className="text-2xl">Access Denied</CardTitle>
+          <CardTitle className="text-2xl">Acesso negado</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-gray-600">
-            You don&apos;t have permission to access this page. If you believe this is
-            an error, please contact your administrator.
+            Você não tem permissão para acessar esta página. Se acredita que isto
+            é um erro, entre em contato com o administrador.
           </p>
           <div className="flex gap-4 justify-center">
             <Link href="/dashboard">
-              <Button>Go to Dashboard</Button>
+              <Button>Ir para o painel</Button>
             </Link>
             <Link href="/">
-              <Button variant="outline">Go Home</Button>
+              <Button variant="outline">Página inicial</Button>
             </Link>
           </div>
         </CardContent>

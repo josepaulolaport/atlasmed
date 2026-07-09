@@ -45,7 +45,7 @@ export function TerritoryPicker({
   excludeCountry = false,
   excludeTerritoryIds = [],
   disabled = false,
-  placeholder = "Select territory",
+  placeholder = "Selecionar território",
   id,
 }: TerritoryPickerProps) {
   const [territories, setTerritories] = useState<Territory[]>([]);
@@ -62,7 +62,7 @@ export function TerritoryPicker({
       const response = await territoriesApi.listTerritories("flat");
       setTerritories(response.data as Territory[]);
     } catch {
-      setError("Failed to load territories");
+      setError("Falha ao carregar territórios");
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ export function TerritoryPicker({
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Loading territories...
+        Carregando territórios...
       </div>
     );
   }
@@ -124,14 +124,14 @@ export function TerritoryPicker({
   return (
     <div className="space-y-2">
       <Input
-        placeholder="Search by code, name, slug, or type..."
+        placeholder="Buscar por código, nome, slug ou tipo..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         disabled={disabled}
       />
       <div className="space-y-1">
         <Label htmlFor={id} className="sr-only">
-          Territory
+          Território
         </Label>
         <Select
           value={value ?? ""}
@@ -151,7 +151,7 @@ export function TerritoryPicker({
         </Select>
       </div>
       {filtered.length === 0 && (
-        <p className="text-xs text-gray-500">No matching territories found.</p>
+        <p className="text-xs text-gray-500">Nenhum território correspondente encontrado.</p>
       )}
     </div>
   );

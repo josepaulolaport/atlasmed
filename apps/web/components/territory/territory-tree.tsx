@@ -84,19 +84,19 @@ function TerritoryTreeNodeRow({
           </Badge>
           {node.isLeaf && (
             <Badge variant="outline" className="text-xs">
-              leaf
+              folha
             </Badge>
           )}
           {node.hasBoundary && (
             <Badge variant="outline" className="text-xs">
-              boundary
+              limite
             </Badge>
           )}
           <Badge variant="outline" className="text-xs">
-            {node.clinicCount} clinics
+            {node.clinicCount} clínicas
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {node.assignedUserCount} users
+            {node.assignedUserCount} usuários
           </Badge>
         </div>
       )}
@@ -106,7 +106,7 @@ function TerritoryTreeNodeRow({
 
 export function TerritoryTree({ nodes, selectedId, onSelect }: TerritoryTreeProps) {
   if (nodes.length === 0) {
-    return <p className="text-sm text-gray-500">No territories found.</p>;
+    return <p className="text-sm text-gray-500">Nenhum território encontrado.</p>;
   }
 
   return (

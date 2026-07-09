@@ -160,15 +160,15 @@ export default function UsersPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              User Management
+              Gerenciamento de usuários
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Manage users, invitations, and permissions
+              Gerencie usuários, convites e permissões
             </p>
           </div>
           <div className="flex gap-2">
             <Link href="/users/invites">
-              <Button variant="outline">View invitations</Button>
+              <Button variant="outline">Ver convites</Button>
             </Link>
             <Link href="/users/invite">
               <Button variant="primary">
@@ -177,7 +177,7 @@ export default function UsersPage() {
                   stroke-width="1.5"
                   className="text-base"
                 />
-                Invite user
+                Convidar usuário
               </Button>
             </Link>
           </div>
@@ -194,7 +194,7 @@ export default function UsersPage() {
                 className="text-base absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
               />
               <Input
-                placeholder="Search by username or email..."
+                placeholder="Buscar por nome de usuário ou email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9"
@@ -204,23 +204,23 @@ export default function UsersPage() {
           <div className="p-5">
             {loading ? (
               <div className="py-10 text-center text-sm text-zinc-500">
-                Loading…
+                Carregando…
               </div>
             ) : users.length === 0 ? (
               <div className="py-10 text-center text-sm text-zinc-500">
-                No users found
+                Nenhum usuário encontrado
               </div>
             ) : (
               <>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>User</TableHead>
+                      <TableHead>Usuário</TableHead>
                       <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
+                      <TableHead>Função</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Verified</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Verificado</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -299,7 +299,7 @@ export default function UsersPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuLabel>Ações</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               {userIsAdmin && (
                                 <>
@@ -314,7 +314,7 @@ export default function UsersPage() {
                                       stroke-width="1.5"
                                       className="text-base mr-2"
                                     />
-                                    Change role
+                                    Alterar função
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
@@ -327,7 +327,7 @@ export default function UsersPage() {
                                       stroke-width="1.5"
                                       className="text-base mr-2"
                                     />
-                                    Manage permissions
+                                    Gerenciar permissões
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
@@ -340,7 +340,7 @@ export default function UsersPage() {
                                       stroke-width="1.5"
                                       className="text-base mr-2"
                                     />
-                                    Manage assignments
+                                    Gerenciar atribuições
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -355,7 +355,7 @@ export default function UsersPage() {
                                     stroke-width="1.5"
                                     className="text-base mr-2"
                                   />
-                                  Activate
+                                  Ativar
                                 </DropdownMenuItem>
                               )}
                               {user.status === "ACTIVE" && (
@@ -370,7 +370,7 @@ export default function UsersPage() {
                                       stroke-width="1.5"
                                       className="text-base mr-2"
                                     />
-                                    Suspend
+                                    Suspender
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() =>
@@ -383,7 +383,7 @@ export default function UsersPage() {
                                       stroke-width="1.5"
                                       className="text-base mr-2"
                                     />
-                                    Deactivate
+                                    Desativar
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -398,7 +398,7 @@ export default function UsersPage() {
                                     stroke-width="1.5"
                                     className="text-base mr-2"
                                   />
-                                  Unsuspend
+                                  Cancelar suspensão
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -416,10 +416,10 @@ export default function UsersPage() {
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                     >
-                      Previous
+                      Anterior
                     </Button>
                     <span className="text-sm text-zinc-500">
-                      Page {page} of {totalPages}
+                      Página {page} de {totalPages}
                     </span>
                     <Button
                       variant="outline"
@@ -428,7 +428,7 @@ export default function UsersPage() {
                       }
                       disabled={page === totalPages}
                     >
-                      Next
+                      Próximo
                     </Button>
                   </div>
                 )}

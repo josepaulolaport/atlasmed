@@ -36,12 +36,12 @@ function ResetPasswordForm() {
   const password = watch("password");
 
   const passwordRequirements = [
-    { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-    { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-    { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
-    { label: "One number", test: (p: string) => /[0-9]/.test(p) },
+    { label: "Pelo menos 8 caracteres", test: (p: string) => p.length >= 8 },
+    { label: "Uma letra maiúscula", test: (p: string) => /[A-Z]/.test(p) },
+    { label: "Uma letra minúscula", test: (p: string) => /[a-z]/.test(p) },
+    { label: "Um número", test: (p: string) => /[0-9]/.test(p) },
     {
-      label: "One special character",
+      label: "Um caractere especial",
       test: (p: string) => /[^A-Za-z0-9]/.test(p),
     },
   ];
@@ -76,20 +76,20 @@ function ResetPasswordForm() {
               ATLASMED
             </h1>
             <p className="text-sm text-zinc-500 mt-2">
-              Healthcare Commercial Operations
+              Operações Comerciais em Saúde
             </p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
             <h2 className="text-lg font-medium text-red-600">
-              Invalid reset link
+              Link de redefinição inválido
             </h2>
             <p className="text-sm text-zinc-500 mt-1">
-              The password reset link is missing or invalid.
+              O link de redefinição de senha está ausente ou é inválido.
             </p>
             <div className="mt-6">
               <Link href="/forgot-password" className="block">
                 <Button variant="primary" className="w-full">
-                  Request new reset link
+                  Solicitar novo link
                 </Button>
               </Link>
             </div>
@@ -111,7 +111,7 @@ function ResetPasswordForm() {
               ATLASMED
             </h1>
             <p className="text-sm text-zinc-500 mt-2">
-              Healthcare Commercial Operations
+              Operações Comerciais em Saúde
             </p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6 text-center">
@@ -123,10 +123,10 @@ function ResetPasswordForm() {
               />
             </div>
             <h2 className="text-lg font-medium text-zinc-900">
-              Password reset successful
+              Senha redefinida com sucesso
             </h2>
             <p className="text-sm text-zinc-500 mt-1">
-              Your password has been reset. Redirecting to login...
+              Sua senha foi redefinida. Redirecionando para o login...
             </p>
           </div>
           <p className="text-center text-xs text-zinc-500 mt-6">
@@ -150,10 +150,10 @@ function ResetPasswordForm() {
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
           <h2 className="text-lg font-medium text-zinc-900">
-            Reset your password
+            Redefinir sua senha
           </h2>
           <p className="text-sm text-zinc-500 mt-1">
-            Enter your new password below.
+            Digite sua nova senha abaixo.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             {error && (
@@ -168,11 +168,11 @@ function ResetPasswordForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="password">New password</Label>
+              <Label htmlFor="password">Nova senha</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your new password"
+                placeholder="Digite sua nova senha"
                 {...register("password")}
                 disabled={isLoading}
               />
@@ -183,7 +183,7 @@ function ResetPasswordForm() {
               {password && (
                 <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3">
                   <p className="text-xs font-medium text-zinc-700">
-                    Password requirements
+                    Requisitos da senha
                   </p>
                   <ul className="space-y-1">
                     {passwordRequirements.map((req, index) => {
@@ -227,12 +227,12 @@ function ResetPasswordForm() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Resetting password..." : "Reset password"}
+              {isLoading ? "Redefinindo senha..." : "Redefinir senha"}
             </Button>
 
             <Link href="/login" className="block">
               <Button variant="ghost" className="w-full">
-                Back to sign in
+                Voltar para o login
               </Button>
             </Link>
           </form>
@@ -251,7 +251,7 @@ export default function ResetPasswordPage() {
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-zinc-50">
           <div className="py-10 text-center text-sm text-zinc-500">
-            Loading...
+            Carregando…
           </div>
         </div>
       }
