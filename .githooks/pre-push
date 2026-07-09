@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Reject pushes to main/master from a local branch that IS main/master.
+# Reject force-pushes to protected refs.
+
+set -euo pipefail
+
+protected="^refs/heads/(main|master)$"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [[ "${remote_ref}" =~ ${protected} ]]; then
+    if [[ "${local_ref}" =~ ${protected} ]]; then
+      echo "✗ Direct push to '${remote_ref}' from '${local_ref}' is blocked."
+      echo "  Use a feature branch and open a PR — see AGENTS.md § Branch and merge workflow."
+      exit 1
+    fi
+  fi
+done
+
+exit 0

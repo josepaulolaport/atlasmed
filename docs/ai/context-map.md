@@ -28,6 +28,8 @@ There are no separate "domain skills" — the AGENTS.md IS the domain context.
 | modify-permissions | `skills/procedure/modify-permissions/SKILL.md`, `packages/access/AGENTS.md` |
 | run-api-tests | `skills/procedure/run-api-tests/SKILL.md` |
 | web-dev-setup | `skills/procedure/web-dev-setup/SKILL.md` |
+| start-task | `skills/procedure/start-task/SKILL.md` |
+| finish-task | `skills/procedure/finish-task/SKILL.md` |
 
 ## By concern
 
@@ -47,7 +49,7 @@ There are no separate "domain skills" — the AGENTS.md IS the domain context.
 | `caching`, `real-time` | affected app AGENTS |
 | `rate-limiting` | `apps/api/AGENTS.md` (rate-limit middleware) |
 | `compliance` | `packages/observability/AGENTS.md` (audit events) + affected domain AGENTS |
-| `ci-cd`, `deployment` | `.github/`, no dedicated skill yet |
+| `ci-cd`, `deployment` | `skills/procedure/start-task/SKILL.md`, `skills/procedure/finish-task/SKILL.md`, `.githooks/`, `.github/` |
 | `styling`, `layout`, `interaction`, `accessibility` | `apps/web/AGENTS.md` (design tokens live there) |
 | `state-management`, `data-fetching`, `forms` | `apps/web/AGENTS.md`, `skills/procedure/add-ui-screen/SKILL.md` |
 | `business-logic` | affected app AGENTS (patterns live there) |

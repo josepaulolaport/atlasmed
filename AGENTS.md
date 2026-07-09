@@ -156,11 +156,65 @@ conflictsWith: [<incompatible skills>]
 
 ## Branch and merge workflow
 
-- One branch per task. Naming: `<type>/<slug>-YYYYMMDD` (e.g. `feature/registry-cards-20260709`).
-- Merge to `main` via squash PR. Delete branch after merge (locally and remotely).
+### Branch naming (locked)
+
+Pattern: `<type>/<slug>-YYYYMMDD`
+
+`<type>` MUST be one of:
+
+| Type | Use for |
+|---|---|
+| `feature/` | New capability or product surface |
+| `fix/` | Bug fix (behavior correction) |
+| `refactor/` | Restructure without behavior change |
+| `chore/` | Tooling, deps, config, meta files |
+| `docs/` | Docs-only change |
+| `spec/` | New spec / ADR / product doc |
+| `experiment/` | Throwaway exploration — auto-delete after 7 days |
+
+`<slug>` — kebab-case, ≤ 40 chars, describes the change. No ticket IDs.
+`YYYYMMDD` — date the branch was created (not today's date every time it's touched).
+
+Examples:
+- `feature/registry-cards-20260709`
+- `fix/facility-detail-tabs-20260709`
+- `chore/ai-context-routing-20260709`
+
+### Worktree location (locked)
+
+For parallel AI agents, use `git worktree add ../atlasmed-worktrees/<slug> -b <type>/<slug>-YYYYMMDD`.
+
+- Root: `../atlasmed-worktrees/` — sibling of the main repo dir, one parent for all task worktrees.
+- Never nest worktrees inside the main repo (tooling recurses and breaks).
+- One worktree per task. Do not reuse a worktree for a different task after PR merge.
+
+### Merge
+
+- Squash PR to `main`. Merge commit body summarizes the branch, not every commit.
+- Delete branch after merge — locally AND remotely.
 - Never commit directly to `main`.
-- Prefer git worktrees when multiple AI agents work in parallel: `git worktree add ../atlasmed-<task> -b <branch>`.
-- Do not force-push to `main` under any circumstance.
+- Never force-push to `main`.
+
+### Cleanup cadence (weekly)
+
+Run in the main repo dir:
+
+```bash
+git fetch --prune                              # remove stale remote-tracking refs
+git worktree prune                             # remove worktree dirs already deleted
+git branch --merged main | grep -v '^\* main$' | xargs -r git branch -d
+```
+
+For `experiment/` branches older than 7 days, delete regardless of merge status.
+
+### Enforcement
+
+Pre-commit + pre-push hooks reject direct commits to `main` and branch names that don't match the pattern. Install with `./scripts/install-git-hooks.sh` (run once per clone / worktree).
+
+### Skills
+
+- `skills/procedure/start-task/SKILL.md` — creates the worktree + branch and sets up the environment.
+- `skills/procedure/finish-task/SKILL.md` — opens the PR, squash-merges, deletes the branch, prunes the worktree.
 
 ## Behavior rules
 

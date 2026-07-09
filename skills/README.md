@@ -33,6 +33,8 @@ See root `AGENTS.md` § Task lifecycle. Summary:
 | `procedure/modify-permissions/` | Change roles / CASL abilities / row-level visibility in `packages/access`. Named helpers, coordinate consumers, audit event on role change. |
 | `procedure/run-api-tests/` | Boot the `apps/api` test environment (Postgres, Redis, `atlasmed_test` DB, seed) and run tests. Covers automated setup, run modes, troubleshooting, CI. |
 | `procedure/web-dev-setup/` | Boot `apps/web` for local development. Prereqs, env vars, dev/build/start commands, port collisions. |
+| `procedure/start-task/` | Create a task-scoped worktree + branch per `AGENTS.md` conventions. Enforced branch naming, worktree location, hook install, `bun install`. Use when spinning up parallel agents. |
+| `procedure/finish-task/` | Ship a task branch: rebase, PR, squash-merge, delete branch (local + remote), prune worktree, weekly cleanup. |
 
 ## Cross-cutting skills
 
@@ -56,6 +58,8 @@ skills/
     modify-permissions/SKILL.md
     run-api-tests/SKILL.md
     web-dev-setup/SKILL.md
+    start-task/SKILL.md
+    finish-task/SKILL.md
   cross-cutting/
     check-permissions/SKILL.md
     keep-docs-current/SKILL.md
