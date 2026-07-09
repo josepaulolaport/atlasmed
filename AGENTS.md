@@ -22,7 +22,27 @@ Tool-specific configs (CLAUDE.md, .cursor/rules/*, etc.) should point here inste
 
 ## Task lifecycle (mandatory)
 
-Every AI editing session runs these steps in order. No editing until step 4 is announced.
+Every AI editing session runs these steps in order. Step 0 comes BEFORE anything else. No editing until step 4 is announced.
+
+### Step 0 — Worktree + branch (HARD GATE, do this first)
+
+**Never edit files while on `main`/`master`, and never edit the primary checkout directly. Always work inside a dedicated git worktree on a feature branch.** This is the first action of every editing session, before classifying or loading anything.
+
+At session start, run `git rev-parse --show-toplevel` + `git branch --show-current`. Then:
+
+1. If on `main`/`master`, OR in the primary checkout (not a linked worktree) → STOP. Create one before any edit:
+
+   ```bash
+   git worktree add ../atlasmed-worktrees/<slug> -b <type>/<slug>-YYYYMMDD
+   ```
+
+   (See "Branch and merge workflow" below for the naming rules.) Then perform ALL edits inside that worktree path.
+
+2. Only if already inside a linked worktree on a valid `<type>/<slug>-YYYYMMDD` branch → proceed.
+
+Verify you are in a linked worktree: `git rev-parse --git-dir` differs from `git rev-parse --git-common-dir` (they are equal in the primary checkout). If you catch yourself having edited on `main`, cut the branch immediately (`git checkout -b <type>/<slug>-YYYYMMDD` carries uncommitted work over) and note the slip — but the rule is to branch FIRST, not recover after.
+
+Do not skip this because the change "looks small." Every edit ships on a branch via PR (see Merge).
 
 ### Step 1 — Classify
 
@@ -123,7 +143,7 @@ Examples:
 
 ### Worktree location (locked)
 
-For parallel AI agents, use `git worktree add ../atlasmed-worktrees/<slug> -b <type>/<slug>-YYYYMMDD`.
+**Every editing task runs in a worktree — not just parallel agents.** Create one with `git worktree add ../atlasmed-worktrees/<slug> -b <type>/<slug>-YYYYMMDD` (this is the Step 0 gate at the top of the task lifecycle).
 
 - Root: `../atlasmed-worktrees/` — sibling of the main repo dir, one parent for all task worktrees.
 - Never nest worktrees inside the main repo (tooling recurses and breaks).
