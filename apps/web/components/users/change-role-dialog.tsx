@@ -92,9 +92,9 @@ export function ChangeRoleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Change role</DialogTitle>
+          <DialogTitle>Alterar função</DialogTitle>
           <DialogDescription>
-            Update the role for {user?.username}. This affects permissions immediately.
+            Atualize a função de {user?.username}. Isso afeta as permissões imediatamente.
           </DialogDescription>
         </DialogHeader>
 
@@ -105,10 +105,10 @@ export function ChangeRoleDialog({
         ) : (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label>Função</Label>
               <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
+                  <SelectValue placeholder="Selecione a função" />
                 </SelectTrigger>
                 <SelectContent>
                   {roles.map((role) => (
@@ -123,10 +123,10 @@ export function ChangeRoleDialog({
 
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                Cancelar
               </Button>
               <Button onClick={handleSave} disabled={saving || !selectedRoleId}>
-                {saving ? "Saving..." : "Save role"}
+                {saving ? "Salvando..." : "Salvar função"}
               </Button>
             </div>
           </div>

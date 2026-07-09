@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
               ATLASMED
             </h1>
             <p className="text-sm text-zinc-500 mt-2">
-              Healthcare Commercial Operations
+              Operações Comerciais em Saúde
             </p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6 text-center">
@@ -64,11 +64,11 @@ export default function ForgotPasswordPage() {
               />
             </div>
             <h2 className="text-lg font-medium text-zinc-900">
-              Check your email
+              Verifique seu email
             </h2>
             <p className="text-sm text-zinc-500 mt-1">
-              If an account exists with the provided information, you will
-              receive password reset instructions shortly.
+              Se existir uma conta com as informações fornecidas, você receberá
+              instruções para redefinir a senha em breve.
             </p>
             <div className="mt-6">
               <Link href="/login">
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
                     stroke-width="1.5"
                     className="text-base"
                   />
-                  Back to sign in
+                  Voltar para o login
                 </Button>
               </Link>
             </div>
@@ -99,14 +99,14 @@ export default function ForgotPasswordPage() {
             ATLASMED
           </h1>
           <p className="text-sm text-zinc-500 mt-2">
-            Healthcare Commercial Operations
+            Operações Comerciais em Saúde
           </p>
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
-          <h2 className="text-lg font-medium text-zinc-900">Forgot password?</h2>
+          <h2 className="text-lg font-medium text-zinc-900">Esqueceu a senha?</h2>
           <p className="text-sm text-zinc-500 mt-1">
-            Enter your email, username, or phone number and we&apos;ll send you
-            instructions to reset your password.
+            Digite seu email, nome de usuário ou telefone e enviaremos as
+            instruções para redefinir sua senha.
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             {error && (
@@ -121,7 +121,7 @@ export default function ForgotPasswordPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="identifier">Email, username or phone</Label>
+              <Label htmlFor="identifier">Email, usuário ou telefone</Label>
               <Input
                 id="identifier"
                 type="text"
@@ -142,7 +142,7 @@ export default function ForgotPasswordPage() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Sending..." : "Send reset instructions"}
+              {isLoading ? "Enviando..." : "Enviar instruções"}
             </Button>
 
             <Link href="/login" className="block">

@@ -161,7 +161,7 @@ export default function ProfessionalsPage() {
   };
 
   const handleDelete = async (professional: Professional) => {
-    if (!confirm(`Delete ${professional.firstName} ${professional.lastName}?`)) return;
+    if (!confirm(`Excluir ${professional.firstName} ${professional.lastName}?`)) return;
 
     try {
       await professionalsApi.deleteProfessional(professional.id);
@@ -186,10 +186,10 @@ export default function ProfessionalsPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Professionals
+              Profissionais
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Manage professionals and facility assignments
+              Gerenciar profissionais e atribuições de unidades
             </p>
           </div>
           {canManage && (
@@ -199,7 +199,7 @@ export default function ProfessionalsPage() {
                 stroke-width="1.5"
                 className="text-base"
               />
-              Add professional
+              Adicionar profissional
             </Button>
           )}
         </div>
@@ -215,7 +215,7 @@ export default function ProfessionalsPage() {
                 className="text-base absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
               />
               <Input
-                placeholder="Search professionals..."
+                placeholder="Buscar profissionais..."
                 value={search}
                 onChange={(event) => {
                   setSearch(event.target.value);
@@ -228,18 +228,18 @@ export default function ProfessionalsPage() {
           <div className="p-5">
             {loading ? (
               <div className="py-10 text-center text-sm text-zinc-500">
-                Loading…
+                Carregando…
               </div>
             ) : (
               <>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Specialty</TableHead>
-                      <TableHead>Facilities</TableHead>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Especialidade</TableHead>
+                      <TableHead>Unidades de saúde</TableHead>
                       {canManage && (
-                        <TableHead className="w-[120px]">Actions</TableHead>
+                        <TableHead className="w-[120px]">Ações</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -250,7 +250,7 @@ export default function ProfessionalsPage() {
                           colSpan={canManage ? 4 : 3}
                           className="text-center text-sm text-zinc-500 py-10"
                         >
-                          No professionals found
+                          Nenhum profissional encontrado
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -314,17 +314,17 @@ export default function ProfessionalsPage() {
                     disabled={page <= 1}
                     onClick={() => setPage((value) => value - 1)}
                   >
-                    Previous
+                    Anterior
                   </Button>
                   <span className="text-sm text-zinc-500">
-                    Page {page} of {totalPages}
+                    Página {page} de {totalPages}
                   </span>
                   <Button
                     variant="outline"
                     disabled={page >= totalPages}
                     onClick={() => setPage((value) => value + 1)}
                   >
-                    Next
+                    Próximo
                   </Button>
                 </div>
               </>
@@ -337,12 +337,12 @@ export default function ProfessionalsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingProfessional ? "Edit professional" : "Create professional"}
+              {editingProfessional ? "Editar profissional" : "Criar profissional"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="professional-first-name">First name</Label>
+              <Label htmlFor="professional-first-name">Nome</Label>
               <Input
                 id="professional-first-name"
                 value={formFirstName}
@@ -350,7 +350,7 @@ export default function ProfessionalsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="professional-last-name">Last name</Label>
+              <Label htmlFor="professional-last-name">Sobrenome</Label>
               <Input
                 id="professional-last-name"
                 value={formLastName}
@@ -358,7 +358,7 @@ export default function ProfessionalsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="professional-specialty">Specialty</Label>
+              <Label htmlFor="professional-specialty">Especialidade</Label>
               <Input
                 id="professional-specialty"
                 value={formSpecialty}
@@ -367,15 +367,15 @@ export default function ProfessionalsPage() {
             </div>
             {!editingProfessional && (
               <div className="space-y-2">
-                <Label>Facilities (optional)</Label>
+                <Label>Unidades de saúde (opcional)</Label>
                 <p className="text-xs text-zinc-500">
-                  Leave unselected to create without facility links. Associate
-                  later from a facility page.
+                  Deixe sem seleção para criar sem vínculos de unidade. Associe
+                  depois na página de uma unidade.
                 </p>
                 <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-zinc-200 bg-white p-3">
                   {facilities.length === 0 ? (
                     <p className="text-sm text-zinc-500">
-                      No facilities available
+                      Nenhuma unidade disponível
                     </p>
                   ) : (
                     facilities.map((facility) => (
@@ -398,10 +398,10 @@ export default function ProfessionalsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              Cancelar
             </Button>
             <Button variant="primary" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving..." : "Save"}
+              {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </DialogContent>

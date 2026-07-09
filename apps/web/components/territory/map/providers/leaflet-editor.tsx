@@ -143,7 +143,7 @@ export function LeafletTerritoryEditor(props: TerritoryMapEditorProps) {
       </MapContainer>
       {!props.readOnly ? (
         <p className="mt-2 text-xs text-gray-500">
-          Draw multiple polygons to define non-contiguous parts of the same territory.
+          Desenhe múltiplos polígonos para definir partes não contíguas do mesmo território.
         </p>
       ) : null}
     </div>

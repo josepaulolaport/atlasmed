@@ -179,11 +179,11 @@ export function ManageAssignmentsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Manage assignments</DialogTitle>
+          <DialogTitle>Gerenciar atribuições</DialogTitle>
           <DialogDescription>
             {user
-              ? `Organizational scope for ${user.username} (${user.email})`
-              : "Loading..."}
+              ? `Escopo organizacional de ${user.username} (${user.email})`
+              : "Carregando..."}
           </DialogDescription>
         </DialogHeader>
 
@@ -195,28 +195,28 @@ export function ManageAssignmentsDialog({
           <div className="space-y-6">
             {isTargetUser && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Operational status:</span>
+                <span className="text-sm text-gray-600">Status operacional:</span>
                 {assignments.isOperationallyActive ? (
-                  <Badge variant="success">Active</Badge>
+                  <Badge variant="success">Ativo</Badge>
                 ) : (
-                  <Badge variant="secondary">Unassigned</Badge>
+                  <Badge variant="secondary">Não atribuído</Badge>
                 )}
               </div>
             )}
 
             {isTargetUser && (
               <div className="space-y-2">
-                <Label htmlFor="manager-select">Manager</Label>
+                <Label htmlFor="manager-select">Gerente</Label>
                 <Select
                   value={assignments.managerId ?? "none"}
                   onValueChange={handleManagerChange}
                   disabled={savingManager}
                 >
                   <SelectTrigger id="manager-select">
-                    <SelectValue placeholder="Select manager" />
+                    <SelectValue placeholder="Selecione o gerente" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {managers.map((manager) => (
                       <SelectItem key={manager.id} value={manager.id}>
                         {formatManagerLabel(manager)}
@@ -226,7 +226,7 @@ export function ManageAssignmentsDialog({
                 </Select>
                 {assignments.manager && (
                   <p className="text-xs text-gray-500">
-                    Current: {assignments.manager.username} ({assignments.manager.email})
+                    Atual: {assignments.manager.username} ({assignments.manager.email})
                   </p>
                 )}
               </div>
@@ -234,11 +234,11 @@ export function ManageAssignmentsDialog({
 
             {canAssignTerritories && territoryPickerConfig && (
               <div className="space-y-3">
-                <Label>Territories</Label>
+                <Label>Territórios</Label>
                 <p className="text-xs text-gray-500">{territoryPickerConfig.helperText}</p>
                 {assignments.territories.length === 0 ? (
                   <p className="text-sm text-gray-500">
-                    No territories assigned. Select a territory below.
+                    Nenhum território atribuído. Selecione um território abaixo.
                   </p>
                 ) : (
                   <ul className="divide-y rounded-md border">
@@ -252,7 +252,7 @@ export function ManageAssignmentsDialog({
                             {getLabel(t.territoryId)}
                           </span>
                           <p className="text-xs text-gray-500">
-                            Assigned {new Date(t.assignedAt).toLocaleString()}
+                            Atribuído {new Date(t.assignedAt).toLocaleString("pt-BR")}
                           </p>
                         </div>
                         <Button
@@ -260,7 +260,7 @@ export function ManageAssignmentsDialog({
                           size="icon"
                           onClick={() => handleRevokeTerritory(t.territoryId)}
                           disabled={territoryBusy !== null}
-                          aria-label={`Remove ${t.territoryId}`}
+                          aria-label={`Remover ${t.territoryId}`}
                         >
                           {territoryBusy === t.territoryId ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -278,7 +278,7 @@ export function ManageAssignmentsDialog({
                   disabled={territoryBusy !== null}
                   pickerConfig={territoryPickerConfig}
                   excludeCountry={territoryPickerConfig.excludeCountry}
-                  placeholder="Select an eligible territory"
+                  placeholder="Selecione um território elegível"
                 />
                 <Button
                   onClick={handleAddTerritory}
@@ -288,7 +288,7 @@ export function ManageAssignmentsDialog({
                   {territoryBusy === "add" ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    "Add territory"
+                    "Adicionar território"
                   )}
                 </Button>
               </div>

@@ -10,38 +10,38 @@ const FLAG_FIELDS: Array<{
 }> = [
   {
     key: "canHaveBoundary",
-    label: "Can have boundary",
-    description: "Territories of this type support polygon boundaries.",
+    label: "Pode ter limite",
+    description: "Territórios deste tipo suportam limites de polígono.",
   },
   {
     key: "assignsClinics",
-    label: "Assigns clinics",
-    description: "Clinics inside the boundary are assigned to this territory.",
+    label: "Atribui clínicas",
+    description: "Clínicas dentro do limite são atribuídas a este território.",
   },
   {
     key: "assignableToUsers",
-    label: "Assignable to users",
-    description: "Field reps can be assigned to territories of this type.",
+    label: "Atribuível a usuários",
+    description: "Representantes de campo podem ser atribuídos a territórios deste tipo.",
   },
   {
     key: "assignableToManagers",
-    label: "Assignable to managers",
-    description: "Managers can be assigned to territories of this type.",
+    label: "Atribuível a gestores",
+    description: "Gestores podem ser atribuídos a territórios deste tipo.",
   },
   {
     key: "isCountryLevel",
-    label: "Country level",
-    description: "Top-level country territory; cannot have a parent.",
+    label: "Nível de país",
+    description: "Território de país de nível superior; não pode ter um pai.",
   },
   {
     key: "participatesInGroupingHierarchy",
-    label: "Grouping hierarchy",
-    description: "Territories of this type appear in the grouping tree for filters and analytics.",
+    label: "Hierarquia de agrupamento",
+    description: "Territórios deste tipo aparecem na árvore de agrupamento para filtros e análises.",
   },
   {
     key: "blockSiblingOverlap",
-    label: "Block sibling overlap",
-    description: "Reject boundaries that overlap siblings of the same type.",
+    label: "Bloquear sobreposição de irmãos",
+    description: "Rejeitar limites que se sobrepõem a irmãos do mesmo tipo.",
   },
 ];
 

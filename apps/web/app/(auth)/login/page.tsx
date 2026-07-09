@@ -39,7 +39,7 @@ function LoginPageContent() {
   useEffect(() => {
     if (searchParams.get("reason") === "refresh_reuse") {
       setError(
-        "Your session was ended due to suspicious activity. Please sign in again."
+        "Sua sessão foi encerrada devido a atividade suspeita. Entre novamente."
       );
     }
   }, [searchParams]);
@@ -74,13 +74,13 @@ function LoginPageContent() {
             ATLASMED
           </h1>
           <p className="text-sm text-zinc-500 mt-2">
-            Healthcare Commercial Operations
+            Operações Comerciais em Saúde
           </p>
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
-          <h2 className="text-lg font-medium text-zinc-900">Sign in</h2>
+          <h2 className="text-lg font-medium text-zinc-900">Entrar</h2>
           <p className="text-sm text-zinc-500 mt-1">
-            Enter your credentials to access your account
+            Insira suas credenciais para acessar sua conta
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             {error && (
@@ -95,7 +95,7 @@ function LoginPageContent() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="identifier">Email, username or phone</Label>
+              <Label htmlFor="identifier">Email, usuário ou telefone</Label>
               <Input
                 id="identifier"
                 type="text"
@@ -112,18 +112,18 @@ function LoginPageContent() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Senha</Label>
                 <Link
                   href="/forgot-password"
                   className="text-xs text-blue-600 hover:underline"
                 >
-                  Forgot password?
+                  Esqueceu a senha?
                 </Link>
               </div>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Digite sua senha"
                 {...register("password")}
                 disabled={isLoading}
               />
@@ -138,16 +138,16 @@ function LoginPageContent() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign in"}
+              {isLoading ? "Entrando..." : "Entrar"}
             </Button>
 
             <p className="text-center text-sm text-zinc-500 pt-2">
-              New to AtlasMed?{" "}
+              Novo no AtlasMed?{" "}
               <Link
                 href="/register"
                 className="text-blue-600 hover:underline font-medium"
               >
-                Register with token
+                Cadastrar com token
               </Link>
             </p>
           </form>

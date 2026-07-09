@@ -45,10 +45,10 @@ type TabKey =
   | "territory";
 
 const VIEWS: { value: FacilityProfessionalView; label: string }[] = [
-  { value: "all", label: "All active" },
-  { value: "source", label: "Source" },
-  { value: "confirmed", label: "Confirmed" },
-  { value: "pending", label: "Pending confirmation" },
+  { value: "all", label: "Todos ativos" },
+  { value: "source", label: "Origem" },
+  { value: "confirmed", label: "Confirmado" },
+  { value: "pending", label: "Confirmação pendente" },
 ];
 
 export default function FacilityDetailPage() {
@@ -175,7 +175,7 @@ export default function FacilityDetailPage() {
   };
 
   const handleEndAssociation = async (professionalId: string) => {
-    if (!confirm("Remove this professional from the facility roster?")) return;
+    if (!confirm("Remover este profissional da lista da unidade?")) return;
     try {
       await facilityProfessionalsApi.endAssociation(facilityId, professionalId);
       toast({ title: "Removed", description: "Association ended" });
@@ -219,22 +219,22 @@ export default function FacilityDetailPage() {
 
   const tabs = useMemo<TabItem[]>(
     () => [
-      { value: "overview", label: "Overview" },
+      { value: "overview", label: "Visão geral" },
       {
         value: "professionals",
-        label: "Professionals",
+        label: "Profissionais",
         badge: professionals.length ? String(professionals.length) : undefined,
         badgeVariant: "muted",
       },
       {
         value: "registry",
-        label: "Registry",
-        badge: suggestions.length ? `${suggestions.length} updates` : undefined,
+        label: "Cadastro",
+        badge: suggestions.length ? `${suggestions.length} atualizações` : undefined,
         badgeVariant: "info",
       },
-      { value: "commercial", label: "Commercial" },
-      { value: "conformity", label: "Conformity" },
-      { value: "territory", label: "Territory" },
+      { value: "commercial", label: "Comercial" },
+      { value: "conformity", label: "Conformidade" },
+      { value: "territory", label: "Território" },
     ],
     [professionals.length, suggestions.length]
   );
@@ -249,7 +249,7 @@ export default function FacilityDetailPage() {
 
   if (!facility) {
     return (
-      <div className="p-6 text-sm text-zinc-500">Facility not found.</div>
+      <div className="p-6 text-sm text-zinc-500">Unidade não encontrada.</div>
     );
   }
 
@@ -270,7 +270,7 @@ export default function FacilityDetailPage() {
               </span>
             </div>
             <p className="text-sm text-zinc-500 mb-4">
-              {facility.address || "No address on file"}
+              {facility.address || "Nenhum endereço cadastrado"}
             </p>
 
             <div className="flex flex-wrap items-center gap-2">
@@ -280,12 +280,12 @@ export default function FacilityDetailPage() {
                   stroke-width="1.5"
                   className="mr-1.5"
                 />
-                Territory:{" "}
+                Território:{" "}
                 {facility.territoryId
                   ? `${facility.territoryId.slice(0, 8)} (${
                       territoryStatus ?? "assigned"
                     })`
-                  : "Unassigned"}
+                  : "Não atribuído"}
               </Badge>
               <Badge
                 variant={
@@ -297,8 +297,8 @@ export default function FacilityDetailPage() {
                   stroke-width="1.5"
                   className="mr-1.5"
                 />
-                Conformity:{" "}
-                {territoryStatus === "assigned" ? "Validated" : "Review"}
+                Conformidade:{" "}
+                {territoryStatus === "assigned" ? "Validado" : "Revisão"}
               </Badge>
               {pendingSuggestionCount > 0 && (
                 <Badge variant="warning">
@@ -307,8 +307,10 @@ export default function FacilityDetailPage() {
                     stroke-width="1.5"
                     className="mr-1.5"
                   />
-                  {pendingSuggestionCount} Pending Suggestion
-                  {pendingSuggestionCount === 1 ? "" : "s"}
+                  {pendingSuggestionCount}{" "}
+                  {pendingSuggestionCount === 1
+                    ? "Sugestão Pendente"
+                    : "Sugestões Pendentes"}
                 </Badge>
               )}
             </div>
@@ -318,16 +320,16 @@ export default function FacilityDetailPage() {
             <Button variant="outline" size="default" asChild>
               <Link href={`/facilities`}>
                 <iconify-icon icon="solar:arrow-left-linear" stroke-width="1.5" />
-                Back
+                Voltar
               </Link>
             </Button>
             <Button variant="outline" size="default">
               <iconify-icon icon="solar:pen-linear" stroke-width="1.5" />
-              Edit
+              Editar
             </Button>
             <Button variant="outline" size="default">
               <iconify-icon icon="solar:map-linear" stroke-width="1.5" />
-              Map View
+              Ver mapa
             </Button>
           </div>
         </div>
@@ -394,15 +396,15 @@ function OverviewTab({ facility }: { facility: Facility }) {
           <section className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
             <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
               <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                Facility Details
+                Detalhes da unidade
               </h3>
             </div>
             <div className="p-5 grid grid-cols-2 gap-6">
-              <Field label="Name" value={facility.name} />
+              <Field label="Nome" value={facility.name} />
               <Field label="ID" value={facility.id} />
-              <Field label="Address" value={facility.address} />
+              <Field label="Endereço" value={facility.address} />
               <Field
-                label="Coordinates"
+                label="Coordenadas"
                 value={
                   facility.lat && facility.lng
                     ? `${facility.lat.toFixed(5)}, ${facility.lng.toFixed(5)}`
@@ -410,12 +412,12 @@ function OverviewTab({ facility }: { facility: Facility }) {
                 }
               />
               <Field
-                label="Created"
-                value={new Date(facility.createdAt).toLocaleDateString()}
+                label="Criado em"
+                value={new Date(facility.createdAt).toLocaleDateString("pt-BR")}
               />
               <Field
-                label="Updated"
-                value={new Date(facility.updatedAt).toLocaleDateString()}
+                label="Atualizado em"
+                value={new Date(facility.updatedAt).toLocaleDateString("pt-BR")}
               />
             </div>
           </section>
@@ -424,14 +426,14 @@ function OverviewTab({ facility }: { facility: Facility }) {
           <section className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
             <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
               <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                Territory
+                Território
               </h3>
             </div>
             <div className="p-5 space-y-4">
-              <Field label="Territory ID" value={facility.territoryId} />
+              <Field label="ID do território" value={facility.territoryId} />
               <div>
                 <label className="block text-xs font-medium text-zinc-500 mb-1">
-                  Assignment Status
+                  Status de atribuição
                 </label>
                 {facility.territoryAssignmentStatus ? (
                   <Badge
@@ -488,7 +490,7 @@ function ProfessionalsTab({
     <div className="p-6 max-w-5xl mx-auto w-full space-y-6">
       <div className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
         <div>
-          <p className="mb-1 text-xs font-medium text-zinc-500">View</p>
+          <p className="mb-1 text-xs font-medium text-zinc-500">Visualização</p>
           <Select
             value={view}
             onValueChange={(value) => setView(value as FacilityProfessionalView)}
@@ -508,14 +510,14 @@ function ProfessionalsTab({
         <div className="flex flex-1 flex-wrap items-end gap-2">
           <div className="min-w-[220px] flex-1">
             <p className="mb-1 text-xs font-medium text-zinc-500">
-              Associate professional
+              Associar profissional
             </p>
             <Select
               value={associateProfessionalId}
               onValueChange={setAssociateProfessionalId}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select professional" />
+                <SelectValue placeholder="Selecionar profissional" />
               </SelectTrigger>
               <SelectContent>
                 {allProfessionals.map((professional) => (
@@ -528,7 +530,7 @@ function ProfessionalsTab({
           </div>
           <Button onClick={onAssociate} disabled={!associateProfessionalId}>
             <iconify-icon icon="solar:link-linear" stroke-width="1.5" />
-            Associate
+            Associar
           </Button>
         </div>
       </div>
@@ -541,7 +543,7 @@ function ProfessionalsTab({
               stroke-width="1.5"
               className="text-zinc-400"
             />
-            Associated Professionals
+            Profissionais associados
             <span className="bg-zinc-100 text-zinc-600 py-0.5 px-2 rounded-full text-xs font-medium">
               {professionals.length}
             </span>
@@ -549,17 +551,17 @@ function ProfessionalsTab({
         </div>
         {loading ? (
           <div className="py-10 text-center text-sm text-zinc-500">
-            Loading professionals…
+            Carregando profissionais…
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Specialty</TableHead>
-                <TableHead>Source</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead>Especialidade</TableHead>
+                <TableHead>Origem</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -569,7 +571,7 @@ function ProfessionalsTab({
                     colSpan={5}
                     className="py-10 text-center text-sm text-zinc-500"
                   >
-                    No professionals in this view
+                    Nenhum profissional nesta visualização
                   </TableCell>
                 </TableRow>
               ) : (
@@ -586,16 +588,16 @@ function ProfessionalsTab({
                     <TableCell>{row.professional.specialty || "—"}</TableCell>
                     <TableCell>
                       {row.association.sourceActive ? (
-                        <Badge variant="secondary">Source</Badge>
+                        <Badge variant="secondary">Origem</Badge>
                       ) : (
                         "—"
                       )}
                     </TableCell>
                     <TableCell>
                       {row.association.confirmedAt ? (
-                        <Badge variant="success">Confirmed</Badge>
+                        <Badge variant="success">Confirmado</Badge>
                       ) : row.association.pendingConfirmation ? (
-                        <Badge variant="warning">Pending</Badge>
+                        <Badge variant="warning">Pendente</Badge>
                       ) : (
                         "—"
                       )}
@@ -607,7 +609,7 @@ function ProfessionalsTab({
                           variant="outline"
                           onClick={() => onConfirm(row.professional.id)}
                         >
-                          Confirm
+                          Confirmar
                         </Button>
                       )}
                       <Button
@@ -615,7 +617,7 @@ function ProfessionalsTab({
                         variant="ghost"
                         onClick={() => onEnd(row.professional.id)}
                       >
-                        Remove
+                        Remover
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -651,18 +653,19 @@ function RegistryTab({
           className="text-zinc-400 text-lg mt-0.5"
         />
         <div>
-          <h4 className="text-sm font-medium text-zinc-900">Registry Review</h4>
+          <h4 className="text-sm font-medium text-zinc-900">Revisão de cadastro</h4>
           <p className="text-sm text-zinc-500 mt-1">
-            CNES data is imported and compared against your CRM truth. Approve
-            or reject suggested changes below. Your manual edits are always
-            protected and never silently overwritten.
+            Os dados do CNES são importados e comparados com as informações do
+            seu CRM. Aprove ou rejeite as alterações sugeridas abaixo. Suas
+            edições manuais estão sempre protegidas e nunca são sobrescritas
+            silenciosamente.
           </p>
         </div>
       </div>
 
       {loading ? (
         <div className="py-10 text-center text-sm text-zinc-500">
-          Loading suggestions…
+          Carregando sugestões…
         </div>
       ) : suggestions.length === 0 ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
@@ -672,10 +675,10 @@ function RegistryTab({
             className="text-emerald-500 text-3xl"
           />
           <h4 className="mt-3 text-sm font-medium text-zinc-900">
-            No pending suggestions
+            Nenhuma sugestão pendente
           </h4>
           <p className="mt-1 text-sm text-zinc-500">
-            This facility is in sync with the registry.
+            Esta unidade está sincronizada com o cadastro.
           </p>
         </div>
       ) : (
@@ -702,9 +705,9 @@ function SuggestionCard({
   onReject: () => void;
 }) {
   const typeLabels: Record<RegistrySuggestion["type"], string> = {
-    FACILITY_REGISTRY_DEACTIVATED: "Facility Deactivation",
-    FACILITY_REGISTRY_REACTIVATED: "Facility Reactivation",
-    DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Professional Removal",
+    FACILITY_REGISTRY_DEACTIVATED: "Desativação de unidade",
+    FACILITY_REGISTRY_REACTIVATED: "Reativação de unidade",
+    DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Remoção de profissional",
   };
   const dotColor: Record<RegistrySuggestion["type"], string> = {
     FACILITY_REGISTRY_DEACTIVATED: "bg-amber-500",
@@ -721,16 +724,16 @@ function SuggestionCard({
             {typeLabels[suggestion.type]}
           </h3>
           <span className="text-xs text-zinc-400 ml-2">
-            Run #{suggestion.ingestionRunId.slice(0, 8)} •{" "}
-            {new Date(suggestion.suggestedAt).toLocaleString()}
+            Execução #{suggestion.ingestionRunId.slice(0, 8)} •{" "}
+            {new Date(suggestion.suggestedAt).toLocaleString("pt-BR")}
           </span>
         </div>
-        <Badge variant="secondary">Pending</Badge>
+        <Badge variant="secondary">Pendente</Badge>
       </div>
 
       <div className="p-5">
         <p className="text-sm text-zinc-700">
-          {suggestion.reason || "Registry mismatch detected."}
+          {suggestion.reason || "Divergência de cadastro detectada."}
         </p>
         {suggestion.payload && Object.keys(suggestion.payload).length > 0 && (
           <pre className="mt-3 rounded-md bg-zinc-50 border border-zinc-200 p-3 text-xs text-zinc-600 overflow-auto">
@@ -741,9 +744,9 @@ function SuggestionCard({
 
       <div className="px-5 py-4 border-t border-zinc-200 bg-white flex items-center justify-end gap-3">
         <Button variant="ghost" onClick={onReject}>
-          Dismiss
+          Descartar
         </Button>
-        <Button onClick={onApprove}>Apply Suggestion</Button>
+        <Button onClick={onApprove}>Aplicar sugestão</Button>
       </div>
     </div>
   );
@@ -794,13 +797,13 @@ function CommercialTab() {
   return (
     <div className="p-6 max-w-5xl mx-auto w-full">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <StatCard label="YTD Revenue" value="—" hint="Data not connected" />
-        <StatCard label="Active Contracts" value="—" hint="Data not connected" />
-        <StatCard label="Potential Score" value="—" hint="Data not connected" />
+        <StatCard label="Receita no ano" value="—" hint="Dados não conectados" />
+        <StatCard label="Contratos ativos" value="—" hint="Dados não conectados" />
+        <StatCard label="Pontuação de potencial" value="—" hint="Dados não conectados" />
       </div>
       <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
         <p className="text-sm text-zinc-500">
-          Commercial pipeline integration coming soon.
+          Integração do pipeline comercial em breve.
         </p>
       </div>
     </div>
@@ -818,11 +821,11 @@ function ConformityTab() {
         />
         <div>
           <h4 className="text-sm font-medium text-emerald-900">
-            Compliance status unknown
+            Status de conformidade desconhecido
           </h4>
           <p className="text-sm text-emerald-700 mt-1">
-            Licenses &amp; certifications tracking will surface here once the
-            registry integration ships.
+            O acompanhamento de licenças &amp; certificações aparecerá aqui
+            quando a integração do cadastro entrar no ar.
           </p>
         </div>
       </div>
@@ -836,24 +839,24 @@ function TerritoryTab({ facility }: { facility: Facility }) {
       <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm mb-6">
         <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
           <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-            Geographic Assignment
+            Atribuição geográfica
           </h3>
         </div>
         <div className="p-5 grid grid-cols-2 gap-6">
-          <Field label="Territory ID" value={facility.territoryId} />
+          <Field label="ID do território" value={facility.territoryId} />
           <Field
-            label="Assignment Status"
+            label="Status de atribuição"
             value={facility.territoryAssignmentStatus}
           />
           <Field
-            label="Coordinates"
+            label="Coordenadas"
             value={
               facility.lat && facility.lng
                 ? `${facility.lat.toFixed(5)}, ${facility.lng.toFixed(5)}`
                 : undefined
             }
           />
-          <Field label="Address" value={facility.address} />
+          <Field label="Endereço" value={facility.address} />
         </div>
       </div>
     </div>

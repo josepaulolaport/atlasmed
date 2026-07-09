@@ -10,16 +10,16 @@ type Crumb = {
 };
 
 const LABEL_MAP: Record<string, string> = {
-  dashboard: "Dashboard",
-  facilities: "Facilities",
-  professionals: "Professionals",
-  territories: "Territories",
-  users: "Users",
-  profile: "Profile",
-  sessions: "Sessions",
-  security: "Security",
-  health: "System Health",
-  "registry-suggestions": "Registry",
+  dashboard: "Painel",
+  facilities: "Unidades de saúde",
+  professionals: "Profissionais",
+  territories: "Territórios",
+  users: "Usuários",
+  profile: "Perfil",
+  sessions: "Sessões",
+  security: "Segurança",
+  health: "Saúde do sistema",
+  "registry-suggestions": "Sugestões de cadastro",
 };
 
 function humanize(segment: string): string {
@@ -41,7 +41,7 @@ function buildCrumbs(pathname: string): Crumb[] {
     const isDynamicId =
       /^[0-9a-f-]{20,}$/i.test(seg) || /^\d+$/.test(seg);
     crumbs.push({
-      label: isDynamicId ? "Detail" : humanize(seg),
+      label: isDynamicId ? "Detalhe" : humanize(seg),
       href: isLast ? undefined : acc,
     });
   });
@@ -96,7 +96,7 @@ export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
           />
           <input
             type="text"
-            placeholder="Search everywhere..."
+            placeholder="Buscar em tudo..."
             className="w-full h-8 pl-8 pr-3 text-sm bg-zinc-50 border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder:text-zinc-400"
           />
           <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -113,7 +113,7 @@ export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
           <button
             type="button"
             className="text-zinc-400 hover:text-zinc-900 transition-colors relative"
-            aria-label="Notifications"
+            aria-label="Notificações"
           >
             <iconify-icon
               icon="solar:bell-linear"

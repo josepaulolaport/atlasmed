@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 const links = [
-  { href: "/territories", label: "Explorer" },
-  { href: "/territories/types", label: "Types" },
-  { href: "/territories/approvals", label: "Approvals" },
-  { href: "/territories/unassigned-facilities", label: "Unassigned clinics" },
+  { href: "/territories", label: "Explorador" },
+  { href: "/territories/types", label: "Tipos" },
+  { href: "/territories/approvals", label: "Aprovações" },
+  { href: "/territories/unassigned-facilities", label: "Clínicas não atribuídas" },
 ];
 
 export function TerritorySubnav() {

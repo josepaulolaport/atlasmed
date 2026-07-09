@@ -11,9 +11,9 @@ import { hasMinimumRole } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
 const TYPE_LABELS: Record<RegistrySuggestion["type"], string> = {
-  FACILITY_REGISTRY_DEACTIVATED: "Facility Deactivation",
-  FACILITY_REGISTRY_REACTIVATED: "Facility Reactivation",
-  DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Professional Removal",
+  FACILITY_REGISTRY_DEACTIVATED: "Desativação de unidade",
+  FACILITY_REGISTRY_REACTIVATED: "Reativação de unidade",
+  DOCTOR_FACILITY_REGISTRY_DEACTIVATED: "Remoção de profissional",
 };
 
 const DOT_COLOR: Record<RegistrySuggestion["type"], string> = {
@@ -145,17 +145,17 @@ export default function RegistrySuggestionsPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Registry Suggestions
+              Sugestões de cadastro
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Review source-driven facility and professional changes before
-              applying them.
+              Revise as alterações de unidades e profissionais originadas da
+              fonte antes de aplicá-las.
             </p>
           </div>
           {isAdmin && (
             <Button onClick={handleRunDemo} disabled={runningDemo}>
               <iconify-icon icon="solar:play-circle-linear" stroke-width="1.5" />
-              {runningDemo ? "Running…" : "Run demo scenario"}
+              {runningDemo ? "Executando…" : "Executar cenário de demonstração"}
             </Button>
           )}
         </div>
@@ -170,12 +170,13 @@ export default function RegistrySuggestionsPage() {
           />
           <div>
             <h4 className="text-sm font-medium text-zinc-900">
-              Registry Review
+              Revisão de cadastro
             </h4>
             <p className="text-sm text-zinc-500 mt-1">
-              CNES data is imported and compared against your CRM truth.
-              Approve or reject suggested changes below. Your manual edits are
-              always protected and never silently overwritten.
+              Os dados do CNES são importados e comparados com a verdade do seu
+              CRM. Aprove ou rejeite as alterações sugeridas abaixo. Suas
+              edições manuais são sempre protegidas e nunca sobrescritas
+              silenciosamente.
             </p>
           </div>
         </div>
@@ -184,32 +185,39 @@ export default function RegistrySuggestionsPage() {
           <div className="mb-6 rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50/50">
               <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                Last demo run
+                Última execução de demonstração
               </h3>
             </div>
             <div className="p-5 space-y-3">
               <div className="flex flex-wrap gap-2">
                 <Badge variant="info">
-                  {demoResult.summary.pendingCount} pending
+                  {demoResult.summary.pendingCount}{" "}
+                  {demoResult.summary.pendingCount === 1
+                    ? "pendente"
+                    : "pendentes"}
                 </Badge>
                 <Badge variant="secondary">
-                  {demoResult.summary.clinicRemovals} facility removal
-                  {demoResult.summary.clinicRemovals === 1 ? "" : "s"}
+                  {demoResult.summary.clinicRemovals}{" "}
+                  {demoResult.summary.clinicRemovals === 1
+                    ? "remoção de unidade"
+                    : "remoções de unidade"}
                 </Badge>
                 <Badge variant="secondary">
-                  {demoResult.summary.doctorClinicRemovals} professional link
-                  {demoResult.summary.doctorClinicRemovals === 1 ? "" : "s"}
+                  {demoResult.summary.doctorClinicRemovals}{" "}
+                  {demoResult.summary.doctorClinicRemovals === 1
+                    ? "vínculo de profissional"
+                    : "vínculos de profissional"}
                 </Badge>
               </div>
               <ul className="space-y-1 text-sm text-zinc-600">
                 {demoResult.steps.map((step) => (
                   <li key={step.fixture}>
                     {step.skipped
-                      ? `${step.label} — skipped (${step.reason})`
+                      ? `${step.label} — ignorado (${step.reason})`
                       : `${step.label}${
                           typeof step.suggestionsCreated === "number" &&
                           step.suggestionsCreated > 0
-                            ? ` — ${step.suggestionsCreated} suggestion(s) created`
+                            ? ` — ${step.suggestionsCreated} sugestão(ões) criada(s)`
                             : ""
                         }`}
                   </li>
@@ -221,7 +229,7 @@ export default function RegistrySuggestionsPage() {
 
         {loading ? (
           <div className="py-10 text-center text-sm text-zinc-500">
-            Loading suggestions…
+            Carregando sugestões…
           </div>
         ) : suggestions.length === 0 ? (
           <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
@@ -231,12 +239,12 @@ export default function RegistrySuggestionsPage() {
               className="text-emerald-500 text-3xl"
             />
             <h4 className="mt-3 text-sm font-medium text-zinc-900">
-              No pending suggestions
+              Nenhuma sugestão pendente
             </h4>
             <p className="mt-1 text-sm text-zinc-500">
               {isAdmin
-                ? "Run the demo scenario to generate sample items."
-                : "You are up to date."}
+                ? "Execute o cenário de demonstração para gerar itens de exemplo."
+                : "Você está em dia."}
             </p>
           </div>
         ) : (
@@ -253,23 +261,23 @@ export default function RegistrySuggestionsPage() {
         {history.length > 0 && (
           <div className="mt-12">
             <h3 className="text-sm font-medium text-zinc-900 mb-4 tracking-tight">
-              Recent Registry Activity
+              Atividade recente de cadastro
             </h3>
             <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-zinc-50 border-b border-zinc-200">
                     <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
-                      Event
+                      Evento
                     </th>
                     <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
-                      Entity
+                      Entidade
                     </th>
                     <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
-                      Resolution
+                      Resolução
                     </th>
                     <th className="py-2.5 px-4 text-xs font-medium text-zinc-500 w-1/4">
-                      Date
+                      Data
                     </th>
                   </tr>
                 </thead>
@@ -308,7 +316,7 @@ export default function RegistrySuggestionsPage() {
                         </Badge>
                       </td>
                       <td className="py-3 px-4 text-zinc-500 text-xs">
-                        {new Date(h.resolvedAt ?? h.suggestedAt).toLocaleDateString()}
+                        {new Date(h.resolvedAt ?? h.suggestedAt).toLocaleDateString("pt-BR")}
                       </td>
                     </tr>
                   ))}
@@ -351,11 +359,11 @@ function SuggestionCard({
             {TYPE_LABELS[suggestion.type]}
           </h3>
           <span className="text-xs text-zinc-400 ml-2">
-            Run #{suggestion.ingestionRunId.slice(0, 8)} •{" "}
-            {new Date(suggestion.suggestedAt).toLocaleString()}
+            Execução #{suggestion.ingestionRunId.slice(0, 8)} •{" "}
+            {new Date(suggestion.suggestedAt).toLocaleString("pt-BR")}
           </span>
         </div>
-        <Badge variant="secondary">Pending</Badge>
+        <Badge variant="secondary">Pendente</Badge>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-zinc-200">
@@ -367,17 +375,17 @@ function SuggestionCard({
                 stroke-width="1.5"
                 className="text-zinc-400"
               />
-              Current CRM Truth
+              Verdade atual do CRM
             </div>
           </div>
           <div className="space-y-3">
-            <FieldRow label="Facility" value={facilityLabel} />
+            <FieldRow label="Unidade de saúde" value={facilityLabel} />
             {professionalLabel && (
-              <FieldRow label="Professional" value={professionalLabel} />
+              <FieldRow label="Profissional" value={professionalLabel} />
             )}
             <FieldRow
-              label="Reason"
-              value={suggestion.reason || "Registry mismatch"}
+              label="Motivo"
+              value={suggestion.reason || "Divergência de cadastro"}
             />
           </div>
         </div>
@@ -390,11 +398,11 @@ function SuggestionCard({
                 stroke-width="1.5"
                 className="text-blue-500"
               />
-              Registry Suggestion
+              Sugestão de cadastro
             </div>
           </div>
           <div className="space-y-3">
-            <FieldRow label="Action" value={TYPE_LABELS[suggestion.type]} highlight />
+            <FieldRow label="Ação" value={TYPE_LABELS[suggestion.type]} highlight />
             <div>
               <label className="block text-xs font-medium text-blue-600/70 mb-1">
                 Payload
@@ -409,9 +417,9 @@ function SuggestionCard({
 
       <div className="px-5 py-4 border-t border-zinc-200 bg-white flex items-center justify-end gap-3">
         <Button variant="ghost" onClick={onReject}>
-          Dismiss
+          Descartar
         </Button>
-        <Button onClick={onApprove}>Apply Suggestion</Button>
+        <Button onClick={onApprove}>Aplicar sugestão</Button>
       </div>
     </div>
   );

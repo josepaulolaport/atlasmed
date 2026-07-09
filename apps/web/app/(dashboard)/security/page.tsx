@@ -244,17 +244,17 @@ export default function SecurityPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Security Settings
+              Configurações de segurança
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Manage your account security and verification settings
+              Gerencie a segurança e as verificações da sua conta
             </p>
           </div>
         </div>
       </div>
 
       <div className="p-6 max-w-6xl mx-auto w-full space-y-6">
-        <SectionCard title="Security Score" icon="solar:shield-check-linear">
+        <SectionCard title="Pontuação de segurança" icon="solar:shield-check-linear">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -263,10 +263,10 @@ export default function SecurityPage() {
                 </div>
                 <p className="text-sm text-zinc-500 mt-1">
                   {securityScore >= 75
-                    ? "Strong"
+                    ? "Forte"
                     : securityScore >= 50
-                    ? "Medium"
-                    : "Weak"}
+                    ? "Média"
+                    : "Fraca"}
                 </p>
               </div>
               <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-zinc-100">
@@ -301,11 +301,11 @@ export default function SecurityPage() {
 
             <ul className="space-y-2 text-sm">
               {[
-                { label: "Account is active", passed: user.status === "ACTIVE" },
-                { label: "Email verified", passed: user.emailVerified },
-                { label: "Phone verified", passed: user.phoneVerified },
+                { label: "Conta ativa", passed: user.status === "ACTIVE" },
+                { label: "Email verificado", passed: user.emailVerified },
+                { label: "Telefone verificado", passed: user.phoneVerified },
                 {
-                  label: "Two-factor authentication enabled",
+                  label: "Autenticação de dois fatores ativada",
                   passed: user.twoFactorEnabled,
                 },
               ].map((item) => (
@@ -330,23 +330,23 @@ export default function SecurityPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Email Verification" icon="solar:letter-linear">
+        <SectionCard title="Verificação de email" icon="solar:letter-linear">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
               <p className="text-sm font-medium text-zinc-900">{user.email}</p>
               <div className="flex items-center gap-2">
                 {user.emailVerified ? (
                   <>
-                    <Badge variant="success">Verified</Badge>
+                    <Badge variant="success">Verificado</Badge>
                     {user.emailVerifiedAt && (
                       <span className="text-xs text-zinc-500">
-                        Verified on{" "}
-                        {new Date(user.emailVerifiedAt).toLocaleDateString()}
+                        Verificado em{" "}
+                        {new Date(user.emailVerifiedAt).toLocaleDateString("pt-BR")}
                       </span>
                     )}
                   </>
                 ) : (
-                  <Badge variant="destructive">Not Verified</Badge>
+                  <Badge variant="destructive">Não verificado</Badge>
                 )}
               </div>
             </div>
@@ -357,17 +357,17 @@ export default function SecurityPage() {
                   onClick={handleRequestEmailVerification}
                   disabled={emailLoading}
                 >
-                  {emailLoading ? "Sending..." : "Send verification email"}
+                  {emailLoading ? "Enviando..." : "Enviar email de verificação"}
                 </Button>
                 <Link href="/security/verify-email">
-                  <Button variant="outline">Enter verification token</Button>
+                  <Button variant="outline">Inserir token de verificação</Button>
                 </Link>
               </div>
             )}
           </div>
         </SectionCard>
 
-        <SectionCard title="Phone Verification" icon="solar:phone-linear">
+        <SectionCard title="Verificação de telefone" icon="solar:phone-linear">
           {user.phoneNumber ? (
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
@@ -376,9 +376,9 @@ export default function SecurityPage() {
                 </p>
                 <div className="flex items-center gap-2">
                   {user.phoneVerified ? (
-                    <Badge variant="success">Verified</Badge>
+                    <Badge variant="success">Verificado</Badge>
                   ) : (
-                    <Badge variant="destructive">Not Verified</Badge>
+                    <Badge variant="destructive">Não verificado</Badge>
                   )}
                 </div>
               </div>
@@ -389,10 +389,10 @@ export default function SecurityPage() {
                     onClick={handleRequestPhoneVerification}
                     disabled={phoneLoading}
                   >
-                    {phoneLoading ? "Sending..." : "Send verification code"}
+                    {phoneLoading ? "Enviando..." : "Enviar código de verificação"}
                   </Button>
                   <Link href="/security/verify-phone">
-                    <Button variant="outline">Enter code</Button>
+                    <Button variant="outline">Inserir código</Button>
                   </Link>
                 </div>
               )}
@@ -400,22 +400,22 @@ export default function SecurityPage() {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-zinc-500">
-                No phone number associated with your account.
+                Nenhum telefone associado à sua conta.
               </p>
               <Link href="/profile">
-                <Button variant="outline">Add phone number</Button>
+                <Button variant="outline">Adicionar telefone</Button>
               </Link>
             </div>
           )}
         </SectionCard>
 
-        <SectionCard title="Change Password" icon="solar:key-linear">
+        <SectionCard title="Alterar senha" icon="solar:key-linear">
           <form
             onSubmit={changePasswordForm.handleSubmit(handleChangePassword)}
             className="space-y-4"
           >
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current password</Label>
+              <Label htmlFor="currentPassword">Senha atual</Label>
               <Input
                 id="currentPassword"
                 type="password"
@@ -429,7 +429,7 @@ export default function SecurityPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New password</Label>
+              <Label htmlFor="newPassword">Nova senha</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -443,7 +443,7 @@ export default function SecurityPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm new password</Label>
+              <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -462,36 +462,36 @@ export default function SecurityPage() {
                 {...changePasswordForm.register("revokeOtherSessions")}
                 disabled={passwordLoading}
               />
-              Sign out of all other devices
+              Sair de todos os outros dispositivos
             </label>
             <Button
               type="submit"
               variant="primary"
               disabled={passwordLoading}
             >
-              {passwordLoading ? "Updating..." : "Update password"}
+              {passwordLoading ? "Atualizando..." : "Atualizar senha"}
             </Button>
           </form>
         </SectionCard>
 
         <SectionCard
-          title="Two-Factor Authentication"
+          title="Autenticação de dois fatores"
           icon="solar:smartphone-linear"
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-zinc-900">
-                  Authenticator app
+                  Aplicativo autenticador
                 </p>
                 <p className="text-sm text-zinc-500 mt-1">
-                  Use a TOTP app such as Google Authenticator or 1Password.
+                  Use um aplicativo TOTP como Google Authenticator ou 1Password.
                 </p>
               </div>
               {user.twoFactorEnabled ? (
-                <Badge variant="success">Enabled</Badge>
+                <Badge variant="success">Ativado</Badge>
               ) : (
-                <Badge variant="secondary">Disabled</Badge>
+                <Badge variant="secondary">Desativado</Badge>
               )}
             </div>
 
@@ -502,16 +502,16 @@ export default function SecurityPage() {
                 disabled={twoFactorLoading}
               >
                 {twoFactorLoading
-                  ? "Starting..."
-                  : "Enable two-factor authentication"}
+                  ? "Iniciando..."
+                  : "Ativar autenticação de dois fatores"}
               </Button>
             )}
 
             {setupData && (
               <div className="space-y-4 rounded-md border border-zinc-200 bg-zinc-50 p-4">
                 <p className="text-sm text-zinc-600">
-                  Add this account to your authenticator app using the secret
-                  below or the setup link.
+                  Adicione esta conta ao seu aplicativo autenticador usando o
+                  segredo abaixo ou o link de configuração.
                 </p>
                 <div className="rounded bg-white border border-zinc-200 p-3 font-mono text-sm break-all text-zinc-800">
                   {setupData.secret}
@@ -520,14 +520,14 @@ export default function SecurityPage() {
                   href={setupData.otpauthUrl}
                   className="text-sm text-blue-600 hover:underline"
                 >
-                  Open in authenticator app
+                  Abrir no aplicativo autenticador
                 </a>
                 <form
                   onSubmit={confirm2FAForm.handleSubmit(handleConfirm2FA)}
                   className="space-y-3"
                 >
                   <div className="space-y-2">
-                    <Label htmlFor="confirmCode">Verification code</Label>
+                    <Label htmlFor="confirmCode">Código de verificação</Label>
                     <Input
                       id="confirmCode"
                       inputMode="numeric"
@@ -547,7 +547,7 @@ export default function SecurityPage() {
                       variant="primary"
                       disabled={twoFactorLoading}
                     >
-                      {twoFactorLoading ? "Confirming..." : "Confirm setup"}
+                      {twoFactorLoading ? "Confirmando..." : "Confirmar configuração"}
                     </Button>
                     <Button
                       type="button"
@@ -555,7 +555,7 @@ export default function SecurityPage() {
                       onClick={() => setSetupData(null)}
                       disabled={twoFactorLoading}
                     >
-                      Cancel
+                      Cancelar
                     </Button>
                   </div>
                 </form>
@@ -569,7 +569,7 @@ export default function SecurityPage() {
                     variant="outline"
                     onClick={() => setShowDisable2FA(true)}
                   >
-                    Disable two-factor authentication
+                    Desativar autenticação de dois fatores
                   </Button>
                 ) : (
                   <form
@@ -577,7 +577,7 @@ export default function SecurityPage() {
                     className="space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4"
                   >
                     <div className="space-y-2">
-                      <Label htmlFor="disablePassword">Password</Label>
+                      <Label htmlFor="disablePassword">Senha</Label>
                       <Input
                         id="disablePassword"
                         type="password"
@@ -586,7 +586,7 @@ export default function SecurityPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="disableCode">Authenticator code</Label>
+                      <Label htmlFor="disableCode">Código do autenticador</Label>
                       <Input
                         id="disableCode"
                         inputMode="numeric"
@@ -601,7 +601,7 @@ export default function SecurityPage() {
                         variant="destructive"
                         disabled={twoFactorLoading}
                       >
-                        {twoFactorLoading ? "Disabling..." : "Confirm disable"}
+                        {twoFactorLoading ? "Desativando..." : "Confirmar desativação"}
                       </Button>
                       <Button
                         type="button"
@@ -609,7 +609,7 @@ export default function SecurityPage() {
                         onClick={() => setShowDisable2FA(false)}
                         disabled={twoFactorLoading}
                       >
-                        Cancel
+                        Cancelar
                       </Button>
                     </div>
                   </form>
@@ -619,20 +619,20 @@ export default function SecurityPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Access Capabilities" icon="solar:key-square-linear">
+        <SectionCard title="Permissões de acesso" icon="solar:key-square-linear">
           {capabilitiesLoading ? (
-            <p className="text-sm text-zinc-500">Loading capabilities...</p>
+            <p className="text-sm text-zinc-500">Carregando permissões...</p>
           ) : capabilities ? (
             <div className="space-y-3">
               <p className="text-sm text-zinc-700">
-                Role:{" "}
+                Função:{" "}
                 <span className="font-medium text-zinc-900">
                   {capabilities.role}
                 </span>
               </p>
               {capabilities.grants.length === 0 ? (
                 <p className="text-sm text-zinc-500">
-                  No additional grants beyond your role.
+                  Nenhuma permissão adicional além da sua função.
                 </p>
               ) : (
                 <ul className="space-y-2 text-sm">
@@ -644,15 +644,15 @@ export default function SecurityPage() {
                       <span className="font-medium text-zinc-900">
                         {grant.action}
                       </span>{" "}
-                      on{" "}
+                      em{" "}
                       <span className="font-medium text-zinc-900">
                         {grant.resource}
                       </span>
                       {grant.resourceId ? ` (${grant.resourceId})` : ""}
                       {grant.expiresAt && (
                         <span className="block text-xs text-zinc-500 mt-0.5">
-                          Expires{" "}
-                          {new Date(grant.expiresAt).toLocaleDateString()}
+                          Expira em{" "}
+                          {new Date(grant.expiresAt).toLocaleDateString("pt-BR")}
                         </span>
                       )}
                     </li>
@@ -662,27 +662,27 @@ export default function SecurityPage() {
             </div>
           ) : (
             <p className="text-sm text-zinc-500">
-              Unable to load capabilities.
+              Não foi possível carregar as permissões.
             </p>
           )}
         </SectionCard>
 
         <SectionCard
-          title="Contact Information"
+          title="Informações de contato"
           icon="solar:user-id-linear"
         >
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/security/change-email">
-              <Button variant="outline">Change email address</Button>
+              <Button variant="outline">Alterar email</Button>
             </Link>
             <Link href="/security/change-phone">
-              <Button variant="outline">Change phone number</Button>
+              <Button variant="outline">Alterar telefone</Button>
             </Link>
           </div>
         </SectionCard>
 
         <SectionCard
-          title="Security Recommendations"
+          title="Recomendações de segurança"
           icon="solar:lightbulb-linear"
         >
           <ul className="space-y-3 text-sm">
@@ -695,11 +695,11 @@ export default function SecurityPage() {
                 />
                 <div>
                   <p className="font-medium text-zinc-900">
-                    Enable two-factor authentication
+                    Ative a autenticação de dois fatores
                   </p>
                   <p className="text-zinc-500">
-                    Protect your account with a second verification step at
-                    sign-in.
+                    Proteja sua conta com uma segunda etapa de verificação no
+                    login.
                   </p>
                 </div>
               </li>
@@ -712,15 +712,15 @@ export default function SecurityPage() {
               />
               <div>
                 <p className="font-medium text-zinc-900">
-                  Review your active sessions
+                  Revise suas sessões ativas
                 </p>
                 <p className="text-zinc-500">
-                  Regularly check for unrecognized devices and locations.{" "}
+                  Verifique regularmente dispositivos e locais não reconhecidos.{" "}
                   <Link
                     href="/sessions"
                     className="text-blue-600 hover:underline"
                   >
-                    View sessions
+                    Ver sessões
                   </Link>
                 </p>
               </div>

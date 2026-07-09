@@ -66,10 +66,10 @@ export default function ProfilePage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Profile Settings
+              Configurações do perfil
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Manage your account information and preferences
+              Gerencie as informações e preferências da sua conta
             </p>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function ProfilePage() {
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
             <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-              Account Overview
+              Visão geral da conta
             </h3>
           </div>
           <div className="p-5 space-y-6">
@@ -129,7 +129,7 @@ export default function ProfilePage() {
                 {!user.emailVerified && (
                   <Link href="/security/verify-email">
                     <Button variant="link" size="sm" className="h-auto p-0">
-                      Verify email
+                      Verificar email
                     </Button>
                   </Link>
                 )}
@@ -143,7 +143,7 @@ export default function ProfilePage() {
                     className="text-base text-zinc-500"
                   />
                   <span className="text-zinc-700">
-                    {user.phoneNumber || "No phone number"}
+                    {user.phoneNumber || "Sem número de telefone"}
                   </span>
                   {user.phoneNumber && (
                     <iconify-icon
@@ -164,7 +164,7 @@ export default function ProfilePage() {
                 {user.phoneNumber && !user.phoneVerified && (
                   <Link href="/security/verify-phone">
                     <Button variant="link" size="sm" className="h-auto p-0">
-                      Verify phone
+                      Verificar telefone
                     </Button>
                   </Link>
                 )}
@@ -173,7 +173,7 @@ export default function ProfilePage() {
 
             <div className="grid gap-4 text-sm md:grid-cols-2">
               <div>
-                <span className="text-zinc-500">Account status:</span>{" "}
+                <span className="text-zinc-500">Status da conta:</span>{" "}
                 <Badge
                   variant={
                     user.status === "ACTIVE"
@@ -187,7 +187,7 @@ export default function ProfilePage() {
                 </Badge>
               </div>
               <div>
-                <span className="text-zinc-500">Member since:</span>{" "}
+                <span className="text-zinc-500">Membro desde:</span>{" "}
                 <span className="font-medium text-zinc-900">
                   {formatDateTime(user.createdAt)}
                 </span>
@@ -200,7 +200,7 @@ export default function ProfilePage() {
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
               <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                Assigned Territories
+                Territórios atribuídos
               </h3>
             </div>
             <div className="p-5">
@@ -211,7 +211,7 @@ export default function ProfilePage() {
                       {getLabel(t.territoryId)}
                     </span>
                     <p className="text-xs text-zinc-500">
-                      Assigned {formatDateTime(t.assignedAt)}
+                      Atribuído em {formatDateTime(t.assignedAt)}
                     </p>
                   </li>
                 ))}
@@ -223,7 +223,7 @@ export default function ProfilePage() {
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
             <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-              Edit Profile
+              Editar perfil
             </h3>
           </div>
           <div className="p-5">
@@ -241,7 +241,7 @@ export default function ProfilePage() {
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First name</Label>
+                  <Label htmlFor="firstName">Nome</Label>
                   <Input
                     id="firstName"
                     type="text"
@@ -256,7 +256,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last name</Label>
+                  <Label htmlFor="lastName">Sobrenome</Label>
                   <Input
                     id="lastName"
                     type="text"
@@ -272,7 +272,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="avatarUrl">Avatar URL</Label>
+                <Label htmlFor="avatarUrl">URL do avatar</Label>
                 <Input
                   id="avatarUrl"
                   type="url"
@@ -289,11 +289,11 @@ export default function ProfilePage() {
 
               <div className="flex gap-2">
                 <Button type="submit" variant="primary" disabled={isLoading}>
-                  {isLoading ? "Saving..." : "Save changes"}
+                  {isLoading ? "Salvando..." : "Salvar alterações"}
                 </Button>
                 <Link href="/dashboard">
                   <Button type="button" variant="outline">
-                    Cancel
+                    Cancelar
                   </Button>
                 </Link>
               </div>
@@ -304,7 +304,7 @@ export default function ProfilePage() {
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
             <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-              Account Actions
+              Ações da conta
             </h3>
           </div>
           <div className="p-5">
@@ -316,7 +316,7 @@ export default function ProfilePage() {
                     stroke-width="1.5"
                     className="text-base"
                   />
-                  Security settings
+                  Configurações de segurança
                 </Button>
               </Link>
               <Link href="/sessions">
@@ -326,7 +326,7 @@ export default function ProfilePage() {
                     stroke-width="1.5"
                     className="text-base"
                   />
-                  Manage sessions
+                  Gerenciar sessões
                 </Button>
               </Link>
             </div>

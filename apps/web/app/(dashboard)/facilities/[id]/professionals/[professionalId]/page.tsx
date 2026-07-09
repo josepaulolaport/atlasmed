@@ -126,11 +126,11 @@ export default function FacilityProfessionalRegistrationPage() {
   }
 
   if (loading) {
-    return <div className="py-8 text-center text-gray-500">Loading registration form...</div>;
+    return <div className="py-8 text-center text-gray-500">Carregando formulário de cadastro...</div>;
   }
 
   if (!context) {
-    return <div className="py-8 text-center text-gray-500">Registration context not found</div>;
+    return <div className="py-8 text-center text-gray-500">Contexto de cadastro não encontrado</div>;
   }
 
   const displayName =
@@ -143,13 +143,13 @@ export default function FacilityProfessionalRegistrationPage() {
         <Button variant="ghost" size="sm" asChild>
           <Link href={`/facilities/${facilityId}`}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
+            Voltar
           </Link>
         </Button>
         <div>
           <p className="text-sm text-gray-500">
             <Link href="/facilities" className="hover:underline">
-              Facilities
+              Unidades de saúde
             </Link>
             {" / "}
             <Link href={`/facilities/${facilityId}`} className="hover:underline">
@@ -157,7 +157,7 @@ export default function FacilityProfessionalRegistrationPage() {
             </Link>
           </p>
           <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
-          <p className="text-sm text-gray-500">Professional registration</p>
+          <p className="text-sm text-gray-500">Cadastro do profissional</p>
         </div>
       </div>
 

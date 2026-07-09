@@ -40,7 +40,7 @@ export default function SessionsPage() {
   }, []);
 
   const handleRevokeSession = async (sessionId: string) => {
-    if (!confirm("Are you sure you want to revoke this session?")) {
+    if (!confirm("Tem certeza de que deseja revogar esta sessão?")) {
       return;
     }
 
@@ -73,17 +73,17 @@ export default function SessionsPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Active Sessions
+              Sessões ativas
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Manage your active sessions and security
+              Gerencie suas sessões ativas e a segurança
             </p>
           </div>
           {sessions.some((session) => !session.isCurrent) && (
             <Button
               variant="outline"
               onClick={async () => {
-                if (!confirm("Sign out of all other devices?")) {
+                if (!confirm("Sair de todos os outros dispositivos?")) {
                   return;
                 }
 
@@ -108,7 +108,7 @@ export default function SessionsPage() {
                 }
               }}
             >
-              Sign out other devices
+              Sair dos outros dispositivos
             </Button>
           )}
         </div>
@@ -117,7 +117,7 @@ export default function SessionsPage() {
       <div className="p-6 max-w-6xl mx-auto w-full space-y-6">
         {loading ? (
           <div className="py-10 text-center text-sm text-zinc-500">
-            Loading…
+            Carregando…
           </div>
         ) : sessions.length === 0 ? (
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-10 text-center">
@@ -128,7 +128,7 @@ export default function SessionsPage() {
                 className="text-2xl"
               />
             </div>
-            <p className="text-sm text-zinc-500">No active sessions found</p>
+            <p className="text-sm text-zinc-500">Nenhuma sessão ativa encontrada</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -156,10 +156,10 @@ export default function SessionsPage() {
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-zinc-900 tracking-tight">
-                              {session.browserName || "Unknown browser"}
+                              {session.browserName || "Navegador desconhecido"}
                             </span>
                             {session.isCurrent && (
-                              <Badge variant="success">Current</Badge>
+                              <Badge variant="success">Atual</Badge>
                             )}
                             {session.suspiciousActivity && (
                               <Badge variant="destructive">
@@ -168,22 +168,22 @@ export default function SessionsPage() {
                                   stroke-width="1.5"
                                   className="text-xs mr-1"
                                 />
-                                Suspicious
+                                Suspeita
                               </Badge>
                             )}
                           </div>
                           <div className="mt-2 space-y-1 text-sm text-zinc-500">
                             {session.browserVersion && (
-                              <p>Version: {session.browserVersion}</p>
+                              <p>Versão: {session.browserVersion}</p>
                             )}
-                            {session.osName && <p>OS: {session.osName}</p>}
+                            {session.osName && <p>SO: {session.osName}</p>}
                             <p className="flex items-center gap-1">
                               <iconify-icon
                                 icon="solar:map-point-linear"
                                 stroke-width="1.5"
                                 className="text-sm"
                               />
-                              {session.ipAddress || "Unknown location"}
+                              {session.ipAddress || "Local desconhecido"}
                             </p>
                             <p className="flex items-center gap-1">
                               <iconify-icon
@@ -191,10 +191,10 @@ export default function SessionsPage() {
                                 stroke-width="1.5"
                                 className="text-sm"
                               />
-                              Last active: {formatDateTime(session.lastSeenAt)}
+                              Última atividade: {formatDateTime(session.lastSeenAt)}
                             </p>
                             <p className="text-xs text-zinc-400">
-                              Created: {formatDateTime(session.createdAt)}
+                              Criada em: {formatDateTime(session.createdAt)}
                             </p>
                           </div>
                         </div>
@@ -212,7 +212,7 @@ export default function SessionsPage() {
                             stroke-width="1.5"
                             className="text-base"
                           />
-                          {revokingId === session.id ? "Revoking..." : "Revoke"}
+                          {revokingId === session.id ? "Revogando..." : "Revogar"}
                         </Button>
                       )}
                     </div>
@@ -224,9 +224,9 @@ export default function SessionsPage() {
                             stroke-width="1.5"
                             className="text-base"
                           />
-                          This session has been flagged for suspicious activity.
-                          If this was not you, revoke it immediately and change
-                          your password.
+                          Esta sessão foi sinalizada por atividade suspeita.
+                          Se não foi você, revogue-a imediatamente e altere
+                          sua senha.
                         </p>
                       </div>
                     )}
@@ -240,21 +240,21 @@ export default function SessionsPage() {
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
             <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-              Security Tips
+              Dicas de segurança
             </h3>
           </div>
           <div className="p-5">
             <ul className="list-disc space-y-2 pl-5 text-sm text-zinc-600">
-              <li>Always log out when using public or shared computers</li>
+              <li>Sempre saia ao usar computadores públicos ou compartilhados</li>
               <li>
-                Regularly review your active sessions for any unrecognized
-                devices
+                Revise regularmente suas sessões ativas em busca de dispositivos
+                não reconhecidos
               </li>
               <li>
-                If you see suspicious activity, revoke the session and change
-                your password immediately
+                Se notar atividade suspeita, revogue a sessão e altere sua senha
+                imediatamente
               </li>
-              <li>Enable email and phone verification for enhanced security</li>
+              <li>Ative a verificação de email e telefone para mais segurança</li>
             </ul>
           </div>
         </div>

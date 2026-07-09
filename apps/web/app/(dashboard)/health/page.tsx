@@ -23,9 +23,9 @@ const statusIconColors: Record<HealthStatus["status"], string> = {
 };
 
 function StatusBadge({ status }: { status: HealthStatus["status"] }) {
-  if (status === "healthy") return <Badge variant="success">Healthy</Badge>;
-  if (status === "degraded") return <Badge variant="warning">Degraded</Badge>;
-  return <Badge variant="destructive">Unhealthy</Badge>;
+  if (status === "healthy") return <Badge variant="success">Saudável</Badge>;
+  if (status === "degraded") return <Badge variant="warning">Degradado</Badge>;
+  return <Badge variant="destructive">Instável</Badge>;
 }
 
 function StatusIcon({ status }: { status: HealthStatus["status"] }) {
@@ -82,14 +82,14 @@ export default function HealthPage() {
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              System Health
+              Saúde do sistema
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
-              Monitor system status and performance metrics
+              Monitore o status e as métricas de desempenho do sistema
             </p>
             {health && (
               <p className="text-xs text-zinc-400 mt-1">
-                Last updated: {formatDateTime(health.timestamp)}
+                Última atualização: {formatDateTime(health.timestamp)}
               </p>
             )}
           </div>
@@ -99,7 +99,7 @@ export default function HealthPage() {
       <div className="p-6 max-w-6xl mx-auto w-full space-y-6">
         {loading || !health ? (
           <div className="py-10 text-center text-sm text-zinc-500">
-            Loading…
+            Carregando…
           </div>
         ) : (
           <>
@@ -112,7 +112,7 @@ export default function HealthPage() {
                     className="text-base text-zinc-500"
                   />
                   <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                    Overall Status
+                    Status geral
                   </h3>
                 </div>
                 <StatusBadge status={health.status} />
@@ -125,12 +125,11 @@ export default function HealthPage() {
                       {health.status}
                     </p>
                     <p className="text-sm text-zinc-500">
-                      All systems are{" "}
                       {health.status === "healthy"
-                        ? "operating normally"
+                        ? "Todos os sistemas operando normalmente"
                         : health.status === "degraded"
-                        ? "experiencing some issues"
-                        : "experiencing critical issues"}
+                        ? "Alguns sistemas apresentando problemas"
+                        : "Sistemas apresentando problemas críticos"}
                     </p>
                   </div>
                 </div>
@@ -141,7 +140,7 @@ export default function HealthPage() {
               <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                   <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                    Database
+                    Banco de dados
                   </h3>
                   <iconify-icon
                     icon="solar:database-linear"
@@ -154,7 +153,7 @@ export default function HealthPage() {
                     <StatusBadge status={health.checks.database.status} />
                     {health.checks.database.responseTime && (
                       <p className="mt-2 text-xs text-zinc-500">
-                        Response time: {health.checks.database.responseTime}ms
+                        Tempo de resposta: {health.checks.database.responseTime}ms
                       </p>
                     )}
                   </div>
@@ -165,7 +164,7 @@ export default function HealthPage() {
               <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                   <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                    Redis Cache
+                    Cache Redis
                   </h3>
                   <iconify-icon
                     icon="solar:server-linear"
@@ -178,7 +177,7 @@ export default function HealthPage() {
                     <StatusBadge status={health.checks.redis.status} />
                     {health.checks.redis.responseTime && (
                       <p className="mt-2 text-xs text-zinc-500">
-                        Response time: {health.checks.redis.responseTime}ms
+                        Tempo de resposta: {health.checks.redis.responseTime}ms
                       </p>
                     )}
                   </div>
@@ -189,7 +188,7 @@ export default function HealthPage() {
               <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                   <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                    Memory Usage
+                    Uso de memória
                   </h3>
                   <iconify-icon
                     icon="solar:pulse-linear"
@@ -226,13 +225,13 @@ export default function HealthPage() {
             {health.metrics && (
               <>
                 <h2 className="text-base font-medium text-zinc-900 tracking-tight">
-                  Application Metrics
+                  Métricas da aplicação
                 </h2>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                       <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                        Active Users
+                        Usuários ativos
                       </h3>
                       <iconify-icon
                         icon="solar:users-group-two-linear"
@@ -245,7 +244,7 @@ export default function HealthPage() {
                         {health.metrics.activeUsers}
                       </div>
                       <p className="text-xs text-zinc-500 mt-1">
-                        Currently online
+                        Atualmente online
                       </p>
                     </div>
                   </div>
@@ -253,7 +252,7 @@ export default function HealthPage() {
                   <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                       <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                        Active Sessions
+                        Sessões ativas
                       </h3>
                       <iconify-icon
                         icon="solar:shield-check-linear"
@@ -266,7 +265,7 @@ export default function HealthPage() {
                         {health.metrics.activeSessions}
                       </div>
                       <p className="text-xs text-zinc-500 mt-1">
-                        Total sessions
+                        Total de sessões
                       </p>
                     </div>
                   </div>
@@ -274,7 +273,7 @@ export default function HealthPage() {
                   <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                       <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                        Login Success Rate
+                        Taxa de sucesso de login
                       </h3>
                       <iconify-icon
                         icon="solar:graph-up-linear"
@@ -287,7 +286,7 @@ export default function HealthPage() {
                         {(health.metrics.loginSuccessRate * 100).toFixed(1)}%
                       </div>
                       <p className="text-xs text-zinc-500 mt-1">
-                        Successful logins
+                        Logins bem-sucedidos
                       </p>
                     </div>
                   </div>
@@ -295,7 +294,7 @@ export default function HealthPage() {
                   <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
                       <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                        Password Resets
+                        Redefinições de senha
                       </h3>
                       <iconify-icon
                         icon="solar:pulse-linear"
@@ -307,7 +306,7 @@ export default function HealthPage() {
                       <div className="text-2xl font-medium tracking-tight text-zinc-900">
                         {health.metrics.passwordResets}
                       </div>
-                      <p className="text-xs text-zinc-500 mt-1">This period</p>
+                      <p className="text-xs text-zinc-500 mt-1">Neste período</p>
                     </div>
                   </div>
                 </div>
@@ -317,35 +316,35 @@ export default function HealthPage() {
             <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
                 <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                  Health Check Details
+                  Detalhes da verificação de saúde
                 </h3>
               </div>
               <div className="p-5">
                 <div className="space-y-4 text-sm">
                   <div>
                     <h4 className="font-medium text-zinc-900">
-                      Monitoring interval
+                      Intervalo de monitoramento
                     </h4>
                     <p className="text-zinc-500 mt-1">
-                      Health status is automatically refreshed every 30 seconds
+                      O status de saúde é atualizado automaticamente a cada 30 segundos
                     </p>
                   </div>
                   <div>
                     <h4 className="font-medium text-zinc-900">
-                      Status definitions
+                      Definições de status
                     </h4>
                     <ul className="mt-2 space-y-2 text-zinc-500">
                       <li className="flex items-center gap-2">
-                        <Badge variant="success">Healthy</Badge>
-                        All systems operating normally
+                        <Badge variant="success">Saudável</Badge>
+                        Todos os sistemas operando normalmente
                       </li>
                       <li className="flex items-center gap-2">
-                        <Badge variant="warning">Degraded</Badge>
-                        Some services experiencing issues
+                        <Badge variant="warning">Degradado</Badge>
+                        Alguns serviços apresentando problemas
                       </li>
                       <li className="flex items-center gap-2">
-                        <Badge variant="destructive">Unhealthy</Badge>
-                        Critical systems are down
+                        <Badge variant="destructive">Instável</Badge>
+                        Sistemas críticos fora do ar
                       </li>
                     </ul>
                   </div>

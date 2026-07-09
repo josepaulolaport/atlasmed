@@ -32,7 +32,7 @@ function AuthShell({ children }: { children: React.ReactNode }) {
             ATLASMED
           </h1>
           <p className="text-sm text-zinc-500 mt-2">
-            Healthcare Commercial Operations
+            Operações Comerciais em Saúde
           </p>
         </div>
         {children}
@@ -68,12 +68,12 @@ function RegisterForm() {
   const canShowRegistrationForm = validatedInvite !== null && registrationToken.length > 0;
 
   const passwordRequirements = [
-    { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-    { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-    { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
-    { label: "One number", test: (p: string) => /[0-9]/.test(p) },
+    { label: "Pelo menos 8 caracteres", test: (p: string) => p.length >= 8 },
+    { label: "Uma letra maiúscula", test: (p: string) => /[A-Z]/.test(p) },
+    { label: "Uma letra minúscula", test: (p: string) => /[a-z]/.test(p) },
+    { label: "Um número", test: (p: string) => /[0-9]/.test(p) },
     {
-      label: "One special character",
+      label: "Um caractere especial",
       test: (p: string) => /[^A-Za-z0-9]/.test(p),
     },
   ];
@@ -101,7 +101,7 @@ function RegisterForm() {
         phoneNumber: validated.phoneNumber || "",
       });
     } catch {
-      setError("Invalid, expired, or already used registration token");
+      setError("Token de cadastro inválido, expirado ou já utilizado");
     } finally {
       setIsLoading(false);
     }
@@ -109,7 +109,7 @@ function RegisterForm() {
 
   const onSubmitRegistration = async (data: RegisterRequest) => {
     if (!canShowRegistrationForm) {
-      setError("Validate your registration token before continuing");
+      setError("Valide seu token de cadastro antes de continuar");
       return;
     }
 
@@ -142,10 +142,10 @@ function RegisterForm() {
     return (
       <AuthShell>
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
-          <h2 className="text-lg font-medium text-zinc-900">Join AtlasMed</h2>
+          <h2 className="text-lg font-medium text-zinc-900">Junte-se ao AtlasMed</h2>
           <p className="text-sm text-zinc-500 mt-1">
-            Enter your registration token to continue. You received this token
-            by email or SMS when you were invited.
+            Digite seu token de cadastro para continuar. Você recebeu este token
+            por email ou SMS quando foi convidado.
           </p>
           <form
             onSubmit={tokenForm.handleSubmit(handleValidateToken)}
@@ -163,11 +163,11 @@ function RegisterForm() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="token">Registration token</Label>
+              <Label htmlFor="token">Token de cadastro</Label>
               <Input
                 id="token"
                 type="text"
-                placeholder="Paste your invite token"
+                placeholder="Cole seu token de convite"
                 autoComplete="off"
                 {...tokenForm.register("token")}
                 disabled={isLoading}
@@ -185,15 +185,15 @@ function RegisterForm() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Validating..." : "Continue"}
+              {isLoading ? "Validando..." : "Continuar"}
             </Button>
             <p className="text-center text-sm text-zinc-500">
-              Already have an account?{" "}
+              Já tem uma conta?{" "}
               <Link
                 href="/login"
                 className="text-blue-600 hover:underline font-medium"
               >
-                Sign in
+                Entrar
               </Link>
             </p>
           </form>
@@ -205,9 +205,9 @@ function RegisterForm() {
   return (
     <AuthShell>
       <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
-        <h2 className="text-lg font-medium text-zinc-900">Create your account</h2>
+        <h2 className="text-lg font-medium text-zinc-900">Crie sua conta</h2>
         <p className="text-sm text-zinc-500 mt-1">
-          Complete registration for the {validatedInvite.role.name} role
+          Conclua o cadastro para a função {validatedInvite.role.name}
         </p>
         <form
           onSubmit={registerForm.handleSubmit(onSubmitRegistration)}
@@ -225,8 +225,8 @@ function RegisterForm() {
           )}
 
           <div className="rounded-md border border-emerald-100 bg-emerald-50 p-3 text-sm text-emerald-800">
-            Registration token verified. Token expires{" "}
-            {new Date(validatedInvite.expiresAt).toLocaleString()}.
+            Token de cadastro verificado. O token expira em{" "}
+            {new Date(validatedInvite.expiresAt).toLocaleString("pt-BR")}.
           </div>
 
           <div className="space-y-2">
@@ -245,11 +245,11 @@ function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">Nome de usuário</Label>
             <Input
               id="username"
               type="text"
-              placeholder="Choose a username"
+              placeholder="Escolha um nome de usuário"
               {...registerForm.register("username")}
               disabled={isLoading}
             />
@@ -261,11 +261,11 @@ function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Senha</Label>
             <Input
               id="password"
               type="password"
-              placeholder="Choose a strong password"
+              placeholder="Escolha uma senha forte"
               {...registerForm.register("password")}
               disabled={isLoading}
             />
@@ -278,7 +278,7 @@ function RegisterForm() {
             {password && (
               <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3">
                 <p className="text-xs font-medium text-zinc-700">
-                  Password requirements
+                  Requisitos da senha
                 </p>
                 <ul className="space-y-1">
                   {passwordRequirements.map((req, index) => {
@@ -318,22 +318,22 @@ function RegisterForm() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">First name</Label>
+              <Label htmlFor="firstName">Nome</Label>
               <Input
                 id="firstName"
                 type="text"
-                placeholder="Optional"
+                placeholder="Opcional"
                 {...registerForm.register("firstName")}
                 disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="lastName">Last name</Label>
+              <Label htmlFor="lastName">Sobrenome</Label>
               <Input
                 id="lastName"
                 type="text"
-                placeholder="Optional"
+                placeholder="Opcional"
                 {...registerForm.register("lastName")}
                 disabled={isLoading}
               />
@@ -341,11 +341,11 @@ function RegisterForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phoneNumber">Phone number</Label>
+            <Label htmlFor="phoneNumber">Telefone</Label>
             <Input
               id="phoneNumber"
               type="tel"
-              placeholder={validatedInvite.phoneNumber ? undefined : "Optional"}
+              placeholder={validatedInvite.phoneNumber ? undefined : "Opcional"}
               {...registerForm.register("phoneNumber")}
               disabled={isLoading || Boolean(validatedInvite.phoneNumber)}
             />
@@ -357,7 +357,7 @@ function RegisterForm() {
             className="w-full"
             disabled={isLoading}
           >
-            {isLoading ? "Creating account..." : "Create account"}
+            {isLoading ? "Criando conta..." : "Criar conta"}
           </Button>
 
           <Button
@@ -367,7 +367,7 @@ function RegisterForm() {
             onClick={resetToTokenStep}
             disabled={isLoading}
           >
-            Use a different token
+            Usar outro token
           </Button>
 
           <p className="text-center text-sm text-zinc-500">
@@ -391,7 +391,7 @@ export default function RegisterPage() {
       fallback={
         <div className="min-h-screen flex items-center justify-center bg-zinc-50">
           <div className="py-10 text-center text-sm text-zinc-500">
-            Loading...
+            Carregando…
           </div>
         </div>
       }

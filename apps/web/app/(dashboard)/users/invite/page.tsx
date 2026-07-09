@@ -88,18 +88,18 @@ export default function InviteUserPage() {
         <Link href="/users">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Users
+            Voltar para Usuários
           </Button>
         </Link>
-        <h1 className="mt-4 text-3xl font-bold text-gray-900">Invite User</h1>
+        <h1 className="mt-4 text-3xl font-bold text-gray-900">Convidar usuário</h1>
         <p className="mt-2 text-gray-600">
-          Send an invitation to a new user to join the platform
+          Envie um convite para um novo usuário entrar na plataforma
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Invitation Details</CardTitle>
+          <CardTitle>Detalhes do convite</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -111,7 +111,7 @@ export default function InviteUserPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email">Endereço de email</Label>
               <Input
                 id="email"
                 type="email"
@@ -123,12 +123,12 @@ export default function InviteUserPage() {
                 <p className="text-sm text-red-600">{errors.email.message}</p>
               )}
               <p className="text-xs text-gray-500">
-                The invitation will be sent to this email address
+                O convite será enviado para este endereço de email
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number (Optional)</Label>
+              <Label htmlFor="phoneNumber">Telefone (Opcional)</Label>
               <Input
                 id="phoneNumber"
                 type="tel"
@@ -142,19 +142,19 @@ export default function InviteUserPage() {
                 </p>
               )}
               <p className="text-xs text-gray-500">
-                Optional: Send invitation via WhatsApp
+                Opcional: enviar convite via WhatsApp
               </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="roleId">Role</Label>
+              <Label htmlFor="roleId">Função</Label>
               <select
                 id="roleId"
                 className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 {...register("roleId")}
                 disabled={isLoading || loadingRoles}
               >
-                <option value="">Select a role</option>
+                <option value="">Selecione uma função</option>
                 {roles.map((role) => (
                   <option key={role.id} value={role.id}>
                     {role.name}
@@ -165,17 +165,17 @@ export default function InviteUserPage() {
                 <p className="text-sm text-red-600">{errors.roleId.message}</p>
               )}
               <p className="text-xs text-gray-500">
-                Assign a role to determine user permissions
+                Atribua uma função para determinar as permissões do usuário
               </p>
             </div>
 
             <div className="flex gap-4 pt-4">
               <Button type="submit" disabled={isLoading || loadingRoles}>
-                {isLoading ? "Sending..." : "Send Invitation"}
+                {isLoading ? "Enviando..." : "Enviar convite"}
               </Button>
               <Link href="/users">
                 <Button type="button" variant="outline">
-                  Cancel
+                  Cancelar
                 </Button>
               </Link>
             </div>
@@ -185,18 +185,18 @@ export default function InviteUserPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Role Permissions</CardTitle>
+          <CardTitle>Permissões da função</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 text-sm">
             {loadingRoles ? (
-              <p className="text-gray-500">Loading roles...</p>
+              <p className="text-gray-500">Carregando funções...</p>
             ) : (
               roles.map((role) => (
                 <div key={role.id}>
                   <h4 className="font-medium text-gray-900">{role.name}</h4>
                   <p className="text-gray-600">
-                    {role.description || "No description available"}
+                    {role.description || "Nenhuma descrição disponível"}
                   </p>
                 </div>
               ))

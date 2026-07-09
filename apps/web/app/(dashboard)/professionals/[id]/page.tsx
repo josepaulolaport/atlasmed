@@ -78,14 +78,14 @@ export default function ProfessionalDetailPage() {
 
   if (loading) {
     return (
-      <div className="py-10 text-center text-sm text-zinc-500">Loading…</div>
+      <div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>
     );
   }
 
   if (!professional) {
     return (
       <div className="py-10 text-center text-sm text-zinc-500">
-        Professional not found
+        Profissional não encontrado
       </div>
     );
   }
@@ -106,14 +106,14 @@ export default function ProfessionalDetailPage() {
                   stroke-width="1.5"
                   className="text-base"
                 />
-                Back
+                Voltar
               </Link>
             </Button>
             <div>
               <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
                 {displayName}
               </h1>
-              <p className="text-sm text-zinc-500 mt-1">Professional profile</p>
+              <p className="text-sm text-zinc-500 mt-1">Perfil do profissional</p>
             </div>
           </div>
         </div>

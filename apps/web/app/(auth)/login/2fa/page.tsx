@@ -49,7 +49,7 @@ function Verify2FALoginInner() {
 
   const onSubmit = async (data: Verify2FAForm) => {
     if (!pendingToken) {
-      setError("Missing verification session. Please sign in again.");
+      setError("Sessão de verificação ausente. Entre novamente.");
       return;
     }
 
@@ -78,15 +78,15 @@ function Verify2FALoginInner() {
               ATLASMED
             </h1>
             <p className="text-sm text-zinc-500 mt-2">
-              Healthcare Commercial Operations
+              Operações Comerciais em Saúde
             </p>
           </div>
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6 text-center">
             <h2 className="text-lg font-medium text-zinc-900">
-              Verification session expired
+              Sessão de verificação expirada
             </h2>
             <p className="text-sm text-zinc-500 mt-1">
-              Start over from the sign-in page to continue.
+              Recomece pela página de login para continuar.
             </p>
             <div className="mt-6">
               <Link
@@ -118,10 +118,10 @@ function Verify2FALoginInner() {
         </div>
         <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
           <h2 className="text-lg font-medium text-zinc-900">
-            Two-factor authentication
+            Autenticação de dois fatores
           </h2>
           <p className="text-sm text-zinc-500 mt-1">
-            Enter the 6-digit code from your authenticator app
+            Digite o código de 6 dígitos do seu aplicativo autenticador
           </p>
           <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             {error && (
@@ -136,7 +136,7 @@ function Verify2FALoginInner() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="code">Authentication code</Label>
+              <Label htmlFor="code">Código de autenticação</Label>
               <Input
                 id="code"
                 type="text"
@@ -158,14 +158,14 @@ function Verify2FALoginInner() {
               className="w-full"
               disabled={isLoading}
             >
-              {isLoading ? "Verifying..." : "Verify and sign in"}
+              {isLoading ? "Verificando..." : "Verificar e entrar"}
             </Button>
 
             <Link
               href="/login"
               className="block text-center text-sm text-blue-600 hover:underline font-medium"
             >
-              Back to sign in
+              Voltar para o login
             </Link>
           </form>
         </div>

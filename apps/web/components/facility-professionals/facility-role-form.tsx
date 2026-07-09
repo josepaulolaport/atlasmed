@@ -91,7 +91,7 @@ export function FacilityRoleForm({
     <form onSubmit={handleSubmit(onSubmit)}>
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Facility roles</CardTitle>
+          <CardTitle className="text-lg">Funções na unidade</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <Controller
@@ -100,7 +100,7 @@ export function FacilityRoleForm({
             render={({ field }) => (
               <RoleSwitch
                 id="isPartner"
-                label="Partner"
+                label="Parceiro"
                 checked={field.value ?? false}
                 disabled={!canEdit}
                 onCheckedChange={field.onChange}
@@ -113,7 +113,7 @@ export function FacilityRoleForm({
             render={({ field }) => (
               <RoleSwitch
                 id="isPrescriber"
-                label="Prescriber"
+                label="Prescritor"
                 checked={field.value ?? false}
                 disabled={!canEdit}
                 onCheckedChange={field.onChange}
@@ -126,7 +126,7 @@ export function FacilityRoleForm({
             render={({ field }) => (
               <RoleSwitch
                 id="isBuyer"
-                label="Buyer"
+                label="Comprador"
                 checked={field.value ?? false}
                 disabled={!canEdit}
                 onCheckedChange={field.onChange}
@@ -139,7 +139,7 @@ export function FacilityRoleForm({
             render={({ field }) => (
               <RoleSwitch
                 id="isDecisionMaker"
-                label="Decision maker"
+                label="Tomador de decisão"
                 checked={field.value ?? false}
                 disabled={!canEdit}
                 onCheckedChange={field.onChange}
@@ -148,7 +148,7 @@ export function FacilityRoleForm({
           />
 
           <div>
-            <Label htmlFor="relationshipLevel">Relationship level</Label>
+            <Label htmlFor="relationshipLevel">Nível de relacionamento</Label>
             <Controller
               name="relationshipLevel"
               control={control}
@@ -161,13 +161,13 @@ export function FacilityRoleForm({
                   }
                 >
                   <SelectTrigger id="relationshipLevel">
-                    <SelectValue placeholder="Select level" />
+                    <SelectValue placeholder="Selecione o nível" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Not set</SelectItem>
-                    <SelectItem value="LOW">Low</SelectItem>
-                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="none">Não definido</SelectItem>
+                    <SelectItem value="LOW">Baixo</SelectItem>
+                    <SelectItem value="MEDIUM">Médio</SelectItem>
+                    <SelectItem value="HIGH">Alto</SelectItem>
                   </SelectContent>
                 </Select>
               )}
@@ -176,13 +176,13 @@ export function FacilityRoleForm({
           </div>
 
           <div>
-            <Label htmlFor="specialtyLabel">Facility specialty label</Label>
+            <Label htmlFor="specialtyLabel">Rótulo de especialidade na unidade</Label>
             <Input id="specialtyLabel" disabled={!canEdit} {...register("specialtyLabel")} />
             <FieldError message={errors.specialtyLabel?.message} />
           </div>
 
           <div>
-            <Label htmlFor="associationNotes">Association notes</Label>
+            <Label htmlFor="associationNotes">Observações da associação</Label>
             <Textarea id="associationNotes" disabled={!canEdit} {...register("notes")} />
             <FieldError message={errors.notes?.message} />
           </div>
@@ -190,7 +190,7 @@ export function FacilityRoleForm({
         {canEdit && (
           <CardFooter>
             <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save facility roles"}
+              {saving ? "Salvando..." : "Salvar funções na unidade"}
             </Button>
           </CardFooter>
         )}

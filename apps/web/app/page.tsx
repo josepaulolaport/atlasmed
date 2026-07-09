@@ -5,34 +5,34 @@ export default function Home() {
   const features = [
     {
       icon: "solar:shield-check-linear",
-      title: "Enterprise Security",
+      title: "Segurança corporativa",
       description:
-        "Bank-level encryption, session management, and multi-factor authentication",
+        "Criptografia de nível bancário, gerenciamento de sessões e autenticação multifator",
     },
     {
       icon: "solar:users-group-two-linear",
-      title: "User Management",
+      title: "Gerenciamento de usuários",
       description:
-        "Comprehensive user administration with role-based access control",
+        "Administração completa de usuários com controle de acesso baseado em funções",
     },
     {
       icon: "solar:pulse-linear",
-      title: "System Monitoring",
-      description: "Real-time health checks and performance metrics dashboard",
+      title: "Monitoramento do sistema",
+      description: "Verificações de saúde em tempo real e painel de métricas de desempenho",
     },
     {
       icon: "solar:check-circle-linear",
-      title: "Verification",
+      title: "Verificação",
       description:
-        "Email and phone verification for enhanced account security",
+        "Verificação de email e telefone para maior segurança da conta",
     },
   ];
 
   const trustPoints = [
-    "Role-based access control",
-    "Audit logging and compliance",
-    "Session management",
-    "Real-time health monitoring",
+    "Controle de acesso baseado em funções",
+    "Registro de auditoria e conformidade",
+    "Gerenciamento de sessões",
+    "Monitoramento de saúde em tempo real",
   ];
 
   return (
@@ -45,10 +45,10 @@ export default function Home() {
             </span>
             <div className="flex items-center gap-2">
               <Link href="/login">
-                <Button variant="ghost">Sign in</Button>
+                <Button variant="ghost">Entrar</Button>
               </Link>
               <Link href="/register">
-                <Button variant="primary">Get started</Button>
+                <Button variant="primary">Começar</Button>
               </Link>
             </div>
           </div>
@@ -59,22 +59,23 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-4xl font-medium tracking-tight text-zinc-900 sm:text-5xl">
-              Healthcare Commercial Operations
-              <span className="block text-blue-600 mt-2">Made Simple</span>
+              Operações Comerciais em Saúde
+              <span className="block text-blue-600 mt-2">De Forma Simples</span>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-base text-zinc-500">
-              A secure, modern platform for healthcare professionals to manage
-              users, track activities, and maintain system health.
+              Uma plataforma segura e moderna para profissionais de saúde
+              gerenciarem usuários, acompanharem atividades e manterem a saúde do
+              sistema.
             </p>
             <div className="mt-10 flex justify-center gap-3">
               <Link href="/register">
                 <Button size="lg" variant="primary">
-                  Start now
+                  Comece agora
                 </Button>
               </Link>
               <Link href="/login">
                 <Button size="lg" variant="outline">
-                  Sign in
+                  Entrar
                 </Button>
               </Link>
             </div>
@@ -108,12 +109,12 @@ export default function Home() {
               <div className="grid md:grid-cols-2">
                 <div className="p-10">
                   <h2 className="text-2xl font-medium tracking-tight text-zinc-900">
-                    Trusted by Healthcare Professionals
+                    A confiança dos profissionais de saúde
                   </h2>
                   <p className="mt-4 text-sm text-zinc-500">
-                    AtlasMed provides a comprehensive solution for managing
-                    healthcare operations with enterprise-grade security and
-                    compliance features.
+                    O AtlasMed oferece uma solução completa para gerenciar
+                    operações de saúde com segurança de nível corporativo e
+                    recursos de conformidade.
                   </p>
                   <ul className="mt-6 space-y-3">
                     {trustPoints.map((feature) => (
@@ -133,18 +134,18 @@ export default function Home() {
                   <div className="mt-8">
                     <Link href="/register">
                       <Button size="lg" variant="primary">
-                        Get started today
+                        Comece hoje mesmo
                       </Button>
                     </Link>
                   </div>
                 </div>
                 <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-10 text-white">
                   <h3 className="text-xl font-medium tracking-tight">
-                    Ready to get started?
+                    Pronto para começar?
                   </h3>
                   <p className="mt-4 text-sm text-blue-100">
-                    Join healthcare organizations already using AtlasMed to
-                    streamline their operations.
+                    Junte-se às organizações de saúde que já usam o AtlasMed para
+                    otimizar suas operações.
                   </p>
                   <div className="mt-8 space-y-6">
                     <div>
@@ -152,7 +153,7 @@ export default function Home() {
                         99.9%
                       </div>
                       <div className="text-xs text-blue-100 mt-1">
-                        Uptime SLA
+                        SLA de disponibilidade
                       </div>
                     </div>
                     <div>
@@ -160,7 +161,7 @@ export default function Home() {
                         24/7
                       </div>
                       <div className="text-xs text-blue-100 mt-1">
-                        Support Available
+                        Suporte disponível
                       </div>
                     </div>
                     <div>
@@ -168,7 +169,7 @@ export default function Home() {
                         HIPAA
                       </div>
                       <div className="text-xs text-blue-100 mt-1">
-                        Compliant Platform
+                        Plataforma em conformidade
                       </div>
                     </div>
                   </div>
@@ -182,7 +183,7 @@ export default function Home() {
       <footer className="border-t border-zinc-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="text-center text-xs text-zinc-500">
-            <p>&copy; AtlasMed 2026. All rights reserved.</p>
+            <p>&copy; AtlasMed 2026. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>

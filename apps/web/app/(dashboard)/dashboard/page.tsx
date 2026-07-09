@@ -14,14 +14,14 @@ export default function DashboardPage() {
 
   const displayName = user.firstName || user.username;
   const securityLevel =
-    user.emailVerified && user.phoneVerified ? "Strong" : "Medium";
+    user.emailVerified && user.phoneVerified ? "Forte" : "Médio";
 
   const stats = [
     {
-      label: "Account Status",
+      label: "Status da conta",
       icon: "solar:user-linear",
       value: user.status,
-      hint: `Role: ${user.role.name}`,
+      hint: `Função: ${user.role.name}`,
       badge: true,
       badgeVariant:
         user.status === "ACTIVE"
@@ -31,38 +31,38 @@ export default function DashboardPage() {
           : "secondary",
     },
     {
-      label: "Email Verification",
+      label: "Verificação de email",
       icon: user.emailVerified
         ? "solar:check-circle-linear"
         : "solar:close-circle-linear",
-      value: user.emailVerified ? "Verified" : "Not verified",
+      value: user.emailVerified ? "Verificado" : "Não verificado",
       hint: user.email,
     },
     {
-      label: "Phone Verification",
+      label: "Verificação de telefone",
       icon: user.phoneVerified
         ? "solar:check-circle-linear"
         : "solar:close-circle-linear",
-      value: user.phoneVerified ? "Verified" : "Not verified",
-      hint: user.phoneNumber || "No phone number",
+      value: user.phoneVerified ? "Verificado" : "Não verificado",
+      hint: user.phoneNumber || "Sem número de telefone",
     },
     {
-      label: "Security",
+      label: "Segurança",
       icon: "solar:shield-check-linear",
       value: securityLevel,
-      hint: "Account security level",
+      hint: "Nível de segurança da conta",
     },
     {
-      label: "Last Activity",
+      label: "Última atividade",
       icon: "solar:pulse-linear",
       value: formatDateTime(user.updatedAt),
-      hint: "Profile last updated",
+      hint: "Perfil atualizado pela última vez",
     },
     {
-      label: "Member Since",
+      label: "Membro desde",
       icon: "solar:calendar-linear",
       value: formatDateTime(user.createdAt),
-      hint: "Account created",
+      hint: "Conta criada",
     },
   ] as const;
 
@@ -70,10 +70,10 @@ export default function DashboardPage() {
     <>
       <div className="px-6 py-8 border-b border-zinc-100">
         <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-          Welcome back, {displayName}
+          Bem-vindo(a) de volta, {displayName}
         </h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Overview of your account and activity.
+          Visão geral da sua conta e atividade.
         </p>
       </div>
 
@@ -119,18 +119,18 @@ export default function DashboardPage() {
           <div className="mt-6 rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
               <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-                Quick Actions
+                Ações rápidas
               </h3>
             </div>
             <div className="p-5 flex flex-wrap gap-3">
               <Button asChild>
-                <Link href="/users">Manage Users</Link>
+                <Link href="/users">Gerenciar usuários</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/facilities">View Facilities</Link>
+                <Link href="/facilities">Ver unidades de saúde</Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link href="/registry-suggestions">Review Suggestions</Link>
+                <Link href="/registry-suggestions">Revisar sugestões</Link>
               </Button>
             </div>
           </div>
