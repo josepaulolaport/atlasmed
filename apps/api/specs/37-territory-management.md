@@ -347,7 +347,7 @@ apps/api/src/modules/territory/
 
 - `20260707120000_territory_dual_graph` — `managerTerritoryId`, `participatesInGroupingHierarchy`, `manager_zone` type seed  
 - `20260707130000_territory_drop_legacy_geo` — drop geo membership, rollup links, parent-assignment columns  
-- Backfill script: `apps/api/src/scripts/backfill-patch-manager-zones.ts`
+- Backfill: `apps/api/src/scripts/backfill-patch-manager-zones.ts` (applied, script removed)
 
 ---
 

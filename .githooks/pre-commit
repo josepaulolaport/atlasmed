@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Reject direct commits to main/master.
+# Reject commits on branches whose name violates the AGENTS.md pattern.
+# Install: ./scripts/install-git-hooks.sh
+
+set -euo pipefail
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null || true)"
+
+if [[ "${branch}" == "main" || "${branch}" == "master" ]]; then
+  echo "✗ Direct commits to '${branch}' are blocked."
+  echo "  Create a task branch first — see AGENTS.md § Branch and merge workflow."
+  echo "  Quick fix: git checkout -b <type>/<slug>-$(date +%Y%m%d)"
+  exit 1
+fi
+
+# Allow detached HEAD (rebasing, cherry-picking) without pattern check.
+if [[ -z "${branch}" ]]; then
+  exit 0
+fi
+
+# Pattern: <type>/<slug>-YYYYMMDD
+# Types: feature, fix, refactor, chore, docs, spec, experiment
+pattern='^(feature|fix|refactor|chore|docs|spec|experiment)/[a-z0-9][a-z0-9-]{0,39}-[0-9]{8}$'
+
+if [[ ! "${branch}" =~ ${pattern} ]]; then
+  echo "✗ Branch name '${branch}' does not match the required pattern:"
+  echo "  <type>/<slug>-YYYYMMDD"
+  echo "  <type> ∈ {feature, fix, refactor, chore, docs, spec, experiment}"
+  echo "  <slug> kebab-case, ≤40 chars"
+  echo "  Example: feature/registry-cards-$(date +%Y%m%d)"
+  echo
+  echo "  Rename: git branch -m <type>/<slug>-$(date +%Y%m%d)"
+  echo "  Bypass (rare, requires justification): git commit --no-verify"
+  exit 1
+fi
+
+exit 0
