@@ -1,6 +1,19 @@
 import "dotenv/config";
 import { hash } from "argon2";
-import { prisma } from "../infrastructure/database/prisma.client";
+import { db } from "../infrastructure/database/db";
+import {
+  roles,
+  users,
+  territories,
+  territoryClosure,
+  userTerritoryAssignments,
+  facilities,
+  professionals,
+  facilityProfessionals,
+  ingestionRuns,
+  ingestionSuggestions,
+} from "@atlasmed/database";
+import { eq, and, or, inArray, like, sql } from "drizzle-orm";
 import { ROLE_PRIORITY_BY_NAME } from "../modules/access/application/constants/role-priority.constants";
 import { TerritoryClosureService } from "../modules/territory/application/services/territory-closure.service";
 import { PrismaTerritoryRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory.repository";
@@ -27,7 +40,7 @@ function parseArgs(argv: string[]) {
 }
 
 async function ensureRoles() {
-  const roles = [
+  const roleDefs = [
     {
       name: "ADMIN",
       description: "Full system access",
@@ -50,116 +63,114 @@ async function ensureRoles() {
     },
   ];
 
-  for (const role of roles) {
-    await prisma.role.upsert({
-      where: { name: role.name },
-      update: { description: role.description, priority: role.priority },
-      create: role,
-    });
+  for (const role of roleDefs) {
+    await db
+      .insert(roles)
+      .values(role)
+      .onConflictDoUpdate({
+        target: roles.name,
+        set: { description: role.description, priority: role.priority, updatedAt: new Date() },
+      });
   }
 
+  const findRole = async (name: string) => {
+    const role = await db.query.roles.findFirst({ where: eq(roles.name, name) });
+    if (!role) throw new Error(`Role "${name}" not found after upsert`);
+    return role;
+  };
+
   return {
-    admin: await prisma.role.findUniqueOrThrow({ where: { name: "ADMIN" } }),
-    manager: await prisma.role.findUniqueOrThrow({ where: { name: "MANAGER" } }),
-    ops: await prisma.role.findUniqueOrThrow({ where: { name: "OPS" } }),
-    rep: await prisma.role.findUniqueOrThrow({ where: { name: "REP" } }),
+    admin: await findRole("ADMIN"),
+    manager: await findRole("MANAGER"),
+    ops: await findRole("OPS"),
+    rep: await findRole("REP"),
   };
 }
 
 async function cleanupDemoData() {
   console.log("🧹 Removing previous demo data...");
 
-  const demoUsers = await prisma.user.findMany({
-    where: { email: { endsWith: `@${DEMO_DOMAIN}` } },
-    select: { id: true },
-  });
-  const demoUserIds = demoUsers.map((user) => user.id);
+  const demoUsers = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(like(users.email, `%@${DEMO_DOMAIN}`));
+  const demoUserIds = demoUsers.map((u) => u.id);
 
-  const demoFacilities = await prisma.facility.findMany({
-    where: { displayName: { contains: DEMO_TAG } },
-    select: { id: true },
-  });
-  const demoFacilityIds = demoFacilities.map((facility) => facility.id);
+  const demoFacilities = await db
+    .select({ id: facilities.id })
+    .from(facilities)
+    .where(like(facilities.displayName, `%${DEMO_TAG}%`));
+  const demoFacilityIds = demoFacilities.map((f) => f.id);
 
-  const demoProfessionals = await prisma.professional.findMany({
-    where: { lastName: { contains: DEMO_TAG } },
-    select: { id: true },
-  });
-  const demoProfessionalIds = demoProfessionals.map((professional) => professional.id);
+  const demoProfessionals = await db
+    .select({ id: professionals.id })
+    .from(professionals)
+    .where(like(professionals.lastName, `%${DEMO_TAG}%`));
+  const demoProfessionalIds = demoProfessionals.map((p) => p.id);
 
   if (demoFacilityIds.length > 0 || demoProfessionalIds.length > 0) {
-    await prisma.ingestionSuggestion.deleteMany({
-      where: {
-        OR: [
-          ...(demoFacilityIds.length > 0 ? [{ facilityId: { in: demoFacilityIds } }] : []),
-          ...(demoProfessionalIds.length > 0
-            ? [{ professionalId: { in: demoProfessionalIds } }]
-            : []),
-        ],
-      },
-    });
+    const suggestionConditions = [
+      ...(demoFacilityIds.length > 0 ? [inArray(ingestionSuggestions.facilityId, demoFacilityIds)] : []),
+      ...(demoProfessionalIds.length > 0 ? [inArray(ingestionSuggestions.professionalId, demoProfessionalIds)] : []),
+    ];
+    await db.delete(ingestionSuggestions).where(or(...suggestionConditions));
+
+    const fpConditions = [
+      ...(demoFacilityIds.length > 0 ? [inArray(facilityProfessionals.facilityId, demoFacilityIds)] : []),
+      ...(demoProfessionalIds.length > 0 ? [inArray(facilityProfessionals.professionalId, demoProfessionalIds)] : []),
+    ];
+    await db.delete(facilityProfessionals).where(or(...fpConditions));
   }
 
-  await prisma.facilityProfessional.deleteMany({
-    where: {
-      OR: [
-        ...(demoFacilityIds.length > 0 ? [{ facilityId: { in: demoFacilityIds } }] : []),
-        ...(demoProfessionalIds.length > 0
-          ? [{ professionalId: { in: demoProfessionalIds } }]
-          : []),
-      ],
-    },
-  });
-
   if (demoProfessionalIds.length > 0) {
-    await prisma.professional.deleteMany({ where: { id: { in: demoProfessionalIds } } });
+    await db.delete(professionals).where(inArray(professionals.id, demoProfessionalIds));
   }
 
   if (demoFacilityIds.length > 0) {
-    await prisma.facility.deleteMany({ where: { id: { in: demoFacilityIds } } });
+    await db.delete(facilities).where(inArray(facilities.id, demoFacilityIds));
   }
 
   if (demoUserIds.length > 0) {
-    await prisma.session.deleteMany({ where: { userId: { in: demoUserIds } } });
-    await prisma.userTerritoryAssignment.deleteMany({
-      where: { userId: { in: demoUserIds } },
-    });
-    await prisma.user.deleteMany({ where: { id: { in: demoUserIds } } });
+    const { sessions } = await import("@atlasmed/database");
+    await db.delete(sessions).where(inArray(sessions.userId, demoUserIds));
+    await db.delete(userTerritoryAssignments).where(inArray(userTerritoryAssignments.userId, demoUserIds));
+    await db.delete(users).where(inArray(users.id, demoUserIds));
   }
 
-  const demoTerritories = await prisma.territory.findMany({
-    where: { code: { startsWith: "DEMO-" } },
-    select: { id: true },
-  });
-  const demoTerritoryIds = demoTerritories.map((territory) => territory.id);
+  const demoTerritories = await db
+    .select({ id: territories.id })
+    .from(territories)
+    .where(like(territories.code, "DEMO-%"));
+  const demoTerritoryIds = demoTerritories.map((t) => t.id);
 
   if (demoTerritoryIds.length > 0) {
-    await prisma.territoryClosure.deleteMany({
-      where: {
-        OR: [
-          { ancestorId: { in: demoTerritoryIds } },
-          { descendantId: { in: demoTerritoryIds } },
-        ],
-      },
-    });
-    await prisma.territory.deleteMany({ where: { id: { in: demoTerritoryIds } } });
+    await db.delete(territoryClosure).where(
+      or(
+        inArray(territoryClosure.ancestorId, demoTerritoryIds),
+        inArray(territoryClosure.descendantId, demoTerritoryIds)
+      )
+    );
+    await db.delete(territories).where(inArray(territories.id, demoTerritoryIds));
   }
 
-  await prisma.ingestionRun.deleteMany({
-    where: { sourceProvider: "demo_seed" },
-  });
+  await db.delete(ingestionRuns).where(eq(ingestionRuns.sourceProvider, "demo_seed"));
 
   console.log("   ✓ Demo data removed");
 }
 
 async function seedTerritories() {
-  let country = await prisma.territory.findFirst({
-    where: { territoryTypeId: "tt_country", countryCode: "BR", isActive: true },
+  let country = await db.query.territories.findFirst({
+    where: and(
+      eq(territories.territoryTypeId, "tt_country"),
+      eq(territories.countryCode, "BR"),
+      eq(territories.isActive, true)
+    ),
   });
 
   if (!country) {
-    country = await prisma.territory.create({
-      data: {
+    [country] = await db
+      .insert(territories)
+      .values({
         name: `Brazil ${DEMO_TAG}`,
         slug: "demo-br",
         code: "DEMO-BR",
@@ -167,13 +178,14 @@ async function seedTerritories() {
         territoryTypeId: "tt_country",
         countryCode: "BR",
         regionSlug: "BR",
-      },
-    });
-    await rebuildClosure(country.id);
+      })
+      .returning();
+    await rebuildClosure(country!.id);
   }
 
-  const region = await prisma.territory.create({
-    data: {
+  const [region] = await db
+    .insert(territories)
+    .values({
       name: `Southeast ${DEMO_TAG}`,
       slug: "demo-se",
       code: "DEMO-BR-SE",
@@ -181,13 +193,14 @@ async function seedTerritories() {
       territoryTypeId: "tt_region",
       countryCode: "BR",
       regionSlug: "SE",
-      parentId: country.id,
-    },
-  });
-  await rebuildClosure(region.id);
+      parentId: country!.id,
+    })
+    .returning();
+  await rebuildClosure(region!.id);
 
-  const inScopePatch = await prisma.territory.create({
-    data: {
+  const [inScopePatch] = await db
+    .insert(territories)
+    .values({
       name: `São Paulo Patch ${DEMO_TAG}`,
       slug: "demo-sp-patch",
       code: "DEMO-BR-SE-SP",
@@ -195,13 +208,14 @@ async function seedTerritories() {
       territoryTypeId: "tt_patch",
       countryCode: "BR",
       regionSlug: "SE",
-      parentId: region.id,
-    },
-  });
-  await rebuildClosure(inScopePatch.id);
+      parentId: region!.id,
+    })
+    .returning();
+  await rebuildClosure(inScopePatch!.id);
 
-  const northRegion = await prisma.territory.create({
-    data: {
+  const [northRegion] = await db
+    .insert(territories)
+    .values({
       name: `North ${DEMO_TAG}`,
       slug: "demo-n",
       code: "DEMO-BR-N",
@@ -209,13 +223,14 @@ async function seedTerritories() {
       territoryTypeId: "tt_region",
       countryCode: "BR",
       regionSlug: "N",
-      parentId: country.id,
-    },
-  });
-  await rebuildClosure(northRegion.id);
+      parentId: country!.id,
+    })
+    .returning();
+  await rebuildClosure(northRegion!.id);
 
-  const outOfScopePatch = await prisma.territory.create({
-    data: {
+  const [outOfScopePatch] = await db
+    .insert(territories)
+    .values({
       name: `Manaus Patch ${DEMO_TAG}`,
       slug: "demo-am-patch",
       code: "DEMO-BR-N-AM",
@@ -223,121 +238,130 @@ async function seedTerritories() {
       territoryTypeId: "tt_patch",
       countryCode: "BR",
       regionSlug: "N",
-      parentId: northRegion.id,
-    },
-  });
-  await rebuildClosure(outOfScopePatch.id);
+      parentId: northRegion!.id,
+    })
+    .returning();
+  await rebuildClosure(outOfScopePatch!.id);
 
-  return { inScopePatchId: inScopePatch.id, outOfScopePatchId: outOfScopePatch.id };
+  return { inScopePatchId: inScopePatch!.id, outOfScopePatchId: outOfScopePatch!.id };
 }
 
-async function seedUsers(roles: {
+async function seedUsers(roleSet: {
   admin: { id: string };
   manager: { id: string };
-  user: { id: string };
+  rep: { id: string };
 }) {
   const passwordHash = await hash(DEMO_PASSWORD);
 
-  const admin = await prisma.user.create({
-    data: {
+  const [admin] = await db
+    .insert(users)
+    .values({
       email: `admin@${DEMO_DOMAIN}`,
       username: "demo_admin",
       passwordHash,
       firstName: "Demo",
       lastName: "Admin",
-      roleId: roles.admin.id,
+      roleId: roleSet.admin.id,
       status: "ACTIVE",
       emailVerified: true,
-    },
-  });
+    })
+    .returning();
 
-  const manager = await prisma.user.create({
-    data: {
+  const [manager] = await db
+    .insert(users)
+    .values({
       email: `manager@${DEMO_DOMAIN}`,
       username: "demo_manager",
       passwordHash,
       firstName: "Demo",
       lastName: "Manager",
-      roleId: roles.manager.id,
+      roleId: roleSet.manager.id,
       status: "ACTIVE",
       emailVerified: true,
-    },
-  });
+    })
+    .returning();
 
-  const fieldUser = await prisma.user.create({
-    data: {
+  const [fieldUser] = await db
+    .insert(users)
+    .values({
       email: `field@${DEMO_DOMAIN}`,
       username: "demo_field",
       passwordHash,
       firstName: "Demo",
       lastName: "Field Rep",
-      roleId: roles.rep.id,
+      roleId: roleSet.rep.id,
       status: "ACTIVE",
       emailVerified: true,
-      managerId: manager.id,
-    },
-  });
+      managerId: manager!.id,
+    })
+    .returning();
 
-  return { admin, manager, fieldUser };
+  return { admin: admin!, manager: manager!, fieldUser: fieldUser! };
 }
 
-async function seedFacilities(territories: {
+async function seedFacilities(territorySet: {
   inScopePatchId: string;
   outOfScopePatchId: string;
 }) {
-  const clinicAlpha = await prisma.facility.create({
-    data: {
+  const [clinicAlpha] = await db
+    .insert(facilities)
+    .values({
       displayName: `Clínica Alpha ${DEMO_TAG}`,
       address: "Av. Paulista, 1000, São Paulo, SP",
-      lat: -23.5614,
-      lng: -46.6559,
-      territoryId: territories.inScopePatchId,
+      location: sql`ST_SetSRID(ST_MakePoint(${-46.6559}, ${-23.5614}), 4326)`,
+      territoryId: territorySet.inScopePatchId,
       territoryAssignmentStatus: "assigned",
       phoneNumber: "1133334444",
       email: `alpha@${DEMO_DOMAIN}`,
-    },
-  });
+    })
+    .returning();
 
-  const clinicBeta = await prisma.facility.create({
-    data: {
+  const [clinicBeta] = await db
+    .insert(facilities)
+    .values({
       displayName: `Clínica Beta ${DEMO_TAG}`,
       address: "Rua Oscar Freire, 200, São Paulo, SP",
-      lat: -23.5671,
-      lng: -46.6734,
-      territoryId: territories.inScopePatchId,
+      location: sql`ST_SetSRID(ST_MakePoint(${-46.6734}, ${-23.5671}), 4326)`,
+      territoryId: territorySet.inScopePatchId,
       territoryAssignmentStatus: "assigned",
       phoneNumber: "1144445555",
-    },
-  });
+    })
+    .returning();
 
-  const clinicGamma = await prisma.facility.create({
-    data: {
+  const [clinicGamma] = await db
+    .insert(facilities)
+    .values({
       displayName: `Clínica Gamma ${DEMO_TAG}`,
       address: "Rua Augusta, 500, São Paulo, SP",
-      lat: -23.5505,
-      lng: -46.6333,
-      territoryId: territories.inScopePatchId,
+      location: sql`ST_SetSRID(ST_MakePoint(${-46.6333}, ${-23.5505}), 4326)`,
+      territoryId: territorySet.inScopePatchId,
       territoryAssignmentStatus: "assigned",
-    },
-  });
+    })
+    .returning();
 
-  const clinicNorth = await prisma.facility.create({
-    data: {
+  const [clinicNorth] = await db
+    .insert(facilities)
+    .values({
       displayName: `Clínica Norte ${DEMO_TAG}`,
       address: "Av. Eduardo Ribeiro, 100, Manaus, AM",
-      lat: -3.119,
-      lng: -60.0217,
-      territoryId: territories.outOfScopePatchId,
+      location: sql`ST_SetSRID(ST_MakePoint(${-60.0217}, ${-3.119}), 4326)`,
+      territoryId: territorySet.outOfScopePatchId,
       territoryAssignmentStatus: "assigned",
-    },
-  });
+    })
+    .returning();
 
-  return { clinicAlpha, clinicBeta, clinicGamma, clinicNorth };
+  return {
+    clinicAlpha: clinicAlpha!,
+    clinicBeta: clinicBeta!,
+    clinicGamma: clinicGamma!,
+    clinicNorth: clinicNorth!,
+  };
 }
 
 async function seedProfessionals() {
-  const ana = await prisma.professional.create({
-    data: {
+  const [ana] = await db
+    .insert(professionals)
+    .values({
       firstName: "Ana",
       lastName: `Paula Silva ${DEMO_TAG}`,
       fullName: "Ana Paula Silva",
@@ -357,11 +381,12 @@ async function seedProfessionals() {
       favoriteSport: "Tennis",
       hobbies: "Reading, travel",
       notes: "Key opinion leader in cardiology.",
-    },
-  });
+    })
+    .returning();
 
-  const carlos = await prisma.professional.create({
-    data: {
+  const [carlos] = await db
+    .insert(professionals)
+    .values({
       firstName: "Carlos",
       lastName: `Eduardo Mendes ${DEMO_TAG}`,
       fullName: "Carlos Eduardo Mendes",
@@ -375,11 +400,12 @@ async function seedProfessionals() {
       crmState: "SP",
       favoriteTeam: "Palmeiras",
       notes: "Pending confirmation at Alpha clinic.",
-    },
-  });
+    })
+    .returning();
 
-  const beatriz = await prisma.professional.create({
-    data: {
+  const [beatriz] = await db
+    .insert(professionals)
+    .values({
       firstName: "Beatriz",
       lastName: `Oliveira ${DEMO_TAG}`,
       fullName: "Beatriz Oliveira",
@@ -391,11 +417,12 @@ async function seedProfessionals() {
       crmCouncil: "CRM",
       crmNumber: "789012",
       crmState: "SP",
-    },
-  });
+    })
+    .returning();
 
-  const diego = await prisma.professional.create({
-    data: {
+  const [diego] = await db
+    .insert(professionals)
+    .values({
       firstName: "Diego",
       lastName: `Ferreira ${DEMO_TAG}`,
       fullName: "Diego Ferreira",
@@ -407,11 +434,12 @@ async function seedProfessionals() {
       crmNumber: "345678",
       crmState: "AM",
       notes: "Based in Manaus — out-of-scope for SP field rep.",
-    },
-  });
+    })
+    .returning();
 
-  const registryOnly = await prisma.professional.create({
-    data: {
+  const [registryOnly] = await db
+    .insert(professionals)
+    .values({
       firstName: "Fernanda",
       lastName: `Lima ${DEMO_TAG}`,
       fullName: "Fernanda Lima",
@@ -423,10 +451,16 @@ async function seedProfessionals() {
       sourceTracked: true,
       sourceFirstSeenAt: new Date(),
       sourceLastSeenAt: new Date(),
-    },
-  });
+    })
+    .returning();
 
-  return { ana, carlos, beatriz, diego, registryOnly };
+  return {
+    ana: ana!,
+    carlos: carlos!,
+    beatriz: beatriz!,
+    diego: diego!,
+    registryOnly: registryOnly!,
+  };
 }
 
 async function seedAssociations(params: {
@@ -434,13 +468,14 @@ async function seedAssociations(params: {
   professionals: Awaited<ReturnType<typeof seedProfessionals>>;
   adminUserId: string;
 }) {
-  const { facilities, professionals, adminUserId } = params;
+  const { facilities: facs, professionals: profs, adminUserId } = params;
   const now = new Date();
 
-  const anaAlpha = await prisma.facilityProfessional.create({
-    data: {
-      facilityId: facilities.clinicAlpha.id,
-      professionalId: professionals.ana.id,
+  const [anaAlpha] = await db
+    .insert(facilityProfessionals)
+    .values({
+      facilityId: facs.clinicAlpha.id,
+      professionalId: profs.ana.id,
       specialtyLabel: "Interventional cardiology",
       isPartner: true,
       isPrescriber: true,
@@ -450,115 +485,108 @@ async function seedAssociations(params: {
       notes: "Primary contact at Alpha — partner and decision maker.",
       confirmedAt: now,
       confirmedByUserId: adminUserId,
-    },
+    })
+    .returning();
+
+  await db.insert(facilityProfessionals).values({
+    facilityId: facs.clinicBeta.id,
+    professionalId: profs.ana.id,
+    isPartner: false,
+    isPrescriber: true,
+    isBuyer: true,
+    isDecisionMaker: false,
+    relationshipLevel: "MEDIUM",
+    confirmedAt: now,
+    confirmedByUserId: adminUserId,
   });
 
-  await prisma.facilityProfessional.create({
-    data: {
-      facilityId: facilities.clinicBeta.id,
-      professionalId: professionals.ana.id,
-      isPartner: false,
-      isPrescriber: true,
-      isBuyer: true,
-      isDecisionMaker: false,
-      relationshipLevel: "MEDIUM",
-      confirmedAt: now,
-      confirmedByUserId: adminUserId,
-    },
-  });
-
-  const carlosPending = await prisma.facilityProfessional.create({
-    data: {
-      facilityId: facilities.clinicAlpha.id,
-      professionalId: professionals.carlos.id,
+  const [carlosPending] = await db
+    .insert(facilityProfessionals)
+    .values({
+      facilityId: facs.clinicAlpha.id,
+      professionalId: profs.carlos.id,
       sourceActive: true,
       sourceFirstSeenAt: now,
       sourceLastSeenAt: now,
       isPrescriber: true,
       relationshipLevel: "LOW",
       notes: "Awaiting manager confirmation.",
-    },
+    })
+    .returning();
+
+  await db.insert(facilityProfessionals).values({
+    facilityId: facs.clinicGamma.id,
+    professionalId: profs.beatriz.id,
+    confirmedAt: now,
+    confirmedByUserId: adminUserId,
+    isDecisionMaker: true,
+    relationshipLevel: "MEDIUM",
   });
 
-  await prisma.facilityProfessional.create({
-    data: {
-      facilityId: facilities.clinicGamma.id,
-      professionalId: professionals.beatriz.id,
-      confirmedAt: now,
-      confirmedByUserId: adminUserId,
-      isDecisionMaker: true,
-      relationshipLevel: "MEDIUM",
-    },
+  await db.insert(facilityProfessionals).values({
+    facilityId: facs.clinicNorth.id,
+    professionalId: profs.diego.id,
+    confirmedAt: now,
+    confirmedByUserId: adminUserId,
+    isPartner: true,
+    relationshipLevel: "HIGH",
   });
 
-  await prisma.facilityProfessional.create({
-    data: {
-      facilityId: facilities.clinicNorth.id,
-      professionalId: professionals.diego.id,
-      confirmedAt: now,
-      confirmedByUserId: adminUserId,
-      isPartner: true,
-      relationshipLevel: "HIGH",
-    },
-  });
-
-  const fernandaSource = await prisma.facilityProfessional.create({
-    data: {
-      facilityId: facilities.clinicBeta.id,
-      professionalId: professionals.registryOnly.id,
+  const [fernandaSource] = await db
+    .insert(facilityProfessionals)
+    .values({
+      facilityId: facs.clinicBeta.id,
+      professionalId: profs.registryOnly.id,
       sourceActive: true,
       sourceFirstSeenAt: now,
       sourceLastSeenAt: now,
       specialtyLabel: "Pediatrics",
-    },
-  });
+    })
+    .returning();
 
-  return { anaAlpha, carlosPending, fernandaSource };
+  return { anaAlpha: anaAlpha!, carlosPending: carlosPending!, fernandaSource: fernandaSource! };
 }
 
 async function seedRegistrySuggestions(params: {
   facilities: Awaited<ReturnType<typeof seedFacilities>>;
   associations: Awaited<ReturnType<typeof seedAssociations>>;
 }) {
-  const run = await prisma.ingestionRun.create({
-    data: {
+  const [run] = await db
+    .insert(ingestionRuns)
+    .values({
       sourceProvider: "demo_seed",
       status: "COMPLETED",
       completedAt: new Date(),
       stats: { facilitiesCreated: 0, professionalsCreated: 1, suggestionsCreated: 2 },
+    })
+    .returning();
+
+  await db.insert(ingestionSuggestions).values({
+    ingestionRunId: run!.id,
+    type: "FACILITY_PROFESSIONAL_REMOVAL",
+    status: "PENDING",
+    facilityId: params.facilities.clinicAlpha.id,
+    professionalId: params.associations.carlosPending.professionalId,
+    facilityProfessionalId: params.associations.carlosPending.id,
+    reason: "missing_from_source",
+    payload: { demo: true, message: "Registry no longer lists this association" },
+  });
+
+  await db.insert(ingestionSuggestions).values({
+    ingestionRunId: run!.id,
+    type: "FACILITY_FIELD_UPDATE",
+    status: "PENDING",
+    facilityId: params.facilities.clinicBeta.id,
+    reason: "field_mismatch",
+    payload: {
+      demo: true,
+      field: "phoneNumber",
+      current: "1144445555",
+      suggested: "1155556666",
     },
   });
 
-  await prisma.ingestionSuggestion.create({
-    data: {
-      ingestionRunId: run.id,
-      type: "FACILITY_PROFESSIONAL_REMOVAL",
-      status: "PENDING",
-      facilityId: params.facilities.clinicAlpha.id,
-      professionalId: params.associations.carlosPending.professionalId,
-      facilityProfessionalId: params.associations.carlosPending.id,
-      reason: "missing_from_source",
-      payload: { demo: true, message: "Registry no longer lists this association" },
-    },
-  });
-
-  await prisma.ingestionSuggestion.create({
-    data: {
-      ingestionRunId: run.id,
-      type: "FACILITY_FIELD_UPDATE",
-      status: "PENDING",
-      facilityId: params.facilities.clinicBeta.id,
-      reason: "field_mismatch",
-      payload: {
-        demo: true,
-        field: "phoneNumber",
-        current: "1144445555",
-        suggested: "1155556666",
-      },
-    },
-  });
-
-  return run;
+  return run!;
 }
 
 function printSummary(params: {
@@ -567,7 +595,7 @@ function printSummary(params: {
   professionals: Awaited<ReturnType<typeof seedProfessionals>>;
   fieldUserId: string;
 }) {
-  const { territories, facilities, professionals, fieldUserId } = params;
+  const { territories: terrs, facilities: facs, professionals: profs, fieldUserId } = params;
 
   console.log("\n✅ Demo seed completed!\n");
   console.log("── Login credentials (password for all: %s) ──", DEMO_PASSWORD);
@@ -576,50 +604,48 @@ function printSummary(params: {
   console.log("  USER    field@%s  (assigned to São Paulo patch)", DEMO_DOMAIN);
   console.log("\n── Web routes to try ──");
   console.log("  /professionals");
-  console.log("  /professionals/%s  (Ana — full CRM profile)", professionals.ana.id);
+  console.log("  /professionals/%s  (Ana — full CRM profile)", profs.ana.id);
   console.log(
     "  /facilities/%s/professionals/%s  (registration form)",
-    facilities.clinicAlpha.id,
-    professionals.ana.id
+    facs.clinicAlpha.id,
+    profs.ana.id
   );
-  console.log("  /facilities/%s  (roster: pending + confirmed)", facilities.clinicAlpha.id);
-  console.log("  /facilities/%s  (out-of-scope for field user)", facilities.clinicNorth.id);
+  console.log("  /facilities/%s  (roster: pending + confirmed)", facs.clinicAlpha.id);
+  console.log("  /facilities/%s  (out-of-scope for field user)", facs.clinicNorth.id);
   console.log("  /registry-suggestions  (2 pending suggestions)");
   console.log("\n── Scope notes ──");
   console.log("  Field user id: %s", fieldUserId);
-  console.log("  In-scope territory: %s", territories.inScopePatchId);
-  console.log("  Out-of-scope territory: %s", territories.outOfScopePatchId);
+  console.log("  In-scope territory: %s", terrs.inScopePatchId);
+  console.log("  Out-of-scope territory: %s", terrs.outOfScopePatchId);
   console.log("  Diego + Clínica Norte are out-of-scope for field@%s", DEMO_DOMAIN);
   console.log("");
 }
 
 async function seedDemoData() {
-  const roles = await ensureRoles();
-  const territories = await seedTerritories();
-  const users = await seedUsers(roles);
+  const roleSet = await ensureRoles();
+  const territorySet = await seedTerritories();
+  const seededUsers = await seedUsers(roleSet);
 
-  await prisma.userTerritoryAssignment.create({
-    data: {
-      userId: users.fieldUser.id,
-      territoryId: territories.inScopePatchId,
-      assignedBy: users.admin.id,
-    },
+  await db.insert(userTerritoryAssignments).values({
+    userId: seededUsers.fieldUser.id,
+    territoryId: territorySet.inScopePatchId,
+    assignedBy: seededUsers.admin.id,
   });
 
-  const facilities = await seedFacilities(territories);
-  const professionals = await seedProfessionals();
+  const facilitySet = await seedFacilities(territorySet);
+  const professionalSet = await seedProfessionals();
   const associations = await seedAssociations({
-    facilities,
-    professionals,
-    adminUserId: users.admin.id,
+    facilities: facilitySet,
+    professionals: professionalSet,
+    adminUserId: seededUsers.admin.id,
   });
-  await seedRegistrySuggestions({ facilities, associations });
+  await seedRegistrySuggestions({ facilities: facilitySet, associations });
 
   printSummary({
-    territories,
-    facilities,
-    professionals,
-    fieldUserId: users.fieldUser.id,
+    territories: territorySet,
+    facilities: facilitySet,
+    professionals: professionalSet,
+    fieldUserId: seededUsers.fieldUser.id,
   });
 }
 
@@ -646,5 +672,5 @@ main()
     process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await db.$client.end();
   });

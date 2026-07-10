@@ -1,6 +1,8 @@
 import { createQueue, createWorker, type JobOptions } from "./queue.client";
 import { redis } from "../cache/redis.client";
-import { prisma } from "../database/prisma.client";
+import { db } from "../database/db";
+import { sessions, invitations, passwordResets, verificationTokens, auditLogs } from "@atlasmed/database";
+import { lt, or, isNotNull, and, inArray, sql, eq } from "drizzle-orm";
 import { environment } from "../../app/config/environment";
 import {
   formatAuditLogForSiem,
@@ -145,55 +147,53 @@ const cleanupWorker = createWorker<any>(
     try {
       switch (name) {
         case "cleanup-expired-sessions": {
-          const result = await prisma.session.deleteMany({
-            where: {
-              OR: [
-                { expiresAt: { lt: new Date() } },
-                { revokedAt: { not: null, lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
-              ],
-            },
-          });
-          console.log(`Cleaned up ${result.count} expired/revoked sessions`);
+          const deleted = await db.delete(sessions).where(
+            or(
+              lt(sessions.expiresAt, new Date()),
+              and(
+                isNotNull(sessions.revokedAt),
+                lt(sessions.revokedAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+              )
+            )
+          ).returning({ id: sessions.id });
+          console.log(`Cleaned up ${deleted.length} expired/revoked sessions`);
           break;
         }
 
         case "cleanup-expired-invites": {
-          const result = await prisma.invitation.updateMany({
-            where: {
-              status: "PENDING",
-              expiresAt: { lt: new Date() },
-            },
-            data: {
-              status: "EXPIRED",
-            },
-          });
-          console.log(`Marked ${result.count} invites as expired`);
+          const updated = await db.update(invitations)
+            .set({ status: "EXPIRED", updatedAt: new Date() })
+            .where(and(eq(invitations.status, "PENDING"), lt(invitations.expiresAt, new Date())))
+            .returning({ id: invitations.id });
+          console.log(`Marked ${updated.length} invites as expired`);
           break;
         }
 
         case "cleanup-expired-password-resets": {
-          const result = await prisma.passwordReset.deleteMany({
-            where: {
-              OR: [
-                { expiresAt: { lt: new Date() } },
-                { usedAt: { not: null, lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-              ],
-            },
-          });
-          console.log(`Cleaned up ${result.count} expired/used password resets`);
+          const deleted = await db.delete(passwordResets).where(
+            or(
+              lt(passwordResets.expiresAt, new Date()),
+              and(
+                isNotNull(passwordResets.usedAt),
+                lt(passwordResets.usedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+              )
+            )
+          ).returning({ id: passwordResets.id });
+          console.log(`Cleaned up ${deleted.length} expired/used password resets`);
           break;
         }
 
         case "cleanup-expired-verification-tokens": {
-          const result = await prisma.verificationToken.deleteMany({
-            where: {
-              OR: [
-                { expiresAt: { lt: new Date() } },
-                { verifiedAt: { not: null, lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } },
-              ],
-            },
-          });
-          console.log(`Cleaned up ${result.count} expired/verified tokens`);
+          const deleted = await db.delete(verificationTokens).where(
+            or(
+              lt(verificationTokens.expiresAt, new Date()),
+              and(
+                isNotNull(verificationTokens.verifiedAt),
+                lt(verificationTokens.verifiedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+              )
+            )
+          ).returning({ id: verificationTokens.id });
+          console.log(`Cleaned up ${deleted.length} expired/verified tokens`);
           break;
         }
 
@@ -217,11 +217,11 @@ const cleanupWorker = createWorker<any>(
             ? new Date(cursorRaw)
             : new Date(Date.now() - 15 * 60 * 1000);
 
-          const logs = await prisma.auditLog.findMany({
-            where: { createdAt: { gt: since } },
-            orderBy: { createdAt: "asc" },
-            take: 500,
-          });
+          const { gt, asc } = await import("drizzle-orm");
+          const logs = await db.select().from(auditLogs)
+            .where(gt(auditLogs.createdAt, since))
+            .orderBy(asc(auditLogs.createdAt))
+            .limit(500);
 
           if (logs.length === 0) {
             metricsService.recordSiemExportBatch(true);
@@ -249,13 +249,13 @@ const cleanupWorker = createWorker<any>(
           const retentionDays = data.retentionDays || environment.AUDIT_LOG_RETENTION_DAYS;
           const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
 
-          const result = await prisma.auditLog.deleteMany({
-            where: {
-              createdAt: { lt: cutoffDate },
-              severity: { in: ["INFO"] },
-            },
-          });
-          console.log(`Cleaned up ${result.count} old audit logs (retention: ${retentionDays} days)`);
+          const deleted = await db.delete(auditLogs).where(
+            and(
+              lt(auditLogs.createdAt, cutoffDate),
+              inArray(auditLogs.severity, ["INFO"])
+            )
+          ).returning({ id: auditLogs.id });
+          console.log(`Cleaned up ${deleted.length} old audit logs (retention: ${retentionDays} days)`);
           break;
         }
 

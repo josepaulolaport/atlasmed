@@ -1,4 +1,6 @@
-import type { PrismaClient } from "@atlasmed/database";
+import { eq, and, isNull, lt } from "drizzle-orm";
+import { users, passwordResets } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 
 import type {
   CreatePasswordResetParams,
@@ -6,60 +8,55 @@ import type {
   PasswordResetRepository,
 } from "../../../application/interfaces/password-reset.repository.interface";
 
-interface Dependencies {
-  prisma: PrismaClient;
-}
-
 export class PrismaPasswordResetRepository implements PasswordResetRepository {
-  constructor(private readonly deps: Dependencies) {}
-
   async create(params: CreatePasswordResetParams) {
-    return await this.deps.prisma.passwordReset.create({
-      data: {
+    const [row] = await db
+      .insert(passwordResets)
+      .values({
         userId: params.userId,
         tokenHash: params.tokenHash,
         expiresAt: params.expiresAt,
-      },
-    });
+      })
+      .returning();
+
+    return row!;
   }
 
   async findByToken(params: FindPasswordResetByTokenParams) {
-    return await this.deps.prisma.passwordReset.findUnique({
-      where: {
-        tokenHash: params.tokenHash,
-      },
-      include: {
-        user: true,
-      },
-    });
+    const [pr] = await db
+      .select()
+      .from(passwordResets)
+      .where(eq(passwordResets.tokenHash, params.tokenHash))
+      .limit(1);
+
+    if (!pr) return null;
+
+    const [userRow] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, pr.userId))
+      .limit(1);
+
+    if (!userRow) return null;
+
+    return { ...pr, user: userRow };
   }
 
   async markAsUsed(id: string): Promise<void> {
-    await this.deps.prisma.passwordReset.update({
-      where: { id },
-      data: { usedAt: new Date() },
-    });
+    await db
+      .update(passwordResets)
+      .set({ usedAt: new Date(), updatedAt: new Date() })
+      .where(eq(passwordResets.id, id));
   }
 
   async invalidateUnusedForUser(userId: string): Promise<void> {
-    await this.deps.prisma.passwordReset.updateMany({
-      where: {
-        userId,
-        usedAt: null,
-      },
-      data: {
-        usedAt: new Date(),
-      },
-    });
+    await db
+      .update(passwordResets)
+      .set({ usedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(passwordResets.userId, userId), isNull(passwordResets.usedAt)));
   }
 
   async deleteExpired(): Promise<void> {
-    await this.deps.prisma.passwordReset.deleteMany({
-      where: {
-        expiresAt: {
-          lt: new Date(),
-        },
-      },
-    });
+    await db.delete(passwordResets).where(lt(passwordResets.expiresAt, new Date()));
   }
 }

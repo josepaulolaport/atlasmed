@@ -1,24 +1,16 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import {
+  facilityRepresentatives,
+} from "@atlasmed/database";
+import { eq, and, isNull } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityRepresentativeRecord,
   FacilityRepresentativeRepository,
 } from "../../../application/interfaces/facility-representative.repository.interface";
 
-function mapRepresentative(row: {
-  id: string;
-  facilityId: string;
-  representativeName: string;
-  roleTitle: string | null;
-  email: string | null;
-  taxId: string | null;
-  externalSourceKey: string | null;
-  sourceActive: boolean;
-  confirmedAt: Date | null;
-  confirmedByUserId: string | null;
-  endedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): FacilityRepresentativeRecord {
+type RepresentativeRow = typeof facilityRepresentatives.$inferSelect;
+
+function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord {
   return {
     id: row.id,
     facilityId: row.facilityId,
@@ -41,9 +33,17 @@ export class PrismaFacilityRepresentativeRepository implements FacilityRepresent
     facilityId: string,
     externalKey: string
   ): Promise<FacilityRepresentativeRecord | null> {
-    const representative = await prisma.facilityRepresentative.findFirst({
-      where: { facilityId, externalSourceKey: externalKey, endedAt: null },
-    });
+    const [representative] = await db
+      .select()
+      .from(facilityRepresentatives)
+      .where(
+        and(
+          eq(facilityRepresentatives.facilityId, facilityId),
+          eq(facilityRepresentatives.externalSourceKey, externalKey),
+          isNull(facilityRepresentatives.endedAt)
+        )
+      )
+      .limit(1);
 
     return representative ? mapRepresentative(representative) : null;
   }
@@ -56,14 +56,9 @@ export class PrismaFacilityRepresentativeRepository implements FacilityRepresent
     email?: string | null;
     taxId?: string | null;
   }): Promise<FacilityRepresentativeRecord> {
-    const representative = await prisma.facilityRepresentative.upsert({
-      where: {
-        facilityId_externalSourceKey: {
-          facilityId: params.facilityId,
-          externalSourceKey: params.externalSourceKey,
-        },
-      },
-      create: {
+    const [representative] = await db
+      .insert(facilityRepresentatives)
+      .values({
         facilityId: params.facilityId,
         externalSourceKey: params.externalSourceKey,
         representativeName: params.representativeName,
@@ -72,15 +67,19 @@ export class PrismaFacilityRepresentativeRepository implements FacilityRepresent
         taxId: params.taxId ?? null,
         sourceActive: true,
         sourceProvider: "registry",
-      },
-      update: {
-        representativeName: params.representativeName,
-        roleTitle: params.roleTitle ?? null,
-        email: params.email ?? null,
-        taxId: params.taxId ?? null,
-        sourceActive: true,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [facilityRepresentatives.facilityId, facilityRepresentatives.externalSourceKey],
+        set: {
+          representativeName: params.representativeName,
+          roleTitle: params.roleTitle ?? null,
+          email: params.email ?? null,
+          taxId: params.taxId ?? null,
+          sourceActive: true,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
 
     return mapRepresentative(representative);
   }
@@ -90,18 +89,20 @@ export class PrismaFacilityRepresentativeRepository implements FacilityRepresent
     externalSourceKey: string;
     confirmedByUserId: string;
   }): Promise<FacilityRepresentativeRecord> {
-    const representative = await prisma.facilityRepresentative.update({
-      where: {
-        facilityId_externalSourceKey: {
-          facilityId: params.facilityId,
-          externalSourceKey: params.externalSourceKey,
-        },
-      },
-      data: {
+    const [representative] = await db
+      .update(facilityRepresentatives)
+      .set({
         confirmedAt: new Date(),
         confirmedByUserId: params.confirmedByUserId,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(facilityRepresentatives.facilityId, params.facilityId),
+          eq(facilityRepresentatives.externalSourceKey, params.externalSourceKey)
+        )
+      )
+      .returning();
 
     return mapRepresentative(representative);
   }
@@ -112,25 +113,29 @@ export class PrismaFacilityRepresentativeRepository implements FacilityRepresent
     endedByUserId: string;
     endReason?: string;
   }): Promise<FacilityRepresentativeRecord | null> {
-    const existing = await prisma.facilityRepresentative.findFirst({
-      where: {
-        facilityId: params.facilityId,
-        externalSourceKey: params.externalSourceKey,
-        endedAt: null,
-      },
-    });
+    const [existing] = await db
+      .select()
+      .from(facilityRepresentatives)
+      .where(
+        and(
+          eq(facilityRepresentatives.facilityId, params.facilityId),
+          eq(facilityRepresentatives.externalSourceKey, params.externalSourceKey),
+          isNull(facilityRepresentatives.endedAt)
+        )
+      )
+      .limit(1);
 
-    if (!existing) {
-      return null;
-    }
+    if (!existing) return null;
 
-    const representative = await prisma.facilityRepresentative.update({
-      where: { id: existing.id },
-      data: {
+    const [representative] = await db
+      .update(facilityRepresentatives)
+      .set({
         endedAt: new Date(),
         sourceActive: false,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(facilityRepresentatives.id, existing.id))
+      .returning();
 
     return mapRepresentative(representative);
   }

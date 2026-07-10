@@ -4,7 +4,9 @@ import { hash } from "argon2";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
 import { access } from "./index";
 import { AppError } from "../../shared/errors";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq, inArray, isNull, and } from "drizzle-orm";
+import { roles, users, sessions, invitations, passwordResets } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -57,55 +59,65 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     const uniqueId = getUniqueTestId();
     userEmail = `auth.security.${uniqueId}@test.example.com`;
 
-    const userRole = await prisma.role.findUnique({ where: { name: "USER" } });
-    const adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
+    const userRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+    const adminRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "ADMIN"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
     if (!userRole || !adminRole) {
       throw new Error("USER or ADMIN role not found in seeded database");
     }
 
     userRoleId = userRole.id;
 
-    const user = await prisma.user.create({
-      data: {
+    const user = await db
+      .insert(users)
+      .values({
         email: userEmail,
         username: `auth_sec_${uniqueId}`,
         passwordHash: await hash(TEST_PASSWORD),
         roleId: userRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     userId = user.id;
 
-    const admin = await prisma.user.create({
-      data: {
+    const admin = await db
+      .insert(users)
+      .values({
         email: `auth.security.admin.${uniqueId}@test.example.com`,
         username: `auth_sec_admin_${uniqueId}`,
         passwordHash: await hash(TEST_PASSWORD),
         roleId: adminRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     adminId = admin.id;
   });
 
   afterAll(async () => {
     if (!dbReady) return;
-    await prisma.invitation.deleteMany({
-      where: { invitedByUserId: { in: [userId, adminId] } },
-    });
-    await prisma.passwordReset.deleteMany({
-      where: { userId: { in: [userId, adminId] } },
-    });
-    await prisma.session.deleteMany({
-      where: { userId: { in: [userId, adminId] } },
-    });
-    await prisma.user.deleteMany({
-      where: { id: { in: [userId, adminId] } },
-    }).catch(() => {});
+    await db
+      .delete(invitations)
+      .where(inArray(invitations.invitedByUserId, [userId, adminId]));
+    await db
+      .delete(passwordResets)
+      .where(inArray(passwordResets.userId, [userId, adminId]));
+    await db.delete(sessions).where(inArray(sessions.userId, [userId, adminId]));
+    await db.delete(users).where(inArray(users.id, [userId, adminId])).catch(() => {});
   });
 
   async function login(identifier: string, password = TEST_PASSWORD) {
@@ -133,12 +145,10 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(refreshToken).toBeTruthy();
 
     const resetToken = generateRandomToken();
-    await prisma.passwordReset.create({
-      data: {
-        userId,
-        tokenHash: hashToken(resetToken),
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      },
+    await db.insert(passwordResets).values({
+      userId,
+      tokenHash: hashToken(resetToken),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     });
 
     const resetResponse = await app.handle(
@@ -240,17 +250,20 @@ describe("Access Auth Security HTTP Integration Tests", () => {
 
     expect(firstRefresh.status).toBe(200);
 
-    const activeSession = await prisma.session.findFirst({
-      where: { userId, revokedAt: null },
-    });
+    const activeSession = await db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.userId, userId), isNull(sessions.revokedAt)))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     expect(activeSession).toBeDefined();
 
     await redis.flushdb();
-    await prisma.session.update({
-      where: { id: activeSession!.id },
-      data: { updatedAt: new Date(Date.now() - 11_000) },
-    });
+    await db
+      .update(sessions)
+      .set({ updatedAt: new Date(Date.now() - 11_000) })
+      .where(eq(sessions.id, activeSession!.id));
 
     const reuseResponse = await app.handle(
       new Request("http://localhost/access/refresh", {
@@ -300,15 +313,13 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     const inviteEmail = `invited.${uniqueId}@test.example.com`;
     const inviteToken = generateRandomToken();
 
-    await prisma.invitation.create({
-      data: {
-        email: inviteEmail,
-        tokenHash: hashToken(inviteToken),
-        roleId: userRoleId,
-        invitedByUserId: adminId,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        status: "PENDING",
-      },
+    await db.insert(invitations).values({
+      email: inviteEmail,
+      tokenHash: hashToken(inviteToken),
+      roleId: userRoleId,
+      invitedByUserId: adminId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      status: "PENDING",
     });
 
     const registerResponse = await app.handle(
@@ -339,13 +350,16 @@ describe("Access Auth Security HTTP Integration Tests", () => {
 
     expect(loginResponse.status).toBe(200);
 
-    const invitedUser = await prisma.user.findUnique({
-      where: { email: inviteEmail },
-    });
+    const invitedUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, inviteEmail))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     if (invitedUser) {
-      await prisma.session.deleteMany({ where: { userId: invitedUser.id } });
-      await prisma.user.delete({ where: { id: invitedUser.id } }).catch(() => {});
+      await db.delete(sessions).where(eq(sessions.userId, invitedUser.id));
+      await db.delete(users).where(eq(users.id, invitedUser.id)).catch(() => {});
     }
   });
 });

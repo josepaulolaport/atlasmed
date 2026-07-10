@@ -1,5 +1,7 @@
 import { Role } from "@atlasmed/access";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../infrastructure/database/db";
+import { userTerritoryAssignments, users, roles } from "@atlasmed/database";
+import { and, ne, inArray, eq } from "drizzle-orm";
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
@@ -58,15 +60,20 @@ export class TerritoryAssignmentPolicyService {
     const exclusionRoles =
       params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.REP];
 
-    const conflictingAssignments = await prisma.userTerritoryAssignment.findMany({
-      where: {
-        userId: { not: params.targetUserId },
-        user: {
-          role: { name: { in: exclusionRoles } },
-        },
-      },
-      select: { territoryId: true, userId: true },
-    });
+    const conflictingAssignments = await db
+      .select({
+        territoryId: userTerritoryAssignments.territoryId,
+        userId: userTerritoryAssignments.userId,
+      })
+      .from(userTerritoryAssignments)
+      .innerJoin(users, eq(userTerritoryAssignments.userId, users.id))
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(
+        and(
+          ne(userTerritoryAssignments.userId, params.targetUserId),
+          inArray(roles.name, exclusionRoles)
+        )
+      );
 
     for (const assignment of conflictingAssignments) {
       const overlaps = await this.deps.closureRepository.hasAncestorDescendantRelation(

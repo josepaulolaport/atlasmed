@@ -1,7 +1,9 @@
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { prisma } from "../infrastructure/prisma";
+import { ingestionRuns } from "@atlasmed/database";
+import { eq } from "drizzle-orm";
+import { db } from "../infrastructure/db";
 import { loadWorkerConfig } from "../config";
 
 export async function updateIngestionRunPhase(
@@ -9,14 +11,14 @@ export async function updateIngestionRunPhase(
   phase: string,
   extra?: Record<string, unknown>
 ): Promise<void> {
-  await prisma.ingestionRun.update({
-    where: { id: ingestionRunId },
-    data: {
+  await db
+    .update(ingestionRuns)
+    .set({
       phase: phase as never,
       phaseStartedAt: new Date(),
       ...(extra ?? {}),
-    },
-  });
+    })
+    .where(eq(ingestionRuns.id, ingestionRunId));
 }
 
 export async function discoverLatestReferenceActivity(input: {
@@ -27,13 +29,13 @@ export async function discoverLatestReferenceActivity(input: {
   await updateIngestionRunPhase(input.ingestionRunId, "DISCOVERING");
 
   if (input.ano && input.mes) {
-    await prisma.ingestionRun.update({
-      where: { id: input.ingestionRunId },
-      data: {
+    await db
+      .update(ingestionRuns)
+      .set({
         referenceAno: input.ano,
         referenceMes: input.mes,
-      },
-    });
+      })
+      .where(eq(ingestionRuns.id, input.ingestionRunId));
     return { ano: input.ano, mes: input.mes };
   }
 
@@ -42,13 +44,13 @@ export async function discoverLatestReferenceActivity(input: {
   const ftp = createCnesFtpAdapter({ mode: config.cnesFtpMode });
   const reference = await ftp.discoverLatest();
 
-  await prisma.ingestionRun.update({
-    where: { id: input.ingestionRunId },
-    data: {
+  await db
+    .update(ingestionRuns)
+    .set({
       referenceAno: reference.ano,
       referenceMes: reference.mes,
-    },
-  });
+    })
+    .where(eq(ingestionRuns.id, input.ingestionRunId));
 
   return reference;
 }
@@ -108,10 +110,10 @@ export async function downloadRawFilesActivity(input: {
   };
 
   await archive.saveManifest(manifest);
-  await prisma.ingestionRun.update({
-    where: { id: input.ingestionRunId },
-    data: { archiveManifest: manifest as object },
-  });
+  await db
+    .update(ingestionRuns)
+    .set({ archiveManifest: manifest as object })
+    .where(eq(ingestionRuns.id, input.ingestionRunId));
 
   return { fileCount: manifestFiles.length };
 }

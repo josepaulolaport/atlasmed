@@ -1,5 +1,7 @@
 import { REGISTRY_TABLES } from "@atlasmed/cnes-ingestion";
-import { prisma } from "../infrastructure/prisma";
+import { facilities, professionals, ingestionRuns } from "@atlasmed/database";
+import { eq, sql } from "drizzle-orm";
+import { db } from "../infrastructure/db";
 import { updateIngestionRunPhase } from "./discover-download.activities";
 import { reconcileCrmFromStaging } from "../reconcile/reconcile-crm.service";
 import {
@@ -11,7 +13,7 @@ export async function reconcileCrmDiffActivity(input: {
   ingestionRunId: string;
 }): Promise<Record<string, unknown>> {
   await updateIngestionRunPhase(input.ingestionRunId, "RECONCILING");
-  return reconcileCrmFromStaging(input);
+  return reconcileCrmFromStaging(input) as Promise<Record<string, unknown>>;
 }
 
 export async function reconcileWarehouseDiffActivity(_input: {
@@ -21,11 +23,11 @@ export async function reconcileWarehouseDiffActivity(_input: {
 
   for (const table of REGISTRY_TABLES) {
     const [stagingRows, currentRows] = await Promise.all([
-      prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-        `SELECT COUNT(*)::bigint AS count FROM registry_staging.${table}`
+      db.execute<{ count: bigint }>(
+        sql.raw(`SELECT COUNT(*)::bigint AS count FROM registry_staging.${table}`)
       ),
-      prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-        `SELECT COUNT(*)::bigint AS count FROM registry.${table}`
+      db.execute<{ count: bigint }>(
+        sql.raw(`SELECT COUNT(*)::bigint AS count FROM registry.${table}`)
       ),
     ]);
 
@@ -50,7 +52,7 @@ export async function syncCrmMetadataActivity(input: {
 
   const now = new Date();
 
-  const facilitiesUpdated = await prisma.$executeRaw`
+  const facilitiesUpdatedResult = await db.execute(sql`
     UPDATE public.facilities f
     SET
       "sourceLastSeenAt" = ${now},
@@ -59,9 +61,9 @@ export async function syncCrmMetadataActivity(input: {
     FROM registry.facilities r
     WHERE f."sourceProvider" = 'cnes'
       AND f."externalSourceId" = r.facility_id
-  `;
+  `);
 
-  const professionalsUpdated = await prisma.$executeRaw`
+  const professionalsUpdatedResult = await db.execute(sql`
     UPDATE public.professionals p
     SET
       "sourceLastSeenAt" = ${now},
@@ -70,9 +72,9 @@ export async function syncCrmMetadataActivity(input: {
     FROM registry.professionals r
     WHERE p."sourceProvider" = 'cnes'
       AND p."externalSourceId" = r.professional_id
-  `;
+  `);
 
-  const facilitiesMarkedAbsent = await prisma.$executeRaw`
+  const facilitiesMarkedAbsentResult = await db.execute(sql`
     UPDATE public.facilities f
     SET
       "sourcePresent" = FALSE,
@@ -83,9 +85,9 @@ export async function syncCrmMetadataActivity(input: {
       AND NOT EXISTS (
         SELECT 1 FROM registry.facilities r WHERE r.facility_id = f."externalSourceId"
       )
-  `;
+  `);
 
-  const professionalsMarkedAbsent = await prisma.$executeRaw`
+  const professionalsMarkedAbsentResult = await db.execute(sql`
     UPDATE public.professionals p
     SET
       "sourcePresent" = FALSE,
@@ -96,23 +98,21 @@ export async function syncCrmMetadataActivity(input: {
       AND NOT EXISTS (
         SELECT 1 FROM registry.professionals r WHERE r.professional_id = p."externalSourceId"
       )
-  `;
+  `);
 
-  const facilityHashRows = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      legal_name: string | null;
-      trade_name: string | null;
-      street_address: string | null;
-      street_number: string | null;
-      neighborhood: string | null;
-      postal_code: string | null;
-      latitude: number | null;
-      longitude: number | null;
-      municipality_id: string | null;
-    }>
-  >(
-    `SELECT
+  const facilityHashRows = await db.execute<{
+    id: string;
+    legal_name: string | null;
+    trade_name: string | null;
+    street_address: string | null;
+    street_number: string | null;
+    neighborhood: string | null;
+    postal_code: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    municipality_id: string | null;
+  }>(sql`
+    SELECT
       f.id,
       r.legal_name,
       r.trade_name,
@@ -125,8 +125,8 @@ export async function syncCrmMetadataActivity(input: {
       r.municipality_id
      FROM public.facilities f
      INNER JOIN registry.facilities r ON r.facility_id = f."externalSourceId"
-     WHERE f."sourceProvider" = 'cnes'`
-  );
+     WHERE f."sourceProvider" = 'cnes'
+  `);
 
   for (const row of facilityHashRows) {
     const name = (row.trade_name?.trim() || row.legal_name?.trim() || "Unknown facility").trim();
@@ -143,24 +143,22 @@ export async function syncCrmMetadataActivity(input: {
       referenceMunicipalityCode: row.municipality_id,
     });
 
-    await prisma.facility.update({
-      where: { id: row.id },
-      data: { sourceContentHash: hash },
-    });
+    await db
+      .update(facilities)
+      .set({ sourceContentHash: hash, updatedAt: new Date() })
+      .where(eq(facilities.id, row.id));
   }
 
-  const professionalHashRows = await prisma.$queryRawUnsafe<
-    Array<{
-      id: string;
-      full_name: string;
-      tax_id: string | null;
-    }>
-  >(
-    `SELECT p.id, r.full_name, r.tax_id
+  const professionalHashRows = await db.execute<{
+    id: string;
+    full_name: string;
+    tax_id: string | null;
+  }>(sql`
+    SELECT p.id, r.full_name, r.tax_id
      FROM public.professionals p
      INNER JOIN registry.professionals r ON r.professional_id = p."externalSourceId"
-     WHERE p."sourceProvider" = 'cnes'`
-  );
+     WHERE p."sourceProvider" = 'cnes'
+  `);
 
   for (const row of professionalHashRows) {
     const fullName = row.full_name.trim() || "Unknown";
@@ -177,17 +175,17 @@ export async function syncCrmMetadataActivity(input: {
       mobilePhone: null,
     });
 
-    await prisma.professional.update({
-      where: { id: row.id },
-      data: { sourceContentHash: hash },
-    });
+    await db
+      .update(professionals)
+      .set({ sourceContentHash: hash, updatedAt: new Date() })
+      .where(eq(professionals.id, row.id));
   }
 
   return {
-    facilitiesUpdated: Number(facilitiesUpdated),
-    professionalsUpdated: Number(professionalsUpdated),
-    facilitiesMarkedAbsent: Number(facilitiesMarkedAbsent),
-    professionalsMarkedAbsent: Number(professionalsMarkedAbsent),
+    facilitiesUpdated: Number(facilitiesUpdatedResult.count ?? 0),
+    professionalsUpdated: Number(professionalsUpdatedResult.count ?? 0),
+    facilitiesMarkedAbsent: Number(facilitiesMarkedAbsentResult.count ?? 0),
+    professionalsMarkedAbsent: Number(professionalsMarkedAbsentResult.count ?? 0),
   };
 }
 
@@ -195,12 +193,12 @@ export async function finalizeIngestionRunActivity(input: {
   ingestionRunId: string;
   stats: Record<string, unknown>;
 }): Promise<void> {
-  await prisma.ingestionRun.update({
-    where: { id: input.ingestionRunId },
-    data: {
+  await db
+    .update(ingestionRuns)
+    .set({
       status: "COMPLETED",
       completedAt: new Date(),
       stats: input.stats as object,
-    },
-  });
+    })
+    .where(eq(ingestionRuns.id, input.ingestionRunId));
 }

@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { products } from "@atlasmed/database";
+import { eq, and, asc, sql } from "drizzle-orm";
 import type {
   ProductRecord,
   ProductRepository,
@@ -31,28 +33,30 @@ export class PrismaProductRepository implements ProductRepository {
     sectorId?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }> {
-    const where = {
-      ...(params.sectorId ? { sectorId: params.sectorId } : {}),
-      ...(params.isActive === undefined ? {} : { isActive: params.isActive }),
-    };
+    const conditions = [
+      ...(params.sectorId ? [eq(products.sectorId, params.sectorId)] : []),
+      ...(params.isActive !== undefined ? [eq(products.isActive, params.isActive)] : []),
+    ];
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
     const skip = (params.page - 1) * params.limit;
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        orderBy: { name: "asc" },
-        skip,
-        take: params.limit,
-      }),
-      prisma.product.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(products)
+        .where(where)
+        .orderBy(asc(products.name))
+        .offset(skip)
+        .limit(params.limit),
+      db.select({ count: sql<number>`count(*)` }).from(products).where(where),
     ]);
 
-    return { products: products.map(mapProduct), total };
+    return { products: rows.map(mapProduct), total: Number(count) };
   }
 
   async findById(id: string): Promise<ProductRecord | null> {
-    const product = await prisma.product.findUnique({ where: { id } });
-    return product ? mapProduct(product) : null;
+    const rows = await db.select().from(products).where(eq(products.id, id));
+    return rows[0] ? mapProduct(rows[0]) : null;
   }
 
   async create(data: {
@@ -61,14 +65,15 @@ export class PrismaProductRepository implements ProductRepository {
     sectorId: string;
     isActive?: boolean;
   }): Promise<ProductRecord> {
-    const product = await prisma.product.create({
-      data: {
+    const [product] = await db
+      .insert(products)
+      .values({
         code: data.code,
         name: data.name,
         sectorId: data.sectorId,
         isActive: data.isActive ?? true,
-      },
-    });
+      })
+      .returning();
     return mapProduct(product);
   }
 
@@ -76,7 +81,11 @@ export class PrismaProductRepository implements ProductRepository {
     id: string,
     data: { code?: string; name?: string; sectorId?: string; isActive?: boolean }
   ): Promise<ProductRecord> {
-    const product = await prisma.product.update({ where: { id }, data });
+    const [product] = await db
+      .update(products)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(products.id, id))
+      .returning();
     return mapProduct(product);
   }
 }

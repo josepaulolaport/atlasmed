@@ -1,7 +1,7 @@
 # Spec 0001: Multi-Tenancy Tasks
 
 - [ ] 1. Model organization and membership data.
-  - Add Prisma models and migration.
+  - Add Drizzle schema and migration.
   - Define organization-owned versus global records.
   - Requirements: 1, 2, 4, 6.
 

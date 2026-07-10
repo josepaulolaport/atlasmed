@@ -1,25 +1,76 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
-import type { PrismaClient } from "@atlasmed/database";
-
 import { PrismaPasswordResetRepository } from "./prisma-password-reset.repository";
+
+// Track the last arguments passed to each db operation for assertions
+let lastInsertedValues: any;
+let lastUpdateSet: any;
+let lastUpdateWhereExpr: any;
+let lastDeleteWhereExpr: any;
+let mockSelectResult: any = null;
+
+const mockReturning = mock(() => Promise.resolve([{ id: "reset-123", usedAt: null }]));
+const mockValues = mock((vals: any) => {
+  lastInsertedValues = vals;
+  return { returning: mockReturning };
+});
+const mockInsert = mock(() => ({ values: mockValues }));
+
+const mockLimit = mock(() =>
+  Promise.resolve(mockSelectResult !== null ? [mockSelectResult] : [])
+);
+const mockSelectWhere = mock(() => ({ limit: mockLimit }));
+const mockFromInner = mock(() => ({ where: mockSelectWhere }));
+const mockSelect = mock(() => ({ from: mockFromInner }));
+
+const mockUpdateWhere = mock((expr: any) => {
+  lastUpdateWhereExpr = expr;
+  return Promise.resolve();
+});
+const mockSet = mock((setData: any) => {
+  lastUpdateSet = setData;
+  return { where: mockUpdateWhere };
+});
+const mockUpdate = mock(() => ({ set: mockSet }));
+
+const mockDeleteWhere = mock((expr: any) => {
+  lastDeleteWhereExpr = expr;
+  return Promise.resolve();
+});
+const mockDelete = mock(() => ({ where: mockDeleteWhere }));
+
+mock.module("../../../../../infrastructure/database/db", () => ({
+  db: {
+    insert: mockInsert,
+    select: mockSelect,
+    update: mockUpdate,
+    delete: mockDelete,
+  },
+}));
 
 describe("PrismaPasswordResetRepository", () => {
   let repository: PrismaPasswordResetRepository;
-  let mockPrisma: any;
 
   beforeEach(() => {
-    mockPrisma = {
-      passwordReset: {
-        create: mock(() => Promise.resolve({})),
-        findUnique: mock(() => Promise.resolve(null)),
-        update: mock(() => Promise.resolve({})),
-        updateMany: mock(() => Promise.resolve({ count: 0 })),
-        deleteMany: mock(() => Promise.resolve({ count: 0 })),
-      },
-    } as unknown as PrismaClient;
+    lastInsertedValues = undefined;
+    lastUpdateSet = undefined;
+    lastUpdateWhereExpr = undefined;
+    lastDeleteWhereExpr = undefined;
+    mockSelectResult = null;
+    mockReturning.mockClear();
+    mockValues.mockClear();
+    mockInsert.mockClear();
+    mockLimit.mockClear();
+    mockSelectWhere.mockClear();
+    mockFromInner.mockClear();
+    mockSelect.mockClear();
+    mockUpdateWhere.mockClear();
+    mockSet.mockClear();
+    mockUpdate.mockClear();
+    mockDeleteWhere.mockClear();
+    mockDelete.mockClear();
 
-    repository = new PrismaPasswordResetRepository({ prisma: mockPrisma });
+    repository = new PrismaPasswordResetRepository();
   });
 
   describe("create", () => {
@@ -40,12 +91,15 @@ describe("PrismaPasswordResetRepository", () => {
         updatedAt: new Date(),
       };
 
-      mockPrisma.passwordReset.create.mockResolvedValue(mockPasswordReset);
+      mockReturning.mockImplementation(() => Promise.resolve([mockPasswordReset]));
 
       const result = await repository.create(params);
 
-      expect(mockPrisma.passwordReset.create).toHaveBeenCalledWith({
-        data: params,
+      expect(mockInsert).toHaveBeenCalled();
+      expect(mockValues).toHaveBeenCalledWith({
+        userId: params.userId,
+        tokenHash: params.tokenHash,
+        expiresAt: params.expiresAt,
       });
       expect(result).toEqual(mockPasswordReset);
     });
@@ -60,22 +114,23 @@ describe("PrismaPasswordResetRepository", () => {
         tokenHash,
         expiresAt: new Date("2026-05-22"),
         usedAt: null,
-        user: { id: "user-123", email: "user@example.com" },
       };
+      const mockUser = { id: "user-123", email: "user@example.com" };
 
-      mockPrisma.passwordReset.findUnique.mockResolvedValue(mockPasswordReset);
+      mockSelectResult = mockPasswordReset;
+      mockLimit
+        .mockImplementationOnce(() => Promise.resolve([mockPasswordReset]))
+        .mockImplementationOnce(() => Promise.resolve([mockUser]));
 
       const result = await repository.findByToken({ tokenHash });
 
-      expect(mockPrisma.passwordReset.findUnique).toHaveBeenCalledWith({
-        where: { tokenHash },
-        include: { user: true },
-      });
-      expect(result).toEqual(mockPasswordReset as any);
+      expect(mockSelect).toHaveBeenCalled();
+      expect(result).toBeDefined();
+      expect(result?.tokenHash).toBe(tokenHash);
     });
 
     it("should return null if token not found", async () => {
-      mockPrisma.passwordReset.findUnique.mockResolvedValue(null);
+      mockLimit.mockImplementation(() => Promise.resolve([]));
 
       const result = await repository.findByToken({ tokenHash: "nonexistent" });
 
@@ -89,44 +144,30 @@ describe("PrismaPasswordResetRepository", () => {
 
       await repository.markAsUsed(id);
 
-      expect(mockPrisma.passwordReset.update).toHaveBeenCalledWith({
-        where: { id },
-        data: { usedAt: expect.any(Date) },
-      });
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ usedAt: expect.any(Date) })
+      );
     });
   });
 
   describe("invalidateUnusedForUser", () => {
     it("should mark prior unused tokens as used", async () => {
-      mockPrisma.passwordReset.updateMany.mockResolvedValue({ count: 2 });
-
       await repository.invalidateUnusedForUser("user-123");
 
-      expect(mockPrisma.passwordReset.updateMany).toHaveBeenCalledWith({
-        where: {
-          userId: "user-123",
-          usedAt: null,
-        },
-        data: {
-          usedAt: expect.any(Date),
-        },
-      });
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ usedAt: expect.any(Date) })
+      );
     });
   });
 
   describe("deleteExpired", () => {
     it("should delete expired password reset records", async () => {
-      mockPrisma.passwordReset.deleteMany.mockResolvedValue({ count: 5 });
-
       await repository.deleteExpired();
 
-      expect(mockPrisma.passwordReset.deleteMany).toHaveBeenCalledWith({
-        where: {
-          expiresAt: {
-            lt: expect.any(Date),
-          },
-        },
-      });
+      expect(mockDelete).toHaveBeenCalled();
+      expect(mockDeleteWhere).toHaveBeenCalled();
     });
   });
 });

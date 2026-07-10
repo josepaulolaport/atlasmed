@@ -1,14 +1,16 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
+import { users, userTerritoryAssignments } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import type { ScopeRepository } from "../../../application/interfaces/scope.repository.interface";
 
 export class PrismaScopeRepository implements ScopeRepository {
   async findTerritoryIdsByUserId(userId: string): Promise<string[]> {
-    const assignments = await prisma.userTerritoryAssignment.findMany({
-      where: { userId },
-      select: { territoryId: true },
-    });
+    const rows = await db
+      .select({ territoryId: userTerritoryAssignments.territoryId })
+      .from(userTerritoryAssignments)
+      .where(eq(userTerritoryAssignments.userId, userId));
 
-    return assignments.map((assignment) => assignment.territoryId);
+    return rows.map((row) => row.territoryId);
   }
 
   async findTerritoryIdsByUserIds(userIds: string[]): Promise<string[]> {
@@ -16,26 +18,21 @@ export class PrismaScopeRepository implements ScopeRepository {
       return [];
     }
 
-    const assignments = await prisma.userTerritoryAssignment.findMany({
-      where: {
-        userId: { in: userIds },
-      },
-      select: { territoryId: true },
-    });
+    const rows = await db
+      .select({ territoryId: userTerritoryAssignments.territoryId })
+      .from(userTerritoryAssignments)
+      .where(inArray(userTerritoryAssignments.userId, userIds));
 
-    return assignments.map((assignment) => assignment.territoryId);
+    return rows.map((row) => row.territoryId);
   }
 
   async findManagedUserIds(managerId: string): Promise<string[]> {
-    const reports = await prisma.user.findMany({
-      where: {
-        managerId,
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
+    const rows = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(eq(users.managerId, managerId as any), isNull(users.deletedAt)));
 
-    return reports.map((report) => report.id);
+    return rows.map((row) => row.id);
   }
 
   async assignTerritory(params: {
@@ -43,34 +40,31 @@ export class PrismaScopeRepository implements ScopeRepository {
     territoryId: string;
     assignedBy: string;
   }): Promise<void> {
-    await prisma.userTerritoryAssignment.upsert({
-      where: {
-        userId_territoryId: {
-          userId: params.userId,
-          territoryId: params.territoryId,
-        },
-      },
-      create: {
+    await db
+      .insert(userTerritoryAssignments)
+      .values({
         userId: params.userId,
         territoryId: params.territoryId,
         assignedBy: params.assignedBy,
-      },
-      update: {
-        assignedBy: params.assignedBy,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [userTerritoryAssignments.userId, userTerritoryAssignments.territoryId],
+        set: {
+          assignedBy: params.assignedBy,
+          updatedAt: new Date(),
+        },
+      });
   }
 
-  async revokeTerritory(params: {
-    userId: string;
-    territoryId: string;
-  }): Promise<void> {
-    await prisma.userTerritoryAssignment.deleteMany({
-      where: {
-        userId: params.userId,
-        territoryId: params.territoryId,
-      },
-    });
+  async revokeTerritory(params: { userId: string; territoryId: string }): Promise<void> {
+    await db
+      .delete(userTerritoryAssignments)
+      .where(
+        and(
+          eq(userTerritoryAssignments.userId, params.userId),
+          eq(userTerritoryAssignments.territoryId, params.territoryId),
+        ),
+      );
   }
 
   async findTerritoryAssignmentsByUserId(userId: string): Promise<
@@ -79,29 +73,28 @@ export class PrismaScopeRepository implements ScopeRepository {
       assignedAt: Date;
     }>
   > {
-    const assignments = await prisma.userTerritoryAssignment.findMany({
-      where: { userId },
-      select: {
-        territoryId: true,
-        createdAt: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const rows = await db
+      .select({
+        territoryId: userTerritoryAssignments.territoryId,
+        createdAt: userTerritoryAssignments.createdAt,
+      })
+      .from(userTerritoryAssignments)
+      .where(eq(userTerritoryAssignments.userId, userId))
+      .orderBy(desc(userTerritoryAssignments.createdAt));
 
-    return assignments.map((assignment) => ({
-      territoryId: assignment.territoryId,
-      assignedAt: assignment.createdAt,
+    return rows.map((row) => ({
+      territoryId: row.territoryId,
+      assignedAt: row.createdAt,
     }));
   }
 
   async findManagerIdByUserId(userId: string): Promise<string | null> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { managerId: true },
-    });
+    const [row] = await db
+      .select({ managerId: users.managerId })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
 
-    return user?.managerId ?? null;
+    return row?.managerId ?? null;
   }
 }

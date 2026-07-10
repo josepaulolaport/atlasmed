@@ -1,21 +1,21 @@
-import { PrismaClient } from "@atlasmed/database";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { createDatabase } from "@atlasmed/database";
+import { roles, users, sessions, invitations, passwordResets } from "@atlasmed/database";
+import { eq, like } from "drizzle-orm";
 import { hash } from "argon2";
 import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
 
 /**
- * Get Prisma client for test environment
+ * Get Drizzle client for test environment
  * Uses DATABASE_URL from environment (should point to test database)
  */
-function getTestPrismaClient() {
+function getTestDatabase() {
   const connectionString = process.env.DATABASE_URL || "";
-  
+
   if (!connectionString.includes("test")) {
     console.warn("⚠️  Warning: DATABASE_URL doesn't contain 'test'. Make sure you're using the test database!");
   }
-  
-  const adapter = new PrismaPg({ connectionString });
-  return new PrismaClient({ adapter });
+
+  return createDatabase(connectionString);
 }
 
 /**
@@ -23,16 +23,14 @@ function getTestPrismaClient() {
  * Creates minimal data needed for integration tests
  */
 export async function seedTestDatabase() {
-  const prisma = getTestPrismaClient();
-  
+  const db = getTestDatabase();
+
   try {
     console.log("🌱 Seeding test database...");
 
-    // 0. Clean up any test data first
     await cleanupTestDatabase();
 
-    // 1. Create roles
-    const roles = [
+    const roleDefs = [
       {
         name: "ADMIN",
         description: "Administrator",
@@ -50,20 +48,18 @@ export async function seedTestDatabase() {
       },
     ];
 
-    for (const role of roles) {
-      await prisma.role.upsert({
-        where: { name: role.name },
-        update: {
-          description: role.description,
-          priority: role.priority,
-        },
-        create: role,
-      });
+    for (const role of roleDefs) {
+      await db
+        .insert(roles)
+        .values(role)
+        .onConflictDoUpdate({
+          target: roles.name,
+          set: { description: role.description, priority: role.priority, updatedAt: new Date() },
+        });
     }
 
-    // 2. Create test user with known password
-    const userRole = await prisma.role.findUnique({
-      where: { name: "USER" },
+    const userRole = await db.query.roles.findFirst({
+      where: eq(roles.name, "USER"),
     });
 
     if (!userRole) {
@@ -72,39 +68,37 @@ export async function seedTestDatabase() {
 
     const testPasswordHash = await hash("Password123!");
 
-    // First, try to find and update existing test user
-    const existingTestUser = await prisma.user.findUnique({
-      where: { email: "test@example.com" },
+    const existingTestUser = await db.query.users.findFirst({
+      where: eq(users.email, "test@example.com"),
     });
 
     if (existingTestUser) {
-      await prisma.user.update({
-        where: { id: existingTestUser.id },
-        data: {
+      await db
+        .update(users)
+        .set({
           username: "testseeduser",
           passwordHash: testPasswordHash,
           status: "ACTIVE",
           emailVerified: true,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, existingTestUser.id));
     } else {
-      await prisma.user.create({
-        data: {
-          email: "test@example.com",
-          username: "testseeduser",
-          passwordHash: testPasswordHash,
-          firstName: "Test",
-          lastName: "User",
-          roleId: userRole.id,
-          status: "ACTIVE",
-          emailVerified: true,
-        },
+      await db.insert(users).values({
+        email: "test@example.com",
+        username: "testseeduser",
+        passwordHash: testPasswordHash,
+        firstName: "Test",
+        lastName: "User",
+        roleId: userRole.id,
+        status: "ACTIVE",
+        emailVerified: true,
       });
     }
 
     console.log("✅ Test database seeded");
   } finally {
-    await prisma.$disconnect();
+    await db.$client.end();
   }
 }
 
@@ -112,26 +106,18 @@ export async function seedTestDatabase() {
  * Clean up test data
  */
 export async function cleanupTestDatabase() {
-  const prisma = getTestPrismaClient();
-  
+  const db = getTestDatabase();
+
   try {
-    // Delete in reverse order of dependencies
-    await prisma.session.deleteMany({});
-    await prisma.invitation.deleteMany({});
-    await prisma.passwordReset.deleteMany({});
-    await prisma.user.deleteMany({
-      where: {
-        email: {
-          contains: "test",
-        },
-      },
-    });
+    await db.delete(sessions);
+    await db.delete(invitations);
+    await db.delete(passwordResets);
+    await db.delete(users).where(like(users.email, "%test%"));
   } finally {
-    await prisma.$disconnect();
+    await db.$client.end();
   }
 }
 
-// Run if called directly
 if (import.meta.main) {
   seedTestDatabase()
     .then(() => {

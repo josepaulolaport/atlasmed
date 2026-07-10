@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { hash } from "argon2";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { eq, or, like, sql } from "drizzle-orm";
+import { roles, users, invitations } from "@atlasmed/database";
+import { db } from "../../../../infrastructure/database/db";
 import { AcceptInviteUseCase } from "./accept-invite.use-case";
 import { PrismaInviteRepository } from "../../infrastructure/repositories/prisma/prisma-invite.repository";
 import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
@@ -41,9 +43,12 @@ describe("Accept Invite Race Condition Integration Tests", () => {
 
     inviteUser = accessUseCases.inviteUser();
 
-    const role = await prisma.role.findFirst({
-      where: { name: "USER" },
-    });
+    const role = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     if (!role) {
       throw new Error("USER role not found in database");
@@ -51,12 +56,12 @@ describe("Accept Invite Race Condition Integration Tests", () => {
 
     roleId = role.id;
 
-    // Create a dedicated admin user for this test suite
     const uniqueId = getUniqueTestId();
     const passwordHash = await hash("AdminPassword123!");
 
-    const adminUser = await prisma.user.create({
-      data: {
+    const adminUser = await db
+      .insert(users)
+      .values({
         email: `invite_admin_${uniqueId}@example.com`,
         username: `invite_admin_${uniqueId}`,
         passwordHash,
@@ -65,28 +70,25 @@ describe("Accept Invite Race Condition Integration Tests", () => {
         roleId: role.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     adminUserId = adminUser.id;
   });
 
   afterAll(async () => {
-    if (!dbReady) {
-      await prisma.$disconnect().catch(() => {});
-      return;
-    }
+    if (!dbReady) return;
 
-    await prisma.invitation.deleteMany({ where: { invitedByUserId: adminUserId } });
-    await prisma.user.deleteMany({
-      where: {
-        OR: [
-          { id: adminUserId },
-          { email: { contains: "race-test" } },
-        ],
-      },
-    });
-    await prisma.$disconnect();
+    await db.delete(invitations).where(eq(invitations.invitedByUserId, adminUserId));
+    await db
+      .delete(users)
+      .where(
+        or(
+          eq(users.id, adminUserId),
+          like(users.email, "%race-test%"),
+        ),
+      );
   });
 
   test("should prevent race condition when accepting invite with same username", async () => {
@@ -122,9 +124,11 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     expect(successCount).toBe(1);
     expect(failureCount).toBe(2);
 
-    const usersWithUsername = await prisma.user.count({
-      where: { username },
-    });
+    const usersWithUsername = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(eq(users.username, username))
+      .then((r) => Number(r[0]?.count ?? 0));
 
     expect(usersWithUsername).toBe(1);
   });
@@ -188,9 +192,11 @@ describe("Accept Invite Race Condition Integration Tests", () => {
 
     expect(successCount).toBe(1);
 
-    const usersWithEmail = await prisma.user.count({
-      where: { email: sharedEmail },
-    });
+    const usersWithEmail = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .where(eq(users.email, sharedEmail))
+      .then((r) => Number(r[0]?.count ?? 0));
 
     expect(usersWithEmail).toBe(1);
   });

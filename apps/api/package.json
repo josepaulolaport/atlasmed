@@ -15,10 +15,10 @@
     "test:watch": "NODE_ENV=test bun test --watch",
     "lint": "eslint src/app",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "cd ../../packages/database && prisma migrate dev",
-    "db:migrate:test": "cd ../../packages/database && DATABASE_URL=postgresql://josepaulolaport:592jphlap@localhost:5432/atlasmed_test prisma migrate deploy",
-    "db:studio": "cd ../../packages/database && prisma studio",
-    "db:generate": "cd ../../packages/database && prisma generate",
+    "db:migrate": "cd ../../packages/database && bunx drizzle-kit migrate",
+    "db:push": "cd ../../packages/database && bunx drizzle-kit push",
+    "db:studio": "cd ../../packages/database && bunx drizzle-kit studio",
+    "db:generate": "cd ../../packages/database && bunx drizzle-kit generate",
     "db:seed": "bun src/infrastructure/database/seed.ts",
     "db:seed:demo": "bun src/scripts/seed-demo-data.ts",
     "db:seed:demo:clean": "bun src/scripts/seed-demo-data.ts --clean",
@@ -26,7 +26,7 @@
     "db:import:mcp-test:all": "bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",
     "db:ingest:brazil": "bun src/scripts/ingest-brazil-geography.ts",
     "db:seed:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun src/infrastructure/database/test-seed.ts",
-    "db:reset:test": "cd ../../packages/database && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test prisma migrate reset --force --skip-seed"
+    "db:reset:test": "cd ../../packages/database && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bunx drizzle-kit push --force"
   },
   "dependencies": {
     "@atlasmed/access": "workspace:*",
@@ -40,8 +40,7 @@
     "@elysiajs/opentelemetry": "^1.4.11",
     "@elysiajs/swagger": "^1.3.1",
     "@opentelemetry/api": "^1.9.1",
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "drizzle-orm": "^0.45.2",
     "@questdb/nodejs-client": "^4.2.0",
     "@react-email/components": "^1.0.12",
     "@sinclair/typebox": "^0.34.49",
@@ -65,7 +64,6 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.15",
-    "prisma": "^7.8.0",
     "typescript": "^5"
   }
 }

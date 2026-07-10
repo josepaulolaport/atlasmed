@@ -53,6 +53,6 @@ Next.js 16 admin/web app. Applies when modifying:
 
 ## Anti-patterns
 
-- Do not import Prisma models directly.
+- Do not import Drizzle row types directly — consume backend DTOs only.
 - Do not fetch inside server components with a browser-only axios instance.
 - Do not add heavy client-side dependencies (charting libs, map libs) without discussion.

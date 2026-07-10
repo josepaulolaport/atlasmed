@@ -1,20 +1,16 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import {
+  facilityConsultantAssignments,
+} from "@atlasmed/database";
+import { eq, and, isNull, desc } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityConsultantAssignmentRecord,
   FacilityConsultantAssignmentRepository,
 } from "../../../application/interfaces/facility-consultant-assignment.repository.interface";
 
-function mapAssignment(row: {
-  id: string;
-  facilityId: string;
-  userId: string;
-  startedAt: Date;
-  endedAt: Date | null;
-  assignedByUserId: string | null;
-  endReason: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): FacilityConsultantAssignmentRecord {
+type AssignmentRow = typeof facilityConsultantAssignments.$inferSelect;
+
+function mapAssignment(row: AssignmentRow): FacilityConsultantAssignmentRecord {
   return {
     id: row.id,
     facilityId: row.facilityId,
@@ -32,21 +28,29 @@ export class PrismaFacilityConsultantAssignmentRepository
   implements FacilityConsultantAssignmentRepository
 {
   async findByFacility(facilityId: string): Promise<FacilityConsultantAssignmentRecord[]> {
-    const assignments = await prisma.facilityConsultantAssignment.findMany({
-      where: { facilityId },
-      orderBy: { startedAt: "desc" },
-    });
+    const rows = await db
+      .select()
+      .from(facilityConsultantAssignments)
+      .where(eq(facilityConsultantAssignments.facilityId, facilityId))
+      .orderBy(desc(facilityConsultantAssignments.startedAt));
 
-    return assignments.map(mapAssignment);
+    return rows.map(mapAssignment);
   }
 
   async findCurrentByFacility(
     facilityId: string
   ): Promise<FacilityConsultantAssignmentRecord | null> {
-    const assignment = await prisma.facilityConsultantAssignment.findFirst({
-      where: { facilityId, endedAt: null },
-      orderBy: { startedAt: "desc" },
-    });
+    const [assignment] = await db
+      .select()
+      .from(facilityConsultantAssignments)
+      .where(
+        and(
+          eq(facilityConsultantAssignments.facilityId, facilityId),
+          isNull(facilityConsultantAssignments.endedAt)
+        )
+      )
+      .orderBy(desc(facilityConsultantAssignments.startedAt))
+      .limit(1);
 
     return assignment ? mapAssignment(assignment) : null;
   }
@@ -59,22 +63,20 @@ export class PrismaFacilityConsultantAssignmentRepository
     const current = await this.findCurrentByFacility(params.facilityId);
 
     if (current) {
-      await prisma.facilityConsultantAssignment.update({
-        where: { id: current.id },
-        data: {
-          endedAt: new Date(),
-          endReason: "reassigned",
-        },
-      });
+      await db
+        .update(facilityConsultantAssignments)
+        .set({ endedAt: new Date(), endReason: "reassigned", updatedAt: new Date() })
+        .where(eq(facilityConsultantAssignments.id, current.id));
     }
 
-    const assignment = await prisma.facilityConsultantAssignment.create({
-      data: {
+    const [assignment] = await db
+      .insert(facilityConsultantAssignments)
+      .values({
         facilityId: params.facilityId,
         userId: params.userId,
         assignedByUserId: params.assignedByUserId,
-      },
-    });
+      })
+      .returning();
 
     return mapAssignment(assignment);
   }

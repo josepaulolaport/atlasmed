@@ -1,17 +1,18 @@
-import { prisma } from "../infrastructure/prisma";
+import { sql } from "drizzle-orm";
+import { db } from "../infrastructure/db";
 
 export async function batchFacilityDeactivations(input: {
   ingestionRunId: string;
   now: Date;
 }): Promise<number> {
-  const stagingCountRows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(*)::bigint AS count FROM registry_staging.facilities
-  `;
-  if (Number(stagingCountRows[0]?.count ?? 0) === 0) {
+  const stagingCountResult = await db.execute<{ count: bigint }>(
+    sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facilities`
+  );
+  if (Number(stagingCountResult[0]?.count ?? 0) === 0) {
     return 0;
   }
 
-  await prisma.$executeRaw`
+  await db.execute(sql`
     UPDATE public.ingestion_suggestions s
     SET status = 'SUPERSEDED', "resolvedAt" = ${input.now}
     FROM public.facilities f
@@ -26,9 +27,9 @@ export async function batchFacilityDeactivations(input: {
         SELECT 1 FROM registry_staging.facilities sf
         WHERE sf.facility_id = f."externalSourceId"
       )
-  `;
+  `);
 
-  const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+  const rows = await db.execute<{ count: bigint }>(sql`
     WITH missing AS (
       SELECT f.id, f."externalSourceId", f.name
       FROM public.facilities f
@@ -65,7 +66,7 @@ export async function batchFacilityDeactivations(input: {
       ${input.now}
     FROM updated u
     RETURNING 1
-  `;
+  `);
 
   return rows.length;
 }
@@ -74,14 +75,14 @@ export async function batchAssociationRemovals(input: {
   ingestionRunId: string;
   now: Date;
 }): Promise<number> {
-  const stagingCountRows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(*)::bigint AS count FROM registry_staging.facility_professionals
-  `;
-  if (Number(stagingCountRows[0]?.count ?? 0) === 0) {
+  const stagingCountResult = await db.execute<{ count: bigint }>(
+    sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facility_professionals`
+  );
+  if (Number(stagingCountResult[0]?.count ?? 0) === 0) {
     return 0;
   }
 
-  await prisma.$executeRaw`
+  await db.execute(sql`
     UPDATE public.ingestion_suggestions s
     SET status = 'SUPERSEDED', "resolvedAt" = ${input.now}
     FROM public.facility_professionals fp
@@ -99,9 +100,9 @@ export async function batchAssociationRemovals(input: {
         WHERE sa.facility_id = f."externalSourceId"
           AND sa.professional_id = p."externalSourceId"
       )
-  `;
+  `);
 
-  const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+  const rows = await db.execute<{ count: bigint }>(sql`
     WITH missing AS (
       SELECT
         fp.id AS association_id,
@@ -154,7 +155,7 @@ export async function batchAssociationRemovals(input: {
       ${input.now}
     FROM updated u
     RETURNING 1
-  `;
+  `);
 
   return rows.length;
 }
@@ -163,14 +164,14 @@ export async function batchRepresentativeRemovals(input: {
   ingestionRunId: string;
   now: Date;
 }): Promise<number> {
-  const stagingCountRows = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(*)::bigint AS count FROM registry_staging.facility_representatives
-  `;
-  if (Number(stagingCountRows[0]?.count ?? 0) === 0) {
+  const stagingCountResult = await db.execute<{ count: bigint }>(
+    sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facility_representatives`
+  );
+  if (Number(stagingCountResult[0]?.count ?? 0) === 0) {
     return 0;
   }
 
-  await prisma.$executeRaw`
+  await db.execute(sql`
     UPDATE public.ingestion_suggestions s
     SET status = 'SUPERSEDED', "resolvedAt" = ${input.now}
     FROM public.facility_representatives fr
@@ -185,9 +186,9 @@ export async function batchRepresentativeRemovals(input: {
         SELECT 1 FROM registry_staging.facility_representatives sr
         WHERE sr.facility_id = f."externalSourceId"
       )
-  `;
+  `);
 
-  const rows = await prisma.$queryRaw<Array<{ count: bigint }>>`
+  const rows = await db.execute<{ count: bigint }>(sql`
     WITH missing AS (
       SELECT
         fr.id AS representative_id,
@@ -231,7 +232,7 @@ export async function batchRepresentativeRemovals(input: {
       ${input.now}
     FROM updated u
     RETURNING 1
-  `;
+  `);
 
   return rows.length;
 }

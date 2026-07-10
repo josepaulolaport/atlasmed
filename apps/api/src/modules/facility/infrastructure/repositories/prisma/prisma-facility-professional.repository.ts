@@ -1,5 +1,11 @@
 import type { RelationshipLevel } from "@atlasmed/database";
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import {
+  facilityProfessionals,
+  professionals,
+  facilities,
+} from "@atlasmed/database";
+import { eq, and, or, isNull, isNotNull, ilike, sql, asc, type SQL } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityProfessionalRecord,
   FacilityProfessionalRepository,
@@ -9,39 +15,9 @@ import type {
 
 const LEGACY_OCCUPATION_CODE = "LEGACY";
 
-function compositeWhere(professionalId: string, facilityId: string) {
-  return {
-    facilityId_professionalId_occupationCode: {
-      facilityId,
-      professionalId,
-      occupationCode: LEGACY_OCCUPATION_CODE,
-    },
-  };
-}
+type AssociationRow = typeof facilityProfessionals.$inferSelect;
 
-function mapAssociation(association: {
-  id: string;
-  professionalId: string;
-  facilityId: string;
-  occupationCode: string;
-  specialtyLabel: string | null;
-  isPartner: boolean;
-  isPrescriber: boolean;
-  isBuyer: boolean;
-  isDecisionMaker: boolean;
-  relationshipLevel: RelationshipLevel | null;
-  notes: string | null;
-  sourceActive: boolean;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  confirmedAt: Date | null;
-  confirmedByUserId: string | null;
-  endedAt: Date | null;
-  endedByUserId: string | null;
-  endReason: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): FacilityProfessionalRecord {
+function mapAssociation(association: AssociationRow): FacilityProfessionalRecord {
   return {
     id: association.id,
     professionalId: association.professionalId,
@@ -52,7 +28,7 @@ function mapAssociation(association: {
     isPrescriber: association.isPrescriber,
     isBuyer: association.isBuyer,
     isDecisionMaker: association.isDecisionMaker,
-    relationshipLevel: association.relationshipLevel,
+    relationshipLevel: association.relationshipLevel as RelationshipLevel | null,
     notes: association.notes,
     sourceActive: association.sourceActive,
     sourceFirstSeenAt: association.sourceFirstSeenAt,
@@ -67,23 +43,57 @@ function mapAssociation(association: {
   };
 }
 
-function buildViewWhere(facilityId: string, view: FacilityProfessionalView) {
-  const base = { facilityId, endedAt: null };
+function buildViewConditions(facilityId: string, view: FacilityProfessionalView): SQL[] {
+  const base: SQL[] = [
+    eq(facilityProfessionals.facilityId, facilityId),
+    isNull(facilityProfessionals.endedAt),
+  ];
 
   switch (view) {
     case "source":
-      return { ...base, sourceActive: true };
+      return [...base, eq(facilityProfessionals.sourceActive, true)];
     case "confirmed":
-      return { ...base, confirmedAt: { not: null } };
+      return [...base, isNotNull(facilityProfessionals.confirmedAt)];
     case "pending":
-      return { ...base, sourceActive: true, confirmedAt: null };
-    case "all":
-      return {
+      return [
         ...base,
-        OR: [{ sourceActive: true }, { confirmedAt: { not: null } }],
-      };
+        eq(facilityProfessionals.sourceActive, true),
+        isNull(facilityProfessionals.confirmedAt),
+      ];
+    case "all":
+      return [
+        ...base,
+        or(
+          eq(facilityProfessionals.sourceActive, true),
+          isNotNull(facilityProfessionals.confirmedAt)
+        ) as SQL,
+      ];
   }
 }
+
+const associationColumns = {
+  id: facilityProfessionals.id,
+  professionalId: facilityProfessionals.professionalId,
+  facilityId: facilityProfessionals.facilityId,
+  occupationCode: facilityProfessionals.occupationCode,
+  specialtyLabel: facilityProfessionals.specialtyLabel,
+  isPartner: facilityProfessionals.isPartner,
+  isPrescriber: facilityProfessionals.isPrescriber,
+  isBuyer: facilityProfessionals.isBuyer,
+  isDecisionMaker: facilityProfessionals.isDecisionMaker,
+  relationshipLevel: facilityProfessionals.relationshipLevel,
+  notes: facilityProfessionals.notes,
+  sourceActive: facilityProfessionals.sourceActive,
+  sourceFirstSeenAt: facilityProfessionals.sourceFirstSeenAt,
+  sourceLastSeenAt: facilityProfessionals.sourceLastSeenAt,
+  confirmedAt: facilityProfessionals.confirmedAt,
+  confirmedByUserId: facilityProfessionals.confirmedByUserId,
+  endedAt: facilityProfessionals.endedAt,
+  endedByUserId: facilityProfessionals.endedByUserId,
+  endReason: facilityProfessionals.endReason,
+  createdAt: facilityProfessionals.createdAt,
+  updatedAt: facilityProfessionals.updatedAt,
+} as const;
 
 export class PrismaFacilityProfessionalRepository
   implements FacilityProfessionalRepository
@@ -93,15 +103,17 @@ export class PrismaFacilityProfessionalRepository
     facilityId: string,
     occupationCode = LEGACY_OCCUPATION_CODE
   ): Promise<FacilityProfessionalRecord | null> {
-    const association = await prisma.facilityProfessional.findUnique({
-      where: {
-        facilityId_professionalId_occupationCode: {
-          facilityId,
-          professionalId,
-          occupationCode,
-        },
-      },
-    });
+    const [association] = await db
+      .select()
+      .from(facilityProfessionals)
+      .where(
+        and(
+          eq(facilityProfessionals.facilityId, facilityId),
+          eq(facilityProfessionals.professionalId, professionalId),
+          eq(facilityProfessionals.occupationCode, occupationCode)
+        )
+      )
+      .limit(1);
 
     return association ? mapAssociation(association) : null;
   }
@@ -111,51 +123,52 @@ export class PrismaFacilityProfessionalRepository
     professionalId: string,
     occupationCode = LEGACY_OCCUPATION_CODE
   ) {
-    const association = await prisma.facilityProfessional.findFirst({
-      where: {
-        facilityId,
-        professionalId,
-        occupationCode,
-        endedAt: null,
-        professional: { deletedAt: null },
-      },
-      include: {
+    const [row] = await db
+      .select({
+        ...associationColumns,
         professional: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            fullName: true,
-            socialName: true,
-            taxId: true,
-            birthDate: true,
-            mobilePhone: true,
-            landlinePhone: true,
-            email: true,
-            websiteUrl: true,
-            imageUrl: true,
-            primarySpecialtyLabel: true,
-            crmCouncil: true,
-            crmNumber: true,
-            crmState: true,
-            favoriteTeam: true,
-            favoriteSport: true,
-            hobbies: true,
-            notes: true,
-            createdAt: true,
-            updatedAt: true,
-          },
+          id: professionals.id,
+          firstName: professionals.firstName,
+          lastName: professionals.lastName,
+          fullName: professionals.fullName,
+          socialName: professionals.socialName,
+          taxId: professionals.taxId,
+          birthDate: professionals.birthDate,
+          mobilePhone: professionals.mobilePhone,
+          landlinePhone: professionals.landlinePhone,
+          email: professionals.email,
+          websiteUrl: professionals.websiteUrl,
+          imageUrl: professionals.imageUrl,
+          primarySpecialtyLabel: professionals.primarySpecialtyLabel,
+          crmCouncil: professionals.crmCouncil,
+          crmNumber: professionals.crmNumber,
+          crmState: professionals.crmState,
+          favoriteTeam: professionals.favoriteTeam,
+          favoriteSport: professionals.favoriteSport,
+          hobbies: professionals.hobbies,
+          notes: professionals.notes,
+          createdAt: professionals.createdAt,
+          updatedAt: professionals.updatedAt,
         },
-      },
-    });
+      })
+      .from(facilityProfessionals)
+      .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
+      .where(
+        and(
+          eq(facilityProfessionals.facilityId, facilityId),
+          eq(facilityProfessionals.professionalId, professionalId),
+          eq(facilityProfessionals.occupationCode, occupationCode),
+          isNull(facilityProfessionals.endedAt),
+          isNull(professionals.deletedAt)
+        )
+      )
+      .limit(1);
 
-    if (!association) {
-      return null;
-    }
+    if (!row) return null;
 
     return {
-      association: mapAssociation(association),
-      professional: association.professional,
+      association: mapAssociation(row),
+      professional: row.professional,
     };
   }
 
@@ -169,83 +182,58 @@ export class PrismaFacilityProfessionalRepository
     associations: FacilityProfessionalWithProfessionalRecord[];
     total: number;
   }> {
-    const where = {
-      ...buildViewWhere(params.facilityId, params.view),
-      professional: {
-        deletedAt: null,
-        ...(params.search
-          ? {
-              OR: [
-                {
-                  firstName: {
-                    contains: params.search,
-                    mode: "insensitive" as const,
-                  },
-                },
-                {
-                  lastName: {
-                    contains: params.search,
-                    mode: "insensitive" as const,
-                  },
-                },
-                {
-                  primarySpecialtyLabel: {
-                    contains: params.search,
-                    mode: "insensitive" as const,
-                  },
-                },
-              ],
-            }
-          : {}),
-      },
-    };
+    const conditions = buildViewConditions(params.facilityId, params.view);
+    conditions.push(isNull(professionals.deletedAt));
 
+    if (params.search) {
+      const pattern = `%${params.search}%`;
+      conditions.push(
+        or(
+          ilike(professionals.firstName, pattern),
+          ilike(professionals.lastName, pattern),
+          ilike(professionals.primarySpecialtyLabel, pattern),
+        ) as SQL
+      );
+    }
+
+    const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
-    const [associations, total] = await Promise.all([
-      prisma.facilityProfessional.findMany({
-        where,
-        include: {
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select({
+          ...associationColumns,
           professional: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              fullName: true,
-              primarySpecialtyLabel: true,
-              crmNumber: true,
-              crmState: true,
-              createdAt: true,
-              updatedAt: true,
-            },
+            id: professionals.id,
+            firstName: professionals.firstName,
+            lastName: professionals.lastName,
+            fullName: professionals.fullName,
+            specialty: professionals.primarySpecialtyLabel,
+            crmNumber: professionals.crmNumber,
+            crmState: professionals.crmState,
+            createdAt: professionals.createdAt,
+            updatedAt: professionals.updatedAt,
           },
-        },
-        orderBy: [
-          { professional: { lastName: "asc" } },
-          { professional: { firstName: "asc" } },
-        ],
-        skip,
-        take: params.limit,
-      }),
-      prisma.facilityProfessional.count({ where }),
+        })
+        .from(facilityProfessionals)
+        .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
+        .where(where)
+        .orderBy(asc(professionals.lastName), asc(professionals.firstName))
+        .offset(skip)
+        .limit(params.limit),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(facilityProfessionals)
+        .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
+        .where(where),
     ]);
 
     return {
-      associations: associations.map((row) => ({
+      associations: rows.map((row) => ({
         ...mapAssociation(row),
-        professional: {
-          id: row.professional.id,
-          firstName: row.professional.firstName,
-          lastName: row.professional.lastName,
-          fullName: row.professional.fullName,
-          specialty: row.professional.primarySpecialtyLabel,
-          crmNumber: row.professional.crmNumber,
-          crmState: row.professional.crmState,
-          createdAt: row.professional.createdAt,
-          updatedAt: row.professional.updatedAt,
-        },
+        professional: row.professional,
       })),
-      total,
+      total: count,
     };
   }
 
@@ -256,27 +244,32 @@ export class PrismaFacilityProfessionalRepository
       facilityExternalSourceId: string;
     }>
   > {
-    const rows = await prisma.facilityProfessional.findMany({
-      where: {
-        endedAt: null,
-        sourceActive: true,
-        professional: { sourceProvider, sourceTracked: true },
-        facility: { sourceProvider, sourceTracked: true },
-      },
-      include: {
-        professional: { select: { externalSourceId: true } },
-        facility: { select: { externalSourceId: true } },
-      },
-    });
+    const rows = await db
+      .select({
+        ...associationColumns,
+        professionalExternalSourceId: professionals.externalSourceId,
+        facilityExternalSourceId: facilities.externalSourceId,
+      })
+      .from(facilityProfessionals)
+      .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
+      .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))
+      .where(
+        and(
+          isNull(facilityProfessionals.endedAt),
+          eq(facilityProfessionals.sourceActive, true),
+          eq(professionals.sourceProvider, sourceProvider),
+          eq(professionals.sourceTracked, true),
+          eq(facilities.sourceProvider, sourceProvider),
+          eq(facilities.sourceTracked, true)
+        )
+      );
 
     return rows
-      .filter(
-        (row) => row.professional.externalSourceId && row.facility.externalSourceId
-      )
+      .filter((row) => row.professionalExternalSourceId && row.facilityExternalSourceId)
       .map((row) => ({
         association: mapAssociation(row),
-        professionalExternalSourceId: row.professional.externalSourceId!,
-        facilityExternalSourceId: row.facility.externalSourceId!,
+        professionalExternalSourceId: row.professionalExternalSourceId!,
+        facilityExternalSourceId: row.facilityExternalSourceId!,
       }));
   }
 
@@ -288,23 +281,32 @@ export class PrismaFacilityProfessionalRepository
   }): Promise<FacilityProfessionalRecord> {
     const now = new Date();
     const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE;
-    const association = await prisma.facilityProfessional.upsert({
-      where: compositeWhere(params.professionalId, params.facilityId),
-      create: {
+
+    const [association] = await db
+      .insert(facilityProfessionals)
+      .values({
         professionalId: params.professionalId,
         facilityId: params.facilityId,
         occupationCode,
         confirmedAt: now,
         confirmedByUserId: params.confirmedByUserId,
-      },
-      update: {
-        confirmedAt: now,
-        confirmedByUserId: params.confirmedByUserId,
-        endedAt: null,
-        endedByUserId: null,
-        endReason: null,
-      },
-    });
+      })
+      .onConflictDoUpdate({
+        target: [
+          facilityProfessionals.facilityId,
+          facilityProfessionals.professionalId,
+          facilityProfessionals.occupationCode,
+        ],
+        set: {
+          confirmedAt: now,
+          confirmedByUserId: params.confirmedByUserId,
+          endedAt: null,
+          endedByUserId: null,
+          endReason: null,
+          updatedAt: now,
+        },
+      })
+      .returning();
 
     return mapAssociation(association);
   }
@@ -331,9 +333,7 @@ export class PrismaFacilityProfessionalRepository
       params.occupationCode
     );
 
-    if (!existing || existing.endedAt) {
-      return null;
-    }
+    if (!existing || existing.endedAt) return null;
 
     return this.endAssociationById({
       facilityProfessionalId: existing.id,
@@ -362,32 +362,27 @@ export class PrismaFacilityProfessionalRepository
       params.occupationCode
     );
 
-    if (!existing || existing.endedAt) {
-      return null;
-    }
+    if (!existing || existing.endedAt) return null;
 
-    const association = await prisma.facilityProfessional.update({
-      where: { id: existing.id },
-      data: {
-        ...(params.data.isPartner !== undefined
-          ? { isPartner: params.data.isPartner }
-          : {}),
-        ...(params.data.isPrescriber !== undefined
-          ? { isPrescriber: params.data.isPrescriber }
-          : {}),
-        ...(params.data.isBuyer !== undefined ? { isBuyer: params.data.isBuyer } : {}),
-        ...(params.data.isDecisionMaker !== undefined
-          ? { isDecisionMaker: params.data.isDecisionMaker }
-          : {}),
-        ...(params.data.relationshipLevel !== undefined
-          ? { relationshipLevel: params.data.relationshipLevel }
-          : {}),
-        ...(params.data.specialtyLabel !== undefined
-          ? { specialtyLabel: params.data.specialtyLabel }
-          : {}),
-        ...(params.data.notes !== undefined ? { notes: params.data.notes } : {}),
-      },
-    });
+    const setData: Partial<typeof facilityProfessionals.$inferInsert> & { updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
+
+    if (params.data.isPartner !== undefined) setData.isPartner = params.data.isPartner;
+    if (params.data.isPrescriber !== undefined) setData.isPrescriber = params.data.isPrescriber;
+    if (params.data.isBuyer !== undefined) setData.isBuyer = params.data.isBuyer;
+    if (params.data.isDecisionMaker !== undefined) setData.isDecisionMaker = params.data.isDecisionMaker;
+    if (params.data.relationshipLevel !== undefined) {
+      setData.relationshipLevel = params.data.relationshipLevel as string | null;
+    }
+    if (params.data.specialtyLabel !== undefined) setData.specialtyLabel = params.data.specialtyLabel;
+    if (params.data.notes !== undefined) setData.notes = params.data.notes;
+
+    const [association] = await db
+      .update(facilityProfessionals)
+      .set(setData)
+      .where(eq(facilityProfessionals.id, existing.id))
+      .returning();
 
     return mapAssociation(association);
   }
@@ -399,42 +394,48 @@ export class PrismaFacilityProfessionalRepository
     sourceLastSeenAt: Date;
   }): Promise<{ association: FacilityProfessionalRecord; created: boolean }> {
     const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE;
-    const existing = await prisma.facilityProfessional.findUnique({
-      where: {
-        facilityId_professionalId_occupationCode: {
-          facilityId: params.facilityId,
-          professionalId: params.professionalId,
-          occupationCode,
-        },
-      },
-    });
+
+    const [existing] = await db
+      .select()
+      .from(facilityProfessionals)
+      .where(
+        and(
+          eq(facilityProfessionals.facilityId, params.facilityId),
+          eq(facilityProfessionals.professionalId, params.professionalId),
+          eq(facilityProfessionals.occupationCode, occupationCode)
+        )
+      )
+      .limit(1);
 
     if (existing) {
-      const association = await prisma.facilityProfessional.update({
-        where: { id: existing.id },
-        data: {
+      const [association] = await db
+        .update(facilityProfessionals)
+        .set({
           sourceActive: true,
           sourceLastSeenAt: params.sourceLastSeenAt,
           sourceFirstSeenAt: existing.sourceFirstSeenAt ?? params.sourceLastSeenAt,
           endedAt: null,
           endedByUserId: null,
           endReason: null,
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(eq(facilityProfessionals.id, existing.id))
+        .returning();
 
       return { association: mapAssociation(association), created: false };
     }
 
-    const association = await prisma.facilityProfessional.create({
-      data: {
+    const [association] = await db
+      .insert(facilityProfessionals)
+      .values({
         professionalId: params.professionalId,
         facilityId: params.facilityId,
         occupationCode,
         sourceActive: true,
         sourceFirstSeenAt: params.sourceLastSeenAt,
         sourceLastSeenAt: params.sourceLastSeenAt,
-      },
-    });
+      })
+      .returning();
 
     return { association: mapAssociation(association), created: true };
   }
@@ -443,22 +444,25 @@ export class PrismaFacilityProfessionalRepository
     facilityProfessionalId: string;
     sourceLastSeenAt: Date;
   }): Promise<FacilityProfessionalRecord> {
-    const association = await prisma.facilityProfessional.update({
-      where: { id: params.facilityProfessionalId },
-      data: {
+    const [association] = await db
+      .update(facilityProfessionals)
+      .set({
         sourceActive: false,
         sourceLastSeenAt: params.sourceLastSeenAt,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(facilityProfessionals.id, params.facilityProfessionalId))
+      .returning();
 
     return mapAssociation(association);
   }
 
   async restoreSourceActive(facilityProfessionalId: string): Promise<FacilityProfessionalRecord> {
-    const association = await prisma.facilityProfessional.update({
-      where: { id: facilityProfessionalId },
-      data: { sourceActive: true },
-    });
+    const [association] = await db
+      .update(facilityProfessionals)
+      .set({ sourceActive: true, updatedAt: new Date() })
+      .where(eq(facilityProfessionals.id, facilityProfessionalId))
+      .returning();
 
     return mapAssociation(association);
   }
@@ -468,15 +472,17 @@ export class PrismaFacilityProfessionalRepository
     endedByUserId: string;
     endReason: string;
   }): Promise<FacilityProfessionalRecord> {
-    const association = await prisma.facilityProfessional.update({
-      where: { id: params.facilityProfessionalId },
-      data: {
+    const [association] = await db
+      .update(facilityProfessionals)
+      .set({
         endedAt: new Date(),
         endedByUserId: params.endedByUserId,
         endReason: params.endReason,
         sourceActive: false,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(facilityProfessionals.id, params.facilityProfessionalId))
+      .returning();
 
     return mapAssociation(association);
   }
@@ -491,29 +497,30 @@ export class PrismaFacilityProfessionalRepository
     const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE;
 
     for (const facilityId of params.facilityIds) {
-      await prisma.facilityProfessional.upsert({
-        where: {
-          facilityId_professionalId_occupationCode: {
-            facilityId,
-            professionalId: params.professionalId,
-            occupationCode,
-          },
-        },
-        create: {
+      await db
+        .insert(facilityProfessionals)
+        .values({
           professionalId: params.professionalId,
           facilityId,
           occupationCode,
           confirmedAt: now,
           confirmedByUserId: params.confirmedByUserId ?? null,
-        },
-        update: {
-          confirmedAt: now,
-          confirmedByUserId: params.confirmedByUserId ?? null,
-          endedAt: null,
-          endedByUserId: null,
-          endReason: null,
-        },
-      });
+        })
+        .onConflictDoUpdate({
+          target: [
+            facilityProfessionals.facilityId,
+            facilityProfessionals.professionalId,
+            facilityProfessionals.occupationCode,
+          ],
+          set: {
+            confirmedAt: now,
+            confirmedByUserId: params.confirmedByUserId ?? null,
+            endedAt: null,
+            endedByUserId: null,
+            endReason: null,
+            updatedAt: now,
+          },
+        });
     }
   }
 }

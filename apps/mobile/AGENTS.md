@@ -34,7 +34,7 @@ Migration target (React Native + Expo) is documented in `docs/architecture/adr/0
 ## Anti-patterns
 
 - Do not import from `apps/api` or `apps/web`.
-- Do not couple to Prisma models via generated typings.
+- Do not couple to database row types — consume backend DTOs only.
 - Do not add new native plugins without noting platform impact (iOS + Android build changes).
 
 ## Stack migration note

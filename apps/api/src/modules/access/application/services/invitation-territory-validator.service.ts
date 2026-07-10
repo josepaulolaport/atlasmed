@@ -1,5 +1,7 @@
 import { Role } from "@atlasmed/access";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../infrastructure/database/db";
+import { userTerritoryAssignments } from "@atlasmed/database";
+import { eq } from "drizzle-orm";
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { TerritoryRepository } from "../../../territory/application/interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../../../territory/application/interfaces/territory-type.repository.interface";
@@ -203,10 +205,10 @@ export class InvitationTerritoryValidatorService {
       ]);
     }
 
-    const managerAssignments = await prisma.userTerritoryAssignment.findMany({
-      where: { userId: manager.id },
-      select: { territoryId: true },
-    });
+    const managerAssignments = await db
+      .select({ territoryId: userTerritoryAssignments.territoryId })
+      .from(userTerritoryAssignments)
+      .where(eq(userTerritoryAssignments.userId, manager.id));
 
     if (managerAssignments.length === 0) {
       throw new ValidationError([

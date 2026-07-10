@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { territories, territoryTypes } from "@atlasmed/database";
+import { eq, and, asc, sql } from "drizzle-orm";
 import type {
   CreateTerritoryTypeInput,
   TerritoryTypeRecord,
@@ -28,28 +30,34 @@ function mapType(record: {
 
 export class PrismaTerritoryTypeRepository implements TerritoryTypeRepository {
   async findById(id: string): Promise<TerritoryTypeRecord | null> {
-    const record = await prisma.territoryType.findUnique({ where: { id } });
-    return record ? mapType(record) : null;
+    const rows = await db
+      .select()
+      .from(territoryTypes)
+      .where(eq(territoryTypes.id, id));
+    return rows[0] ? mapType(rows[0]) : null;
   }
 
   async findBySlug(slug: string): Promise<TerritoryTypeRecord | null> {
-    const record = await prisma.territoryType.findUnique({
-      where: { slug: slug.toLowerCase() },
-    });
-    return record ? mapType(record) : null;
+    const rows = await db
+      .select()
+      .from(territoryTypes)
+      .where(eq(territoryTypes.slug, slug.toLowerCase()));
+    return rows[0] ? mapType(rows[0]) : null;
   }
 
   async findAll(activeOnly = true): Promise<TerritoryTypeRecord[]> {
-    const records = await prisma.territoryType.findMany({
-      where: activeOnly ? { isActive: true } : undefined,
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    });
-    return records.map(mapType);
+    const rows = await db
+      .select()
+      .from(territoryTypes)
+      .where(activeOnly ? eq(territoryTypes.isActive, true) : undefined)
+      .orderBy(asc(territoryTypes.sortOrder), asc(territoryTypes.name));
+    return rows.map(mapType);
   }
 
   async create(input: CreateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
-    const record = await prisma.territoryType.create({
-      data: {
+    const [record] = await db
+      .insert(territoryTypes)
+      .values({
         slug: input.slug.toLowerCase(),
         name: input.name,
         description: input.description ?? null,
@@ -61,20 +69,25 @@ export class PrismaTerritoryTypeRepository implements TerritoryTypeRepository {
         blockSiblingOverlap: input.blockSiblingOverlap ?? false,
         participatesInGroupingHierarchy: input.participatesInGroupingHierarchy ?? false,
         sortOrder: input.sortOrder ?? 0,
-      },
-    });
+      })
+      .returning();
     return mapType(record);
   }
 
   async update(id: string, input: UpdateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
-    const record = await prisma.territoryType.update({
-      where: { id },
-      data: input,
-    });
+    const [record] = await db
+      .update(territoryTypes)
+      .set({ ...input, updatedAt: new Date() })
+      .where(eq(territoryTypes.id, id))
+      .returning();
     return mapType(record);
   }
 
   async countTerritoriesUsingType(id: string): Promise<number> {
-    return prisma.territory.count({ where: { territoryTypeId: id, isActive: true } });
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(territories)
+      .where(and(eq(territories.territoryTypeId, id), eq(territories.isActive, true)));
+    return Number(result?.count ?? 0);
   }
 }

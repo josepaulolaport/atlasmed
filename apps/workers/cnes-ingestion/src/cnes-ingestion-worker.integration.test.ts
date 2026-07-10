@@ -1,6 +1,8 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { ingestionRuns, ingestionDiffs, ingestionSuggestions, facilities } from "@atlasmed/database";
+import { eq, and, sql } from "drizzle-orm";
 
 function loadApiEnv(): void {
   if (process.env.DATABASE_URL) {
@@ -28,14 +30,14 @@ function loadApiEnv(): void {
 
 async function isWorkerDatabaseReady(): Promise<boolean> {
   try {
-    const { prisma } = await import("../src/infrastructure/prisma");
-    await prisma.$queryRaw`SELECT 1`;
-    const rows = await prisma.$queryRawUnsafe<Array<{ exists: boolean }>>(
-      `SELECT EXISTS (
+    const { db } = await import("../src/infrastructure/db");
+    await db.execute(sql`SELECT 1`);
+    const rows = await db.execute<{ exists: boolean }>(sql`
+      SELECT EXISTS (
         SELECT 1 FROM information_schema.tables
         WHERE table_schema = 'registry_staging' AND table_name = 'facilities'
-      ) AS exists`
-    );
+      ) AS exists
+    `);
     return Boolean(rows[0]?.exists);
   } catch {
     return false;
@@ -53,35 +55,40 @@ describe("CNES ingestion worker Integration Tests", () => {
   it("discover activity sets reference on ingestion run", async () => {
     if (!dbReady) return;
 
-    const { prisma } = await import("../src/infrastructure/prisma");
+    const { db } = await import("../src/infrastructure/db");
     const { discoverLatestReferenceActivity } = await import(
       "../src/activities/discover-download.activities"
     );
 
-    const run = await prisma.ingestionRun.create({
-      data: { sourceProvider: "cnes", status: "RUNNING" },
-    });
+    const [run] = await db
+      .insert(ingestionRuns)
+      .values({ sourceProvider: "cnes", status: "RUNNING" })
+      .returning();
 
     const reference = await discoverLatestReferenceActivity({
-      ingestionRunId: run.id,
+      ingestionRunId: run!.id,
       ano: 2026,
       mes: 1,
     });
 
     expect(reference).toEqual({ ano: 2026, mes: 1 });
 
-    const updated = await prisma.ingestionRun.findUnique({ where: { id: run.id } });
+    const [updated] = await db
+      .select()
+      .from(ingestionRuns)
+      .where(eq(ingestionRuns.id, run!.id))
+      .limit(1);
     expect(updated?.phase).toBe("DISCOVERING");
     expect(updated?.referenceAno).toBe(2026);
     expect(updated?.referenceMes).toBe(1);
 
-    await prisma.ingestionRun.delete({ where: { id: run.id } });
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run!.id));
   });
 
   it("validation fails when staging facilities table is empty", async () => {
     if (!dbReady) return;
 
-    const { prisma } = await import("../src/infrastructure/prisma");
+    const { db } = await import("../src/infrastructure/db");
     const { truncateRegistryStaging } = await import("../src/infrastructure/registry-schemas");
     const { validateStagingActivity } = await import(
       "../src/activities/load-validate-promote.activities"
@@ -89,21 +96,22 @@ describe("CNES ingestion worker Integration Tests", () => {
 
     await truncateRegistryStaging();
 
-    const run = await prisma.ingestionRun.create({
-      data: { sourceProvider: "cnes", status: "RUNNING" },
-    });
+    const [run] = await db
+      .insert(ingestionRuns)
+      .values({ sourceProvider: "cnes", status: "RUNNING" })
+      .returning();
 
-    await expect(validateStagingActivity({ ingestionRunId: run.id })).rejects.toThrow(
+    await expect(validateStagingActivity({ ingestionRunId: run!.id })).rejects.toThrow(
       /Staging validation failed/
     );
 
-    await prisma.ingestionRun.delete({ where: { id: run.id } });
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run!.id));
   });
 
   it("reconcile creates facility shell from minimal staging row", async () => {
     if (!dbReady) return;
 
-    const { prisma } = await import("../src/infrastructure/prisma");
+    const { db } = await import("../src/infrastructure/db");
     const { truncateRegistryStaging } = await import("../src/infrastructure/registry-schemas");
     const { reconcileCrmDiffActivity } = await import(
       "../src/activities/reconcile-sync.activities"
@@ -111,28 +119,34 @@ describe("CNES ingestion worker Integration Tests", () => {
 
     await truncateRegistryStaging();
 
-    const run = await prisma.ingestionRun.create({
-      data: { sourceProvider: "cnes", status: "RUNNING" },
-    });
+    const [run] = await db
+      .insert(ingestionRuns)
+      .values({ sourceProvider: "cnes", status: "RUNNING" })
+      .returning();
 
-    const facilityId = `test-facility-${run.id}`;
-    await prisma.$executeRawUnsafe(`
+    const facilityId = `test-facility-${run!.id}`;
+    await db.execute(sql`
       INSERT INTO registry_staging.facilities (
         facility_id, legal_name, trade_name, street_address, latitude, longitude
       ) VALUES (
-        '${facilityId}', 'Test Legal', 'Test Trade', 'Rua Test 1', -23.5, -46.6
+        ${facilityId}, 'Test Legal', 'Test Trade', 'Rua Test 1', -23.5, -46.6
       )
     `);
 
-    const stats = await reconcileCrmDiffActivity({ ingestionRunId: run.id });
+    const stats = await reconcileCrmDiffActivity({ ingestionRunId: run!.id });
 
     expect(stats.facilitiesCreated).toBe(1);
 
-    await prisma.facility.deleteMany({
-      where: { externalSourceId: facilityId, sourceProvider: "cnes" },
-    });
-    await prisma.ingestionDiff.deleteMany({ where: { ingestionRunId: run.id } });
-    await prisma.ingestionSuggestion.deleteMany({ where: { ingestionRunId: run.id } });
-    await prisma.ingestionRun.delete({ where: { id: run.id } });
+    await db
+      .delete(facilities)
+      .where(
+        and(
+          eq(facilities.externalSourceId, facilityId),
+          eq(facilities.sourceProvider, "cnes")
+        )
+      );
+    await db.delete(ingestionDiffs).where(eq(ingestionDiffs.ingestionRunId, run!.id));
+    await db.delete(ingestionSuggestions).where(eq(ingestionSuggestions.ingestionRunId, run!.id));
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run!.id));
   });
 });

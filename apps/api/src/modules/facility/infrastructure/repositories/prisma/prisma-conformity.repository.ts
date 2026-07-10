@@ -1,20 +1,18 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import {
+  conformityRecords,
+  conformityRequirements,
+} from "@atlasmed/database";
+import { eq, asc, desc } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
 import type {
   ConformityRecordRow,
   ConformityRepository,
   ConformityRequirementRecord,
 } from "../../../application/interfaces/conformity.repository.interface";
 
-function mapRequirement(row: {
-  id: string;
-  slug: string;
-  name: string;
-  description: string | null;
-  sectorId: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}): ConformityRequirementRecord {
+type RequirementRow = typeof conformityRequirements.$inferSelect;
+
+function mapRequirement(row: RequirementRow): ConformityRequirementRecord {
   return {
     id: row.id,
     slug: row.slug,
@@ -27,7 +25,25 @@ function mapRequirement(row: {
   };
 }
 
-function mapRecord(row: {
+const recordWithRequirementSelect = {
+  id: conformityRecords.id,
+  facilityId: conformityRecords.facilityId,
+  requirementId: conformityRecords.requirementId,
+  status: conformityRecords.status,
+  submittedAt: conformityRecords.submittedAt,
+  validatedAt: conformityRecords.validatedAt,
+  expiresAt: conformityRecords.expiresAt,
+  validatedByUserId: conformityRecords.validatedByUserId,
+  createdAt: conformityRecords.createdAt,
+  updatedAt: conformityRecords.updatedAt,
+  requirement: {
+    id: conformityRequirements.id,
+    slug: conformityRequirements.slug,
+    name: conformityRequirements.name,
+  },
+} as const;
+
+type RecordWithRequirement = {
   id: string;
   facilityId: string;
   requirementId: string;
@@ -39,7 +55,9 @@ function mapRecord(row: {
   createdAt: Date;
   updatedAt: Date;
   requirement: { id: string; slug: string; name: string };
-}): ConformityRecordRow {
+};
+
+function mapRecord(row: RecordWithRequirement): ConformityRecordRow {
   return {
     id: row.id,
     facilityId: row.facilityId,
@@ -57,26 +75,27 @@ function mapRecord(row: {
 
 export class PrismaConformityRepository implements ConformityRepository {
   async findActiveRequirements(): Promise<ConformityRequirementRecord[]> {
-    const requirements = await prisma.conformityRequirement.findMany({
-      where: { isActive: true },
-      orderBy: { name: "asc" },
-    });
+    const rows = await db
+      .select()
+      .from(conformityRequirements)
+      .where(eq(conformityRequirements.isActive, true))
+      .orderBy(asc(conformityRequirements.name));
 
-    return requirements.map(mapRequirement);
+    return rows.map(mapRequirement);
   }
 
   async findRecordsByFacility(facilityId: string): Promise<ConformityRecordRow[]> {
-    const records = await prisma.conformityRecord.findMany({
-      where: { facilityId },
-      include: {
-        requirement: {
-          select: { id: true, slug: true, name: true },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const rows = await db
+      .select(recordWithRequirementSelect)
+      .from(conformityRecords)
+      .innerJoin(
+        conformityRequirements,
+        eq(conformityRecords.requirementId, conformityRequirements.id)
+      )
+      .where(eq(conformityRecords.facilityId, facilityId))
+      .orderBy(desc(conformityRecords.createdAt));
 
-    return records.map(mapRecord);
+    return rows.map(mapRecord);
   }
 
   async createRecord(params: {
@@ -84,18 +103,23 @@ export class PrismaConformityRepository implements ConformityRepository {
     requirementId: string;
     status?: ConformityRecordRow["status"];
   }): Promise<ConformityRecordRow> {
-    const record = await prisma.conformityRecord.create({
-      data: {
+    const [inserted] = await db
+      .insert(conformityRecords)
+      .values({
         facilityId: params.facilityId,
         requirementId: params.requirementId,
         status: params.status ?? "PENDING",
-      },
-      include: {
-        requirement: {
-          select: { id: true, slug: true, name: true },
-        },
-      },
-    });
+      })
+      .returning({ id: conformityRecords.id });
+
+    const [record] = await db
+      .select(recordWithRequirementSelect)
+      .from(conformityRecords)
+      .innerJoin(
+        conformityRequirements,
+        eq(conformityRecords.requirementId, conformityRequirements.id)
+      )
+      .where(eq(conformityRecords.id, inserted.id));
 
     return mapRecord(record);
   }

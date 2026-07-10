@@ -1,4 +1,8 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import {
+  facilities,
+} from "@atlasmed/database";
+import { eq, and, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityListScopeFilter,
   FacilityRecord,
@@ -6,31 +10,9 @@ import type {
   FacilitySourceUpsertInput,
 } from "../../../application/interfaces/facility.repository.interface";
 
-function mapFacility(facility: {
-  id: string;
-  displayName: string;
-  address: string | null;
-  city: string | null;
-  stateCode: string | null;
-  taxIdCnpj: string | null;
-  lat: number | null;
-  lng: number | null;
-  territoryId: string | null;
-  territoryAssignmentStatus: FacilityRecord["territoryAssignmentStatus"];
-  territoryAssignmentSource: FacilityRecord["territoryAssignmentSource"];
-  purchaseStatus: FacilityRecord["purchaseStatus"];
-  sourceProvider: string | null;
-  externalSourceId: string | null;
-  sourceContentHash: string | null;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  sourcePresent: boolean;
-  sourceTracked: boolean;
-  manuallyEditedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-}): FacilityRecord {
+type FacilityRow = typeof facilities.$inferSelect;
+
+function mapFacility(facility: FacilityRow): FacilityRecord {
   return {
     id: facility.id,
     name: facility.displayName,
@@ -38,12 +20,13 @@ function mapFacility(facility: {
     city: facility.city,
     stateCode: facility.stateCode,
     cnpj: facility.taxIdCnpj,
-    lat: facility.lat,
-    lng: facility.lng,
+    // location geometry column replaces lat/lng; spatial repos handle geometry
+    lat: null,
+    lng: null,
     territoryId: facility.territoryId,
     territoryAssignmentStatus: facility.territoryAssignmentStatus,
     territoryAssignmentSource: facility.territoryAssignmentSource,
-    purchaseStatus: facility.purchaseStatus,
+    purchaseStatus: facility.purchaseStatus ?? null,
     sourceProvider: facility.sourceProvider,
     externalSourceId: facility.externalSourceId,
     sourceContentHash: facility.sourceContentHash,
@@ -58,16 +41,10 @@ function mapFacility(facility: {
   };
 }
 
-function buildScopeWhere(scope: FacilityListScopeFilter) {
-  if (scope.isGlobal) {
-    return {};
-  }
-
-  return {
-    id: {
-      in: scope.facilityIds?.length ? scope.facilityIds : ["__none__"],
-    },
-  };
+function buildScopeCondition(scope: FacilityListScopeFilter) {
+  if (scope.isGlobal) return null;
+  const ids = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
+  return inArray(facilities.id, ids);
 }
 
 export class PrismaFacilityRepository implements FacilityRepository {
@@ -77,41 +54,35 @@ export class PrismaFacilityRepository implements FacilityRepository {
     search?: string;
     scope: FacilityListScopeFilter;
   }): Promise<{ facilities: FacilityRecord[]; total: number }> {
-    const where = {
-      deletedAt: null,
-      ...buildScopeWhere(params.scope),
-      ...(params.search
-        ? {
-            displayName: {
-              contains: params.search,
-              mode: "insensitive" as const,
-            },
-          }
-        : {}),
-    };
+    const conditions = [isNull(facilities.deletedAt)];
 
+    const scopeCondition = buildScopeCondition(params.scope);
+    if (scopeCondition) conditions.push(scopeCondition);
+
+    if (params.search) {
+      conditions.push(ilike(facilities.displayName, `%${params.search}%`));
+    }
+
+    const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
-    const [facilities, total] = await Promise.all([
-      prisma.facility.findMany({
-        where,
-        orderBy: { displayName: "asc" },
-        skip,
-        take: params.limit,
-      }),
-      prisma.facility.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db.select().from(facilities).where(where).orderBy(asc(facilities.displayName)).offset(skip).limit(params.limit),
+      db.select({ count: sql<number>`count(*)::int` }).from(facilities).where(where),
     ]);
 
     return {
-      facilities: facilities.map(mapFacility),
-      total,
+      facilities: rows.map(mapFacility),
+      total: count,
     };
   }
 
   async findById(id: string): Promise<FacilityRecord | null> {
-    const facility = await prisma.facility.findFirst({
-      where: { id, deletedAt: null },
-    });
+    const [facility] = await db
+      .select()
+      .from(facilities)
+      .where(and(eq(facilities.id, id), isNull(facilities.deletedAt)))
+      .limit(1);
 
     return facility ? mapFacility(facility) : null;
   }
@@ -120,19 +91,32 @@ export class PrismaFacilityRepository implements FacilityRepository {
     sourceProvider: string,
     externalSourceId: string
   ): Promise<FacilityRecord | null> {
-    const facility = await prisma.facility.findFirst({
-      where: { sourceProvider, externalSourceId },
-    });
+    const [facility] = await db
+      .select()
+      .from(facilities)
+      .where(
+        and(
+          eq(facilities.sourceProvider, sourceProvider),
+          eq(facilities.externalSourceId, externalSourceId)
+        )
+      )
+      .limit(1);
 
     return facility ? mapFacility(facility) : null;
   }
 
   async findSourceTrackedByProvider(sourceProvider: string): Promise<FacilityRecord[]> {
-    const facilities = await prisma.facility.findMany({
-      where: { sourceProvider, sourceTracked: true },
-    });
+    const rows = await db
+      .select()
+      .from(facilities)
+      .where(
+        and(
+          eq(facilities.sourceProvider, sourceProvider),
+          eq(facilities.sourceTracked, true)
+        )
+      );
 
-    return facilities.map(mapFacility);
+    return rows.map(mapFacility);
   }
 
   async create(data: {
@@ -141,14 +125,14 @@ export class PrismaFacilityRepository implements FacilityRepository {
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord> {
-    const facility = await prisma.facility.create({
-      data: {
+    const [facility] = await db
+      .insert(facilities)
+      .values({
         displayName: data.name,
         address: data.address ?? null,
-        lat: data.lat ?? null,
-        lng: data.lng ?? null,
-      },
-    });
+        // lat/lng not in schema; location (geometry) handled by spatial repo
+      })
+      .returning();
 
     return mapFacility(facility);
   }
@@ -163,44 +147,47 @@ export class PrismaFacilityRepository implements FacilityRepository {
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
-    const facility = await prisma.facility.update({
-      where: { id },
-      data: {
-        ...(data.name !== undefined ? { displayName: data.name } : {}),
-        address: data.address,
-        lat: data.lat,
-        lng: data.lng,
-        manuallyEditedAt: data.manuallyEditedAt,
-      },
-    });
+    const setData: Partial<typeof facilities.$inferInsert> & { updatedAt: Date } = {
+      updatedAt: new Date(),
+      address: data.address,
+      manuallyEditedAt: data.manuallyEditedAt,
+    };
+
+    if (data.name !== undefined) {
+      setData.displayName = data.name;
+    }
+
+    const [facility] = await db
+      .update(facilities)
+      .set(setData)
+      .where(eq(facilities.id, id))
+      .returning();
 
     return mapFacility(facility);
   }
 
   async softDelete(id: string): Promise<void> {
-    await prisma.facility.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await db
+      .update(facilities)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(facilities.id, id));
   }
 
   async reactivate(id: string): Promise<FacilityRecord> {
-    const facility = await prisma.facility.update({
-      where: { id },
-      data: { deletedAt: null },
-    });
+    const [facility] = await db
+      .update(facilities)
+      .set({ deletedAt: null, updatedAt: new Date() })
+      .where(eq(facilities.id, id))
+      .returning();
 
     return mapFacility(facility);
   }
 
   async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
-    await prisma.facility.update({
-      where: { id },
-      data: {
-        sourcePresent: false,
-        sourceLastSeenAt,
-      },
-    });
+    await db
+      .update(facilities)
+      .set({ sourcePresent: false, sourceLastSeenAt, updatedAt: new Date() })
+      .where(eq(facilities.id, id));
   }
 
   async upsertFromSource(input: FacilitySourceUpsertInput): Promise<{
@@ -208,20 +195,24 @@ export class PrismaFacilityRepository implements FacilityRepository {
     created: boolean;
     updated: boolean;
   }> {
-    const existing = await prisma.facility.findFirst({
-      where: {
-        sourceProvider: input.sourceProvider,
-        externalSourceId: input.externalSourceId,
-      },
-    });
+    const [existing] = await db
+      .select()
+      .from(facilities)
+      .where(
+        and(
+          eq(facilities.sourceProvider, input.sourceProvider),
+          eq(facilities.externalSourceId, input.externalSourceId)
+        )
+      )
+      .limit(1);
 
     if (!existing) {
-      const facility = await prisma.facility.create({
-        data: {
+      const [facility] = await db
+        .insert(facilities)
+        .values({
           displayName: input.name,
           address: input.address,
-          lat: input.lat ?? null,
-          lng: input.lng ?? null,
+          // lat/lng not in schema; location (geometry) handled by spatial repo
           sourceProvider: input.sourceProvider,
           externalSourceId: input.externalSourceId,
           sourceContentHash: input.sourceContentHash,
@@ -229,24 +220,25 @@ export class PrismaFacilityRepository implements FacilityRepository {
           sourceLastSeenAt: input.sourceLastSeenAt,
           sourcePresent: true,
           sourceTracked: true,
-        },
-      });
+        })
+        .returning();
 
       return { facility: mapFacility(facility), created: true, updated: false };
     }
 
     const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
-    const updateData: Record<string, unknown> = {
-      sourceContentHash: input.sourceContentHash,
-      sourceLastSeenAt: input.sourceLastSeenAt,
-      sourcePresent: true,
-      sourceTracked: true,
-    };
 
-    const facility = await prisma.facility.update({
-      where: { id: existing.id },
-      data: updateData,
-    });
+    const [facility] = await db
+      .update(facilities)
+      .set({
+        sourceContentHash: input.sourceContentHash,
+        sourceLastSeenAt: input.sourceLastSeenAt,
+        sourcePresent: true,
+        sourceTracked: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(facilities.id, existing.id))
+      .returning();
 
     return {
       facility: mapFacility(facility),
@@ -264,32 +256,33 @@ export class PrismaFacilityRepository implements FacilityRepository {
       lng?: number | null;
     }
   ): Promise<FacilityRecord> {
-    const facility = await prisma.facility.update({
-      where: { id },
-      data: {
-        ...(updates.name !== undefined ? { displayName: updates.name } : {}),
-        ...(updates.address !== undefined ? { address: updates.address } : {}),
-        ...(updates.lat !== undefined ? { lat: updates.lat } : {}),
-        ...(updates.lng !== undefined ? { lng: updates.lng } : {}),
-      },
-    });
+    const setData: Partial<typeof facilities.$inferInsert> & { updatedAt: Date } = {
+      updatedAt: new Date(),
+    };
+
+    if (updates.name !== undefined) setData.displayName = updates.name;
+    if (updates.address !== undefined) setData.address = updates.address;
+    // lat/lng not in schema; location (geometry) handled by spatial repo
+
+    const [facility] = await db
+      .update(facilities)
+      .set(setData)
+      .where(eq(facilities.id, id))
+      .returning();
 
     return mapFacility(facility);
   }
 
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
-    if (territoryIds.length === 0) {
-      return [];
-    }
+    if (territoryIds.length === 0) return [];
 
-    const facilities = await prisma.facility.findMany({
-      where: {
-        deletedAt: null,
-        territoryId: { in: territoryIds },
-      },
-      select: { id: true },
-    });
+    const rows = await db
+      .select({ id: facilities.id })
+      .from(facilities)
+      .where(
+        and(isNull(facilities.deletedAt), inArray(facilities.territoryId, territoryIds))
+      );
 
-    return facilities.map((facility) => facility.id);
+    return rows.map((r) => r.id);
   }
 }

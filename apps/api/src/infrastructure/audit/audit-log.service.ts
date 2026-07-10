@@ -1,4 +1,6 @@
-import { prisma } from "../database/prisma.client";
+import { db } from "../database/db";
+import { auditLogs } from "@atlasmed/database";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { metricsService } from "../monitoring/metrics.service";
 import { environment } from "../../app/config/environment";
 import type { AuditEventType, AuditEventSeverity } from "@atlasmed/database";
@@ -25,24 +27,22 @@ export class AuditLogService {
   private async writeLog(entry: AuditLogEntry): Promise<void> {
     const severity = entry.severity || "INFO";
 
-    await prisma.auditLog.create({
-      data: {
-        userId: entry.userId,
-        eventType: entry.eventType,
-        severity,
-        actor: entry.actor,
-        actorId: entry.actorId,
-        resource: entry.resource,
-        resourceId: entry.resourceId,
-        action: entry.action,
-        details: entry.details ? (entry.details as any) : undefined,
-        ipAddress: entry.ipAddress,
-        userAgent: entry.userAgent,
-        sessionId: entry.sessionId,
-        outcome: entry.outcome || "SUCCESS",
-        errorMessage: entry.errorMessage,
-        metadata: entry.metadata ? (entry.metadata as any) : undefined,
-      },
+    await db.insert(auditLogs).values({
+      userId: entry.userId,
+      eventType: entry.eventType,
+      severity,
+      actor: entry.actor,
+      actorId: entry.actorId,
+      resource: entry.resource,
+      resourceId: entry.resourceId,
+      action: entry.action,
+      details: entry.details ?? null,
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent,
+      sessionId: entry.sessionId,
+      outcome: entry.outcome ?? "SUCCESS",
+      errorMessage: entry.errorMessage,
+      metadata: entry.metadata ?? null,
     });
 
     metricsService.recordAuditLog(entry.eventType, severity);
@@ -500,36 +500,28 @@ export class AuditLogService {
     limit?: number;
     offset?: number;
   }) {
-    const where: any = {};
+    const conditions = [];
+    if (params.userId) conditions.push(eq(auditLogs.userId, params.userId));
+    if (params.eventType) conditions.push(eq(auditLogs.eventType, params.eventType));
+    if (params.severity) conditions.push(eq(auditLogs.severity, params.severity));
+    if (params.startDate) conditions.push(gte(auditLogs.createdAt, params.startDate));
+    if (params.endDate) conditions.push(lte(auditLogs.createdAt, params.endDate));
 
-    if (params.userId) where.userId = params.userId;
-    if (params.eventType) where.eventType = params.eventType;
-    if (params.severity) where.severity = params.severity;
-    if (params.startDate || params.endDate) {
-      where.createdAt = {};
-      if (params.startDate) where.createdAt.gte = params.startDate;
-      if (params.endDate) where.createdAt.lte = params.endDate;
-    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const limit = params.limit ?? 50;
+    const offset = params.offset ?? 0;
 
-    const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: params.limit || 50,
-        skip: params.offset || 0,
-        include: {
-          user: {
-            select: {
-              username: true,
-              email: true,
-            },
-          },
-        },
-      }),
-      prisma.auditLog.count({ where }),
+    const { sql: sqlTag, count } = await import("drizzle-orm").then((m) => ({
+      sql: m.sql,
+      count: m.count,
+    }));
+
+    const [logs, [{ total }]] = await Promise.all([
+      db.select().from(auditLogs).where(where).orderBy(auditLogs.createdAt).limit(limit).offset(offset),
+      db.select({ total: count() }).from(auditLogs).where(where),
     ]);
 
-    return { logs, total };
+    return { logs, total: Number(total) };
   }
 }
 

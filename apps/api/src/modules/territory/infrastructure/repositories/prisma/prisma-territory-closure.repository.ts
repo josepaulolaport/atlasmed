@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { territories, territoryClosure } from "@atlasmed/database";
+import { eq, and, or, inArray } from "drizzle-orm";
 import type { TerritoryClosureRepository } from "../../../application/interfaces/territory-closure.repository.interface";
 
 export class PrismaTerritoryClosureRepository implements TerritoryClosureRepository {
@@ -7,9 +9,7 @@ export class PrismaTerritoryClosureRepository implements TerritoryClosureReposit
       return;
     }
 
-    await prisma.territoryClosure.deleteMany({
-      where: { descendantId: { in: descendantIds } },
-    });
+    await db.delete(territoryClosure).where(inArray(territoryClosure.descendantId, descendantIds));
   }
 
   async insertRows(
@@ -19,10 +19,7 @@ export class PrismaTerritoryClosureRepository implements TerritoryClosureReposit
       return;
     }
 
-    await prisma.territoryClosure.createMany({
-      data: rows,
-      skipDuplicates: true,
-    });
+    await db.insert(territoryClosure).values(rows).onConflictDoNothing();
   }
 
   async findDescendantIds(ancestorIds: string[], activeOnly = true): Promise<string[]> {
@@ -30,16 +27,24 @@ export class PrismaTerritoryClosureRepository implements TerritoryClosureReposit
       return [];
     }
 
-    const rows = await prisma.territoryClosure.findMany({
-      where: {
-        ancestorId: { in: ancestorIds },
-        ...(activeOnly
-          ? { descendant: { isActive: true } }
-          : {}),
-      },
-      select: { descendantId: true },
-    });
+    if (activeOnly) {
+      const rows = await db
+        .select({ descendantId: territoryClosure.descendantId })
+        .from(territoryClosure)
+        .innerJoin(territories, eq(territoryClosure.descendantId, territories.id))
+        .where(
+          and(
+            inArray(territoryClosure.ancestorId, ancestorIds),
+            eq(territories.isActive, true)
+          )
+        );
+      return [...new Set(rows.map((row) => row.descendantId))];
+    }
 
+    const rows = await db
+      .select({ descendantId: territoryClosure.descendantId })
+      .from(territoryClosure)
+      .where(inArray(territoryClosure.ancestorId, ancestorIds));
     return [...new Set(rows.map((row) => row.descendantId))];
   }
 
@@ -48,10 +53,10 @@ export class PrismaTerritoryClosureRepository implements TerritoryClosureReposit
       return [];
     }
 
-    const rows = await prisma.territoryClosure.findMany({
-      where: { descendantId: { in: descendantIds } },
-      select: { ancestorId: true },
-    });
+    const rows = await db
+      .select({ ancestorId: territoryClosure.ancestorId })
+      .from(territoryClosure)
+      .where(inArray(territoryClosure.descendantId, descendantIds));
 
     return [...new Set(rows.map((row) => row.ancestorId))];
   }
@@ -64,15 +69,23 @@ export class PrismaTerritoryClosureRepository implements TerritoryClosureReposit
       return true;
     }
 
-    const row = await prisma.territoryClosure.findFirst({
-      where: {
-        OR: [
-          { ancestorId: territoryIdA, descendantId: territoryIdB },
-          { ancestorId: territoryIdB, descendantId: territoryIdA },
-        ],
-      },
-    });
+    const rows = await db
+      .select()
+      .from(territoryClosure)
+      .where(
+        or(
+          and(
+            eq(territoryClosure.ancestorId, territoryIdA),
+            eq(territoryClosure.descendantId, territoryIdB)
+          ),
+          and(
+            eq(territoryClosure.ancestorId, territoryIdB),
+            eq(territoryClosure.descendantId, territoryIdA)
+          )
+        )
+      )
+      .limit(1);
 
-    return row !== null;
+    return rows.length > 0;
   }
 }

@@ -1,6 +1,8 @@
 import "dotenv/config";
-import { Prisma } from "@atlasmed/database";
-import { prisma } from "../infrastructure/database/prisma.client";
+import { db } from "../infrastructure/database/db";
+import { users, roles } from "@atlasmed/database";
+import { sql, eq, inArray, type SQL } from "drizzle-orm";
+import type { Database } from "@atlasmed/database";
 
 /**
  * MCP test data import pipeline:
@@ -121,51 +123,55 @@ function parseArgs(argv: string[]): ImportOptions {
   };
 }
 
-function buildFacilityFilterSql(filters: ImportFilters, alias = "f"): Prisma.Sql {
-  const clauses: Prisma.Sql[] = [];
+function buildFacilityFilterSql(filters: ImportFilters, alias = "f"): SQL {
+  const clauses: SQL[] = [];
 
   if (filters.municipalityIds.length > 0) {
     clauses.push(
-      Prisma.sql`${Prisma.raw(alias)}.municipality_id IN (${Prisma.join(
-        filters.municipalityIds
+      sql`${sql.raw(alias)}.municipality_id IN (${sql.join(
+        filters.municipalityIds.map((id) => sql`${id}`),
+        sql`, `
       )})`
     );
   }
 
   if (filters.stateCodes.length > 0) {
     clauses.push(
-      Prisma.sql`EXISTS (
-        SELECT 1 FROM ${Prisma.raw(`${SOURCE_SCHEMA}.municipalities`)} m
-        WHERE m.municipality_id = ${Prisma.raw(`${alias}.municipality_id`)}
-          AND m.state_code IN (${Prisma.join(filters.stateCodes)})
+      sql`EXISTS (
+        SELECT 1 FROM ${sql.raw(`${SOURCE_SCHEMA}.municipalities`)} m
+        WHERE m.municipality_id = ${sql.raw(`${alias}.municipality_id`)}
+          AND m.state_code IN (${sql.join(
+            filters.stateCodes.map((c) => sql`${c}`),
+            sql`, `
+          )})
       )`
     );
   }
 
   if (filters.activeOnly) {
     clauses.push(
-      Prisma.sql`(${Prisma.raw(alias)}.deactivation_reason_code IS NULL OR trim(${Prisma.raw(alias)}.deactivation_reason_code) = '')`
+      sql`(${sql.raw(alias)}.deactivation_reason_code IS NULL OR trim(${sql.raw(alias)}.deactivation_reason_code) = '')`
     );
   }
 
   if (filters.withCoordsOnly) {
     clauses.push(
-      Prisma.sql`${Prisma.raw(alias)}.latitude IS NOT NULL AND ${Prisma.raw(alias)}.longitude IS NOT NULL`
+      sql`${sql.raw(alias)}.latitude IS NOT NULL AND ${sql.raw(alias)}.longitude IS NOT NULL`
     );
   }
 
   if (clauses.length === 0) {
-    return Prisma.sql`TRUE`;
+    return sql`TRUE`;
   }
 
-  return Prisma.join(clauses, " AND ");
+  return sql.join(clauses, sql` AND `);
 }
 
 async function resolveAdminUser(adminEmail: string | null) {
   if (adminEmail) {
-    const user = await prisma.user.findUnique({
-      where: { email: adminEmail },
-      include: { role: true },
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, adminEmail),
+      with: { role: true },
     });
 
     if (!user) {
@@ -175,10 +181,12 @@ async function resolveAdminUser(adminEmail: string | null) {
     return user;
   }
 
-  const admin = await prisma.user.findFirst({
-    where: { role: { name: "ADMIN" } },
-    include: { role: true },
-    orderBy: { createdAt: "asc" },
+  const admin = await db.query.users.findFirst({
+    where: inArray(
+      users.roleId,
+      db.select({ id: roles.id }).from(roles).where(eq(roles.name, "ADMIN"))
+    ),
+    with: { role: true },
   });
 
   if (!admin) {
@@ -193,16 +201,16 @@ async function analyzeSourceData(filters: ImportFilters) {
 
   const facilityFilter = buildFacilityFilterSql(filters, "f");
 
-  const [facilityStats] = await prisma.$queryRaw<
-    Array<{
-      total: bigint;
-      missing_coords: bigint;
-      partial_coords: bigint;
-      missing_address_parts: bigint;
-      deactivated: bigint;
-      missing_municipality: bigint;
-    }>
-  >(Prisma.sql`
+  type FacilityStats = {
+    total: string;
+    missing_coords: string;
+    partial_coords: string;
+    missing_address_parts: string;
+    deactivated: string;
+    missing_municipality: string;
+  };
+
+  const facilityResult = await db.execute<FacilityStats>(sql`
     SELECT
       COUNT(*)::bigint AS total,
       COUNT(*) FILTER (
@@ -220,42 +228,44 @@ async function analyzeSourceData(filters: ImportFilters) {
       COUNT(*) FILTER (
         WHERE f.municipality_id IS NULL OR trim(f.municipality_id) = ''
       )::bigint AS missing_municipality
-    FROM ${Prisma.raw(`${SOURCE_SCHEMA}.facilities`)} f
+    FROM ${sql.raw(`${SOURCE_SCHEMA}.facilities`)} f
     WHERE ${facilityFilter}
   `);
+  const facilityStats = (facilityResult as unknown as FacilityStats[])[0];
 
-  const [associationStats] = await prisma.$queryRaw<
-    Array<{
-      total: bigint;
-      facilities_in_scope: bigint;
-      professionals_in_scope: bigint;
-    }>
-  >(Prisma.sql`
+  type AssociationStats = {
+    total: string;
+    facilities_in_scope: string;
+    professionals_in_scope: string;
+  };
+
+  const associationResult = await db.execute<AssociationStats>(sql`
     WITH scoped_facilities AS (
       SELECT f.facility_id
-      FROM ${Prisma.raw(`${SOURCE_SCHEMA}.facilities`)} f
+      FROM ${sql.raw(`${SOURCE_SCHEMA}.facilities`)} f
       WHERE ${facilityFilter}
     )
     SELECT
       COUNT(*)::bigint AS total,
       COUNT(DISTINCT fp.facility_id)::bigint AS facilities_in_scope,
       COUNT(DISTINCT fp.professional_id)::bigint AS professionals_in_scope
-    FROM ${Prisma.raw(`${SOURCE_SCHEMA}.facility_professionals`)} fp
+    FROM ${sql.raw(`${SOURCE_SCHEMA}.facility_professionals`)} fp
     INNER JOIN scoped_facilities sf ON sf.facility_id = fp.facility_id
   `);
+  const associationStats = (associationResult as unknown as AssociationStats[])[0];
 
-  const [professionalStats] = await prisma.$queryRaw<
-    Array<{
-      total: bigint;
-      missing_tax_id: bigint;
-      missing_name: bigint;
-      missing_crm: bigint;
-    }>
-  >(Prisma.sql`
+  type ProfessionalStats = {
+    total: string;
+    missing_tax_id: string;
+    missing_name: string;
+    missing_crm: string;
+  };
+
+  const professionalResult = await db.execute<ProfessionalStats>(sql`
     WITH scoped_professionals AS (
       SELECT DISTINCT fp.professional_id
-      FROM ${Prisma.raw(`${SOURCE_SCHEMA}.facility_professionals`)} fp
-      INNER JOIN ${Prisma.raw(`${SOURCE_SCHEMA}.facilities`)} f ON f.facility_id = fp.facility_id
+      FROM ${sql.raw(`${SOURCE_SCHEMA}.facility_professionals`)} fp
+      INNER JOIN ${sql.raw(`${SOURCE_SCHEMA}.facilities`)} f ON f.facility_id = fp.facility_id
       WHERE ${facilityFilter}
     )
     SELECT
@@ -269,7 +279,7 @@ async function analyzeSourceData(filters: ImportFilters) {
       COUNT(*) FILTER (
         WHERE NOT EXISTS (
           SELECT 1
-          FROM ${Prisma.raw(`${SOURCE_SCHEMA}.professional_workload`)} w
+          FROM ${sql.raw(`${SOURCE_SCHEMA}.professional_workload`)} w
           WHERE w.professional_id = p.professional_id
             AND (
               coalesce(trim(w.license_number), '') <> ''
@@ -278,20 +288,21 @@ async function analyzeSourceData(filters: ImportFilters) {
             )
         )
       )::bigint AS missing_crm
-    FROM ${Prisma.raw(`${SOURCE_SCHEMA}.professionals`)} p
+    FROM ${sql.raw(`${SOURCE_SCHEMA}.professionals`)} p
     INNER JOIN scoped_professionals sp ON sp.professional_id = p.professional_id
   `);
+  const professionalStats = (professionalResult as unknown as ProfessionalStats[])[0];
 
-  const [representativeStats] = await prisma.$queryRaw<
-    Array<{
-      total: bigint;
-      missing_email: bigint;
-      missing_tax_id: bigint;
-    }>
-  >(Prisma.sql`
+  type RepresentativeStats = {
+    total: string;
+    missing_email: string;
+    missing_tax_id: string;
+  };
+
+  const representativeResult = await db.execute<RepresentativeStats>(sql`
     WITH scoped_facilities AS (
       SELECT f.facility_id
-      FROM ${Prisma.raw(`${SOURCE_SCHEMA}.facilities`)} f
+      FROM ${sql.raw(`${SOURCE_SCHEMA}.facilities`)} f
       WHERE ${facilityFilter}
     )
     SELECT
@@ -302,9 +313,10 @@ async function analyzeSourceData(filters: ImportFilters) {
       COUNT(*) FILTER (
         WHERE coalesce(trim(r.tax_id), '') = ''
       )::bigint AS missing_tax_id
-    FROM ${Prisma.raw(`${SOURCE_SCHEMA}.facility_representatives`)} r
+    FROM ${sql.raw(`${SOURCE_SCHEMA}.facility_representatives`)} r
     INNER JOIN scoped_facilities sf ON sf.facility_id = r.facility_id
   `);
+  const representativeStats = (representativeResult as unknown as RepresentativeStats[])[0];
 
   const report = {
     scope: {
@@ -345,154 +357,206 @@ async function analyzeSourceData(filters: ImportFilters) {
   return report;
 }
 
+function getRawCount(result: unknown): number {
+  if (result && typeof result === "object" && "count" in result) {
+    return Number((result as { count: unknown }).count ?? 0);
+  }
+  return 0;
+}
+
 async function cleanOperationalData(adminUserId: string, dryRun: boolean) {
   console.log("\n🧹 Cleaning operational data (keeping admin user and IBGE territories)...");
 
   const steps: Array<{ label: string; run: () => Promise<{ count: number }> }> = [
     {
       label: "audit logs",
-      run: async () => ({ count: (await prisma.auditLog.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.audit_logs`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "ingestion suggestions",
-      run: async () => ({ count: (await prisma.ingestionSuggestion.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.ingestion_suggestions`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "facility professionals",
-      run: async () => ({ count: (await prisma.facilityProfessional.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.facility_professionals`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "facility representatives",
-      run: async () => ({ count: (await prisma.facilityRepresentative.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.facility_representatives`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "facility consultant assignments",
-      run: async () => ({
-        count: (await prisma.facilityConsultantAssignment.deleteMany({})).count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.facility_consultant_assignments`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "facility healthcare provider shares",
-      run: async () => ({
-        count: (await prisma.facilityHealthcareProviderShare.deleteMany({})).count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.facility_healthcare_provider_shares`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "conformity records",
-      run: async () => ({ count: (await prisma.conformityRecord.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.conformity_records`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "professionals",
-      run: async () => ({ count: (await prisma.professional.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.professionals`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "facilities",
-      run: async () => ({ count: (await prisma.facility.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.facilities`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "sectors",
-      run: async () => ({ count: (await prisma.sector.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.sectors`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "products",
-      run: async () => ({ count: (await prisma.product.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.products`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "healthcare providers",
-      run: async () => ({ count: (await prisma.healthcareProvider.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.healthcare_providers`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "ingestion runs",
-      run: async () => ({ count: (await prisma.ingestionRun.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.ingestion_runs`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "territory approval requests",
-      run: async () => ({
-        count: (await prisma.territoryApprovalRequest.deleteMany({})).count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.territory_approval_requests`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "demo territory assignments",
       run: async () => {
-        const demoTerritories = await prisma.territory.findMany({
-          where: { code: { startsWith: "DEMO-" } },
-          select: { id: true },
-        });
-        const ids = demoTerritories.map((territory) => territory.id);
-        if (ids.length === 0) {
-          return { count: 0 };
-        }
+        const demoTerrs = await db.$client.unsafe(
+          `SELECT id FROM public.territories WHERE code LIKE 'DEMO-%'`
+        );
+        const ids: string[] = (demoTerrs as unknown as { id: string }[]).map((t) => t.id);
+        if (ids.length === 0) return { count: 0 };
 
-        return {
-          count: (
-            await prisma.userTerritoryAssignment.deleteMany({
-              where: { territoryId: { in: ids } },
-            })
-          ).count,
-        };
+        const idList = ids.map((id) => `'${id}'`).join(", ");
+        const r = await db.$client.unsafe(
+          `DELETE FROM public.user_territory_assignments WHERE "territoryId" IN (${idList})`
+        );
+        return { count: getRawCount(r) };
       },
     },
     {
       label: "demo territories",
       run: async () => {
-        const demoTerritories = await prisma.territory.findMany({
-          where: { code: { startsWith: "DEMO-" } },
-          select: { id: true },
-        });
-        const ids = demoTerritories.map((territory) => territory.id);
-        if (ids.length === 0) {
-          return { count: 0 };
-        }
+        const demoTerrs = await db.$client.unsafe(
+          `SELECT id FROM public.territories WHERE code LIKE 'DEMO-%'`
+        );
+        const ids: string[] = (demoTerrs as unknown as { id: string }[]).map((t) => t.id);
+        if (ids.length === 0) return { count: 0 };
 
-        await prisma.territoryClosure.deleteMany({
-          where: {
-            OR: [{ ancestorId: { in: ids } }, { descendantId: { in: ids } }],
-          },
-        });
-
-        return { count: (await prisma.territory.deleteMany({ where: { id: { in: ids } } })).count };
+        const idList = ids.map((id) => `'${id}'`).join(", ");
+        await db.$client.unsafe(
+          `DELETE FROM public.territory_closure WHERE "ancestorId" IN (${idList}) OR "descendantId" IN (${idList})`
+        );
+        const r = await db.$client.unsafe(
+          `DELETE FROM public.territories WHERE id IN (${idList})`
+        );
+        return { count: getRawCount(r) };
       },
     },
     {
       label: "non-admin sessions",
-      run: async () => ({
-        count: (await prisma.session.deleteMany({ where: { userId: { not: adminUserId } } })).count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(
+          `DELETE FROM public.sessions WHERE "userId" != '${adminUserId}'`
+        );
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "non-admin permissions",
-      run: async () => ({
-        count: (await prisma.permission.deleteMany({ where: { userId: { not: adminUserId } } }))
-          .count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(
+          `DELETE FROM public.permissions WHERE "userId" != '${adminUserId}'`
+        );
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "non-admin territory assignments",
-      run: async () => ({
-        count: (
-          await prisma.userTerritoryAssignment.deleteMany({
-            where: { userId: { not: adminUserId } },
-          })
-        ).count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(
+          `DELETE FROM public.user_territory_assignments WHERE "userId" != '${adminUserId}'`
+        );
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "invitations",
-      run: async () => ({ count: (await prisma.invitation.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.invitations`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "password resets",
-      run: async () => ({ count: (await prisma.passwordReset.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.password_resets`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "verification tokens",
-      run: async () => ({ count: (await prisma.verificationToken.deleteMany({})).count }),
+      run: async () => {
+        const r = await db.$client.unsafe(`DELETE FROM public.verification_tokens`);
+        return { count: getRawCount(r) };
+      },
     },
     {
       label: "non-admin users",
-      run: async () => ({
-        count: (await prisma.user.deleteMany({ where: { id: { not: adminUserId } } })).count,
-      }),
+      run: async () => {
+        const r = await db.$client.unsafe(
+          `DELETE FROM public.users WHERE id != '${adminUserId}'`
+        );
+        return { count: getRawCount(r) };
+      },
     },
   ];
 
@@ -519,15 +583,15 @@ async function loadRegistryFromSource(dryRun: boolean) {
   }
 
   const tableList = REGISTRY_TABLES.map((table) => `registry.${table}`).join(", ");
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`);
+  await db.$client.unsafe(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`);
 
   for (const table of REGISTRY_TABLES) {
     const startedAt = Date.now();
-    const inserted = await prisma.$executeRawUnsafe(`
+    const result = await db.$client.unsafe(`
       INSERT INTO registry.${table}
       SELECT * FROM ${SOURCE_SCHEMA}.${table}
     `);
-    console.log(`   ✓ registry.${table}: ${inserted} rows (${Date.now() - startedAt}ms)`);
+    console.log(`   ✓ registry.${table}: ${getRawCount(result)} rows (${Date.now() - startedAt}ms)`);
   }
 }
 
@@ -568,12 +632,10 @@ function facilityImportWhereSql(filters: ImportFilters): string {
   return clauses.join("\n      AND ");
 }
 
-async function prepareImportScopeTables(
-  db: Pick<typeof prisma, "$executeRawUnsafe">
-) {
+async function prepareImportScopeTables(database: Database) {
   console.log("   → preparing import scope temp tables...");
   const prepStartedAt = Date.now();
-  await db.$executeRawUnsafe(`
+  await database.execute(sql.raw(`
     DROP TABLE IF EXISTS _import_facility_ids;
     CREATE TEMP TABLE _import_facility_ids AS
     SELECT "externalSourceId" AS facility_id
@@ -587,7 +649,7 @@ async function prepareImportScopeTables(
     FROM registry.facility_professionals fp
     INNER JOIN _import_facility_ids iff ON iff.facility_id = fp.facility_id;
     CREATE INDEX _import_professional_ids_idx ON _import_professional_ids (professional_id);
-  `);
+  `));
   console.log(`   ✓ scope tables ready (${Date.now() - prepStartedAt}ms)`);
 }
 
@@ -599,20 +661,18 @@ async function syncPublicFromRegistry(options: ImportOptions) {
     return;
   }
 
-  await prisma.$executeRawUnsafe(`SET statement_timeout = 0`);
+  await db.$client.unsafe(`SET statement_timeout = 0`);
 
   const importStartedAt = Date.now();
   const facilityWhere = facilityImportWhereSql(options.filters);
   const limitClause = options.filters.limit ? `LIMIT ${options.filters.limit}` : "";
 
   const facilityInsertStartedAt = Date.now();
-  const facilitiesInserted = await prisma.$executeRawUnsafe(`
+  const facilitiesResult = await db.$client.unsafe(`
     INSERT INTO public.facilities (
       id,
       name,
       address,
-      lat,
-      lng,
       "territoryId",
       "territoryAssignmentStatus",
       "territoryAssignmentSource",
@@ -655,8 +715,6 @@ async function syncPublicFromRegistry(options: ImportOptions) {
         NULLIF(trim(m.municipality_name), ''),
         NULLIF(trim(m.state_code), '')
       )), ''),
-      f.latitude,
-      f.longitude,
       NULL,
       'unassigned'::"TerritoryAssignmentStatus",
       'geo'::"TerritoryAssignmentSource",
@@ -693,154 +751,155 @@ async function syncPublicFromRegistry(options: ImportOptions) {
     ${limitClause}
     ON CONFLICT ("sourceProvider", "externalSourceId") DO NOTHING
   `);
+  const facilitiesInserted = getRawCount(facilitiesResult);
   console.log(
     `   ✓ facilities: ${facilitiesInserted} rows (${Date.now() - facilityInsertStartedAt}ms)`
   );
 
-  const scopedSync = await prisma.$transaction(
-    async (tx) => {
-      await tx.$executeRawUnsafe(`SET statement_timeout = 0`);
-      await prepareImportScopeTables(tx);
+  const scopedSync = await db.transaction(async (tx) => {
+    await tx.execute(sql.raw(`SET statement_timeout = 0`));
+    await prepareImportScopeTables(tx as unknown as Database);
 
-      const professionalsInsertStartedAt = Date.now();
-      const professionalsInserted = await tx.$executeRawUnsafe(`
-        INSERT INTO public.professionals (
-          id, "firstName", "lastName", full_name, social_name, tax_id,
-          "sourceProvider", "externalSourceId", "sourcePresent", "sourceTracked",
-          "createdAt", "updatedAt"
-        )
-        SELECT
-          'cnes_p_' || p.professional_id,
-          COALESCE(NULLIF(split_part(trim(p.full_name), ' ', 1), ''), trim(p.full_name)),
-          COALESCE(
-            NULLIF(trim(substring(trim(p.full_name) FROM position(' ' IN trim(p.full_name)) + 1)), ''),
-            COALESCE(NULLIF(split_part(trim(p.full_name), ' ', 1), ''), trim(p.full_name))
-          ),
-          p.full_name, p.social_name, p.tax_id,
-          '${REGISTRY_PROVIDER}', p.professional_id, TRUE, TRUE, NOW(), NOW()
-        FROM registry.professionals p
-        INNER JOIN _import_professional_ids ip ON ip.professional_id = p.professional_id
-        ON CONFLICT ("sourceProvider", "externalSourceId") DO NOTHING
-      `);
-      console.log(`   ✓ professionals: ${professionalsInserted} rows (${Date.now() - professionalsInsertStartedAt}ms)`);
+    const professionalsInsertStartedAt = Date.now();
+    const professionalsResult = await tx.execute(sql.raw(`
+      INSERT INTO public.professionals (
+        id, "firstName", "lastName", full_name, social_name, tax_id,
+        "sourceProvider", "externalSourceId", "sourcePresent", "sourceTracked",
+        "createdAt", "updatedAt"
+      )
+      SELECT
+        'cnes_p_' || p.professional_id,
+        COALESCE(NULLIF(split_part(trim(p.full_name), ' ', 1), ''), trim(p.full_name)),
+        COALESCE(
+          NULLIF(trim(substring(trim(p.full_name) FROM position(' ' IN trim(p.full_name)) + 1)), ''),
+          COALESCE(NULLIF(split_part(trim(p.full_name), ' ', 1), ''), trim(p.full_name))
+        ),
+        p.full_name, p.social_name, p.tax_id,
+        '${REGISTRY_PROVIDER}', p.professional_id, TRUE, TRUE, NOW(), NOW()
+      FROM registry.professionals p
+      INNER JOIN _import_professional_ids ip ON ip.professional_id = p.professional_id
+      ON CONFLICT ("sourceProvider", "externalSourceId") DO NOTHING
+    `));
+    const professionalsInserted = getRawCount(professionalsResult);
+    console.log(`   ✓ professionals: ${professionalsInserted} rows (${Date.now() - professionalsInsertStartedAt}ms)`);
 
-      const specialtyUpdateStartedAt = Date.now();
-      const specialtiesUpdated = await tx.$executeRawUnsafe(`
-        UPDATE public.professionals prof
-        SET primary_specialty_label = sub.occupation_name
-        FROM (
-          SELECT DISTINCT ON (fp.professional_id) fp.professional_id, o.occupation_name
-          FROM registry.facility_professionals fp
-          INNER JOIN _import_facility_ids iff ON iff.facility_id = fp.facility_id
-          INNER JOIN _import_professional_ids ip ON ip.professional_id = fp.professional_id
-          LEFT JOIN registry.occupations o ON o.occupation_code = fp.occupation_code
-          ORDER BY fp.professional_id, fp.facility_id, fp.occupation_code
-        ) sub
-        WHERE prof."sourceProvider" = '${REGISTRY_PROVIDER}'
-          AND prof."externalSourceId" = sub.professional_id
-      `);
-      console.log(`   ✓ professional specialties: ${specialtiesUpdated} rows (${Date.now() - specialtyUpdateStartedAt}ms)`);
-
-      const crmUpdateStartedAt = Date.now();
-      const crmUpdated = await tx.$executeRawUnsafe(`
-        UPDATE public.professionals prof
-        SET crm_council = w.professional_council_code,
-            crm_number = w.license_number,
-            crm_state = w.license_state
-        FROM (
-          SELECT DISTINCT ON (pw.professional_id)
-            pw.professional_id, pw.professional_council_code, pw.license_number, pw.license_state
-          FROM registry.professional_workload pw
-          INNER JOIN _import_professional_ids ip ON ip.professional_id = pw.professional_id
-          WHERE coalesce(trim(pw.license_number), '') <> ''
-             OR coalesce(trim(pw.license_state), '') <> ''
-             OR coalesce(trim(pw.professional_council_code), '') <> ''
-          ORDER BY pw.professional_id,
-            CASE WHEN coalesce(trim(pw.license_number), '') <> '' THEN 0 ELSE 1 END,
-            pw.last_updated_date DESC NULLS LAST
-        ) w
-        WHERE prof."sourceProvider" = '${REGISTRY_PROVIDER}'
-          AND prof."externalSourceId" = w.professional_id
-      `);
-      console.log(`   ✓ professional CRM fields: ${crmUpdated} rows (${Date.now() - crmUpdateStartedAt}ms)`);
-
-      const associationsInsertStartedAt = Date.now();
-      const associationsInserted = await tx.$executeRawUnsafe(`
-        INSERT INTO public.facility_professionals (
-          id, "facilityId", "professionalId", occupation_code, specialty_label,
-          employment_type_code, source_occupation_code, "sourceActive",
-          "sourceFirstSeenAt", "sourceLastSeenAt", "createdAt", "updatedAt"
-        )
-        SELECT
-          'cnes_fp_' || fp.facility_id || '_' || fp.professional_id || '_' || fp.occupation_code,
-          fac.id, prof.id, fp.occupation_code, o.occupation_name,
-          fp.employment_type_code, fp.occupation_code, TRUE, NOW(), NOW(), NOW(), NOW()
+    const specialtyUpdateStartedAt = Date.now();
+    const specialtiesResult = await tx.execute(sql.raw(`
+      UPDATE public.professionals prof
+      SET primary_specialty_label = sub.occupation_name
+      FROM (
+        SELECT DISTINCT ON (fp.professional_id) fp.professional_id, o.occupation_name
         FROM registry.facility_professionals fp
         INNER JOIN _import_facility_ids iff ON iff.facility_id = fp.facility_id
-        INNER JOIN public.facilities fac
-          ON fac."sourceProvider" = '${REGISTRY_PROVIDER}' AND fac."externalSourceId" = fp.facility_id
-        INNER JOIN public.professionals prof
-          ON prof."sourceProvider" = '${REGISTRY_PROVIDER}' AND prof."externalSourceId" = fp.professional_id
+        INNER JOIN _import_professional_ids ip ON ip.professional_id = fp.professional_id
         LEFT JOIN registry.occupations o ON o.occupation_code = fp.occupation_code
-        ON CONFLICT ("facilityId", "professionalId", occupation_code) DO NOTHING
-      `);
-      console.log(`   ✓ facility_professionals: ${associationsInserted} rows (${Date.now() - associationsInsertStartedAt}ms)`);
+        ORDER BY fp.professional_id, fp.facility_id, fp.occupation_code
+      ) sub
+      WHERE prof."sourceProvider" = '${REGISTRY_PROVIDER}'
+        AND prof."externalSourceId" = sub.professional_id
+    `));
+    console.log(`   ✓ professional specialties: ${getRawCount(specialtiesResult)} rows (${Date.now() - specialtyUpdateStartedAt}ms)`);
 
-      const representativesInsertStartedAt = Date.now();
-      const representativesInserted = await tx.$executeRawUnsafe(`
-        INSERT INTO public.facility_representatives (
-          id, "facilityId", representative_name, role_title, email, tax_id,
-          contact_type, source_provider, external_source_key, source_active,
-          "createdAt", "updatedAt"
-        )
-        SELECT
-          'cnes_fr_' || r.facility_id || '_' || md5(r.representative_name),
-          fac.id, r.representative_name, r.role_title, r.email,
-          COALESCE(NULLIF(trim(r.tax_id), ''), r.representative_name),
-          'PROFESSIONAL'::"ContactType", '${REGISTRY_PROVIDER}',
-          COALESCE(NULLIF(trim(r.tax_id), ''), r.representative_name), TRUE, NOW(), NOW()
-        FROM registry.facility_representatives r
-        INNER JOIN _import_facility_ids iff ON iff.facility_id = r.facility_id
-        INNER JOIN public.facilities fac
-          ON fac."sourceProvider" = '${REGISTRY_PROVIDER}' AND fac."externalSourceId" = r.facility_id
-        ON CONFLICT ("facilityId", external_source_key) DO NOTHING
-      `);
-      console.log(`   ✓ facility_representatives: ${representativesInserted} rows (${Date.now() - representativesInsertStartedAt}ms)`);
+    const crmUpdateStartedAt = Date.now();
+    const crmResult = await tx.execute(sql.raw(`
+      UPDATE public.professionals prof
+      SET crm_council = w.professional_council_code,
+          crm_number = w.license_number,
+          crm_state = w.license_state
+      FROM (
+        SELECT DISTINCT ON (pw.professional_id)
+          pw.professional_id, pw.professional_council_code, pw.license_number, pw.license_state
+        FROM registry.professional_workload pw
+        INNER JOIN _import_professional_ids ip ON ip.professional_id = pw.professional_id
+        WHERE coalesce(trim(pw.license_number), '') <> ''
+           OR coalesce(trim(pw.license_state), '') <> ''
+           OR coalesce(trim(pw.professional_council_code), '') <> ''
+        ORDER BY pw.professional_id,
+          CASE WHEN coalesce(trim(pw.license_number), '') <> '' THEN 0 ELSE 1 END,
+          pw.last_updated_date DESC NULLS LAST
+      ) w
+      WHERE prof."sourceProvider" = '${REGISTRY_PROVIDER}'
+        AND prof."externalSourceId" = w.professional_id
+    `));
+    console.log(`   ✓ professional CRM fields: ${getRawCount(crmResult)} rows (${Date.now() - crmUpdateStartedAt}ms)`);
 
-      const addressEnrichStartedAt = Date.now();
-      const addressesEnriched = await tx.$executeRawUnsafe(`
-        UPDATE public.facilities fac
-        SET address = NULLIF(trim(BOTH FROM concat_ws(', ',
-          NULLIF(trim(f.street_address), ''), NULLIF(trim(f.street_number), ''),
-          NULLIF(trim(f.address_complement), ''), NULLIF(trim(f.neighborhood), ''),
-          NULLIF(trim(f.postal_code), ''), NULLIF(trim(m.municipality_name), ''),
-          NULLIF(trim(m.state_code), '')
-        )), '')
-        FROM registry.facilities f
-        LEFT JOIN registry.municipalities m ON m.municipality_id = f.municipality_id
-        WHERE fac."sourceProvider" = '${REGISTRY_PROVIDER}' AND fac."externalSourceId" = f.facility_id
-      `);
-      console.log(`   ✓ facility addresses enriched: ${addressesEnriched} rows (${Date.now() - addressEnrichStartedAt}ms)`);
+    const associationsInsertStartedAt = Date.now();
+    const associationsResult = await tx.execute(sql.raw(`
+      INSERT INTO public.facility_professionals (
+        id, "facilityId", "professionalId", occupation_code, specialty_label,
+        employment_type_code, source_occupation_code, "sourceActive",
+        "sourceFirstSeenAt", "sourceLastSeenAt", "createdAt", "updatedAt"
+      )
+      SELECT
+        'cnes_fp_' || fp.facility_id || '_' || fp.professional_id || '_' || fp.occupation_code,
+        fac.id, prof.id, fp.occupation_code, o.occupation_name,
+        fp.employment_type_code, fp.occupation_code, TRUE, NOW(), NOW(), NOW(), NOW()
+      FROM registry.facility_professionals fp
+      INNER JOIN _import_facility_ids iff ON iff.facility_id = fp.facility_id
+      INNER JOIN public.facilities fac
+        ON fac."sourceProvider" = '${REGISTRY_PROVIDER}' AND fac."externalSourceId" = fp.facility_id
+      INNER JOIN public.professionals prof
+        ON prof."sourceProvider" = '${REGISTRY_PROVIDER}' AND prof."externalSourceId" = fp.professional_id
+      LEFT JOIN registry.occupations o ON o.occupation_code = fp.occupation_code
+      ON CONFLICT ("facilityId", "professionalId", occupation_code) DO NOTHING
+    `));
+    const associationsInserted = getRawCount(associationsResult);
+    console.log(`   ✓ facility_professionals: ${associationsInserted} rows (${Date.now() - associationsInsertStartedAt}ms)`);
 
-      return {
-        professionalsInserted,
-        associationsInserted,
-        representativesInserted,
-      };
-    },
-    { maxWait: 60_000, timeout: 3_600_000 }
-  );
+    const representativesInsertStartedAt = Date.now();
+    const representativesResult = await tx.execute(sql.raw(`
+      INSERT INTO public.facility_representatives (
+        id, "facilityId", representative_name, role_title, email, tax_id,
+        contact_type, source_provider, external_source_key, source_active,
+        "createdAt", "updatedAt"
+      )
+      SELECT
+        'cnes_fr_' || r.facility_id || '_' || md5(r.representative_name),
+        fac.id, r.representative_name, r.role_title, r.email,
+        COALESCE(NULLIF(trim(r.tax_id), ''), r.representative_name),
+        'PROFESSIONAL'::"ContactType", '${REGISTRY_PROVIDER}',
+        COALESCE(NULLIF(trim(r.tax_id), ''), r.representative_name), TRUE, NOW(), NOW()
+      FROM registry.facility_representatives r
+      INNER JOIN _import_facility_ids iff ON iff.facility_id = r.facility_id
+      INNER JOIN public.facilities fac
+        ON fac."sourceProvider" = '${REGISTRY_PROVIDER}' AND fac."externalSourceId" = r.facility_id
+      ON CONFLICT ("facilityId", external_source_key) DO NOTHING
+    `));
+    const representativesInserted = getRawCount(representativesResult);
+    console.log(`   ✓ facility_representatives: ${representativesInserted} rows (${Date.now() - representativesInsertStartedAt}ms)`);
+
+    const addressEnrichStartedAt = Date.now();
+    const addressesResult = await tx.execute(sql.raw(`
+      UPDATE public.facilities fac
+      SET address = NULLIF(trim(BOTH FROM concat_ws(', ',
+        NULLIF(trim(f.street_address), ''), NULLIF(trim(f.street_number), ''),
+        NULLIF(trim(f.address_complement), ''), NULLIF(trim(f.neighborhood), ''),
+        NULLIF(trim(f.postal_code), ''), NULLIF(trim(m.municipality_name), ''),
+        NULLIF(trim(m.state_code), '')
+      )), '')
+      FROM registry.facilities f
+      LEFT JOIN registry.municipalities m ON m.municipality_id = f.municipality_id
+      WHERE fac."sourceProvider" = '${REGISTRY_PROVIDER}' AND fac."externalSourceId" = f.facility_id
+    `));
+    console.log(`   ✓ facility addresses enriched: ${getRawCount(addressesResult)} rows (${Date.now() - addressEnrichStartedAt}ms)`);
+
+    return {
+      professionalsInserted,
+      associationsInserted,
+      representativesInserted,
+    };
+  });
 
   const { professionalsInserted, associationsInserted, representativesInserted } = scopedSync;
 
-  const [counts] = await prisma.$queryRaw<
-    Array<{
-      facilities: bigint;
-      professionals: bigint;
-      associations: bigint;
-      representatives: bigint;
-    }>
-  >`
+  type CountSummary = {
+    facilities: string;
+    professionals: string;
+    associations: string;
+    representatives: string;
+  };
+
+  const countsResult = await db.execute<CountSummary>(sql`
     SELECT
       (SELECT COUNT(*)::bigint FROM public.facilities WHERE "sourceProvider" = ${REGISTRY_PROVIDER}) AS facilities,
       (SELECT COUNT(*)::bigint FROM public.professionals WHERE "sourceProvider" = ${REGISTRY_PROVIDER}) AS professionals,
@@ -850,7 +909,8 @@ async function syncPublicFromRegistry(options: ImportOptions) {
       (SELECT COUNT(*)::bigint FROM public.facility_representatives fr
         INNER JOIN public.facilities f ON f.id = fr."facilityId"
         WHERE f."sourceProvider" = ${REGISTRY_PROVIDER}) AS representatives
-  `;
+  `);
+  const counts = (countsResult as unknown as CountSummary[])[0];
 
   const stats = {
     facilitiesInserted,
@@ -881,10 +941,8 @@ async function main() {
     console.log("   Mode: dry-run");
   }
 
-  let analysisReport: Awaited<ReturnType<typeof analyzeSourceData>> | null = null;
-
   if (options.analyze) {
-    analysisReport = await analyzeSourceData(options.filters);
+    await analyzeSourceData(options.filters);
   }
 
   if (options.clean) {
@@ -900,17 +958,17 @@ async function main() {
   }
 
   if (options.clean || options.loadRegistry || options.syncPublic) {
-    const [summary] = await prisma.$queryRaw<
-      Array<{
-        users: bigint;
-        ibge_territories: bigint;
-        registry_facilities: bigint;
-        public_facilities: bigint;
-        public_professionals: bigint;
-        associations: bigint;
-        representatives: bigint;
-      }>
-    >`
+    type FinalSummary = {
+      users: string;
+      ibge_territories: string;
+      registry_facilities: string;
+      public_facilities: string;
+      public_professionals: string;
+      associations: string;
+      representatives: string;
+    };
+
+    const summaryResult = await db.execute<FinalSummary>(sql`
       SELECT
         (SELECT COUNT(*)::bigint FROM public.users) AS users,
         (SELECT COUNT(*)::bigint FROM public.territories WHERE code NOT LIKE 'DEMO-%') AS ibge_territories,
@@ -923,7 +981,8 @@ async function main() {
         (SELECT COUNT(*)::bigint FROM public.facility_representatives fr
           INNER JOIN public.facilities f ON f.id = fr."facilityId"
           WHERE f."sourceProvider" = ${REGISTRY_PROVIDER}) AS representatives
-    `;
+    `);
+    const summary = (summaryResult as unknown as FinalSummary[])[0];
 
     console.log("\n📋 Final database summary:");
     console.log(
@@ -950,5 +1009,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await db.$client.end();
   });

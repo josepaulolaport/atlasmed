@@ -23,7 +23,7 @@ Use when a task touches BOTH `apps/api` and `apps/mobile`.
 
 1. Define the API contract with mobile version drift in mind.
 2. Prefer additive changes; version if breaking is required.
-3. Update / add Prisma schema if persistence changes.
+3. Update Drizzle schema if persistence changes. Run `bunx drizzle-kit generate` then `bunx drizzle-kit migrate`.
 4. Implement backend per `apps/api/AGENTS.md` route + use-case conventions.
 5. Update mobile client + UI.
 6. Handle offline behavior: form must survive network failure mid-submission.
@@ -35,7 +35,7 @@ Use when a task touches BOTH `apps/api` and `apps/mobile`.
 
 - Never break a contract without a deprecation window — mobile clients cannot force-upgrade users overnight.
 - Backend authorization applies whether the client is web or mobile.
-- Do not couple mobile UI to Prisma-shaped fields — go through DTOs.
+- Do not couple mobile UI to Drizzle row shapes — go through DTOs.
 - Announce the "Loading:" file list before editing.
 
 ## Docs to update after

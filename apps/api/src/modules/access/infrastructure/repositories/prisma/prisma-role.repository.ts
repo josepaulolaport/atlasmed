@@ -1,29 +1,32 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { eq, asc } from "drizzle-orm";
+import { roles } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import type { RoleRepository } from "../../../application/interfaces/role.repository.interface";
 
 export class PrismaRoleRepository implements RoleRepository {
   async findById(roleId: string) {
-    return await prisma.role.findUnique({
-      where: { id: roleId },
-      select: {
-        id: true,
-        name: true,
-        priority: true,
-      },
-    });
+    const [row] = await db
+      .select({
+        id: roles.id,
+        name: roles.name,
+        priority: roles.priority,
+      })
+      .from(roles)
+      .where(eq(roles.id, roleId))
+      .limit(1);
+
+    return row ?? null;
   }
 
   async findAll() {
-    return await prisma.role.findMany({
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        priority: true,
-      },
-      orderBy: {
-        priority: "asc",
-      },
-    });
+    return await db
+      .select({
+        id: roles.id,
+        name: roles.name,
+        description: roles.description,
+        priority: roles.priority,
+      })
+      .from(roles)
+      .orderBy(asc(roles.priority));
   }
 }

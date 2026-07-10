@@ -51,7 +51,7 @@ Design tokens (zinc palette + section-card pattern) come from `apps/web/AGENTS.m
 
 ---
 
-## Example 3 — "Add a Prisma migration for facility.archived_at + backfill"
+## Example 3 — "Add a Drizzle migration for facility.archived_at + backfill"
 
 **Classify:**
 ```

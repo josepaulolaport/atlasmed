@@ -1,11 +1,9 @@
-import { prisma } from "../infrastructure/database/prisma.client";
+import { db } from "../infrastructure/database/db";
+import { users } from "@atlasmed/database";
 
 export async function isIntegrationDatabaseReady(): Promise<boolean> {
   try {
-    await prisma.user.findFirst({
-      select: { managerId: true },
-      take: 1,
-    });
+    await db.select({ managerId: users.managerId }).from(users).limit(1);
     return true;
   } catch (error) {
     console.warn(

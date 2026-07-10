@@ -12,7 +12,7 @@ Atlasmed should continue as a modular monolith while the product matures. The ba
 - PostgreSQL.
 - Redis.
 - BullMQ or equivalent queue layer.
-- Prisma initially, with repository boundaries insulating domain logic from persistence details.
+- Drizzle ORM, with repository boundaries insulating domain logic from persistence details.
 - OpenAPI-first API design.
 
 ## Target Web Stack

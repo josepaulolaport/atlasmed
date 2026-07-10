@@ -1,5 +1,7 @@
+import { eq, and, or, isNull, isNotNull, gt, lt } from "drizzle-orm";
+import { permissions } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import type { AccessGrantRecord } from "@atlasmed/access";
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
 import type { AccessGrantRepository } from "../../../application/interfaces/access-grant.repository.interface";
 
 function mapRow(row: {
@@ -15,29 +17,29 @@ function mapRow(row: {
     resource: row.resource,
     resourceId: row.resourceId,
     action: row.action,
-    conditions: row.conditions
-      ? (row.conditions as Record<string, unknown>)
-      : undefined,
+    conditions: row.conditions ? (row.conditions as Record<string, unknown>) : undefined,
     expiresAt: row.expiresAt ?? undefined,
   };
 }
 
 export class PrismaAccessGrantRepository implements AccessGrantRepository {
   async findActiveByUserId(userId: string): Promise<AccessGrantRecord[]> {
-    const rows = await prisma.permission.findMany({
-      where: {
-        userId,
-        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-      },
-      select: {
-        id: true,
-        resource: true,
-        resourceId: true,
-        action: true,
-        conditions: true,
-        expiresAt: true,
-      },
-    });
+    const rows = await db
+      .select({
+        id: permissions.id,
+        resource: permissions.resource,
+        resourceId: permissions.resourceId,
+        action: permissions.action,
+        conditions: permissions.conditions,
+        expiresAt: permissions.expiresAt,
+      })
+      .from(permissions)
+      .where(
+        and(
+          eq(permissions.userId, userId),
+          or(isNull(permissions.expiresAt), gt(permissions.expiresAt, new Date())),
+        ),
+      );
 
     return rows.map(mapRow);
   }
@@ -51,8 +53,9 @@ export class PrismaAccessGrantRepository implements AccessGrantRepository {
     grantedBy: string;
     expiresAt?: Date;
   }): Promise<AccessGrantRecord> {
-    const row = await prisma.permission.create({
-      data: {
+    const [row] = await db
+      .insert(permissions)
+      .values({
         userId: params.userId,
         resource: params.resource,
         resourceId: params.resourceId ?? null,
@@ -60,18 +63,17 @@ export class PrismaAccessGrantRepository implements AccessGrantRepository {
         conditions: params.conditions ? (params.conditions as object) : undefined,
         grantedBy: params.grantedBy,
         expiresAt: params.expiresAt ?? null,
-      },
-      select: {
-        id: true,
-        resource: true,
-        resourceId: true,
-        action: true,
-        conditions: true,
-        expiresAt: true,
-      },
-    });
+      })
+      .returning({
+        id: permissions.id,
+        resource: permissions.resource,
+        resourceId: permissions.resourceId,
+        action: permissions.action,
+        conditions: permissions.conditions,
+        expiresAt: permissions.expiresAt,
+      });
 
-    return mapRow(row);
+    return mapRow(row!);
   }
 
   async deleteMany(params: {
@@ -80,30 +82,30 @@ export class PrismaAccessGrantRepository implements AccessGrantRepository {
     resourceId?: string;
     action: string;
   }): Promise<number> {
-    const result = await prisma.permission.deleteMany({
-      where: {
-        userId: params.userId,
-        resource: params.resource,
-        action: params.action,
-        ...(params.resourceId !== undefined && {
-          resourceId: params.resourceId,
-        }),
-      },
-    });
+    const conditions = [
+      eq(permissions.userId, params.userId),
+      eq(permissions.resource, params.resource),
+      eq(permissions.action, params.action),
+    ];
 
-    return result.count;
+    if (params.resourceId !== undefined) {
+      conditions.push(eq(permissions.resourceId, params.resourceId) as any);
+    }
+
+    const result = await db
+      .delete(permissions)
+      .where(and(...conditions))
+      .returning({ id: permissions.id });
+
+    return result.length;
   }
 
   async deleteExpired(): Promise<number> {
-    const result = await prisma.permission.deleteMany({
-      where: {
-        expiresAt: {
-          not: null,
-          lt: new Date(),
-        },
-      },
-    });
+    const result = await db
+      .delete(permissions)
+      .where(and(isNotNull(permissions.expiresAt), lt(permissions.expiresAt, new Date())))
+      .returning({ id: permissions.id });
 
-    return result.count;
+    return result.length;
   }
 }

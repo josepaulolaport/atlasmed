@@ -9,7 +9,9 @@ import {
 import { access } from "../access/index";
 import { facility } from "../facility/index";
 import { professional } from "../professional/index";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { like, inArray } from "drizzle-orm";
+import { professionals, facilityProfessional } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -41,20 +43,20 @@ describe("Facility HTTP auth integration", () => {
     app = createHttpIntegrationApp(access, facility, professional);
     await redis.flushdb();
 
-    const professionalRecord = await prisma.professional.create({
-      data: {
+    const professionalRecord = await db
+      .insert(professionals)
+      .values({
         firstName: "Facility",
         lastName: `Context ${uniqueId}`,
         taxId: "52998224725",
-      },
-    });
-    await prisma.facilityProfessional.create({
-      data: {
-        facilityId: fixtures.inScopeFacilityId,
-        professionalId: professionalRecord.id,
-        confirmedAt: new Date(),
-        isPartner: false,
-      },
+      })
+      .returning()
+      .then((r) => r[0]!);
+    await db.insert(facilityProfessional).values({
+      facilityId: fixtures.inScopeFacilityId,
+      professionalId: professionalRecord.id,
+      confirmedAt: new Date(),
+      isPartner: false,
     });
     contextProfessionalId = professionalRecord.id;
   });
@@ -71,18 +73,19 @@ describe("Facility HTTP auth integration", () => {
   afterAll(async () => {
     if (!dbReady || !fixtures) return;
 
-    await prisma.facilityProfessional.deleteMany({
-      where: {
-        professional: {
-          lastName: { contains: fixtures.uniqueId },
-        },
-      },
-    });
-    await prisma.professional.deleteMany({
-      where: {
-        lastName: { contains: fixtures.uniqueId },
-      },
-    });
+    const profIds = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(like(professionals.lastName, `%${fixtures.uniqueId}%`))
+      .then((r) => r.map((p) => p.id));
+    if (profIds.length > 0) {
+      await db
+        .delete(facilityProfessional)
+        .where(inArray(facilityProfessional.professionalId, profIds));
+    }
+    await db
+      .delete(professionals)
+      .where(like(professionals.lastName, `%${fixtures.uniqueId}%`));
     await cleanupScopeIntegrationFixtures(fixtures.uniqueId);
   });
 

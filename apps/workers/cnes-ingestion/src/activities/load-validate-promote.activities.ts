@@ -1,5 +1,7 @@
 import { REGISTRY_TABLES, type RegistryTableName } from "@atlasmed/cnes-ingestion";
-import { prisma } from "../infrastructure/prisma";
+import { ingestionRuns } from "@atlasmed/database";
+import { eq, sql } from "drizzle-orm";
+import { db } from "../infrastructure/db";
 import { loadWorkerConfig } from "../config";
 import { truncateRegistryStaging } from "../infrastructure/registry-schemas";
 import { updateIngestionRunPhase } from "./discover-download.activities";
@@ -62,11 +64,10 @@ export async function loadRegistryStagingActivity(input: {
     REGISTRY_TABLES,
     config.loadConcurrency,
     async (table: RegistryTableName) => {
-      const inserted = await prisma.$executeRawUnsafe(`
-        INSERT INTO registry_staging.${table}
-        SELECT * FROM ${sourceSchema}.${table}
-      `);
-      return Number(inserted);
+      const result = await db.execute(
+        sql.raw(`INSERT INTO registry_staging.${table} SELECT * FROM ${sourceSchema}.${table}`)
+      );
+      return Number(result.count ?? 0);
     }
   );
 
@@ -88,10 +89,10 @@ export async function validateStagingActivity(input: {
 
   const emptyTables: string[] = [];
   for (const table of REGISTRY_TABLES) {
-    const rows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-      `SELECT COUNT(*)::bigint AS count FROM registry_staging.${table}`
+    const result = await db.execute<{ count: bigint }>(
+      sql.raw(`SELECT COUNT(*)::bigint AS count FROM registry_staging.${table}`)
     );
-    const count = Number(rows[0]?.count ?? 0);
+    const count = Number(result[0]?.count ?? 0);
     if (count === 0) {
       emptyTables.push(table);
     }
@@ -103,15 +104,15 @@ export async function validateStagingActivity(input: {
     details: { emptyTables },
   });
 
-  const facilityCountRows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-    `SELECT COUNT(*)::bigint AS count FROM registry_staging.facilities`
+  const facilityCountResult = await db.execute<{ count: bigint }>(
+    sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facilities`
   );
-  const stagingFacilityCount = Number(facilityCountRows[0]?.count ?? 0);
+  const stagingFacilityCount = Number(facilityCountResult[0]?.count ?? 0);
 
-  const currentRegistryRows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-    `SELECT COUNT(*)::bigint AS count FROM registry.facilities`
+  const currentRegistryResult = await db.execute<{ count: bigint }>(
+    sql`SELECT COUNT(*)::bigint AS count FROM registry.facilities`
   );
-  const currentRegistryCount = Number(currentRegistryRows[0]?.count ?? 0);
+  const currentRegistryCount = Number(currentRegistryResult[0]?.count ?? 0);
 
   if (currentRegistryCount > 0 && stagingFacilityCount > 0) {
     const deltaPct =
@@ -134,32 +135,32 @@ export async function validateStagingActivity(input: {
     });
   }
 
-  const duplicateRows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-    `SELECT COUNT(*)::bigint AS count FROM (
+  const duplicateResult = await db.execute<{ count: bigint }>(sql`
+    SELECT COUNT(*)::bigint AS count FROM (
       SELECT facility_id FROM registry_staging.facilities
       GROUP BY facility_id HAVING COUNT(*) > 1
-    ) d`
-  );
+    ) d
+  `);
   checks.push({
     name: "no_duplicate_facility_keys",
-    passed: Number(duplicateRows[0]?.count ?? 0) === 0,
-    details: { duplicateCount: Number(duplicateRows[0]?.count ?? 0) },
+    passed: Number(duplicateResult[0]?.count ?? 0) === 0,
+    details: { duplicateCount: Number(duplicateResult[0]?.count ?? 0) },
   });
 
-  const orphanAssociationRows = await prisma.$queryRawUnsafe<Array<{ count: bigint }>>(
-    `SELECT COUNT(*)::bigint AS count
+  const orphanAssociationResult = await db.execute<{ count: bigint }>(sql`
+    SELECT COUNT(*)::bigint AS count
      FROM registry_staging.facility_professionals fp
      WHERE NOT EXISTS (
        SELECT 1 FROM registry_staging.facilities f WHERE f.facility_id = fp.facility_id
      )
         OR NOT EXISTS (
        SELECT 1 FROM registry_staging.professionals p WHERE p.professional_id = fp.professional_id
-     )`
-  );
+     )
+  `);
   checks.push({
     name: "facility_professional_fk_integrity",
-    passed: Number(orphanAssociationRows[0]?.count ?? 0) === 0,
-    details: { orphanCount: Number(orphanAssociationRows[0]?.count ?? 0) },
+    passed: Number(orphanAssociationResult[0]?.count ?? 0) === 0,
+    details: { orphanCount: Number(orphanAssociationResult[0]?.count ?? 0) },
   });
 
   const report: ValidationReport = {
@@ -167,10 +168,10 @@ export async function validateStagingActivity(input: {
     checks,
   };
 
-  await prisma.ingestionRun.update({
-    where: { id: input.ingestionRunId },
-    data: { validationReport: report as object },
-  });
+  await db
+    .update(ingestionRuns)
+    .set({ validationReport: report as object })
+    .where(eq(ingestionRuns.id, input.ingestionRunId));
 
   if (!report.passed) {
     throw new Error(`Staging validation failed: ${JSON.stringify(report.checks.filter((c) => !c.passed))}`);
@@ -188,10 +189,10 @@ export async function promoteRegistrySwapActivity(input: {
   await promoteRegistrySchemas();
 
   const promotedAt = new Date();
-  await prisma.ingestionRun.update({
-    where: { id: input.ingestionRunId },
-    data: { promotedAt },
-  });
+  await db
+    .update(ingestionRuns)
+    .set({ promotedAt })
+    .where(eq(ingestionRuns.id, input.ingestionRunId));
 
   return { promotedAt: promotedAt.toISOString() };
 }

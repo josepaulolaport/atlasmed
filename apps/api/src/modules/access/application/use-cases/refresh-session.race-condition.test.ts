@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
 import { hash } from "argon2";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { eq, and, isNull } from "drizzle-orm";
+import { roles, users, sessions } from "@atlasmed/database";
+import { db } from "../../../../infrastructure/database/db";
 import { RefreshSessionUseCase } from "./refresh-session.use-case";
 import { LoginUseCase } from "./login.use-case";
 import { PrismaSessionRepository } from "../../infrastructure/repositories/prisma/prisma-session.repository";
@@ -44,10 +46,12 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     refreshSessionUseCase = accessUseCases.refreshSession();
     loginUseCase = accessUseCases.login();
 
-    // Create a dedicated test user for this test suite
-    const userRole = await prisma.role.findUnique({
-      where: { name: "USER" },
-    });
+    const userRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     if (!userRole) {
       throw new Error("USER role not found in database");
@@ -56,8 +60,9 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     const uniqueId = getUniqueTestId();
     const passwordHash = await hash("Password123!");
 
-    testUser = await prisma.user.create({
-      data: {
+    testUser = await db
+      .insert(users)
+      .values({
         email: `refresh_race_${uniqueId}@example.com`,
         username: `refresh_race_${uniqueId}`,
         passwordHash,
@@ -66,31 +71,27 @@ describe("Refresh Session Race Condition Integration Tests", () => {
         roleId: userRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-      include: { role: true },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
   });
 
   beforeEach(async () => {
     if (!dbReady || !testUser) return;
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
     await redis.flushdb();
   });
 
   afterEach(async () => {
     if (!dbReady || !testUser) return;
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
   });
 
   afterAll(async () => {
-    if (!dbReady) {
-      await prisma.$disconnect().catch(() => {});
-      return;
-    }
+    if (!dbReady) return;
 
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
-    await prisma.user.delete({ where: { id: testUser.id } }).catch(() => {});
-    await prisma.$disconnect();
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
+    await db.delete(users).where(eq(users.id, testUser.id)).catch(() => {});
   });
 
   test("should handle concurrent refresh attempts atomically", async () => {
@@ -139,9 +140,10 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       expect(failure.reason).toBeInstanceOf(TokenInvalidError);
     }
 
-    const activeSessions = await prisma.session.findMany({
-      where: { userId: testUser.id, revokedAt: null },
-    });
+    const activeSessions = await db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.userId, testUser.id), isNull(sessions.revokedAt)));
     expect(activeSessions.length).toBe(1);
   });
 
@@ -198,9 +200,10 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       })
     ).rejects.toThrow(TokenInvalidError);
 
-    const activeSessions = await prisma.session.findMany({
-      where: { userId: testUser.id, revokedAt: null },
-    });
+    const activeSessions = await db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.userId, testUser.id), isNull(sessions.revokedAt)));
 
     expect(activeSessions.length).toBe(1);
   });
@@ -225,18 +228,21 @@ describe("Refresh Session Race Condition Integration Tests", () => {
 
     expect(firstRefresh.accessToken).toBeDefined();
 
-    const activeSession = await prisma.session.findFirst({
-      where: { userId: testUser.id, revokedAt: null },
-    });
+    const activeSession = await db
+      .select()
+      .from(sessions)
+      .where(and(eq(sessions.userId, testUser.id), isNull(sessions.revokedAt)))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     expect(activeSession).toBeDefined();
 
     await redis.flushdb();
 
-    await prisma.session.update({
-      where: { id: activeSession!.id },
-      data: { updatedAt: new Date(Date.now() - 11_000) },
-    });
+    await db
+      .update(sessions)
+      .set({ updatedAt: new Date(Date.now() - 11_000) })
+      .where(eq(sessions.id, activeSession!.id));
 
     await expect(
       refreshSessionUseCase.execute({
@@ -246,12 +252,13 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       })
     ).rejects.toThrow(RefreshTokenReuseDetectedError);
 
-    const sessions = await prisma.session.findMany({
-      where: { userId: testUser.id },
-    });
+    const allSessions = await db
+      .select()
+      .from(sessions)
+      .where(eq(sessions.userId, testUser.id));
 
-    expect(sessions.length).toBeGreaterThan(0);
-    expect(sessions.every((session) => session.revokedAt !== null)).toBe(true);
+    expect(allSessions.length).toBeGreaterThan(0);
+    expect(allSessions.every((session) => session.revokedAt !== null)).toBe(true);
   });
 
   test("should not leave user locked out on refresh failure", async () => {

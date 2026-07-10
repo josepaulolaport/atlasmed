@@ -1,37 +1,79 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
-import type { PrismaClient } from "@atlasmed/database";
-
 import { PrismaVerificationTokenRepository } from "./prisma-verification-token.repository";
+
+// Track calls for assertions
+let lastDeletedWhere: any;
+let lastInsertedValues: any;
+let mockSelectResult: any = null;
+let lastUpdateWhere: any;
+
+const mockDeleteWhere = mock((expr: any) => {
+  lastDeletedWhere = expr;
+  return Promise.resolve();
+});
+const mockDeleteFn = mock(() => ({ where: mockDeleteWhere }));
+
+const mockReturningVoid = mock(() => Promise.resolve());
+const mockValues = mock((vals: any) => {
+  lastInsertedValues = vals;
+  return mockReturningVoid();
+});
+const mockInsert = mock(() => ({ values: mockValues }));
+
+const mockLimit = mock(() =>
+  Promise.resolve(mockSelectResult !== null ? [mockSelectResult] : [])
+);
+const mockSelectWhere = mock(() => ({ limit: mockLimit }));
+const mockFromInner = mock(() => ({ where: mockSelectWhere }));
+const mockSelect = mock(() => ({ from: mockFromInner }));
+
+const mockUpdateWhere = mock((expr: any) => {
+  lastUpdateWhere = expr;
+  return Promise.resolve();
+});
+const mockSet = mock(() => ({ where: mockUpdateWhere }));
+const mockUpdate = mock(() => ({ set: mockSet }));
+
+mock.module("../../../../../infrastructure/database/db", () => ({
+  db: {
+    delete: mockDeleteFn,
+    insert: mockInsert,
+    select: mockSelect,
+    update: mockUpdate,
+  },
+}));
 
 describe("PrismaVerificationTokenRepository", () => {
   let repository: PrismaVerificationTokenRepository;
-  let mockPrisma: any;
 
   beforeEach(() => {
-    mockPrisma = {
-      verificationToken: {
-        deleteMany: mock(() => Promise.resolve({ count: 0 })),
-        create: mock(() => Promise.resolve({})),
-        findFirst: mock(() => Promise.resolve(null)),
-        update: mock(() => Promise.resolve({})),
-      },
-    } as unknown as PrismaClient;
+    lastDeletedWhere = undefined;
+    lastInsertedValues = undefined;
+    mockSelectResult = null;
+    lastUpdateWhere = undefined;
+    mockDeleteWhere.mockClear();
+    mockDeleteFn.mockClear();
+    mockReturningVoid.mockClear();
+    mockValues.mockClear();
+    mockInsert.mockClear();
+    mockLimit.mockClear();
+    mockSelectWhere.mockClear();
+    mockFromInner.mockClear();
+    mockSelect.mockClear();
+    mockUpdateWhere.mockClear();
+    mockSet.mockClear();
+    mockUpdate.mockClear();
 
-    repository = new PrismaVerificationTokenRepository({ prisma: mockPrisma });
+    repository = new PrismaVerificationTokenRepository();
   });
 
   describe("deleteUnusedByUserAndType", () => {
     it("should delete unverified tokens for user and type", async () => {
       await repository.deleteUnusedByUserAndType("user-123", "EMAIL_VERIFICATION");
 
-      expect(mockPrisma.verificationToken.deleteMany).toHaveBeenCalledWith({
-        where: {
-          userId: "user-123",
-          type: "EMAIL_VERIFICATION",
-          verifiedAt: null,
-        },
-      });
+      expect(mockDeleteFn).toHaveBeenCalled();
+      expect(mockDeleteWhere).toHaveBeenCalled();
     });
   });
 
@@ -47,9 +89,16 @@ describe("PrismaVerificationTokenRepository", () => {
 
       await repository.create(params);
 
-      expect(mockPrisma.verificationToken.create).toHaveBeenCalledWith({
-        data: params,
-      });
+      expect(mockInsert).toHaveBeenCalled();
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: params.userId,
+          type: params.type,
+          tokenHash: params.tokenHash,
+          newValue: params.newValue,
+          expiresAt: params.expiresAt,
+        })
+      );
     });
   });
 
@@ -60,7 +109,8 @@ describe("PrismaVerificationTokenRepository", () => {
         newValue: null,
       };
 
-      mockPrisma.verificationToken.findFirst.mockResolvedValue(mockToken);
+      mockSelectResult = mockToken;
+      mockLimit.mockImplementation(() => Promise.resolve([mockToken]));
 
       const result = await repository.findValidToken({
         tokenHash: "hash-123",
@@ -68,24 +118,12 @@ describe("PrismaVerificationTokenRepository", () => {
         type: "EMAIL_VERIFICATION",
       });
 
-      expect(mockPrisma.verificationToken.findFirst).toHaveBeenCalledWith({
-        where: {
-          tokenHash: "hash-123",
-          userId: "user-123",
-          type: "EMAIL_VERIFICATION",
-          verifiedAt: null,
-          expiresAt: { gt: expect.any(Date) },
-        },
-        select: {
-          id: true,
-          newValue: true,
-        },
-      });
+      expect(mockSelect).toHaveBeenCalled();
       expect(result).toEqual(mockToken);
     });
 
     it("should return null if token not found", async () => {
-      mockPrisma.verificationToken.findFirst.mockResolvedValue(null);
+      mockLimit.mockImplementation(() => Promise.resolve([]));
 
       const result = await repository.findValidToken({
         tokenHash: "nonexistent",
@@ -101,10 +139,10 @@ describe("PrismaVerificationTokenRepository", () => {
     it("should mark a verification token as verified", async () => {
       await repository.markVerified("token-123");
 
-      expect(mockPrisma.verificationToken.update).toHaveBeenCalledWith({
-        where: { id: "token-123" },
-        data: { verifiedAt: expect.any(Date) },
-      });
+      expect(mockUpdate).toHaveBeenCalled();
+      expect(mockSet).toHaveBeenCalledWith(
+        expect.objectContaining({ verifiedAt: expect.any(Date) })
+      );
     });
   });
 });

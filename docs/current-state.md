@@ -13,21 +13,23 @@ atlasmed/
 ├── packages/
 │   ├── access/        # Shared auth/access contracts, permissions, schemas
 │   ├── config/        # Shared environment schemas
-│   ├── database/      # Prisma schema, migrations, generated client
+│   ├── database/      # Drizzle schema, migrations, database client factory
 │   ├── observability/ # OpenTelemetry/logger utilities
 │   └── ui/            # Shared UI package placeholder
 ```
 
 ## Backend
 
-The backend is a TypeScript API using Bun and ElysiaJS. It has PostgreSQL via Prisma, Redis, BullMQ jobs, OpenAPI/Swagger, structured errors, request observability, health checks, and security middleware.
+The backend is a TypeScript API using Bun and ElysiaJS. It has PostgreSQL + PostGIS via Drizzle ORM, Redis, BullMQ jobs, Temporal workflows, OpenAPI/Swagger, structured errors, request observability, health checks, and security middleware.
 
 Implemented backend modules:
 
 - `access`: authentication, sessions, invitations, verification, RBAC, grants, scopes, 2FA, audit, and user management.
-- `clinic`: clinic CRUD and facility-professional association workflows.
-- `doctor`: doctor CRUD.
-- `registry-ingestion`: ingestion runs and suggestions for external registry changes.
+- `facility`: facilities, professionals, facility-professional associations, conformity requirements and records.
+- `territory`: territory types, hierarchy, spatial assignment, approval workflows.
+- `catalog`: products.
+- `ingestion`: ingestion runs, diffs, suggestions.
+- `registry-ingestion`: ingestion runs and suggestions for external CNES registry changes.
 
 ## Web App
 
@@ -49,12 +51,20 @@ The current mobile app is a Flutter starter. This does not match the current tar
 
 ## Database
 
-The Prisma schema currently includes:
+ORM: Drizzle. Schema files live in `packages/database/src/schema/`. Migrations are managed by Drizzle Kit.
 
-- Users, roles, sessions, invitations, password resets, verification tokens, permissions, audit logs.
-- User territory assignments.
-- Clinics, doctors, facility-professional associations.
-- Registry ingestion runs and ingestion suggestions.
+PostgreSQL schemas in use:
+
+- `public` — CRM and operational data.
+- `registry` — CNES registry warehouse.
+
+Current Drizzle schema includes:
+
+- `public`: users, roles, sessions, invitations, password resets, verification tokens, permissions.
+- `public`: territories, territory closure, territory assignments, territory approval requests.
+- `public`: facilities (PostGIS `Point` location), professionals, associations, conformity requirements and records.
+- `public`: catalog products, ingestion runs, ingestion diffs, ingestion suggestions.
+- `registry`: raw CNES facility records (PostGIS `Point` location).
 
 Not yet present as first-class models:
 
@@ -71,4 +81,4 @@ Root-level status and implementation docs exist, including API endpoints, setup,
 
 ## Worktree Note
 
-The current branch is `feature/facility-professional` and the worktree contains uncommitted changes around clinic, doctor, registry ingestion, web pages, and generated Prisma files. Documentation work should avoid modifying those implementation files unless explicitly requested.
+The current branch is `refactor/prisma-to-drizzle-20260709`. This branch completed the full migration from Prisma to Drizzle ORM, including schema rewrites, repository migrations, infrastructure rewrites, test utility updates, and removal of all Prisma artifacts.

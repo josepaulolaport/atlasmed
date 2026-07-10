@@ -9,7 +9,9 @@ import {
 import { access } from "../access/index";
 import { facility } from "../facility/index";
 import { professional } from "../professional/index";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq, like, inArray } from "drizzle-orm";
+import { professionals, facilityProfessional } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -42,33 +44,27 @@ describe("Professional HTTP auth integration", () => {
     app = createHttpIntegrationApp(access, facility, professional);
     await redis.flushdb();
 
-    const inScopeProfessional = await prisma.professional.create({
-      data: {
-        firstName: "In",
-        lastName: `Scope ${uniqueId}`,
-      },
-    });
-    await prisma.facilityProfessional.create({
-      data: {
-        facilityId: fixtures.inScopeFacilityId,
-        professionalId: inScopeProfessional.id,
-        confirmedAt: new Date(),
-      },
+    const inScopeProfessional = await db
+      .insert(professionals)
+      .values({ firstName: "In", lastName: `Scope ${uniqueId}` })
+      .returning()
+      .then((r) => r[0]!);
+    await db.insert(facilityProfessional).values({
+      facilityId: fixtures.inScopeFacilityId,
+      professionalId: inScopeProfessional.id,
+      confirmedAt: new Date(),
     });
     inScopeProfessionalId = inScopeProfessional.id;
 
-    const outOfScopeProfessional = await prisma.professional.create({
-      data: {
-        firstName: "Out",
-        lastName: `Scope ${uniqueId}`,
-      },
-    });
-    await prisma.facilityProfessional.create({
-      data: {
-        facilityId: fixtures.outOfScopeFacilityId,
-        professionalId: outOfScopeProfessional.id,
-        confirmedAt: new Date(),
-      },
+    const outOfScopeProfessional = await db
+      .insert(professionals)
+      .values({ firstName: "Out", lastName: `Scope ${uniqueId}` })
+      .returning()
+      .then((r) => r[0]!);
+    await db.insert(facilityProfessional).values({
+      facilityId: fixtures.outOfScopeFacilityId,
+      professionalId: outOfScopeProfessional.id,
+      confirmedAt: new Date(),
     });
     outOfScopeProfessionalId = outOfScopeProfessional.id;
   });
@@ -85,18 +81,19 @@ describe("Professional HTTP auth integration", () => {
   afterAll(async () => {
     if (!dbReady || !fixtures) return;
 
-    await prisma.facilityProfessional.deleteMany({
-      where: {
-        professional: {
-          lastName: { contains: fixtures.uniqueId },
-        },
-      },
-    });
-    await prisma.professional.deleteMany({
-      where: {
-        lastName: { contains: fixtures.uniqueId },
-      },
-    });
+    const profIds = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(like(professionals.lastName, `%${fixtures.uniqueId}%`))
+      .then((r) => r.map((p) => p.id));
+    if (profIds.length > 0) {
+      await db
+        .delete(facilityProfessional)
+        .where(inArray(facilityProfessional.professionalId, profIds));
+    }
+    await db
+      .delete(professionals)
+      .where(like(professionals.lastName, `%${fixtures.uniqueId}%`));
     await cleanupScopeIntegrationFixtures(fixtures.uniqueId);
   });
 

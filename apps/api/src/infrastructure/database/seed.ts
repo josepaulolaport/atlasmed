@@ -1,4 +1,6 @@
-import { prisma } from "./prisma.client";
+import { db } from "./db";
+import { roles, users } from "@atlasmed/database";
+import { eq, or } from "drizzle-orm";
 import { hash } from "argon2";
 import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
 
@@ -11,7 +13,7 @@ interface SeedConfig {
 }
 
 async function createRoles() {
-  const roles = [
+  const roleDefs = [
     {
       name: "ADMIN",
       description: "Full system access - can manage all resources and users",
@@ -31,15 +33,14 @@ async function createRoles() {
 
   console.log("📦 Creating roles...");
 
-  for (const role of roles) {
-    await prisma.role.upsert({
-      where: { name: role.name },
-      update: {
-        description: role.description,
-        priority: role.priority,
-      },
-      create: role,
-    });
+  for (const role of roleDefs) {
+    await db
+      .insert(roles)
+      .values(role)
+      .onConflictDoUpdate({
+        target: roles.name,
+        set: { description: role.description, priority: role.priority, updatedAt: new Date() },
+      });
     console.log(`   ✓ Role "${role.name}" (priority ${role.priority})`);
   }
 }
@@ -47,14 +48,8 @@ async function createRoles() {
 async function createInitialAdmin(config: SeedConfig) {
   console.log("\n👤 Creating initial admin user...");
 
-  // Check if admin already exists
-  const existingAdmin = await prisma.user.findFirst({
-    where: {
-      OR: [
-        { email: config.adminEmail },
-        { username: config.adminUsername },
-      ],
-    },
+  const existingAdmin = await db.query.users.findFirst({
+    where: or(eq(users.email, config.adminEmail), eq(users.username, config.adminUsername)),
   });
 
   if (existingAdmin) {
@@ -65,21 +60,19 @@ async function createInitialAdmin(config: SeedConfig) {
     return;
   }
 
-  // Get ADMIN role
-  const adminRole = await prisma.role.findUnique({
-    where: { name: "ADMIN" },
+  const adminRole = await db.query.roles.findFirst({
+    where: eq(roles.name, "ADMIN"),
   });
 
   if (!adminRole) {
     throw new Error("ADMIN role not found. Run createRoles first.");
   }
 
-  // Hash password
   const passwordHash = await hash(config.adminPassword);
 
-  // Create admin user
-  const admin = await prisma.user.create({
-    data: {
+  const [admin] = await db
+    .insert(users)
+    .values({
       email: config.adminEmail,
       username: config.adminUsername,
       passwordHash,
@@ -87,28 +80,23 @@ async function createInitialAdmin(config: SeedConfig) {
       lastName: config.adminLastName || null,
       roleId: adminRole.id,
       status: "ACTIVE",
-      emailVerified: true, // Bootstrap admin is pre-verified
-    },
-    include: {
-      role: true,
-    },
-  });
+      emailVerified: true,
+    })
+    .returning();
 
   console.log("   ✓ Created initial admin user:");
-  console.log(`      Email: ${admin.email}`);
-  console.log(`      Username: ${admin.username}`);
-  console.log(`      Role: ${admin.role.name}`);
-  console.log(`      Status: ${admin.status}`);
+  console.log(`      Email: ${admin!.email}`);
+  console.log(`      Username: ${admin!.username}`);
+  console.log(`      Role: ${adminRole.name}`);
+  console.log(`      Status: ${admin!.status}`);
 }
 
 async function seed() {
   try {
     console.log("\n🌱 Starting database seed...\n");
 
-    // 1. Create roles
     await createRoles();
 
-    // 2. Create initial admin from environment variables
     const adminConfig: SeedConfig = {
       adminEmail: process.env.SEED_ADMIN_EMAIL || "admin@atlasmed.com",
       adminUsername: process.env.SEED_ADMIN_USERNAME || "admin",
@@ -117,7 +105,6 @@ async function seed() {
       adminLastName: process.env.SEED_ADMIN_LAST_NAME || "Administrator",
     };
 
-    // Validate required fields
     if (
       !adminConfig.adminEmail ||
       !adminConfig.adminUsername ||
@@ -128,7 +115,6 @@ async function seed() {
       );
     }
 
-    // Warn about default password in production
     if (
       process.env.NODE_ENV === "production" &&
       adminConfig.adminPassword === "admin123456"
@@ -149,11 +135,10 @@ async function seed() {
     console.error("\n❌ Seed failed:", error);
     throw error;
   } finally {
-    await prisma.$disconnect();
+    await db.$client.end();
   }
 }
 
-// Run seed
 seed().catch((error) => {
   console.error(error);
   process.exit(1);
