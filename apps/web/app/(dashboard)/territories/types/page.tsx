@@ -48,8 +48,8 @@ export default function TerritoryTypesPage() {
       setTypes(response.data);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load territory types",
+        title: "Erro",
+        description: "Falha ao carregar tipos de território",
         variant: "destructive",
       });
     } finally {
@@ -88,11 +88,11 @@ export default function TerritoryTypesPage() {
       });
       resetCreateForm();
       await loadTypes();
-      toast({ title: "Success", description: "Territory type created", variant: "success" });
+      toast({ title: "Sucesso", description: "Tipo de território criado", variant: "success" });
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to create territory type"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao criar tipo de território"),
         variant: "destructive",
       });
     } finally {
@@ -130,11 +130,11 @@ export default function TerritoryTypesPage() {
       });
       setEditingId(null);
       await loadTypes();
-      toast({ title: "Success", description: "Territory type updated", variant: "success" });
+      toast({ title: "Sucesso", description: "Tipo de território atualizado", variant: "success" });
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to update territory type"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao atualizar tipo de território"),
         variant: "destructive",
       });
     } finally {

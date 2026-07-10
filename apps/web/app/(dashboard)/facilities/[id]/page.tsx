@@ -8,6 +8,7 @@ import { facilityProfessionalsApi } from "@/lib/api/facility-professionals";
 import { professionalsApi } from "@/lib/api/professionals";
 import { registryApi } from "@/lib/api/registry";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { useTerritoryLabels } from "@/components/territory/territory-picker";
 import type {
   Facility,
   FacilityProfessionalListItem,
@@ -40,8 +41,6 @@ type TabKey =
   | "overview"
   | "professionals"
   | "registry"
-  | "commercial"
-  | "conformity"
   | "territory";
 
 const VIEWS: { value: FacilityProfessionalView; label: string }[] = [
@@ -68,6 +67,7 @@ export default function FacilityDetailPage() {
 
   const [suggestions, setSuggestions] = useState<RegistrySuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const { getLabel: getTerritoryLabel } = useTerritoryLabels();
 
   const loadFacility = useCallback(async () => {
     try {
@@ -75,8 +75,8 @@ export default function FacilityDetailPage() {
       setFacility(data);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to load facility"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao carregar unidade"),
         variant: "destructive",
       });
     }
@@ -92,8 +92,8 @@ export default function FacilityDetailPage() {
       setProfessionals(response.data);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to load facility professionals"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao carregar profissionais"),
         variant: "destructive",
       });
     } finally {
@@ -113,8 +113,8 @@ export default function FacilityDetailPage() {
       );
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to load suggestions"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao carregar sugestões"),
         variant: "destructive",
       });
     } finally {
@@ -147,12 +147,12 @@ export default function FacilityDetailPage() {
   const handleConfirm = async (professionalId: string) => {
     try {
       await facilityProfessionalsApi.confirmProfessional(facilityId, professionalId);
-      toast({ title: "Confirmed", description: "Professional confirmed at facility" });
+      toast({ title: "Confirmado", description: "Profissional confirmado na unidade" });
       await loadProfessionals();
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to confirm professional"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao confirmar profissional"),
         variant: "destructive",
       });
     }
@@ -162,13 +162,13 @@ export default function FacilityDetailPage() {
     if (!associateProfessionalId) return;
     try {
       await facilityProfessionalsApi.associateProfessional(facilityId, associateProfessionalId);
-      toast({ title: "Associated", description: "Professional linked to facility" });
+      toast({ title: "Associado", description: "Profissional vinculado à unidade" });
       setAssociateProfessionalId("");
       await loadProfessionals();
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to associate professional"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao associar profissional"),
         variant: "destructive",
       });
     }
@@ -178,12 +178,12 @@ export default function FacilityDetailPage() {
     if (!confirm("Remover este profissional da lista da unidade?")) return;
     try {
       await facilityProfessionalsApi.endAssociation(facilityId, professionalId);
-      toast({ title: "Removed", description: "Association ended" });
+      toast({ title: "Removido", description: "Associação encerrada" });
       await loadProfessionals();
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to end association"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao encerrar associação"),
         variant: "destructive",
       });
     }
@@ -192,12 +192,12 @@ export default function FacilityDetailPage() {
   const handleApproveSuggestion = async (id: string) => {
     try {
       await registryApi.approveSuggestion(id);
-      toast({ title: "Approved", description: "Registry suggestion applied" });
+      toast({ title: "Aprovado", description: "Sugestão de cadastro aplicada" });
       await Promise.all([loadSuggestions(), loadProfessionals(), loadFacility()]);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to approve"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao aprovar sugestão"),
         variant: "destructive",
       });
     }
@@ -206,12 +206,12 @@ export default function FacilityDetailPage() {
   const handleRejectSuggestion = async (id: string) => {
     try {
       await registryApi.rejectSuggestion(id);
-      toast({ title: "Rejected", description: "Suggestion dismissed" });
+      toast({ title: "Descartado", description: "Sugestão rejeitada" });
       await loadSuggestions();
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to reject"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao rejeitar sugestão"),
         variant: "destructive",
       });
     }
@@ -232,8 +232,6 @@ export default function FacilityDetailPage() {
         badge: suggestions.length ? `${suggestions.length} atualizações` : undefined,
         badgeVariant: "info",
       },
-      { value: "commercial", label: "Comercial" },
-      { value: "conformity", label: "Conformidade" },
       { value: "territory", label: "Território" },
     ],
     [professionals.length, suggestions.length]
@@ -282,9 +280,7 @@ export default function FacilityDetailPage() {
                 />
                 Território:{" "}
                 {facility.territoryId
-                  ? `${facility.territoryId.slice(0, 8)} (${
-                      territoryStatus ?? "assigned"
-                    })`
+                  ? getTerritoryLabel(facility.territoryId)
                   : "Não atribuído"}
               </Badge>
               <Badge
@@ -370,8 +366,6 @@ export default function FacilityDetailPage() {
         />
       )}
 
-      {activeTab === "commercial" && <CommercialTab />}
-      {activeTab === "conformity" && <ConformityTab />}
       {activeTab === "territory" && <TerritoryTab facility={facility} />}
     </>
   );
@@ -752,88 +746,8 @@ function SuggestionCard({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  hint,
-  trend,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  trend?: { direction: "up" | "down"; text: string };
-}) {
-  return (
-    <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm flex flex-col justify-center">
-      <span className="text-xs font-medium text-zinc-500 mb-1">{label}</span>
-      <span className="text-2xl font-semibold tracking-tight text-zinc-900">
-        {value}
-      </span>
-      {trend && (
-        <span
-          className={cn(
-            "text-xs mt-2 flex items-center gap-1",
-            trend.direction === "up" ? "text-emerald-600" : "text-red-600"
-          )}
-        >
-          <iconify-icon
-            icon={
-              trend.direction === "up"
-                ? "solar:trend-up-linear"
-                : "solar:trend-down-linear"
-            }
-          />
-          {trend.text}
-        </span>
-      )}
-      {hint && !trend && (
-        <span className="text-xs text-zinc-500 mt-2">{hint}</span>
-      )}
-    </div>
-  );
-}
-
-function CommercialTab() {
-  return (
-    <div className="p-6 max-w-5xl mx-auto w-full">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <StatCard label="Receita no ano" value="—" hint="Dados não conectados" />
-        <StatCard label="Contratos ativos" value="—" hint="Dados não conectados" />
-        <StatCard label="Pontuação de potencial" value="—" hint="Dados não conectados" />
-      </div>
-      <div className="rounded-xl border border-zinc-200 bg-white p-10 text-center shadow-sm">
-        <p className="text-sm text-zinc-500">
-          Integração do pipeline comercial em breve.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ConformityTab() {
-  return (
-    <div className="p-6 max-w-5xl mx-auto w-full">
-      <div className="mb-6 p-4 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-3">
-        <iconify-icon
-          icon="solar:shield-check-linear"
-          stroke-width="1.5"
-          className="text-emerald-500 text-lg mt-0.5"
-        />
-        <div>
-          <h4 className="text-sm font-medium text-emerald-900">
-            Status de conformidade desconhecido
-          </h4>
-          <p className="text-sm text-emerald-700 mt-1">
-            O acompanhamento de licenças &amp; certificações aparecerá aqui
-            quando a integração do cadastro entrar no ar.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function TerritoryTab({ facility }: { facility: Facility }) {
+  const { getLabel } = useTerritoryLabels();
   return (
     <div className="p-6 max-w-5xl mx-auto w-full">
       <div className="bg-white border border-zinc-200 rounded-xl overflow-hidden shadow-sm mb-6">
@@ -843,7 +757,7 @@ function TerritoryTab({ facility }: { facility: Facility }) {
           </h3>
         </div>
         <div className="p-5 grid grid-cols-2 gap-6">
-          <Field label="ID do território" value={facility.territoryId} />
+          <Field label="Território" value={facility.territoryId ? getLabel(facility.territoryId) : undefined} />
           <Field
             label="Status de atribuição"
             value={facility.territoryAssignmentStatus}

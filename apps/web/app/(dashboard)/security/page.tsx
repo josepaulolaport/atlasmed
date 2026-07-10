@@ -89,16 +89,16 @@ export default function SecurityPage() {
     try {
       await verificationApi.requestEmailVerification();
       toast({
-        title: "Success",
-        description: "Verification email sent. Please check your inbox.",
+        title: "Sucesso",
+        description: "E-mail de verificação enviado. Verifique sua caixa de entrada.",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast({
-        title: "Error",
+        title: "Erro",
         description:
-          error.response?.data?.message || "Failed to send verification email",
+          error.response?.data?.message || "Falha ao enviar e-mail de verificação",
         variant: "destructive",
       });
     } finally {
@@ -111,16 +111,16 @@ export default function SecurityPage() {
     try {
       await verificationApi.requestPhoneVerification();
       toast({
-        title: "Success",
-        description: "Verification code sent to your phone.",
+        title: "Sucesso",
+        description: "Código de verificação enviado para o seu telefone.",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
       toast({
-        title: "Error",
+        title: "Erro",
         description:
-          error.response?.data?.message || "Failed to send verification code",
+          error.response?.data?.message || "Falha ao enviar código de verificação",
         variant: "destructive",
       });
     } finally {
@@ -138,15 +138,15 @@ export default function SecurityPage() {
       });
       changePasswordForm.reset({ revokeOtherSessions: true });
       toast({
-        title: "Success",
-        description: "Password changed successfully",
+        title: "Sucesso",
+        description: "Senha alterada com sucesso",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
       toast({
-        title: "Error",
-        description: error.response?.data?.error || "Failed to change password",
+        title: "Erro",
+        description: error.response?.data?.error || "Falha ao alterar senha",
         variant: "destructive",
       });
     } finally {
@@ -160,18 +160,18 @@ export default function SecurityPage() {
       const result = await authApi.setup2FA();
       setSetupData(result);
       toast({
-        title: "Setup started",
+        title: "Configuração iniciada",
         description:
-          "Scan the code or enter the secret in your authenticator app.",
+          "Escaneie o código ou insira o segredo no seu aplicativo autenticador.",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
       toast({
-        title: "Error",
+        title: "Erro",
         description:
           error.response?.data?.error ||
-          "Two-factor authentication is not available",
+          "Autenticação em dois fatores indisponível",
         variant: "destructive",
       });
     } finally {
@@ -187,16 +187,16 @@ export default function SecurityPage() {
       confirm2FAForm.reset();
       await refreshUser();
       toast({
-        title: "Success",
-        description: "Two-factor authentication enabled",
+        title: "Sucesso",
+        description: "Autenticação em dois fatores ativada",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
       toast({
-        title: "Error",
+        title: "Erro",
         description:
-          error.response?.data?.error || "Invalid verification code",
+          error.response?.data?.error || "Código de verificação inválido",
         variant: "destructive",
       });
     } finally {
@@ -212,17 +212,17 @@ export default function SecurityPage() {
       disable2FAForm.reset();
       await refreshUser();
       toast({
-        title: "Success",
-        description: "Two-factor authentication disabled",
+        title: "Sucesso",
+        description: "Autenticação em dois fatores desativada",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
       toast({
-        title: "Error",
+        title: "Erro",
         description:
           error.response?.data?.error ||
-          "Failed to disable two-factor authentication",
+          "Falha ao desativar autenticação em dois fatores",
         variant: "destructive",
       });
     } finally {

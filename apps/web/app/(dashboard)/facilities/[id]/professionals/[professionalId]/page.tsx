@@ -55,8 +55,8 @@ export default function FacilityProfessionalRegistrationPage() {
       setContext(registrationContext);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to load registration context"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao carregar contexto de cadastro"),
         variant: "destructive",
       });
       setContext(null);
@@ -89,8 +89,8 @@ export default function FacilityProfessionalRegistrationPage() {
       toast({ title: "Saved", description: "Professional profile updated" });
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to update professional profile"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao atualizar perfil do profissional"),
         variant: "destructive",
       });
     } finally {
@@ -112,8 +112,8 @@ export default function FacilityProfessionalRegistrationPage() {
       toast({ title: "Saved", description: "Facility roles updated" });
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to update facility roles"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao atualizar funções na unidade"),
         variant: "destructive",
       });
     } finally {

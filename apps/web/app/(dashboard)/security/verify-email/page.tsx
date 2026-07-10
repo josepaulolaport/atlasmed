@@ -40,8 +40,8 @@ function VerifyEmailForm() {
       await verificationApi.verifyEmail({ token: data.token });
       await refreshUser();
       toast({
-        title: "Success",
-        description: "Email verified successfully",
+        title: "Sucesso",
+        description: "E-mail verificado com sucesso",
         variant: "success",
       });
       router.push("/security");

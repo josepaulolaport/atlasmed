@@ -74,15 +74,6 @@ export function Sidebar() {
   ];
 
   const administration: NavItem[] = [
-    ...(hasMinimumRole(roleName, "MANAGER")
-      ? [
-          {
-            name: "Ingestão de cadastro",
-            href: "/registry-suggestions",
-            icon: "solar:database-linear",
-          } as NavItem,
-        ]
-      : []),
     ...(canManageUsers(roleName)
       ? [
           {

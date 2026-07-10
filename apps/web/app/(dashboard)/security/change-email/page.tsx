@@ -58,8 +58,8 @@ export default function ChangeEmailPage() {
     try {
       await verificationApi.confirmEmailChange(data);
       toast({
-        title: "Success",
-        description: "Email address updated",
+        title: "Sucesso",
+        description: "Endereço de e-mail atualizado",
         variant: "success",
       });
     } catch (err) {

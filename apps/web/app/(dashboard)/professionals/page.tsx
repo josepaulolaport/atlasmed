@@ -76,8 +76,8 @@ export default function ProfessionalsPage() {
         setFacilities(facilitiesResponse.data);
       } catch (error) {
         toast({
-          title: "Error",
-          description: getApiErrorMessage(error, "Failed to load professionals"),
+          title: "Erro",
+          description: getApiErrorMessage(error, "Falha ao carregar profissionais"),
           variant: "destructive",
         });
       } finally {
@@ -135,7 +135,7 @@ export default function ProfessionalsPage() {
           lastName: formLastName.trim(),
           primarySpecialtyLabel: formSpecialty.trim() || null,
         });
-        toast({ title: "Success", description: "Professional updated" });
+        toast({ title: "Sucesso", description: "Profissional atualizado" });
         setDialogOpen(false);
         setRefreshKey((value) => value + 1);
       } else {
@@ -145,14 +145,14 @@ export default function ProfessionalsPage() {
           primarySpecialtyLabel: formSpecialty.trim() || undefined,
           facilityIds: formFacilityIds,
         });
-        toast({ title: "Success", description: "Professional created" });
+        toast({ title: "Sucesso", description: "Profissional criado" });
         setDialogOpen(false);
         router.push(`/professionals/${created.id}`);
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to save professional"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao salvar profissional"),
         variant: "destructive",
       });
     } finally {
@@ -165,12 +165,12 @@ export default function ProfessionalsPage() {
 
     try {
       await professionalsApi.deleteProfessional(professional.id);
-      toast({ title: "Success", description: "Professional deleted" });
+      toast({ title: "Sucesso", description: "Profissional excluído" });
       setRefreshKey((value) => value + 1);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to delete professional"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao excluir profissional"),
         variant: "destructive",
       });
     }

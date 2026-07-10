@@ -87,7 +87,7 @@ apiClient.interceptors.response.use(
     };
 
     if (error.response?.status === 429) {
-      throw new Error("Too many requests. Please try again later.");
+      throw new Error("Muitas requisições. Tente novamente em instantes.");
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -154,11 +154,11 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 403) {
-      throw new Error("You don't have permission to perform this action.");
+      throw new Error("Você não tem permissão para realizar esta ação.");
     }
 
     if (error.response?.status === 500) {
-      throw new Error("An unexpected error occurred. Please try again later.");
+      throw new Error("Ocorreu um erro inesperado. Tente novamente mais tarde.");
     }
 
     return Promise.reject(error);

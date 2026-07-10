@@ -12,6 +12,8 @@ function serializeClinic(clinic: {
   territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
   createdAt: Date;
   updatedAt: Date;
+  professionalCount?: number;
+  consultantName?: string | null;
 }) {
   return {
     id: clinic.id,
@@ -20,6 +22,8 @@ function serializeClinic(clinic: {
     lng: clinic.lng ?? undefined,
     territoryId: clinic.territoryId ?? undefined,
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
+    professionalCount: clinic.professionalCount ?? 0,
+    consultantName: clinic.consultantName ?? null,
     createdAt: clinic.createdAt.toISOString(),
     updatedAt: clinic.updatedAt.toISOString(),
   };

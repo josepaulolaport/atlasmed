@@ -27,8 +27,8 @@ export default function SessionsPage() {
         setSessions(data);
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load sessions",
+          title: "Erro",
+          description: "Falha ao carregar sessões",
           variant: "destructive",
         });
       } finally {
@@ -49,8 +49,8 @@ export default function SessionsPage() {
     try {
       await authApi.revokeSession(sessionId);
       toast({
-        title: "Success",
-        description: "Session revoked successfully",
+        title: "Sucesso",
+        description: "Sessão revogada com sucesso",
         variant: "success",
       });
 
@@ -58,8 +58,8 @@ export default function SessionsPage() {
       setSessions(data);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to revoke session",
+        title: "Erro",
+        description: "Falha ao revogar sessão",
         variant: "destructive",
       });
     } finally {
@@ -90,19 +90,19 @@ export default function SessionsPage() {
                 try {
                   const result = await authApi.revokeOtherSessions();
                   toast({
-                    title: "Success",
+                    title: "Sucesso",
                     description:
                       result.revokedCount > 0
-                        ? `Signed out of ${result.revokedCount} other device(s)`
-                        : "No other active sessions found",
+                        ? `Sessões encerradas em ${result.revokedCount} outro(s) dispositivo(s)`
+                        : "Nenhuma outra sessão ativa encontrada",
                     variant: "success",
                   });
                   const data = await authApi.getSessions();
                   setSessions(data);
                 } catch {
                   toast({
-                    title: "Error",
-                    description: "Failed to sign out other devices",
+                    title: "Erro",
+                    description: "Falha ao encerrar sessões em outros dispositivos",
                     variant: "destructive",
                   });
                 }

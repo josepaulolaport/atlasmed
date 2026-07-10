@@ -34,8 +34,8 @@ export default function ProfessionalDetailPage() {
       setProfessional(data);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to load professional"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao carregar profissional"),
         variant: "destructive",
       });
       setProfessional(null);
@@ -63,8 +63,8 @@ export default function ProfessionalDetailPage() {
       toast({ title: "Saved", description: "Professional profile updated" });
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to update professional"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao atualizar profissional"),
         variant: "destructive",
       });
     } finally {

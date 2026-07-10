@@ -58,8 +58,8 @@ export default function HealthPage() {
         setHealth(data);
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load health status",
+          title: "Erro",
+          description: "Falha ao carregar status do sistema",
           variant: "destructive",
         });
       } finally {
