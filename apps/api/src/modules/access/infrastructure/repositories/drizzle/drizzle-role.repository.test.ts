@@ -4,7 +4,7 @@ import { roles } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { DrizzleRoleRepository } from "./drizzle-role.repository";
 
-describe("DrizzleRoleRepository", () => {
+describe("DrizzleRoleRepository (Integration)", () => {
   describe("findAll", () => {
     it("should return roles ordered by priority ascending", async () => {
       const repository = new DrizzleRoleRepository();

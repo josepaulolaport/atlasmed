@@ -10,7 +10,7 @@
     "predev": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
     "build": "bun build ./src/app/server.ts --outdir dist",
     "test": "NODE_ENV=test bun test",
-    "test:unit": "NODE_ENV=test bun test --test-name-pattern=\"^((?!Integration Tests).)*$\"",
+    "test:unit": "NODE_ENV=test bun test --test-name-pattern='^(?!.*Integration Tests)(?!.*\\(Integration\\))(?!.*integration)(?!.*race-condition).*$'",
     "test:integration": "NODE_ENV=test bun test --test-name-pattern=\"Integration Tests\"",
     "test:watch": "NODE_ENV=test bun test --watch",
     "lint": "eslint src",
