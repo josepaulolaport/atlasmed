@@ -27,53 +27,6 @@ export const authSessionTypeEnum = pgEnum("auth_session_type", [
   "API",
 ]);
 
-export const ingestionRunStatusEnum = pgEnum("ingestion_run_status", [
-  "RUNNING",
-  "COMPLETED",
-  "FAILED",
-]);
-
-export const ingestionRunPhaseEnum = pgEnum("ingestion_run_phase", [
-  "DISCOVERING",
-  "DOWNLOADING",
-  "EXTRACTING",
-  "PREFLIGHT",
-  "PARSING",
-  "LOADING",
-  "VALIDATING",
-  "RECONCILING",
-  "PROMOTING",
-  "SYNCING",
-  "FAILED",
-]);
-
-export const ingestionDiffScopeEnum = pgEnum("ingestion_diff_scope", [
-  "WAREHOUSE",
-  "CRM",
-]);
-
-export const ingestionSuggestionTypeEnum = pgEnum("ingestion_suggestion_type", [
-  "FACILITY_FIELD_UPDATE",
-  "PROFESSIONAL_FIELD_UPDATE",
-  "FACILITY_REGISTRY_DEACTIVATED",
-  "FACILITY_REGISTRY_REACTIVATED",
-  "FACILITY_PROFESSIONAL_REMOVAL",
-  "FACILITY_PROFESSIONAL_ADD",
-  "FACILITY_REPRESENTATIVE_REMOVAL",
-  "FACILITY_REPRESENTATIVE_ADD",
-  "FACILITY_REPRESENTATIVE_FIELD_UPDATE",
-  "CLINIC_REMOVAL",
-  "CLINIC_REACTIVATION",
-  "DOCTOR_CLINIC_REMOVAL",
-]);
-
-export const ingestionSuggestionStatusEnum = pgEnum("ingestion_suggestion_status", [
-  "PENDING",
-  "APPROVED",
-  "REJECTED",
-  "EXPIRED",
-  "SUPERSEDED",
-]);
 
 export const conformityStatusEnum = pgEnum("conformity_status", [
   "INCOMPLETE",

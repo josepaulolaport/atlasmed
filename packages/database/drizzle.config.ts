@@ -6,10 +6,11 @@ export default defineConfig({
     "./src/schema/public/index.ts",
     "./src/schema/audit/index.ts",
     "./src/schema/registry/index.ts",
+    "./src/schema/ingestion/index.ts",
   ],
   out: "./drizzle",
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
-  schemaFilter: ["public", "audit", "registry"],
+  schemaFilter: ["public", "audit", "registry", "ingestion"],
 });

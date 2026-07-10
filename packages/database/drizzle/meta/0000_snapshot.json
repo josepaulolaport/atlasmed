@@ -1,5 +1,5 @@
 {
-  "id": "4f5b9dba-6c5b-4fca-8ab6-8d66d2a54c96",
+  "id": "5f9d5c61-d8bc-4bcc-b73e-cf6e0b296566",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -4461,487 +4461,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.ingestion_diffs": {
-      "name": "ingestion_diffs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "ingestion_run_id": {
-          "name": "ingestion_run_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope": {
-          "name": "scope",
-          "type": "ingestion_diff_scope",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "entity_type": {
-          "name": "entity_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "external_source_id": {
-          "name": "external_source_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "diff_type": {
-          "name": "diff_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "payload": {
-          "name": "payload",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::json"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "ingestion_diffs_ingestion_run_id_idx": {
-          "name": "ingestion_diffs_ingestion_run_id_idx",
-          "columns": [
-            {
-              "expression": "ingestion_run_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ingestion_diffs_scope_entity_type_idx": {
-          "name": "ingestion_diffs_scope_entity_type_idx",
-          "columns": [
-            {
-              "expression": "scope",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "entity_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "ingestion_diffs_ingestion_run_id_ingestion_runs_id_fk": {
-          "name": "ingestion_diffs_ingestion_run_id_ingestion_runs_id_fk",
-          "tableFrom": "ingestion_diffs",
-          "tableTo": "ingestion_runs",
-          "columnsFrom": [
-            "ingestion_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.ingestion_runs": {
-      "name": "ingestion_runs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "source_provider": {
-          "name": "source_provider",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "ingestion_run_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'RUNNING'"
-        },
-        "phase": {
-          "name": "phase",
-          "type": "ingestion_run_phase",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "phase_started_at": {
-          "name": "phase_started_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "temporal_workflow_id": {
-          "name": "temporal_workflow_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reference_ano": {
-          "name": "reference_ano",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reference_mes": {
-          "name": "reference_mes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "started_at": {
-          "name": "started_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "promoted_at": {
-          "name": "promoted_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stats": {
-          "name": "stats",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "validation_report": {
-          "name": "validation_report",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "archive_manifest": {
-          "name": "archive_manifest",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "ingestion_runs_source_provider_started_at_idx": {
-          "name": "ingestion_runs_source_provider_started_at_idx",
-          "columns": [
-            {
-              "expression": "source_provider",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "started_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ingestion_runs_status_idx": {
-          "name": "ingestion_runs_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ingestion_runs_temporal_workflow_id_idx": {
-          "name": "ingestion_runs_temporal_workflow_id_idx",
-          "columns": [
-            {
-              "expression": "temporal_workflow_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.ingestion_suggestions": {
-      "name": "ingestion_suggestions",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "ingestion_run_id": {
-          "name": "ingestion_run_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "type": {
-          "name": "type",
-          "type": "ingestion_suggestion_type",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "ingestion_suggestion_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'PENDING'"
-        },
-        "facility_id": {
-          "name": "facility_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "professional_id": {
-          "name": "professional_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "facility_professional_id": {
-          "name": "facility_professional_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "payload": {
-          "name": "payload",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::json"
-        },
-        "suggested_at": {
-          "name": "suggested_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "resolved_at": {
-          "name": "resolved_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "resolved_by_user_id": {
-          "name": "resolved_by_user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "resolution_note": {
-          "name": "resolution_note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "ingestion_suggestions_status_type_idx": {
-          "name": "ingestion_suggestions_status_type_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ingestion_suggestions_facility_id_status_idx": {
-          "name": "ingestion_suggestions_facility_id_status_idx",
-          "columns": [
-            {
-              "expression": "facility_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "ingestion_suggestions_ingestion_run_id_idx": {
-          "name": "ingestion_suggestions_ingestion_run_id_idx",
-          "columns": [
-            {
-              "expression": "ingestion_run_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "ingestion_suggestions_ingestion_run_id_ingestion_runs_id_fk": {
-          "name": "ingestion_suggestions_ingestion_run_id_ingestion_runs_id_fk",
-          "tableFrom": "ingestion_suggestions",
-          "tableTo": "ingestion_runs",
-          "columnsFrom": [
-            "ingestion_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "ingestion_suggestions_facility_id_facilities_id_fk": {
-          "name": "ingestion_suggestions_facility_id_facilities_id_fk",
-          "tableFrom": "ingestion_suggestions",
-          "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "ingestion_suggestions_professional_id_professionals_id_fk": {
-          "name": "ingestion_suggestions_professional_id_professionals_id_fk",
-          "tableFrom": "ingestion_suggestions",
-          "tableTo": "professionals",
-          "columnsFrom": [
-            "professional_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        },
-        "ingestion_suggestions_facility_professional_id_facility_professionals_id_fk": {
-          "name": "ingestion_suggestions_facility_professional_id_facility_professionals_id_fk",
-          "tableFrom": "ingestion_suggestions",
-          "tableTo": "facility_professionals",
-          "columnsFrom": [
-            "facility_professional_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "audit.audit_logs": {
       "name": "audit_logs",
       "schema": "audit",
@@ -6293,6 +5812,489 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "ingestion.cnes_diffs": {
+      "name": "cnes_diffs",
+      "schema": "ingestion",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cnes_run_id": {
+          "name": "cnes_run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "cnes_diff_scope",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_source_id": {
+          "name": "external_source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diff_type": {
+          "name": "diff_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::json"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "cnes_diffs_cnes_run_id_idx": {
+          "name": "cnes_diffs_cnes_run_id_idx",
+          "columns": [
+            {
+              "expression": "cnes_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_diffs_scope_entity_type_idx": {
+          "name": "cnes_diffs_scope_entity_type_idx",
+          "columns": [
+            {
+              "expression": "scope",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cnes_diffs_cnes_run_id_cnes_runs_id_fk": {
+          "name": "cnes_diffs_cnes_run_id_cnes_runs_id_fk",
+          "tableFrom": "cnes_diffs",
+          "tableTo": "cnes_runs",
+          "schemaTo": "ingestion",
+          "columnsFrom": [
+            "cnes_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "ingestion.cnes_runs": {
+      "name": "cnes_runs",
+      "schema": "ingestion",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "source_provider": {
+          "name": "source_provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "cnes_run_status",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'RUNNING'"
+        },
+        "phase": {
+          "name": "phase",
+          "type": "cnes_run_phase",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phase_started_at": {
+          "name": "phase_started_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "temporal_workflow_id": {
+          "name": "temporal_workflow_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_ano": {
+          "name": "reference_ano",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reference_mes": {
+          "name": "reference_mes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "promoted_at": {
+          "name": "promoted_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stats": {
+          "name": "stats",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "validation_report": {
+          "name": "validation_report",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "archive_manifest": {
+          "name": "archive_manifest",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "cnes_runs_source_provider_started_at_idx": {
+          "name": "cnes_runs_source_provider_started_at_idx",
+          "columns": [
+            {
+              "expression": "source_provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_runs_status_idx": {
+          "name": "cnes_runs_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_runs_temporal_workflow_id_idx": {
+          "name": "cnes_runs_temporal_workflow_id_idx",
+          "columns": [
+            {
+              "expression": "temporal_workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "ingestion.cnes_suggestions": {
+      "name": "cnes_suggestions",
+      "schema": "ingestion",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cnes_run_id": {
+          "name": "cnes_run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "cnes_suggestion_type",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "cnes_suggestion_status",
+          "typeSchema": "ingestion",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'PENDING'"
+        },
+        "facility_id": {
+          "name": "facility_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "professional_id": {
+          "name": "professional_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "facility_professional_id": {
+          "name": "facility_professional_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::json"
+        },
+        "suggested_at": {
+          "name": "suggested_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolved_by_user_id": {
+          "name": "resolved_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolution_note": {
+          "name": "resolution_note",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "cnes_suggestions_status_type_idx": {
+          "name": "cnes_suggestions_status_type_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_suggestions_facility_id_status_idx": {
+          "name": "cnes_suggestions_facility_id_status_idx",
+          "columns": [
+            {
+              "expression": "facility_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "cnes_suggestions_cnes_run_id_idx": {
+          "name": "cnes_suggestions_cnes_run_id_idx",
+          "columns": [
+            {
+              "expression": "cnes_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "cnes_suggestions_cnes_run_id_cnes_runs_id_fk": {
+          "name": "cnes_suggestions_cnes_run_id_cnes_runs_id_fk",
+          "tableFrom": "cnes_suggestions",
+          "tableTo": "cnes_runs",
+          "schemaTo": "ingestion",
+          "columnsFrom": [
+            "cnes_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "cnes_suggestions_facility_id_facilities_id_fk": {
+          "name": "cnes_suggestions_facility_id_facilities_id_fk",
+          "tableFrom": "cnes_suggestions",
+          "tableTo": "facilities",
+          "columnsFrom": [
+            "facility_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "cnes_suggestions_professional_id_professionals_id_fk": {
+          "name": "cnes_suggestions_professional_id_professionals_id_fk",
+          "tableFrom": "cnes_suggestions",
+          "tableTo": "professionals",
+          "columnsFrom": [
+            "professional_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "cnes_suggestions_facility_professional_id_facility_professionals_id_fk": {
+          "name": "cnes_suggestions_facility_professional_id_facility_professionals_id_fk",
+          "tableFrom": "cnes_suggestions",
+          "tableTo": "facility_professionals",
+          "columnsFrom": [
+            "facility_professional_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -6372,69 +6374,6 @@
         "PUBLIC",
         "MIXED",
         "OTHER"
-      ]
-    },
-    "public.ingestion_diff_scope": {
-      "name": "ingestion_diff_scope",
-      "schema": "public",
-      "values": [
-        "WAREHOUSE",
-        "CRM"
-      ]
-    },
-    "public.ingestion_run_phase": {
-      "name": "ingestion_run_phase",
-      "schema": "public",
-      "values": [
-        "DISCOVERING",
-        "DOWNLOADING",
-        "EXTRACTING",
-        "PREFLIGHT",
-        "PARSING",
-        "LOADING",
-        "VALIDATING",
-        "RECONCILING",
-        "PROMOTING",
-        "SYNCING",
-        "FAILED"
-      ]
-    },
-    "public.ingestion_run_status": {
-      "name": "ingestion_run_status",
-      "schema": "public",
-      "values": [
-        "RUNNING",
-        "COMPLETED",
-        "FAILED"
-      ]
-    },
-    "public.ingestion_suggestion_status": {
-      "name": "ingestion_suggestion_status",
-      "schema": "public",
-      "values": [
-        "PENDING",
-        "APPROVED",
-        "REJECTED",
-        "EXPIRED",
-        "SUPERSEDED"
-      ]
-    },
-    "public.ingestion_suggestion_type": {
-      "name": "ingestion_suggestion_type",
-      "schema": "public",
-      "values": [
-        "FACILITY_FIELD_UPDATE",
-        "PROFESSIONAL_FIELD_UPDATE",
-        "FACILITY_REGISTRY_DEACTIVATED",
-        "FACILITY_REGISTRY_REACTIVATED",
-        "FACILITY_PROFESSIONAL_REMOVAL",
-        "FACILITY_PROFESSIONAL_ADD",
-        "FACILITY_REPRESENTATIVE_REMOVAL",
-        "FACILITY_REPRESENTATIVE_ADD",
-        "FACILITY_REPRESENTATIVE_FIELD_UPDATE",
-        "CLINIC_REMOVAL",
-        "CLINIC_REACTIVATION",
-        "DOCTOR_CLINIC_REMOVAL"
       ]
     },
     "public.invitation_status": {
@@ -6586,11 +6525,75 @@
         "DOCTOR_CLINIC_MANUAL_ASSOCIATED",
         "CLINIC_REACTIVATED"
       ]
+    },
+    "ingestion.cnes_diff_scope": {
+      "name": "cnes_diff_scope",
+      "schema": "ingestion",
+      "values": [
+        "WAREHOUSE",
+        "CRM"
+      ]
+    },
+    "ingestion.cnes_run_phase": {
+      "name": "cnes_run_phase",
+      "schema": "ingestion",
+      "values": [
+        "DISCOVERING",
+        "DOWNLOADING",
+        "EXTRACTING",
+        "PREFLIGHT",
+        "PARSING",
+        "LOADING",
+        "VALIDATING",
+        "RECONCILING",
+        "PROMOTING",
+        "SYNCING",
+        "FAILED"
+      ]
+    },
+    "ingestion.cnes_run_status": {
+      "name": "cnes_run_status",
+      "schema": "ingestion",
+      "values": [
+        "RUNNING",
+        "COMPLETED",
+        "FAILED"
+      ]
+    },
+    "ingestion.cnes_suggestion_status": {
+      "name": "cnes_suggestion_status",
+      "schema": "ingestion",
+      "values": [
+        "PENDING",
+        "APPROVED",
+        "REJECTED",
+        "EXPIRED",
+        "SUPERSEDED"
+      ]
+    },
+    "ingestion.cnes_suggestion_type": {
+      "name": "cnes_suggestion_type",
+      "schema": "ingestion",
+      "values": [
+        "FACILITY_FIELD_UPDATE",
+        "PROFESSIONAL_FIELD_UPDATE",
+        "FACILITY_REGISTRY_DEACTIVATED",
+        "FACILITY_REGISTRY_REACTIVATED",
+        "FACILITY_PROFESSIONAL_REMOVAL",
+        "FACILITY_PROFESSIONAL_ADD",
+        "FACILITY_REPRESENTATIVE_REMOVAL",
+        "FACILITY_REPRESENTATIVE_ADD",
+        "FACILITY_REPRESENTATIVE_FIELD_UPDATE",
+        "CLINIC_REMOVAL",
+        "CLINIC_REACTIVATION",
+        "DOCTOR_CLINIC_REMOVAL"
+      ]
     }
   },
   "schemas": {
     "audit": "audit",
-    "registry": "registry"
+    "registry": "registry",
+    "ingestion": "ingestion"
   },
   "sequences": {},
   "roles": {},

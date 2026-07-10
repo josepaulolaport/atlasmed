@@ -10,8 +10,8 @@ import {
   facilities,
   professionals,
   facilityProfessionals,
-  ingestionRuns,
-  ingestionSuggestions,
+  cnesRuns,
+  cnesSuggestions,
 } from "@atlasmed/database";
 import { eq, and, or, inArray, like, sql } from "drizzle-orm";
 import { ROLE_PRIORITY_BY_NAME } from "../modules/access/application/constants/role-priority.constants";
@@ -110,10 +110,10 @@ async function cleanupDemoData() {
 
   if (demoFacilityIds.length > 0 || demoProfessionalIds.length > 0) {
     const suggestionConditions = [
-      ...(demoFacilityIds.length > 0 ? [inArray(ingestionSuggestions.facilityId, demoFacilityIds)] : []),
-      ...(demoProfessionalIds.length > 0 ? [inArray(ingestionSuggestions.professionalId, demoProfessionalIds)] : []),
+      ...(demoFacilityIds.length > 0 ? [inArray(cnesSuggestions.facilityId, demoFacilityIds)] : []),
+      ...(demoProfessionalIds.length > 0 ? [inArray(cnesSuggestions.professionalId, demoProfessionalIds)] : []),
     ];
-    await db.delete(ingestionSuggestions).where(or(...suggestionConditions));
+    await db.delete(cnesSuggestions).where(or(...suggestionConditions));
 
     const fpConditions = [
       ...(demoFacilityIds.length > 0 ? [inArray(facilityProfessionals.facilityId, demoFacilityIds)] : []),
@@ -153,7 +153,7 @@ async function cleanupDemoData() {
     await db.delete(territories).where(inArray(territories.id, demoTerritoryIds));
   }
 
-  await db.delete(ingestionRuns).where(eq(ingestionRuns.sourceProvider, "demo_seed"));
+  await db.delete(cnesRuns).where(eq(cnesRuns.sourceProvider, "demo_seed"));
 
   console.log("   ✓ Demo data removed");
 }
@@ -552,7 +552,7 @@ async function seedRegistrySuggestions(params: {
   associations: Awaited<ReturnType<typeof seedAssociations>>;
 }) {
   const [run] = await db
-    .insert(ingestionRuns)
+    .insert(cnesRuns)
     .values({
       sourceProvider: "demo_seed",
       status: "COMPLETED",
@@ -561,7 +561,7 @@ async function seedRegistrySuggestions(params: {
     })
     .returning();
 
-  await db.insert(ingestionSuggestions).values({
+  await db.insert(cnesSuggestions).values({
     ingestionRunId: run!.id,
     type: "FACILITY_PROFESSIONAL_REMOVAL",
     status: "PENDING",
@@ -572,7 +572,7 @@ async function seedRegistrySuggestions(params: {
     payload: { demo: true, message: "Registry no longer lists this association" },
   });
 
-  await db.insert(ingestionSuggestions).values({
+  await db.insert(cnesSuggestions).values({
     ingestionRunId: run!.id,
     type: "FACILITY_FIELD_UPDATE",
     status: "PENDING",
