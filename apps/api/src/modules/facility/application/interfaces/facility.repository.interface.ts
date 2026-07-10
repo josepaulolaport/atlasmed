@@ -2,11 +2,15 @@ export interface FacilityRecord {
   id: string;
   name: string;
   address: string | null;
+  city: string | null;
+  stateCode: string | null;
+  cnpj: string | null;
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
   territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
   territoryAssignmentSource: "geo" | "manual";
+  purchaseStatus: "NAO_COMPRA" | "COMPRA" | "COMPRA_POUCO" | "COMPRA_MUITO" | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;

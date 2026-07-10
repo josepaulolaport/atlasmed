@@ -433,6 +433,16 @@ export const CommercialStatus: {
 export type CommercialStatus = (typeof CommercialStatus)[keyof typeof CommercialStatus]
 
 
+export const PurchaseStatus: {
+  NAO_COMPRA: 'NAO_COMPRA',
+  COMPRA: 'COMPRA',
+  COMPRA_POUCO: 'COMPRA_POUCO',
+  COMPRA_MUITO: 'COMPRA_MUITO'
+};
+
+export type PurchaseStatus = (typeof PurchaseStatus)[keyof typeof PurchaseStatus]
+
+
 export const ContactType: {
   PROFESSIONAL: 'PROFESSIONAL',
   DECISOR: 'DECISOR',
@@ -603,6 +613,10 @@ export const ConformityStatus: typeof $Enums.ConformityStatus
 export type CommercialStatus = $Enums.CommercialStatus
 
 export const CommercialStatus: typeof $Enums.CommercialStatus
+
+export type PurchaseStatus = $Enums.PurchaseStatus
+
+export const PurchaseStatus: typeof $Enums.PurchaseStatus
 
 export type ContactType = $Enums.ContactType
 
@@ -49354,6 +49368,9 @@ export namespace Prisma {
     referenceMunicipalityCode: string | null
     conformityStatus: $Enums.ConformityStatus | null
     commercialStatus: $Enums.CommercialStatus | null
+    purchaseStatus: $Enums.PurchaseStatus | null
+    city: string | null
+    stateCode: string | null
     primarySectorId: string | null
     imageUrl: string | null
     territoryId: string | null
@@ -49399,6 +49416,9 @@ export namespace Prisma {
     referenceMunicipalityCode: string | null
     conformityStatus: $Enums.ConformityStatus | null
     commercialStatus: $Enums.CommercialStatus | null
+    purchaseStatus: $Enums.PurchaseStatus | null
+    city: string | null
+    stateCode: string | null
     primarySectorId: string | null
     imageUrl: string | null
     territoryId: string | null
@@ -49444,6 +49464,9 @@ export namespace Prisma {
     referenceMunicipalityCode: number
     conformityStatus: number
     commercialStatus: number
+    purchaseStatus: number
+    city: number
+    stateCode: number
     primarySectorId: number
     imageUrl: number
     territoryId: number
@@ -49501,6 +49524,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: true
     conformityStatus?: true
     commercialStatus?: true
+    purchaseStatus?: true
+    city?: true
+    stateCode?: true
     primarySectorId?: true
     imageUrl?: true
     territoryId?: true
@@ -49546,6 +49572,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: true
     conformityStatus?: true
     commercialStatus?: true
+    purchaseStatus?: true
+    city?: true
+    stateCode?: true
     primarySectorId?: true
     imageUrl?: true
     territoryId?: true
@@ -49591,6 +49620,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: true
     conformityStatus?: true
     commercialStatus?: true
+    purchaseStatus?: true
+    city?: true
+    stateCode?: true
     primarySectorId?: true
     imageUrl?: true
     territoryId?: true
@@ -49723,6 +49755,9 @@ export namespace Prisma {
     referenceMunicipalityCode: string | null
     conformityStatus: $Enums.ConformityStatus
     commercialStatus: $Enums.CommercialStatus | null
+    purchaseStatus: $Enums.PurchaseStatus | null
+    city: string | null
+    stateCode: string | null
     primarySectorId: string | null
     imageUrl: string | null
     territoryId: string | null
@@ -49787,6 +49822,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: boolean
     conformityStatus?: boolean
     commercialStatus?: boolean
+    purchaseStatus?: boolean
+    city?: boolean
+    stateCode?: boolean
     primarySectorId?: boolean
     imageUrl?: boolean
     territoryId?: boolean
@@ -49842,6 +49880,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: boolean
     conformityStatus?: boolean
     commercialStatus?: boolean
+    purchaseStatus?: boolean
+    city?: boolean
+    stateCode?: boolean
     primarySectorId?: boolean
     imageUrl?: boolean
     territoryId?: boolean
@@ -49889,6 +49930,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: boolean
     conformityStatus?: boolean
     commercialStatus?: boolean
+    purchaseStatus?: boolean
+    city?: boolean
+    stateCode?: boolean
     primarySectorId?: boolean
     imageUrl?: boolean
     territoryId?: boolean
@@ -49936,6 +49980,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: boolean
     conformityStatus?: boolean
     commercialStatus?: boolean
+    purchaseStatus?: boolean
+    city?: boolean
+    stateCode?: boolean
     primarySectorId?: boolean
     imageUrl?: boolean
     territoryId?: boolean
@@ -49954,7 +50001,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type FacilityOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "displayName" | "address" | "lat" | "lng" | "cnesCode" | "legalName" | "tradeName" | "streetAddress" | "streetNumber" | "addressComplement" | "neighborhood" | "postalCode" | "phoneNumber" | "faxNumber" | "email" | "websiteUrl" | "taxIdCnpj" | "taxIdCpf" | "ownerTaxId" | "facilityTypeCode" | "registryDeactivationCode" | "isActiveInRegistry" | "referenceMunicipalityCode" | "conformityStatus" | "commercialStatus" | "primarySectorId" | "imageUrl" | "territoryId" | "territoryAssignmentStatus" | "territoryAssignmentSource" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["facility"]>
+  export type FacilityOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "displayName" | "address" | "lat" | "lng" | "cnesCode" | "legalName" | "tradeName" | "streetAddress" | "streetNumber" | "addressComplement" | "neighborhood" | "postalCode" | "phoneNumber" | "faxNumber" | "email" | "websiteUrl" | "taxIdCnpj" | "taxIdCpf" | "ownerTaxId" | "facilityTypeCode" | "registryDeactivationCode" | "isActiveInRegistry" | "referenceMunicipalityCode" | "conformityStatus" | "commercialStatus" | "purchaseStatus" | "city" | "stateCode" | "primarySectorId" | "imageUrl" | "territoryId" | "territoryAssignmentStatus" | "territoryAssignmentSource" | "sourceProvider" | "externalSourceId" | "sourceContentHash" | "sourceFirstSeenAt" | "sourceLastSeenAt" | "sourcePresent" | "sourceTracked" | "manuallyEditedAt" | "deletedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["facility"]>
   export type FacilityInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     primarySector?: boolean | Facility$primarySectorArgs<ExtArgs>
     territory?: boolean | Facility$territoryArgs<ExtArgs>
@@ -50016,6 +50063,9 @@ export namespace Prisma {
       referenceMunicipalityCode: string | null
       conformityStatus: $Enums.ConformityStatus
       commercialStatus: $Enums.CommercialStatus | null
+      purchaseStatus: $Enums.PurchaseStatus | null
+      city: string | null
+      stateCode: string | null
       primarySectorId: string | null
       imageUrl: string | null
       territoryId: string | null
@@ -50490,6 +50540,9 @@ export namespace Prisma {
     readonly referenceMunicipalityCode: FieldRef<"Facility", 'String'>
     readonly conformityStatus: FieldRef<"Facility", 'ConformityStatus'>
     readonly commercialStatus: FieldRef<"Facility", 'CommercialStatus'>
+    readonly purchaseStatus: FieldRef<"Facility", 'PurchaseStatus'>
+    readonly city: FieldRef<"Facility", 'String'>
+    readonly stateCode: FieldRef<"Facility", 'String'>
     readonly primarySectorId: FieldRef<"Facility", 'String'>
     readonly imageUrl: FieldRef<"Facility", 'String'>
     readonly territoryId: FieldRef<"Facility", 'String'>
@@ -67320,6 +67373,9 @@ export namespace Prisma {
     referenceMunicipalityCode: 'referenceMunicipalityCode',
     conformityStatus: 'conformityStatus',
     commercialStatus: 'commercialStatus',
+    purchaseStatus: 'purchaseStatus',
+    city: 'city',
+    stateCode: 'stateCode',
     primarySectorId: 'primarySectorId',
     imageUrl: 'imageUrl',
     territoryId: 'territoryId',
@@ -67879,6 +67935,20 @@ export namespace Prisma {
    * Reference to a field of type 'CommercialStatus[]'
    */
   export type ListEnumCommercialStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CommercialStatus[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'PurchaseStatus'
+   */
+  export type EnumPurchaseStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PurchaseStatus'>
+    
+
+
+  /**
+   * Reference to a field of type 'PurchaseStatus[]'
+   */
+  export type ListEnumPurchaseStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PurchaseStatus[]'>
     
 
 
@@ -71290,6 +71360,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: StringNullableFilter<"Facility"> | string | null
     conformityStatus?: EnumConformityStatusFilter<"Facility"> | $Enums.ConformityStatus
     commercialStatus?: EnumCommercialStatusNullableFilter<"Facility"> | $Enums.CommercialStatus | null
+    purchaseStatus?: EnumPurchaseStatusNullableFilter<"Facility"> | $Enums.PurchaseStatus | null
+    city?: StringNullableFilter<"Facility"> | string | null
+    stateCode?: StringNullableFilter<"Facility"> | string | null
     primarySectorId?: StringNullableFilter<"Facility"> | string | null
     imageUrl?: StringNullableFilter<"Facility"> | string | null
     territoryId?: StringNullableFilter<"Facility"> | string | null
@@ -71344,6 +71417,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: SortOrderInput | SortOrder
     conformityStatus?: SortOrder
     commercialStatus?: SortOrderInput | SortOrder
+    purchaseStatus?: SortOrderInput | SortOrder
+    city?: SortOrderInput | SortOrder
+    stateCode?: SortOrderInput | SortOrder
     primarySectorId?: SortOrderInput | SortOrder
     imageUrl?: SortOrderInput | SortOrder
     territoryId?: SortOrderInput | SortOrder
@@ -71403,6 +71479,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: StringNullableFilter<"Facility"> | string | null
     conformityStatus?: EnumConformityStatusFilter<"Facility"> | $Enums.ConformityStatus
     commercialStatus?: EnumCommercialStatusNullableFilter<"Facility"> | $Enums.CommercialStatus | null
+    purchaseStatus?: EnumPurchaseStatusNullableFilter<"Facility"> | $Enums.PurchaseStatus | null
+    city?: StringNullableFilter<"Facility"> | string | null
+    stateCode?: StringNullableFilter<"Facility"> | string | null
     primarySectorId?: StringNullableFilter<"Facility"> | string | null
     imageUrl?: StringNullableFilter<"Facility"> | string | null
     territoryId?: StringNullableFilter<"Facility"> | string | null
@@ -71457,6 +71536,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: SortOrderInput | SortOrder
     conformityStatus?: SortOrder
     commercialStatus?: SortOrderInput | SortOrder
+    purchaseStatus?: SortOrderInput | SortOrder
+    city?: SortOrderInput | SortOrder
+    stateCode?: SortOrderInput | SortOrder
     primarySectorId?: SortOrderInput | SortOrder
     imageUrl?: SortOrderInput | SortOrder
     territoryId?: SortOrderInput | SortOrder
@@ -71510,6 +71592,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: StringNullableWithAggregatesFilter<"Facility"> | string | null
     conformityStatus?: EnumConformityStatusWithAggregatesFilter<"Facility"> | $Enums.ConformityStatus
     commercialStatus?: EnumCommercialStatusNullableWithAggregatesFilter<"Facility"> | $Enums.CommercialStatus | null
+    purchaseStatus?: EnumPurchaseStatusNullableWithAggregatesFilter<"Facility"> | $Enums.PurchaseStatus | null
+    city?: StringNullableWithAggregatesFilter<"Facility"> | string | null
+    stateCode?: StringNullableWithAggregatesFilter<"Facility"> | string | null
     primarySectorId?: StringNullableWithAggregatesFilter<"Facility"> | string | null
     imageUrl?: StringNullableWithAggregatesFilter<"Facility"> | string | null
     territoryId?: StringNullableWithAggregatesFilter<"Facility"> | string | null
@@ -76508,6 +76593,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -76560,6 +76648,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -76612,6 +76703,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -76664,6 +76758,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -76716,6 +76813,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -76761,6 +76861,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -76804,6 +76907,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -80685,6 +80791,13 @@ export namespace Prisma {
     not?: NestedEnumCommercialStatusNullableFilter<$PrismaModel> | $Enums.CommercialStatus | null
   }
 
+  export type EnumPurchaseStatusNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.PurchaseStatus | EnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    in?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumPurchaseStatusNullableFilter<$PrismaModel> | $Enums.PurchaseStatus | null
+  }
+
   export type EnumTerritoryAssignmentStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.TerritoryAssignmentStatus | EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
     in?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
@@ -80801,6 +80914,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: SortOrder
     conformityStatus?: SortOrder
     commercialStatus?: SortOrder
+    purchaseStatus?: SortOrder
+    city?: SortOrder
+    stateCode?: SortOrder
     primarySectorId?: SortOrder
     imageUrl?: SortOrder
     territoryId?: SortOrder
@@ -80851,6 +80967,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: SortOrder
     conformityStatus?: SortOrder
     commercialStatus?: SortOrder
+    purchaseStatus?: SortOrder
+    city?: SortOrder
+    stateCode?: SortOrder
     primarySectorId?: SortOrder
     imageUrl?: SortOrder
     territoryId?: SortOrder
@@ -80896,6 +81015,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: SortOrder
     conformityStatus?: SortOrder
     commercialStatus?: SortOrder
+    purchaseStatus?: SortOrder
+    city?: SortOrder
+    stateCode?: SortOrder
     primarySectorId?: SortOrder
     imageUrl?: SortOrder
     territoryId?: SortOrder
@@ -80937,6 +81059,16 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedEnumCommercialStatusNullableFilter<$PrismaModel>
     _max?: NestedEnumCommercialStatusNullableFilter<$PrismaModel>
+  }
+
+  export type EnumPurchaseStatusNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.PurchaseStatus | EnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    in?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumPurchaseStatusNullableWithAggregatesFilter<$PrismaModel> | $Enums.PurchaseStatus | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumPurchaseStatusNullableFilter<$PrismaModel>
+    _max?: NestedEnumPurchaseStatusNullableFilter<$PrismaModel>
   }
 
   export type EnumTerritoryAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -83219,6 +83351,10 @@ export namespace Prisma {
     set?: $Enums.CommercialStatus | null
   }
 
+  export type NullableEnumPurchaseStatusFieldUpdateOperationsInput = {
+    set?: $Enums.PurchaseStatus | null
+  }
+
   export type EnumTerritoryAssignmentStatusFieldUpdateOperationsInput = {
     set?: $Enums.TerritoryAssignmentStatus
   }
@@ -84576,6 +84712,13 @@ export namespace Prisma {
     not?: NestedEnumCommercialStatusNullableFilter<$PrismaModel> | $Enums.CommercialStatus | null
   }
 
+  export type NestedEnumPurchaseStatusNullableFilter<$PrismaModel = never> = {
+    equals?: $Enums.PurchaseStatus | EnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    in?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumPurchaseStatusNullableFilter<$PrismaModel> | $Enums.PurchaseStatus | null
+  }
+
   export type NestedEnumTerritoryAssignmentStatusFilter<$PrismaModel = never> = {
     equals?: $Enums.TerritoryAssignmentStatus | EnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
     in?: $Enums.TerritoryAssignmentStatus[] | ListEnumTerritoryAssignmentStatusFieldRefInput<$PrismaModel>
@@ -84608,6 +84751,16 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedEnumCommercialStatusNullableFilter<$PrismaModel>
     _max?: NestedEnumCommercialStatusNullableFilter<$PrismaModel>
+  }
+
+  export type NestedEnumPurchaseStatusNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: $Enums.PurchaseStatus | EnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    in?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    notIn?: $Enums.PurchaseStatus[] | ListEnumPurchaseStatusFieldRefInput<$PrismaModel> | null
+    not?: NestedEnumPurchaseStatusNullableWithAggregatesFilter<$PrismaModel> | $Enums.PurchaseStatus | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedEnumPurchaseStatusNullableFilter<$PrismaModel>
+    _max?: NestedEnumPurchaseStatusNullableFilter<$PrismaModel>
   }
 
   export type NestedEnumTerritoryAssignmentStatusWithAggregatesFilter<$PrismaModel = never> = {
@@ -86444,6 +86597,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -86495,6 +86651,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
@@ -86954,6 +87113,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: StringNullableFilter<"Facility"> | string | null
     conformityStatus?: EnumConformityStatusFilter<"Facility"> | $Enums.ConformityStatus
     commercialStatus?: EnumCommercialStatusNullableFilter<"Facility"> | $Enums.CommercialStatus | null
+    purchaseStatus?: EnumPurchaseStatusNullableFilter<"Facility"> | $Enums.PurchaseStatus | null
+    city?: StringNullableFilter<"Facility"> | string | null
+    stateCode?: StringNullableFilter<"Facility"> | string | null
     primarySectorId?: StringNullableFilter<"Facility"> | string | null
     imageUrl?: StringNullableFilter<"Facility"> | string | null
     territoryId?: StringNullableFilter<"Facility"> | string | null
@@ -87446,6 +87608,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -87497,6 +87662,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -87787,6 +87955,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -87838,6 +88009,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -90160,6 +90334,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -90211,6 +90388,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -90399,6 +90579,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -90450,6 +90633,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -90517,6 +90703,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -90568,6 +90757,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -90635,6 +90827,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -90686,6 +90881,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -90737,6 +90935,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -90788,6 +90989,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -90855,6 +91059,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -90906,6 +91113,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -90985,6 +91195,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -91036,6 +91249,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryId?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
@@ -91314,6 +91530,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -91365,6 +91584,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -91455,6 +91677,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -91506,6 +91731,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -91696,6 +91924,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -91747,6 +91978,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -91841,6 +92075,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -91892,6 +92129,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -92227,6 +92467,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: $Enums.TerritoryAssignmentSource
@@ -92278,6 +92521,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryId?: string | null
@@ -92526,6 +92772,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -92577,6 +92826,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -93472,6 +93724,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     primarySectorId?: string | null
     imageUrl?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
@@ -93732,6 +93987,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -93783,6 +94041,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
@@ -93834,6 +94095,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     primarySectorId?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
@@ -94995,6 +95259,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: string | null
     conformityStatus?: $Enums.ConformityStatus
     commercialStatus?: $Enums.CommercialStatus | null
+    purchaseStatus?: $Enums.PurchaseStatus | null
+    city?: string | null
+    stateCode?: string | null
     imageUrl?: string | null
     territoryId?: string | null
     territoryAssignmentStatus?: $Enums.TerritoryAssignmentStatus
@@ -95076,6 +95343,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
     territoryAssignmentSource?: EnumTerritoryAssignmentSourceFieldUpdateOperationsInput | $Enums.TerritoryAssignmentSource
@@ -95127,6 +95397,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus
@@ -95178,6 +95451,9 @@ export namespace Prisma {
     referenceMunicipalityCode?: NullableStringFieldUpdateOperationsInput | string | null
     conformityStatus?: EnumConformityStatusFieldUpdateOperationsInput | $Enums.ConformityStatus
     commercialStatus?: NullableEnumCommercialStatusFieldUpdateOperationsInput | $Enums.CommercialStatus | null
+    purchaseStatus?: NullableEnumPurchaseStatusFieldUpdateOperationsInput | $Enums.PurchaseStatus | null
+    city?: NullableStringFieldUpdateOperationsInput | string | null
+    stateCode?: NullableStringFieldUpdateOperationsInput | string | null
     imageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     territoryId?: NullableStringFieldUpdateOperationsInput | string | null
     territoryAssignmentStatus?: EnumTerritoryAssignmentStatusFieldUpdateOperationsInput | $Enums.TerritoryAssignmentStatus

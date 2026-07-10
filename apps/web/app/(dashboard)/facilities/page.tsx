@@ -15,14 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogFooter,
@@ -31,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Search, Users, MapPin, Pencil, Trash2 } from "lucide-react";
 
 function territoryStatusBadge(status?: Facility["territoryAssignmentStatus"]) {
   if (!status || status === "assigned") return null;
@@ -40,6 +32,24 @@ function territoryStatusBadge(status?: Facility["territoryAssignmentStatus"]) {
       {status}
     </Badge>
   );
+}
+
+function purchaseStatusBadge(status?: Facility["purchaseStatus"]) {
+  if (!status) return null;
+  
+  const variants: Record<string, { variant: "default" | "secondary" | "outline" | "destructive"; label: string }> = {
+    NAO_COMPRA: { variant: "outline", label: "Não compra" },
+    COMPRA: { variant: "default", label: "Compra" },
+    COMPRA_POUCO: { variant: "secondary", label: "Compra pouco" },
+    COMPRA_MUITO: { variant: "default", label: "Compra muito" },
+  };
+  
+  const config = variants[status];
+  return config ? (
+    <Badge variant={config.variant} className="text-xs">
+      {config.label}
+    </Badge>
+  ) : null;
 }
 
 export default function FacilitiesPage() {
@@ -54,6 +64,9 @@ export default function FacilitiesPage() {
   const [editingFacility, setEditingFacility] = useState<Facility | null>(null);
   const [formName, setFormName] = useState("");
   const [formAddress, setFormAddress] = useState("");
+  const [formCity, setFormCity] = useState("");
+  const [formStateCode, setFormStateCode] = useState("");
+  const [formCnpj, setFormCnpj] = useState("");
   const [formLat, setFormLat] = useState("");
   const [formLng, setFormLng] = useState("");
   const [saving, setSaving] = useState(false);
@@ -78,7 +91,7 @@ export default function FacilitiesPage() {
       try {
         const response = await facilitiesApi.getFacilities({
           page,
-          limit: 10,
+          limit: 12,
           search: search || undefined,
         });
         setFacilities(response.data);
@@ -101,6 +114,9 @@ export default function FacilitiesPage() {
     setEditingFacility(null);
     setFormName("");
     setFormAddress("");
+    setFormCity("");
+    setFormStateCode("");
+    setFormCnpj("");
     setFormLat("");
     setFormLng("");
     setDialogOpen(true);
@@ -110,6 +126,9 @@ export default function FacilitiesPage() {
     setEditingFacility(facility);
     setFormName(facility.name);
     setFormAddress(facility.address ?? "");
+    setFormCity(facility.city ?? "");
+    setFormStateCode(facility.stateCode ?? "");
+    setFormCnpj(facility.cnpj ?? "");
     setFormLat(facility.lat != null ? String(facility.lat) : "");
     setFormLng(facility.lng != null ? String(facility.lng) : "");
     setDialogOpen(true);
@@ -198,6 +217,9 @@ export default function FacilitiesPage() {
         await facilitiesApi.updateFacility(editingFacility.id, {
           name: formName.trim(),
           address: formAddress.trim() || null,
+          city: formCity.trim() || null,
+          stateCode: formStateCode.trim() || null,
+          cnpj: formCnpj.trim() || null,
           lat,
           lng,
         });
@@ -210,6 +232,9 @@ export default function FacilitiesPage() {
         await facilitiesApi.createFacility({
           name: formName.trim(),
           address: formAddress.trim() || undefined,
+          city: formCity.trim() || undefined,
+          stateCode: formStateCode.trim() || undefined,
+          cnpj: formCnpj.trim() || undefined,
           lat: lat ?? undefined,
           lng: lng ?? undefined,
         });
@@ -274,123 +299,170 @@ export default function FacilitiesPage() {
         </div>
       </div>
 
-      <div className="p-6 max-w-6xl mx-auto w-full">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b border-zinc-200 bg-zinc-50/50">
-            <div className="relative max-w-sm">
-              <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              <Input
-                placeholder="Buscar unidades..."
-                value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
-                className="pl-8"
-              />
-            </div>
+      <div className="p-6 max-w-7xl mx-auto w-full">
+        <div className="mb-6">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            <Input
+              placeholder="Buscar unidades..."
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setPage(1);
+              }}
+              className="pl-8"
+            />
           </div>
-          <div className="p-0">
-          {loading ? (
-            <div className="py-10 text-center text-sm text-zinc-500">
-              Carregando unidades…
-            </div>
-          ) : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Endereço</TableHead>
-                    <TableHead>Coordenadas</TableHead>
-                    <TableHead>Território</TableHead>
-                    {canManage && <TableHead className="w-[120px]">Ações</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {facilities.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={canManage ? 5 : 4}
-                        className="text-center text-gray-500"
-                      >
-                        Nenhuma unidade encontrada
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    facilities.map((facility) => (
-                      <TableRow key={facility.id}>
-                        <TableCell className="font-medium">
-                          <Link
-                            href={`/facilities/${facility.id}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {facility.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>{facility.address || "—"}</TableCell>
-                        <TableCell className="text-sm">
-                          {facility.lat != null && facility.lng != null
-                            ? `${facility.lat.toFixed(4)}, ${facility.lng.toFixed(4)}`
-                            : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <span>
-                            {facility.territoryId ? getLabel(facility.territoryId) : "—"}
+        </div>
+
+        {loading ? (
+          <div className="py-10 text-center text-sm text-zinc-500">
+            Carregando unidades…
+          </div>
+        ) : facilities.length === 0 ? (
+          <div className="py-10 text-center text-sm text-zinc-500">
+            Nenhuma unidade encontrada
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {facilities.map((facility) => (
+                <div
+                  key={facility.id}
+                  className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+                >
+                  <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Users className="h-4 w-4 text-zinc-400 flex-shrink-0" />
+                          <span className="text-xs text-zinc-500">
+                            Consultor: {/* TODO: Get from territory */}
+                            <span className="text-zinc-900 font-medium">—</span>
+                          </span>
+                        </div>
+                        <Link
+                          href={`/facilities/${facility.id}`}
+                          className="text-lg font-semibold text-zinc-900 hover:text-blue-600 transition-colors block truncate"
+                        >
+                          {facility.name}
+                        </Link>
+                      </div>
+                      <div className="flex items-center gap-1 pl-2 flex-shrink-0">
+                        <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-zinc-200">
+                          <Users className="h-3.5 w-3.5 text-zinc-500" />
+                          <span className="text-sm font-medium text-zinc-700">
+                            {/* TODO: Get actual professional count */}
+                            0
+                          </span>
+                        </div>
+                        {canManage && (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => openEditDialog(facility)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-red-600 hover:text-red-700"
+                              onClick={() => handleDelete(facility)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-5 space-y-3">
+                    {facility.cnpj && (
+                      <div>
+                        <p className="text-xs text-zinc-500 mb-0.5">CNPJ</p>
+                        <p className="text-sm text-zinc-900">{facility.cnpj}</p>
+                      </div>
+                    )}
+
+                    {facility.address && (
+                      <div>
+                        <div className="flex items-start gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-zinc-400 mt-0.5 flex-shrink-0" />
+                          <p className="text-sm text-zinc-700">{facility.address}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {(facility.city || facility.stateCode) && (
+                      <div>
+                        <p className="text-sm text-zinc-900 font-medium">
+                          {facility.city}
+                          {facility.city && facility.stateCode && ", "}
+                          {facility.stateCode}
+                        </p>
+                      </div>
+                    )}
+
+                    {facility.lat != null && facility.lng != null && (
+                      <div>
+                        <p className="text-xs text-zinc-500 mb-0.5">Coordenadas</p>
+                        <p className="text-xs text-zinc-600 font-mono">
+                          {facility.lat.toFixed(4)}, {facility.lng.toFixed(4)}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 pt-2">
+                      {facility.territoryId ? (
+                        <>
+                          <p className="text-xs text-zinc-500">Território:</p>
+                          <span className="text-xs text-zinc-900 font-medium">
+                            {getLabel(facility.territoryId)}
                           </span>
                           {territoryStatusBadge(facility.territoryAssignmentStatus)}
-                        </TableCell>
-                        {canManage && (
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => openEditDialog(facility)}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDelete(facility)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                        </>
+                      ) : (
+                        <p className="text-xs text-zinc-500">Sem território atribuído</p>
+                      )}
+                    </div>
 
-              <div className="px-5 py-3 border-t border-zinc-200 bg-zinc-50/50 flex items-center justify-between">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((value) => value - 1)}
-                >
-                  Anterior
-                </Button>
-                <span className="text-xs text-zinc-500">
-                  Página {page} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  Próximo
-                </Button>
-              </div>
-            </>
-          )}
-        </div>
-        </div>
+                    {facility.purchaseStatus && (
+                      <div className="pt-2">
+                        {purchaseStatusBadge(facility.purchaseStatus)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((value) => value - 1)}
+              >
+                Anterior
+              </Button>
+              <span className="text-xs text-zinc-500">
+                Página {page} de {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => setPage((value) => value + 1)}
+              >
+                Próximo
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -406,6 +478,17 @@ export default function FacilitiesPage() {
                 value={formName}
                 onChange={(event) => setFormName(event.target.value)}
               />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="clinic-cnpj">CNPJ</Label>
+                <Input
+                  id="clinic-cnpj"
+                  value={formCnpj}
+                  onChange={(event) => setFormCnpj(event.target.value)}
+                  placeholder="00.000.000/0000-00"
+                />
+              </div>
             </div>
             <div>
               <Label htmlFor="clinic-address">Endereço</Label>
@@ -423,6 +506,26 @@ export default function FacilitiesPage() {
                 >
                   {geocoding ? "Geocodificando..." : "Geocodificar"}
                 </Button>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="clinic-city">Cidade</Label>
+                <Input
+                  id="clinic-city"
+                  value={formCity}
+                  onChange={(event) => setFormCity(event.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="clinic-state">Estado (UF)</Label>
+                <Input
+                  id="clinic-state"
+                  value={formStateCode}
+                  onChange={(event) => setFormStateCode(event.target.value)}
+                  placeholder="SP"
+                  maxLength={2}
+                />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

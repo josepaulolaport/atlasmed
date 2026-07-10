@@ -10,14 +10,20 @@ import type {
 
 export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
 
+export type PurchaseStatus = "NAO_COMPRA" | "COMPRA" | "COMPRA_POUCO" | "COMPRA_MUITO";
+
 export interface Facility {
   id: string;
   name: string;
   address?: string;
+  city?: string;
+  stateCode?: string;
   lat?: number;
   lng?: number;
+  cnpj?: string;
   territoryId?: string;
   territoryAssignmentStatus?: TerritoryAssignmentStatus;
+  purchaseStatus?: PurchaseStatus;
   createdAt: string;
   updatedAt: string;
 }

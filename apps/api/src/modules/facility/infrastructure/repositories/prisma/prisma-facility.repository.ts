@@ -10,11 +10,15 @@ function mapFacility(facility: {
   id: string;
   displayName: string;
   address: string | null;
+  city: string | null;
+  stateCode: string | null;
+  taxIdCnpj: string | null;
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
   territoryAssignmentStatus: FacilityRecord["territoryAssignmentStatus"];
   territoryAssignmentSource: FacilityRecord["territoryAssignmentSource"];
+  purchaseStatus: FacilityRecord["purchaseStatus"];
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -31,11 +35,15 @@ function mapFacility(facility: {
     id: facility.id,
     name: facility.displayName,
     address: facility.address,
+    city: facility.city,
+    stateCode: facility.stateCode,
+    cnpj: facility.taxIdCnpj,
     lat: facility.lat,
     lng: facility.lng,
     territoryId: facility.territoryId,
     territoryAssignmentStatus: facility.territoryAssignmentStatus,
     territoryAssignmentSource: facility.territoryAssignmentSource,
+    purchaseStatus: facility.purchaseStatus,
     sourceProvider: facility.sourceProvider,
     externalSourceId: facility.externalSourceId,
     sourceContentHash: facility.sourceContentHash,

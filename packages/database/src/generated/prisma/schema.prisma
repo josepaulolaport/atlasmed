@@ -545,6 +545,15 @@ enum CommercialStatus {
   @@schema("public")
 }
 
+enum PurchaseStatus {
+  NAO_COMPRA
+  COMPRA
+  COMPRA_POUCO
+  COMPRA_MUITO
+
+  @@schema("public")
+}
+
 enum ContactType {
   PROFESSIONAL
   DECISOR
@@ -1044,6 +1053,9 @@ model Facility {
   referenceMunicipalityCode String?                           @map("reference_municipality_code")
   conformityStatus          ConformityStatus                  @default(INCOMPLETE)
   commercialStatus          CommercialStatus?                 @map("commercial_status")
+  purchaseStatus            PurchaseStatus?                   @map("purchase_status")
+  city                      String?
+  stateCode                 String?                           @map("state_code")
   primarySectorId           String?                           @map("primary_sector_id")
   primarySector             Sector?                           @relation(fields: [primarySectorId], references: [id], onDelete: SetNull)
   imageUrl                  String?                           @map("image_url")
