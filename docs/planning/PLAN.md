@@ -14,7 +14,8 @@ This document is the single source of truth for the project recovery. Update it 
 |---|---|
 | `PLAN.md` (this file) | Master overview, feature inventory, problem inventory, phase summary |
 | `phase-0-foundation.md` | CI, tests, linting, seed, raw errors |
-| `phase-1-db-observability.md` | Database schema review + changes, observability wiring |
+| `phase-0.5-infrastructure.md` | Full local dev stack, audit log migration, MinIO, Meilisearch, ClickHouse, SigNoz, env files |
+| `phase-1-db-observability.md` | Database schema decisions + observability wiring (OTEL, logger, spans) |
 | `phase-2-cleanup.md` | Delete stubs, dead code, decorative UI |
 | `phase-3-contracts.md` | Contract bugs, invite flow fix, selector fixes |
 | `phase-4-features.md` | Feature completion, one at a time |
@@ -135,8 +136,9 @@ This document is the single source of truth for the project recovery. Update it 
 
 | Phase | Focus | Status |
 |---|---|---|
-| **Phase 0** | Foundation: CI, tests, linting, seed, raw errors | 🔜 Next |
-| **Phase 1** | DB schema decisions + SigNoz/OTEL wiring + dev/staging/prod environment setup | 🟡 DB done — observability/env pending |
+| **Phase 0** | Foundation: CI, tests, linting, seed, raw errors | 🔜 In review (PR #20) |
+| **Phase 0.5** | Infrastructure: full local dev stack, audit log redesign, MinIO, Meilisearch, ClickHouse, SigNoz, env files | ⬜ Not started |
+| **Phase 1** | DB schema decisions + observability wiring (OTEL, structured logging, spans) | 🟡 DB done — observability pending |
 | **Phase 2** | Delete stubs, dead code, decorative UI | ⬜ Not started |
 | **Phase 3** | Contract bugs: invite flow, selectors, OPS role | ⬜ Not started |
 | **Phase 4** | Feature completion, one at a time | ⬜ Not started |
