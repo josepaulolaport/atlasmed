@@ -52,9 +52,9 @@ export function AssignUserToTerritoryDialog({
       setUsers(
         response.data.filter(
           (u) =>
-            (u.role.name === "USER" || u.role.name === "MANAGER") &&
+            (u.role.name === "REP" || u.role.name === "MANAGER") &&
             canAssignUserToTerritoryNode({
-              userRole: u.role.name as "USER" | "MANAGER",
+              userRole: u.role.name as "REP" | "MANAGER",
               territory,
             })
         )
@@ -84,7 +84,7 @@ export function AssignUserToTerritoryDialog({
     if (
       selectedUser &&
       !canAssignUserToTerritoryNode({
-        userRole: selectedUser.role.name as "USER" | "MANAGER",
+        userRole: selectedUser.role.name as "REP" | "MANAGER",
         territory,
       })
     ) {

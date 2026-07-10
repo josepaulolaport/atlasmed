@@ -48,12 +48,12 @@ export function ManageAssignmentsDialog({
   const [territoryBusy, setTerritoryBusy] = useState<string | null>(null);
   const { getLabel } = useTerritoryLabels();
 
-  const isTargetUser = user?.role.name === "USER";
+  const isTargetUser = user?.role.name === "REP";
   const isTargetManager = user?.role.name === "MANAGER";
   const canAssignTerritories = isTargetUser || isTargetManager;
   const territoryPickerConfig = user
     ? getTerritoryAssignmentPickerConfig(
-        isTargetManager ? "MANAGER" : "USER"
+        isTargetManager ? "MANAGER" : "REP"
       )
     : null;
 
