@@ -666,6 +666,9 @@ exports.Prisma.FacilityScalarFieldEnum = {
   referenceMunicipalityCode: 'referenceMunicipalityCode',
   conformityStatus: 'conformityStatus',
   commercialStatus: 'commercialStatus',
+  purchaseStatus: 'purchaseStatus',
+  city: 'city',
+  stateCode: 'stateCode',
   primarySectorId: 'primarySectorId',
   imageUrl: 'imageUrl',
   territoryId: 'territoryId',
@@ -1032,6 +1035,13 @@ exports.CommercialStatus = exports.$Enums.CommercialStatus = {
   COMMERCIALLY_ACTIVE: 'COMMERCIALLY_ACTIVE',
   COMMERCIALLY_SUSPENDED: 'COMMERCIALLY_SUSPENDED',
   COMMERCIALLY_INACTIVE: 'COMMERCIALLY_INACTIVE'
+};
+
+exports.PurchaseStatus = exports.$Enums.PurchaseStatus = {
+  NAO_COMPRA: 'NAO_COMPRA',
+  COMPRA: 'COMPRA',
+  COMPRA_POUCO: 'COMPRA_POUCO',
+  COMPRA_MUITO: 'COMPRA_MUITO'
 };
 
 exports.TerritoryAssignmentStatus = exports.$Enums.TerritoryAssignmentStatus = {
