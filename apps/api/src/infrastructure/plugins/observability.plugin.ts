@@ -174,9 +174,6 @@ function logRequestOutcome(params: {
   if (params.statusCode >= 500) {
     const errorMessage = params.error instanceof Error ? params.error.message : 'Request failed';
     logger.error(errorMessage, params.error instanceof Error ? params.error : undefined, context);
-    if (params.error instanceof Error && environment.NODE_ENV === 'development') {
-      logger.error('Error stack trace', { stack: params.error.stack });
-    }
     return;
   }
 

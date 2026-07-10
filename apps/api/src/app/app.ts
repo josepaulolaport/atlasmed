@@ -18,7 +18,6 @@ import { securityHeadersPlugin } from "../infrastructure/middleware/security-hea
 import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
-import { logger } from "../infrastructure/logging/logger";
 
 const app = new Elysia()
   // Observability MUST come first to track all requests
@@ -26,23 +25,7 @@ const app = new Elysia()
   .use(securityHeadersPlugin)
   
   // Apply global error handler
-  .onError(({ code, error, set, request }) => {
-    const path = new URL(request.url).pathname;
-    const method = request.method;
-    
-    // Log error with context
-    logger.error("Request failed", error instanceof Error ? error : undefined, {
-      code: String(code),
-      errorType: error?.constructor?.name ?? "unknown",
-      path,
-      method,
-      ...(error instanceof AppError && { errorCode: error.code }),
-      ...(error instanceof HttpError && {
-        errorCode: error.code,
-        statusCode: error.statusCode,
-      }),
-    });
-
+  .onError(({ code, error, set }) => {
     // Handle custom AppError instances
     if (error instanceof AppError) {
       set.status = error.statusCode;
@@ -71,14 +54,8 @@ const app = new Elysia()
       };
     }
 
-    // Handle unknown errors with proper logging
+    // Unhandled — observability plugin logs this as a 500
     set.status = 500;
-    
-    // Log full error details in development
-    if (environment.NODE_ENV === 'development') {
-      logger.error("Unhandled error details", error instanceof Error ? error : undefined);
-    }
-    
     return {
       error: {
         code: 'INTERNAL_SERVER_ERROR',
