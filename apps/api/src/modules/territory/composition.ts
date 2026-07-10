@@ -1,10 +1,10 @@
-import { PrismaTerritoryRepository } from "./infrastructure/repositories/prisma/prisma-territory.repository";
-import { PrismaTerritoryTypeRepository } from "./infrastructure/repositories/prisma/prisma-territory-type.repository";
-import { PrismaTerritoryClosureRepository } from "./infrastructure/repositories/prisma/prisma-territory-closure.repository";
-import { PrismaTerritorySpatialRepository } from "./infrastructure/repositories/prisma/prisma-territory-spatial.repository";
-import { PrismaTerritoryApprovalRepository } from "./infrastructure/repositories/prisma/prisma-territory-approval.repository";
-import { PrismaTerritoryHierarchyPort } from "./infrastructure/ports/prisma-territory-hierarchy.port";
-import { PrismaClinicMembershipWriter } from "./infrastructure/adapters/prisma-facility-membership.writer";
+import { DrizzleTerritoryRepository } from "./infrastructure/repositories/drizzle/drizzle-territory.repository";
+import { DrizzleTerritoryTypeRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-type.repository";
+import { DrizzleTerritoryClosureRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
+import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
+import { DrizzleTerritoryApprovalRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-approval.repository";
+import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
+import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
 import { TerritoryClosureService } from "./application/services/territory-closure.service";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
@@ -20,16 +20,16 @@ import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.se
 import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
 
 export const territoryRepositories = {
-  territory: new PrismaTerritoryRepository(),
-  territoryType: new PrismaTerritoryTypeRepository(),
-  closure: new PrismaTerritoryClosureRepository(),
-  spatial: new PrismaTerritorySpatialRepository(),
-  approval: new PrismaTerritoryApprovalRepository(),
+  territory: new DrizzleTerritoryRepository(),
+  territoryType: new DrizzleTerritoryTypeRepository(),
+  closure: new DrizzleTerritoryClosureRepository(),
+  spatial: new DrizzleTerritorySpatialRepository(),
+  approval: new DrizzleTerritoryApprovalRepository(),
 };
 
-export const facilityMembershipWriter = new PrismaClinicMembershipWriter();
+export const facilityMembershipWriter = new DrizzleClinicMembershipWriter();
 
-export const territoryHierarchyPort = new PrismaTerritoryHierarchyPort(
+export const territoryHierarchyPort = new DrizzleTerritoryHierarchyPort(
   territoryRepositories.closure,
   territoryRepositories.territory
 );

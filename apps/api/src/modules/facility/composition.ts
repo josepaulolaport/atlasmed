@@ -1,9 +1,9 @@
-import { PrismaFacilityRepository } from "./infrastructure/repositories/prisma/prisma-facility.repository";
-import { PrismaFacilityProfessionalRepository } from "./infrastructure/repositories/prisma/prisma-facility-professional.repository";
-import { PrismaFacilityRepresentativeRepository } from "./infrastructure/repositories/prisma/prisma-facility-representative.repository";
-import { PrismaFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/prisma/prisma-facility-consultant-assignment.repository";
-import { PrismaConformityRepository } from "./infrastructure/repositories/prisma/prisma-conformity.repository";
-import { PrismaTerritoryScopePort } from "./infrastructure/scope/prisma-territory-scope.port";
+import { DrizzleFacilityRepository } from "./infrastructure/repositories/drizzle/drizzle-facility.repository";
+import { DrizzleFacilityProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
+import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
+import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
+import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
+import { DrizzleTerritoryScopePort } from "./infrastructure/scope/drizzle-territory-scope.port";
 import {
   CreateFacilityUseCase,
   DeleteFacilityUseCase,
@@ -35,20 +35,20 @@ import {
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
-import { PrismaRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/prisma/prisma-registry-read.repository";
+import { DrizzleRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/drizzle/drizzle-registry-read.repository";
 import { professionalRepositories } from "../professional/composition";
 
-const registryReadRepository = new PrismaRegistryReadRepository();
+const registryReadRepository = new DrizzleRegistryReadRepository();
 
 export const facilityRepositories = {
-  facility: new PrismaFacilityRepository(),
-  association: new PrismaFacilityProfessionalRepository(),
-  representative: new PrismaFacilityRepresentativeRepository(),
-  consultantAssignment: new PrismaFacilityConsultantAssignmentRepository(),
-  conformity: new PrismaConformityRepository(),
+  facility: new DrizzleFacilityRepository(),
+  association: new DrizzleFacilityProfessionalRepository(),
+  representative: new DrizzleFacilityRepresentativeRepository(),
+  consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
+  conformity: new DrizzleConformityRepository(),
 };
 
-export const facilityTerritoryScopePort = new PrismaTerritoryScopePort(
+export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
   facilityRepositories.facility
 );
 

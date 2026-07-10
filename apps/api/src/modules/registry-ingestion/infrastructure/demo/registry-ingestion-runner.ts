@@ -1,17 +1,17 @@
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { auditLogService } from "../../../../infrastructure/audit/audit-log.service";
-import { PrismaFacilityRepository } from "../../../facility/infrastructure/repositories/prisma/prisma-facility.repository";
-import { PrismaFacilityProfessionalRepository } from "../../../facility/infrastructure/repositories/prisma/prisma-facility-professional.repository";
-import { PrismaProfessionalRepository } from "../../../professional/infrastructure/repositories/prisma/prisma-professional.repository";
+import { DrizzleFacilityRepository } from "../../../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
+import { DrizzleFacilityProfessionalRepository } from "../../../facility/infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
+import { DrizzleProfessionalRepository } from "../../../professional/infrastructure/repositories/drizzle/drizzle-professional.repository";
 import { RegistrySyncService } from "../../application/services/registry-sync.service";
 import { RegistryDiffService } from "../../application/services/registry-diff.service";
 import { RunRegistryIngestionUseCase } from "../../application/use-cases/run-registry-ingestion.use-case";
 import { MockRegistrySourceAdapter } from "../adapters/mock-registry-source.adapter";
 import {
-  PrismaIngestionRunRepository,
-  PrismaIngestionSuggestionRepository,
-} from "../repositories/prisma/prisma-ingestion.repository";
+  DrizzleIngestionRunRepository,
+  DrizzleIngestionSuggestionRepository,
+} from "../repositories/drizzle/drizzle-ingestion.repository";
 
 const fixturesDir = join(
   fileURLToPath(new URL(".", import.meta.url)),
@@ -19,11 +19,11 @@ const fixturesDir = join(
 );
 
 const sharedRepositories = {
-  facility: new PrismaFacilityRepository(),
-  professional: new PrismaProfessionalRepository(),
-  association: new PrismaFacilityProfessionalRepository(),
-  ingestionRun: new PrismaIngestionRunRepository(),
-  suggestion: new PrismaIngestionSuggestionRepository(),
+  facility: new DrizzleFacilityRepository(),
+  professional: new DrizzleProfessionalRepository(),
+  association: new DrizzleFacilityProfessionalRepository(),
+  ingestionRun: new DrizzleIngestionRunRepository(),
+  suggestion: new DrizzleIngestionSuggestionRepository(),
 };
 
 export function createRegistryIngestionRunner(fixtureName: string) {

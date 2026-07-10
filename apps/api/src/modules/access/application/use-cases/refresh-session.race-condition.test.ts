@@ -5,8 +5,8 @@ import { roles, users, sessions } from "@atlasmed/database";
 import { db } from "../../../../infrastructure/database/db";
 import { RefreshSessionUseCase } from "./refresh-session.use-case";
 import { LoginUseCase } from "./login.use-case";
-import { PrismaSessionRepository } from "../../infrastructure/repositories/prisma/prisma-session.repository";
-import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
+import { DrizzleSessionRepository } from "../../infrastructure/repositories/drizzle/drizzle-session.repository";
+import { DrizzleUserRepository } from "../../infrastructure/repositories/drizzle/drizzle-user.repository";
 import { SessionCacheService } from "../../infrastructure/cache/session-cache.service";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
@@ -26,8 +26,8 @@ import { RefreshTokenReuseDetectedError, TokenInvalidError } from "../../../../s
  */
 describe("Refresh Session Race Condition Integration Tests", () => {
   let dbReady = false;
-  let sessionRepository: PrismaSessionRepository;
-  let userRepository: PrismaUserRepository;
+  let sessionRepository: DrizzleSessionRepository;
+  let userRepository: DrizzleUserRepository;
   let sessionCache: SessionCacheService;
   let refreshSessionUseCase: RefreshSessionUseCase;
   let loginUseCase: LoginUseCase;
@@ -37,8 +37,8 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     dbReady = await isIntegrationDatabaseReady();
     if (!dbReady) return;
 
-    sessionRepository = new PrismaSessionRepository();
-    userRepository = new PrismaUserRepository();
+    sessionRepository = new DrizzleSessionRepository();
+    userRepository = new DrizzleUserRepository();
     sessionCache = new SessionCacheService();
 
     const { accessUseCases } = await import("../../composition");
