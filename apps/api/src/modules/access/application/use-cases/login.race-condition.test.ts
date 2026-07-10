@@ -1,6 +1,8 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } from "bun:test";
 import { hash } from "argon2";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { eq, and, isNull, gt } from "drizzle-orm";
+import { roles, users, sessions } from "@atlasmed/database";
+import { db } from "../../../../infrastructure/database/db";
 import type { LoginUseCase } from "./login.use-case";
 import { accessUseCases } from "../../composition";
 import { redis } from "../../../../infrastructure/cache/redis.client";
@@ -31,9 +33,12 @@ describe("Login Session Race Condition Integration Tests", () => {
 
     loginUseCase = accessUseCases.login();
 
-    const userRole = await prisma.role.findUnique({
-      where: { name: "USER" },
-    });
+    const userRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     if (!userRole) {
       throw new Error("USER role not found in database");
@@ -42,8 +47,9 @@ describe("Login Session Race Condition Integration Tests", () => {
     const uniqueId = getUniqueTestId();
     const passwordHash = await hash("Password123!");
 
-    testUser = await prisma.user.create({
-      data: {
+    testUser = await db
+      .insert(users)
+      .values({
         email: `login_race_${uniqueId}@example.com`,
         username: `login_race_${uniqueId}`,
         passwordHash,
@@ -52,31 +58,27 @@ describe("Login Session Race Condition Integration Tests", () => {
         roleId: userRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-      include: { role: true },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
   });
 
   beforeEach(async () => {
     if (!dbReady || !testUser) return;
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
     await redis.flushdb();
   });
 
   afterEach(async () => {
     if (!dbReady || !testUser) return;
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
   });
 
   afterAll(async () => {
-    if (!dbReady) {
-      await prisma.$disconnect().catch(() => {});
-      return;
-    }
+    if (!dbReady) return;
 
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
-    await prisma.user.delete({ where: { id: testUser.id } }).catch(() => {});
-    await prisma.$disconnect();
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
+    await db.delete(users).where(eq(users.id, testUser.id)).catch(() => {});
   });
 
   test("should leave exactly one active same-device session after concurrent logins", async () => {
@@ -109,13 +111,16 @@ describe("Login Session Race Condition Integration Tests", () => {
     const successCount = results.filter((r) => r.status === "fulfilled").length;
     expect(successCount).toBe(3);
 
-    const activeSessions = await prisma.session.findMany({
-      where: {
-        userId: testUser.id,
-        revokedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    });
+    const activeSessions = await db
+      .select()
+      .from(sessions)
+      .where(
+        and(
+          eq(sessions.userId, testUser.id),
+          isNull(sessions.revokedAt),
+          gt(sessions.expiresAt, new Date()),
+        ),
+      );
 
     const deviceReference = activeSessions[0] ?? {
       id: "reference",

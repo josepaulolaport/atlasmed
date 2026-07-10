@@ -22,7 +22,7 @@ Use when a task touches BOTH `apps/api` and `apps/web`.
 
 1. Define the API contract first. Name the endpoint, request shape, response shape.
 2. If a shared DTO is needed, place it in a shared location the web can import.
-3. Update / add Prisma schema if persistence changes. Generate migration.
+3. Update Drizzle schema if persistence changes. Run `bunx drizzle-kit generate` then `bunx drizzle-kit migrate`.
 4. Implement backend: Zod validation → `requirePermission` → `getScope()` → use-case → DTO mapping → tests.
 5. Update web data-fetching client under `apps/web/lib/api/*`.
 6. Update web UI.
@@ -34,7 +34,7 @@ Use when a task touches BOTH `apps/api` and `apps/web`.
 ## Rules
 
 - Backend authorization is source of truth. Frontend visibility is not security.
-- Do not expose raw Prisma models to the web app — DTOs only.
+- Do not expose raw Drizzle row types to the web app — DTOs only.
 - Do not duplicate API response types inside `apps/web` — import from a shared location.
 - Additive contract changes preferred; version when breaking is unavoidable.
 - Announce the "Loading:" file list before editing. Prune if over 15 files.

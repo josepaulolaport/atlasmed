@@ -1,4 +1,10 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import {
+  professionals,
+  facilityProfessionals,
+  facilities,
+} from "@atlasmed/database";
+import { eq, and, or, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
+import { db } from "../../../../../infrastructure/database/db";
 import type {
   ProfessionalCreateInput,
   ProfessionalFacilitySummary,
@@ -9,40 +15,7 @@ import type {
   ProfessionalUpdateInput,
 } from "../../../application/interfaces/professional.repository.interface";
 
-type ProfessionalRow = {
-  id: string;
-  firstName: string;
-  lastName: string;
-  fullName: string | null;
-  socialName: string | null;
-  taxId: string | null;
-  birthDate: Date | null;
-  mobilePhone: string | null;
-  landlinePhone: string | null;
-  email: string | null;
-  websiteUrl: string | null;
-  imageUrl: string | null;
-  favoriteTeam: string | null;
-  favoriteSport: string | null;
-  hobbies: string | null;
-  notes: string | null;
-  primarySpecialtyLabel: string | null;
-  crmCouncil: string | null;
-  crmNumber: string | null;
-  crmState: string | null;
-  sourceProvider: string | null;
-  externalSourceId: string | null;
-  sourceContentHash: string | null;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  sourcePresent: boolean;
-  sourceTracked: boolean;
-  manuallyEditedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  deletedAt: Date | null;
-  facilityAssociations: Array<{ facilityId: string; endedAt: Date | null }>;
-};
+type ProfessionalRow = typeof professionals.$inferSelect;
 
 function resolveFullName(
   firstName: string,
@@ -52,7 +25,10 @@ function resolveFullName(
   return fullName?.trim() || `${firstName} ${lastName}`.trim();
 }
 
-function mapProfessional(professional: ProfessionalRow): ProfessionalRecord {
+function mapProfessional(
+  professional: ProfessionalRow,
+  facilityAssociations: Array<{ facilityId: string; endedAt: Date | null }>
+): ProfessionalRecord {
   return {
     id: professional.id,
     firstName: professional.firstName,
@@ -82,7 +58,7 @@ function mapProfessional(professional: ProfessionalRow): ProfessionalRecord {
     sourcePresent: professional.sourcePresent,
     sourceTracked: professional.sourceTracked,
     manuallyEditedAt: professional.manuallyEditedAt,
-    facilityIds: professional.facilityAssociations
+    facilityIds: facilityAssociations
       .filter((a) => a.endedAt === null)
       .map((a) => a.facilityId),
     createdAt: professional.createdAt,
@@ -91,21 +67,35 @@ function mapProfessional(professional: ProfessionalRow): ProfessionalRecord {
   };
 }
 
-function buildScopeFilter(scope: ProfessionalListScopeFilter) {
-  if (scope.isGlobal) {
-    return {};
+async function loadAssociationsMap(
+  professionalIds: string[]
+): Promise<Map<string, Array<{ facilityId: string; endedAt: Date | null }>>> {
+  if (professionalIds.length === 0) {
+    return new Map();
   }
 
-  const facilityIds = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
+  const rows = await db
+    .select({
+      professionalId: facilityProfessionals.professionalId,
+      facilityId: facilityProfessionals.facilityId,
+      endedAt: facilityProfessionals.endedAt,
+    })
+    .from(facilityProfessionals)
+    .where(inArray(facilityProfessionals.professionalId, professionalIds));
 
-  return {
-    facilityAssociations: {
-      some: {
-        facilityId: { in: facilityIds },
-        endedAt: null,
-      },
-    },
-  };
+  const map = new Map<string, Array<{ facilityId: string; endedAt: Date | null }>>();
+  for (const row of rows) {
+    if (!map.has(row.professionalId)) map.set(row.professionalId, []);
+    map.get(row.professionalId)!.push({ facilityId: row.facilityId, endedAt: row.endedAt });
+  }
+  return map;
+}
+
+async function loadAssociationsForOne(
+  professionalId: string
+): Promise<Array<{ facilityId: string; endedAt: Date | null }>> {
+  const map = await loadAssociationsMap([professionalId]);
+  return map.get(professionalId) ?? [];
 }
 
 function buildPersonCreateData(data: ProfessionalCreateInput) {
@@ -133,42 +123,31 @@ function buildPersonCreateData(data: ProfessionalCreateInput) {
 }
 
 function buildPersonUpdateData(data: ProfessionalUpdateInput) {
-  const nextFirstName = data.firstName;
-  const nextLastName = data.lastName;
+  const patch: Partial<typeof professionals.$inferInsert> = {};
 
-  return {
-    ...(nextFirstName !== undefined ? { firstName: nextFirstName } : {}),
-    ...(nextLastName !== undefined ? { lastName: nextLastName } : {}),
-    ...(data.fullName !== undefined ? { fullName: data.fullName } : {}),
-    ...(data.socialName !== undefined ? { socialName: data.socialName } : {}),
-    ...(data.taxId !== undefined ? { taxId: data.taxId } : {}),
-    ...(data.birthDate !== undefined ? { birthDate: data.birthDate } : {}),
-    ...(data.mobilePhone !== undefined ? { mobilePhone: data.mobilePhone } : {}),
-    ...(data.landlinePhone !== undefined ? { landlinePhone: data.landlinePhone } : {}),
-    ...(data.email !== undefined ? { email: data.email } : {}),
-    ...(data.websiteUrl !== undefined ? { websiteUrl: data.websiteUrl } : {}),
-    ...(data.imageUrl !== undefined ? { imageUrl: data.imageUrl } : {}),
-    ...(data.favoriteTeam !== undefined ? { favoriteTeam: data.favoriteTeam } : {}),
-    ...(data.favoriteSport !== undefined ? { favoriteSport: data.favoriteSport } : {}),
-    ...(data.hobbies !== undefined ? { hobbies: data.hobbies } : {}),
-    ...(data.notes !== undefined ? { notes: data.notes } : {}),
-    ...(data.specialty !== undefined
-      ? { primarySpecialtyLabel: data.specialty }
-      : {}),
-    ...(data.crmCouncil !== undefined ? { crmCouncil: data.crmCouncil } : {}),
-    ...(data.crmNumber !== undefined ? { crmNumber: data.crmNumber } : {}),
-    ...(data.crmState !== undefined ? { crmState: data.crmState } : {}),
-    ...(data.manuallyEditedAt !== undefined
-      ? { manuallyEditedAt: data.manuallyEditedAt }
-      : {}),
-  };
+  if (data.firstName !== undefined) patch.firstName = data.firstName;
+  if (data.lastName !== undefined) patch.lastName = data.lastName;
+  if (data.fullName !== undefined) patch.fullName = data.fullName;
+  if (data.socialName !== undefined) patch.socialName = data.socialName;
+  if (data.taxId !== undefined) patch.taxId = data.taxId;
+  if (data.birthDate !== undefined) patch.birthDate = data.birthDate;
+  if (data.mobilePhone !== undefined) patch.mobilePhone = data.mobilePhone;
+  if (data.landlinePhone !== undefined) patch.landlinePhone = data.landlinePhone;
+  if (data.email !== undefined) patch.email = data.email;
+  if (data.websiteUrl !== undefined) patch.websiteUrl = data.websiteUrl;
+  if (data.imageUrl !== undefined) patch.imageUrl = data.imageUrl;
+  if (data.favoriteTeam !== undefined) patch.favoriteTeam = data.favoriteTeam;
+  if (data.favoriteSport !== undefined) patch.favoriteSport = data.favoriteSport;
+  if (data.hobbies !== undefined) patch.hobbies = data.hobbies;
+  if (data.notes !== undefined) patch.notes = data.notes;
+  if (data.specialty !== undefined) patch.primarySpecialtyLabel = data.specialty;
+  if (data.crmCouncil !== undefined) patch.crmCouncil = data.crmCouncil;
+  if (data.crmNumber !== undefined) patch.crmNumber = data.crmNumber;
+  if (data.crmState !== undefined) patch.crmState = data.crmState;
+  if (data.manuallyEditedAt !== undefined) patch.manuallyEditedAt = data.manuallyEditedAt;
+
+  return patch;
 }
-
-const professionalInclude = {
-  facilityAssociations: {
-    select: { facilityId: true, endedAt: true },
-  },
-} as const;
 
 export class PrismaProfessionalRepository implements ProfessionalRepository {
   async findAll(params: {
@@ -178,188 +157,236 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     facilityId?: string;
     scope: ProfessionalListScopeFilter;
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }> {
-    const where = {
-      deletedAt: null,
-      ...buildScopeFilter(params.scope),
-      ...(params.facilityId
-        ? {
-            facilityAssociations: {
-              some: {
-                facilityId: params.facilityId,
-                endedAt: null,
-              },
-            },
-          }
-        : {}),
-      ...(params.search
-        ? {
-            OR: [
-              { firstName: { contains: params.search, mode: "insensitive" as const } },
-              { lastName: { contains: params.search, mode: "insensitive" as const } },
-              { fullName: { contains: params.search, mode: "insensitive" as const } },
-              {
-                primarySpecialtyLabel: {
-                  contains: params.search,
-                  mode: "insensitive" as const,
-                },
-              },
-              { taxId: { contains: params.search, mode: "insensitive" as const } },
-              { crmNumber: { contains: params.search, mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
-    };
+    const conditions = [isNull(professionals.deletedAt)];
 
+    if (!params.scope.isGlobal) {
+      const facilityIds = params.scope.facilityIds?.length
+        ? params.scope.facilityIds
+        : ["__none__"];
+
+      conditions.push(
+        inArray(
+          professionals.id,
+          db
+            .select({ id: facilityProfessionals.professionalId })
+            .from(facilityProfessionals)
+            .where(
+              and(
+                inArray(facilityProfessionals.facilityId, facilityIds),
+                isNull(facilityProfessionals.endedAt)
+              )
+            )
+        )
+      );
+    }
+
+    if (params.facilityId) {
+      conditions.push(
+        inArray(
+          professionals.id,
+          db
+            .select({ id: facilityProfessionals.professionalId })
+            .from(facilityProfessionals)
+            .where(
+              and(
+                eq(facilityProfessionals.facilityId, params.facilityId),
+                isNull(facilityProfessionals.endedAt)
+              )
+            )
+        )
+      );
+    }
+
+    if (params.search) {
+      const pattern = `%${params.search}%`;
+      conditions.push(
+        or(
+          ilike(professionals.firstName, pattern),
+          ilike(professionals.lastName, pattern),
+          ilike(professionals.fullName, pattern),
+          ilike(professionals.primarySpecialtyLabel, pattern),
+          ilike(professionals.taxId, pattern),
+          ilike(professionals.crmNumber, pattern),
+        )!
+      );
+    }
+
+    const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
-    const [professionals, total] = await Promise.all([
-      prisma.professional.findMany({
-        where,
-        include: professionalInclude,
-        orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-        skip,
-        take: params.limit,
-      }),
-      prisma.professional.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(professionals)
+        .where(where)
+        .orderBy(asc(professionals.lastName), asc(professionals.firstName))
+        .offset(skip)
+        .limit(params.limit),
+      db.select({ count: sql<number>`count(*)::int` }).from(professionals).where(where),
     ]);
 
+    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
+
     return {
-      professionals: professionals.map(mapProfessional),
-      total,
+      professionals: rows.map((p) =>
+        mapProfessional(p, associationsMap.get(p.id) ?? [])
+      ),
+      total: count,
     };
   }
 
   async findById(id: string): Promise<ProfessionalRecord | null> {
-    const professional = await prisma.professional.findFirst({
-      where: { id, deletedAt: null },
-      include: professionalInclude,
-    });
+    const [professional] = await db
+      .select()
+      .from(professionals)
+      .where(and(eq(professionals.id, id), isNull(professionals.deletedAt)))
+      .limit(1);
 
-    return professional ? mapProfessional(professional) : null;
+    if (!professional) return null;
+
+    const associations = await loadAssociationsForOne(professional.id);
+    return mapProfessional(professional, associations);
   }
 
   async findByExternalId(
     sourceProvider: string,
     externalSourceId: string
   ): Promise<ProfessionalRecord | null> {
-    const professional = await prisma.professional.findFirst({
-      where: { sourceProvider, externalSourceId, deletedAt: null },
-      include: professionalInclude,
-    });
+    const [professional] = await db
+      .select()
+      .from(professionals)
+      .where(
+        and(
+          eq(professionals.sourceProvider, sourceProvider),
+          eq(professionals.externalSourceId, externalSourceId),
+          isNull(professionals.deletedAt)
+        )
+      )
+      .limit(1);
 
-    return professional ? mapProfessional(professional) : null;
+    if (!professional) return null;
+
+    const associations = await loadAssociationsForOne(professional.id);
+    return mapProfessional(professional, associations);
   }
 
   async findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]> {
-    const professionals = await prisma.professional.findMany({
-      where: { sourceProvider, sourceTracked: true, deletedAt: null },
-      include: professionalInclude,
-    });
+    const rows = await db
+      .select()
+      .from(professionals)
+      .where(
+        and(
+          eq(professionals.sourceProvider, sourceProvider),
+          eq(professionals.sourceTracked, true),
+          isNull(professionals.deletedAt)
+        )
+      );
 
-    return professionals.map(mapProfessional);
+    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
+
+    return rows.map((p) => mapProfessional(p, associationsMap.get(p.id) ?? []));
   }
 
   async findActiveFacilities(professionalId: string): Promise<ProfessionalFacilitySummary[]> {
-    const associations = await prisma.facilityProfessional.findMany({
-      where: { professionalId, endedAt: null },
-      include: {
-        facility: {
-          select: { id: true, displayName: true, legalName: true, tradeName: true },
-        },
-      },
-      orderBy: { facility: { displayName: "asc" } },
-    });
+    const rows = await db
+      .select({
+        id: facilities.id,
+        displayName: facilities.displayName,
+        legalName: facilities.legalName,
+        tradeName: facilities.tradeName,
+      })
+      .from(facilityProfessionals)
+      .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))
+      .where(
+        and(
+          eq(facilityProfessionals.professionalId, professionalId),
+          isNull(facilityProfessionals.endedAt)
+        )
+      )
+      .orderBy(asc(facilities.displayName));
 
-    return associations.map((row) => ({
-      id: row.facility.id,
+    return rows.map((row) => ({
+      id: row.id,
       name:
-        row.facility.displayName?.trim() ||
-        row.facility.tradeName?.trim() ||
-        row.facility.legalName?.trim() ||
-        row.facility.id,
+        row.displayName?.trim() ||
+        row.tradeName?.trim() ||
+        row.legalName?.trim() ||
+        row.id,
     }));
   }
 
   async create(data: ProfessionalCreateInput): Promise<ProfessionalRecord> {
     const now = new Date();
 
-    const professional = await prisma.professional.create({
-      data: {
-        ...buildPersonCreateData(data),
-        ...(data.facilityIds.length > 0
-          ? {
-              facilityAssociations: {
-                create: data.facilityIds.map((facilityId) => ({
-                  facilityId,
-                  confirmedAt: now,
-                  confirmedByUserId: data.confirmedByUserId ?? null,
-                })),
-              },
-            }
-          : {}),
-      },
-      include: professionalInclude,
-    });
+    const [professional] = await db
+      .insert(professionals)
+      .values(buildPersonCreateData(data))
+      .returning();
 
-    return mapProfessional(professional);
+    if (data.facilityIds.length > 0) {
+      await db.insert(facilityProfessionals).values(
+        data.facilityIds.map((facilityId) => ({
+          facilityId,
+          professionalId: professional.id,
+          occupationCode: "LEGACY",
+          confirmedAt: now,
+          confirmedByUserId: data.confirmedByUserId ?? null,
+        }))
+      );
+    }
+
+    const associations = await loadAssociationsForOne(professional.id);
+    return mapProfessional(professional, associations);
   }
 
   async update(id: string, data: ProfessionalUpdateInput): Promise<ProfessionalRecord> {
-    const existing = await prisma.professional.findUnique({
-      where: { id },
-      select: { firstName: true, lastName: true, fullName: true },
-    });
+    const [existing] = await db
+      .select({
+        firstName: professionals.firstName,
+        lastName: professionals.lastName,
+        fullName: professionals.fullName,
+      })
+      .from(professionals)
+      .where(eq(professionals.id, id))
+      .limit(1);
 
-    if (!existing) {
-      throw new Error("Professional not found");
-    }
+    if (!existing) throw new Error("Professional not found");
 
-    const updateData = buildPersonUpdateData(data);
+    const patch = buildPersonUpdateData(data);
 
     if (
       data.fullName === undefined &&
       (data.firstName !== undefined || data.lastName !== undefined)
     ) {
-      const professional = await prisma.professional.update({
-        where: { id },
-        data: {
-          ...updateData,
-          fullName: resolveFullName(
-            data.firstName ?? existing.firstName,
-            data.lastName ?? existing.lastName,
-            existing.fullName
-          ),
-        },
-        include: professionalInclude,
-      });
-
-      return mapProfessional(professional);
+      patch.fullName = resolveFullName(
+        data.firstName ?? existing.firstName,
+        data.lastName ?? existing.lastName,
+        existing.fullName
+      );
     }
 
-    const professional = await prisma.professional.update({
-      where: { id },
-      data: updateData,
-      include: professionalInclude,
-    });
+    const [professional] = await db
+      .update(professionals)
+      .set({ ...patch, updatedAt: new Date() })
+      .where(eq(professionals.id, id))
+      .returning();
 
-    return mapProfessional(professional);
+    const associations = await loadAssociationsForOne(professional.id);
+    return mapProfessional(professional, associations);
   }
 
   async softDelete(id: string): Promise<void> {
-    await prisma.professional.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await db
+      .update(professionals)
+      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .where(eq(professionals.id, id));
   }
 
   async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
-    await prisma.professional.update({
-      where: { id },
-      data: {
-        sourcePresent: false,
-        sourceLastSeenAt,
-      },
-    });
+    await db
+      .update(professionals)
+      .set({ sourcePresent: false, sourceLastSeenAt, updatedAt: new Date() })
+      .where(eq(professionals.id, id));
   }
 
   async upsertFromSource(input: ProfessionalSourceUpsertInput): Promise<{
@@ -367,20 +394,22 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     created: boolean;
     updated: boolean;
   }> {
-    const existing = await prisma.professional.findFirst({
-      where: {
-        sourceProvider: input.sourceProvider,
-        externalSourceId: input.externalSourceId,
-      },
-      include: professionalInclude,
-    });
+    const [existing] = await db
+      .select()
+      .from(professionals)
+      .where(
+        and(
+          eq(professionals.sourceProvider, input.sourceProvider),
+          eq(professionals.externalSourceId, input.externalSourceId)
+        )
+      )
+      .limit(1);
 
     const sourcePersonFields = {
       firstName: input.firstName,
       lastName: input.lastName,
       fullName:
-        input.fullName?.trim() ||
-        resolveFullName(input.firstName, input.lastName, null),
+        input.fullName?.trim() || resolveFullName(input.firstName, input.lastName, null),
       socialName: input.socialName ?? null,
       taxId: input.taxId ?? null,
       primarySpecialtyLabel: input.specialty,
@@ -390,8 +419,9 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
     };
 
     if (!existing) {
-      const professional = await prisma.professional.create({
-        data: {
+      const [professional] = await db
+        .insert(professionals)
+        .values({
           ...sourcePersonFields,
           sourceProvider: input.sourceProvider,
           externalSourceId: input.externalSourceId,
@@ -400,51 +430,53 @@ export class PrismaProfessionalRepository implements ProfessionalRepository {
           sourceLastSeenAt: input.sourceLastSeenAt,
           sourcePresent: true,
           sourceTracked: true,
-        },
-        include: professionalInclude,
-      });
+        })
+        .returning();
 
-      return { professional: mapProfessional(professional), created: true, updated: false };
+      const associations = await loadAssociationsForOne(professional.id);
+      return {
+        professional: mapProfessional(professional, associations),
+        created: true,
+        updated: false,
+      };
     }
 
     const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
-    const updateData: Record<string, unknown> = {
+
+    const updateData: Partial<typeof professionals.$inferInsert> & { updatedAt: Date } = {
       sourceContentHash: input.sourceContentHash,
       sourceLastSeenAt: input.sourceLastSeenAt,
       sourcePresent: true,
       sourceTracked: true,
+      updatedAt: new Date(),
     };
 
     if (!existing.manuallyEditedAt) {
       Object.assign(updateData, sourcePersonFields);
     }
 
-    const professional = await prisma.professional.update({
-      where: { id: existing.id },
-      data: updateData,
-      include: professionalInclude,
-    });
+    const [professional] = await db
+      .update(professionals)
+      .set(updateData)
+      .where(eq(professionals.id, existing.id))
+      .returning();
 
+    const associations = await loadAssociationsForOne(professional.id);
     return {
-      professional: mapProfessional(professional),
+      professional: mapProfessional(professional, associations),
       created: false,
       updated: !hashUnchanged || !existing.manuallyEditedAt,
     };
   }
 
   async findExistingFacilityIds(facilityIds: string[]): Promise<string[]> {
-    if (facilityIds.length === 0) {
-      return [];
-    }
+    if (facilityIds.length === 0) return [];
 
-    const facilities = await prisma.facility.findMany({
-      where: {
-        id: { in: facilityIds },
-        deletedAt: null,
-      },
-      select: { id: true },
-    });
+    const rows = await db
+      .select({ id: facilities.id })
+      .from(facilities)
+      .where(and(inArray(facilities.id, facilityIds), isNull(facilities.deletedAt)));
 
-    return facilities.map((facility) => facility.id);
+    return rows.map((r) => r.id);
   }
 }

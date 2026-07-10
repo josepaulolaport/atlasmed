@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
-
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { asc } from "drizzle-orm";
+import { roles } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import { PrismaRoleRepository } from "./prisma-role.repository";
 
 describe("PrismaRoleRepository", () => {
@@ -9,17 +10,15 @@ describe("PrismaRoleRepository", () => {
       const repository = new PrismaRoleRepository();
 
       const result = await repository.findAll();
-      const expected = await prisma.role.findMany({
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          priority: true,
-        },
-        orderBy: {
-          priority: "asc",
-        },
-      });
+      const expected = await db
+        .select({
+          id: roles.id,
+          name: roles.name,
+          description: roles.description,
+          priority: roles.priority,
+        })
+        .from(roles)
+        .orderBy(asc(roles.priority));
 
       expect(result).toEqual(expected);
 

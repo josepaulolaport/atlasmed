@@ -4,7 +4,9 @@ import { hash } from "argon2";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
 import { access } from "./index";
 import { AppError } from "../../shared/errors";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { roles, users, sessions } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -46,29 +48,36 @@ describe("Access Auth HTTP Integration Tests", () => {
     const uniqueId = getUniqueTestId();
     userEmail = `auth.http.${uniqueId}@test.example.com`;
 
-    const userRole = await prisma.role.findUnique({ where: { name: "USER" } });
+    const userRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
     if (!userRole) {
       throw new Error("USER role not found in seeded database");
     }
 
-    const user = await prisma.user.create({
-      data: {
+    const user = await db
+      .insert(users)
+      .values({
         email: userEmail,
         username: `auth_http_${uniqueId}`,
         passwordHash: await hash(TEST_PASSWORD),
         roleId: userRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     userId = user.id;
   });
 
   afterAll(async () => {
     if (!dbReady) return;
-    await prisma.session.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await db.delete(users).where(eq(users.id, userId)).catch(() => {});
   });
 
   async function loginViaHttp() {

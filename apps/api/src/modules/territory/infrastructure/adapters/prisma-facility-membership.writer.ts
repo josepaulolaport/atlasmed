@@ -1,4 +1,6 @@
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../infrastructure/database/db";
+import { facilities } from "@atlasmed/database";
+import { eq, isNull, and, inArray, between, sql } from "drizzle-orm";
 import type {
   ClinicMembershipTarget,
   ClinicMembershipWriter,
@@ -13,14 +15,15 @@ export class PrismaClinicMembershipWriter implements ClinicMembershipWriter {
       territoryAssignmentSource: "geo" | "manual";
     }
   ): Promise<void> {
-    await prisma.facility.update({
-      where: { id: facilityId },
-      data: {
+    await db
+      .update(facilities)
+      .set({
         territoryId: data.territoryId,
         territoryAssignmentStatus: data.territoryAssignmentStatus,
         territoryAssignmentSource: data.territoryAssignmentSource,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(facilities.id, facilityId));
   }
 
   async findClinicsForMembership(params?: {
@@ -28,34 +31,33 @@ export class PrismaClinicMembershipWriter implements ClinicMembershipWriter {
     territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]> {
-    const clinics = await prisma.facility.findMany({
-      where: {
-        deletedAt: null,
-        ...(params?.facilityIds ? { id: { in: params.facilityIds } } : {}),
-        ...(params?.territoryIds ? { territoryId: { in: params.territoryIds } } : {}),
-        ...(params?.boundingBox
-          ? {
-              lat: {
-                gte: params.boundingBox.minLat,
-                lte: params.boundingBox.maxLat,
-              },
-              lng: {
-                gte: params.boundingBox.minLng,
-                lte: params.boundingBox.maxLng,
-              },
-            }
-          : {}),
-      },
-      select: {
-        id: true,
-        lat: true,
-        lng: true,
-        territoryId: true,
-        territoryAssignmentSource: true,
-        territoryAssignmentStatus: true,
-      },
-    });
+    const conditions = [isNull(facilities.deletedAt)];
 
-    return clinics;
+    if (params?.facilityIds?.length) {
+      conditions.push(inArray(facilities.id, params.facilityIds));
+    }
+    if (params?.territoryIds?.length) {
+      conditions.push(inArray(facilities.territoryId, params.territoryIds));
+    }
+    if (params?.boundingBox) {
+      const { minLng, maxLng, minLat, maxLat } = params.boundingBox;
+      conditions.push(
+        sql`ST_X(${facilities.location}::geometry) BETWEEN ${minLng} AND ${maxLng}`,
+        sql`ST_Y(${facilities.location}::geometry) BETWEEN ${minLat} AND ${maxLat}`
+      );
+    }
+
+    const rows = await db
+      .select({
+        id: facilities.id,
+        location: facilities.location,
+        territoryId: facilities.territoryId,
+        territoryAssignmentSource: facilities.territoryAssignmentSource,
+        territoryAssignmentStatus: facilities.territoryAssignmentStatus,
+      })
+      .from(facilities)
+      .where(and(...conditions));
+
+    return rows as ClinicMembershipTarget[];
   }
 }

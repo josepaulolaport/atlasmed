@@ -33,7 +33,7 @@ Each domain module lives at `apps/api/src/modules/<domain>/` with:
     services/         (optional — cross-use-case orchestration)
   infrastructure/
     routes/           # Elysia routes, one file per resource surface
-    repositories/     # Prisma-backed implementations of ports
+    repositories/     # Drizzle-backed implementations of ports
     scope/            # (optional) domain-specific scope adapters
   composition.ts      # composition root — wires ports + services + use-cases
   index.ts
@@ -103,7 +103,7 @@ Missing `detail` = missing docs. Missing `security` = looks unauthenticated in S
 
 - Handler is thin. Extract `body`, `params`, `query`, and `scope`. Call the use-case. Return the DTO.
 - No inline business logic. No repository calls from the handler.
-- Never return raw Prisma models. Use-cases return DTOs.
+- Never return raw Drizzle row types. Use-cases return DTOs.
 
 ## Testing
 

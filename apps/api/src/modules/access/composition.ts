@@ -13,7 +13,6 @@
  */
 
 import { redis } from "../../infrastructure/cache/redis.client";
-import { prisma } from "../../infrastructure/database/prisma.client";
 
 // Repositories
 import { PrismaUserRepository } from "./infrastructure/repositories/prisma/prisma-user.repository";
@@ -99,9 +98,9 @@ export const accessRepositories = {
   user: new PrismaUserRepository(),
   invite: new PrismaInviteRepository(),
   session: new PrismaSessionRepository(),
-  passwordReset: new PrismaPasswordResetRepository({ prisma }),
+  passwordReset: new PrismaPasswordResetRepository(),
   role: new PrismaRoleRepository(),
-  verificationToken: new PrismaVerificationTokenRepository({ prisma }),
+  verificationToken: new PrismaVerificationTokenRepository(),
   scope: new PrismaScopeRepository(),
   accessGrant: new PrismaAccessGrantRepository(),
 };

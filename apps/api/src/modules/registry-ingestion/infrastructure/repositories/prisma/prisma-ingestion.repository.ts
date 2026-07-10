@@ -1,4 +1,12 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { ingestionRuns, ingestionSuggestions } from "@atlasmed/database";
+import {
+  ingestionRunStatusEnum,
+  ingestionRunPhaseEnum,
+  ingestionSuggestionStatusEnum,
+  ingestionSuggestionTypeEnum,
+} from "@atlasmed/database";
+import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import type {
   IngestionRunRecord,
   IngestionRunRepository,
@@ -6,12 +14,11 @@ import type {
   IngestionSuggestionRepository,
   CreateSuggestionInput,
 } from "../../../application/interfaces/ingestion.repository.interface";
-import type {
-  IngestionRunPhase,
-  IngestionRunStatus,
-  IngestionSuggestionStatus,
-  IngestionSuggestionType,
-} from "@atlasmed/database";
+
+type IngestionRunStatus = typeof ingestionRunStatusEnum.enumValues[number];
+type IngestionRunPhase = typeof ingestionRunPhaseEnum.enumValues[number];
+type IngestionSuggestionStatus = typeof ingestionSuggestionStatusEnum.enumValues[number];
+type IngestionSuggestionType = typeof ingestionSuggestionTypeEnum.enumValues[number];
 
 function mapRun(run: {
   id: string;
@@ -88,49 +95,55 @@ export class PrismaIngestionRunRepository implements IngestionRunRepository {
       referenceMes?: number;
     }
   ): Promise<IngestionRunRecord> {
-    const run = await prisma.ingestionRun.create({
-      data: {
+    const [run] = await db
+      .insert(ingestionRuns)
+      .values({
         sourceProvider,
         temporalWorkflowId: options?.temporalWorkflowId,
         referenceAno: options?.referenceAno,
         referenceMes: options?.referenceMes,
-      },
-    });
+      })
+      .returning();
 
     return mapRun(run);
   }
 
   async findById(id: string): Promise<IngestionRunRecord | null> {
-    const run = await prisma.ingestionRun.findUnique({ where: { id } });
-    return run ? mapRun(run) : null;
+    const rows = await db
+      .select()
+      .from(ingestionRuns)
+      .where(eq(ingestionRuns.id, id));
+    return rows[0] ? mapRun(rows[0]) : null;
   }
 
   async complete(
     id: string,
     stats: Record<string, unknown>
   ): Promise<IngestionRunRecord> {
-    const run = await prisma.ingestionRun.update({
-      where: { id },
-      data: {
+    const [run] = await db
+      .update(ingestionRuns)
+      .set({
         status: "COMPLETED",
         completedAt: new Date(),
-        stats: stats as object,
-      },
-    });
+        stats,
+      })
+      .where(eq(ingestionRuns.id, id))
+      .returning();
 
     return mapRun(run);
   }
 
   async fail(id: string, error: string): Promise<IngestionRunRecord> {
-    const run = await prisma.ingestionRun.update({
-      where: { id },
-      data: {
+    const [run] = await db
+      .update(ingestionRuns)
+      .set({
         status: "FAILED",
         phase: "FAILED",
         completedAt: new Date(),
         error,
-      },
-    });
+      })
+      .where(eq(ingestionRuns.id, id))
+      .returning();
 
     return mapRun(run);
   }
@@ -141,22 +154,23 @@ export class PrismaIngestionRunRepository implements IngestionRunRepository {
     sourceProvider?: string;
   }): Promise<{ runs: IngestionRunRecord[]; total: number }> {
     const where = params.sourceProvider
-      ? { sourceProvider: params.sourceProvider }
-      : {};
+      ? eq(ingestionRuns.sourceProvider, params.sourceProvider)
+      : undefined;
 
     const skip = (params.page - 1) * params.limit;
 
-    const [runs, total] = await Promise.all([
-      prisma.ingestionRun.findMany({
-        where,
-        orderBy: { startedAt: "desc" },
-        skip,
-        take: params.limit,
-      }),
-      prisma.ingestionRun.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(ingestionRuns)
+        .where(where)
+        .orderBy(desc(ingestionRuns.startedAt))
+        .offset(skip)
+        .limit(params.limit),
+      db.select({ count: sql<number>`count(*)` }).from(ingestionRuns).where(where),
     ]);
 
-    return { runs: runs.map(mapRun), total };
+    return { runs: rows.map(mapRun), total: Number(count) };
   }
 }
 
@@ -164,17 +178,18 @@ export class PrismaIngestionSuggestionRepository
   implements IngestionSuggestionRepository
 {
   async create(input: CreateSuggestionInput): Promise<IngestionSuggestionRecord> {
-    const suggestion = await prisma.ingestionSuggestion.create({
-      data: {
+    const [suggestion] = await db
+      .insert(ingestionSuggestions)
+      .values({
         ingestionRunId: input.ingestionRunId,
         type: input.type,
         facilityId: input.facilityId,
         professionalId: input.professionalId,
         facilityProfessionalId: input.facilityProfessionalId,
         reason: input.reason,
-        payload: (input.payload ?? {}) as object,
-      },
-    });
+        payload: (input.payload ?? {}) as Record<string, unknown>,
+      })
+      .returning();
 
     return mapSuggestion(suggestion);
   }
@@ -185,17 +200,27 @@ export class PrismaIngestionSuggestionRepository
     professionalId?: string;
     facilityProfessionalId?: string;
   }): Promise<IngestionSuggestionRecord | null> {
-    const suggestion = await prisma.ingestionSuggestion.findFirst({
-      where: {
-        type: params.type,
-        status: "PENDING",
-        facilityId: params.facilityId ?? null,
-        professionalId: params.professionalId ?? null,
-        facilityProfessionalId: params.facilityProfessionalId ?? null,
-      },
-    });
+    const conditions = [
+      eq(ingestionSuggestions.type, params.type),
+      eq(ingestionSuggestions.status, "PENDING"),
+      ...(params.facilityId != null
+        ? [eq(ingestionSuggestions.facilityId, params.facilityId)]
+        : []),
+      ...(params.professionalId != null
+        ? [eq(ingestionSuggestions.professionalId, params.professionalId)]
+        : []),
+      ...(params.facilityProfessionalId != null
+        ? [eq(ingestionSuggestions.facilityProfessionalId, params.facilityProfessionalId)]
+        : []),
+    ];
 
-    return suggestion ? mapSuggestion(suggestion) : null;
+    const rows = await db
+      .select()
+      .from(ingestionSuggestions)
+      .where(and(...conditions))
+      .limit(1);
+
+    return rows[0] ? mapSuggestion(rows[0]) : null;
   }
 
   async supersedePending(params: {
@@ -204,24 +229,33 @@ export class PrismaIngestionSuggestionRepository
     professionalId?: string;
     facilityProfessionalId?: string;
   }): Promise<void> {
-    await prisma.ingestionSuggestion.updateMany({
-      where: {
-        type: params.type,
-        status: "PENDING",
-        facilityId: params.facilityId ?? null,
-        professionalId: params.professionalId ?? null,
-        facilityProfessionalId: params.facilityProfessionalId ?? null,
-      },
-      data: { status: "SUPERSEDED", resolvedAt: new Date() },
-    });
+    const conditions = [
+      eq(ingestionSuggestions.type, params.type),
+      eq(ingestionSuggestions.status, "PENDING"),
+      ...(params.facilityId != null
+        ? [eq(ingestionSuggestions.facilityId, params.facilityId)]
+        : []),
+      ...(params.professionalId != null
+        ? [eq(ingestionSuggestions.professionalId, params.professionalId)]
+        : []),
+      ...(params.facilityProfessionalId != null
+        ? [eq(ingestionSuggestions.facilityProfessionalId, params.facilityProfessionalId)]
+        : []),
+    ];
+
+    await db
+      .update(ingestionSuggestions)
+      .set({ status: "SUPERSEDED", resolvedAt: new Date() })
+      .where(and(...conditions));
   }
 
   async findById(id: string): Promise<IngestionSuggestionRecord | null> {
-    const suggestion = await prisma.ingestionSuggestion.findUnique({
-      where: { id },
-    });
+    const rows = await db
+      .select()
+      .from(ingestionSuggestions)
+      .where(eq(ingestionSuggestions.id, id));
 
-    return suggestion ? mapSuggestion(suggestion) : null;
+    return rows[0] ? mapSuggestion(rows[0]) : null;
   }
 
   async findAll(params: {
@@ -234,34 +268,32 @@ export class PrismaIngestionSuggestionRepository
     const page = params.page ?? 1;
     const limit = params.limit ?? 20;
 
-    const where = {
-      ...(params.status ? { status: params.status } : {}),
-      ...(params.type ? { type: params.type } : {}),
-      ...(params.facilityIds
-        ? {
-            facilityId: {
-              in:
-                params.facilityIds.length > 0
-                  ? params.facilityIds
-                  : ["__none__"],
-            },
-          }
-        : {}),
-    };
+    if (params.facilityIds !== undefined && params.facilityIds.length === 0) {
+      return { suggestions: [], total: 0 };
+    }
 
+    const conditions = [
+      ...(params.status ? [eq(ingestionSuggestions.status, params.status)] : []),
+      ...(params.type ? [eq(ingestionSuggestions.type, params.type)] : []),
+      ...(params.facilityIds
+        ? [inArray(ingestionSuggestions.facilityId, params.facilityIds)]
+        : []),
+    ];
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
     const skip = (page - 1) * limit;
 
-    const [suggestions, total] = await Promise.all([
-      prisma.ingestionSuggestion.findMany({
-        where,
-        orderBy: { suggestedAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.ingestionSuggestion.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(ingestionSuggestions)
+        .where(where)
+        .orderBy(desc(ingestionSuggestions.suggestedAt))
+        .offset(skip)
+        .limit(limit),
+      db.select({ count: sql<number>`count(*)` }).from(ingestionSuggestions).where(where),
     ]);
 
-    return { suggestions: suggestions.map(mapSuggestion), total };
+    return { suggestions: rows.map(mapSuggestion), total: Number(count) };
   }
 
   async resolve(params: {
@@ -270,15 +302,16 @@ export class PrismaIngestionSuggestionRepository
     resolvedByUserId: string;
     resolutionNote?: string;
   }): Promise<IngestionSuggestionRecord> {
-    const suggestion = await prisma.ingestionSuggestion.update({
-      where: { id: params.id },
-      data: {
+    const [suggestion] = await db
+      .update(ingestionSuggestions)
+      .set({
         status: params.status,
         resolvedAt: new Date(),
         resolvedByUserId: params.resolvedByUserId,
         resolutionNote: params.resolutionNote,
-      },
-    });
+      })
+      .where(eq(ingestionSuggestions.id, params.id))
+      .returning();
 
     return mapSuggestion(suggestion);
   }

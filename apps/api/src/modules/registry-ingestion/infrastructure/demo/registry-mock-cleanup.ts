@@ -1,48 +1,37 @@
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../infrastructure/database/db";
+import { facilities, professionals, ingestionSuggestions, facilityProfessionals, ingestionRuns } from "@atlasmed/database";
+import { eq, or, inArray } from "drizzle-orm";
 import { MOCK_REGISTRY_PROVIDER } from "../../application/interfaces/registry-source.port";
 
 export async function cleanupMockRegistryData(): Promise<void> {
-  const mockClinics = await prisma.facility.findMany({
-    where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
-    select: { id: true },
-  });
-  const mockDoctors = await prisma.professional.findMany({
-    where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
-    select: { id: true },
-  });
+  const mockClinics = await db
+    .select({ id: facilities.id })
+    .from(facilities)
+    .where(eq(facilities.sourceProvider, MOCK_REGISTRY_PROVIDER));
+
+  const mockDoctors = await db
+    .select({ id: professionals.id })
+    .from(professionals)
+    .where(eq(professionals.sourceProvider, MOCK_REGISTRY_PROVIDER));
 
   const facilityIds = mockClinics.map((c) => c.id);
   const professionalIds = mockDoctors.map((d) => d.id);
 
   if (facilityIds.length > 0 || professionalIds.length > 0) {
-    await prisma.ingestionSuggestion.deleteMany({
-      where: {
-        OR: [
-          ...(facilityIds.length > 0 ? [{ facilityId: { in: facilityIds } }] : []),
-          ...(professionalIds.length > 0 ? [{ professionalId: { in: professionalIds } }] : []),
-        ],
-      },
-    });
+    const suggestionConditions = [
+      ...(facilityIds.length > 0 ? [inArray(ingestionSuggestions.facilityId, facilityIds)] : []),
+      ...(professionalIds.length > 0 ? [inArray(ingestionSuggestions.professionalId, professionalIds)] : []),
+    ];
+    await db.delete(ingestionSuggestions).where(or(...suggestionConditions));
 
-    await prisma.facilityProfessional.deleteMany({
-      where: {
-        OR: [
-          ...(facilityIds.length > 0 ? [{ facilityId: { in: facilityIds } }] : []),
-          ...(professionalIds.length > 0 ? [{ professionalId: { in: professionalIds } }] : []),
-        ],
-      },
-    });
+    const fpConditions = [
+      ...(facilityIds.length > 0 ? [inArray(facilityProfessionals.facilityId, facilityIds)] : []),
+      ...(professionalIds.length > 0 ? [inArray(facilityProfessionals.professionalId, professionalIds)] : []),
+    ];
+    await db.delete(facilityProfessionals).where(or(...fpConditions));
   }
 
-  await prisma.ingestionRun.deleteMany({
-    where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
-  });
-
-  await prisma.professional.deleteMany({
-    where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
-  });
-
-  await prisma.facility.deleteMany({
-    where: { sourceProvider: MOCK_REGISTRY_PROVIDER },
-  });
+  await db.delete(ingestionRuns).where(eq(ingestionRuns.sourceProvider, MOCK_REGISTRY_PROVIDER));
+  await db.delete(professionals).where(eq(professionals.sourceProvider, MOCK_REGISTRY_PROVIDER));
+  await db.delete(facilities).where(eq(facilities.sourceProvider, MOCK_REGISTRY_PROVIDER));
 }

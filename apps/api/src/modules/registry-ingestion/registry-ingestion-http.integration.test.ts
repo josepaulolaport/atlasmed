@@ -12,7 +12,9 @@ import { access } from "../access/index";
 import { facility } from "../facility/index";
 import { registryIngestion } from "../registry-ingestion/index";
 import { AppError } from "../../shared/errors";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { facilities, ingestionRuns, ingestionSuggestions } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -155,26 +157,32 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   it("scoped MANAGER can approve suggestion for facility in territory", async () => {
     if (!dbReady) return;
 
-    const clinicRecord = await prisma.facility.create({
-      data: {
+    const clinicRecord = await db
+      .insert(facilities)
+      .values({
         displayName: `Registry Scope Facility ${fixtures.uniqueId}`,
         territoryId: fixtures.territoryId,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
-    const run = await prisma.ingestionRun.create({
-      data: { sourceProvider: "mock_registry", status: "COMPLETED" },
-    });
+    const run = await db
+      .insert(ingestionRuns)
+      .values({ sourceProvider: "mock_registry", status: "COMPLETED" })
+      .returning()
+      .then((r) => r[0]!);
 
-    const suggestion = await prisma.ingestionSuggestion.create({
-      data: {
+    const suggestion = await db
+      .insert(ingestionSuggestions)
+      .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: clinicRecord.id,
         reason: "test_scope",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     const managerToken = await loginToken(fixtures.manager.email);
     const approveResponse = await authRequest(
@@ -189,50 +197,60 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
 
     expect(approveResponse.status).toBe(200);
 
-    await prisma.facility.delete({ where: { id: clinicRecord.id } }).catch(() => {});
-    await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
+    await db.delete(facilities).where(eq(facilities.id, clinicRecord.id)).catch(() => {});
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id)).catch(() => {});
   });
 
   it("MANAGER list only returns suggestions for facilities in scope", async () => {
     if (!dbReady) return;
 
-    const inScopeFacility = await prisma.facility.create({
-      data: {
+    const inScopeFacility = await db
+      .insert(facilities)
+      .values({
         displayName: `In Scope Facility ${fixtures.uniqueId}`,
         territoryId: fixtures.territoryId,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
-    const outOfScopeFacility = await prisma.facility.create({
-      data: {
+    const outOfScopeFacility = await db
+      .insert(facilities)
+      .values({
         displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
         territoryId: fixtures.outOfScopeTerritoryId,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
-    const run = await prisma.ingestionRun.create({
-      data: { sourceProvider: "mock_registry", status: "COMPLETED" },
-    });
+    const run = await db
+      .insert(ingestionRuns)
+      .values({ sourceProvider: "mock_registry", status: "COMPLETED" })
+      .returning()
+      .then((r) => r[0]!);
 
-    const inScopeSuggestion = await prisma.ingestionSuggestion.create({
-      data: {
+    const inScopeSuggestion = await db
+      .insert(ingestionSuggestions)
+      .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: inScopeFacility.id,
         reason: "test_in_scope",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
-    const outOfScopeSuggestion = await prisma.ingestionSuggestion.create({
-      data: {
+    const outOfScopeSuggestion = await db
+      .insert(ingestionSuggestions)
+      .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: outOfScopeFacility.id,
         reason: "test_out_of_scope_list",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     const managerToken = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -247,36 +265,40 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     expect(ids).toContain(inScopeSuggestion.id);
     expect(ids).not.toContain(outOfScopeSuggestion.id);
 
-    await prisma.facility.delete({ where: { id: inScopeFacility.id } }).catch(() => {});
-    await prisma.facility
-      .delete({ where: { id: outOfScopeFacility.id } })
-      .catch(() => {});
-    await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
+    await db.delete(facilities).where(eq(facilities.id, inScopeFacility.id)).catch(() => {});
+    await db.delete(facilities).where(eq(facilities.id, outOfScopeFacility.id)).catch(() => {});
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id)).catch(() => {});
   });
 
   it("returns 403 when MANAGER approves suggestion outside scope", async () => {
     if (!dbReady) return;
 
-    const clinicRecord = await prisma.facility.create({
-      data: {
+    const clinicRecord = await db
+      .insert(facilities)
+      .values({
         displayName: `Out of Scope Facility ${fixtures.uniqueId}`,
         territoryId: fixtures.outOfScopeTerritoryId,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
-    const run = await prisma.ingestionRun.create({
-      data: { sourceProvider: "mock_registry", status: "COMPLETED" },
-    });
+    const run = await db
+      .insert(ingestionRuns)
+      .values({ sourceProvider: "mock_registry", status: "COMPLETED" })
+      .returning()
+      .then((r) => r[0]!);
 
-    const suggestion = await prisma.ingestionSuggestion.create({
-      data: {
+    const suggestion = await db
+      .insert(ingestionSuggestions)
+      .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: clinicRecord.id,
         reason: "test_out_of_scope",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     const managerToken = await loginToken(fixtures.otherManager.email);
     const response = await authRequest(
@@ -291,23 +313,25 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
 
     expect(response.status).toBe(403);
 
-    await prisma.facility.delete({ where: { id: clinicRecord.id } }).catch(() => {});
-    await prisma.ingestionRun.delete({ where: { id: run.id } }).catch(() => {});
+    await db.delete(facilities).where(eq(facilities.id, clinicRecord.id)).catch(() => {});
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id)).catch(() => {});
   });
 
   it("allows ADMIN to list registry ingestion runs with phase fields", async () => {
     if (!dbReady) return;
 
-    const run = await prisma.ingestionRun.create({
-      data: {
+    const run = await db
+      .insert(ingestionRuns)
+      .values({
         sourceProvider: "cnes",
         status: "RUNNING",
         phase: "LOADING",
         referenceAno: 2026,
         referenceMes: 6,
         temporalWorkflowId: "cnes-ingestion-2026-06",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -334,7 +358,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     expect(statusBody.run.id).toBe(run.id);
     expect(statusBody.run.temporalWorkflowId).toBe("cnes-ingestion-2026-06");
 
-    await prisma.ingestionRun.delete({ where: { id: run.id } });
+    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id));
   });
 
   it("returns 401 for unauthenticated clinic doctors list", async () => {

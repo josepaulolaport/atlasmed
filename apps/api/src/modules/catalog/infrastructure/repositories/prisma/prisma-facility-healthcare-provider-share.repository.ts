@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { facilityHealthcareProviderShares, healthcareProviders } from "@atlasmed/database";
+import { eq, sql } from "drizzle-orm";
 import type {
   FacilityHealthcareProviderShareRecord,
   FacilityHealthcareProviderShareRepository,
@@ -8,7 +10,7 @@ function mapShare(row: {
   id: string;
   facilityId: string;
   healthcareProviderId: string;
-  sharePercent: number;
+  sharePercent: string;
   source: "MANUAL" | "REGISTRY" | "IMPORT";
   createdAt: Date;
   updatedAt: Date;
@@ -18,7 +20,7 @@ function mapShare(row: {
     id: row.id,
     facilityId: row.facilityId,
     healthcareProviderId: row.healthcareProviderId,
-    sharePercent: row.sharePercent,
+    sharePercent: Number(row.sharePercent),
     source: row.source,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -30,17 +32,30 @@ export class PrismaFacilityHealthcareProviderShareRepository
   implements FacilityHealthcareProviderShareRepository
 {
   async findByFacility(facilityId: string): Promise<FacilityHealthcareProviderShareRecord[]> {
-    const shares = await prisma.facilityHealthcareProviderShare.findMany({
-      where: { facilityId },
-      include: {
+    const rows = await db
+      .select({
+        id: facilityHealthcareProviderShares.id,
+        facilityId: facilityHealthcareProviderShares.facilityId,
+        healthcareProviderId: facilityHealthcareProviderShares.healthcareProviderId,
+        sharePercent: facilityHealthcareProviderShares.sharePercent,
+        source: facilityHealthcareProviderShares.source,
+        createdAt: facilityHealthcareProviderShares.createdAt,
+        updatedAt: facilityHealthcareProviderShares.updatedAt,
         healthcareProvider: {
-          select: { id: true, name: true, type: true },
+          id: healthcareProviders.id,
+          name: healthcareProviders.name,
+          type: healthcareProviders.type,
         },
-      },
-      orderBy: { sharePercent: "desc" },
-    });
+      })
+      .from(facilityHealthcareProviderShares)
+      .innerJoin(
+        healthcareProviders,
+        eq(facilityHealthcareProviderShares.healthcareProviderId, healthcareProviders.id)
+      )
+      .where(eq(facilityHealthcareProviderShares.facilityId, facilityId))
+      .orderBy(sql`${facilityHealthcareProviderShares.sharePercent}::numeric desc`);
 
-    return shares.map(mapShare);
+    return rows.map(mapShare);
   }
 
   async create(data: {
@@ -48,29 +63,47 @@ export class PrismaFacilityHealthcareProviderShareRepository
     healthcareProviderId: string;
     sharePercent: number;
   }): Promise<FacilityHealthcareProviderShareRecord> {
-    const share = await prisma.facilityHealthcareProviderShare.create({
-      data: {
+    const [share] = await db
+      .insert(facilityHealthcareProviderShares)
+      .values({
         facilityId: data.facilityId,
         healthcareProviderId: data.healthcareProviderId,
-        sharePercent: data.sharePercent,
+        sharePercent: String(data.sharePercent),
         source: "MANUAL",
-      },
-      include: {
-        healthcareProvider: {
-          select: { id: true, name: true, type: true },
-        },
-      },
-    });
+      })
+      .returning({ id: facilityHealthcareProviderShares.id });
 
-    return mapShare(share);
+    const [row] = await db
+      .select({
+        id: facilityHealthcareProviderShares.id,
+        facilityId: facilityHealthcareProviderShares.facilityId,
+        healthcareProviderId: facilityHealthcareProviderShares.healthcareProviderId,
+        sharePercent: facilityHealthcareProviderShares.sharePercent,
+        source: facilityHealthcareProviderShares.source,
+        createdAt: facilityHealthcareProviderShares.createdAt,
+        updatedAt: facilityHealthcareProviderShares.updatedAt,
+        healthcareProvider: {
+          id: healthcareProviders.id,
+          name: healthcareProviders.name,
+          type: healthcareProviders.type,
+        },
+      })
+      .from(facilityHealthcareProviderShares)
+      .innerJoin(
+        healthcareProviders,
+        eq(facilityHealthcareProviderShares.healthcareProviderId, healthcareProviders.id)
+      )
+      .where(eq(facilityHealthcareProviderShares.id, share.id));
+
+    return mapShare(row);
   }
 
   async sumSharePercentForFacility(facilityId: string): Promise<number> {
-    const result = await prisma.facilityHealthcareProviderShare.aggregate({
-      where: { facilityId },
-      _sum: { sharePercent: true },
-    });
+    const [result] = await db
+      .select({ sum: sql<string>`sum(${facilityHealthcareProviderShares.sharePercent}::numeric)` })
+      .from(facilityHealthcareProviderShares)
+      .where(eq(facilityHealthcareProviderShares.facilityId, facilityId));
 
-    return result._sum.sharePercent ?? 0;
+    return Number(result?.sum ?? 0);
   }
 }

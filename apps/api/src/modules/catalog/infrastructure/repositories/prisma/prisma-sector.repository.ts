@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { sectors } from "@atlasmed/database";
+import { eq, asc, sql } from "drizzle-orm";
 import type {
   SectorRecord,
   SectorRepository,
@@ -28,25 +30,27 @@ export class PrismaSectorRepository implements SectorRepository {
     limit: number;
     isActive?: boolean;
   }): Promise<{ sectors: SectorRecord[]; total: number }> {
-    const where = params.isActive === undefined ? {} : { isActive: params.isActive };
+    const where =
+      params.isActive === undefined ? undefined : eq(sectors.isActive, params.isActive);
     const skip = (params.page - 1) * params.limit;
 
-    const [sectors, total] = await Promise.all([
-      prisma.sector.findMany({
-        where,
-        orderBy: { name: "asc" },
-        skip,
-        take: params.limit,
-      }),
-      prisma.sector.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(sectors)
+        .where(where)
+        .orderBy(asc(sectors.name))
+        .offset(skip)
+        .limit(params.limit),
+      db.select({ count: sql<number>`count(*)` }).from(sectors).where(where),
     ]);
 
-    return { sectors: sectors.map(mapSector), total };
+    return { sectors: rows.map(mapSector), total: Number(count) };
   }
 
   async findById(id: string): Promise<SectorRecord | null> {
-    const sector = await prisma.sector.findUnique({ where: { id } });
-    return sector ? mapSector(sector) : null;
+    const rows = await db.select().from(sectors).where(eq(sectors.id, id));
+    return rows[0] ? mapSector(rows[0]) : null;
   }
 
   async create(data: {
@@ -54,13 +58,14 @@ export class PrismaSectorRepository implements SectorRepository {
     name: string;
     isActive?: boolean;
   }): Promise<SectorRecord> {
-    const sector = await prisma.sector.create({
-      data: {
+    const [sector] = await db
+      .insert(sectors)
+      .values({
         slug: data.slug,
         name: data.name,
         isActive: data.isActive ?? true,
-      },
-    });
+      })
+      .returning();
     return mapSector(sector);
   }
 
@@ -68,7 +73,11 @@ export class PrismaSectorRepository implements SectorRepository {
     id: string,
     data: { slug?: string; name?: string; isActive?: boolean }
   ): Promise<SectorRecord> {
-    const sector = await prisma.sector.update({ where: { id }, data });
+    const [sector] = await db
+      .update(sectors)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(sectors.id, id))
+      .returning();
     return mapSector(sector);
   }
 }

@@ -1,4 +1,11 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import {
+  territories,
+  territoryTypes,
+  userTerritoryAssignments,
+  facilities,
+} from "@atlasmed/database";
+import { eq, and, inArray, asc, isNull, sql } from "drizzle-orm";
 import type {
   CreateTerritoryInput,
   TerritoryRecord,
@@ -64,112 +71,139 @@ function mapTerritory(territory: {
   };
 }
 
-const territoryInclude = { territoryType: true } as const;
+type TerritoryJoinedRow = {
+  territories: typeof territories.$inferSelect;
+  territoryTypes: typeof territoryTypes.$inferSelect | null;
+};
+
+function fromJoinedRow(row: TerritoryJoinedRow): TerritoryRecord {
+  return mapTerritory({
+    ...row.territories,
+    territoryType: row.territoryTypes ?? undefined,
+  });
+}
 
 export class PrismaTerritoryRepository implements TerritoryRepository {
+  private async findOneWithType(id: string): Promise<TerritoryRecord | null> {
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(eq(territories.id, id));
+    return rows[0] ? fromJoinedRow(rows[0]) : null;
+  }
+
   async findById(id: string): Promise<TerritoryRecord | null> {
-    const territory = await prisma.territory.findUnique({
-      where: { id },
-      include: territoryInclude,
-    });
-    return territory ? mapTerritory(territory) : null;
+    return this.findOneWithType(id);
   }
 
   async findBySlug(slug: string): Promise<TerritoryRecord | null> {
-    const territory = await prisma.territory.findUnique({
-      where: { slug: slug.toLowerCase() },
-      include: territoryInclude,
-    });
-    return territory ? mapTerritory(territory) : null;
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(eq(territories.slug, slug.toLowerCase()));
+    return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
   async findByCode(code: string): Promise<TerritoryRecord | null> {
-    const territory = await prisma.territory.findUnique({
-      where: { code },
-      include: territoryInclude,
-    });
-    return territory ? mapTerritory(territory) : null;
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(eq(territories.code, code));
+    return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
   async findByIds(ids: string[]): Promise<TerritoryRecord[]> {
     if (ids.length === 0) {
       return [];
     }
-
-    const territories = await prisma.territory.findMany({
-      where: { id: { in: ids } },
-      include: territoryInclude,
-    });
-    return territories.map(mapTerritory);
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(inArray(territories.id, ids));
+    return rows.map(fromJoinedRow);
   }
 
   async findAllActive(): Promise<TerritoryRecord[]> {
-    const territories = await prisma.territory.findMany({
-      where: { isActive: true },
-      include: territoryInclude,
-      orderBy: [{ code: "asc" }],
-    });
-    return territories.map(mapTerritory);
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(eq(territories.isActive, true))
+      .orderBy(asc(territories.code));
+    return rows.map(fromJoinedRow);
   }
 
   async findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]> {
-    const territories = await prisma.territory.findMany({
-      where: {
-        isActive: true,
-        territoryType: { slug: typeSlug },
-      },
-      include: territoryInclude,
-      orderBy: [{ name: "asc" }],
-    });
-    return territories.map(mapTerritory);
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(and(eq(territories.isActive, true), eq(territoryTypes.slug, typeSlug)))
+      .orderBy(asc(territories.name));
+    return rows.map(fromJoinedRow);
   }
 
   async findChildren(parentId: string, activeOnly = true): Promise<TerritoryRecord[]> {
-    const territories = await prisma.territory.findMany({
-      where: {
-        parentId,
-        ...(activeOnly ? { isActive: true } : {}),
-      },
-      include: territoryInclude,
-      orderBy: [{ name: "asc" }],
-    });
-    return territories.map(mapTerritory);
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(
+        activeOnly
+          ? and(eq(territories.parentId, parentId), eq(territories.isActive, true))
+          : eq(territories.parentId, parentId)
+      )
+      .orderBy(asc(territories.name));
+    return rows.map(fromJoinedRow);
   }
 
   async countActiveChildren(parentId: string): Promise<number> {
-    return prisma.territory.count({
-      where: { parentId, isActive: true },
-    });
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(territories)
+      .where(and(eq(territories.parentId, parentId), eq(territories.isActive, true)));
+    return Number(result?.count ?? 0);
   }
 
   async countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number> {
-    return prisma.territory.count({
-      where: {
-        managerTerritoryId,
-        isActive: true,
-        territoryType: { assignsClinics: true },
-      },
-    });
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(territories)
+      .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(
+        and(
+          eq(territories.managerTerritoryId, managerTerritoryId),
+          eq(territories.isActive, true),
+          eq(territoryTypes.assignsClinics, true)
+        )
+      );
+    return Number(result?.count ?? 0);
   }
 
   async countClinics(territoryId: string): Promise<number> {
-    return prisma.facility.count({
-      where: {
-        deletedAt: null,
-        territoryId,
-      },
-    });
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(facilities)
+      .where(and(isNull(facilities.deletedAt), eq(facilities.territoryId, territoryId)));
+    return Number(result?.count ?? 0);
   }
 
   async countAssignedUsers(territoryId: string): Promise<number> {
-    return prisma.userTerritoryAssignment.count({
-      where: { territoryId },
-    });
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(userTerritoryAssignments)
+      .where(eq(userTerritoryAssignments.territoryId, territoryId));
+    return Number(result?.count ?? 0);
   }
 
   async create(input: CreateTerritoryInput): Promise<TerritoryRecord> {
-    const territory = await prisma.territory.create({
-      data: {
+    const [inserted] = await db
+      .insert(territories)
+      .values({
         name: input.name,
         slug: input.slug,
         code: input.code ?? input.slug.toUpperCase(),
@@ -181,10 +215,9 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
         parentId: input.parentId ?? null,
         managerTerritoryId: input.managerTerritoryId ?? null,
         organizationId: input.organizationId ?? null,
-      },
-      include: territoryInclude,
-    });
-    return mapTerritory(territory);
+      })
+      .returning({ id: territories.id });
+    return (await this.findOneWithType(inserted.id))!;
   }
 
   async update(
@@ -197,24 +230,27 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
       countryCode?: string | null;
     }
   ): Promise<TerritoryRecord> {
-    const territory = await prisma.territory.update({
-      where: { id },
-      data,
-      include: territoryInclude,
-    });
-    return mapTerritory(territory);
+    await db
+      .update(territories)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(territories.id, id));
+    return (await this.findOneWithType(id))!;
   }
 
   async findActiveCountryByCode(countryCode: string): Promise<TerritoryRecord | null> {
-    const territory = await prisma.territory.findFirst({
-      where: {
-        isActive: true,
-        countryCode,
-        territoryType: { isCountryLevel: true },
-      },
-      include: territoryInclude,
-    });
-    return territory ? mapTerritory(territory) : null;
+    const rows = await db
+      .select({ territories, territoryTypes })
+      .from(territories)
+      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(
+        and(
+          eq(territories.isActive, true),
+          eq(territories.countryCode, countryCode),
+          eq(territoryTypes.isCountryLevel, true)
+        )
+      )
+      .limit(1);
+    return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
   async findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]> {
@@ -222,15 +258,18 @@ export class PrismaTerritoryRepository implements TerritoryRepository {
       return [];
     }
 
-    const patches = await prisma.territory.findMany({
-      where: {
-        isActive: true,
-        managerTerritoryId: { in: managerTerritoryIds },
-        territoryType: { assignsClinics: true },
-      },
-      select: { id: true },
-    });
+    const rows = await db
+      .select({ id: territories.id })
+      .from(territories)
+      .innerJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
+      .where(
+        and(
+          eq(territories.isActive, true),
+          inArray(territories.managerTerritoryId, managerTerritoryIds),
+          eq(territoryTypes.assignsClinics, true)
+        )
+      );
 
-    return patches.map((patch) => patch.id);
+    return rows.map((r) => r.id);
   }
 }

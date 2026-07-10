@@ -1,5 +1,14 @@
 import { CNES_REGISTRY_PROVIDER } from "@atlasmed/cnes-ingestion";
-import { prisma } from "../infrastructure/prisma";
+import {
+  facilities,
+  professionals,
+  facilityProfessionals,
+  facilityRepresentatives,
+  ingestionDiffs,
+  ingestionSuggestions,
+} from "@atlasmed/database";
+import { eq, and, isNull, sql } from "drizzle-orm";
+import { db } from "../infrastructure/db";
 import { buildFacilityAddress, computeContentHash } from "./content-hash";
 import {
   batchAssociationRemovals,
@@ -46,20 +55,18 @@ export async function reconcileCrmFromStaging(input: {
 
   const now = new Date();
 
-  const stagingFacilities = await prisma.$queryRawUnsafe<
-    Array<{
-      facility_id: string;
-      legal_name: string | null;
-      trade_name: string | null;
-      street_address: string | null;
-      street_number: string | null;
-      neighborhood: string | null;
-      postal_code: string | null;
-      latitude: number | null;
-      longitude: number | null;
-      municipality_id: string | null;
-    }>
-  >(`SELECT facility_id, legal_name, trade_name, street_address, street_number, neighborhood, postal_code, latitude, longitude, municipality_id
+  const stagingFacilities = await db.execute<{
+    facility_id: string;
+    legal_name: string | null;
+    trade_name: string | null;
+    street_address: string | null;
+    street_number: string | null;
+    neighborhood: string | null;
+    postal_code: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    municipality_id: string | null;
+  }>(sql`SELECT facility_id, legal_name, trade_name, street_address, street_number, neighborhood, postal_code, latitude, longitude, municipality_id
      FROM registry_staging.facilities`);
 
   const facilityExternalToInternal = new Map<string, string>();
@@ -81,20 +88,23 @@ export async function reconcileCrmFromStaging(input: {
     };
     const contentHash = computeContentHash(hashPayload);
 
-    const existing = await prisma.facility.findFirst({
-      where: {
-        sourceProvider: CNES_REGISTRY_PROVIDER,
-        externalSourceId: row.facility_id,
-      },
-    });
+    const [existing] = await db
+      .select()
+      .from(facilities)
+      .where(
+        and(
+          eq(facilities.sourceProvider, CNES_REGISTRY_PROVIDER),
+          eq(facilities.externalSourceId, row.facility_id)
+        )
+      )
+      .limit(1);
 
     if (!existing) {
-      const created = await prisma.facility.create({
-        data: {
+      const [created] = await db
+        .insert(facilities)
+        .values({
           displayName: name,
           address,
-          lat: row.latitude,
-          lng: row.longitude,
           referenceMunicipalityCode: row.municipality_id,
           sourceProvider: CNES_REGISTRY_PROVIDER,
           externalSourceId: row.facility_id,
@@ -103,9 +113,9 @@ export async function reconcileCrmFromStaging(input: {
           sourceLastSeenAt: now,
           sourcePresent: true,
           sourceTracked: true,
-        },
-      });
-      facilityExternalToInternal.set(row.facility_id, created.id);
+        })
+        .returning();
+      facilityExternalToInternal.set(row.facility_id, created!.id);
       stats.facilitiesCreated += 1;
       continue;
     }
@@ -131,12 +141,6 @@ export async function reconcileCrmFromStaging(input: {
       if (existing.address !== address) {
         changes.push({ field: "address", current: existing.address, proposed: address });
       }
-      if (existing.lat !== row.latitude) {
-        changes.push({ field: "lat", current: existing.lat, proposed: row.latitude });
-      }
-      if (existing.lng !== row.longitude) {
-        changes.push({ field: "lng", current: existing.lng, proposed: row.longitude });
-      }
 
       if (changes.length > 0) {
         await supersedePending({
@@ -160,17 +164,13 @@ export async function reconcileCrmFromStaging(input: {
     now,
   });
 
-  const stagingProfessionals = await prisma.$queryRawUnsafe<
-    Array<{
-      professional_id: string;
-      full_name: string | null;
-      social_name: string | null;
-      tax_id: string | null;
-    }>
-  >(
-    `SELECT professional_id, full_name, social_name, tax_id
-     FROM registry_staging.professionals`
-  );
+  const stagingProfessionals = await db.execute<{
+    professional_id: string;
+    full_name: string | null;
+    social_name: string | null;
+    tax_id: string | null;
+  }>(sql`SELECT professional_id, full_name, social_name, tax_id
+     FROM registry_staging.professionals`);
 
   const professionalExternalToInternal = new Map<string, string>();
 
@@ -190,16 +190,21 @@ export async function reconcileCrmFromStaging(input: {
     };
     const contentHash = computeContentHash(hashPayload);
 
-    const existing = await prisma.professional.findFirst({
-      where: {
-        sourceProvider: CNES_REGISTRY_PROVIDER,
-        externalSourceId: row.professional_id,
-      },
-    });
+    const [existing] = await db
+      .select()
+      .from(professionals)
+      .where(
+        and(
+          eq(professionals.sourceProvider, CNES_REGISTRY_PROVIDER),
+          eq(professionals.externalSourceId, row.professional_id)
+        )
+      )
+      .limit(1);
 
     if (!existing) {
-      const created = await prisma.professional.create({
-        data: {
+      const [created] = await db
+        .insert(professionals)
+        .values({
           firstName,
           lastName,
           fullName,
@@ -212,9 +217,9 @@ export async function reconcileCrmFromStaging(input: {
           sourceLastSeenAt: now,
           sourcePresent: true,
           sourceTracked: true,
-        },
-      });
-      professionalExternalToInternal.set(row.professional_id, created.id);
+        })
+        .returning();
+      professionalExternalToInternal.set(row.professional_id, created!.id);
       stats.professionalsCreated += 1;
       continue;
     }
@@ -247,11 +252,10 @@ export async function reconcileCrmFromStaging(input: {
     }
   }
 
-  const stagingAssociations = await prisma.$queryRawUnsafe<
-    Array<{ facility_id: string; professional_id: string }>
-  >(
-    `SELECT facility_id, professional_id FROM registry_staging.facility_professionals`
-  );
+  const stagingAssociations = await db.execute<{
+    facility_id: string;
+    professional_id: string;
+  }>(sql`SELECT facility_id, professional_id FROM registry_staging.facility_professionals`);
 
   const associationFacilityIds = [
     ...new Set(stagingAssociations.map((row) => row.facility_id)),
@@ -262,14 +266,11 @@ export async function reconcileCrmFromStaging(input: {
 
   const preExistingFacilityIds = new Set<string>();
   if (associationFacilityIds.length > 0) {
-    const rows = await prisma.$queryRawUnsafe<Array<{ externalSourceId: string }>>(
-      `SELECT "externalSourceId"
+    const rows = await db.execute<{ externalSourceId: string }>(sql`
+      SELECT "externalSourceId"
        FROM public.facilities
-       WHERE "sourceProvider" = $1
-         AND "externalSourceId" = ANY($2::text[])`,
-      CNES_REGISTRY_PROVIDER,
-      associationFacilityIds
-    );
+       WHERE "sourceProvider" = ${CNES_REGISTRY_PROVIDER}
+         AND "externalSourceId" = ANY(${associationFacilityIds}::text[])`);
     for (const row of rows) {
       if (row.externalSourceId) {
         preExistingFacilityIds.add(row.externalSourceId);
@@ -279,14 +280,11 @@ export async function reconcileCrmFromStaging(input: {
 
   const preExistingProfessionalIds = new Set<string>();
   if (associationProfessionalIds.length > 0) {
-    const rows = await prisma.$queryRawUnsafe<Array<{ externalSourceId: string }>>(
-      `SELECT "externalSourceId"
+    const rows = await db.execute<{ externalSourceId: string }>(sql`
+      SELECT "externalSourceId"
        FROM public.professionals
-       WHERE "sourceProvider" = $1
-         AND "externalSourceId" = ANY($2::text[])`,
-      CNES_REGISTRY_PROVIDER,
-      associationProfessionalIds
-    );
+       WHERE "sourceProvider" = ${CNES_REGISTRY_PROVIDER}
+         AND "externalSourceId" = ANY(${associationProfessionalIds}::text[])`);
     for (const row of rows) {
       if (row.externalSourceId) {
         preExistingProfessionalIds.add(row.externalSourceId);
@@ -301,9 +299,17 @@ export async function reconcileCrmFromStaging(input: {
       continue;
     }
 
-    const existing = await prisma.facilityProfessional.findFirst({
-      where: { facilityId, professionalId, endedAt: null },
-    });
+    const [existing] = await db
+      .select()
+      .from(facilityProfessionals)
+      .where(
+        and(
+          eq(facilityProfessionals.facilityId, facilityId),
+          eq(facilityProfessionals.professionalId, professionalId),
+          isNull(facilityProfessionals.endedAt)
+        )
+      )
+      .limit(1);
 
     if (existing) {
       continue;
@@ -328,14 +334,12 @@ export async function reconcileCrmFromStaging(input: {
       continue;
     }
 
-    await prisma.facilityProfessional.create({
-      data: {
-        facilityId,
-        professionalId,
-        sourceActive: true,
-        sourceFirstSeenAt: now,
-        sourceLastSeenAt: now,
-      },
+    await db.insert(facilityProfessionals).values({
+      facilityId,
+      professionalId,
+      sourceActive: true,
+      sourceFirstSeenAt: now,
+      sourceLastSeenAt: now,
     });
     stats.associationsCreated += 1;
   }
@@ -345,32 +349,25 @@ export async function reconcileCrmFromStaging(input: {
     now,
   });
 
-  const stagingRepresentatives = await prisma.$queryRawUnsafe<
-    Array<{
-      facility_id: string;
-      representative_name: string;
-      role_title: string | null;
-      email: string | null;
-      tax_id: string | null;
-    }>
-  >(
-    `SELECT facility_id, representative_name, role_title, email, tax_id
-     FROM registry_staging.facility_representatives`
-  );
+  const stagingRepresentatives = await db.execute<{
+    facility_id: string;
+    representative_name: string;
+    role_title: string | null;
+    email: string | null;
+    tax_id: string | null;
+  }>(sql`SELECT facility_id, representative_name, role_title, email, tax_id
+     FROM registry_staging.facility_representatives`);
 
   const preExistingFacilityIdsForReps = new Set<string>();
   const representativeFacilityIds = [
     ...new Set(stagingRepresentatives.map((row) => row.facility_id)),
   ];
   if (representativeFacilityIds.length > 0) {
-    const rows = await prisma.$queryRawUnsafe<Array<{ externalSourceId: string }>>(
-      `SELECT "externalSourceId"
+    const rows = await db.execute<{ externalSourceId: string }>(sql`
+      SELECT "externalSourceId"
        FROM public.facilities
-       WHERE "sourceProvider" = $1
-         AND "externalSourceId" = ANY($2::text[])`,
-      CNES_REGISTRY_PROVIDER,
-      representativeFacilityIds
-    );
+       WHERE "sourceProvider" = ${CNES_REGISTRY_PROVIDER}
+         AND "externalSourceId" = ANY(${representativeFacilityIds}::text[])`);
     for (const row of rows) {
       if (row.externalSourceId) {
         preExistingFacilityIdsForReps.add(row.externalSourceId);
@@ -394,9 +391,17 @@ export async function reconcileCrmFromStaging(input: {
     };
     const contentHash = computeContentHash(hashPayload);
 
-    const existing = await prisma.facilityRepresentative.findFirst({
-      where: { facilityId, externalSourceKey, endedAt: null },
-    });
+    const [existing] = await db
+      .select()
+      .from(facilityRepresentatives)
+      .where(
+        and(
+          eq(facilityRepresentatives.facilityId, facilityId),
+          eq(facilityRepresentatives.externalSourceKey, externalSourceKey),
+          isNull(facilityRepresentatives.endedAt)
+        )
+      )
+      .limit(1);
 
     if (!existing) {
       if (preExistingFacilityIdsForReps.has(row.facility_id)) {
@@ -417,17 +422,15 @@ export async function reconcileCrmFromStaging(input: {
         continue;
       }
 
-      await prisma.facilityRepresentative.create({
-        data: {
-          facilityId,
-          externalSourceKey,
-          representativeName: row.representative_name,
-          roleTitle: row.role_title,
-          email: row.email,
-          taxId,
-          sourceProvider: CNES_REGISTRY_PROVIDER,
-          sourceActive: true,
-        },
+      await db.insert(facilityRepresentatives).values({
+        facilityId,
+        externalSourceKey,
+        representativeName: row.representative_name,
+        roleTitle: row.role_title,
+        email: row.email,
+        taxId,
+        sourceProvider: CNES_REGISTRY_PROVIDER,
+        sourceActive: true,
       });
       stats.representativesCreated += 1;
       continue;
@@ -486,15 +489,13 @@ async function recordDiff(input: {
   diffType: string;
   payload?: Record<string, unknown>;
 }): Promise<void> {
-  await prisma.ingestionDiff.create({
-    data: {
-      ingestionRunId: input.ingestionRunId,
-      scope: "CRM",
-      entityType: input.entityType,
-      externalSourceId: input.externalSourceId,
-      diffType: input.diffType,
-      payload: (input.payload ?? {}) as object,
-    },
+  await db.insert(ingestionDiffs).values({
+    ingestionRunId: input.ingestionRunId,
+    scope: "CRM",
+    entityType: input.entityType,
+    externalSourceId: input.externalSourceId,
+    diffType: input.diffType,
+    payload: (input.payload ?? {}) as object,
   });
 }
 
@@ -547,31 +548,39 @@ async function createSuggestion(input: {
   externalSourceId?: string;
   diffType?: string;
 }): Promise<void> {
-  const duplicate = await prisma.ingestionSuggestion.findFirst({
-    where: {
-      ingestionRunId: input.ingestionRunId,
-      type: input.type as never,
-      status: "PENDING",
-      facilityId: input.facilityId ?? null,
-      professionalId: input.professionalId ?? null,
-      facilityProfessionalId: input.facilityProfessionalId ?? null,
-    },
-  });
+  const [duplicate] = await db
+    .select()
+    .from(ingestionSuggestions)
+    .where(
+      and(
+        eq(ingestionSuggestions.ingestionRunId, input.ingestionRunId),
+        eq(ingestionSuggestions.type, input.type as never),
+        eq(ingestionSuggestions.status, "PENDING"),
+        input.facilityId
+          ? eq(ingestionSuggestions.facilityId, input.facilityId)
+          : isNull(ingestionSuggestions.facilityId),
+        input.professionalId
+          ? eq(ingestionSuggestions.professionalId, input.professionalId)
+          : isNull(ingestionSuggestions.professionalId),
+        input.facilityProfessionalId
+          ? eq(ingestionSuggestions.facilityProfessionalId, input.facilityProfessionalId)
+          : isNull(ingestionSuggestions.facilityProfessionalId)
+      )
+    )
+    .limit(1);
 
   if (duplicate) {
     return;
   }
 
-  await prisma.ingestionSuggestion.create({
-    data: {
-      ingestionRunId: input.ingestionRunId,
-      type: input.type as never,
-      facilityId: input.facilityId,
-      professionalId: input.professionalId,
-      facilityProfessionalId: input.facilityProfessionalId,
-      reason: input.reason,
-      payload: (input.payload ?? {}) as object,
-    },
+  await db.insert(ingestionSuggestions).values({
+    ingestionRunId: input.ingestionRunId,
+    type: input.type as never,
+    facilityId: input.facilityId,
+    professionalId: input.professionalId,
+    facilityProfessionalId: input.facilityProfessionalId,
+    reason: input.reason,
+    payload: (input.payload ?? {}) as object,
   });
 
   if (input.entityType && input.diffType) {
@@ -603,17 +612,25 @@ async function supersedePending(input: {
   professionalId?: string;
   facilityProfessionalId?: string;
 }): Promise<void> {
-  await prisma.ingestionSuggestion.updateMany({
-    where: {
-      type: input.type as never,
-      status: "PENDING",
-      facilityId: input.facilityId ?? null,
-      professionalId: input.professionalId ?? null,
-      facilityProfessionalId: input.facilityProfessionalId ?? null,
-    },
-    data: {
+  await db
+    .update(ingestionSuggestions)
+    .set({
       status: "SUPERSEDED",
       resolvedAt: new Date(),
-    },
-  });
+    })
+    .where(
+      and(
+        eq(ingestionSuggestions.type, input.type as never),
+        eq(ingestionSuggestions.status, "PENDING"),
+        input.facilityId
+          ? eq(ingestionSuggestions.facilityId, input.facilityId)
+          : isNull(ingestionSuggestions.facilityId),
+        input.professionalId
+          ? eq(ingestionSuggestions.professionalId, input.professionalId)
+          : isNull(ingestionSuggestions.professionalId),
+        input.facilityProfessionalId
+          ? eq(ingestionSuggestions.facilityProfessionalId, input.facilityProfessionalId)
+          : isNull(ingestionSuggestions.facilityProfessionalId)
+      )
+    );
 }

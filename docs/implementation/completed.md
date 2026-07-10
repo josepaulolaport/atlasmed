@@ -23,10 +23,12 @@ This document lists implementation work already present in the repository at the
 
 ## Database and Persistence
 
-- [x] PostgreSQL persistence through Prisma.
-- [x] Prisma schema and migrations for access/auth models.
-- [x] Prisma schema and migrations for clinic, doctor, and registry ingestion models.
-- [x] Generated Prisma client package.
+- [x] PostgreSQL + PostGIS persistence through Drizzle ORM.
+- [x] Drizzle schema for access/auth models (`public` pg schema).
+- [x] Drizzle schema for facility, territory, catalog, and ingestion models (`public` pg schema).
+- [x] Drizzle schema for CNES registry warehouse (`registry` pg schema).
+- [x] PostGIS geometry columns for facility location, territory boundary and centroid.
+- [x] Drizzle Kit migration infrastructure.
 - [x] Database seed scripts for local/test setup.
 - [x] Test database helpers and integration database utilities.
 
@@ -107,12 +109,12 @@ This document lists implementation work already present in the repository at the
 - [x] Professional model with registry provenance and soft-delete fields.
 - [x] Doctor-clinic association model.
 - [x] Facility application use cases and repository interface.
-- [x] Facility Prisma repository.
+- [x] Facility Drizzle repository.
 - [x] Facility API routes.
 - [x] Professional application use cases and repository interface.
-- [x] Professional Prisma repository.
+- [x] Professional Drizzle repository.
 - [x] Professional API routes.
-- [x] Doctor-clinic association use cases and repository.
+- [x] Facility-professional association use cases and repository.
 - [x] Registry ingestion run model.
 - [x] Registry ingestion suggestion model.
 - [x] Registry ingestion service and use cases.

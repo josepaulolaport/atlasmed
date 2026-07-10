@@ -1,11 +1,13 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
-import type { Prisma } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
+import { territoryApprovalRequests, territoryApprovalStatusEnum } from "@atlasmed/database";
+import { eq, and, desc, sql } from "drizzle-orm";
 import type {
   CreateApprovalInput,
   TerritoryApprovalRecord,
   TerritoryApprovalRepository,
 } from "../../../application/interfaces/territory-approval.repository.interface";
-import type { TerritoryApprovalStatus } from "@atlasmed/database";
+
+type TerritoryApprovalStatus = typeof territoryApprovalStatusEnum.enumValues[number];
 
 function mapApproval(record: {
   id: string;
@@ -45,23 +47,27 @@ function mapApproval(record: {
 
 export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepository {
   async create(input: CreateApprovalInput): Promise<TerritoryApprovalRecord> {
-    const record = await prisma.territoryApprovalRequest.create({
-      data: {
+    const [record] = await db
+      .insert(territoryApprovalRequests)
+      .values({
         type: input.type,
         requesterId: input.requesterId,
-        entityPayload: input.entityPayload as Prisma.InputJsonValue,
+        entityPayload: input.entityPayload,
         targetTerritoryId: input.targetTerritoryId ?? null,
         facilityId: input.facilityId ?? null,
         toTerritoryId: input.toTerritoryId ?? null,
         reason: input.reason ?? null,
-      },
-    });
+      })
+      .returning();
     return mapApproval(record);
   }
 
   async findById(id: string): Promise<TerritoryApprovalRecord | null> {
-    const record = await prisma.territoryApprovalRequest.findUnique({ where: { id } });
-    return record ? mapApproval(record) : null;
+    const rows = await db
+      .select()
+      .from(territoryApprovalRequests)
+      .where(eq(territoryApprovalRequests.id, id));
+    return rows[0] ? mapApproval(rows[0]) : null;
   }
 
   async findPendingByEntity(params: {
@@ -69,14 +75,21 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
     targetTerritoryId?: string | null;
     facilityId?: string | null;
   }): Promise<TerritoryApprovalRecord[]> {
-    const records = await prisma.territoryApprovalRequest.findMany({
-      where: {
-        type: params.type,
-        status: "pending",
-        targetTerritoryId: params.targetTerritoryId ?? undefined,
-        facilityId: params.facilityId ?? undefined,
-      },
-    });
+    const conditions = [
+      eq(territoryApprovalRequests.type, params.type),
+      eq(territoryApprovalRequests.status, "pending"),
+      ...(params.targetTerritoryId != null
+        ? [eq(territoryApprovalRequests.targetTerritoryId, params.targetTerritoryId)]
+        : []),
+      ...(params.facilityId != null
+        ? [eq(territoryApprovalRequests.facilityId, params.facilityId)]
+        : []),
+    ];
+
+    const records = await db
+      .select()
+      .from(territoryApprovalRequests)
+      .where(and(...conditions));
     return records.map(mapApproval);
   }
 
@@ -86,26 +99,31 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
     targetTerritoryId?: string | null;
     facilityId?: string | null;
   }): Promise<TerritoryApprovalRecord | null> {
-    const record = await prisma.territoryApprovalRequest.findFirst({
-      where: {
-        type: params.type,
-        status: "pending",
-        requesterId: params.requesterId,
-        targetTerritoryId: params.targetTerritoryId ?? undefined,
-        facilityId: params.facilityId ?? undefined,
-      },
-    });
-    return record ? mapApproval(record) : null;
+    const conditions = [
+      eq(territoryApprovalRequests.type, params.type),
+      eq(territoryApprovalRequests.status, "pending"),
+      eq(territoryApprovalRequests.requesterId, params.requesterId),
+      ...(params.targetTerritoryId != null
+        ? [eq(territoryApprovalRequests.targetTerritoryId, params.targetTerritoryId)]
+        : []),
+      ...(params.facilityId != null
+        ? [eq(territoryApprovalRequests.facilityId, params.facilityId)]
+        : []),
+    ];
+
+    const rows = await db
+      .select()
+      .from(territoryApprovalRequests)
+      .where(and(...conditions))
+      .limit(1);
+    return rows[0] ? mapApproval(rows[0]) : null;
   }
 
   async supersede(id: string, supersededById: string): Promise<void> {
-    await prisma.territoryApprovalRequest.update({
-      where: { id },
-      data: {
-        status: "superseded",
-        supersededById,
-      },
-    });
+    await db
+      .update(territoryApprovalRequests)
+      .set({ status: "superseded", supersededById, updatedAt: new Date() })
+      .where(eq(territoryApprovalRequests.id, id));
   }
 
   async resolve(
@@ -116,15 +134,17 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
       resolutionNote?: string | null;
     }
   ): Promise<TerritoryApprovalRecord> {
-    const record = await prisma.territoryApprovalRequest.update({
-      where: { id },
-      data: {
+    const [record] = await db
+      .update(territoryApprovalRequests)
+      .set({
         status: data.status,
         reviewerId: data.reviewerId,
         resolutionNote: data.resolutionNote ?? null,
         resolvedAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(territoryApprovalRequests.id, id))
+      .returning();
     return mapApproval(record);
   }
 
@@ -133,19 +153,26 @@ export class PrismaTerritoryApprovalRepository implements TerritoryApprovalRepos
     page: number;
     limit: number;
   }): Promise<{ items: TerritoryApprovalRecord[]; total: number }> {
-    const where = params.status ? { status: params.status } : {};
+    const where = params.status
+      ? eq(territoryApprovalRequests.status, params.status)
+      : undefined;
+
     const skip = (params.page - 1) * params.limit;
 
-    const [items, total] = await Promise.all([
-      prisma.territoryApprovalRequest.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: params.limit,
-      }),
-      prisma.territoryApprovalRequest.count({ where }),
+    const [items, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(territoryApprovalRequests)
+        .where(where)
+        .orderBy(desc(territoryApprovalRequests.createdAt))
+        .offset(skip)
+        .limit(params.limit),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(territoryApprovalRequests)
+        .where(where),
     ]);
 
-    return { items: items.map(mapApproval), total };
+    return { items: items.map(mapApproval), total: Number(count) };
   }
 }

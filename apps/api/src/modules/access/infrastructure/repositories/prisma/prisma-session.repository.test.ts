@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { roles, users, sessions } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import { PrismaSessionRepository } from "./prisma-session.repository";
 import { hashToken } from "../../../../../shared/utils/hash-token";
 import { randomUUID } from "node:crypto";
@@ -11,39 +13,41 @@ describe("PrismaSessionRepository (Integration)", () => {
   let testRoleId: string;
 
   beforeAll(async () => {
-    // Use existing seeded role
-    const testRole = await prisma.role.findUnique({
-      where: { name: "USER" },
-    });
-    
+    const testRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
     if (!testRole) {
       throw new Error("USER role not found in seeded database");
     }
-    
+
     testRoleId = testRole.id;
 
-    // Create a test user for session tests
     const uniqueId = getUniqueTestId();
-    const testUser = await prisma.user.create({
-      data: {
+    const testUser = await db
+      .insert(users)
+      .values({
         email: `session_${uniqueId}@example.com`,
         username: `session_${uniqueId}`,
         passwordHash: "$argon2id$test",
         roleId: testRoleId,
         status: "ACTIVE",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
     testUserId = testUser.id;
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.session.deleteMany({ where: { userId: testUserId } });
-    await prisma.user.delete({ where: { id: testUserId } }).catch(() => {});
+    await db.delete(sessions).where(eq(sessions.userId, testUserId));
+    await db.delete(users).where(eq(users.id, testUserId)).catch(() => {});
   });
 
   beforeEach(async () => {
-    await prisma.session.deleteMany({ where: { userId: testUserId } });
+    await db.delete(sessions).where(eq(sessions.userId, testUserId));
     sessionRepository = new PrismaSessionRepository();
   });
 
@@ -486,9 +490,12 @@ describe("PrismaSessionRepository (Integration)", () => {
 
       await sessionRepository.revokeAllByUserId(testUserId);
 
-      const updated = await prisma.session.findUnique({
-        where: { id: session.id },
-      });
+      const updated = await db
+        .select()
+        .from(sessions)
+        .where(eq(sessions.id, session.id))
+        .limit(1)
+        .then((r) => r[0] ?? null);
 
       expect(updated?.revokedReason).toBe("User deactivation or logout all");
     });

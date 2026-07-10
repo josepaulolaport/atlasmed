@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { eq, and, or, isNull, ilike, inArray, sql, desc } from "drizzle-orm";
+import { users, roles, sessions, passwordResets, type Database } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import {
   ResetTokenExpiredError,
   ResetTokenInvalidError,
@@ -16,72 +18,71 @@ import type {
   FindAllUsersParams,
 } from "../../../application/interfaces/user.repository.interface";
 
+async function fetchUserWithRole(userId: string, client: Database = db) {
+  const [row] = await client
+    .select()
+    .from(users)
+    .leftJoin(roles, eq(users.roleId, roles.id))
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!row) return null;
+  return { ...row.users, role: row.roles! };
+}
+
 export class PrismaUserRepository implements UserRepository {
   async findByIdentifier(params: FindUserByIdentifierParams) {
-    return await prisma.user.findFirst({
-      where: {
-        deletedAt: null,
-        OR: [
-          {
-            email: params.identifier,
-          },
+    const [row] = await db
+      .select()
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(
+        and(
+          isNull(users.deletedAt),
+          or(
+            eq(users.email, params.identifier),
+            eq(users.username, params.identifier),
+            eq(users.phoneNumber, params.identifier as any),
+          ),
+        ),
+      )
+      .limit(1);
 
-          {
-            username: params.identifier,
-          },
-
-          {
-            phoneNumber: params.identifier,
-          },
-        ],
-      },
-
-      include: {
-        role: true,
-      },
-    });
+    if (!row) return null;
+    return { ...row.users, role: row.roles! };
   }
 
   async findById(id: string) {
-    return await prisma.user.findUnique({
-      where: { id },
-
-      include: {
-        role: true,
-      },
-    });
+    return fetchUserWithRole(id);
   }
 
   async findUserAuthStatus(id: string) {
-    const user = await prisma.user.findUnique({
-      where: { id },
-      select: {
-        status: true,
-        tokenVersion: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
+    const [row] = await db
+      .select({
+        status: users.status,
+        tokenVersion: users.tokenVersion,
+        roleId: roles.id,
+        roleName: roles.name,
+      })
+      .from(users)
+      .leftJoin(roles, eq(users.roleId, roles.id))
+      .where(eq(users.id, id))
+      .limit(1);
 
-    if (!user) {
-      return null;
-    }
+    if (!row) return null;
 
     return {
-      status: user.status,
-      tokenVersion: user.tokenVersion,
-      roleId: user.role.id,
-      roleName: user.role.name,
+      status: row.status,
+      tokenVersion: row.tokenVersion,
+      roleId: row.roleId!,
+      roleName: row.roleName!,
     };
   }
 
   async create(params: CreateUserParams) {
-    return await prisma.user.create({
-      data: {
+    const [inserted] = await db
+      .insert(users)
+      .values({
         email: params.email,
         username: params.username,
         phoneNumber: params.phoneNumber ?? null,
@@ -92,109 +93,101 @@ export class PrismaUserRepository implements UserRepository {
         emailVerified: params.emailVerified ?? false,
         phoneVerified: params.phoneVerified ?? false,
         status: (params.status as any) ?? "PENDING",
-      },
+      })
+      .returning();
 
-      include: {
-        role: true,
-      },
-    });
+    const result = await fetchUserWithRole(inserted!.id);
+    return result!;
   }
 
   async updateLastLogin(userId: string) {
-    await prisma.user.update({
-      where: {
-        id: userId,
-      },
-
-      data: {
-        lastLoginAt: new Date(),
-      },
-    });
+    await db
+      .update(users)
+      .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async updatePassword(params: UpdatePasswordParams) {
-    await prisma.user.update({
-      where: {
-        id: params.userId,
-      },
-
-      data: {
+    await db
+      .update(users)
+      .set({
         passwordHash: params.passwordHash,
         passwordChangedAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, params.userId));
   }
 
   async deactivate(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         status: "INACTIVE",
         deactivatedAt: new Date(),
-        tokenVersion: { increment: 1 },
-      },
-    });
+        tokenVersion: sql`${users.tokenVersion} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async activate(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         status: "ACTIVE",
         deactivatedAt: null,
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async suspend(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         status: "SUSPENDED",
-        tokenVersion: { increment: 1 },
-      },
-    });
+        tokenVersion: sql`${users.tokenVersion} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async unsuspend(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        status: "ACTIVE",
-      },
-    });
+    await db
+      .update(users)
+      .set({ status: "ACTIVE", updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async updateRole(userId: string, roleId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { roleId },
-    });
+    await db
+      .update(users)
+      .set({ roleId, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async changeRoleTransaction(params: {
     userId: string;
     newRoleId: string;
   }): Promise<void> {
-    await prisma.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: params.userId },
-        data: {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
           roleId: params.newRoleId,
-          tokenVersion: { increment: 1 },
-        },
-      });
+          tokenVersion: sql`${users.tokenVersion} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, params.userId));
 
-      await tx.session.updateMany({
-        where: {
-          userId: params.userId,
-          revokedAt: null,
-        },
-        data: {
+      await tx
+        .update(sessions)
+        .set({
           revokedAt: new Date(),
           revokedReason: "Role changed",
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(and(eq(sessions.userId, params.userId), isNull(sessions.revokedAt)));
     });
   }
 
@@ -206,58 +199,66 @@ export class PrismaUserRepository implements UserRepository {
     revokeOtherSessions: boolean;
     keepSessionId?: string;
   }) {
-    return await prisma.$transaction(async (tx) => {
-      const user = await tx.user.update({
-        where: { id: params.userId },
-        data: {
+    return await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
           passwordHash: params.newPasswordHash,
           passwordHistory: params.passwordHistory,
           passwordChangedAt: new Date(),
-          tokenVersion: { increment: 1 },
-        },
-        include: { role: true },
-      });
+          tokenVersion: sql`${users.tokenVersion} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, params.userId));
+
+      const user = await fetchUserWithRole(params.userId, tx);
 
       if (params.revokeOtherSessions) {
-        await tx.session.updateMany({
-          where: {
-            userId: params.userId,
-            revokedAt: null,
-            ...(params.keepSessionId
-              ? { id: { not: params.keepSessionId } }
-              : {}),
-          },
-          data: {
+        const conditions = [
+          eq(sessions.userId, params.userId),
+          isNull(sessions.revokedAt),
+        ];
+
+        if (params.keepSessionId) {
+          conditions.push(sql`${sessions.id} != ${params.keepSessionId}` as any);
+        }
+
+        await tx
+          .update(sessions)
+          .set({
             revokedAt: new Date(),
             revokedReason: "Password changed",
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(and(...conditions));
       }
 
-      return { user };
+      return { user: user! };
     });
   }
 
   async enableTwoFactor(params: { userId: string; encryptedSecret: string }) {
-    await prisma.user.update({
-      where: { id: params.userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         twoFactorEnabled: true,
         twoFactorSecret: params.encryptedSecret,
-        tokenVersion: { increment: 1 },
-      },
-    });
+        tokenVersion: sql`${users.tokenVersion} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, params.userId));
   }
 
   async disableTwoFactor(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         twoFactorEnabled: false,
         twoFactorSecret: null,
-        tokenVersion: { increment: 1 },
-      },
-    });
+        tokenVersion: sql`${users.tokenVersion} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   /**
@@ -265,32 +266,31 @@ export class PrismaUserRepository implements UserRepository {
    * Intended for privilege changes (e.g. role change) — call alongside session revocation and cache invalidation.
    */
   async incrementTokenVersion(userId: string): Promise<number> {
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        tokenVersion: { increment: 1 },
-      },
-      select: {
-        tokenVersion: true,
-      },
-    });
+    const [updated] = await db
+      .update(users)
+      .set({
+        tokenVersion: sql`${users.tokenVersion} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning({ tokenVersion: users.tokenVersion });
 
-    return user.tokenVersion;
+    return updated!.tokenVersion;
   }
 
   async resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult> {
-    return await prisma.$transaction(async (tx) => {
-      const lockedReset = await tx.$queryRaw<Array<{
+    return await db.transaction(async (tx) => {
+      const lockedReset = await tx.execute<{
         id: string;
         userId: string;
         expiresAt: Date;
         usedAt: Date | null;
-      }>>`
+      }>(sql`
         SELECT id, "userId", "expiresAt", "usedAt"
         FROM password_resets
         WHERE "tokenHash" = ${params.tokenHash}
         FOR UPDATE
-      `;
+      `);
 
       if (!lockedReset || lockedReset.length === 0) {
         throw new ResetTokenInvalidError();
@@ -306,16 +306,16 @@ export class PrismaUserRepository implements UserRepository {
         throw new ResetTokenExpiredError();
       }
 
-      const lockedUser = await tx.$queryRaw<Array<{
+      const lockedUser = await tx.execute<{
         id: string;
         passwordHash: string;
         passwordHistory: string[];
-      }>>`
+      }>(sql`
         SELECT id, "passwordHash", "passwordHistory"
         FROM users
         WHERE id = ${passwordReset.userId}
         FOR UPDATE
-      `;
+      `);
 
       if (!lockedUser || lockedUser.length === 0) {
         throw new ResetTokenInvalidError();
@@ -325,122 +325,130 @@ export class PrismaUserRepository implements UserRepository {
 
       const updatedHistory = [userLock.passwordHash, ...userLock.passwordHistory].slice(
         0,
-        PASSWORD_HISTORY_LIMIT
+        PASSWORD_HISTORY_LIMIT,
       );
 
-      const user = await tx.user.update({
-        where: { id: userLock.id },
-        data: {
+      await tx
+        .update(users)
+        .set({
           passwordHash: params.newPasswordHash,
           passwordHistory: updatedHistory,
           passwordChangedAt: new Date(),
-          tokenVersion: { increment: 1 },
-        },
-        include: {
-          role: true,
-        },
-      });
+          tokenVersion: sql`${users.tokenVersion} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userLock.id));
 
-      await tx.passwordReset.update({
-        where: { id: passwordReset.id },
-        data: {
-          usedAt: new Date(),
-        },
-      });
+      const user = await fetchUserWithRole(userLock.id, tx);
 
-      await tx.session.updateMany({
-        where: {
-          userId: user.id,
-          revokedAt: null,
-        },
-        data: {
+      await tx
+        .update(passwordResets)
+        .set({ usedAt: new Date(), updatedAt: new Date() })
+        .where(eq(passwordResets.id, passwordReset.id));
+
+      await tx
+        .update(sessions)
+        .set({
           revokedAt: new Date(),
           revokedReason: "Password reset",
-        },
-      });
+          updatedAt: new Date(),
+        })
+        .where(and(eq(sessions.userId, user!.id), isNull(sessions.revokedAt)));
 
-      const passwordResetRecord = await tx.passwordReset.findUniqueOrThrow({
-        where: { id: passwordReset.id },
-      });
+      const [passwordResetRecord] = await tx
+        .select()
+        .from(passwordResets)
+        .where(eq(passwordResets.id, passwordReset.id))
+        .limit(1);
 
-      return { user, passwordReset: passwordResetRecord };
+      return { user: user!, passwordReset: passwordResetRecord! };
     });
   }
 
   async findEmailVerificationState(userId: string) {
-    return await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        email: true,
-        emailVerified: true,
-      },
-    });
+    const [row] = await db
+      .select({ email: users.email, emailVerified: users.emailVerified })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return row ?? null;
   }
 
   async findPhoneVerificationState(userId: string) {
-    return await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        phoneNumber: true,
-        phoneVerified: true,
-      },
-    });
+    const [row] = await db
+      .select({ phoneNumber: users.phoneNumber, phoneVerified: users.phoneVerified })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return row ?? null;
   }
 
   async findByEmail(email: string) {
-    return await prisma.user.findUnique({
-      where: { email },
-      select: { id: true },
-    });
+    const [row] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
+
+    return row ?? null;
   }
 
   async findByPhone(phoneNumber: string) {
-    return await prisma.user.findUnique({
-      where: { phoneNumber },
-      select: { id: true },
-    });
+    const [row] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.phoneNumber, phoneNumber as any))
+      .limit(1);
+
+    return row ?? null;
   }
 
   async markEmailVerified(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         emailVerified: true,
         emailVerifiedAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async markPhoneVerified(userId: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         phoneVerified: true,
         phoneVerifiedAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async updateEmail(userId: string, newEmail: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         email: newEmail,
         emailVerified: true,
         emailVerifiedAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async updatePhone(userId: string, newPhone: string) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
+    await db
+      .update(users)
+      .set({
         phoneNumber: newPhone,
         phoneVerified: true,
         phoneVerifiedAt: new Date(),
-      },
-    });
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async findAll(params: FindAllUsersParams) {
@@ -448,22 +456,23 @@ export class PrismaUserRepository implements UserRepository {
     const limit = Math.min(params.limit, 100);
     const skip = (page - 1) * limit;
 
-    const where: Record<string, unknown> = {
-      deletedAt: null,
-    };
+    const conditions: ReturnType<typeof eq>[] = [isNull(users.deletedAt) as any];
 
     if (params.status) {
-      where.status = params.status;
+      conditions.push(eq(users.status, params.status as any));
     }
 
     if (params.search) {
-      where.OR = [
-        { email: { contains: params.search, mode: "insensitive" } },
-        { username: { contains: params.search, mode: "insensitive" } },
-        { firstName: { contains: params.search, mode: "insensitive" } },
-        { lastName: { contains: params.search, mode: "insensitive" } },
-        { phoneNumber: { contains: params.search, mode: "insensitive" } },
-      ];
+      const term = `%${params.search}%`;
+      conditions.push(
+        or(
+          ilike(users.email, term),
+          ilike(users.username, term),
+          ilike(users.firstName as any, term),
+          ilike(users.lastName as any, term),
+          ilike(users.phoneNumber as any, term),
+        ) as any,
+      );
     }
 
     if (params.scope && !params.scope.isGlobal) {
@@ -473,54 +482,52 @@ export class PrismaUserRepository implements UserRepository {
         return { users: [], total: 0 };
       }
 
-      where.AND = [
-        ...((where.AND as Record<string, unknown>[]) ?? []),
-        { id: { in: managedUserIds } },
-      ];
+      conditions.push(inArray(users.id, managedUserIds) as any);
     }
 
-    const [users, total] = await Promise.all([
-      prisma.user.findMany({
-        where: where as any,
-        include: {
-          role: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        skip,
-        take: limit,
-      }),
-      prisma.user.count({ where: where as any }),
+    const where = and(...conditions);
+
+    const [userRows, countRows] = await Promise.all([
+      db
+        .select()
+        .from(users)
+        .leftJoin(roles, eq(users.roleId, roles.id))
+        .where(where)
+        .orderBy(desc(users.createdAt))
+        .offset(skip)
+        .limit(limit),
+      db.select({ count: sql<number>`count(*)::int` }).from(users).where(where),
     ]);
 
-    return { users, total };
+    return {
+      users: userRows.map((row) => ({ ...row.users, role: row.roles! })),
+      total: countRows[0]!.count,
+    };
   }
 
   async updateProfile(
     userId: string,
-    data: { firstName?: string; lastName?: string; avatarUrl?: string }
+    data: { firstName?: string; lastName?: string; avatarUrl?: string },
   ) {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(data.firstName !== undefined && { firstName: data.firstName }),
-        ...(data.lastName !== undefined && { lastName: data.lastName }),
-        ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
-      },
-      include: {
-        role: true,
-      },
-    });
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+
+    if (data.firstName !== undefined) updates.firstName = data.firstName;
+    if (data.lastName !== undefined) updates.lastName = data.lastName;
+    if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl;
+
+    await db.update(users).set(updates).where(eq(users.id, userId));
+
+    const result = await fetchUserWithRole(userId);
+    return result!;
   }
 
   async updateManagerId(userId: string, managerId: string | null) {
-    return await prisma.user.update({
-      where: { id: userId },
-      data: { managerId },
-      include: {
-        role: true,
-      },
-    });
+    await db
+      .update(users)
+      .set({ managerId, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+
+    const result = await fetchUserWithRole(userId);
+    return result!;
   }
 }

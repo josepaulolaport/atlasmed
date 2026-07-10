@@ -8,11 +8,11 @@ Tool-specific configs (CLAUDE.md, .cursor/rules/*, etc.) should point here inste
 
 ## Repository structure
 
-- `apps/api` — Bun + Elysia backend, Prisma, PostgreSQL/PostGIS, CASL authorization.
+- `apps/api` — Bun + Elysia backend, Drizzle ORM, PostgreSQL/PostGIS, CASL authorization.
 - `apps/mobile` — Flutter mobile app (migration to React Native/Expo tracked in `docs/architecture/adr/0002-mobile-stack.md`).
 - `apps/web` — Next.js admin/web app.
 - `apps/workers` — Temporal workflow workers (registry ingestion, background jobs).
-- `packages/database` — Prisma schema, migrations, generated client, database helpers.
+- `packages/database` — Drizzle schema, migrations (Drizzle Kit), database client factory, PostGIS geometry types.
 - `packages/access` — CASL authorization rules, roles, row-level access.
 - `packages/cnes-ingestion` — CNES / DataSUS adapters (FTP, parsing).
 - `packages/mapbox` — Mapbox API client wrappers.
@@ -111,7 +111,7 @@ Tier hierarchy (drop from highest tier down under pressure):
 - Never import one app from another app.
 - Shared code belongs in `packages/*`, never inside `apps/*`.
 - UI apps must not depend directly on database models — go through backend DTOs.
-- Backend exposes explicit DTOs/contracts, never raw Prisma models.
+- Backend exposes explicit DTOs/contracts, never raw Drizzle row types.
 - Do not duplicate business rules across api, mobile, and web.
 - If a change crosses app boundaries, name every affected area BEFORE editing.
 

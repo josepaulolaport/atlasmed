@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { roles, users, invitations } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import { PrismaInviteRepository } from "./prisma-invite.repository";
 import { getUniqueTestId } from "../../../../../test-utils/database-helpers";
 
@@ -9,39 +11,41 @@ describe("PrismaInviteRepository (Integration)", () => {
   let testInviterId: string;
 
   beforeAll(async () => {
-    // Use existing seeded role
-    const testRole = await prisma.role.findUnique({
-      where: { name: "USER" },
-    });
-    
+    const testRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
     if (!testRole) {
       throw new Error("USER role not found in seeded database");
     }
-    
+
     testRoleId = testRole.id;
 
-    // Create a test inviter user
     const uniqueId = getUniqueTestId();
-    const inviter = await prisma.user.create({
-      data: {
+    const inviter = await db
+      .insert(users)
+      .values({
         email: `inviter_${uniqueId}@example.com`,
         username: `inviter_${uniqueId}`,
         passwordHash: "$argon2id$test",
         roleId: testRoleId,
         status: "ACTIVE",
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
     testInviterId = inviter.id;
   });
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.invitation.deleteMany({ where: { invitedByUserId: testInviterId } });
-    await prisma.user.delete({ where: { id: testInviterId } }).catch(() => {});
+    await db.delete(invitations).where(eq(invitations.invitedByUserId, testInviterId));
+    await db.delete(users).where(eq(users.id, testInviterId)).catch(() => {});
   });
 
   beforeEach(async () => {
-    await prisma.invitation.deleteMany({ where: { invitedByUserId: testInviterId } });
+    await db.delete(invitations).where(eq(invitations.invitedByUserId, testInviterId));
     inviteRepository = new PrismaInviteRepository();
   });
 
@@ -217,15 +221,17 @@ describe("PrismaInviteRepository (Integration)", () => {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
-      const user = await prisma.user.create({
-        data: {
+      const user = await db
+        .insert(users)
+        .values({
           email: "accepted-test@example.com",
           username: `accepteduser1_${Date.now()}`,
           passwordHash: "$argon2id$test",
           roleId: testRoleId,
           status: "ACTIVE",
-        },
-      });
+        })
+        .returning()
+        .then((r) => r[0]!);
 
       await inviteRepository.markAccepted(created.id, user.id);
 
@@ -363,15 +369,17 @@ describe("PrismaInviteRepository (Integration)", () => {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
-      const user = await prisma.user.create({
-        data: {
+      const user = await db
+        .insert(users)
+        .values({
           email: "acceptuser@example.com",
           username: `accepteduser_${Date.now()}`,
           passwordHash: "$argon2id$test",
           roleId: testRoleId,
           status: "ACTIVE",
-        },
-      });
+        })
+        .returning()
+        .then((r) => r[0]!);
 
       await inviteRepository.markAccepted(invite.id, user.id);
 

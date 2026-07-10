@@ -1,4 +1,6 @@
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../infrastructure/database/db";
+import { userTerritoryAssignments } from "@atlasmed/database";
+import { inArray } from "drizzle-orm";
 import type { TerritoryHierarchyPort } from "../../application/interfaces/territory-hierarchy.port.interface";
 import type { TerritoryClosureRepository } from "../../application/interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../../application/interfaces/territory.repository.interface";
@@ -83,13 +85,11 @@ export class PrismaTerritoryHierarchyPort implements TerritoryHierarchyPort {
       relatedTerritoryIds.add(ancestorId);
     }
 
-    const assignments = await prisma.userTerritoryAssignment.findMany({
-      where: {
-        territoryId: { in: [...relatedTerritoryIds] },
-      },
-      select: { userId: true },
-    });
+    const assignments = await db
+      .select({ userId: userTerritoryAssignments.userId })
+      .from(userTerritoryAssignments)
+      .where(inArray(userTerritoryAssignments.territoryId, [...relatedTerritoryIds]));
 
-    return [...new Set(assignments.map((assignment) => assignment.userId))];
+    return [...new Set(assignments.map((a) => a.userId))];
   }
 }

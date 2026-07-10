@@ -241,20 +241,16 @@ export class MetricsService {
 
   public async updateActiveMetrics(): Promise<void> {
     try {
+      const { db } = await import("../database/db");
+      const { users, sessions } = await import("@atlasmed/database");
+      const { eq, isNull, gt, and, count } = await import("drizzle-orm");
+
       const [activeUserCount, activeSessionCount] = await Promise.all([
-        (async () => {
-          const { prisma } = await import("../database/prisma.client");
-          return prisma.user.count({ where: { status: "ACTIVE" } });
-        })(),
-        (async () => {
-          const { prisma } = await import("../database/prisma.client");
-          return prisma.session.count({
-            where: {
-              revokedAt: null,
-              expiresAt: { gt: new Date() },
-            },
-          });
-        })(),
+        db.select({ count: count() }).from(users).where(eq(users.status, "ACTIVE"))
+          .then(([r]) => Number(r?.count ?? 0)),
+        db.select({ count: count() }).from(sessions).where(
+          and(isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date()))
+        ).then(([r]) => Number(r?.count ?? 0)),
       ]);
 
       this.activeUsers.set(activeUserCount);

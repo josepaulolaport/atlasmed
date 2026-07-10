@@ -1,4 +1,6 @@
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../../infrastructure/database/db";
+import { healthcareProviders } from "@atlasmed/database";
+import { eq, asc, sql } from "drizzle-orm";
 import type {
   HealthcareProviderRecord,
   HealthcareProviderRepository,
@@ -29,25 +31,32 @@ export class PrismaHealthcareProviderRepository implements HealthcareProviderRep
     limit: number;
     isActive?: boolean;
   }): Promise<{ providers: HealthcareProviderRecord[]; total: number }> {
-    const where = params.isActive === undefined ? {} : { isActive: params.isActive };
+    const where =
+      params.isActive === undefined
+        ? undefined
+        : eq(healthcareProviders.isActive, params.isActive);
     const skip = (params.page - 1) * params.limit;
 
-    const [providers, total] = await Promise.all([
-      prisma.healthcareProvider.findMany({
-        where,
-        orderBy: { name: "asc" },
-        skip,
-        take: params.limit,
-      }),
-      prisma.healthcareProvider.count({ where }),
+    const [rows, [{ count }]] = await Promise.all([
+      db
+        .select()
+        .from(healthcareProviders)
+        .where(where)
+        .orderBy(asc(healthcareProviders.name))
+        .offset(skip)
+        .limit(params.limit),
+      db.select({ count: sql<number>`count(*)` }).from(healthcareProviders).where(where),
     ]);
 
-    return { providers: providers.map(mapProvider), total };
+    return { providers: rows.map(mapProvider), total: Number(count) };
   }
 
   async findById(id: string): Promise<HealthcareProviderRecord | null> {
-    const provider = await prisma.healthcareProvider.findUnique({ where: { id } });
-    return provider ? mapProvider(provider) : null;
+    const rows = await db
+      .select()
+      .from(healthcareProviders)
+      .where(eq(healthcareProviders.id, id));
+    return rows[0] ? mapProvider(rows[0]) : null;
   }
 
   async create(data: {
@@ -55,13 +64,14 @@ export class PrismaHealthcareProviderRepository implements HealthcareProviderRep
     type: HealthcareProviderType;
     isActive?: boolean;
   }): Promise<HealthcareProviderRecord> {
-    const provider = await prisma.healthcareProvider.create({
-      data: {
+    const [provider] = await db
+      .insert(healthcareProviders)
+      .values({
         name: data.name,
         type: data.type,
         isActive: data.isActive ?? true,
-      },
-    });
+      })
+      .returning();
     return mapProvider(provider);
   }
 
@@ -69,7 +79,11 @@ export class PrismaHealthcareProviderRepository implements HealthcareProviderRep
     id: string,
     data: { name?: string; type?: HealthcareProviderType; isActive?: boolean }
   ): Promise<HealthcareProviderRecord> {
-    const provider = await prisma.healthcareProvider.update({ where: { id }, data });
+    const [provider] = await db
+      .update(healthcareProviders)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(healthcareProviders.id, id))
+      .returning();
     return mapProvider(provider);
   }
 }

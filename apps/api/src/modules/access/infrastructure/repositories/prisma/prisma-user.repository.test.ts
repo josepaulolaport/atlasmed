@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { hash } from "argon2";
-import { prisma } from "../../../../../infrastructure/database/prisma.client";
+import { eq, like } from "drizzle-orm";
+import { roles, users, passwordResets, sessions } from "@atlasmed/database";
+import { db } from "../../../../../infrastructure/database/db";
 import { PrismaUserRepository } from "./prisma-user.repository";
 import { createTestUserParams } from "../../../../../test-utils/user-test-helpers";
 import { cleanTestData, getUniqueTestId } from "../../../../../test-utils/database-helpers";
@@ -17,29 +19,26 @@ describe("PrismaUserRepository (Integration)", () => {
   let testRoleId: string;
 
   beforeAll(async () => {
-    // Use existing seeded role instead of creating a new one
-    const testRole = await prisma.role.findUnique({
-      where: { name: "USER" },
-    });
-    
+    const testRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "USER"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
+
     if (!testRole) {
       throw new Error("USER role not found in seeded database");
     }
-    
+
     testRoleId = testRole.id;
   });
 
   afterAll(async () => {
-    // Clean up test data but don't delete the seeded role
-    await prisma.user.deleteMany({
-      where: {
-        email: { contains: "test" },
-      },
-    });
+    await db.delete(users).where(like(users.email, "%test%"));
   });
 
   beforeEach(async () => {
-    await cleanTestData(prisma);
+    await cleanTestData(db);
     userRepository = new PrismaUserRepository();
   });
 
@@ -464,9 +463,12 @@ describe("PrismaUserRepository (Integration)", () => {
         status: "ACTIVE",
       });
 
-      const managerRole = await prisma.role.findUnique({
-        where: { name: "MANAGER" },
-      });
+      const managerRole = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.name, "MANAGER"))
+        .limit(1)
+        .then((r) => r[0] ?? null);
 
       if (!managerRole) {
         throw new Error("MANAGER role not found in seeded database");
@@ -490,7 +492,7 @@ describe("PrismaUserRepository (Integration)", () => {
         roleId: testRoleId,
       });
 
-      await prisma.user.delete({ where: { id: user.id } });
+      await db.delete(users).where(eq(users.id, user.id));
 
       const deleted = await userRepository.findById(user.id);
 
@@ -511,20 +513,16 @@ describe("PrismaUserRepository (Integration)", () => {
       });
 
       tokenHash = hashToken(`reset_${getUniqueTestId()}`);
-      await prisma.passwordReset.create({
-        data: {
-          userId: user.id,
-          tokenHash,
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        },
+      await db.insert(passwordResets).values({
+        userId: user.id,
+        tokenHash,
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       });
 
-      await prisma.session.create({
-        data: {
-          userId: user.id,
-          refreshTokenHash: hashToken(`session_${getUniqueTestId()}`),
-          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-        },
+      await db.insert(sessions).values({
+        userId: user.id,
+        refreshTokenHash: hashToken(`session_${getUniqueTestId()}`),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       });
     });
 
@@ -569,9 +567,9 @@ describe("PrismaUserRepository (Integration)", () => {
         newPasswordHash,
       });
 
-      const sessions = await prisma.session.findMany({ where: { userId: user.id } });
-      expect(sessions.every((session) => session.revokedAt !== null)).toBe(true);
-      expect(sessions.every((session) => session.revokedReason === "Password reset")).toBe(true);
+      const userSessions = await db.select().from(sessions).where(eq(sessions.userId, user.id));
+      expect(userSessions.every((session) => session.revokedAt !== null)).toBe(true);
+      expect(userSessions.every((session) => session.revokedReason === "Password reset")).toBe(true);
     });
 
     it("should update password history", async () => {
@@ -600,12 +598,10 @@ describe("PrismaUserRepository (Integration)", () => {
 
     it("should throw ResetTokenExpiredError for expired token", async () => {
       const expiredTokenHash = hashToken(`expired_${getUniqueTestId()}`);
-      await prisma.passwordReset.create({
-        data: {
-          userId: user.id,
-          tokenHash: expiredTokenHash,
-          expiresAt: new Date(Date.now() - 1000),
-        },
+      await db.insert(passwordResets).values({
+        userId: user.id,
+        tokenHash: expiredTokenHash,
+        expiresAt: new Date(Date.now() - 1000),
       });
 
       await expect(
@@ -631,12 +627,10 @@ describe("PrismaUserRepository (Integration)", () => {
         });
 
         currentTokenHash = hashToken(`history_${getUniqueTestId()}_${nextPassword}`);
-        await prisma.passwordReset.create({
-          data: {
-            userId: user.id,
-            tokenHash: currentTokenHash,
-            expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-          },
+        await db.insert(passwordResets).values({
+          userId: user.id,
+          tokenHash: currentTokenHash,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         });
       }
 
