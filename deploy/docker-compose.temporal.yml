@@ -1,0 +1,48 @@
+# Temporal workflow engine for CNES ingestion worker.
+# Uses its own postgres (port 5433) so it doesn't conflict with the app DB.
+#
+# Usage:
+#   bun run temporal:up     — start Temporal + UI
+#   bun run temporal:down   — stop
+#   Temporal UI: http://localhost:8080
+#   Temporal gRPC: localhost:7233
+
+services:
+  temporal-postgresql:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+    ports:
+      - "5433:5432"
+    volumes:
+      - temporal_postgres_data:/var/lib/postgresql/data
+
+  temporal:
+    image: temporalio/auto-setup:latest
+    restart: unless-stopped
+    depends_on:
+      - temporal-postgresql
+    environment:
+      DB: postgres12
+      DB_PORT: 5432
+      POSTGRES_USER: temporal
+      POSTGRES_PWD: temporal
+      POSTGRES_SEEDS: temporal-postgresql
+    ports:
+      - "7233:7233"
+
+  temporal-ui:
+    image: temporalio/ui:latest
+    restart: unless-stopped
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+
+volumes:
+  temporal_postgres_data:

@@ -14,6 +14,7 @@
     "dev:backend": "turbo dev --filter=@atlasmed/api",
     "dev:web": "turbo dev --filter=@atlasmed/web",
     "dev:mobile": "cd apps/mobile && flutter run",
+    "dev:cnes-worker": "turbo dev --filter=@atlasmed/cnes-ingestion-worker",
     "build": "turbo build",
     "build:mobile": "cd apps/mobile && flutter build",
     "lint": "turbo lint",
@@ -21,9 +22,21 @@
     "test": "turbo test",
     "test:mobile": "cd apps/mobile && flutter test",
     "clean": "rm -rf .turbo",
-    "temporal:up": "docker compose -f docker-compose.temporal.yml up -d",
-    "temporal:down": "docker compose -f docker-compose.temporal.yml down",
-    "dev:cnes-worker": "turbo dev --filter=@atlasmed/cnes-ingestion-worker"
+
+    "dev:up": "docker compose -f deploy/docker-compose.dev.yml up -d",
+    "dev:down": "docker compose -f deploy/docker-compose.dev.yml down",
+    "dev:down:volumes": "docker compose -f deploy/docker-compose.dev.yml down -v",
+    "dev:logs": "docker compose -f deploy/docker-compose.dev.yml logs -f",
+    "dev:ps": "docker compose -f deploy/docker-compose.dev.yml ps",
+
+    "temporal:up": "docker compose -f deploy/docker-compose.temporal.yml up -d",
+    "temporal:down": "docker compose -f deploy/docker-compose.temporal.yml down",
+
+    "observability:up": "docker compose -f deploy/docker-compose.dev.yml up -d clickhouse otel-collector signoz-query signoz-frontend",
+    "observability:down": "docker compose -f deploy/docker-compose.dev.yml stop clickhouse otel-collector signoz-query signoz-frontend",
+
+    "db:migrate": "cd packages/database && bun run db:migrate",
+    "db:seed": "cd apps/api && bun run db:seed"
   },
   "devDependencies": {
     "@types/bun": "latest",

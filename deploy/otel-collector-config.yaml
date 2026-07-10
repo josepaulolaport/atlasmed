@@ -1,0 +1,55 @@
+# OpenTelemetry Collector configuration for local development
+# Receives traces, logs, and metrics from apps/api and apps/workers,
+# then exports everything to ClickHouse (SigNoz backend).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 100ms
+    send_batch_size: 10000
+
+  # Generate latency histograms from span data (powers SigNoz RED metrics)
+  signozspanmetrics/prometheus:
+    metrics_exporter: prometheus
+
+exporters:
+  clickhousetraces:
+    datasource: tcp://clickhouse:9000?database=signoz_traces
+    docker_multi_node_cluster: false
+    low_cardinal_exception_grouping: false
+
+  clickhousemetricswrite:
+    endpoint: tcp://clickhouse:9000?database=signoz_metrics
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  clickhouselogsexporter:
+    dsn: tcp://clickhouse:9000?database=signoz_logs
+    timeout: 10s
+
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch, signozspanmetrics/prometheus]
+      exporters: [clickhousetraces]
+
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [clickhousemetricswrite]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [clickhouselogsexporter]

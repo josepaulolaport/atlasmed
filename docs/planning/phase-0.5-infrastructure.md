@@ -3,7 +3,7 @@
 **Goal:** One command starts the complete local environment. Every service the app needs — database, cache, object storage, search, observability, workflow engine — has a local equivalent. Environment files are clean and per-environment. No developer needs a cloud account to run this project.
 
 **Rule:** No new features. No API routes. Schema changes to audit log column type only.  
-**Status:** ⬜ Not started
+**Status:** ✅ Complete
 
 ---
 

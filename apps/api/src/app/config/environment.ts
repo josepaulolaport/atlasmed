@@ -304,6 +304,51 @@ const EnvironmentSchema = Type.Object({
     description: 'Days to retain INFO audit logs before cleanup',
   }),
 
+  // ============================================================================
+  // Object Storage (MinIO in dev / S3 or R2 in prod)
+  // All optional — features degrade gracefully when not configured.
+  // ============================================================================
+  STORAGE_ENDPOINT: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'S3-compatible endpoint URL (MinIO in dev). Leave empty for AWS S3 in prod.',
+    })
+  ),
+  STORAGE_ACCESS_KEY_ID: Type.String({
+    default: 'minioadmin',
+    minLength: 1,
+    description: 'S3 access key ID',
+  }),
+  STORAGE_SECRET_ACCESS_KEY: Type.String({
+    default: 'minioadmin',
+    minLength: 1,
+    description: 'S3 secret access key',
+  }),
+  STORAGE_BUCKET: Type.String({
+    default: 'atlasmed-dev',
+    minLength: 1,
+    description: 'S3 bucket name',
+  }),
+  STORAGE_REGION: Type.String({
+    default: 'us-east-1',
+    minLength: 1,
+    description: 'S3 region (any string for MinIO)',
+  }),
+
+  // ============================================================================
+  // Search (Meilisearch in dev and prod)
+  // ============================================================================
+  MEILISEARCH_URL: Type.String({
+    default: 'http://localhost:7700',
+    minLength: 1,
+    description: 'Meilisearch server URL',
+  }),
+  MEILISEARCH_API_KEY: Type.String({
+    default: 'masterKey',
+    minLength: 1,
+    description: 'Meilisearch master/admin key',
+  }),
+
   REGISTRY_SOURCE: Type.Union([Type.Literal("mock"), Type.Literal("temporal")], {
     default: "temporal",
     description: "Registry ingestion source: temporal workflow or mock fixture adapter",
@@ -373,6 +418,16 @@ const processEnv = {
   QUESTDB_ENABLED: process.env.QUESTDB_ENABLED === 'true',
   QUESTDB_HOST: process.env.QUESTDB_HOST ?? 'localhost',
   QUESTDB_PORT: parseInt(process.env.QUESTDB_PORT ?? '9009', 10),
+
+  // Object Storage
+  STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID ?? 'minioadmin',
+  STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY ?? 'minioadmin',
+  STORAGE_BUCKET: process.env.STORAGE_BUCKET ?? 'atlasmed-dev',
+  STORAGE_REGION: process.env.STORAGE_REGION ?? 'us-east-1',
+
+  // Search
+  MEILISEARCH_URL: process.env.MEILISEARCH_URL ?? 'http://localhost:7700',
+  MEILISEARCH_API_KEY: process.env.MEILISEARCH_API_KEY ?? 'masterKey',
   
   // Feature Flags
   ENABLE_SWAGGER: process.env.ENABLE_SWAGGER !== 'false',

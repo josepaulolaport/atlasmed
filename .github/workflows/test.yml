@@ -74,6 +74,13 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
           REDIS_URL: redis://localhost:6379
+          # Storage / Search — use defaults (no real services needed in CI unit tests)
+          STORAGE_ACCESS_KEY_ID: minioadmin
+          STORAGE_SECRET_ACCESS_KEY: minioadmin
+          STORAGE_BUCKET: atlasmed-test
+          STORAGE_REGION: us-east-1
+          MEILISEARCH_URL: http://localhost:7700
+          MEILISEARCH_API_KEY: masterKey
         run: bun test
 
   web:

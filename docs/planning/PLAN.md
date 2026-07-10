@@ -137,7 +137,7 @@ This document is the single source of truth for the project recovery. Update it 
 | Phase | Focus | Status |
 |---|---|---|
 | **Phase 0** | Foundation: CI, tests, linting, seed, raw errors | ✅ Done (PR #20) |
-| **Phase 0.5** | Infrastructure: full local dev stack, audit log redesign, MinIO, Meilisearch, ClickHouse, SigNoz, env files | 🟡 Audit log done — infra stack pending |
+| **Phase 0.5** | Infrastructure: full local dev stack, audit log redesign, MinIO, Meilisearch, ClickHouse, SigNoz, env files | ✅ Done |
 | **Phase 1** | DB schema decisions + observability wiring (OTEL, structured logging, spans) | 🟡 DB done — observability pending |
 | **Phase 2** | Delete stubs, dead code, decorative UI | ⬜ Not started |
 | **Phase 3** | Contract bugs: invite flow, selectors, OPS role | ⬜ Not started |
