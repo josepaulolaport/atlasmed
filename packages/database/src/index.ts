@@ -8,7 +8,6 @@ export * from "./types/geometry";
 
 // Explicit enum value types for backward-compat
 import {
-  auditEventTypeEnum,
   auditEventSeverityEnum,
 } from "./schema/audit/index";
 import {
@@ -34,7 +33,6 @@ import {
   cnesSuggestionStatusEnum,
 } from "./schema/ingestion/index";
 
-export type AuditEventType = (typeof auditEventTypeEnum.enumValues)[number];
 export type AuditEventSeverity = (typeof auditEventSeverityEnum.enumValues)[number];
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
 export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
