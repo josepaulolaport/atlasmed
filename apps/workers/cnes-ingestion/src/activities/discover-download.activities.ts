@@ -1,7 +1,7 @@
 import { mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ingestionRuns } from "@atlasmed/database";
+import { cnesRuns } from "@atlasmed/database";
 import { eq } from "drizzle-orm";
 import { db } from "../infrastructure/db";
 import { loadWorkerConfig } from "../config";
@@ -12,13 +12,13 @@ export async function updateIngestionRunPhase(
   extra?: Record<string, unknown>
 ): Promise<void> {
   await db
-    .update(ingestionRuns)
+    .update(cnesRuns)
     .set({
       phase: phase as never,
       phaseStartedAt: new Date(),
       ...(extra ?? {}),
     })
-    .where(eq(ingestionRuns.id, ingestionRunId));
+    .where(eq(cnesRuns.id, ingestionRunId));
 }
 
 export async function discoverLatestReferenceActivity(input: {
@@ -30,12 +30,12 @@ export async function discoverLatestReferenceActivity(input: {
 
   if (input.ano && input.mes) {
     await db
-      .update(ingestionRuns)
+      .update(cnesRuns)
       .set({
         referenceAno: input.ano,
         referenceMes: input.mes,
       })
-      .where(eq(ingestionRuns.id, input.ingestionRunId));
+      .where(eq(cnesRuns.id, input.ingestionRunId));
     return { ano: input.ano, mes: input.mes };
   }
 
@@ -45,12 +45,12 @@ export async function discoverLatestReferenceActivity(input: {
   const reference = await ftp.discoverLatest();
 
   await db
-    .update(ingestionRuns)
+    .update(cnesRuns)
     .set({
       referenceAno: reference.ano,
       referenceMes: reference.mes,
     })
-    .where(eq(ingestionRuns.id, input.ingestionRunId));
+    .where(eq(cnesRuns.id, input.ingestionRunId));
 
   return reference;
 }
@@ -111,9 +111,9 @@ export async function downloadRawFilesActivity(input: {
 
   await archive.saveManifest(manifest);
   await db
-    .update(ingestionRuns)
+    .update(cnesRuns)
     .set({ archiveManifest: manifest as object })
-    .where(eq(ingestionRuns.id, input.ingestionRunId));
+    .where(eq(cnesRuns.id, input.ingestionRunId));
 
   return { fileCount: manifestFiles.length };
 }

@@ -4,12 +4,12 @@ import {
   professionals,
   facilityProfessionals,
   facilityRepresentatives,
-  ingestionDiffs,
-  ingestionSuggestions,
+  cnesDiffs,
+  cnesSuggestions,
 } from "@atlasmed/database";
 import { eq, and, isNull, sql } from "drizzle-orm";
 import { db } from "../infrastructure/db";
-import { buildFacilityAddress, computeContentHash } from "./content-hash";
+import { computeContentHash } from "./content-hash";
 import {
   batchAssociationRemovals,
   batchFacilityDeactivations,
@@ -72,19 +72,15 @@ export async function reconcileCrmFromStaging(input: {
   const facilityExternalToInternal = new Map<string, string>();
 
   for (const row of stagingFacilities) {
-    const address = buildFacilityAddress({
+    const name = facilityDisplayName(row.legal_name, row.trade_name);
+    const hashPayload = {
+      name,
       streetAddress: row.street_address,
       streetNumber: row.street_number,
       neighborhood: row.neighborhood,
       postalCode: row.postal_code,
-    });
-    const name = facilityDisplayName(row.legal_name, row.trade_name);
-    const hashPayload = {
-      name,
-      address,
       lat: row.latitude,
       lng: row.longitude,
-      referenceMunicipalityCode: row.municipality_id,
     };
     const contentHash = computeContentHash(hashPayload);
 
@@ -104,8 +100,10 @@ export async function reconcileCrmFromStaging(input: {
         .insert(facilities)
         .values({
           displayName: name,
-          address,
-          referenceMunicipalityCode: row.municipality_id,
+          streetAddress: row.street_address,
+          streetNumber: row.street_number,
+          neighborhood: row.neighborhood,
+          postalCode: row.postal_code,
           sourceProvider: CNES_REGISTRY_PROVIDER,
           externalSourceId: row.facility_id,
           sourceContentHash: contentHash,
@@ -122,7 +120,7 @@ export async function reconcileCrmFromStaging(input: {
 
     facilityExternalToInternal.set(row.facility_id, existing.id);
 
-    if (existing.deletedAt) {
+    if (existing.deactivatedAt) {
       await createSuggestion({
         ingestionRunId: input.ingestionRunId,
         type: "FACILITY_REGISTRY_REACTIVATED",
@@ -138,8 +136,12 @@ export async function reconcileCrmFromStaging(input: {
       if (existing.displayName !== name) {
         changes.push({ field: "displayName", current: existing.displayName, proposed: name });
       }
-      if (existing.address !== address) {
-        changes.push({ field: "address", current: existing.address, proposed: address });
+      if (existing.streetAddress !== row.street_address) {
+        changes.push({
+          field: "streetAddress",
+          current: existing.streetAddress,
+          proposed: row.street_address,
+        });
       }
 
       if (changes.length > 0) {
@@ -489,8 +491,8 @@ async function recordDiff(input: {
   diffType: string;
   payload?: Record<string, unknown>;
 }): Promise<void> {
-  await db.insert(ingestionDiffs).values({
-    ingestionRunId: input.ingestionRunId,
+  await db.insert(cnesDiffs).values({
+    cnesRunId: input.ingestionRunId,
     scope: "CRM",
     entityType: input.entityType,
     externalSourceId: input.externalSourceId,
@@ -550,21 +552,21 @@ async function createSuggestion(input: {
 }): Promise<void> {
   const [duplicate] = await db
     .select()
-    .from(ingestionSuggestions)
+    .from(cnesSuggestions)
     .where(
       and(
-        eq(ingestionSuggestions.ingestionRunId, input.ingestionRunId),
-        eq(ingestionSuggestions.type, input.type as never),
-        eq(ingestionSuggestions.status, "PENDING"),
+        eq(cnesSuggestions.cnesRunId, input.ingestionRunId),
+        eq(cnesSuggestions.type, input.type as never),
+        eq(cnesSuggestions.status, "PENDING"),
         input.facilityId
-          ? eq(ingestionSuggestions.facilityId, input.facilityId)
-          : isNull(ingestionSuggestions.facilityId),
+          ? eq(cnesSuggestions.facilityId, input.facilityId)
+          : isNull(cnesSuggestions.facilityId),
         input.professionalId
-          ? eq(ingestionSuggestions.professionalId, input.professionalId)
-          : isNull(ingestionSuggestions.professionalId),
+          ? eq(cnesSuggestions.professionalId, input.professionalId)
+          : isNull(cnesSuggestions.professionalId),
         input.facilityProfessionalId
-          ? eq(ingestionSuggestions.facilityProfessionalId, input.facilityProfessionalId)
-          : isNull(ingestionSuggestions.facilityProfessionalId)
+          ? eq(cnesSuggestions.facilityProfessionalId, input.facilityProfessionalId)
+          : isNull(cnesSuggestions.facilityProfessionalId)
       )
     )
     .limit(1);
@@ -573,8 +575,8 @@ async function createSuggestion(input: {
     return;
   }
 
-  await db.insert(ingestionSuggestions).values({
-    ingestionRunId: input.ingestionRunId,
+  await db.insert(cnesSuggestions).values({
+    cnesRunId: input.ingestionRunId,
     type: input.type as never,
     facilityId: input.facilityId,
     professionalId: input.professionalId,
@@ -613,24 +615,24 @@ async function supersedePending(input: {
   facilityProfessionalId?: string;
 }): Promise<void> {
   await db
-    .update(ingestionSuggestions)
+    .update(cnesSuggestions)
     .set({
       status: "SUPERSEDED",
       resolvedAt: new Date(),
     })
     .where(
       and(
-        eq(ingestionSuggestions.type, input.type as never),
-        eq(ingestionSuggestions.status, "PENDING"),
+        eq(cnesSuggestions.type, input.type as never),
+        eq(cnesSuggestions.status, "PENDING"),
         input.facilityId
-          ? eq(ingestionSuggestions.facilityId, input.facilityId)
-          : isNull(ingestionSuggestions.facilityId),
+          ? eq(cnesSuggestions.facilityId, input.facilityId)
+          : isNull(cnesSuggestions.facilityId),
         input.professionalId
-          ? eq(ingestionSuggestions.professionalId, input.professionalId)
-          : isNull(ingestionSuggestions.professionalId),
+          ? eq(cnesSuggestions.professionalId, input.professionalId)
+          : isNull(cnesSuggestions.professionalId),
         input.facilityProfessionalId
-          ? eq(ingestionSuggestions.facilityProfessionalId, input.facilityProfessionalId)
-          : isNull(ingestionSuggestions.facilityProfessionalId)
+          ? eq(cnesSuggestions.facilityProfessionalId, input.facilityProfessionalId)
+          : isNull(cnesSuggestions.facilityProfessionalId)
       )
     );
 }

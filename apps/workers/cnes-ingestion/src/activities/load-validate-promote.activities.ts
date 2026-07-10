@@ -1,5 +1,5 @@
 import { REGISTRY_TABLES, type RegistryTableName } from "@atlasmed/cnes-ingestion";
-import { ingestionRuns } from "@atlasmed/database";
+import { cnesRuns } from "@atlasmed/database";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../infrastructure/db";
 import { loadWorkerConfig } from "../config";
@@ -169,9 +169,9 @@ export async function validateStagingActivity(input: {
   };
 
   await db
-    .update(ingestionRuns)
+    .update(cnesRuns)
     .set({ validationReport: report as object })
-    .where(eq(ingestionRuns.id, input.ingestionRunId));
+    .where(eq(cnesRuns.id, input.ingestionRunId));
 
   if (!report.passed) {
     throw new Error(`Staging validation failed: ${JSON.stringify(report.checks.filter((c) => !c.passed))}`);
@@ -190,9 +190,9 @@ export async function promoteRegistrySwapActivity(input: {
 
   const promotedAt = new Date();
   await db
-    .update(ingestionRuns)
+    .update(cnesRuns)
     .set({ promotedAt })
-    .where(eq(ingestionRuns.id, input.ingestionRunId));
+    .where(eq(cnesRuns.id, input.ingestionRunId));
 
   return { promotedAt: promotedAt.toISOString() };
 }
