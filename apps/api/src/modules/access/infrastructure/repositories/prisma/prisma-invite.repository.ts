@@ -19,6 +19,11 @@ export class PrismaInviteRepository implements InviteRepository {
         tokenHash: params.tokenHash,
         roleId: params.roleId,
         invitedByUserId: params.invitedByUserId,
+        firstName: params.firstName ?? null,
+        lastName: params.lastName ?? null,
+        managerId: params.managerId ?? null,
+        managerTerritoryId: params.managerTerritoryId ?? null,
+        repTerritoryId: params.repTerritoryId ?? null,
         expiresAt: params.expiresAt,
       },
       include: {
@@ -181,8 +186,14 @@ export class PrismaInviteRepository implements InviteRepository {
         email: string | null;
         phoneNumber: string | null;
         roleId: string;
+        firstName: string | null;
+        lastName: string | null;
+        managerId: string | null;
+        managerTerritoryId: string | null;
+        repTerritoryId: string | null;
       }>>`
-        SELECT id, status, "expiresAt", email, "phoneNumber", "roleId"
+        SELECT id, status, "expiresAt", email, "phoneNumber", "roleId",
+               "firstName", "lastName", "managerId", "managerTerritoryId", "repTerritoryId"
         FROM invitations
         WHERE "tokenHash" = ${params.tokenHash}
         FOR UPDATE
@@ -227,7 +238,7 @@ export class PrismaInviteRepository implements InviteRepository {
         throw new Error("User already exists");
       }
 
-      // Create the user
+      // Create the user with invitation data
       const user = await tx.user.create({
         data: {
           email: params.email,
@@ -235,8 +246,9 @@ export class PrismaInviteRepository implements InviteRepository {
           phoneNumber: params.phoneNumber ?? null,
           passwordHash: params.passwordHash,
           roleId: inviteLock.roleId,
-          firstName: params.firstName ?? null,
-          lastName: params.lastName ?? null,
+          firstName: params.firstName ?? inviteLock.firstName ?? null,
+          lastName: params.lastName ?? inviteLock.lastName ?? null,
+          managerId: inviteLock.managerId ?? null,
           emailVerified: Boolean(inviteLock.email),
           phoneVerified: Boolean(inviteLock.phoneNumber),
           status: "ACTIVE",
@@ -245,6 +257,27 @@ export class PrismaInviteRepository implements InviteRepository {
           role: true,
         },
       });
+
+      // Create territory assignments if specified in invitation
+      if (inviteLock.managerTerritoryId) {
+        await tx.userTerritoryAssignment.create({
+          data: {
+            userId: user.id,
+            territoryId: inviteLock.managerTerritoryId,
+            assignedBy: inviteLock.id,
+          },
+        });
+      }
+
+      if (inviteLock.repTerritoryId) {
+        await tx.userTerritoryAssignment.create({
+          data: {
+            userId: user.id,
+            territoryId: inviteLock.repTerritoryId,
+            assignedBy: inviteLock.id,
+          },
+        });
+      }
 
       // Mark invite as accepted
       await tx.invitation.update({

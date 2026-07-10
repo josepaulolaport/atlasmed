@@ -34,17 +34,17 @@ export class TerritoryAssignmentPolicyService {
       throw new OperationNotAllowedError("assign_territory", "Territory type not found");
     }
 
-    if (params.targetRole !== Role.USER && params.targetRole !== Role.MANAGER) {
+    if (params.targetRole !== Role.REP && params.targetRole !== Role.MANAGER) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "Territory assignments are only supported for USER and MANAGER accounts"
+        "Territory assignments are only supported for REP and MANAGER accounts"
       );
     }
 
-    if (params.targetRole === Role.USER && !type.assignableToUsers) {
+    if (params.targetRole === Role.REP && !type.assignableToUsers) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "This territory type cannot be assigned to field users"
+        "This territory type cannot be assigned to field reps"
       );
     }
 
@@ -56,7 +56,7 @@ export class TerritoryAssignmentPolicyService {
     }
 
     const exclusionRoles =
-      params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.USER];
+      params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.REP];
 
     const conflictingAssignments = await prisma.userTerritoryAssignment.findMany({
       where: {

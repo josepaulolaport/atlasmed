@@ -44,7 +44,7 @@ export function applyRoleAbilities(
       can("update", "REGISTRY_SUGGESTION");
       break;
 
-    case "USER":
+    case "REP":
       can("read", "FACILITY");
       can("update", "FACILITY");
       can("read", "PROFESSIONAL");
@@ -53,6 +53,29 @@ export function applyRoleAbilities(
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");
+      break;
+
+    case "OPS":
+      can("read", "FACILITY");
+      can("read", "PROFESSIONAL");
+      can("read", "VISIT");
+      can("read", "TERRITORY");
+      can("read", "USER");
+      cannot("create", "FACILITY");
+      cannot("update", "FACILITY");
+      cannot("delete", "FACILITY");
+      cannot("create", "PROFESSIONAL");
+      cannot("update", "PROFESSIONAL");
+      cannot("delete", "PROFESSIONAL");
+      cannot("create", "VISIT");
+      cannot("update", "VISIT");
+      cannot("delete", "VISIT");
+      cannot("create", "USER");
+      cannot("update", "USER");
+      cannot("delete", "USER");
+      cannot("create", "TERRITORY");
+      cannot("update", "TERRITORY");
+      cannot("delete", "TERRITORY");
       break;
   }
 }

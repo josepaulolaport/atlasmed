@@ -13,12 +13,12 @@ import {
 describe("ui.permissions", () => {
   describe("hasMinimumRole", () => {
     it("should allow equal or higher roles", () => {
-      expect(hasMinimumRole(Role.ADMIN, Role.USER)).toBe(true);
+      expect(hasMinimumRole(Role.ADMIN, Role.REP)).toBe(true);
       expect(hasMinimumRole(Role.MANAGER, Role.MANAGER)).toBe(true);
     });
 
     it("should deny lower roles", () => {
-      expect(hasMinimumRole(Role.USER, Role.MANAGER)).toBe(false);
+      expect(hasMinimumRole(Role.REP, Role.MANAGER)).toBe(false);
     });
   });
 
@@ -29,7 +29,7 @@ describe("ui.permissions", () => {
     });
 
     it("should deny USER", () => {
-      expect(canManageUsers(Role.USER)).toBe(false);
+      expect(canManageUsers(Role.REP)).toBe(false);
     });
   });
 
@@ -37,7 +37,7 @@ describe("ui.permissions", () => {
     it("should allow ADMIN only", () => {
       expect(canViewHealth(Role.ADMIN)).toBe(true);
       expect(canViewHealth(Role.MANAGER)).toBe(false);
-      expect(canViewHealth(Role.USER)).toBe(false);
+      expect(canViewHealth(Role.REP)).toBe(false);
     });
   });
 
@@ -48,7 +48,7 @@ describe("ui.permissions", () => {
     });
 
     it("should deny USER", () => {
-      expect(canReadTerritories(Role.USER)).toBe(false);
+      expect(canReadTerritories(Role.REP)).toBe(false);
     });
   });
 
@@ -68,8 +68,8 @@ describe("ui.permissions", () => {
     it("should deny MANAGER and USER catalog access", () => {
       expect(canReadCatalog(Role.MANAGER)).toBe(false);
       expect(canManageCatalog(Role.MANAGER)).toBe(false);
-      expect(canReadCatalog(Role.USER)).toBe(false);
-      expect(canManageCatalog(Role.USER)).toBe(false);
+      expect(canReadCatalog(Role.REP)).toBe(false);
+      expect(canManageCatalog(Role.REP)).toBe(false);
     });
   });
 });

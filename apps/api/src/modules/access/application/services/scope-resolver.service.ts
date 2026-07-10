@@ -20,7 +20,7 @@ export class ScopeResolver {
       return createGlobalScopeContext();
     }
 
-    if (roleName === Role.USER) {
+    if (roleName === Role.REP) {
       const assignedTerritoryIds =
         await this.deps.scopeRepository.findTerritoryIdsByUserId(userId);
       const effectiveTerritoryIds =

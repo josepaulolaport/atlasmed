@@ -15,6 +15,11 @@ interface CreateInviteParams {
   phoneNumber?: string | undefined;
   roleId: string;
   invitedByUserId: string;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
+  managerId?: string | undefined;
+  managerTerritoryId?: string | undefined;
+  repTerritoryId?: string | undefined;
 }
 
 export class InviteService {
@@ -31,6 +36,11 @@ export class InviteService {
       tokenHash,
       roleId: params.roleId,
       invitedByUserId: params.invitedByUserId,
+      firstName: params.firstName,
+      lastName: params.lastName,
+      managerId: params.managerId,
+      managerTerritoryId: params.managerTerritoryId,
+      repTerritoryId: params.repTerritoryId,
       expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
     });
 

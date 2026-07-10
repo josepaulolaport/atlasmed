@@ -39,9 +39,14 @@ async function ensureRoles() {
       priority: ROLE_PRIORITY_BY_NAME.MANAGER,
     },
     {
-      name: "USER",
+      name: "OPS",
+      description: "Operations (read-only)",
+      priority: ROLE_PRIORITY_BY_NAME.OPS,
+    },
+    {
+      name: "REP",
       description: "Field representative",
-      priority: ROLE_PRIORITY_BY_NAME.USER,
+      priority: ROLE_PRIORITY_BY_NAME.REP,
     },
   ];
 
@@ -56,7 +61,8 @@ async function ensureRoles() {
   return {
     admin: await prisma.role.findUniqueOrThrow({ where: { name: "ADMIN" } }),
     manager: await prisma.role.findUniqueOrThrow({ where: { name: "MANAGER" } }),
-    user: await prisma.role.findUniqueOrThrow({ where: { name: "USER" } }),
+    ops: await prisma.role.findUniqueOrThrow({ where: { name: "OPS" } }),
+    rep: await prisma.role.findUniqueOrThrow({ where: { name: "REP" } }),
   };
 }
 
@@ -265,7 +271,7 @@ async function seedUsers(roles: {
       passwordHash,
       firstName: "Demo",
       lastName: "Field Rep",
-      roleId: roles.user.id,
+      roleId: roles.rep.id,
       status: "ACTIVE",
       emailVerified: true,
       managerId: manager.id,

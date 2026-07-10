@@ -21,7 +21,7 @@ describe("GetUserAssignmentsUseCase", () => {
             managerId: "manager-1",
             username: "fielduser",
             email: "field@example.com",
-            role: { name: Role.USER },
+            role: { name: Role.REP },
           };
         }
         if (id === "manager-1") {

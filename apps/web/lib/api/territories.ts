@@ -22,11 +22,32 @@ import type {
 
 export const territoriesApi = {
   listTerritories: async (
-    format: "tree" | "flat" = "flat"
+    format: "tree" | "flat" = "flat",
+    typeSlug?: string
   ): Promise<{ data: Territory[] | TerritoryTreeNode[] }> => {
     const response = await apiClient.get<{ data: Territory[] | TerritoryTreeNode[] }>(
       "/territory/territories",
-      { params: { format } }
+      { params: { format, type: typeSlug } }
+    );
+    return response.data;
+  },
+
+  listManagerZones: async (): Promise<{ data: Territory[] }> => {
+    const response = await apiClient.get<{ data: Territory[] }>(
+      "/territory/territories",
+      { params: { format: "flat", type: "manager_zone" } }
+    );
+    return response.data;
+  },
+
+  listRepPatches: async (managerTerritoryId?: string): Promise<{ data: Territory[] }> => {
+    const params: Record<string, string> = { format: "flat", type: "patch" };
+    if (managerTerritoryId) {
+      params.managerTerritoryId = managerTerritoryId;
+    }
+    const response = await apiClient.get<{ data: Territory[] }>(
+      "/territory/territories",
+      { params }
     );
     return response.data;
   },

@@ -48,7 +48,7 @@ describe("ScopeResolver", () => {
       territoryScopePort,
       territoryHierarchyPort,
     });
-    const scope = await resolver.resolve("user-1", Role.USER);
+    const scope = await resolver.resolve("user-1", Role.REP);
 
     expect(scope.assignedTerritoryIds).toEqual(["territory-1"]);
     expect(scope.effectiveTerritoryIds).toEqual(["territory-1", "territory-1-patch"]);

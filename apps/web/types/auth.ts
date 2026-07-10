@@ -1,5 +1,5 @@
 export type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED" | "PENDING";
-export type Role = "ADMIN" | "MANAGER" | "USER";
+export type Role = "ADMIN" | "MANAGER" | "REP" | "OPS";
 export type DeviceType = "DESKTOP" | "MOBILE" | "TABLET" | "UNKNOWN";
 export type InviteStatus = "PENDING" | "ACCEPTED" | "EXPIRED" | "REVOKED";
 
@@ -115,6 +115,11 @@ export interface InviteUserRequest {
   email?: string;
   phoneNumber?: string;
   roleId: string;
+  firstName: string;
+  lastName: string;
+  managerId?: string;
+  managerTerritoryId?: string;
+  repTerritoryId?: string;
 }
 
 export interface AccessGrant {

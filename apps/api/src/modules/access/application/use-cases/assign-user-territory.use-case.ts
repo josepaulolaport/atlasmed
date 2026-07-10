@@ -40,10 +40,10 @@ export class AssignUserTerritoryUseCase {
       throw new UserNotFoundError(params.targetUserId);
     }
 
-    if (target.role.name !== Role.USER && target.role.name !== Role.MANAGER) {
+    if (target.role.name !== Role.REP && target.role.name !== Role.MANAGER) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "Territory assignments are only supported for USER and MANAGER accounts"
+        "Territory assignments are only supported for REP and MANAGER accounts"
       );
     }
 

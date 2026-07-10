@@ -4,7 +4,7 @@ import { defineAbilitiesFor } from "./role.permissions";
 const ROLE_PRIORITY: Record<Role, number> = {
   [Role.ADMIN]: 3,
   [Role.MANAGER]: 2,
-  [Role.USER]: 1,
+  [Role.REP]: 1,
 };
 
 export function hasMinimumRole(userRole: Role, required: Role): boolean {

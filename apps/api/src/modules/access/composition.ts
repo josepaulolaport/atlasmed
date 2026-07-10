@@ -77,7 +77,7 @@ import { Pending2FALoginService } from "./application/services/pending-2fa-login
 import { PrismaScopeRepository } from "./infrastructure/repositories/prisma/prisma-scope.repository";
 import { PrismaAccessGrantRepository } from "./infrastructure/repositories/prisma/prisma-access-grant.repository";
 import { facilityTerritoryScopePort } from "../facility/composition";
-import { territoryHierarchyPort, territoryAssignmentPolicy } from "../territory/composition";
+import { territoryHierarchyPort, territoryAssignmentPolicy, territoryRepositories } from "../territory/composition";
 import { ScopeService } from "./application/services/scope.service";
 import { AccessGrantService } from "./application/services/access-grant.service";
 import { AccessGrantCacheService } from "./infrastructure/cache/access-grant-cache.service";
@@ -192,6 +192,8 @@ export const accessUseCases = {
     userRepository: accessRepositories.user,
     inviteRepository: accessRepositories.invite,
     roleRepository: accessRepositories.role,
+    territoryRepository: territoryRepositories.territory,
+    territoryTypeRepository: territoryRepositories.territoryType,
     auditLog: accessInfrastructure.auditLog,
     metrics: accessInfrastructure.metrics,
   }),
