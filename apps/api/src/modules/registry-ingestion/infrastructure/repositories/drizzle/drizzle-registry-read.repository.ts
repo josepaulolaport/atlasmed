@@ -5,7 +5,7 @@ import {
   registryFacilityRepresentatives,
   registryProfessionals,
 } from "@atlasmed/database";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import type {
   RegistryReadRepository,
   RegistryFacilityProjection,
@@ -23,7 +23,28 @@ export class DrizzleRegistryReadRepository implements RegistryReadRepository {
     registryFacilityId: string
   ): Promise<RegistryFacilityProjection | null> {
     const rows = await db
-      .select()
+      .select({
+        facilityId: registryFacilities.facilityId,
+        cnesCode: registryFacilities.cnesCode,
+        legalName: registryFacilities.legalName,
+        tradeName: registryFacilities.tradeName,
+        streetAddress: registryFacilities.streetAddress,
+        streetNumber: registryFacilities.streetNumber,
+        addressComplement: registryFacilities.addressComplement,
+        neighborhood: registryFacilities.neighborhood,
+        postalCode: registryFacilities.postalCode,
+        phoneNumber: registryFacilities.phoneNumber,
+        faxNumber: registryFacilities.faxNumber,
+        email: registryFacilities.email,
+        websiteUrl: registryFacilities.websiteUrl,
+        latitude: sql<number | null>`ST_Y(${registryFacilities.location}::geometry)`,
+        longitude: sql<number | null>`ST_X(${registryFacilities.location}::geometry)`,
+        cnpj: registryFacilities.taxIdCnpj,
+        cpf: registryFacilities.taxIdCpf,
+        facilityTypeCode: registryFacilities.facilityTypeCode,
+        deactivationReasonCode: registryFacilities.deactivationReasonCode,
+        lastUpdatedDate: registryFacilities.lastUpdatedDate,
+      })
       .from(registryFacilities)
       .where(eq(registryFacilities.facilityId, registryFacilityId));
 

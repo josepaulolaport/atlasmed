@@ -1,8 +1,9 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import type { IngestionSuggestionType } from "@atlasmed/database";
+import type { CnesSuggestionType as IngestionSuggestionType } from "@atlasmed/database";
 import {
   ForbiddenError,
+  ConfigurationError,
   ValidationError,
 } from "../../../../shared/errors";
 import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
@@ -259,7 +260,7 @@ export class ApproveSuggestionUseCase {
         }
 
         if (!this.deps.professionalRepository) {
-          throw new Error("professionalRepository is required to approve professional field updates");
+          throw new ConfigurationError("professionalRepository is required to approve professional field updates");
         }
 
         const updates = parseProfessionalFieldUpdatePayload(suggestion.payload);
@@ -286,7 +287,7 @@ export class ApproveSuggestionUseCase {
       case "FACILITY_REPRESENTATIVE_ADD":
       case "FACILITY_REPRESENTATIVE_FIELD_UPDATE": {
         if (!this.deps.facilityRepresentativeRepository) {
-          throw new Error("facilityRepresentativeRepository is required to approve representative suggestions");
+          throw new ConfigurationError("facilityRepresentativeRepository is required to approve representative suggestions");
         }
         if (!suggestion.facilityId) {
           throw new ValidationError([
@@ -319,7 +320,7 @@ export class ApproveSuggestionUseCase {
       }
       case "FACILITY_REPRESENTATIVE_REMOVAL": {
         if (!this.deps.facilityRepresentativeRepository) {
-          throw new Error("facilityRepresentativeRepository is required to approve representative suggestions");
+          throw new ConfigurationError("facilityRepresentativeRepository is required to approve representative suggestions");
         }
         if (!suggestion.facilityId) {
           throw new ValidationError([

@@ -123,7 +123,7 @@ export const disable2FASchema = z.object({
 
 export const grantPermissionSchema = z.object({
   resource: z.enum([
-    "USER",
+    "REP",
     "FACILITY",
     "PROFESSIONAL",
     "VISIT",

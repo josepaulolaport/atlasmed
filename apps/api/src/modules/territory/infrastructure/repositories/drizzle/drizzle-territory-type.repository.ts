@@ -71,7 +71,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
         sortOrder: input.sortOrder ?? 0,
       })
       .returning();
-    return mapType(record);
+    return mapType(record!);
   }
 
   async update(id: string, input: UpdateTerritoryTypeInput): Promise<TerritoryTypeRecord> {
@@ -80,7 +80,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
       .set({ ...input, updatedAt: new Date() })
       .where(eq(territoryTypes.id, id))
       .returning();
-    return mapType(record);
+    return mapType(record!);
   }
 
   async countTerritoriesUsingType(id: string): Promise<number> {

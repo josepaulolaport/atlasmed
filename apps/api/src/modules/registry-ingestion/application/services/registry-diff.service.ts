@@ -3,7 +3,7 @@ import type {
   IngestionSuggestionRepository,
 } from "../interfaces/ingestion.repository.interface";
 import type { SanitizedFacilityRecord } from "../interfaces/registry-source.port";
-import type { IngestionSuggestionType } from "@atlasmed/database";
+import type { CnesSuggestionType as IngestionSuggestionType } from "@atlasmed/database";
 
 export interface DiffStats {
   fieldUpdateSuggestions: number;

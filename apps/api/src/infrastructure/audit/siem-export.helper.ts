@@ -1,4 +1,8 @@
-import type { AuditLog } from "@atlasmed/database";
+import type { InferSelectModel } from "drizzle-orm";
+import { auditLogs } from "@atlasmed/database";
+import { ExternalServiceError } from "../../shared/errors";
+
+type AuditLog = InferSelectModel<typeof auditLogs>;
 
 const PII_KEYS = new Set([
   "email",
@@ -88,6 +92,6 @@ export async function postSiemBatch(
   });
 
   if (!response.ok) {
-    throw new Error(`SIEM webhook returned ${response.status}`);
+    throw new ExternalServiceError(`SIEM webhook (HTTP ${response.status})`);
   }
 }

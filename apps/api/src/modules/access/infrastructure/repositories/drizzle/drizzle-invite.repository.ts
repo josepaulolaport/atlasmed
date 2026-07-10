@@ -1,7 +1,7 @@
 import { eq, and, or, isNull, gt, desc, lt, sql } from "drizzle-orm";
 import { users, roles, invitations, userTerritoryAssignments } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
-import { InvalidInviteError } from "../../../../../shared/errors";
+import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
 
 import type {
   InviteRepository,
@@ -249,7 +249,7 @@ export class DrizzleInviteRepository implements InviteRepository {
         .limit(1);
 
       if (existingUser) {
-        throw new Error("User already exists");
+        throw new ResourceConflictError("User", "email or username already taken");
       }
 
       // Create the user with invitation data
@@ -315,7 +315,7 @@ export class DrizzleInviteRepository implements InviteRepository {
         .where(eq(invitations.id, inviteLock.id))
         .limit(1);
 
-      if (!inviteRow) throw new Error("Invitation not found after update");
+      if (!inviteRow) throw new ResourceNotFoundError("Invitation", inviteLock.id);
 
       const invite = { ...inviteRow.invitations, role: inviteRow.roles! };
 

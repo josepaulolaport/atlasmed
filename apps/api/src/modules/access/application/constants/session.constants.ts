@@ -10,7 +10,8 @@ const REFRESH_EXPIRATION_MS = parseDurationToMs(
 export const SESSION_EXPIRY: Record<Role, number> = {
   ADMIN: 4 * 60 * 60 * 1000,
   MANAGER: 8 * 60 * 60 * 1000,
-  USER: 24 * 60 * 60 * 1000,
+  OPS: 12 * 60 * 60 * 1000,
+  REP: 24 * 60 * 60 * 1000,
 };
 
 export const DEFAULT_SESSION_EXPIRY = 8 * 60 * 60 * 1000;

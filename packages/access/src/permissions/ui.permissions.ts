@@ -4,6 +4,7 @@ import { defineAbilitiesFor } from "./role.permissions";
 const ROLE_PRIORITY: Record<Role, number> = {
   [Role.ADMIN]: 3,
   [Role.MANAGER]: 2,
+  [Role.OPS]: 1,
   [Role.REP]: 1,
 };
 

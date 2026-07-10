@@ -33,7 +33,7 @@ describe("RevokeInviteUseCase", () => {
 
   beforeEach(() => {
     mockInviteRepository = createMockInviteRepository({
-      findById: mock(async () => mockPendingInvite),
+      findById: mock(async () => mockPendingInvite) as any,
     });
 
     revokeInviteUseCase = new RevokeInviteUseCase({
@@ -99,7 +99,7 @@ describe("RevokeInviteUseCase", () => {
         ...mockPendingInvite,
         status: "ACCEPTED",
         acceptedAt: new Date(),
-      }));
+      })) as any;
 
       await expect(
         revokeInviteUseCase.execute({
@@ -115,7 +115,7 @@ describe("RevokeInviteUseCase", () => {
         ...mockPendingInvite,
         status: "REVOKED",
         revokedAt: new Date(),
-      }));
+      })) as any;
 
       await expect(
         revokeInviteUseCase.execute({
@@ -130,7 +130,7 @@ describe("RevokeInviteUseCase", () => {
       mockInviteRepository.findById = mock(async () => ({
         ...mockPendingInvite,
         status: "ACCEPTED",
-      }));
+      })) as any;
 
       try {
         await revokeInviteUseCase.execute({
@@ -147,7 +147,7 @@ describe("RevokeInviteUseCase", () => {
       mockInviteRepository.findById = mock(async () => ({
         ...mockPendingInvite,
         status: "REVOKED",
-      }));
+      })) as any;
 
       try {
         await revokeInviteUseCase.execute({

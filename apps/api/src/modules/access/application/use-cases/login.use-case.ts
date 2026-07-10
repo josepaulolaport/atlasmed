@@ -153,7 +153,7 @@ export class LoginUseCase {
     const session = await this.deps.sessionService.create({
       userId: user.id,
 
-      userRole: user.role.name,
+      userRole: user.role.name as any,
 
       ipAddress: params.ipAddress || undefined,
 
@@ -171,11 +171,11 @@ export class LoginUseCase {
       revokedAt: session.revokedAt?.toISOString() || null,
       ipAddress: session.ipAddress,
       userAgent: session.userAgent,
-      lastSeenAt: session.lastSeenAt.toISOString(),
+      lastSeenAt: (session.lastSeenAt ?? new Date()).toISOString(),
       createdAt: session.createdAt.toISOString(),
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email!,
         username: user.username,
         status: user.status,
         tokenVersion: user.tokenVersion,
@@ -191,7 +191,7 @@ export class LoginUseCase {
 
       sid: session.id,
 
-      role: user.role.name,
+      role: user.role.name as any,
 
       tokenVersion: user.tokenVersion,
 

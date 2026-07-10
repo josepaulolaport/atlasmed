@@ -35,7 +35,7 @@ describe("Reset Password Race Condition Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     userRepository = new DrizzleUserRepository();
     passwordResetRepository = new DrizzlePasswordResetRepository();
@@ -54,7 +54,7 @@ describe("Reset Password Race Condition Integration Tests", () => {
     const userRole = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, "USER"))
+      .where(eq(roles.name, "REP"))
       .limit(1)
       .then((r) => r[0] ?? null);
 
@@ -96,7 +96,7 @@ describe("Reset Password Race Condition Integration Tests", () => {
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     await db.delete(passwordResets).where(eq(passwordResets.userId, testUser.id));
     await db.delete(sessions).where(eq(sessions.userId, testUser.id));
@@ -104,7 +104,7 @@ describe("Reset Password Race Condition Integration Tests", () => {
   });
 
   test("concurrent confirms with same token — exactly one succeeds", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const newPassword = "ConcurrentPass1!";
 

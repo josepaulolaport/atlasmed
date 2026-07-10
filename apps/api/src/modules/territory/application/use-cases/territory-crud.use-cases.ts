@@ -82,7 +82,7 @@ function serializeTerritory(territory: {
   hasBoundary?: boolean;
 }) {
   if (!territory.territoryType) {
-    throw new Error(`Territory ${territory.id} is missing territoryType`);
+    throw new OperationNotAllowedError("serializeTerritory", `Territory ${territory.id} is missing territoryType`);
   }
 
   return {

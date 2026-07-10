@@ -1,12 +1,12 @@
 export function serializeAuthUser(user: {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
   firstName?: string | null;
   lastName?: string | null;
   status: string;
-  emailVerified: boolean;
-  phoneVerified: boolean;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   role: {
     id: string;
     name: string;
@@ -15,13 +15,13 @@ export function serializeAuthUser(user: {
 }) {
   return {
     id: user.id,
-    email: user.email,
+    email: user.email!,
     username: user.username,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
     status: user.status,
-    emailVerified: user.emailVerified,
-    phoneVerified: user.phoneVerified,
+    emailVerified: user.emailVerified ?? false,
+    phoneVerified: user.phoneVerified ?? false,
     role: {
       id: user.role.id,
       name: user.role.name,
@@ -32,7 +32,7 @@ export function serializeAuthUser(user: {
 
 export function serializeUser(user: {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
   phoneNumber?: string | null;
   firstName?: string | null;
@@ -54,7 +54,7 @@ export function serializeUser(user: {
 }) {
   return {
     id: user.id,
-    email: user.email,
+    email: user.email!,
     username: user.username,
     phoneNumber: user.phoneNumber ?? undefined,
     firstName: user.firstName ?? undefined,

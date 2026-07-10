@@ -39,7 +39,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -54,7 +54,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -69,7 +69,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -84,7 +84,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -103,7 +103,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -121,7 +121,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -149,7 +149,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };
@@ -167,7 +167,7 @@ describe("TokenService", () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       };

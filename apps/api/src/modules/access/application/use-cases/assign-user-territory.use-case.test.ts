@@ -33,7 +33,7 @@ describe("AssignUserTerritoryUseCase", () => {
         if (id === fieldUser.id) return fieldUser;
         if (id === managerUser.id) return managerUser;
         return null;
-      }),
+      }) as any,
     });
     scopeRepository = createMockScopeRepository();
     scopeService = createMockScopeService();

@@ -92,8 +92,8 @@ describe("RefreshSessionUseCase", () => {
     mockRecordSuspiciousActivity.mockClear();
 
     mockSessionRepository = createMockSessionRepository({
-      findActiveByTokenHash: mock(async () => mockOldSession),
-      findById: mock(async () => mockOldSession),
+      findActiveByTokenHash: mock(async () => mockOldSession) as any,
+      findById: mock(async () => mockOldSession) as any,
       rotateRefreshTokenTransaction: mock(async () => ({
         status: "rotated" as const,
         session: {
@@ -101,7 +101,7 @@ describe("RefreshSessionUseCase", () => {
           refreshTokenHash: "new-hashed-token",
           lastSeenAt: new Date(),
         },
-      })),
+      })) as any,
     });
 
     mockSessionCache = createMockSessionCache({
@@ -272,7 +272,7 @@ describe("RefreshSessionUseCase", () => {
       mockSessionRepository.findById = mock(async () => ({
         ...mockOldSession,
         updatedAt: new Date(Date.now() - 11_000),
-      }));
+      })) as any;
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => ({
         sessionId: "session-123",
@@ -314,7 +314,7 @@ describe("RefreshSessionUseCase", () => {
       mockSessionRepository.findById = mock(async () => ({
         ...mockOldSession,
         updatedAt: new Date(),
-      }));
+      })) as any;
       mockSessionCache.getByTokenHash = mock(async () => null);
       mockSessionCache.getSupersededSession = mock(async () => ({
         sessionId: "session-123",
@@ -424,7 +424,7 @@ describe("RefreshSessionUseCase", () => {
       mockSessionRepository.findById = mock(async () => ({
         ...mockOldSession,
         deviceFingerprint: storedFingerprint,
-      }));
+      })) as any;
 
       await expect(
         refreshSessionUseCase.execute({
@@ -447,7 +447,7 @@ describe("RefreshSessionUseCase", () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => ({
         ...mockOldSession,
         user: { ...mockUser, status: "INACTIVE" },
-      }));
+      })) as any;
 
       await expect(
         refreshSessionUseCase.execute({
@@ -460,7 +460,7 @@ describe("RefreshSessionUseCase", () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => ({
         ...mockOldSession,
         user: { ...mockUser, status: "SUSPENDED" },
-      }));
+      })) as any;
 
       await expect(
         refreshSessionUseCase.execute({
@@ -473,7 +473,7 @@ describe("RefreshSessionUseCase", () => {
       mockSessionRepository.findActiveByTokenHash = mock(async () => ({
         ...mockOldSession,
         user: { ...mockUser, status: "PENDING" },
-      }));
+      })) as any;
 
       await expect(
         refreshSessionUseCase.execute({

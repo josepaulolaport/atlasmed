@@ -119,8 +119,8 @@ export class DrizzleConformityRepository implements ConformityRepository {
         conformityRequirements,
         eq(conformityRecords.requirementId, conformityRequirements.id)
       )
-      .where(eq(conformityRecords.id, inserted.id));
+      .where(eq(conformityRecords.id, inserted!.id));
 
-    return mapRecord(record);
+    return mapRecord(record!);
   }
 }

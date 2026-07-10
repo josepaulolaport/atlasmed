@@ -51,7 +51,8 @@ export interface TerritoryDescendantsResponse {
 
 export interface CreateTerritoryRequest {
   name: string;
-  slug: string;
+  code?: string;
+  slug?: string;
   territoryTypeId?: string;
   typeSlug?: string;
   countryCode?: string;

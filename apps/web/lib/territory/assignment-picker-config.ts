@@ -1,6 +1,6 @@
 import type { Territory, TerritoryType } from "@/types/territory";
 
-export type AssignableRole = "USER" | "MANAGER";
+export type AssignableRole = "REP" | "MANAGER";
 
 export interface TerritoryAssignmentPickerConfig {
   filterAssignableToUsers?: boolean;
@@ -12,7 +12,7 @@ export interface TerritoryAssignmentPickerConfig {
 export function getTerritoryAssignmentPickerConfig(
   role: AssignableRole
 ): TerritoryAssignmentPickerConfig {
-  if (role === "USER") {
+  if (role === "REP") {
     return {
       filterAssignableToUsers: true,
       helperText:

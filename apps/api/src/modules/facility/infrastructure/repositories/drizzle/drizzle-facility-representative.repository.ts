@@ -81,7 +81,7 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
       })
       .returning();
 
-    return mapRepresentative(representative);
+    return mapRepresentative(representative!);
   }
 
   async confirm(params: {
@@ -104,7 +104,7 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
       )
       .returning();
 
-    return mapRepresentative(representative);
+    return mapRepresentative(representative!);
   }
 
   async endSourceRepresentative(params: {
@@ -137,6 +137,6 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
       .where(eq(facilityRepresentatives.id, existing.id))
       .returning();
 
-    return mapRepresentative(representative);
+    return mapRepresentative(representative!);
   }
 }

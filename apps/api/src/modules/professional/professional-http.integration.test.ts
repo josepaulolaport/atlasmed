@@ -10,7 +10,7 @@ import { access } from "../access/index";
 import { facility } from "../facility/index";
 import { professional } from "../professional/index";
 import { eq, like, inArray } from "drizzle-orm";
-import { professionals, facilityProfessional } from "@atlasmed/database";
+import { professionals, facilityProfessionals } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -37,7 +37,7 @@ describe("Professional HTTP auth integration", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -49,7 +49,7 @@ describe("Professional HTTP auth integration", () => {
       .values({ firstName: "In", lastName: `Scope ${uniqueId}` })
       .returning()
       .then((r) => r[0]!);
-    await db.insert(facilityProfessional).values({
+    await db.insert(facilityProfessionals).values({
       facilityId: fixtures.inScopeFacilityId,
       professionalId: inScopeProfessional.id,
       confirmedAt: new Date(),
@@ -61,7 +61,7 @@ describe("Professional HTTP auth integration", () => {
       .values({ firstName: "Out", lastName: `Scope ${uniqueId}` })
       .returning()
       .then((r) => r[0]!);
-    await db.insert(facilityProfessional).values({
+    await db.insert(facilityProfessionals).values({
       facilityId: fixtures.outOfScopeFacilityId,
       professionalId: outOfScopeProfessional.id,
       confirmedAt: new Date(),
@@ -70,7 +70,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
       fixtures.manager.id,
@@ -88,8 +88,8 @@ describe("Professional HTTP auth integration", () => {
       .then((r) => r.map((p) => p.id));
     if (profIds.length > 0) {
       await db
-        .delete(facilityProfessional)
-        .where(inArray(facilityProfessional.professionalId, profIds));
+        .delete(facilityProfessionals)
+        .where(inArray(facilityProfessionals.professionalId, profIds));
     }
     await db
       .delete(professionals)
@@ -111,7 +111,7 @@ describe("Professional HTTP auth integration", () => {
   }
 
   it("returns 401 for unauthenticated professional list", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest(
       app,
@@ -123,7 +123,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   it("returns 403 when MANAGER tries to create a professional", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -144,7 +144,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   it("allows ADMIN to list professionals", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -159,7 +159,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   it("scoped field USER can read in-scope professional", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -174,7 +174,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   it("scoped field USER gets 403 for out-of-scope professional", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -187,7 +187,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   it("allows ADMIN to update professional profile with CRM fields", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -220,7 +220,7 @@ describe("Professional HTTP auth integration", () => {
   });
 
   it("rejects invalid CPF on professional create", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(

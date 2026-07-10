@@ -58,16 +58,23 @@ export function createMockSessionRepository(overrides?: Partial<SessionRepositor
         id: params.id,
         userId: params.userId,
         refreshTokenHash: params.refreshTokenHash,
-        ipAddress: params.ipAddress,
-        userAgent: params.userAgent,
+        previousRefreshTokenHash: null,
+        ipAddress: params.ipAddress ?? null,
+        userAgent: params.userAgent ?? null,
+        browserName: null,
+        browserVersion: null,
+        osName: null,
+        deviceType: params.deviceType ?? null,
+        deviceFingerprint: params.deviceFingerprint ?? null,
         expiresAt: params.expiresAt,
-        createdAt: new Date(),
         lastSeenAt: new Date(),
         revokedAt: null,
         revokedReason: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       },
       revokedSessionIds: [],
-    })),
+    } as any)),
     ...overrides,
   };
 }
@@ -122,17 +129,17 @@ export function createMockRoleRepository(overrides?: Partial<RoleRepository>): R
     findById: mock(() =>
       Promise.resolve({
         id: "role-123",
-        name: "USER",
-        priority: ROLE_PRIORITY_BY_NAME.USER,
+        name: "REP",
+        priority: ROLE_PRIORITY_BY_NAME.REP,
       })
     ),
     findAll: mock(() =>
       Promise.resolve([
         {
           id: "role-123",
-          name: "USER",
+          name: "REP",
           description: "Standard user",
-          priority: ROLE_PRIORITY_BY_NAME.USER,
+          priority: ROLE_PRIORITY_BY_NAME.REP,
         },
       ])
     ),

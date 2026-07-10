@@ -35,7 +35,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     sessionRepository = new DrizzleSessionRepository();
     userRepository = new DrizzleUserRepository();
@@ -49,7 +49,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
     const userRole = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, "USER"))
+      .where(eq(roles.name, "REP"))
       .limit(1)
       .then((r) => r[0] ?? null);
 
@@ -88,14 +88,14 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     await db.delete(sessions).where(eq(sessions.userId, testUser.id));
     await db.delete(users).where(eq(users.id, testUser.id)).catch(() => {});
   });
 
   test("should handle concurrent refresh attempts atomically", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
@@ -104,7 +104,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     const results = await Promise.allSettled([
       refreshSessionUseCase.execute({
@@ -148,7 +148,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   });
 
   test("should preserve session identity after successful refresh", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
@@ -159,7 +159,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
 
     const oldSessions = await sessionRepository.findByUserId(testUser.id);
     const oldSessionId = oldSessions[0]?.id;
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     await refreshSessionUseCase.execute({
       refreshToken,
@@ -175,7 +175,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   });
 
   test("should reject old refresh token within grace window without revoking sessions", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
@@ -184,7 +184,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     await refreshSessionUseCase.execute({
       refreshToken,
@@ -209,7 +209,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   });
 
   test("should detect refresh token reuse after grace window via DB fallback", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
@@ -218,7 +218,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     const firstRefresh = await refreshSessionUseCase.execute({
       refreshToken,
@@ -262,7 +262,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
   });
 
   test("should not leave user locked out on refresh failure", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const loginResult = await loginUseCase.execute({
       identifier: testUser.email,
@@ -271,7 +271,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     await refreshSessionUseCase.execute({
       refreshToken,

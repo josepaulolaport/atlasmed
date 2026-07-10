@@ -21,8 +21,8 @@ export * from "./schemas/professional.schema";
 export * from "./schemas/registry.schema";
 export * from "./schemas/territory.schema";
 
-// Re-export Prisma enums as single source of truth
-export {
+// Re-export database enums as single source of truth
+export type {
   UserStatus,
   InvitationStatus as InviteStatus,
   AuthSessionDeviceType as DeviceType,

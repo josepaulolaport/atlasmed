@@ -35,7 +35,7 @@ describe("GetUserAssignmentsUseCase", () => {
           };
         }
         return null;
-      }),
+      }) as any,
     });
 
     const scopeRepository = createMockScopeRepository({
@@ -73,9 +73,9 @@ describe("GetUserAssignmentsUseCase", () => {
           managerId: null,
           username: "unassigned",
           email: "u@example.com",
-          role: { name: Role.USER },
+          role: { name: Role.REP },
         })
-      ),
+      ) as any,
     });
 
     const scopeRepository = createMockScopeRepository();
@@ -101,7 +101,7 @@ describe("GetUserAssignmentsUseCase", () => {
           email: "mgr@example.com",
           role: { name: Role.MANAGER },
         })
-      ),
+      ) as any,
     });
 
     const scopeRepository = createMockScopeRepository({

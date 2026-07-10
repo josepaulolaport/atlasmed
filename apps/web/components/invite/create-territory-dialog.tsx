@@ -140,7 +140,7 @@ export function CreateTerritoryDialog({
         return;
       }
 
-      onTerritoryCreated(result.territory);
+      onTerritoryCreated(result as Territory);
       onOpenChange(false);
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };

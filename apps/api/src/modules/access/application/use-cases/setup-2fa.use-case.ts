@@ -27,7 +27,7 @@ export class Setup2FAUseCase {
     return {
       secret,
       otpauthUrl: this.deps.twoFactorService.generateOtpAuthUrl({
-        email: user.email,
+        email: user.email!,
         secret,
       }),
     };

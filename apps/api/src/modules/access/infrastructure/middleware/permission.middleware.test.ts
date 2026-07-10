@@ -38,7 +38,7 @@ describe("PermissionMiddleware", () => {
     username: "user",
     role: {
       id: "role-user",
-      name: "USER" as const,
+      name: "REP" as const,
       description: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -97,13 +97,13 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should allow USER to read CLINIC", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "FACILITY")).toBe(true);
     });
 
     it("should allow USER to read VISIT", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "VISIT")).toBe(true);
     });
@@ -111,19 +111,19 @@ describe("PermissionMiddleware", () => {
 
   describe("missing permission", () => {
     it("should deny USER from creating USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
     });
 
     it("should deny USER from updating USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("update", "USER")).toBe(false);
     });
 
     it("should deny USER from deleting USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("delete", "USER")).toBe(false);
     });
@@ -141,13 +141,13 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should deny USER from managing CLINIC", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("manage", "FACILITY")).toBe(false);
     });
 
     it("should deny USER from managing VISIT", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("manage", "VISIT")).toBe(false);
     });
@@ -177,7 +177,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should check multiple denied permissions for USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
       expect(ability.can("update", "USER")).toBe(false);
@@ -283,7 +283,7 @@ describe("PermissionMiddleware", () => {
 
   describe("USER permissions", () => {
     it("should have read and update on CLINIC", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "FACILITY")).toBe(true);
       expect(ability.can("create", "FACILITY")).toBe(false);
@@ -292,7 +292,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should have read-only on VISIT", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "VISIT")).toBe(true);
       expect(ability.can("create", "VISIT")).toBe(false);
@@ -301,7 +301,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should have no permissions on USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
       expect(ability.can("read", "USER")).toBe(false);
@@ -310,7 +310,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should have no permissions on TERRITORY", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "TERRITORY")).toBe(false);
       expect(ability.can("read", "TERRITORY")).toBe(false);
@@ -320,7 +320,7 @@ describe("PermissionMiddleware", () => {
   });
 
   describe("Elysia scoped hook wiring", () => {
-    function createTestApp(role: "ADMIN" | "MANAGER" | "USER") {
+    function createTestApp(role: "ADMIN" | "MANAGER" | "REP") {
       const auth = new Elysia({ name: "auth-test" }).derive({ as: "scoped" }, async () => ({
         getUser: async () => ({
           id: "user-test",
@@ -356,7 +356,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("blocks USER on manage USER routes", async () => {
-      const app = createTestApp("USER");
+      const app = createTestApp("REP");
       const response = await app.handle(new Request("http://localhost/protected"));
 
       expect(response.status).toBe(403);

@@ -18,17 +18,17 @@ describe("Registry Ingestion DB Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await cleanupMockRegistryData();
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await cleanupMockRegistryData();
   });
 
   it("v1 then v2 creates FACILITY_REGISTRY_DEACTIVATED suggestion without deactivating clinic", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { runIngestion } = createRegistryIngestionStack("snapshot-v1.json");
     await runIngestion.execute();
@@ -71,7 +71,7 @@ describe("Registry Ingestion DB Integration Tests", () => {
   });
 
   it("approving FACILITY_REGISTRY_DEACTIVATED soft-deletes the clinic", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const stack = createRegistryIngestionStack("snapshot-v1.json");
     await stack.runIngestion.execute();
@@ -123,7 +123,7 @@ describe("Registry Ingestion DB Integration Tests", () => {
   });
 
   it("soft-deleted clinic reappearing in source creates FACILITY_REGISTRY_REACTIVATED suggestion", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const stack = createRegistryIngestionStack("snapshot-v1.json");
     await stack.runIngestion.execute();
@@ -170,7 +170,7 @@ describe("Registry Ingestion DB Integration Tests", () => {
   });
 
   it("v1 then v4 creates FACILITY_PROFESSIONAL_REMOVAL without deleting professional", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const stack = createRegistryIngestionStack("snapshot-v1.json");
     await stack.runIngestion.execute();

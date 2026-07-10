@@ -1,3 +1,30 @@
+export interface InviteRecord {
+  id: string;
+  email: string | null;
+  phoneNumber: string | null;
+  status: string;
+  roleId: string;
+  role: {
+    id: string;
+    name: string;
+    priority?: number | null;
+  };
+  invitedByUserId: string;
+  firstName: string | null;
+  lastName: string | null;
+  managerId: string | null;
+  managerTerritoryId: string | null;
+  repTerritoryId: string | null;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  acceptedByUserId: string | null;
+  revokedAt: Date | null;
+  resendCount: number;
+  lastResendAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface CreateInviteParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
@@ -23,25 +50,36 @@ export interface AcceptInviteTransactionParams {
 }
 
 export interface AcceptInviteTransactionResult {
-  user: any;
-  invite: any;
+  user: {
+    id: string;
+    email: string | null;
+    username: string;
+    firstName: string | null;
+    lastName: string | null;
+    status: string;
+    roleId: string;
+    role: { id: string; name: string };
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  invite: InviteRecord;
 }
 
 export interface InviteRepository {
-  create(params: CreateInviteParams): Promise<any>;
+  create(params: CreateInviteParams): Promise<InviteRecord>;
 
-  findValidByTokenHash(tokenHash: string): Promise<any>;
+  findValidByTokenHash(tokenHash: string): Promise<InviteRecord | null>;
 
-  findById(inviteId: string): Promise<any>;
+  findById(inviteId: string): Promise<InviteRecord | null>;
 
-  findByEmailOrPhone(email?: string | undefined, phoneNumber?: string | undefined): Promise<any>;
+  findByEmailOrPhone(email?: string | undefined, phoneNumber?: string | undefined): Promise<InviteRecord | null>;
 
   findAll(params?: {
     status?: string;
     page?: number;
     limit?: number;
     invitedByUserId?: string;
-  }): Promise<{ invitations: any[]; total: number }>;
+  }): Promise<{ invitations: InviteRecord[]; total: number }>;
 
   markAccepted(inviteId: string, userId: string): Promise<void>;
 
@@ -50,7 +88,7 @@ export interface InviteRepository {
   regenerateToken(
     inviteId: string,
     params: { tokenHash: string; expiresAt: Date }
-  ): Promise<any>;
+  ): Promise<InviteRecord>;
 
   cleanupExpired(): Promise<number>;
 

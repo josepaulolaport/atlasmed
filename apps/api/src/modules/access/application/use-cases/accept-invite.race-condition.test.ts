@@ -33,7 +33,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     inviteRepository = new DrizzleInviteRepository();
     userRepository = new DrizzleUserRepository();
@@ -46,7 +46,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     const role = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, "USER"))
+      .where(eq(roles.name, "REP"))
       .limit(1)
       .then((r) => r[0] ?? null);
 
@@ -78,7 +78,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     await db.delete(invitations).where(eq(invitations.invitedByUserId, adminUserId));
     await db
@@ -92,7 +92,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   test("should prevent race condition when accepting invite with same username", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const email = `race-test-${Date.now()}@example.com`;
     const username = `raceuser${Date.now()}`;
@@ -134,7 +134,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   test("should prevent race condition with same email", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     const phone1 = `+1555${Date.now()}1`;
     const phone2 = `+1555${Date.now()}2`;
     const phone3 = `+1555${Date.now()}3`;
@@ -202,7 +202,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
   });
 
   test("should allow sequential accept invites with different credentials", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     const email1 = `seq1-${Date.now()}@example.com`;
     const email2 = `seq2-${Date.now()}@example.com`;
     const username1 = `sequser1-${Date.now()}`;

@@ -63,4 +63,5 @@ export {
   DatabaseError,
   ExternalServiceError,
   CacheError,
+  ConfigurationError,
 } from "./domain-errors";

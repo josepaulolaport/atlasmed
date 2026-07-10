@@ -26,7 +26,7 @@ describe("Setup2FAUseCase", () => {
 
     useCase = new Setup2FAUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => mockUser),
+        findById: mock(async () => mockUser) as any,
       }),
       twoFactorService: mockTwoFactorService as any,
     });
@@ -46,7 +46,7 @@ describe("Setup2FAUseCase", () => {
   it("should reject when 2FA is already enabled", async () => {
     useCase = new Setup2FAUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => ({ ...mockUser, twoFactorEnabled: true })),
+        findById: mock(async () => ({ ...mockUser, twoFactorEnabled: true })) as any,
       }),
       twoFactorService: mockTwoFactorService as any,
     });

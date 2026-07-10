@@ -68,11 +68,11 @@ describe("ResetPasswordUseCase", () => {
       resetPasswordTransaction: mock(() => Promise.resolve({
         user: mockUser,
         passwordReset: mockPasswordReset,
-      })),
+      })) as any,
     });
 
     mockPasswordResetRepository = createMockPasswordResetRepository({
-      findByToken: mock(() => Promise.resolve(mockPasswordReset)),
+      findByToken: mock(() => Promise.resolve(mockPasswordReset)) as any,
     });
 
     mockAuthCache = createMockAuthCache({
@@ -133,7 +133,7 @@ describe("ResetPasswordUseCase", () => {
           ...mockPasswordReset,
           usedAt: new Date(),
         })
-      );
+      ) as any;
 
       await expect(
         useCase.execute({
@@ -151,7 +151,7 @@ describe("ResetPasswordUseCase", () => {
           ...mockPasswordReset,
           expiresAt: new Date(Date.now() - 1000),
         })
-      );
+      ) as any;
 
       await expect(
         useCase.execute({
@@ -174,7 +174,7 @@ describe("ResetPasswordUseCase", () => {
             passwordHistory: [],
           },
         })
-      );
+      ) as any;
 
       await expect(
         useCase.execute({
@@ -200,7 +200,7 @@ describe("ResetPasswordUseCase", () => {
             passwordHistory: [historicHash],
           },
         })
-      );
+      ) as any;
 
       await expect(
         useCase.execute({

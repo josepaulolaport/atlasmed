@@ -59,7 +59,7 @@ describe("Verify2FALoginUseCase", () => {
     mockAuditLog = createMockAuditLogService();
     mockMetrics = createMockMetricsService();
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => mockUser),
+      findById: mock(async () => mockUser) as any,
       updateLastLogin: mock(async () => {}),
     });
     mockSessionCache = createMockSessionCache();
@@ -144,7 +144,7 @@ describe("Verify2FALoginUseCase", () => {
       ...mockUser,
       twoFactorEnabled: false,
       twoFactorSecret: null,
-    }));
+    })) as any;
 
     await expect(
       useCase.execute({

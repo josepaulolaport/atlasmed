@@ -51,7 +51,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     app = createAuthIntegrationApp();
     await redis.flushdb();
@@ -62,7 +62,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     const userRole = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, "USER"))
+      .where(eq(roles.name, "REP"))
       .limit(1)
       .then((r) => r[0] ?? null);
     const adminRole = await db
@@ -109,7 +109,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await db
       .delete(invitations)
       .where(inArray(invitations.invitedByUserId, [userId, adminId]));
@@ -139,7 +139,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
   }
 
   it("completes password reset and invalidates existing refresh sessions", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { refreshToken } = await login(userEmail, TEST_PASSWORD);
     expect(refreshToken).toBeTruthy();
@@ -189,7 +189,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
   });
 
   it("invalidates superseded refresh token after change password", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken, refreshToken: initialRefreshToken } = await login(
       userEmail,
@@ -235,7 +235,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
   });
 
   it("returns REFRESH_TOKEN_REUSE_DETECTED without leaking internal ids", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { refreshToken } = await login(userEmail, NEW_PASSWORD);
     expect(refreshToken).toBeTruthy();
@@ -285,7 +285,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
   });
 
   it("returns 403 when USER attempts to create an invitation", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken } = await login(userEmail, NEW_PASSWORD);
 
@@ -307,7 +307,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
   });
 
   it("accepts invite via register and allows login", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     const inviteEmail = `invited.${uniqueId}@test.example.com`;

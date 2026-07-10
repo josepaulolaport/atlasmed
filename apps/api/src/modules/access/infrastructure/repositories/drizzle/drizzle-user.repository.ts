@@ -1,5 +1,5 @@
 import { eq, and, or, isNull, ilike, inArray, sql, desc } from "drizzle-orm";
-import { users, roles, sessions, passwordResets, type Database } from "@atlasmed/database";
+import { users, roles, sessions, passwordResets, type Database, type AnyDatabase } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import {
   ResetTokenExpiredError,
@@ -18,7 +18,7 @@ import type {
   FindAllUsersParams,
 } from "../../../application/interfaces/user.repository.interface";
 
-async function fetchUserWithRole(userId: string, client: Database = db) {
+async function fetchUserWithRole(userId: string, client: AnyDatabase = db) {
   const [row] = await client
     .select()
     .from(users)

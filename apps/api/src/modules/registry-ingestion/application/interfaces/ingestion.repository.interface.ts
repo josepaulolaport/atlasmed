@@ -1,8 +1,8 @@
 import type {
-  IngestionRunPhase,
-  IngestionRunStatus,
-  IngestionSuggestionStatus,
-  IngestionSuggestionType,
+  CnesRunPhase as IngestionRunPhase,
+  CnesRunStatus as IngestionRunStatus,
+  CnesSuggestionStatus as IngestionSuggestionStatus,
+  CnesSuggestionType as IngestionSuggestionType,
 } from "@atlasmed/database";
 
 export interface IngestionRunRecord {

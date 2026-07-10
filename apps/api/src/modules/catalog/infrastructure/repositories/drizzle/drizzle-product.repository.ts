@@ -40,7 +40,7 @@ export class DrizzleProductRepository implements ProductRepository {
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select()
         .from(products)
@@ -51,7 +51,7 @@ export class DrizzleProductRepository implements ProductRepository {
       db.select({ count: sql<number>`count(*)` }).from(products).where(where),
     ]);
 
-    return { products: rows.map(mapProduct), total: Number(count) };
+    return { products: rows.map(mapProduct), total: Number(countRows[0]?.count ?? 0) };
   }
 
   async findById(id: string): Promise<ProductRecord | null> {
@@ -74,7 +74,7 @@ export class DrizzleProductRepository implements ProductRepository {
         isActive: data.isActive ?? true,
       })
       .returning();
-    return mapProduct(product);
+    return mapProduct(product!);
   }
 
   async update(
@@ -86,6 +86,6 @@ export class DrizzleProductRepository implements ProductRepository {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(products.id, id))
       .returning();
-    return mapProduct(product);
+    return mapProduct(product!);
   }
 }

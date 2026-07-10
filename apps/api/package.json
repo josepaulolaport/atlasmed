@@ -13,7 +13,7 @@
     "test:unit": "NODE_ENV=test bun test --test-name-pattern=\"^((?!Integration Tests).)*$\"",
     "test:integration": "NODE_ENV=test bun test --test-name-pattern=\"Integration Tests\"",
     "test:watch": "NODE_ENV=test bun test --watch",
-    "lint": "eslint src/app",
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "db:migrate": "cd ../../packages/database && bunx drizzle-kit migrate",
     "db:push": "cd ../../packages/database && bunx drizzle-kit push",

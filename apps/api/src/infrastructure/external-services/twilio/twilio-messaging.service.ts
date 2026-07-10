@@ -6,6 +6,7 @@ import type {
 } from "../../../modules/access/application/interfaces/messaging.service.interface";
 
 import { twilioClient } from "./twilio.client";
+import { ExternalServiceError } from "../../../shared/errors";
 
 export class TwilioMessagingService implements MessagingService {
   async send(params: SendMessageParams): Promise<void> {
@@ -21,8 +22,7 @@ export class TwilioMessagingService implements MessagingService {
         body: params.message,
       });
     } catch (error) {
-      console.error("Failed to send WhatsApp message:", error);
-      throw new Error("Failed to send WhatsApp message");
+      throw new ExternalServiceError("Twilio", error instanceof Error ? error : undefined);
     }
   }
 }

@@ -37,7 +37,7 @@ interface ManagePermissionsDialogProps {
 }
 
 const RESOURCES = [
-  "USER",
+  "REP",
   "FACILITY",
   "PROFESSIONAL",
   "VISIT",
@@ -58,7 +58,7 @@ export function ManagePermissionsDialog({
   const form = useForm<GrantForm>({
     resolver: zodResolver(grantPermissionSchema),
     defaultValues: {
-      resource: "USER",
+      resource: "REP",
       action: "read",
     },
   });

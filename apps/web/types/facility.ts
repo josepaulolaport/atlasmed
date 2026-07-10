@@ -62,6 +62,9 @@ export type UpdateDoctorRequest = UpdateProfessionalInput;
 export interface CreateClinicRequest {
   name: string;
   address?: string;
+  city?: string;
+  stateCode?: string;
+  cnpj?: string;
   lat?: number;
   lng?: number;
 }
@@ -69,6 +72,9 @@ export interface CreateClinicRequest {
 export interface UpdateClinicRequest {
   name?: string;
   address?: string | null;
+  city?: string | null;
+  stateCode?: string | null;
+  cnpj?: string | null;
   lat?: number | null;
   lng?: number | null;
 }

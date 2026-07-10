@@ -4,6 +4,7 @@ import { sanitizeFacilityBatch } from "../sanitize/sanitize-facility";
 import { sanitizeProfessionalBatch } from "../sanitize/sanitize-professional";
 import { RegistrySyncService } from "../services/registry-sync.service";
 import type { AuditLogService } from "../../../../infrastructure/audit/audit-log.service";
+import { ConfigurationError } from "../../../../shared/errors";
 
 interface Dependencies {
   registrySource: RegistrySourcePort;
@@ -59,7 +60,7 @@ export class RunRegistryIngestionUseCase {
 
   private async executeTemporal(input?: { actorUserId?: string; ano?: number; mes?: number }) {
     if (!this.deps.startTemporalWorkflow) {
-      throw new Error("Temporal workflow starter is not configured");
+      throw new ConfigurationError("Temporal workflow starter is not configured");
     }
 
     const ano = input?.ano ?? new Date().getFullYear();

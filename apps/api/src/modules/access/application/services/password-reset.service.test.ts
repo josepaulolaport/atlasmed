@@ -17,7 +17,7 @@ describe("PasswordResetService", () => {
 
   beforeEach(() => {
     mockRepository = {
-      create: mock(() => Promise.resolve({})),
+      create: mock(() => Promise.resolve({})) as any,
       findByToken: mock(() => Promise.resolve(null)),
       markAsUsed: mock(() => Promise.resolve()),
       invalidateUnusedForUser: mock(() => Promise.resolve()),
@@ -38,7 +38,7 @@ describe("PasswordResetService", () => {
         usedAt: null,
       };
 
-      mockRepository.create = mock(() => Promise.resolve(mockPasswordReset));
+      mockRepository.create = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       await service.createPasswordReset({ userId });
 
@@ -56,11 +56,11 @@ describe("PasswordResetService", () => {
         usedAt: null,
       };
 
-      mockRepository.create = mock(() => Promise.resolve(mockPasswordReset));
+      mockRepository.create = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       const result = await service.createPasswordReset({ userId });
 
-      expect(result.passwordReset).toEqual(mockPasswordReset);
+      expect(result.passwordReset).toEqual(mockPasswordReset as any);
       expect(result.token).toBeTruthy();
       expect(typeof result.token).toBe("string");
       expect(mockRepository.create).toHaveBeenCalled();
@@ -94,11 +94,11 @@ describe("PasswordResetService", () => {
         usedAt: null,
       };
 
-      mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset));
+      mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       const result = await service.validatePasswordResetToken(token);
 
-      expect(result).toEqual(mockPasswordReset);
+      expect(result).toEqual(mockPasswordReset as any);
       expect(mockRepository.findByToken).toHaveBeenCalledWith({ tokenHash });
     });
 
@@ -122,7 +122,7 @@ describe("PasswordResetService", () => {
         usedAt: new Date(),
       };
 
-      mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset));
+      mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       await expect(service.validatePasswordResetToken(token)).rejects.toThrow(
         ResetTokenUsedError
@@ -141,7 +141,7 @@ describe("PasswordResetService", () => {
         usedAt: null,
       };
 
-      mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset));
+      mockRepository.findByToken = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       await expect(service.validatePasswordResetToken(token)).rejects.toThrow(
         ResetTokenExpiredError

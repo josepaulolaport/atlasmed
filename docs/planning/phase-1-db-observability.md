@@ -2,7 +2,9 @@
 
 **Goal:** Get the data model right and get real visibility into what the system is doing.  
 **Rule:** Schema changes here. No new API routes or web pages. No feature work.  
-**Status:** 🟡 Part A (DB) complete — Part B (Observability) + Part C (Environments) pending
+**Status:** 🟡 Part A (DB) complete — Part B (Observability) pending
+
+> **Note:** Part C (Environment Setup, Docker Compose, MinIO, Meilisearch, ClickHouse) has been moved to its own **Phase 0.5 — Infrastructure** (`phase-0.5-infrastructure.md`). Part B below focuses purely on OTEL wiring, structured logging, and business spans.
 
 This phase requires a design conversation before execution. The checkboxes below are the known mechanical work. The schema decisions section is where that conversation happens.
 

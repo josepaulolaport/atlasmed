@@ -473,6 +473,16 @@ export class ExternalServiceError extends AppError {
   }
 }
 
+export class ConfigurationError extends AppError {
+  constructor(message: string) {
+    super(
+      'CONFIGURATION_ERROR',
+      500,
+      message
+    );
+  }
+}
+
 export class CacheError extends AppError {
   constructor(operation: string, originalError?: Error) {
     super(

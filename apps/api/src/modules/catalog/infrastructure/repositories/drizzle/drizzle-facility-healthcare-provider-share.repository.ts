@@ -93,9 +93,9 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         healthcareProviders,
         eq(facilityHealthcareProviderShares.healthcareProviderId, healthcareProviders.id)
       )
-      .where(eq(facilityHealthcareProviderShares.id, share.id));
+      .where(eq(facilityHealthcareProviderShares.id, share!.id));
 
-    return mapShare(row);
+    return mapShare(row!);
   }
 
   async sumSharePercentForFacility(facilityId: string): Promise<number> {

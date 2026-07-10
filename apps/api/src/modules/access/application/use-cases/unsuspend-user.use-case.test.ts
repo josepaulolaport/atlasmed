@@ -34,7 +34,7 @@ describe("UnsuspendUserUseCase", () => {
   beforeEach(() => {
     mockAuditLog = createMockAuditLogService();
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => suspendedUser),
+      findById: mock(async () => suspendedUser) as any,
     });
     mockAuthCache = createMockAuthCache();
 
@@ -72,7 +72,7 @@ describe("UnsuspendUserUseCase", () => {
     mockUserRepository.findById = mock(async () => ({
       ...suspendedUser,
       status: "ACTIVE",
-    }));
+    })) as any;
 
     await expect(
       useCase.execute(adminUnsuspendParams("user-123"))

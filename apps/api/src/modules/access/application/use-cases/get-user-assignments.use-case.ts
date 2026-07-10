@@ -55,7 +55,7 @@ export class GetUserAssignmentsUseCase {
         manager = {
           id: managerUser.id,
           username: managerUser.username,
-          email: managerUser.email,
+          email: managerUser.email!,
           ...(managerUser.firstName ? { firstName: managerUser.firstName } : {}),
           ...(managerUser.lastName ? { lastName: managerUser.lastName } : {}),
         };

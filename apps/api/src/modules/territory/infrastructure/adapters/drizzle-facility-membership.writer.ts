@@ -50,7 +50,8 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
     const rows = await db
       .select({
         id: facilities.id,
-        location: facilities.location,
+        lat: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
+        lng: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         territoryId: facilities.territoryId,
         territoryAssignmentSource: facilities.territoryAssignmentSource,
         territoryAssignmentStatus: facilities.territoryAssignmentStatus,
@@ -58,6 +59,6 @@ export class DrizzleClinicMembershipWriter implements ClinicMembershipWriter {
       .from(facilities)
       .where(and(...conditions));
 
-    return rows as ClinicMembershipTarget[];
+    return rows;
   }
 }

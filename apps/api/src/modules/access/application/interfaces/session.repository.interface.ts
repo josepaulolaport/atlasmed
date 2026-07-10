@@ -1,3 +1,37 @@
+export interface SessionRecord {
+  id: string;
+  userId: string;
+  refreshTokenHash: string;
+  previousRefreshTokenHash: string | null;
+  expiresAt: Date;
+  revokedAt: Date | null;
+  revokedReason: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  browserName: string | null;
+  browserVersion: string | null;
+  osName: string | null;
+  deviceType: string | null;
+  deviceFingerprint: string | null;
+  lastSeenAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface SessionWithUserRecord extends SessionRecord {
+  user: {
+    id: string;
+    email: string | null;
+    username: string;
+    status: string;
+    tokenVersion: number;
+    role: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
 export interface CreateSessionParams {
   id: string;
 
@@ -42,7 +76,7 @@ export interface CreateLoginSessionParams extends CreateSessionParams {
 }
 
 export interface CreateLoginSessionResult {
-  session: any;
+  session: SessionRecord;
   revokedSessionIds: string[];
 }
 
@@ -59,28 +93,28 @@ export interface PreviousRefreshTokenSession {
 }
 
 export interface RotateRefreshTokenResult {
-  session: any;
+  session: SessionWithUserRecord;
 }
 
 export type RotateRefreshTokenTransactionResult =
-  | { status: "rotated"; session: any }
+  | { status: "rotated"; session: SessionWithUserRecord }
   | { status: "reuse_detected"; userId: string; sessionId: string }
   | { status: "already_rotated"; userId: string; sessionId: string };
 
 export interface SessionRepository {
-  create(params: CreateSessionParams): Promise<any>;
+  create(params: CreateSessionParams): Promise<SessionRecord>;
 
-  findActiveByTokenHash(tokenHash: string): Promise<any>;
+  findActiveByTokenHash(tokenHash: string): Promise<SessionWithUserRecord | null>;
 
   findActiveByPreviousRefreshTokenHash(
     tokenHash: string
   ): Promise<PreviousRefreshTokenSession | null>;
 
-  findById(sessionId: string): Promise<any>;
+  findById(sessionId: string): Promise<SessionWithUserRecord | null>;
 
   findSessionStatus(sessionId: string): Promise<SessionStatus | null>;
 
-  findByUserId(userId: string): Promise<any[]>;
+  findByUserId(userId: string): Promise<SessionRecord[]>;
 
   revoke(sessionId: string): Promise<void>;
 

@@ -16,8 +16,8 @@ import {
 
 interface Dependencies {
   userRepository: UserRepository;
-  territoryRepository: TerritoryRepository;
-  territoryTypeRepository: TerritoryTypeRepository;
+  territoryRepository?: TerritoryRepository;
+  territoryTypeRepository?: TerritoryTypeRepository;
 }
 
 export interface ValidateInvitationTerritoriesParams {
@@ -77,6 +77,10 @@ export class InvitationTerritoryValidatorService {
       ]);
     }
 
+    if (!this.deps.territoryRepository) {
+      return;
+    }
+
     const territory = await this.deps.territoryRepository.findById(
       params.managerTerritoryId
     );
@@ -92,7 +96,9 @@ export class InvitationTerritoryValidatorService {
 
     const type =
       territory.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+      (this.deps.territoryTypeRepository
+        ? await this.deps.territoryTypeRepository.findById(territory.territoryTypeId)
+        : null);
 
     if (!type) {
       throw new ValidationError([
@@ -161,6 +167,10 @@ export class InvitationTerritoryValidatorService {
       ]);
     }
 
+    if (!this.deps.territoryRepository) {
+      return;
+    }
+
     const repTerritory = await this.deps.territoryRepository.findById(
       params.repTerritoryId!
     );
@@ -176,7 +186,9 @@ export class InvitationTerritoryValidatorService {
 
     const repType =
       repTerritory.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(repTerritory.territoryTypeId));
+      (this.deps.territoryTypeRepository
+        ? await this.deps.territoryTypeRepository.findById(repTerritory.territoryTypeId)
+        : null);
 
     if (!repType) {
       throw new ValidationError([

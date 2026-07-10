@@ -68,7 +68,7 @@ describe("RequestPasswordResetUseCase", () => {
         phoneNumber: null,
       };
 
-      mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser));
+      mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser)) as any;
 
       const mockPasswordReset = {
         id: "reset-123",
@@ -77,11 +77,11 @@ describe("RequestPasswordResetUseCase", () => {
         expiresAt: new Date(),
       };
 
-      mockPasswordResetRepository.create = mock(() => Promise.resolve(mockPasswordReset));
+      mockPasswordResetRepository.create = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       const result = await useCase.execute({ identifier: "user@example.com" });
 
-      expect(result?.passwordReset).toEqual(mockPasswordReset);
+      expect(result?.passwordReset).toEqual(mockPasswordReset as any);
       expect(mockEmailService.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: mockUser.email,
@@ -105,7 +105,7 @@ describe("RequestPasswordResetUseCase", () => {
         phoneNumber: "+5511999999999",
       };
 
-      mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser));
+      mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser)) as any;
 
       const mockPasswordReset = {
         id: "reset-123",
@@ -114,11 +114,11 @@ describe("RequestPasswordResetUseCase", () => {
         expiresAt: new Date(),
       };
 
-      mockPasswordResetRepository.create = mock(() => Promise.resolve(mockPasswordReset));
+      mockPasswordResetRepository.create = mock(() => Promise.resolve(mockPasswordReset)) as any;
 
       const result = await useCase.execute({ identifier: "+5511999999999" });
 
-      expect(result?.passwordReset).toEqual(mockPasswordReset);
+      expect(result?.passwordReset).toEqual(mockPasswordReset as any);
       expect(mockMessagingService.send).toHaveBeenCalled();
 
       const sendCall = (mockMessagingService.send as any).mock.calls[0][0];
@@ -142,7 +142,7 @@ describe("RequestPasswordResetUseCase", () => {
         phoneNumber: "+5511999999999",
       };
 
-      mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser));
+      mockUserRepository.findByIdentifier = mock(() => Promise.resolve(mockUser)) as any;
 
       mockPasswordResetRepository.create = mock(() =>
         Promise.resolve({
@@ -151,7 +151,7 @@ describe("RequestPasswordResetUseCase", () => {
           tokenHash: "hash-123",
           expiresAt: new Date(),
         })
-      );
+      ) as any;
 
       await useCase.execute({ identifier: "user@example.com" });
 

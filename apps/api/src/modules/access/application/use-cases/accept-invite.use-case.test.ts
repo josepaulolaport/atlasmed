@@ -55,7 +55,7 @@ describe("AcceptInviteUseCase", () => {
       acceptInviteTransaction: mock(async () => ({
         user: mockUser,
         invite: mockInvite,
-      })),
+      })) as any,
     });
 
     acceptInviteUseCase = new AcceptInviteUseCase({

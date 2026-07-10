@@ -105,7 +105,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
       })
       .returning();
 
-    return mapRun(run);
+    return mapRun(run!);
   }
 
   async findById(id: string): Promise<IngestionRunRecord | null> {
@@ -130,7 +130,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
       .where(eq(cnesRuns.id, id))
       .returning();
 
-    return mapRun(run);
+    return mapRun(run!);
   }
 
   async fail(id: string, error: string): Promise<IngestionRunRecord> {
@@ -145,7 +145,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
       .where(eq(cnesRuns.id, id))
       .returning();
 
-    return mapRun(run);
+    return mapRun(run!);
   }
 
   async findRecent(params: {
@@ -159,7 +159,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
 
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select()
         .from(cnesRuns)
@@ -170,7 +170,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
       db.select({ count: sql<number>`count(*)` }).from(cnesRuns).where(where),
     ]);
 
-    return { runs: rows.map(mapRun), total: Number(count) };
+    return { runs: rows.map(mapRun), total: Number(countRows[0]?.count ?? 0) };
   }
 }
 
@@ -191,7 +191,7 @@ export class DrizzleIngestionSuggestionRepository
       })
       .returning();
 
-    return mapSuggestion(suggestion);
+    return mapSuggestion(suggestion!);
   }
 
   async findPendingDuplicate(params: {
@@ -282,7 +282,7 @@ export class DrizzleIngestionSuggestionRepository
     const where = conditions.length > 0 ? and(...conditions) : undefined;
     const skip = (page - 1) * limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select()
         .from(cnesSuggestions)
@@ -293,7 +293,7 @@ export class DrizzleIngestionSuggestionRepository
       db.select({ count: sql<number>`count(*)` }).from(cnesSuggestions).where(where),
     ]);
 
-    return { suggestions: rows.map(mapSuggestion), total: Number(count) };
+    return { suggestions: rows.map(mapSuggestion), total: Number(countRows[0]?.count ?? 0) };
   }
 
   async resolve(params: {
@@ -313,6 +313,6 @@ export class DrizzleIngestionSuggestionRepository
       .where(eq(cnesSuggestions.id, params.id))
       .returning();
 
-    return mapSuggestion(suggestion);
+    return mapSuggestion(suggestion!);
   }
 }
