@@ -1,4 +1,4 @@
-export { createDatabase, type Database } from "./client";
+export { createDatabase, type Database, type AnyDatabase, type DatabaseTransaction } from "./client";
 
 export * from "./schema/public/index";
 export * from "./schema/audit/index";

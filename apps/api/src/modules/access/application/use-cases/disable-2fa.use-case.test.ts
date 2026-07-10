@@ -46,7 +46,7 @@ describe("Disable2FAUseCase", () => {
 
     useCase = new Disable2FAUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => baseUser),
+        findById: mock(async () => baseUser) as any,
         disableTwoFactor: mock(async () => {}),
       }),
       twoFactorService: mockTwoFactorService as any,
@@ -110,7 +110,7 @@ describe("Disable2FAUseCase", () => {
           ...baseUser,
           twoFactorEnabled: false,
           twoFactorSecret: null,
-        })),
+        })) as any,
       }),
       twoFactorService: mockTwoFactorService as any,
       authCache: mockAuthCache,

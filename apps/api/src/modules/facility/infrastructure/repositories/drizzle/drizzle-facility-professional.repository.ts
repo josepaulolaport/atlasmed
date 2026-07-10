@@ -15,7 +15,29 @@ import type {
 
 const LEGACY_OCCUPATION_CODE = "LEGACY";
 
-type AssociationRow = typeof facilityProfessionals.$inferSelect;
+type AssociationRow = {
+  id: string;
+  professionalId: string;
+  facilityId: string;
+  occupationCode: string;
+  specialtyLabel: string | null;
+  isPartner: boolean;
+  isPrescriber: boolean;
+  isBuyer: boolean;
+  isDecisionMaker: boolean;
+  relationshipLevel: string | null;
+  notes: string | null;
+  sourceActive: boolean;
+  sourceFirstSeenAt: Date | null;
+  sourceLastSeenAt: Date | null;
+  confirmedAt: Date | null;
+  confirmedByUserId: string | null;
+  endedAt: Date | null;
+  endedByUserId: string | null;
+  endReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 function mapAssociation(association: AssociationRow): FacilityProfessionalRecord {
   return {
@@ -199,7 +221,7 @@ export class DrizzleFacilityProfessionalRepository
     const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select({
           ...associationColumns,
@@ -233,7 +255,7 @@ export class DrizzleFacilityProfessionalRepository
         ...mapAssociation(row),
         professional: row.professional,
       })),
-      total: count,
+      total: countRows[0]?.count ?? 0,
     };
   }
 
@@ -308,7 +330,7 @@ export class DrizzleFacilityProfessionalRepository
       })
       .returning();
 
-    return mapAssociation(association);
+    return mapAssociation(association!);
   }
 
   async manuallyAssociate(params: {
@@ -373,7 +395,7 @@ export class DrizzleFacilityProfessionalRepository
     if (params.data.isBuyer !== undefined) setData.isBuyer = params.data.isBuyer;
     if (params.data.isDecisionMaker !== undefined) setData.isDecisionMaker = params.data.isDecisionMaker;
     if (params.data.relationshipLevel !== undefined) {
-      setData.relationshipLevel = params.data.relationshipLevel as string | null;
+      setData.relationshipLevel = params.data.relationshipLevel;
     }
     if (params.data.specialtyLabel !== undefined) setData.specialtyLabel = params.data.specialtyLabel;
     if (params.data.notes !== undefined) setData.notes = params.data.notes;
@@ -384,7 +406,7 @@ export class DrizzleFacilityProfessionalRepository
       .where(eq(facilityProfessionals.id, existing.id))
       .returning();
 
-    return mapAssociation(association);
+    return mapAssociation(association!);
   }
 
   async upsertSourceAssociation(params: {
@@ -422,7 +444,7 @@ export class DrizzleFacilityProfessionalRepository
         .where(eq(facilityProfessionals.id, existing.id))
         .returning();
 
-      return { association: mapAssociation(association), created: false };
+      return { association: mapAssociation(association!), created: false };
     }
 
     const [association] = await db
@@ -437,7 +459,7 @@ export class DrizzleFacilityProfessionalRepository
       })
       .returning();
 
-    return { association: mapAssociation(association), created: true };
+    return { association: mapAssociation(association!), created: true };
   }
 
   async markSourceInactive(params: {
@@ -454,7 +476,7 @@ export class DrizzleFacilityProfessionalRepository
       .where(eq(facilityProfessionals.id, params.facilityProfessionalId))
       .returning();
 
-    return mapAssociation(association);
+    return mapAssociation(association!);
   }
 
   async restoreSourceActive(facilityProfessionalId: string): Promise<FacilityProfessionalRecord> {
@@ -464,7 +486,7 @@ export class DrizzleFacilityProfessionalRepository
       .where(eq(facilityProfessionals.id, facilityProfessionalId))
       .returning();
 
-    return mapAssociation(association);
+    return mapAssociation(association!);
   }
 
   async endAssociationById(params: {
@@ -484,7 +506,7 @@ export class DrizzleFacilityProfessionalRepository
       .where(eq(facilityProfessionals.id, params.facilityProfessionalId))
       .returning();
 
-    return mapAssociation(association);
+    return mapAssociation(association!);
   }
 
   async createConfirmedAssociations(params: {

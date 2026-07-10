@@ -41,8 +41,8 @@ describe("AssignUserManagerUseCase", () => {
         if (id === targetUser.id) return targetUser;
         if (id === managerUser.id) return managerUser;
         return null;
-      }),
-      updateManagerId: mock(() => Promise.resolve({})),
+      }) as any,
+      updateManagerId: mock(() => Promise.resolve({})) as any,
     });
     scopeRepository = createMockScopeRepository();
     scopeService = createMockScopeService();
@@ -71,7 +71,7 @@ describe("AssignUserManagerUseCase", () => {
     userRepository.findById = mock(async (id: string) => {
       if (id === targetUser.id) return { ...targetUser, managerId: managerUser.id };
       return null;
-    });
+    }) as any;
 
     await useCase.execute({
       targetUserId: targetUser.id,
@@ -125,7 +125,7 @@ describe("AssignUserManagerUseCase", () => {
       if (id === targetUser.id) return targetUser;
       if (id === "bad-manager") return { id: "bad-manager", role: { name: Role.REP } };
       return null;
-    });
+    }) as any;
 
     await expect(
       useCase.execute({

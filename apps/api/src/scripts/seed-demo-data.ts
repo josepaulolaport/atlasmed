@@ -307,7 +307,6 @@ async function seedFacilities(territorySet: {
     .insert(facilities)
     .values({
       displayName: `Clínica Alpha ${DEMO_TAG}`,
-      address: "Av. Paulista, 1000, São Paulo, SP",
       location: sql`ST_SetSRID(ST_MakePoint(${-46.6559}, ${-23.5614}), 4326)`,
       territoryId: territorySet.inScopePatchId,
       territoryAssignmentStatus: "assigned",
@@ -320,7 +319,6 @@ async function seedFacilities(territorySet: {
     .insert(facilities)
     .values({
       displayName: `Clínica Beta ${DEMO_TAG}`,
-      address: "Rua Oscar Freire, 200, São Paulo, SP",
       location: sql`ST_SetSRID(ST_MakePoint(${-46.6734}, ${-23.5671}), 4326)`,
       territoryId: territorySet.inScopePatchId,
       territoryAssignmentStatus: "assigned",
@@ -332,7 +330,6 @@ async function seedFacilities(territorySet: {
     .insert(facilities)
     .values({
       displayName: `Clínica Gamma ${DEMO_TAG}`,
-      address: "Rua Augusta, 500, São Paulo, SP",
       location: sql`ST_SetSRID(ST_MakePoint(${-46.6333}, ${-23.5505}), 4326)`,
       territoryId: territorySet.inScopePatchId,
       territoryAssignmentStatus: "assigned",
@@ -343,7 +340,6 @@ async function seedFacilities(territorySet: {
     .insert(facilities)
     .values({
       displayName: `Clínica Norte ${DEMO_TAG}`,
-      address: "Av. Eduardo Ribeiro, 100, Manaus, AM",
       location: sql`ST_SetSRID(ST_MakePoint(${-60.0217}, ${-3.119}), 4326)`,
       territoryId: territorySet.outOfScopePatchId,
       territoryAssignmentStatus: "assigned",
@@ -562,7 +558,7 @@ async function seedRegistrySuggestions(params: {
     .returning();
 
   await db.insert(cnesSuggestions).values({
-    ingestionRunId: run!.id,
+    cnesRunId: run!.id,
     type: "FACILITY_PROFESSIONAL_REMOVAL",
     status: "PENDING",
     facilityId: params.facilities.clinicAlpha.id,
@@ -573,7 +569,7 @@ async function seedRegistrySuggestions(params: {
   });
 
   await db.insert(cnesSuggestions).values({
-    ingestionRunId: run!.id,
+    cnesRunId: run!.id,
     type: "FACILITY_FIELD_UPDATE",
     status: "PENDING",
     facilityId: params.facilities.clinicBeta.id,

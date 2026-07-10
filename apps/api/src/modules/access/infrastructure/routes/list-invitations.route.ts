@@ -18,7 +18,7 @@ export const listInvitationsRoute = new Elysia({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         actorId: await getUserId(),
-        actorRole: actor.role.name,
+        actorRole: actor.role.name as any,
         scope: await getScope(),
       });
 

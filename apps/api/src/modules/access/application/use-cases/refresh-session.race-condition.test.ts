@@ -104,7 +104,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     const results = await Promise.allSettled([
       refreshSessionUseCase.execute({
@@ -159,7 +159,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
 
     const oldSessions = await sessionRepository.findByUserId(testUser.id);
     const oldSessionId = oldSessions[0]?.id;
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     await refreshSessionUseCase.execute({
       refreshToken,
@@ -184,7 +184,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     await refreshSessionUseCase.execute({
       refreshToken,
@@ -218,7 +218,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     const firstRefresh = await refreshSessionUseCase.execute({
       refreshToken,
@@ -271,7 +271,7 @@ describe("Refresh Session Race Condition Integration Tests", () => {
       userAgent: "test-agent",
     });
 
-    const refreshToken = loginResult.refreshToken;
+    const refreshToken = loginResult.refreshToken!;
 
     await refreshSessionUseCase.execute({
       refreshToken,

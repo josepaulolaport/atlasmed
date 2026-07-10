@@ -10,7 +10,7 @@ import { access } from "../access/index";
 import { facility } from "../facility/index";
 import { professional } from "../professional/index";
 import { eq, like, inArray } from "drizzle-orm";
-import { professionals, facilityProfessional } from "@atlasmed/database";
+import { professionals, facilityProfessionals } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -49,7 +49,7 @@ describe("Professional HTTP auth integration", () => {
       .values({ firstName: "In", lastName: `Scope ${uniqueId}` })
       .returning()
       .then((r) => r[0]!);
-    await db.insert(facilityProfessional).values({
+    await db.insert(facilityProfessionals).values({
       facilityId: fixtures.inScopeFacilityId,
       professionalId: inScopeProfessional.id,
       confirmedAt: new Date(),
@@ -61,7 +61,7 @@ describe("Professional HTTP auth integration", () => {
       .values({ firstName: "Out", lastName: `Scope ${uniqueId}` })
       .returning()
       .then((r) => r[0]!);
-    await db.insert(facilityProfessional).values({
+    await db.insert(facilityProfessionals).values({
       facilityId: fixtures.outOfScopeFacilityId,
       professionalId: outOfScopeProfessional.id,
       confirmedAt: new Date(),
@@ -88,8 +88,8 @@ describe("Professional HTTP auth integration", () => {
       .then((r) => r.map((p) => p.id));
     if (profIds.length > 0) {
       await db
-        .delete(facilityProfessional)
-        .where(inArray(facilityProfessional.professionalId, profIds));
+        .delete(facilityProfessionals)
+        .where(inArray(facilityProfessionals.professionalId, profIds));
     }
     await db
       .delete(professionals)

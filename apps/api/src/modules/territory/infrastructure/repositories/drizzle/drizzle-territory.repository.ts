@@ -217,7 +217,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         organizationId: input.organizationId ?? null,
       })
       .returning({ id: territories.id });
-    return (await this.findOneWithType(inserted.id))!;
+    return (await this.findOneWithType(inserted!.id))!;
   }
 
   async update(

@@ -37,7 +37,7 @@ export class DrizzleHealthcareProviderRepository implements HealthcareProviderRe
         : eq(healthcareProviders.isActive, params.isActive);
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select()
         .from(healthcareProviders)
@@ -48,7 +48,7 @@ export class DrizzleHealthcareProviderRepository implements HealthcareProviderRe
       db.select({ count: sql<number>`count(*)` }).from(healthcareProviders).where(where),
     ]);
 
-    return { providers: rows.map(mapProvider), total: Number(count) };
+    return { providers: rows.map(mapProvider), total: Number(countRows[0]?.count ?? 0) };
   }
 
   async findById(id: string): Promise<HealthcareProviderRecord | null> {
@@ -72,7 +72,7 @@ export class DrizzleHealthcareProviderRepository implements HealthcareProviderRe
         isActive: data.isActive ?? true,
       })
       .returning();
-    return mapProvider(provider);
+    return mapProvider(provider!);
   }
 
   async update(
@@ -84,6 +84,6 @@ export class DrizzleHealthcareProviderRepository implements HealthcareProviderRe
       .set({ ...data, updatedAt: new Date() })
       .where(eq(healthcareProviders.id, id))
       .returning();
-    return mapProvider(provider);
+    return mapProvider(provider!);
   }
 }

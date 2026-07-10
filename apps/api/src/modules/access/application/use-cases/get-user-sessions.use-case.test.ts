@@ -63,10 +63,10 @@ describe("GetUserSessionsUseCase", () => {
 
   beforeEach(() => {
     mockSessionRepository = createMockSessionRepository({
-      findByUserId: mock(async () => sessions),
+      findByUserId: mock(async () => sessions) as any,
       findById: mock(async (id: string) =>
         sessions.find((session) => session.id === id) ?? null
-      ),
+      ) as any,
     });
 
     useCase = new GetUserSessionsUseCase({

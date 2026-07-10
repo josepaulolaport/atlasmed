@@ -27,7 +27,7 @@ describe("GrantPermissionUseCase", () => {
     } as unknown as AccessGrantService;
 
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => ({ id: "user-123" })),
+      findById: mock(async () => ({ id: "user-123" })) as any,
     });
 
     useCase = new GrantPermissionUseCase({

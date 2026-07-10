@@ -175,7 +175,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const suggestion = await db
       .insert(cnesSuggestions)
       .values({
-        ingestionRunId: run.id,
+        cnesRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: clinicRecord.id,
@@ -231,7 +231,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const inScopeSuggestion = await db
       .insert(cnesSuggestions)
       .values({
-        ingestionRunId: run.id,
+        cnesRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: inScopeFacility.id,
@@ -243,7 +243,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const outOfScopeSuggestion = await db
       .insert(cnesSuggestions)
       .values({
-        ingestionRunId: run.id,
+        cnesRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: outOfScopeFacility.id,
@@ -291,7 +291,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     const suggestion = await db
       .insert(cnesSuggestions)
       .values({
-        ingestionRunId: run.id,
+        cnesRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
         status: "PENDING",
         facilityId: clinicRecord.id,

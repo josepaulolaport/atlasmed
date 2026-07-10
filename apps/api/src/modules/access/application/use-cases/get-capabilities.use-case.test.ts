@@ -30,7 +30,7 @@ describe("GetCapabilitiesUseCase", () => {
 
     useCase = new GetCapabilitiesUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => mockUser),
+        findById: mock(async () => mockUser) as any,
       }),
       accessGrantService: mockAccessGrantService as any,
     });

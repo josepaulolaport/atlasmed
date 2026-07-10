@@ -58,8 +58,8 @@ describe("LoginUseCase", () => {
     const mockUser = createMockUser();
 
     mockUserRepository = createMockUserRepository({
-      findByIdentifier: mock(async () => mockUser),
-      findById: mock(async () => mockUser),
+      findByIdentifier: mock(async () => mockUser) as any,
+      findById: mock(async () => mockUser) as any,
       updateLastLogin: mock(async () => {}),
     });
 
@@ -124,7 +124,7 @@ describe("LoginUseCase", () => {
 
       const result = await loginUseCase.execute(params);
 
-      expect(result.user.username).toBe("testuser");
+      expect(result.user!.username).toBe("testuser");
     });
 
     it("should return access token as string", async () => {
@@ -144,7 +144,7 @@ describe("LoginUseCase", () => {
       });
 
       expect(result.refreshToken).toBeString();
-      expect(result.refreshToken.length).toBeGreaterThan(0);
+      expect(result.refreshToken!.length).toBeGreaterThan(0);
     });
 
     it("should return user object", async () => {
@@ -154,9 +154,9 @@ describe("LoginUseCase", () => {
       });
 
       expect(result.user).toBeDefined();
-      expect(result.user.id).toBe("user-123");
-      expect(result.user.email).toBe("user@example.com");
-      expect(result.user.username).toBe("testuser");
+      expect(result.user!.id).toBe("user-123");
+      expect(result.user!.email).toBe("user@example.com");
+      expect(result.user!.username).toBe("testuser");
     });
 
     it("should create a session", async () => {
@@ -210,7 +210,7 @@ describe("LoginUseCase", () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
         ...createMockUser(),
         status: "INACTIVE",
-      }));
+      })) as any;
 
       await expect(
         loginUseCase.execute({
@@ -226,7 +226,7 @@ describe("LoginUseCase", () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
         ...createMockUser(),
         status: "PENDING",
-      }));
+      })) as any;
 
       await expect(
         loginUseCase.execute({

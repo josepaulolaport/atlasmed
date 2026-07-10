@@ -29,7 +29,7 @@ describe("InviteService", () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-      })),
+      })) as any,
     });
 
     inviteService = new InviteService({

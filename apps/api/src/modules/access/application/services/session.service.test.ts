@@ -29,7 +29,7 @@ describe("SessionService", () => {
           revokedReason: null,
         },
         revokedSessionIds: [],
-      })),
+      })) as any,
     });
 
     mockSessionCache = createMockSessionCache();
@@ -77,7 +77,7 @@ describe("SessionService", () => {
           revokedAt: null,
         },
         revokedSessionIds: ["old-session-1", "old-session-2"],
-      }));
+      })) as any;
 
       await sessionService.create({ userId: "user-123", userRole: "REP" });
 

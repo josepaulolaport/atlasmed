@@ -4,6 +4,7 @@ import type { CnesSuggestionType as IngestionSuggestionType } from "@atlasmed/da
 import {
   ForbiddenError,
   ConfigurationError,
+  ValidationError,
 } from "../../../../shared/errors";
 import type { FacilityRepository } from "../../../facility/application/interfaces/facility.repository.interface";
 import type { FacilityProfessionalRepository } from "../../../facility/application/interfaces/facility-professional.repository.interface";

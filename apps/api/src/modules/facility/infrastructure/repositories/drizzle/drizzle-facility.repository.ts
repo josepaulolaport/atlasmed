@@ -65,14 +65,14 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db.select().from(facilities).where(where).orderBy(asc(facilities.displayName)).offset(skip).limit(params.limit),
       db.select({ count: sql<number>`count(*)::int` }).from(facilities).where(where),
     ]);
 
     return {
       facilities: rows.map(mapFacility),
-      total: count,
+      total: countRows[0]?.count ?? 0,
     };
   }
 
@@ -131,7 +131,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       })
       .returning();
 
-    return mapFacility(facility);
+    return mapFacility(facility!);
   }
 
   async update(
@@ -158,7 +158,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .where(eq(facilities.id, id))
       .returning();
 
-    return mapFacility(facility);
+    return mapFacility(facility!);
   }
 
   async softDelete(id: string): Promise<void> {
@@ -175,7 +175,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .where(eq(facilities.id, id))
       .returning();
 
-    return mapFacility(facility);
+    return mapFacility(facility!);
   }
 
   async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
@@ -217,7 +217,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         })
         .returning();
 
-      return { facility: mapFacility(facility), created: true, updated: false };
+      return { facility: mapFacility(facility!), created: true, updated: false };
     }
 
     const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
@@ -235,7 +235,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .returning();
 
     return {
-      facility: mapFacility(facility),
+      facility: mapFacility(facility!),
       created: false,
       updated: !hashUnchanged,
     };
@@ -262,7 +262,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .where(eq(facilities.id, id))
       .returning();
 
-    return mapFacility(facility);
+    return mapFacility(facility!);
   }
 
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {

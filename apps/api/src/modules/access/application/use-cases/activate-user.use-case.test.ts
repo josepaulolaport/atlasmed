@@ -14,7 +14,7 @@ describe("ActivateUserUseCase", () => {
       findById: mock(async () => ({
         id: "user-1",
         status: "INACTIVE",
-      })),
+      })) as any,
       activate,
     });
 
@@ -46,7 +46,7 @@ describe("ActivateUserUseCase", () => {
   it("should throw when already active", async () => {
     const useCase = new ActivateUserUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => ({ id: "user-1", status: "ACTIVE" })),
+        findById: mock(async () => ({ id: "user-1", status: "ACTIVE" })) as any,
       }),
       authCache: createMockAuthCache(),
       auditLog: createMockAuditLogService(),

@@ -1,5 +1,5 @@
 import { eq, and, isNull, lt } from "drizzle-orm";
-import { users, passwordResets } from "@atlasmed/database";
+import { users, passwordResets, roles } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 
 import type {
@@ -31,15 +31,44 @@ export class DrizzlePasswordResetRepository implements PasswordResetRepository {
 
     if (!pr) return null;
 
-    const [userRow] = await db
-      .select()
+    const [userWithRole] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        username: users.username,
+        phoneNumber: users.phoneNumber,
+        passwordHash: users.passwordHash,
+        passwordHistory: users.passwordHistory,
+        roleId: roles.id,
+        roleName: roles.name,
+      })
       .from(users)
+      .innerJoin(roles, eq(roles.id, users.roleId))
       .where(eq(users.id, pr.userId))
       .limit(1);
 
-    if (!userRow) return null;
+    if (!userWithRole) return null;
 
-    return { ...pr, user: userRow };
+    return {
+      id: pr.id,
+      userId: pr.userId,
+      tokenHash: pr.tokenHash,
+      expiresAt: pr.expiresAt,
+      usedAt: pr.usedAt,
+      createdAt: pr.createdAt,
+      user: {
+        id: userWithRole.id,
+        email: userWithRole.email,
+        username: userWithRole.username,
+        phoneNumber: userWithRole.phoneNumber,
+        passwordHash: userWithRole.passwordHash,
+        passwordHistory: userWithRole.passwordHistory,
+        role: {
+          id: userWithRole.roleId,
+          name: userWithRole.roleName,
+        },
+      },
+    };
   }
 
   async markAsUsed(id: string): Promise<void> {

@@ -131,7 +131,7 @@ export class SessionService {
       revokedAt: null,
       ipAddress: session.ipAddress,
       userAgent: session.userAgent,
-      lastSeenAt: session.lastSeenAt.toISOString(),
+      lastSeenAt: (session.lastSeenAt ?? new Date()).toISOString(),
       createdAt: session.createdAt.toISOString(),
     });
 

@@ -34,7 +34,7 @@ describe("RevokeOtherSessionsUseCase", () => {
     mockSessionRepository = createMockSessionRepository({
       findById: mock(async (id: string) =>
         id === "session-current" ? currentSession : null
-      ),
+      ) as any,
       revokeAllExceptDevice: mock(async () => ["session-other-1", "session-other-2"]),
     });
     mockSessionCache = createMockSessionCache({
@@ -73,7 +73,7 @@ describe("RevokeOtherSessionsUseCase", () => {
     mockSessionRepository.findById = mock(async () => ({
       ...currentSession,
       userId: "other-user",
-    }));
+    })) as any;
 
     const result = await useCase.execute({
       userId: "user-123",

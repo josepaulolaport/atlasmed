@@ -242,7 +242,7 @@ describe("Auth Plugin Scope", () => {
         id: "role-manager",
         name: "MANAGER",
       },
-    }));
+    })) as any;
 
     mockScopeService.resolve = mock(() =>
       Promise.resolve(

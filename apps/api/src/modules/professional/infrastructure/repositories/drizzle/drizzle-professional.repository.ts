@@ -215,7 +215,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select()
         .from(professionals)
@@ -232,7 +232,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       professionals: rows.map((p) =>
         mapProfessional(p, associationsMap.get(p.id) ?? [])
       ),
-      total: count,
+      total: countRows[0]?.count ?? 0,
     };
   }
 
@@ -245,8 +245,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     if (!professional) return null;
 
-    const associations = await loadAssociationsForOne(professional.id);
-    return mapProfessional(professional, associations);
+    const associations = await loadAssociationsForOne(professional!.id);
+    return mapProfessional(professional!, associations);
   }
 
   async findByExternalId(
@@ -267,8 +267,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     if (!professional) return null;
 
-    const associations = await loadAssociationsForOne(professional.id);
-    return mapProfessional(professional, associations);
+    const associations = await loadAssociationsForOne(professional!.id);
+    return mapProfessional(professional!, associations);
   }
 
   async findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]> {
@@ -328,7 +328,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       await db.insert(facilityProfessionals).values(
         data.facilityIds.map((facilityId) => ({
           facilityId,
-          professionalId: professional.id,
+          professionalId: professional!.id,
           occupationCode: "LEGACY",
           confirmedAt: now,
           confirmedByUserId: data.confirmedByUserId ?? null,
@@ -336,8 +336,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       );
     }
 
-    const associations = await loadAssociationsForOne(professional.id);
-    return mapProfessional(professional, associations);
+    const associations = await loadAssociationsForOne(professional!.id);
+    return mapProfessional(professional!, associations);
   }
 
   async update(id: string, data: ProfessionalUpdateInput): Promise<ProfessionalRecord> {
@@ -372,8 +372,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(eq(professionals.id, id))
       .returning();
 
-    const associations = await loadAssociationsForOne(professional.id);
-    return mapProfessional(professional, associations);
+    const associations = await loadAssociationsForOne(professional!.id);
+    return mapProfessional(professional!, associations);
   }
 
   async softDelete(id: string): Promise<void> {
@@ -434,9 +434,9 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         })
         .returning();
 
-      const associations = await loadAssociationsForOne(professional.id);
+      const associations = await loadAssociationsForOne(professional!.id);
       return {
-        professional: mapProfessional(professional, associations),
+        professional: mapProfessional(professional!, associations),
         created: true,
         updated: false,
       };
@@ -462,9 +462,9 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(eq(professionals.id, existing.id))
       .returning();
 
-    const associations = await loadAssociationsForOne(professional.id);
+    const associations = await loadAssociationsForOne(professional!.id);
     return {
-      professional: mapProfessional(professional, associations),
+      professional: mapProfessional(professional!, associations),
       created: false,
       updated: !hashUnchanged || !existing.manuallyEditedAt,
     };

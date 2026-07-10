@@ -34,7 +34,7 @@ export class DrizzleSectorRepository implements SectorRepository {
       params.isActive === undefined ? undefined : eq(sectors.isActive, params.isActive);
     const skip = (params.page - 1) * params.limit;
 
-    const [rows, [{ count }]] = await Promise.all([
+    const [rows, countRows] = await Promise.all([
       db
         .select()
         .from(sectors)
@@ -45,7 +45,7 @@ export class DrizzleSectorRepository implements SectorRepository {
       db.select({ count: sql<number>`count(*)` }).from(sectors).where(where),
     ]);
 
-    return { sectors: rows.map(mapSector), total: Number(count) };
+    return { sectors: rows.map(mapSector), total: Number(countRows[0]?.count ?? 0) };
   }
 
   async findById(id: string): Promise<SectorRecord | null> {
@@ -66,7 +66,7 @@ export class DrizzleSectorRepository implements SectorRepository {
         isActive: data.isActive ?? true,
       })
       .returning();
-    return mapSector(sector);
+    return mapSector(sector!);
   }
 
   async update(
@@ -78,6 +78,6 @@ export class DrizzleSectorRepository implements SectorRepository {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(sectors.id, id))
       .returning();
-    return mapSector(sector);
+    return mapSector(sector!);
   }
 }

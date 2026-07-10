@@ -59,7 +59,7 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
         reason: input.reason ?? null,
       })
       .returning();
-    return mapApproval(record);
+    return mapApproval(record!);
   }
 
   async findById(id: string): Promise<TerritoryApprovalRecord | null> {
@@ -145,7 +145,7 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
       })
       .where(eq(territoryApprovalRequests.id, id))
       .returning();
-    return mapApproval(record);
+    return mapApproval(record!);
   }
 
   async list(params: {
@@ -159,7 +159,7 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
 
     const skip = (params.page - 1) * params.limit;
 
-    const [items, [{ count }]] = await Promise.all([
+    const [items, countRows] = await Promise.all([
       db
         .select()
         .from(territoryApprovalRequests)
@@ -173,6 +173,6 @@ export class DrizzleTerritoryApprovalRepository implements TerritoryApprovalRepo
         .where(where),
     ]);
 
-    return { items: items.map(mapApproval), total: Number(count) };
+    return { items: items.map(mapApproval), total: Number(countRows[0]?.count ?? 0) };
   }
 }

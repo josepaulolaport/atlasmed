@@ -118,11 +118,11 @@ async function resolveAccessSessionFromToken(
       revokedAt: dbSession.revokedAt?.toISOString() || null,
       ipAddress: dbSession.ipAddress,
       userAgent: dbSession.userAgent,
-      lastSeenAt: dbSession.lastSeenAt.toISOString(),
+      lastSeenAt: (dbSession.lastSeenAt ?? new Date()).toISOString(),
       createdAt: dbSession.createdAt.toISOString(),
       user: {
         id: dbSession.user.id,
-        email: dbSession.user.email,
+        email: dbSession.user.email!,
         username: dbSession.user.username,
         status: dbSession.user.status,
         tokenVersion: dbSession.user.tokenVersion,
@@ -133,7 +133,7 @@ async function resolveAccessSessionFromToken(
       },
     };
 
-    await sessionCacheService.set(session);
+    await sessionCacheService.set(session!);
     await sessionCacheService.markValidated(payload.sid);
   } else {
     if (await sessionCacheService.isMarkedRevoked(payload.sid)) {
@@ -194,6 +194,10 @@ async function resolveAccessSessionFromToken(
 
       await sessionCacheService.markValidated(payload.sid);
     }
+  }
+
+  if (!session) {
+    throw new UnauthorizedError();
   }
 
   if (session.revokedAt) {

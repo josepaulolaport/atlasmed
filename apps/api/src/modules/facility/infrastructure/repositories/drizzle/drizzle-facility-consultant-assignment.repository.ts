@@ -78,6 +78,6 @@ export class DrizzleFacilityConsultantAssignmentRepository
       })
       .returning();
 
-    return mapAssignment(assignment);
+    return mapAssignment(assignment!);
   }
 }

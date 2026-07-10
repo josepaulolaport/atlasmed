@@ -40,7 +40,7 @@ describe("Confirm2FASetupUseCase", () => {
 
     useCase = new Confirm2FASetupUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => mockUser),
+        findById: mock(async () => mockUser) as any,
         enableTwoFactor: mock(async () => {}),
       }),
       twoFactorService: mockTwoFactorService as any,
@@ -92,7 +92,7 @@ describe("Confirm2FASetupUseCase", () => {
   it("should reject when already enabled", async () => {
     useCase = new Confirm2FASetupUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => ({ ...mockUser, twoFactorEnabled: true })),
+        findById: mock(async () => ({ ...mockUser, twoFactorEnabled: true })) as any,
       }),
       twoFactorService: mockTwoFactorService as any,
       authCache: mockAuthCache,

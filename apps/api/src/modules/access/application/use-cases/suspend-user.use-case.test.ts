@@ -68,7 +68,7 @@ describe("SuspendUserUseCase", () => {
 
   beforeEach(() => {
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => mockUser),
+      findById: mock(async () => mockUser) as any,
     });
 
     mockSessionRepository = createMockSessionRepository();
@@ -134,7 +134,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         managerId: "manager-456",
-      }));
+      })) as any;
 
       await suspendUserUseCase.execute(adminSuspendParams("user-123"));
 
@@ -188,7 +188,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         status: "SUSPENDED",
-      }));
+      })) as any;
 
       await expect(
         suspendUserUseCase.execute(adminSuspendParams("user-123"))
@@ -199,7 +199,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         status: "SUSPENDED",
-      }));
+      })) as any;
 
       try {
         await suspendUserUseCase.execute(adminSuspendParams("user-123"));
@@ -212,7 +212,7 @@ describe("SuspendUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         status: "SUSPENDED",
-      }));
+      })) as any;
 
       try {
         await suspendUserUseCase.execute(adminSuspendParams("user-123"));

@@ -33,7 +33,7 @@ describe("ListUsersUseCase", () => {
           users: [mockUser],
           total: 1,
         })
-      ),
+      ) as any,
     });
 
     const useCase = new ListUsersUseCase({ userRepository });

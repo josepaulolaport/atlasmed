@@ -53,7 +53,7 @@ describe("RevokeSessionUseCase", () => {
         if (id === "session-target") return targetSession;
         if (id === "session-current") return currentSession;
         return null;
-      }),
+      }) as any,
       revokeAllActiveForDevice: mock(async () => ["session-target", "session-target-2"]),
     });
 
