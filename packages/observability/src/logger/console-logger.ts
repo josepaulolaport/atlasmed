@@ -7,6 +7,31 @@ function usePrettyConsole(): boolean {
   )
 }
 
+const LEVEL_LABELS: Record<string, string> = {
+  trace: 'TRACE',
+  debug: 'DEBUG',
+  info:  ' INFO',
+  warn:  ' WARN',
+  error: 'ERROR',
+  fatal: 'FATAL',
+}
+
+function formatTimestamp(): string {
+  const now = new Date()
+  const hh = String(now.getHours()).padStart(2, '0')
+  const mm = String(now.getMinutes()).padStart(2, '0')
+  const ss = String(now.getSeconds()).padStart(2, '0')
+  const ms = String(now.getMilliseconds()).padStart(3, '0')
+  return `${hh}:${mm}:${ss}.${ms}`
+}
+
+function formatContext(context: LoggerContext): string {
+  return Object.entries(context)
+    .filter(([, v]) => v !== undefined)
+    .map(([k, v]) => `${k}=${v}`)
+    .join('  ')
+}
+
 function formatPrettyLine(
   level: string,
   scope: string,
@@ -14,16 +39,24 @@ function formatPrettyLine(
   context?: LoggerContext,
   error?: unknown
 ): string {
-  const parts = [`[${level}]`, scope, message]
+  const label = LEVEL_LABELS[level] ?? level.toUpperCase()
+  const time = formatTimestamp()
+  const parts = [`${time} [${label}] ${scope}  ${message}`]
+
   if (context && Object.keys(context).length > 0) {
-    parts.push(JSON.stringify(context))
+    parts.push(formatContext(context))
   }
+
   if (error instanceof Error) {
-    parts.push(`— ${error.message}`)
+    const errorLine = error.stack
+      ? `${error.name}: ${error.message}\n${error.stack.split('\n').slice(1).join('\n')}`
+      : `${error.name}: ${error.message}`
+    parts.push(errorLine)
   } else if (error !== undefined && error !== null) {
-    parts.push(`— ${String(error)}`)
+    parts.push(String(error))
   }
-  return parts.join(' ')
+
+  return parts.join('  ')
 }
 
 function formatJsonLine(
