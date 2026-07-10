@@ -5,7 +5,7 @@ import { users } from "../public/users";
 
 export const auditSchema = pgSchema("audit");
 
-export const auditEventTypeEnum = auditSchema.enum("AuditEventType", [
+export const auditEventTypeEnum = auditSchema.enum("audit_event_type", [
   "USER_LOGIN",
   "USER_LOGOUT",
   "USER_REGISTER",
@@ -46,7 +46,7 @@ export const auditEventTypeEnum = auditSchema.enum("AuditEventType", [
   "CLINIC_REACTIVATED",
 ]);
 
-export const auditEventSeverityEnum = auditSchema.enum("AuditEventSeverity", [
+export const auditEventSeverityEnum = auditSchema.enum("audit_event_severity", [
   "INFO",
   "WARNING",
   "CRITICAL",
@@ -56,31 +56,31 @@ export const auditLogs = auditSchema.table(
   "audit_logs",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("userId").references(() => users.id, { onDelete: "set null" }),
-    eventType: auditEventTypeEnum("eventType").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    eventType: auditEventTypeEnum("event_type").notNull(),
     severity: auditEventSeverityEnum("severity").notNull().default("INFO"),
     actor: text("actor"),
-    actorId: text("actorId"),
+    actorId: text("actor_id"),
     resource: text("resource"),
-    resourceId: text("resourceId"),
+    resourceId: text("resource_id"),
     action: text("action").notNull(),
     details: json("details"),
-    ipAddress: text("ipAddress"),
-    userAgent: text("userAgent"),
-    sessionId: text("sessionId"),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    sessionId: text("session_id"),
     outcome: text("outcome"),
-    errorMessage: text("errorMessage"),
+    errorMessage: text("error_message"),
     metadata: json("metadata"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    index("audit_logs_userId_idx").on(t.userId),
-    index("audit_logs_eventType_idx").on(t.eventType),
+    index("audit_logs_user_id_idx").on(t.userId),
+    index("audit_logs_event_type_idx").on(t.eventType),
     index("audit_logs_severity_idx").on(t.severity),
-    index("audit_logs_createdAt_idx").on(t.createdAt),
-    index("audit_logs_actorId_idx").on(t.actorId),
-    index("audit_logs_resourceId_idx").on(t.resourceId),
-    index("audit_logs_sessionId_idx").on(t.sessionId),
+    index("audit_logs_created_at_idx").on(t.createdAt),
+    index("audit_logs_actor_id_idx").on(t.actorId),
+    index("audit_logs_resource_id_idx").on(t.resourceId),
+    index("audit_logs_session_id_idx").on(t.sessionId),
   ]
 );
 

@@ -15,8 +15,8 @@ export interface RegistryFacilityProjection {
   websiteUrl: string | null;
   latitude: number | null;
   longitude: number | null;
-  taxIdCnpj: string | null;
-  taxIdCpf: string | null;
+  cnpj: string | null;
+  cpf: string | null;
   facilityTypeCode: string | null;
   deactivationReasonCode: string | null;
   lastUpdatedDate: string | null;

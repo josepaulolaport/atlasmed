@@ -24,7 +24,7 @@ describe("FacilityGeocodingService", () => {
       manuallyEditedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      deletedAt: null,
+      deactivatedAt: null,
     })),
     update: mock(async () => ({
       id: "clinic-1",
@@ -45,7 +45,7 @@ describe("FacilityGeocodingService", () => {
       manuallyEditedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      deletedAt: null,
+      deactivatedAt: null,
     })),
   } as unknown as FacilityRepository;
 

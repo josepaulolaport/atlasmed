@@ -46,14 +46,12 @@ interface Dependencies {
 
 function parseFieldUpdatePayload(payload: Record<string, unknown>): {
   name?: string;
-  address?: string | null;
   lat?: number | null;
   lng?: number | null;
 } {
   const changes = Array.isArray(payload.changes) ? payload.changes : [];
   const updates: {
     name?: string;
-    address?: string | null;
     lat?: number | null;
     lng?: number | null;
   } = {};
@@ -68,9 +66,6 @@ function parseFieldUpdatePayload(payload: Record<string, unknown>): {
 
     if (field === "displayName" && typeof proposed === "string") {
       updates.name = proposed;
-    }
-    if (field === "address") {
-      updates.address = typeof proposed === "string" ? proposed : null;
     }
     if (field === "lat") {
       updates.lat = typeof proposed === "number" ? proposed : null;
@@ -251,11 +246,6 @@ export class ApproveSuggestionUseCase {
           updates
         );
 
-        if (updates.address !== undefined) {
-          await this.deps.facilityGeocodingService?.ensureCoordinatesPersisted(
-            suggestion.facilityId
-          );
-        }
         break;
       }
       case "PROFESSIONAL_FIELD_UPDATE": {

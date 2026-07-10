@@ -1,40 +1,39 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const invitationStatusEnum = pgEnum("InvitationStatus", [
+export const invitationStatusEnum = pgEnum("invitation_status", [
   "PENDING",
   "ACCEPTED",
   "EXPIRED",
   "REVOKED",
 ]);
 
-export const userStatusEnum = pgEnum("UserStatus", [
+export const userStatusEnum = pgEnum("user_status", [
   "ACTIVE",
   "INACTIVE",
   "SUSPENDED",
   "PENDING",
 ]);
 
-export const authSessionDeviceTypeEnum = pgEnum("AuthSessionDeviceType", [
+export const authSessionDeviceTypeEnum = pgEnum("auth_session_device_type", [
   "DESKTOP",
   "MOBILE",
   "TABLET",
   "UNKNOWN",
 ]);
 
-export const authSessionTypeEnum = pgEnum("AuthSessionType", [
+export const authSessionTypeEnum = pgEnum("auth_session_type", [
   "WEB",
   "MOBILE",
   "API",
 ]);
 
-
-export const ingestionRunStatusEnum = pgEnum("IngestionRunStatus", [
+export const ingestionRunStatusEnum = pgEnum("ingestion_run_status", [
   "RUNNING",
   "COMPLETED",
   "FAILED",
 ]);
 
-export const ingestionRunPhaseEnum = pgEnum("IngestionRunPhase", [
+export const ingestionRunPhaseEnum = pgEnum("ingestion_run_phase", [
   "DISCOVERING",
   "DOWNLOADING",
   "EXTRACTING",
@@ -48,12 +47,12 @@ export const ingestionRunPhaseEnum = pgEnum("IngestionRunPhase", [
   "FAILED",
 ]);
 
-export const ingestionDiffScopeEnum = pgEnum("IngestionDiffScope", [
+export const ingestionDiffScopeEnum = pgEnum("ingestion_diff_scope", [
   "WAREHOUSE",
   "CRM",
 ]);
 
-export const ingestionSuggestionTypeEnum = pgEnum("IngestionSuggestionType", [
+export const ingestionSuggestionTypeEnum = pgEnum("ingestion_suggestion_type", [
   "FACILITY_FIELD_UPDATE",
   "PROFESSIONAL_FIELD_UPDATE",
   "FACILITY_REGISTRY_DEACTIVATED",
@@ -68,7 +67,7 @@ export const ingestionSuggestionTypeEnum = pgEnum("IngestionSuggestionType", [
   "DOCTOR_CLINIC_REMOVAL",
 ]);
 
-export const ingestionSuggestionStatusEnum = pgEnum("IngestionSuggestionStatus", [
+export const ingestionSuggestionStatusEnum = pgEnum("ingestion_suggestion_status", [
   "PENDING",
   "APPROVED",
   "REJECTED",
@@ -76,14 +75,14 @@ export const ingestionSuggestionStatusEnum = pgEnum("IngestionSuggestionStatus",
   "SUPERSEDED",
 ]);
 
-export const conformityStatusEnum = pgEnum("ConformityStatus", [
+export const conformityStatusEnum = pgEnum("conformity_status", [
   "INCOMPLETE",
   "COMPLETE",
   "EXPIRING_SOON",
   "NON_CONFORMING",
 ]);
 
-export const conformityRecordStatusEnum = pgEnum("ConformityRecordStatus", [
+export const conformityRecordStatusEnum = pgEnum("conformity_record_status", [
   "PENDING",
   "SUBMITTED",
   "VALIDATED",
@@ -91,53 +90,53 @@ export const conformityRecordStatusEnum = pgEnum("ConformityRecordStatus", [
   "EXPIRED",
 ]);
 
-export const commercialStatusEnum = pgEnum("CommercialStatus", [
+export const commercialStatusEnum = pgEnum("commercial_status", [
   "REGISTERED",
-  "COMMERCIALLY_ACTIVE",
-  "COMMERCIALLY_SUSPENDED",
-  "COMMERCIALLY_INACTIVE",
+  "ACTIVE",
+  "SUSPENDED",
+  "INACTIVE",
 ]);
 
-export const purchaseStatusEnum = pgEnum("PurchaseStatus", [
-  "NAO_COMPRA",
-  "COMPRA",
-  "COMPRA_POUCO",
-  "COMPRA_MUITO",
+export const purchaseStatusEnum = pgEnum("purchase_status", [
+  "NON_BUYER",
+  "LOW_BUYER",
+  "REGULAR_BUYER",
+  "HIGH_BUYER",
 ]);
 
-export const contactTypeEnum = pgEnum("ContactType", [
+export const contactTypeEnum = pgEnum("contact_type", [
   "PROFESSIONAL",
   "DECISOR",
   "COMPRADOR",
 ]);
 
-export const relationshipLevelEnum = pgEnum("RelationshipLevel", [
+export const relationshipLevelEnum = pgEnum("relationship_level", [
   "LOW",
   "MEDIUM",
   "HIGH",
 ]);
 
-export const healthcareProviderTypeEnum = pgEnum("HealthcareProviderType", [
+export const healthcareProviderTypeEnum = pgEnum("healthcare_provider_type", [
   "PRIVATE",
   "PUBLIC",
   "MIXED",
   "OTHER",
 ]);
 
-export const healthcareProviderShareSourceEnum = pgEnum("HealthcareProviderShareSource", [
+export const healthcareProviderShareSourceEnum = pgEnum("healthcare_provider_share_source", [
   "MANUAL",
   "REGISTRY",
   "IMPORT",
 ]);
 
-export const verificationTokenTypeEnum = pgEnum("VerificationTokenType", [
+export const verificationTokenTypeEnum = pgEnum("verification_token_type", [
   "EMAIL_VERIFICATION",
   "PHONE_VERIFICATION",
   "EMAIL_CHANGE",
   "PHONE_CHANGE",
 ]);
 
-export const territoryNodeTypeEnum = pgEnum("TerritoryNodeType", [
+export const territoryNodeTypeEnum = pgEnum("territory_node_type", [
   "root",
   "region",
   "state",
@@ -145,25 +144,25 @@ export const territoryNodeTypeEnum = pgEnum("TerritoryNodeType", [
   "patch",
 ]);
 
-export const territoryAssignmentStatusEnum = pgEnum("TerritoryAssignmentStatus", [
+export const territoryAssignmentStatusEnum = pgEnum("territory_assignment_status", [
   "assigned",
   "unassigned",
   "ambiguous",
 ]);
 
-export const territoryAssignmentSourceEnum = pgEnum("TerritoryAssignmentSource", [
+export const territoryAssignmentSourceEnum = pgEnum("territory_assignment_source", [
   "geo",
   "manual",
 ]);
 
-export const territoryApprovalTypeEnum = pgEnum("TerritoryApprovalType", [
+export const territoryApprovalTypeEnum = pgEnum("territory_approval_type", [
   "create_territory",
   "reparent_territory",
   "deactivate_territory",
   "clinic_territory_change",
 ]);
 
-export const territoryApprovalStatusEnum = pgEnum("TerritoryApprovalStatus", [
+export const territoryApprovalStatusEnum = pgEnum("territory_approval_status", [
   "pending",
   "approved",
   "rejected",

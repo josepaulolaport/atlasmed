@@ -52,7 +52,7 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
       await db.execute(sql`
         UPDATE territories
         SET boundary = ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)),
-            "updatedAt" = NOW()
+            updated_at = NOW()
         WHERE id = ${territoryId}
       `);
       return;
@@ -61,7 +61,7 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
     await db.execute(sql`
       UPDATE territories
       SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326),
-          "updatedAt" = NOW()
+          updated_at = NOW()
       WHERE id = ${territoryId}
     `);
   }
@@ -70,7 +70,7 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
     await db.execute(sql`
       UPDATE territories
       SET boundary = NULL,
-          "updatedAt" = NOW()
+          updated_at = NOW()
       WHERE id = ${territoryId}
     `);
   }
@@ -131,11 +131,11 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
     return db.execute(sql`
       SELECT t.id, t.code
       FROM territories t
-      INNER JOIN territory_types tt ON tt.id = t."territoryTypeId"
+      INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       WHERE t.id != ${territoryId}
-        AND t."isActive" = true
+        AND t.is_active = true
         AND t.boundary IS NOT NULL
-        AND tt."assignsClinics" = true
+        AND tt.assigns_clinics = true
         AND ST_Intersects(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
         AND NOT ST_Touches(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
     `) as Promise<Array<{ id: string; code: string }>>;
@@ -145,10 +145,10 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
     const rows = await db.execute(sql`
       SELECT t.id
       FROM territories t
-      INNER JOIN territory_types tt ON tt.id = t."territoryTypeId"
-      WHERE t."isActive" = true
+      INNER JOIN territory_types tt ON tt.id = t.territory_type_id
+      WHERE t.is_active = true
         AND t.boundary IS NOT NULL
-        AND tt."assignsClinics" = true
+        AND tt.assigns_clinics = true
         AND ST_Covers(
           t.boundary,
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
@@ -180,14 +180,14 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
             / ST_Area(child.geom::geography)
         END AS overlap_ratio
       FROM territories t
-      INNER JOIN territory_types tt ON tt.id = t."territoryTypeId"
+      INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       CROSS JOIN child
       WHERE t.id != ${input.territoryId}
-        AND t."isActive" = true
+        AND t.is_active = true
         AND t.boundary IS NOT NULL
-        AND t."countryCode" = ${input.countryCode}
-        AND t."territoryTypeId" = ${input.territoryTypeId}
-        AND tt."blockSiblingOverlap" = true
+        AND t.country_code = ${input.countryCode}
+        AND t.territory_type_id = ${input.territoryTypeId}
+        AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
         AND NOT ST_Touches(t.boundary, child.geom)
     `) as Array<{ id: string; code: string; overlap_ratio: number }>;
@@ -211,11 +211,11 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
       )
       SELECT t.id, t.code, t.name
       FROM territories t
-      INNER JOIN territory_types tt ON tt.id = t."territoryTypeId"
+      INNER JOIN territory_types tt ON tt.id = t.territory_type_id
       CROSS JOIN patch
-      WHERE t."isActive" = true
+      WHERE t.is_active = true
         AND t.boundary IS NOT NULL
-        AND t."countryCode" = ${input.countryCode}
+        AND t.country_code = ${input.countryCode}
         AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
         AND ST_CoveredBy(patch.geom, t.boundary)
       ORDER BY ST_Area(t.boundary::geography) ASC
@@ -234,12 +234,12 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
       )
       SELECT p.id, p.code
       FROM territories p
-      INNER JOIN territory_types tt ON tt.id = p."territoryTypeId"
+      INNER JOIN territory_types tt ON tt.id = p.territory_type_id
       CROSS JOIN zone
-      WHERE p."managerTerritoryId" = ${input.managerZoneId}
-        AND p."isActive" = true
+      WHERE p.manager_territory_id = ${input.managerZoneId}
+        AND p.is_active = true
         AND p.boundary IS NOT NULL
-        AND tt."assignsClinics" = true
+        AND tt.assigns_clinics = true
         AND NOT ST_CoveredBy(p.boundary, zone.geom)
     `) as Promise<Array<{ id: string; code: string }>>;
   }
@@ -248,12 +248,12 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
     await db.execute(sql`
       UPDATE territories
       SET
-        "boundaryMinLng" = bbox.min_lng,
-        "boundaryMinLat" = bbox.min_lat,
-        "boundaryMaxLng" = bbox.max_lng,
-        "boundaryMaxLat" = bbox.max_lat,
-        "boundaryAreaSqKm" = bbox.area_sq_km,
-        "updatedAt" = NOW()
+        boundary_min_lng = bbox.min_lng,
+        boundary_min_lat = bbox.min_lat,
+        boundary_max_lng = bbox.max_lng,
+        boundary_max_lat = bbox.max_lat,
+        boundary_area_sq_km = bbox.area_sq_km,
+        updated_at = NOW()
       FROM (
         SELECT
           ST_XMin(extent)::float AS min_lng,
@@ -294,23 +294,22 @@ export class PrismaTerritorySpatialRepository implements TerritorySpatialReposit
       SELECT
         c.id,
         c.name,
-        c.lat,
-        c.lng,
-        c."territoryId" AS territory_id,
+        ST_Y(c.location::geometry) AS lat,
+        ST_X(c.location::geometry) AS lng,
+        c.territory_id,
         patch.code AS rep_patch_code,
         patch.name AS rep_patch_name
       FROM facilities c
-      INNER JOIN territories patch ON patch.id = c."territoryId"
+      INNER JOIN territories patch ON patch.id = c.territory_id
       INNER JOIN territories grp ON grp.id = ${input.groupingTerritoryId}
-      WHERE c."deletedAt" IS NULL
-        AND c."territoryAssignmentStatus" = 'assigned'::"TerritoryAssignmentStatus"
-        AND c.lat IS NOT NULL
-        AND c.lng IS NOT NULL
-        AND c."territoryId" = ANY(${input.scopedPatchIds})
+      WHERE c.deactivated_at IS NULL
+        AND c.territory_assignment_status = 'assigned'::territory_assignment_status
+        AND c.location IS NOT NULL
+        AND c.territory_id = ANY(${input.scopedPatchIds})
         AND grp.boundary IS NOT NULL
-        AND c.lng BETWEEN grp."boundaryMinLng" AND grp."boundaryMaxLng"
-        AND c.lat BETWEEN grp."boundaryMinLat" AND grp."boundaryMaxLat"
-        AND ST_Covers(grp.boundary, ST_SetSRID(ST_MakePoint(c.lng, c.lat), 4326))
+        AND ST_X(c.location::geometry) BETWEEN grp.boundary_min_lng AND grp.boundary_max_lng
+        AND ST_Y(c.location::geometry) BETWEEN grp.boundary_min_lat AND grp.boundary_max_lat
+        AND ST_Covers(grp.boundary, ST_SetSRID(ST_MakePoint(ST_X(c.location::geometry), ST_Y(c.location::geometry)), 4326))
     `) as Array<{
       id: string;
       name: string;

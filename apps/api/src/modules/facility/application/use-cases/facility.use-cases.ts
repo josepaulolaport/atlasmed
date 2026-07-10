@@ -6,7 +6,6 @@ import type { FacilityRepository } from "../interfaces/facility.repository.inter
 function serializeClinic(clinic: {
   id: string;
   name: string;
-  address: string | null;
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
@@ -17,7 +16,6 @@ function serializeClinic(clinic: {
   return {
     id: clinic.id,
     name: clinic.name,
-    address: clinic.address ?? undefined,
     lat: clinic.lat ?? undefined,
     lng: clinic.lng ?? undefined,
     territoryId: clinic.territoryId ?? undefined,
@@ -87,13 +85,11 @@ export class CreateFacilityUseCase {
 
   async execute(input: {
     name: string;
-    address?: string;
     lat?: number;
     lng?: number;
   }) {
     const coordinates = this.deps.facilityGeocodingService
       ? await this.deps.facilityGeocodingService.resolveCoordinates({
-          address: input.address,
           lat: input.lat,
           lng: input.lng,
         })
@@ -101,7 +97,6 @@ export class CreateFacilityUseCase {
 
     const clinic = await this.deps.facilityRepository.create({
       name: input.name,
-      address: input.address ?? null,
       lat: coordinates.lat,
       lng: coordinates.lng,
     });
@@ -122,7 +117,6 @@ export class UpdateFacilityUseCase {
     facilityId: string;
     scope: ScopeContext;
     name?: string;
-    address?: string | null;
     lat?: number | null;
     lng?: number | null;
   }) {
@@ -133,10 +127,8 @@ export class UpdateFacilityUseCase {
       return null;
     }
 
-    const nextAddress = input.address !== undefined ? input.address : existing.address;
     const coordinates = this.deps.facilityGeocodingService
       ? await this.deps.facilityGeocodingService.resolveCoordinates({
-          address: nextAddress,
           lat: input.lat !== undefined ? input.lat : existing.lat,
           lng: input.lng !== undefined ? input.lng : existing.lng,
         })
@@ -151,7 +143,6 @@ export class UpdateFacilityUseCase {
 
     const clinic = await this.deps.facilityRepository.update(input.facilityId, {
       name: input.name,
-      address: input.address,
       lat: coordinates.lat,
       lng: coordinates.lng,
       manuallyEditedAt: new Date(),

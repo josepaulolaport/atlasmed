@@ -16,7 +16,6 @@ export class FacilityGeocodingService {
   ) {}
 
   async resolveCoordinates(input: {
-    address?: string | null;
     lat?: number | null;
     lng?: number | null;
   }): Promise<ResolvedCoordinates> {
@@ -24,32 +23,10 @@ export class FacilityGeocodingService {
       return { lat: input.lat, lng: input.lng, geocoded: false };
     }
 
-    if (input.lat != null || input.lng != null) {
-      return {
-        lat: input.lat ?? null,
-        lng: input.lng ?? null,
-        geocoded: false,
-      };
-    }
-
-    const address = input.address?.trim();
-    if (!address || !this.deps.geocodingPort) {
-      return { lat: null, lng: null, geocoded: false };
-    }
-
-    const geocoded = await this.deps.geocodingPort.forwardGeocode({
-      query: address,
-      limit: 1,
-    });
-
-    if (!geocoded) {
-      return { lat: null, lng: null, geocoded: false };
-    }
-
     return {
-      lat: geocoded.latitude,
-      lng: geocoded.longitude,
-      geocoded: true,
+      lat: input.lat ?? null,
+      lng: input.lng ?? null,
+      geocoded: false,
     };
   }
 
@@ -68,7 +45,6 @@ export class FacilityGeocodingService {
     }
 
     const resolved = await this.resolveCoordinates({
-      address: clinic.address,
       lat: clinic.lat,
       lng: clinic.lng,
     });

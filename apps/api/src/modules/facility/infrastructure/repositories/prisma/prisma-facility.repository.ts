@@ -16,10 +16,9 @@ function mapFacility(facility: FacilityRow): FacilityRecord {
   return {
     id: facility.id,
     name: facility.displayName,
-    address: facility.address,
     city: facility.city,
-    stateCode: facility.stateCode,
-    cnpj: facility.taxIdCnpj,
+    state: facility.state,
+    cnpj: facility.cnpj,
     // location geometry column replaces lat/lng; spatial repos handle geometry
     lat: null,
     lng: null,
@@ -35,9 +34,9 @@ function mapFacility(facility: FacilityRow): FacilityRecord {
     sourcePresent: facility.sourcePresent,
     sourceTracked: facility.sourceTracked,
     manuallyEditedAt: facility.manuallyEditedAt,
+    deactivatedAt: facility.deactivatedAt,
     createdAt: facility.createdAt,
     updatedAt: facility.updatedAt,
-    deletedAt: facility.deletedAt,
   };
 }
 
@@ -54,7 +53,7 @@ export class PrismaFacilityRepository implements FacilityRepository {
     search?: string;
     scope: FacilityListScopeFilter;
   }): Promise<{ facilities: FacilityRecord[]; total: number }> {
-    const conditions = [isNull(facilities.deletedAt)];
+    const conditions = [isNull(facilities.deactivatedAt)];
 
     const scopeCondition = buildScopeCondition(params.scope);
     if (scopeCondition) conditions.push(scopeCondition);
@@ -81,7 +80,7 @@ export class PrismaFacilityRepository implements FacilityRepository {
     const [facility] = await db
       .select()
       .from(facilities)
-      .where(and(eq(facilities.id, id), isNull(facilities.deletedAt)))
+      .where(and(eq(facilities.id, id), isNull(facilities.deactivatedAt)))
       .limit(1);
 
     return facility ? mapFacility(facility) : null;
@@ -121,7 +120,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
 
   async create(data: {
     name: string;
-    address?: string | null;
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord> {
@@ -129,7 +127,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
       .insert(facilities)
       .values({
         displayName: data.name,
-        address: data.address ?? null,
         // lat/lng not in schema; location (geometry) handled by spatial repo
       })
       .returning();
@@ -141,7 +138,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
     id: string,
     data: {
       name?: string;
-      address?: string | null;
       lat?: number | null;
       lng?: number | null;
       manuallyEditedAt?: Date;
@@ -149,7 +145,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
   ): Promise<FacilityRecord> {
     const setData: Partial<typeof facilities.$inferInsert> & { updatedAt: Date } = {
       updatedAt: new Date(),
-      address: data.address,
       manuallyEditedAt: data.manuallyEditedAt,
     };
 
@@ -169,14 +164,14 @@ export class PrismaFacilityRepository implements FacilityRepository {
   async softDelete(id: string): Promise<void> {
     await db
       .update(facilities)
-      .set({ deletedAt: new Date(), updatedAt: new Date() })
+      .set({ deactivatedAt: new Date(), updatedAt: new Date() })
       .where(eq(facilities.id, id));
   }
 
   async reactivate(id: string): Promise<FacilityRecord> {
     const [facility] = await db
       .update(facilities)
-      .set({ deletedAt: null, updatedAt: new Date() })
+      .set({ deactivatedAt: null, updatedAt: new Date() })
       .where(eq(facilities.id, id))
       .returning();
 
@@ -211,7 +206,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
         .insert(facilities)
         .values({
           displayName: input.name,
-          address: input.address,
           // lat/lng not in schema; location (geometry) handled by spatial repo
           sourceProvider: input.sourceProvider,
           externalSourceId: input.externalSourceId,
@@ -251,7 +245,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
     id: string,
     updates: {
       name?: string;
-      address?: string | null;
       lat?: number | null;
       lng?: number | null;
     }
@@ -261,7 +254,6 @@ export class PrismaFacilityRepository implements FacilityRepository {
     };
 
     if (updates.name !== undefined) setData.displayName = updates.name;
-    if (updates.address !== undefined) setData.address = updates.address;
     // lat/lng not in schema; location (geometry) handled by spatial repo
 
     const [facility] = await db
@@ -280,7 +272,7 @@ export class PrismaFacilityRepository implements FacilityRepository {
       .select({ id: facilities.id })
       .from(facilities)
       .where(
-        and(isNull(facilities.deletedAt), inArray(facilities.territoryId, territoryIds))
+        and(isNull(facilities.deactivatedAt), inArray(facilities.territoryId, territoryIds))
       );
 
     return rows.map((r) => r.id);

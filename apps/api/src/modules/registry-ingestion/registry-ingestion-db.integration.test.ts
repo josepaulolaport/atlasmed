@@ -52,7 +52,7 @@ describe("Registry Ingestion DB Integration Tests", () => {
 
     expect(clinic).toBeTruthy();
     expect(clinic?.sourcePresent).toBe(false);
-    expect(clinic?.deletedAt).toBeNull();
+    expect(clinic?.deactivatedAt).toBeNull();
 
     const suggestion = await db
       .select()
@@ -119,7 +119,7 @@ describe("Registry Ingestion DB Integration Tests", () => {
       .limit(1)
       .then((r) => r[0] ?? null);
 
-    expect(updated?.deletedAt).not.toBeNull();
+    expect(updated?.deactivatedAt).not.toBeNull();
   });
 
   it("soft-deleted clinic reappearing in source creates FACILITY_REGISTRY_REACTIVATED suggestion", async () => {
@@ -166,7 +166,7 @@ describe("Registry Ingestion DB Integration Tests", () => {
       .where(eq(facilities.id, clinic!.id))
       .limit(1)
       .then((r) => r[0] ?? null);
-    expect(stillDeleted?.deletedAt).not.toBeNull();
+    expect(stillDeleted?.deactivatedAt).not.toBeNull();
   });
 
   it("v1 then v4 creates FACILITY_PROFESSIONAL_REMOVAL without deleting professional", async () => {

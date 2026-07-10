@@ -267,7 +267,7 @@ describe("Suggestion use cases", () => {
       manuallyEditedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      deletedAt: null,
+      deactivatedAt: null,
     }));
 
     const useCase = new ApproveSuggestionUseCase({
