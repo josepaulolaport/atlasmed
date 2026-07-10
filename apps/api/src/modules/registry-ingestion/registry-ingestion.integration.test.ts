@@ -49,7 +49,7 @@ describe("Registry ingestion Integration Tests", () => {
             sourcePresent: true,
             sourceTracked: true,
             manuallyEditedAt: null,
-            deletedAt: null,
+            deactivatedAt: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           };
@@ -79,13 +79,13 @@ describe("Registry ingestion Integration Tests", () => {
       softDelete: mock(async (id) => {
         const clinic = [...facilities.values()].find((c) => c.id === id);
         if (clinic) {
-          clinic.deletedAt = new Date();
+          clinic.deactivatedAt = new Date();
         }
       }),
       reactivate: mock(async (id) => {
         const clinic = [...facilities.values()].find((c) => c.id === id);
         if (clinic) {
-          clinic.deletedAt = null;
+          clinic.deactivatedAt = null;
         }
       }),
     } as unknown as FacilityRepository;
@@ -101,7 +101,7 @@ describe("Registry ingestion Integration Tests", () => {
             sourcePresent: true,
             sourceTracked: true,
             manuallyEditedAt: null,
-            deletedAt: null,
+            deactivatedAt: null,
             facilityIds: [],
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -234,7 +234,7 @@ describe("Registry ingestion Integration Tests", () => {
     );
 
     expect(removedFacility?.sourcePresent).toBe(false);
-    expect(removedFacility?.deletedAt).toBeNull();
+    expect(removedFacility?.deactivatedAt).toBeNull();
     expect(suggestions.some((s) => s.type === "FACILITY_REGISTRY_DEACTIVATED")).toBe(true);
   });
 
@@ -274,7 +274,7 @@ describe("Registry ingestion Integration Tests", () => {
     const clinic = [...facilities.values()].find(
       (c) => c.externalSourceId === "mock-clinic-001"
     );
-    clinic!.deletedAt = new Date();
+    clinic!.deactivatedAt = new Date();
 
     const v5 = await new MockRegistrySourceAdapter(
       "snapshot-v5-reactivated-clinic.json",
@@ -282,7 +282,7 @@ describe("Registry ingestion Integration Tests", () => {
     ).fetchSnapshot();
     await sync.syncSnapshot({ snapshot: v5, ingestionRunId: "run-5" });
 
-    expect(clinic?.deletedAt).not.toBeNull();
+    expect(clinic?.deactivatedAt).not.toBeNull();
     expect(
       suggestions.some((s) => s.type === "FACILITY_REGISTRY_REACTIVATED" && s.facilityId === clinic?.id)
     ).toBe(true);

@@ -31,7 +31,7 @@ export class PrismaClinicMembershipWriter implements ClinicMembershipWriter {
     territoryIds?: string[];
     boundingBox?: { minLng: number; minLat: number; maxLng: number; maxLat: number };
   }): Promise<ClinicMembershipTarget[]> {
-    const conditions = [isNull(facilities.deletedAt)];
+    const conditions = [isNull(facilities.deactivatedAt)];
 
     if (params?.facilityIds?.length) {
       conditions.push(inArray(facilities.id, params.facilityIds));

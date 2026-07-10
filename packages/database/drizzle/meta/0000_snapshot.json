@@ -1,5 +1,5 @@
 {
-  "id": "26d02a36-32a6-4e9b-a02e-8275e152da8a",
+  "id": "4f5b9dba-6c5b-4fca-8ab6-8d66d2a54c96",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -20,114 +20,114 @@
           "primaryKey": false,
           "notNull": false
         },
-        "phoneNumber": {
-          "name": "phoneNumber",
+        "phone_number": {
+          "name": "phone_number",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "tokenHash": {
-          "name": "tokenHash",
+        "token_hash": {
+          "name": "token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "InvitationStatus",
+          "type": "invitation_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'PENDING'"
         },
-        "expiresAt": {
-          "name": "expiresAt",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "acceptedAt": {
-          "name": "acceptedAt",
+        "accepted_at": {
+          "name": "accepted_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "acceptedByUserId": {
-          "name": "acceptedByUserId",
+        "accepted_by_user_id": {
+          "name": "accepted_by_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "revokedAt": {
-          "name": "revokedAt",
+        "revoked_at": {
+          "name": "revoked_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "resendCount": {
-          "name": "resendCount",
+        "resend_count": {
+          "name": "resend_count",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "lastResendAt": {
-          "name": "lastResendAt",
+        "last_resend_at": {
+          "name": "last_resend_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "roleId": {
-          "name": "roleId",
+        "role_id": {
+          "name": "role_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "invitedByUserId": {
-          "name": "invitedByUserId",
+        "invited_by_user_id": {
+          "name": "invited_by_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "firstName": {
-          "name": "firstName",
+        "first_name": {
+          "name": "first_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "lastName": {
-          "name": "lastName",
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "managerId": {
-          "name": "managerId",
+        "manager_id": {
+          "name": "manager_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "managerTerritoryId": {
-          "name": "managerTerritoryId",
+        "manager_territory_id": {
+          "name": "manager_territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "repTerritoryId": {
-          "name": "repTerritoryId",
+        "rep_territory_id": {
+          "name": "rep_territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -150,11 +150,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_phoneNumber_idx": {
-          "name": "invitations_phoneNumber_idx",
+        "invitations_phone_number_idx": {
+          "name": "invitations_phone_number_idx",
           "columns": [
             {
-              "expression": "phoneNumber",
+              "expression": "phone_number",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -165,11 +165,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_tokenHash_idx": {
-          "name": "invitations_tokenHash_idx",
+        "invitations_token_hash_idx": {
+          "name": "invitations_token_hash_idx",
           "columns": [
             {
-              "expression": "tokenHash",
+              "expression": "token_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -195,11 +195,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_acceptedByUserId_idx": {
-          "name": "invitations_acceptedByUserId_idx",
+        "invitations_accepted_by_user_id_idx": {
+          "name": "invitations_accepted_by_user_id_idx",
           "columns": [
             {
-              "expression": "acceptedByUserId",
+              "expression": "accepted_by_user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -210,11 +210,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_invitedByUserId_idx": {
-          "name": "invitations_invitedByUserId_idx",
+        "invitations_invited_by_user_id_idx": {
+          "name": "invitations_invited_by_user_id_idx",
           "columns": [
             {
-              "expression": "invitedByUserId",
+              "expression": "invited_by_user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -225,11 +225,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_managerId_idx": {
-          "name": "invitations_managerId_idx",
+        "invitations_manager_id_idx": {
+          "name": "invitations_manager_id_idx",
           "columns": [
             {
-              "expression": "managerId",
+              "expression": "manager_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -240,11 +240,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_managerTerritoryId_idx": {
-          "name": "invitations_managerTerritoryId_idx",
+        "invitations_manager_territory_id_idx": {
+          "name": "invitations_manager_territory_id_idx",
           "columns": [
             {
-              "expression": "managerTerritoryId",
+              "expression": "manager_territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -255,11 +255,11 @@
           "method": "btree",
           "with": {}
         },
-        "invitations_repTerritoryId_idx": {
-          "name": "invitations_repTerritoryId_idx",
+        "invitations_rep_territory_id_idx": {
+          "name": "invitations_rep_territory_id_idx",
           "columns": [
             {
-              "expression": "repTerritoryId",
+              "expression": "rep_territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -272,12 +272,12 @@
         }
       },
       "foreignKeys": {
-        "invitations_roleId_roles_id_fk": {
-          "name": "invitations_roleId_roles_id_fk",
+        "invitations_role_id_roles_id_fk": {
+          "name": "invitations_role_id_roles_id_fk",
           "tableFrom": "invitations",
           "tableTo": "roles",
           "columnsFrom": [
-            "roleId"
+            "role_id"
           ],
           "columnsTo": [
             "id"
@@ -285,12 +285,12 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "invitations_invitedByUserId_users_id_fk": {
-          "name": "invitations_invitedByUserId_users_id_fk",
+        "invitations_invited_by_user_id_users_id_fk": {
+          "name": "invitations_invited_by_user_id_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
           "columnsFrom": [
-            "invitedByUserId"
+            "invited_by_user_id"
           ],
           "columnsTo": [
             "id"
@@ -298,12 +298,12 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "invitations_managerId_users_id_fk": {
-          "name": "invitations_managerId_users_id_fk",
+        "invitations_manager_id_users_id_fk": {
+          "name": "invitations_manager_id_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
           "columnsFrom": [
-            "managerId"
+            "manager_id"
           ],
           "columnsTo": [
             "id"
@@ -314,11 +314,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "invitations_tokenHash_unique": {
-          "name": "invitations_tokenHash_unique",
+        "invitations_token_hash_unique": {
+          "name": "invitations_token_hash_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "tokenHash"
+            "token_hash"
           ]
         }
       },
@@ -336,51 +336,51 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "tokenHash": {
-          "name": "tokenHash",
+        "token_hash": {
+          "name": "token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "expiresAt": {
-          "name": "expiresAt",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "usedAt": {
-          "name": "usedAt",
+        "used_at": {
+          "name": "used_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "ipAddress": {
-          "name": "ipAddress",
+        "ip_address": {
+          "name": "ip_address",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "userAgent": {
-          "name": "userAgent",
+        "user_agent": {
+          "name": "user_agent",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -388,11 +388,11 @@
         }
       },
       "indexes": {
-        "password_resets_userId_idx": {
-          "name": "password_resets_userId_idx",
+        "password_resets_user_id_idx": {
+          "name": "password_resets_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -403,11 +403,11 @@
           "method": "btree",
           "with": {}
         },
-        "password_resets_tokenHash_idx": {
-          "name": "password_resets_tokenHash_idx",
+        "password_resets_token_hash_idx": {
+          "name": "password_resets_token_hash_idx",
           "columns": [
             {
-              "expression": "tokenHash",
+              "expression": "token_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -418,11 +418,11 @@
           "method": "btree",
           "with": {}
         },
-        "password_resets_expiresAt_idx": {
-          "name": "password_resets_expiresAt_idx",
+        "password_resets_expires_at_idx": {
+          "name": "password_resets_expires_at_idx",
           "columns": [
             {
-              "expression": "expiresAt",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -435,12 +435,12 @@
         }
       },
       "foreignKeys": {
-        "password_resets_userId_users_id_fk": {
-          "name": "password_resets_userId_users_id_fk",
+        "password_resets_user_id_users_id_fk": {
+          "name": "password_resets_user_id_users_id_fk",
           "tableFrom": "password_resets",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -451,11 +451,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "password_resets_tokenHash_unique": {
-          "name": "password_resets_tokenHash_unique",
+        "password_resets_token_hash_unique": {
+          "name": "password_resets_token_hash_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "tokenHash"
+            "token_hash"
           ]
         }
       },
@@ -473,8 +473,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -485,8 +485,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "resourceId": {
-          "name": "resourceId",
+        "resource_id": {
+          "name": "resource_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -503,27 +503,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "grantedBy": {
-          "name": "grantedBy",
+        "granted_by": {
+          "name": "granted_by",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "expiresAt": {
-          "name": "expiresAt",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -531,11 +531,11 @@
         }
       },
       "indexes": {
-        "permissions_userId_idx": {
-          "name": "permissions_userId_idx",
+        "permissions_user_id_idx": {
+          "name": "permissions_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -546,8 +546,8 @@
           "method": "btree",
           "with": {}
         },
-        "permissions_resource_resourceId_idx": {
-          "name": "permissions_resource_resourceId_idx",
+        "permissions_resource_resource_id_idx": {
+          "name": "permissions_resource_resource_id_idx",
           "columns": [
             {
               "expression": "resource",
@@ -556,7 +556,7 @@
               "nulls": "last"
             },
             {
-              "expression": "resourceId",
+              "expression": "resource_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -567,47 +567,11 @@
           "method": "btree",
           "with": {}
         },
-        "permissions_userId_resource_idx": {
-          "name": "permissions_userId_resource_idx",
+        "permissions_user_id_resource_idx": {
+          "name": "permissions_user_id_resource_idx",
           "columns": [
             {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "resource",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "permissions_expiresAt_idx": {
-          "name": "permissions_expiresAt_idx",
-          "columns": [
-            {
-              "expression": "expiresAt",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "permissions_userId_resource_resourceId_action_uidx": {
-          "name": "permissions_userId_resource_resourceId_action_uidx",
-          "columns": [
-            {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -617,9 +581,45 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "permissions_expires_at_idx": {
+          "name": "permissions_expires_at_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "permissions_user_id_resource_resource_id_action_uidx": {
+          "name": "permissions_user_id_resource_resource_id_action_uidx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             },
             {
-              "expression": "resourceId",
+              "expression": "resource",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -638,12 +638,12 @@
         }
       },
       "foreignKeys": {
-        "permissions_userId_users_id_fk": {
-          "name": "permissions_userId_users_id_fk",
+        "permissions_user_id_users_id_fk": {
+          "name": "permissions_user_id_users_id_fk",
           "tableFrom": "permissions",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -687,15 +687,15 @@
           "notNull": true,
           "default": 0
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -744,153 +744,153 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "refreshTokenHash": {
-          "name": "refreshTokenHash",
+        "refresh_token_hash": {
+          "name": "refresh_token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "expiresAt": {
-          "name": "expiresAt",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "revokedAt": {
-          "name": "revokedAt",
+        "revoked_at": {
+          "name": "revoked_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "revokedReason": {
-          "name": "revokedReason",
+        "revoked_reason": {
+          "name": "revoked_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "revokedByUserId": {
-          "name": "revokedByUserId",
+        "revoked_by_user_id": {
+          "name": "revoked_by_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "replacedBySessionId": {
-          "name": "replacedBySessionId",
+        "replaced_by_session_id": {
+          "name": "replaced_by_session_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "previousRefreshTokenHash": {
-          "name": "previousRefreshTokenHash",
+        "previous_refresh_token_hash": {
+          "name": "previous_refresh_token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "lastSeenAt": {
-          "name": "lastSeenAt",
+        "last_seen_at": {
+          "name": "last_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "userAgent": {
-          "name": "userAgent",
+        "user_agent": {
+          "name": "user_agent",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "browserName": {
-          "name": "browserName",
+        "browser_name": {
+          "name": "browser_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "browserVersion": {
-          "name": "browserVersion",
+        "browser_version": {
+          "name": "browser_version",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "osName": {
-          "name": "osName",
+        "os_name": {
+          "name": "os_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "deviceType": {
-          "name": "deviceType",
-          "type": "AuthSessionDeviceType",
+        "device_type": {
+          "name": "device_type",
+          "type": "auth_session_device_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'UNKNOWN'"
         },
-        "deviceName": {
-          "name": "deviceName",
+        "device_name": {
+          "name": "device_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "deviceFingerprint": {
-          "name": "deviceFingerprint",
+        "device_fingerprint": {
+          "name": "device_fingerprint",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "sessionType": {
-          "name": "sessionType",
-          "type": "AuthSessionType",
+        "session_type": {
+          "name": "session_type",
+          "type": "auth_session_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'WEB'"
         },
-        "ipAddress": {
-          "name": "ipAddress",
+        "ip_address": {
+          "name": "ip_address",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "ipCountry": {
-          "name": "ipCountry",
+        "ip_country": {
+          "name": "ip_country",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "ipCity": {
-          "name": "ipCity",
+        "ip_city": {
+          "name": "ip_city",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "suspiciousActivity": {
-          "name": "suspiciousActivity",
+        "suspicious_activity": {
+          "name": "suspicious_activity",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "lastIpAddress": {
-          "name": "lastIpAddress",
+        "last_ip_address": {
+          "name": "last_ip_address",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -898,11 +898,11 @@
         }
       },
       "indexes": {
-        "sessions_userId_idx": {
-          "name": "sessions_userId_idx",
+        "sessions_user_id_idx": {
+          "name": "sessions_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -913,11 +913,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_refreshTokenHash_idx": {
-          "name": "sessions_refreshTokenHash_idx",
+        "sessions_refresh_token_hash_idx": {
+          "name": "sessions_refresh_token_hash_idx",
           "columns": [
             {
-              "expression": "refreshTokenHash",
+              "expression": "refresh_token_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -928,11 +928,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_previousRefreshTokenHash_idx": {
-          "name": "sessions_previousRefreshTokenHash_idx",
+        "sessions_previous_refresh_token_hash_idx": {
+          "name": "sessions_previous_refresh_token_hash_idx",
           "columns": [
             {
-              "expression": "previousRefreshTokenHash",
+              "expression": "previous_refresh_token_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -943,11 +943,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_expiresAt_idx": {
-          "name": "sessions_expiresAt_idx",
+        "sessions_expires_at_idx": {
+          "name": "sessions_expires_at_idx",
           "columns": [
             {
-              "expression": "expiresAt",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -958,11 +958,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_revokedAt_idx": {
-          "name": "sessions_revokedAt_idx",
+        "sessions_revoked_at_idx": {
+          "name": "sessions_revoked_at_idx",
           "columns": [
             {
-              "expression": "revokedAt",
+              "expression": "revoked_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -973,11 +973,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_sessionType_idx": {
-          "name": "sessions_sessionType_idx",
+        "sessions_session_type_idx": {
+          "name": "sessions_session_type_idx",
           "columns": [
             {
-              "expression": "sessionType",
+              "expression": "session_type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -988,11 +988,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_deviceFingerprint_idx": {
-          "name": "sessions_deviceFingerprint_idx",
+        "sessions_device_fingerprint_idx": {
+          "name": "sessions_device_fingerprint_idx",
           "columns": [
             {
-              "expression": "deviceFingerprint",
+              "expression": "device_fingerprint",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1003,11 +1003,11 @@
           "method": "btree",
           "with": {}
         },
-        "sessions_suspiciousActivity_idx": {
-          "name": "sessions_suspiciousActivity_idx",
+        "sessions_suspicious_activity_idx": {
+          "name": "sessions_suspicious_activity_idx",
           "columns": [
             {
-              "expression": "suspiciousActivity",
+              "expression": "suspicious_activity",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1020,12 +1020,12 @@
         }
       },
       "foreignKeys": {
-        "sessions_userId_users_id_fk": {
-          "name": "sessions_userId_users_id_fk",
+        "sessions_user_id_users_id_fk": {
+          "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -1036,11 +1036,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "sessions_refreshTokenHash_unique": {
-          "name": "sessions_refreshTokenHash_unique",
+        "sessions_refresh_token_hash_unique": {
+          "name": "sessions_refresh_token_hash_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "refreshTokenHash"
+            "refresh_token_hash"
           ]
         }
       },
@@ -1070,123 +1070,123 @@
           "primaryKey": false,
           "notNull": true
         },
-        "phoneNumber": {
-          "name": "phoneNumber",
+        "phone_number": {
+          "name": "phone_number",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "emailVerified": {
-          "name": "emailVerified",
+        "email_verified": {
+          "name": "email_verified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "phoneVerified": {
-          "name": "phoneVerified",
+        "phone_verified": {
+          "name": "phone_verified",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "emailVerifiedAt": {
-          "name": "emailVerifiedAt",
+        "email_verified_at": {
+          "name": "email_verified_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "phoneVerifiedAt": {
-          "name": "phoneVerifiedAt",
+        "phone_verified_at": {
+          "name": "phone_verified_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "passwordHash": {
-          "name": "passwordHash",
+        "password_hash": {
+          "name": "password_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "passwordHistory": {
-          "name": "passwordHistory",
+        "password_history": {
+          "name": "password_history",
           "type": "text[]",
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'"
         },
-        "firstName": {
-          "name": "firstName",
+        "first_name": {
+          "name": "first_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "lastName": {
-          "name": "lastName",
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "avatarUrl": {
-          "name": "avatarUrl",
+        "avatar_url": {
+          "name": "avatar_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
         "status": {
           "name": "status",
-          "type": "UserStatus",
+          "type": "user_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'PENDING'"
         },
-        "tokenVersion": {
-          "name": "tokenVersion",
+        "token_version": {
+          "name": "token_version",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 1
         },
-        "lastLoginAt": {
-          "name": "lastLoginAt",
+        "last_login_at": {
+          "name": "last_login_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "passwordChangedAt": {
-          "name": "passwordChangedAt",
+        "password_changed_at": {
+          "name": "password_changed_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "deactivatedAt": {
-          "name": "deactivatedAt",
+        "deactivated_at": {
+          "name": "deactivated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "suspendedAt": {
-          "name": "suspendedAt",
+        "suspended_at": {
+          "name": "suspended_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "twoFactorEnabled": {
-          "name": "twoFactorEnabled",
+        "two_factor_enabled": {
+          "name": "two_factor_enabled",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "twoFactorSecret": {
-          "name": "twoFactorSecret",
+        "two_factor_secret": {
+          "name": "two_factor_secret",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "deletedAt": {
-          "name": "deletedAt",
+        "deleted_at": {
+          "name": "deleted_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -1197,27 +1197,27 @@
           "primaryKey": false,
           "notNull": false
         },
-        "roleId": {
-          "name": "roleId",
+        "role_id": {
+          "name": "role_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "managerId": {
-          "name": "managerId",
+        "manager_id": {
+          "name": "manager_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1255,11 +1255,11 @@
           "method": "btree",
           "with": {}
         },
-        "users_phoneNumber_idx": {
-          "name": "users_phoneNumber_idx",
+        "users_phone_number_idx": {
+          "name": "users_phone_number_idx",
           "columns": [
             {
-              "expression": "phoneNumber",
+              "expression": "phone_number",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1285,11 +1285,11 @@
           "method": "btree",
           "with": {}
         },
-        "users_deletedAt_idx": {
-          "name": "users_deletedAt_idx",
+        "users_deleted_at_idx": {
+          "name": "users_deleted_at_idx",
           "columns": [
             {
-              "expression": "deletedAt",
+              "expression": "deleted_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1300,11 +1300,11 @@
           "method": "btree",
           "with": {}
         },
-        "users_managerId_idx": {
-          "name": "users_managerId_idx",
+        "users_manager_id_idx": {
+          "name": "users_manager_id_idx",
           "columns": [
             {
-              "expression": "managerId",
+              "expression": "manager_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1317,12 +1317,12 @@
         }
       },
       "foreignKeys": {
-        "users_roleId_roles_id_fk": {
-          "name": "users_roleId_roles_id_fk",
+        "users_role_id_roles_id_fk": {
+          "name": "users_role_id_roles_id_fk",
           "tableFrom": "users",
           "tableTo": "roles",
           "columnsFrom": [
-            "roleId"
+            "role_id"
           ],
           "columnsTo": [
             "id"
@@ -1347,11 +1347,11 @@
             "username"
           ]
         },
-        "users_phoneNumber_unique": {
-          "name": "users_phoneNumber_unique",
+        "users_phone_number_unique": {
+          "name": "users_phone_number_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "phoneNumber"
+            "phone_number"
           ]
         }
       },
@@ -1369,52 +1369,52 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "type": {
           "name": "type",
-          "type": "VerificationTokenType",
+          "type": "verification_token_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "tokenHash": {
-          "name": "tokenHash",
+        "token_hash": {
+          "name": "token_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "newValue": {
-          "name": "newValue",
+        "new_value": {
+          "name": "new_value",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "expiresAt": {
-          "name": "expiresAt",
+        "expires_at": {
+          "name": "expires_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
-        "verifiedAt": {
-          "name": "verifiedAt",
+        "verified_at": {
+          "name": "verified_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1422,11 +1422,11 @@
         }
       },
       "indexes": {
-        "verification_tokens_userId_idx": {
-          "name": "verification_tokens_userId_idx",
+        "verification_tokens_user_id_idx": {
+          "name": "verification_tokens_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1437,11 +1437,11 @@
           "method": "btree",
           "with": {}
         },
-        "verification_tokens_tokenHash_idx": {
-          "name": "verification_tokens_tokenHash_idx",
+        "verification_tokens_token_hash_idx": {
+          "name": "verification_tokens_token_hash_idx",
           "columns": [
             {
-              "expression": "tokenHash",
+              "expression": "token_hash",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1467,11 +1467,11 @@
           "method": "btree",
           "with": {}
         },
-        "verification_tokens_expiresAt_idx": {
-          "name": "verification_tokens_expiresAt_idx",
+        "verification_tokens_expires_at_idx": {
+          "name": "verification_tokens_expires_at_idx",
           "columns": [
             {
-              "expression": "expiresAt",
+              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1484,12 +1484,12 @@
         }
       },
       "foreignKeys": {
-        "verification_tokens_userId_users_id_fk": {
-          "name": "verification_tokens_userId_users_id_fk",
+        "verification_tokens_user_id_users_id_fk": {
+          "name": "verification_tokens_user_id_users_id_fk",
           "tableFrom": "verification_tokens",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -1500,11 +1500,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "verification_tokens_tokenHash_unique": {
-          "name": "verification_tokens_tokenHash_unique",
+        "verification_tokens_token_hash_unique": {
+          "name": "verification_tokens_token_hash_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "tokenHash"
+            "token_hash"
           ]
         }
       },
@@ -1540,58 +1540,58 @@
           "primaryKey": false,
           "notNull": true
         },
-        "nodeType": {
-          "name": "nodeType",
-          "type": "TerritoryNodeType",
+        "node_type": {
+          "name": "node_type",
+          "type": "territory_node_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "territoryTypeId": {
-          "name": "territoryTypeId",
+        "territory_type_id": {
+          "name": "territory_type_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "countryCode": {
-          "name": "countryCode",
+        "country_code": {
+          "name": "country_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "regionSlug": {
-          "name": "regionSlug",
+        "region_slug": {
+          "name": "region_slug",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "stateCode": {
-          "name": "stateCode",
+        "state_code": {
+          "name": "state_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "parentId": {
-          "name": "parentId",
+        "parent_id": {
+          "name": "parent_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "managerTerritoryId": {
-          "name": "managerTerritoryId",
+        "manager_territory_id": {
+          "name": "manager_territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "isActive": {
-          "name": "isActive",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": true
         },
-        "organizationId": {
-          "name": "organizationId",
+        "organization_id": {
+          "name": "organization_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1608,45 +1608,45 @@
           "primaryKey": false,
           "notNull": false
         },
-        "boundaryMinLng": {
-          "name": "boundaryMinLng",
+        "boundary_min_lng": {
+          "name": "boundary_min_lng",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "boundaryMinLat": {
-          "name": "boundaryMinLat",
+        "boundary_min_lat": {
+          "name": "boundary_min_lat",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "boundaryMaxLng": {
-          "name": "boundaryMaxLng",
+        "boundary_max_lng": {
+          "name": "boundary_max_lng",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "boundaryMaxLat": {
-          "name": "boundaryMaxLat",
+        "boundary_max_lat": {
+          "name": "boundary_max_lat",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "boundaryAreaSqKm": {
-          "name": "boundaryAreaSqKm",
+        "boundary_area_sq_km": {
+          "name": "boundary_area_sq_km",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1669,11 +1669,11 @@
           "method": "btree",
           "with": {}
         },
-        "territories_parentId_idx": {
-          "name": "territories_parentId_idx",
+        "territories_parent_id_idx": {
+          "name": "territories_parent_id_idx",
           "columns": [
             {
-              "expression": "parentId",
+              "expression": "parent_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1684,11 +1684,11 @@
           "method": "btree",
           "with": {}
         },
-        "territories_managerTerritoryId_idx": {
-          "name": "territories_managerTerritoryId_idx",
+        "territories_manager_territory_id_idx": {
+          "name": "territories_manager_territory_id_idx",
           "columns": [
             {
-              "expression": "managerTerritoryId",
+              "expression": "manager_territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1699,11 +1699,11 @@
           "method": "btree",
           "with": {}
         },
-        "territories_isActive_idx": {
-          "name": "territories_isActive_idx",
+        "territories_is_active_idx": {
+          "name": "territories_is_active_idx",
           "columns": [
             {
-              "expression": "isActive",
+              "expression": "is_active",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1714,11 +1714,11 @@
           "method": "btree",
           "with": {}
         },
-        "territories_nodeType_idx": {
-          "name": "territories_nodeType_idx",
+        "territories_node_type_idx": {
+          "name": "territories_node_type_idx",
           "columns": [
             {
-              "expression": "nodeType",
+              "expression": "node_type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1729,11 +1729,11 @@
           "method": "btree",
           "with": {}
         },
-        "territories_countryCode_idx": {
-          "name": "territories_countryCode_idx",
+        "territories_country_code_idx": {
+          "name": "territories_country_code_idx",
           "columns": [
             {
-              "expression": "countryCode",
+              "expression": "country_code",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1744,11 +1744,11 @@
           "method": "btree",
           "with": {}
         },
-        "territories_territoryTypeId_idx": {
-          "name": "territories_territoryTypeId_idx",
+        "territories_territory_type_id_idx": {
+          "name": "territories_territory_type_id_idx",
           "columns": [
             {
-              "expression": "territoryTypeId",
+              "expression": "territory_type_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1761,12 +1761,12 @@
         }
       },
       "foreignKeys": {
-        "territories_territoryTypeId_territory_types_id_fk": {
-          "name": "territories_territoryTypeId_territory_types_id_fk",
+        "territories_territory_type_id_territory_types_id_fk": {
+          "name": "territories_territory_type_id_territory_types_id_fk",
           "tableFrom": "territories",
           "tableTo": "territory_types",
           "columnsFrom": [
-            "territoryTypeId"
+            "territory_type_id"
           ],
           "columnsTo": [
             "id"
@@ -1801,52 +1801,52 @@
         },
         "type": {
           "name": "type",
-          "type": "TerritoryApprovalType",
+          "type": "territory_approval_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "TerritoryApprovalStatus",
+          "type": "territory_approval_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
         },
-        "requesterId": {
-          "name": "requesterId",
+        "requester_id": {
+          "name": "requester_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "reviewerId": {
-          "name": "reviewerId",
+        "reviewer_id": {
+          "name": "reviewer_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "entityPayload": {
-          "name": "entityPayload",
+        "entity_payload": {
+          "name": "entity_payload",
           "type": "json",
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::json"
         },
-        "targetTerritoryId": {
-          "name": "targetTerritoryId",
+        "target_territory_id": {
+          "name": "target_territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "facilityId": {
-          "name": "facilityId",
+        "facility_id": {
+          "name": "facility_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "toTerritoryId": {
-          "name": "toTerritoryId",
+        "to_territory_id": {
+          "name": "to_territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1857,33 +1857,33 @@
           "primaryKey": false,
           "notNull": false
         },
-        "resolutionNote": {
-          "name": "resolutionNote",
+        "resolution_note": {
+          "name": "resolution_note",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "supersededById": {
-          "name": "supersededById",
+        "superseded_by_id": {
+          "name": "superseded_by_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "resolvedAt": {
-          "name": "resolvedAt",
+        "resolved_at": {
+          "name": "resolved_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -1912,11 +1912,11 @@
           "method": "btree",
           "with": {}
         },
-        "territory_approval_requests_requesterId_idx": {
-          "name": "territory_approval_requests_requesterId_idx",
+        "territory_approval_requests_requester_id_idx": {
+          "name": "territory_approval_requests_requester_id_idx",
           "columns": [
             {
-              "expression": "requesterId",
+              "expression": "requester_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1927,11 +1927,11 @@
           "method": "btree",
           "with": {}
         },
-        "territory_approval_requests_targetTerritoryId_status_idx": {
-          "name": "territory_approval_requests_targetTerritoryId_status_idx",
+        "territory_approval_requests_target_territory_id_status_idx": {
+          "name": "territory_approval_requests_target_territory_id_status_idx",
           "columns": [
             {
-              "expression": "targetTerritoryId",
+              "expression": "target_territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1948,11 +1948,11 @@
           "method": "btree",
           "with": {}
         },
-        "territory_approval_requests_facilityId_status_type_idx": {
-          "name": "territory_approval_requests_facilityId_status_type_idx",
+        "territory_approval_requests_facility_id_status_type_idx": {
+          "name": "territory_approval_requests_facility_id_status_type_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1977,12 +1977,12 @@
         }
       },
       "foreignKeys": {
-        "territory_approval_requests_targetTerritoryId_territories_id_fk": {
-          "name": "territory_approval_requests_targetTerritoryId_territories_id_fk",
+        "territory_approval_requests_target_territory_id_territories_id_fk": {
+          "name": "territory_approval_requests_target_territory_id_territories_id_fk",
           "tableFrom": "territory_approval_requests",
           "tableTo": "territories",
           "columnsFrom": [
-            "targetTerritoryId"
+            "target_territory_id"
           ],
           "columnsTo": [
             "id"
@@ -1990,12 +1990,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "territory_approval_requests_toTerritoryId_territories_id_fk": {
-          "name": "territory_approval_requests_toTerritoryId_territories_id_fk",
+        "territory_approval_requests_to_territory_id_territories_id_fk": {
+          "name": "territory_approval_requests_to_territory_id_territories_id_fk",
           "tableFrom": "territory_approval_requests",
           "tableTo": "territories",
           "columnsFrom": [
-            "toTerritoryId"
+            "to_territory_id"
           ],
           "columnsTo": [
             "id"
@@ -2014,14 +2014,14 @@
       "name": "territory_closure",
       "schema": "",
       "columns": {
-        "ancestorId": {
-          "name": "ancestorId",
+        "ancestor_id": {
+          "name": "ancestor_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "descendantId": {
-          "name": "descendantId",
+        "descendant_id": {
+          "name": "descendant_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2034,11 +2034,11 @@
         }
       },
       "indexes": {
-        "territory_closure_descendantId_idx": {
-          "name": "territory_closure_descendantId_idx",
+        "territory_closure_descendant_id_idx": {
+          "name": "territory_closure_descendant_id_idx",
           "columns": [
             {
-              "expression": "descendantId",
+              "expression": "descendant_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2051,12 +2051,12 @@
         }
       },
       "foreignKeys": {
-        "territory_closure_ancestorId_territories_id_fk": {
-          "name": "territory_closure_ancestorId_territories_id_fk",
+        "territory_closure_ancestor_id_territories_id_fk": {
+          "name": "territory_closure_ancestor_id_territories_id_fk",
           "tableFrom": "territory_closure",
           "tableTo": "territories",
           "columnsFrom": [
-            "ancestorId"
+            "ancestor_id"
           ],
           "columnsTo": [
             "id"
@@ -2064,12 +2064,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "territory_closure_descendantId_territories_id_fk": {
-          "name": "territory_closure_descendantId_territories_id_fk",
+        "territory_closure_descendant_id_territories_id_fk": {
+          "name": "territory_closure_descendant_id_territories_id_fk",
           "tableFrom": "territory_closure",
           "tableTo": "territories",
           "columnsFrom": [
-            "descendantId"
+            "descendant_id"
           ],
           "columnsTo": [
             "id"
@@ -2079,11 +2079,11 @@
         }
       },
       "compositePrimaryKeys": {
-        "territory_closure_ancestorId_descendantId_pk": {
-          "name": "territory_closure_ancestorId_descendantId_pk",
+        "territory_closure_ancestor_id_descendant_id_pk": {
+          "name": "territory_closure_ancestor_id_descendant_id_pk",
           "columns": [
-            "ancestorId",
-            "descendantId"
+            "ancestor_id",
+            "descendant_id"
           ]
         }
       },
@@ -2120,78 +2120,78 @@
           "primaryKey": false,
           "notNull": false
         },
-        "canHaveBoundary": {
-          "name": "canHaveBoundary",
+        "can_have_boundary": {
+          "name": "can_have_boundary",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": true
         },
-        "assignsClinics": {
-          "name": "assignsClinics",
+        "assigns_clinics": {
+          "name": "assigns_clinics",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "assignableToUsers": {
-          "name": "assignableToUsers",
+        "assignable_to_users": {
+          "name": "assignable_to_users",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "assignableToManagers": {
-          "name": "assignableToManagers",
+        "assignable_to_managers": {
+          "name": "assignable_to_managers",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "isCountryLevel": {
-          "name": "isCountryLevel",
+        "is_country_level": {
+          "name": "is_country_level",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "blockSiblingOverlap": {
-          "name": "blockSiblingOverlap",
+        "block_sibling_overlap": {
+          "name": "block_sibling_overlap",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "participatesInGroupingHierarchy": {
-          "name": "participatesInGroupingHierarchy",
+        "participates_in_grouping_hierarchy": {
+          "name": "participates_in_grouping_hierarchy",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "sortOrder": {
-          "name": "sortOrder",
+        "sort_order": {
+          "name": "sort_order",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "isActive": {
-          "name": "isActive",
+        "is_active": {
+          "name": "is_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -2199,11 +2199,11 @@
         }
       },
       "indexes": {
-        "territory_types_isActive_idx": {
-          "name": "territory_types_isActive_idx",
+        "territory_types_is_active_idx": {
+          "name": "territory_types_is_active_idx",
           "columns": [
             {
-              "expression": "isActive",
+              "expression": "is_active",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2240,33 +2240,33 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "territoryId": {
-          "name": "territoryId",
+        "territory_id": {
+          "name": "territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "assignedBy": {
-          "name": "assignedBy",
+        "assigned_by": {
+          "name": "assigned_by",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -2274,17 +2274,17 @@
         }
       },
       "indexes": {
-        "user_territory_assignments_userId_territoryId_uidx": {
-          "name": "user_territory_assignments_userId_territoryId_uidx",
+        "user_territory_assignments_user_id_territory_id_uidx": {
+          "name": "user_territory_assignments_user_id_territory_id_uidx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "territoryId",
+              "expression": "territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2295,11 +2295,11 @@
           "method": "btree",
           "with": {}
         },
-        "user_territory_assignments_userId_idx": {
-          "name": "user_territory_assignments_userId_idx",
+        "user_territory_assignments_user_id_idx": {
+          "name": "user_territory_assignments_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2310,11 +2310,11 @@
           "method": "btree",
           "with": {}
         },
-        "user_territory_assignments_territoryId_idx": {
-          "name": "user_territory_assignments_territoryId_idx",
+        "user_territory_assignments_territory_id_idx": {
+          "name": "user_territory_assignments_territory_id_idx",
           "columns": [
             {
-              "expression": "territoryId",
+              "expression": "territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2327,12 +2327,12 @@
         }
       },
       "foreignKeys": {
-        "user_territory_assignments_userId_users_id_fk": {
-          "name": "user_territory_assignments_userId_users_id_fk",
+        "user_territory_assignments_user_id_users_id_fk": {
+          "name": "user_territory_assignments_user_id_users_id_fk",
           "tableFrom": "user_territory_assignments",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -2340,12 +2340,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "user_territory_assignments_territoryId_territories_id_fk": {
-          "name": "user_territory_assignments_territoryId_territories_id_fk",
+        "user_territory_assignments_territory_id_territories_id_fk": {
+          "name": "user_territory_assignments_territory_id_territories_id_fk",
           "tableFrom": "user_territory_assignments",
           "tableTo": "territories",
           "columnsFrom": [
-            "territoryId"
+            "territory_id"
           ],
           "columnsTo": [
             "id"
@@ -2384,7 +2384,7 @@
         },
         "status": {
           "name": "status",
-          "type": "ConformityRecordStatus",
+          "type": "conformity_record_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -2414,15 +2414,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -2430,8 +2430,8 @@
         }
       },
       "indexes": {
-        "conformity_records_facilityId_requirementId_uidx": {
-          "name": "conformity_records_facilityId_requirementId_uidx",
+        "conformity_records_facility_id_requirement_id_uidx": {
+          "name": "conformity_records_facility_id_requirement_id_uidx",
           "columns": [
             {
               "expression": "facility_id",
@@ -2451,8 +2451,8 @@
           "method": "btree",
           "with": {}
         },
-        "conformity_records_facilityId_idx": {
-          "name": "conformity_records_facilityId_idx",
+        "conformity_records_facility_id_idx": {
+          "name": "conformity_records_facility_id_idx",
           "columns": [
             {
               "expression": "facility_id",
@@ -2466,8 +2466,8 @@
           "method": "btree",
           "with": {}
         },
-        "conformity_records_requirementId_idx": {
-          "name": "conformity_records_requirementId_idx",
+        "conformity_records_requirement_id_idx": {
+          "name": "conformity_records_requirement_id_idx",
           "columns": [
             {
               "expression": "requirement_id",
@@ -2572,15 +2572,15 @@
           "notNull": true,
           "default": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -2588,8 +2588,8 @@
         }
       },
       "indexes": {
-        "conformity_requirements_sectorId_idx": {
-          "name": "conformity_requirements_sectorId_idx",
+        "conformity_requirements_sector_id_idx": {
+          "name": "conformity_requirements_sector_id_idx",
           "columns": [
             {
               "expression": "sector_id",
@@ -2603,8 +2603,8 @@
           "method": "btree",
           "with": {}
         },
-        "conformity_requirements_isActive_idx": {
-          "name": "conformity_requirements_isActive_idx",
+        "conformity_requirements_is_active_idx": {
+          "name": "conformity_requirements_is_active_idx",
           "columns": [
             {
               "expression": "is_active",
@@ -2664,15 +2664,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "address": {
-          "name": "address",
+        "legal_name": {
+          "name": "legal_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "location": {
-          "name": "location",
-          "type": "geometry(Point,4326)",
+        "trade_name": {
+          "name": "trade_name",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -2682,14 +2682,57 @@
           "primaryKey": false,
           "notNull": false
         },
-        "legal_name": {
-          "name": "legal_name",
+        "facility_type_code": {
+          "name": "facility_type_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "trade_name": {
-          "name": "trade_name",
+        "is_active_in_registry": {
+          "name": "is_active_in_registry",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "registry_deactivation_code": {
+          "name": "registry_deactivation_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cnpj": {
+          "name": "cnpj",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cpf": {
+          "name": "cpf",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "neighborhood": {
+          "name": "neighborhood",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2712,15 +2755,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "neighborhood": {
-          "name": "neighborhood",
+        "postal_code": {
+          "name": "postal_code",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "postal_code": {
-          "name": "postal_code",
-          "type": "text",
+        "location": {
+          "name": "location",
+          "type": "geometry(Point,4326)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2748,52 +2791,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "tax_id_cnpj": {
-          "name": "tax_id_cnpj",
+        "primary_sector_id": {
+          "name": "primary_sector_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "tax_id_cpf": {
-          "name": "tax_id_cpf",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "owner_tax_id": {
-          "name": "owner_tax_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "facility_type_code": {
-          "name": "facility_type_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "registry_deactivation_code": {
-          "name": "registry_deactivation_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_active_in_registry": {
-          "name": "is_active_in_registry",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "reference_municipality_code": {
-          "name": "reference_municipality_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "conformityStatus": {
-          "name": "conformityStatus",
-          "type": "ConformityStatus",
+        "conformity_status": {
+          "name": "conformity_status",
+          "type": "conformity_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -2801,33 +2807,15 @@
         },
         "commercial_status": {
           "name": "commercial_status",
-          "type": "CommercialStatus",
+          "type": "commercial_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
         "purchase_status": {
           "name": "purchase_status",
-          "type": "PurchaseStatus",
+          "type": "purchase_status",
           "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "city": {
-          "name": "city",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state_code": {
-          "name": "state_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "primary_sector_id": {
-          "name": "primary_sector_id",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -2837,93 +2825,93 @@
           "primaryKey": false,
           "notNull": false
         },
-        "territoryId": {
-          "name": "territoryId",
+        "territory_id": {
+          "name": "territory_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "territoryAssignmentStatus": {
-          "name": "territoryAssignmentStatus",
-          "type": "TerritoryAssignmentStatus",
+        "territory_assignment_status": {
+          "name": "territory_assignment_status",
+          "type": "territory_assignment_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'unassigned'"
         },
-        "territoryAssignmentSource": {
-          "name": "territoryAssignmentSource",
-          "type": "TerritoryAssignmentSource",
+        "territory_assignment_source": {
+          "name": "territory_assignment_source",
+          "type": "territory_assignment_source",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'geo'"
         },
-        "sourceProvider": {
-          "name": "sourceProvider",
+        "source_provider": {
+          "name": "source_provider",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "externalSourceId": {
-          "name": "externalSourceId",
+        "external_source_id": {
+          "name": "external_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceContentHash": {
-          "name": "sourceContentHash",
+        "source_content_hash": {
+          "name": "source_content_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceFirstSeenAt": {
-          "name": "sourceFirstSeenAt",
+        "source_first_seen_at": {
+          "name": "source_first_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceLastSeenAt": {
-          "name": "sourceLastSeenAt",
+        "source_last_seen_at": {
+          "name": "source_last_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "sourcePresent": {
-          "name": "sourcePresent",
+        "source_present": {
+          "name": "source_present",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "sourceTracked": {
-          "name": "sourceTracked",
+        "source_tracked": {
+          "name": "source_tracked",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "manuallyEditedAt": {
-          "name": "manuallyEditedAt",
+        "manually_edited_at": {
+          "name": "manually_edited_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "deletedAt": {
-          "name": "deletedAt",
+        "deactivated_at": {
+          "name": "deactivated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -2931,17 +2919,17 @@
         }
       },
       "indexes": {
-        "facilities_sourceProvider_externalSourceId_uidx": {
-          "name": "facilities_sourceProvider_externalSourceId_uidx",
+        "facilities_source_provider_external_source_id_uidx": {
+          "name": "facilities_source_provider_external_source_id_uidx",
           "columns": [
             {
-              "expression": "sourceProvider",
+              "expression": "source_provider",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "externalSourceId",
+              "expression": "external_source_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2952,11 +2940,11 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_sourceProvider_cnesCode_uidx": {
-          "name": "facilities_sourceProvider_cnesCode_uidx",
+        "facilities_source_provider_cnes_code_uidx": {
+          "name": "facilities_source_provider_cnes_code_uidx",
           "columns": [
             {
-              "expression": "sourceProvider",
+              "expression": "source_provider",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2973,11 +2961,11 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_territoryId_idx": {
-          "name": "facilities_territoryId_idx",
+        "facilities_territory_id_idx": {
+          "name": "facilities_territory_id_idx",
           "columns": [
             {
-              "expression": "territoryId",
+              "expression": "territory_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2988,11 +2976,11 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_deletedAt_idx": {
-          "name": "facilities_deletedAt_idx",
+        "facilities_deactivated_at_idx": {
+          "name": "facilities_deactivated_at_idx",
           "columns": [
             {
-              "expression": "deletedAt",
+              "expression": "deactivated_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3003,8 +2991,8 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_displayName_idx": {
-          "name": "facilities_displayName_idx",
+        "facilities_name_idx": {
+          "name": "facilities_name_idx",
           "columns": [
             {
               "expression": "name",
@@ -3018,17 +3006,17 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_sourceProvider_sourcePresent_idx": {
-          "name": "facilities_sourceProvider_sourcePresent_idx",
+        "facilities_source_provider_source_present_idx": {
+          "name": "facilities_source_provider_source_present_idx",
           "columns": [
             {
-              "expression": "sourceProvider",
+              "expression": "source_provider",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "sourcePresent",
+              "expression": "source_present",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3039,11 +3027,11 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_territoryAssignmentStatus_idx": {
-          "name": "facilities_territoryAssignmentStatus_idx",
+        "facilities_territory_assignment_status_idx": {
+          "name": "facilities_territory_assignment_status_idx",
           "columns": [
             {
-              "expression": "territoryAssignmentStatus",
+              "expression": "territory_assignment_status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3054,8 +3042,8 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_primarySectorId_idx": {
-          "name": "facilities_primarySectorId_idx",
+        "facilities_primary_sector_id_idx": {
+          "name": "facilities_primary_sector_id_idx",
           "columns": [
             {
               "expression": "primary_sector_id",
@@ -3069,11 +3057,11 @@
           "method": "btree",
           "with": {}
         },
-        "facilities_conformityStatus_idx": {
-          "name": "facilities_conformityStatus_idx",
+        "facilities_conformity_status_idx": {
+          "name": "facilities_conformity_status_idx",
           "columns": [
             {
-              "expression": "conformityStatus",
+              "expression": "conformity_status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3099,12 +3087,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "facilities_territoryId_territories_id_fk": {
-          "name": "facilities_territoryId_territories_id_fk",
+        "facilities_territory_id_territories_id_fk": {
+          "name": "facilities_territory_id_territories_id_fk",
           "tableFrom": "facilities",
           "tableTo": "territories",
           "columnsFrom": [
-            "territoryId"
+            "territory_id"
           ],
           "columnsTo": [
             "id"
@@ -3129,14 +3117,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "facilityId": {
-          "name": "facilityId",
+        "facility_id": {
+          "name": "facility_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -3166,15 +3154,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -3182,11 +3170,11 @@
         }
       },
       "indexes": {
-        "facility_consultant_assignments_facilityId_idx": {
-          "name": "facility_consultant_assignments_facilityId_idx",
+        "facility_consultant_assignments_facility_id_idx": {
+          "name": "facility_consultant_assignments_facility_id_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3197,11 +3185,11 @@
           "method": "btree",
           "with": {}
         },
-        "facility_consultant_assignments_userId_idx": {
-          "name": "facility_consultant_assignments_userId_idx",
+        "facility_consultant_assignments_user_id_idx": {
+          "name": "facility_consultant_assignments_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3212,11 +3200,11 @@
           "method": "btree",
           "with": {}
         },
-        "facility_consultant_assignments_facilityId_endedAt_idx": {
-          "name": "facility_consultant_assignments_facilityId_endedAt_idx",
+        "facility_consultant_assignments_facility_id_ended_at_idx": {
+          "name": "facility_consultant_assignments_facility_id_ended_at_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3235,12 +3223,12 @@
         }
       },
       "foreignKeys": {
-        "facility_consultant_assignments_facilityId_facilities_id_fk": {
-          "name": "facility_consultant_assignments_facilityId_facilities_id_fk",
+        "facility_consultant_assignments_facility_id_facilities_id_fk": {
+          "name": "facility_consultant_assignments_facility_id_facilities_id_fk",
           "tableFrom": "facility_consultant_assignments",
           "tableTo": "facilities",
           "columnsFrom": [
-            "facilityId"
+            "facility_id"
           ],
           "columnsTo": [
             "id"
@@ -3285,7 +3273,7 @@
         },
         "source": {
           "name": "source",
-          "type": "HealthcareProviderShareSource",
+          "type": "healthcare_provider_share_source",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -3309,15 +3297,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -3325,8 +3313,8 @@
         }
       },
       "indexes": {
-        "facility_healthcare_provider_shares_facilityId_providerId_uidx": {
-          "name": "facility_healthcare_provider_shares_facilityId_providerId_uidx",
+        "facility_healthcare_provider_shares_facility_id_provider_id_uidx": {
+          "name": "facility_healthcare_provider_shares_facility_id_provider_id_uidx",
           "columns": [
             {
               "expression": "facility_id",
@@ -3346,8 +3334,8 @@
           "method": "btree",
           "with": {}
         },
-        "facility_healthcare_provider_shares_facilityId_idx": {
-          "name": "facility_healthcare_provider_shares_facilityId_idx",
+        "facility_healthcare_provider_shares_facility_id_idx": {
+          "name": "facility_healthcare_provider_shares_facility_id_idx",
           "columns": [
             {
               "expression": "facility_id",
@@ -3361,8 +3349,8 @@
           "method": "btree",
           "with": {}
         },
-        "facility_healthcare_provider_shares_healthcareProviderId_idx": {
-          "name": "facility_healthcare_provider_shares_healthcareProviderId_idx",
+        "facility_healthcare_provider_shares_healthcare_provider_id_idx": {
+          "name": "facility_healthcare_provider_shares_healthcare_provider_id_idx",
           "columns": [
             {
               "expression": "healthcare_provider_id",
@@ -3421,14 +3409,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "professionalId": {
-          "name": "professionalId",
+        "professional_id": {
+          "name": "professional_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "facilityId": {
-          "name": "facilityId",
+        "facility_id": {
+          "name": "facility_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -3488,7 +3476,7 @@
         },
         "relationship_level": {
           "name": "relationship_level",
-          "type": "RelationshipLevel",
+          "type": "relationship_level",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
@@ -3499,64 +3487,64 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sourceActive": {
-          "name": "sourceActive",
+        "source_active": {
+          "name": "source_active",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "sourceFirstSeenAt": {
-          "name": "sourceFirstSeenAt",
+        "source_first_seen_at": {
+          "name": "source_first_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceLastSeenAt": {
-          "name": "sourceLastSeenAt",
+        "source_last_seen_at": {
+          "name": "source_last_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "confirmedAt": {
-          "name": "confirmedAt",
+        "confirmed_at": {
+          "name": "confirmed_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "confirmedByUserId": {
-          "name": "confirmedByUserId",
+        "confirmed_by_user_id": {
+          "name": "confirmed_by_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "endedAt": {
-          "name": "endedAt",
+        "ended_at": {
+          "name": "ended_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "endedByUserId": {
-          "name": "endedByUserId",
+        "ended_by_user_id": {
+          "name": "ended_by_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "endReason": {
-          "name": "endReason",
+        "end_reason": {
+          "name": "end_reason",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -3564,17 +3552,17 @@
         }
       },
       "indexes": {
-        "facility_professionals_facilityId_professionalId_occupationCode_uidx": {
-          "name": "facility_professionals_facilityId_professionalId_occupationCode_uidx",
+        "facility_professionals_facility_id_professional_id_occupation_code_uidx": {
+          "name": "facility_professionals_facility_id_professional_id_occupation_code_uidx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "professionalId",
+              "expression": "professional_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3591,11 +3579,11 @@
           "method": "btree",
           "with": {}
         },
-        "facility_professionals_professionalId_idx": {
-          "name": "facility_professionals_professionalId_idx",
+        "facility_professionals_professional_id_idx": {
+          "name": "facility_professionals_professional_id_idx",
           "columns": [
             {
-              "expression": "professionalId",
+              "expression": "professional_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3606,11 +3594,11 @@
           "method": "btree",
           "with": {}
         },
-        "facility_professionals_facilityId_idx": {
-          "name": "facility_professionals_facilityId_idx",
+        "facility_professionals_facility_id_idx": {
+          "name": "facility_professionals_facility_id_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3621,23 +3609,23 @@
           "method": "btree",
           "with": {}
         },
-        "facility_professionals_facilityId_sourceActive_endedAt_idx": {
-          "name": "facility_professionals_facilityId_sourceActive_endedAt_idx",
+        "facility_professionals_facility_id_source_active_ended_at_idx": {
+          "name": "facility_professionals_facility_id_source_active_ended_at_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "sourceActive",
+              "expression": "source_active",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "endedAt",
+              "expression": "ended_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3648,23 +3636,23 @@
           "method": "btree",
           "with": {}
         },
-        "facility_professionals_facilityId_confirmedAt_endedAt_idx": {
-          "name": "facility_professionals_facilityId_confirmedAt_endedAt_idx",
+        "facility_professionals_facility_id_confirmed_at_ended_at_idx": {
+          "name": "facility_professionals_facility_id_confirmed_at_ended_at_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "confirmedAt",
+              "expression": "confirmed_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "endedAt",
+              "expression": "ended_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3677,12 +3665,12 @@
         }
       },
       "foreignKeys": {
-        "facility_professionals_professionalId_professionals_id_fk": {
-          "name": "facility_professionals_professionalId_professionals_id_fk",
+        "facility_professionals_professional_id_professionals_id_fk": {
+          "name": "facility_professionals_professional_id_professionals_id_fk",
           "tableFrom": "facility_professionals",
           "tableTo": "professionals",
           "columnsFrom": [
-            "professionalId"
+            "professional_id"
           ],
           "columnsTo": [
             "id"
@@ -3690,12 +3678,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "facility_professionals_facilityId_facilities_id_fk": {
-          "name": "facility_professionals_facilityId_facilities_id_fk",
+        "facility_professionals_facility_id_facilities_id_fk": {
+          "name": "facility_professionals_facility_id_facilities_id_fk",
           "tableFrom": "facility_professionals",
           "tableTo": "facilities",
           "columnsFrom": [
-            "facilityId"
+            "facility_id"
           ],
           "columnsTo": [
             "id"
@@ -3720,8 +3708,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "facilityId": {
-          "name": "facilityId",
+        "facility_id": {
+          "name": "facility_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -3752,7 +3740,7 @@
         },
         "contact_type": {
           "name": "contact_type",
-          "type": "ContactType",
+          "type": "contact_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -3819,15 +3807,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -3835,11 +3823,11 @@
         }
       },
       "indexes": {
-        "facility_representatives_facilityId_externalSourceKey_uidx": {
-          "name": "facility_representatives_facilityId_externalSourceKey_uidx",
+        "facility_representatives_facility_id_external_source_key_uidx": {
+          "name": "facility_representatives_facility_id_external_source_key_uidx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3856,11 +3844,11 @@
           "method": "btree",
           "with": {}
         },
-        "facility_representatives_facilityId_idx": {
-          "name": "facility_representatives_facilityId_idx",
+        "facility_representatives_facility_id_idx": {
+          "name": "facility_representatives_facility_id_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3871,11 +3859,11 @@
           "method": "btree",
           "with": {}
         },
-        "facility_representatives_facilityId_sourceActive_endedAt_idx": {
-          "name": "facility_representatives_facilityId_sourceActive_endedAt_idx",
+        "facility_representatives_facility_id_source_active_ended_at_idx": {
+          "name": "facility_representatives_facility_id_source_active_ended_at_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3900,12 +3888,12 @@
         }
       },
       "foreignKeys": {
-        "facility_representatives_facilityId_facilities_id_fk": {
-          "name": "facility_representatives_facilityId_facilities_id_fk",
+        "facility_representatives_facility_id_facilities_id_fk": {
+          "name": "facility_representatives_facility_id_facilities_id_fk",
           "tableFrom": "facility_representatives",
           "tableTo": "facilities",
           "columnsFrom": [
-            "facilityId"
+            "facility_id"
           ],
           "columnsTo": [
             "id"
@@ -3938,7 +3926,7 @@
         },
         "type": {
           "name": "type",
-          "type": "HealthcareProviderType",
+          "type": "healthcare_provider_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
@@ -3950,15 +3938,15 @@
           "notNull": true,
           "default": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -3966,8 +3954,8 @@
         }
       },
       "indexes": {
-        "healthcare_providers_isActive_idx": {
-          "name": "healthcare_providers_isActive_idx",
+        "healthcare_providers_is_active_idx": {
+          "name": "healthcare_providers_is_active_idx",
           "columns": [
             {
               "expression": "is_active",
@@ -3999,14 +3987,14 @@
           "primaryKey": true,
           "notNull": true
         },
-        "firstName": {
-          "name": "firstName",
+        "first_name": {
+          "name": "first_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "lastName": {
-          "name": "lastName",
+        "last_name": {
+          "name": "last_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -4113,71 +4101,71 @@
           "primaryKey": false,
           "notNull": false
         },
-        "sourceProvider": {
-          "name": "sourceProvider",
+        "source_provider": {
+          "name": "source_provider",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "externalSourceId": {
-          "name": "externalSourceId",
+        "external_source_id": {
+          "name": "external_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceContentHash": {
-          "name": "sourceContentHash",
+        "source_content_hash": {
+          "name": "source_content_hash",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceFirstSeenAt": {
-          "name": "sourceFirstSeenAt",
+        "source_first_seen_at": {
+          "name": "source_first_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "sourceLastSeenAt": {
-          "name": "sourceLastSeenAt",
+        "source_last_seen_at": {
+          "name": "source_last_seen_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "sourcePresent": {
-          "name": "sourcePresent",
+        "source_present": {
+          "name": "source_present",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "sourceTracked": {
-          "name": "sourceTracked",
+        "source_tracked": {
+          "name": "source_tracked",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
           "default": false
         },
-        "manuallyEditedAt": {
-          "name": "manuallyEditedAt",
+        "manually_edited_at": {
+          "name": "manually_edited_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "deletedAt": {
-          "name": "deletedAt",
+        "deleted_at": {
+          "name": "deleted_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -4185,17 +4173,17 @@
         }
       },
       "indexes": {
-        "professionals_sourceProvider_externalSourceId_uidx": {
-          "name": "professionals_sourceProvider_externalSourceId_uidx",
+        "professionals_source_provider_external_source_id_uidx": {
+          "name": "professionals_source_provider_external_source_id_uidx",
           "columns": [
             {
-              "expression": "sourceProvider",
+              "expression": "source_provider",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "externalSourceId",
+              "expression": "external_source_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4206,11 +4194,11 @@
           "method": "btree",
           "with": {}
         },
-        "professionals_deletedAt_idx": {
-          "name": "professionals_deletedAt_idx",
+        "professionals_deleted_at_idx": {
+          "name": "professionals_deleted_at_idx",
           "columns": [
             {
-              "expression": "deletedAt",
+              "expression": "deleted_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4221,17 +4209,17 @@
           "method": "btree",
           "with": {}
         },
-        "professionals_lastName_firstName_idx": {
-          "name": "professionals_lastName_firstName_idx",
+        "professionals_last_name_first_name_idx": {
+          "name": "professionals_last_name_first_name_idx",
           "columns": [
             {
-              "expression": "lastName",
+              "expression": "last_name",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "firstName",
+              "expression": "first_name",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4242,17 +4230,17 @@
           "method": "btree",
           "with": {}
         },
-        "professionals_sourceProvider_sourcePresent_idx": {
-          "name": "professionals_sourceProvider_sourcePresent_idx",
+        "professionals_source_provider_source_present_idx": {
+          "name": "professionals_source_provider_source_present_idx",
           "columns": [
             {
-              "expression": "sourceProvider",
+              "expression": "source_provider",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "sourcePresent",
+              "expression": "source_present",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4263,8 +4251,8 @@
           "method": "btree",
           "with": {}
         },
-        "professionals_taxId_idx": {
-          "name": "professionals_taxId_idx",
+        "professionals_tax_id_idx": {
+          "name": "professionals_tax_id_idx",
           "columns": [
             {
               "expression": "tax_id",
@@ -4315,15 +4303,15 @@
           "notNull": true,
           "default": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -4331,8 +4319,8 @@
         }
       },
       "indexes": {
-        "sectors_isActive_idx": {
-          "name": "sectors_isActive_idx",
+        "sectors_is_active_idx": {
+          "name": "sectors_is_active_idx",
           "columns": [
             {
               "expression": "is_active",
@@ -4397,15 +4385,15 @@
           "notNull": true,
           "default": true
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "updatedAt": {
-          "name": "updatedAt",
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -4413,8 +4401,8 @@
         }
       },
       "indexes": {
-        "products_sectorId_idx": {
-          "name": "products_sectorId_idx",
+        "products_sector_id_idx": {
+          "name": "products_sector_id_idx",
           "columns": [
             {
               "expression": "sector_id",
@@ -4428,8 +4416,8 @@
           "method": "btree",
           "with": {}
         },
-        "products_isActive_idx": {
-          "name": "products_isActive_idx",
+        "products_is_active_idx": {
+          "name": "products_is_active_idx",
           "columns": [
             {
               "expression": "is_active",
@@ -4483,33 +4471,33 @@
           "primaryKey": true,
           "notNull": true
         },
-        "ingestionRunId": {
-          "name": "ingestionRunId",
+        "ingestion_run_id": {
+          "name": "ingestion_run_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "scope": {
           "name": "scope",
-          "type": "IngestionDiffScope",
+          "type": "ingestion_diff_scope",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
-        "entityType": {
-          "name": "entityType",
+        "entity_type": {
+          "name": "entity_type",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "externalSourceId": {
-          "name": "externalSourceId",
+        "external_source_id": {
+          "name": "external_source_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "diffType": {
-          "name": "diffType",
+        "diff_type": {
+          "name": "diff_type",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -4521,8 +4509,8 @@
           "notNull": true,
           "default": "'{}'::json"
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -4530,11 +4518,11 @@
         }
       },
       "indexes": {
-        "ingestion_diffs_ingestionRunId_idx": {
-          "name": "ingestion_diffs_ingestionRunId_idx",
+        "ingestion_diffs_ingestion_run_id_idx": {
+          "name": "ingestion_diffs_ingestion_run_id_idx",
           "columns": [
             {
-              "expression": "ingestionRunId",
+              "expression": "ingestion_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4545,8 +4533,8 @@
           "method": "btree",
           "with": {}
         },
-        "ingestion_diffs_scope_entityType_idx": {
-          "name": "ingestion_diffs_scope_entityType_idx",
+        "ingestion_diffs_scope_entity_type_idx": {
+          "name": "ingestion_diffs_scope_entity_type_idx",
           "columns": [
             {
               "expression": "scope",
@@ -4555,7 +4543,7 @@
               "nulls": "last"
             },
             {
-              "expression": "entityType",
+              "expression": "entity_type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4568,12 +4556,12 @@
         }
       },
       "foreignKeys": {
-        "ingestion_diffs_ingestionRunId_ingestion_runs_id_fk": {
-          "name": "ingestion_diffs_ingestionRunId_ingestion_runs_id_fk",
+        "ingestion_diffs_ingestion_run_id_ingestion_runs_id_fk": {
+          "name": "ingestion_diffs_ingestion_run_id_ingestion_runs_id_fk",
           "tableFrom": "ingestion_diffs",
           "tableTo": "ingestion_runs",
           "columnsFrom": [
-            "ingestionRunId"
+            "ingestion_run_id"
           ],
           "columnsTo": [
             "id"
@@ -4598,15 +4586,15 @@
           "primaryKey": true,
           "notNull": true
         },
-        "sourceProvider": {
-          "name": "sourceProvider",
+        "source_provider": {
+          "name": "source_provider",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "IngestionRunStatus",
+          "type": "ingestion_run_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -4614,50 +4602,50 @@
         },
         "phase": {
           "name": "phase",
-          "type": "IngestionRunPhase",
+          "type": "ingestion_run_phase",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
-        "phaseStartedAt": {
-          "name": "phaseStartedAt",
+        "phase_started_at": {
+          "name": "phase_started_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "temporalWorkflowId": {
-          "name": "temporalWorkflowId",
+        "temporal_workflow_id": {
+          "name": "temporal_workflow_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "referenceAno": {
-          "name": "referenceAno",
+        "reference_ano": {
+          "name": "reference_ano",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "referenceMes": {
-          "name": "referenceMes",
+        "reference_mes": {
+          "name": "reference_mes",
           "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "startedAt": {
-          "name": "startedAt",
+        "started_at": {
+          "name": "started_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "completedAt": {
-          "name": "completedAt",
+        "completed_at": {
+          "name": "completed_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "promotedAt": {
-          "name": "promotedAt",
+        "promoted_at": {
+          "name": "promoted_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
@@ -4668,14 +4656,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "validationReport": {
-          "name": "validationReport",
+        "validation_report": {
+          "name": "validation_report",
           "type": "json",
           "primaryKey": false,
           "notNull": false
         },
-        "archiveManifest": {
-          "name": "archiveManifest",
+        "archive_manifest": {
+          "name": "archive_manifest",
           "type": "json",
           "primaryKey": false,
           "notNull": false
@@ -4688,17 +4676,17 @@
         }
       },
       "indexes": {
-        "ingestion_runs_sourceProvider_startedAt_idx": {
-          "name": "ingestion_runs_sourceProvider_startedAt_idx",
+        "ingestion_runs_source_provider_started_at_idx": {
+          "name": "ingestion_runs_source_provider_started_at_idx",
           "columns": [
             {
-              "expression": "sourceProvider",
+              "expression": "source_provider",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "startedAt",
+              "expression": "started_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4724,11 +4712,11 @@
           "method": "btree",
           "with": {}
         },
-        "ingestion_runs_temporalWorkflowId_idx": {
-          "name": "ingestion_runs_temporalWorkflowId_idx",
+        "ingestion_runs_temporal_workflow_id_idx": {
+          "name": "ingestion_runs_temporal_workflow_id_idx",
           "columns": [
             {
-              "expression": "temporalWorkflowId",
+              "expression": "temporal_workflow_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4757,41 +4745,41 @@
           "primaryKey": true,
           "notNull": true
         },
-        "ingestionRunId": {
-          "name": "ingestionRunId",
+        "ingestion_run_id": {
+          "name": "ingestion_run_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
         "type": {
           "name": "type",
-          "type": "IngestionSuggestionType",
+          "type": "ingestion_suggestion_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
         "status": {
           "name": "status",
-          "type": "IngestionSuggestionStatus",
+          "type": "ingestion_suggestion_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'PENDING'"
         },
-        "facilityId": {
-          "name": "facilityId",
+        "facility_id": {
+          "name": "facility_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "professionalId": {
-          "name": "professionalId",
+        "professional_id": {
+          "name": "professional_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "facilityProfessionalId": {
-          "name": "facilityProfessionalId",
+        "facility_professional_id": {
+          "name": "facility_professional_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -4809,27 +4797,27 @@
           "notNull": true,
           "default": "'{}'::json"
         },
-        "suggestedAt": {
-          "name": "suggestedAt",
+        "suggested_at": {
+          "name": "suggested_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
         },
-        "resolvedAt": {
-          "name": "resolvedAt",
+        "resolved_at": {
+          "name": "resolved_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
-        "resolvedByUserId": {
-          "name": "resolvedByUserId",
+        "resolved_by_user_id": {
+          "name": "resolved_by_user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "resolutionNote": {
-          "name": "resolutionNote",
+        "resolution_note": {
+          "name": "resolution_note",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -4857,11 +4845,11 @@
           "method": "btree",
           "with": {}
         },
-        "ingestion_suggestions_facilityId_status_idx": {
-          "name": "ingestion_suggestions_facilityId_status_idx",
+        "ingestion_suggestions_facility_id_status_idx": {
+          "name": "ingestion_suggestions_facility_id_status_idx",
           "columns": [
             {
-              "expression": "facilityId",
+              "expression": "facility_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4878,11 +4866,11 @@
           "method": "btree",
           "with": {}
         },
-        "ingestion_suggestions_ingestionRunId_idx": {
-          "name": "ingestion_suggestions_ingestionRunId_idx",
+        "ingestion_suggestions_ingestion_run_id_idx": {
+          "name": "ingestion_suggestions_ingestion_run_id_idx",
           "columns": [
             {
-              "expression": "ingestionRunId",
+              "expression": "ingestion_run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4895,12 +4883,12 @@
         }
       },
       "foreignKeys": {
-        "ingestion_suggestions_ingestionRunId_ingestion_runs_id_fk": {
-          "name": "ingestion_suggestions_ingestionRunId_ingestion_runs_id_fk",
+        "ingestion_suggestions_ingestion_run_id_ingestion_runs_id_fk": {
+          "name": "ingestion_suggestions_ingestion_run_id_ingestion_runs_id_fk",
           "tableFrom": "ingestion_suggestions",
           "tableTo": "ingestion_runs",
           "columnsFrom": [
-            "ingestionRunId"
+            "ingestion_run_id"
           ],
           "columnsTo": [
             "id"
@@ -4908,12 +4896,12 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "ingestion_suggestions_facilityId_facilities_id_fk": {
-          "name": "ingestion_suggestions_facilityId_facilities_id_fk",
+        "ingestion_suggestions_facility_id_facilities_id_fk": {
+          "name": "ingestion_suggestions_facility_id_facilities_id_fk",
           "tableFrom": "ingestion_suggestions",
           "tableTo": "facilities",
           "columnsFrom": [
-            "facilityId"
+            "facility_id"
           ],
           "columnsTo": [
             "id"
@@ -4921,12 +4909,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "ingestion_suggestions_professionalId_professionals_id_fk": {
-          "name": "ingestion_suggestions_professionalId_professionals_id_fk",
+        "ingestion_suggestions_professional_id_professionals_id_fk": {
+          "name": "ingestion_suggestions_professional_id_professionals_id_fk",
           "tableFrom": "ingestion_suggestions",
           "tableTo": "professionals",
           "columnsFrom": [
-            "professionalId"
+            "professional_id"
           ],
           "columnsTo": [
             "id"
@@ -4934,12 +4922,12 @@
           "onDelete": "set null",
           "onUpdate": "no action"
         },
-        "ingestion_suggestions_facilityProfessionalId_facility_professionals_id_fk": {
-          "name": "ingestion_suggestions_facilityProfessionalId_facility_professionals_id_fk",
+        "ingestion_suggestions_facility_professional_id_facility_professionals_id_fk": {
+          "name": "ingestion_suggestions_facility_professional_id_facility_professionals_id_fk",
           "tableFrom": "ingestion_suggestions",
           "tableTo": "facility_professionals",
           "columnsFrom": [
-            "facilityProfessionalId"
+            "facility_professional_id"
           ],
           "columnsTo": [
             "id"
@@ -4964,22 +4952,22 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "eventType": {
-          "name": "eventType",
-          "type": "AuditEventType",
+        "event_type": {
+          "name": "event_type",
+          "type": "audit_event_type",
           "typeSchema": "audit",
           "primaryKey": false,
           "notNull": true
         },
         "severity": {
           "name": "severity",
-          "type": "AuditEventSeverity",
+          "type": "audit_event_severity",
           "typeSchema": "audit",
           "primaryKey": false,
           "notNull": true,
@@ -4991,8 +4979,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "actorId": {
-          "name": "actorId",
+        "actor_id": {
+          "name": "actor_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -5003,8 +4991,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "resourceId": {
-          "name": "resourceId",
+        "resource_id": {
+          "name": "resource_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -5021,20 +5009,20 @@
           "primaryKey": false,
           "notNull": false
         },
-        "ipAddress": {
-          "name": "ipAddress",
+        "ip_address": {
+          "name": "ip_address",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "userAgent": {
-          "name": "userAgent",
+        "user_agent": {
+          "name": "user_agent",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "sessionId": {
-          "name": "sessionId",
+        "session_id": {
+          "name": "session_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -5045,8 +5033,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "errorMessage": {
-          "name": "errorMessage",
+        "error_message": {
+          "name": "error_message",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -5057,8 +5045,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "createdAt": {
-          "name": "createdAt",
+        "created_at": {
+          "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": true,
@@ -5066,11 +5054,11 @@
         }
       },
       "indexes": {
-        "audit_logs_userId_idx": {
-          "name": "audit_logs_userId_idx",
+        "audit_logs_user_id_idx": {
+          "name": "audit_logs_user_id_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5081,11 +5069,11 @@
           "method": "btree",
           "with": {}
         },
-        "audit_logs_eventType_idx": {
-          "name": "audit_logs_eventType_idx",
+        "audit_logs_event_type_idx": {
+          "name": "audit_logs_event_type_idx",
           "columns": [
             {
-              "expression": "eventType",
+              "expression": "event_type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5111,11 +5099,11 @@
           "method": "btree",
           "with": {}
         },
-        "audit_logs_createdAt_idx": {
-          "name": "audit_logs_createdAt_idx",
+        "audit_logs_created_at_idx": {
+          "name": "audit_logs_created_at_idx",
           "columns": [
             {
-              "expression": "createdAt",
+              "expression": "created_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5126,11 +5114,11 @@
           "method": "btree",
           "with": {}
         },
-        "audit_logs_actorId_idx": {
-          "name": "audit_logs_actorId_idx",
+        "audit_logs_actor_id_idx": {
+          "name": "audit_logs_actor_id_idx",
           "columns": [
             {
-              "expression": "actorId",
+              "expression": "actor_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5141,11 +5129,11 @@
           "method": "btree",
           "with": {}
         },
-        "audit_logs_resourceId_idx": {
-          "name": "audit_logs_resourceId_idx",
+        "audit_logs_resource_id_idx": {
+          "name": "audit_logs_resource_id_idx",
           "columns": [
             {
-              "expression": "resourceId",
+              "expression": "resource_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5156,11 +5144,11 @@
           "method": "btree",
           "with": {}
         },
-        "audit_logs_sessionId_idx": {
-          "name": "audit_logs_sessionId_idx",
+        "audit_logs_session_id_idx": {
+          "name": "audit_logs_session_id_idx",
           "columns": [
             {
-              "expression": "sessionId",
+              "expression": "session_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5173,12 +5161,12 @@
         }
       },
       "foreignKeys": {
-        "audit_logs_userId_users_id_fk": {
-          "name": "audit_logs_userId_users_id_fk",
+        "audit_logs_user_id_users_id_fk": {
+          "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -6308,8 +6296,8 @@
     }
   },
   "enums": {
-    "public.AuthSessionDeviceType": {
-      "name": "AuthSessionDeviceType",
+    "public.auth_session_device_type": {
+      "name": "auth_session_device_type",
       "schema": "public",
       "values": [
         "DESKTOP",
@@ -6318,8 +6306,8 @@
         "UNKNOWN"
       ]
     },
-    "public.AuthSessionType": {
-      "name": "AuthSessionType",
+    "public.auth_session_type": {
+      "name": "auth_session_type",
       "schema": "public",
       "values": [
         "WEB",
@@ -6327,18 +6315,18 @@
         "API"
       ]
     },
-    "public.CommercialStatus": {
-      "name": "CommercialStatus",
+    "public.commercial_status": {
+      "name": "commercial_status",
       "schema": "public",
       "values": [
         "REGISTERED",
-        "COMMERCIALLY_ACTIVE",
-        "COMMERCIALLY_SUSPENDED",
-        "COMMERCIALLY_INACTIVE"
+        "ACTIVE",
+        "SUSPENDED",
+        "INACTIVE"
       ]
     },
-    "public.ConformityRecordStatus": {
-      "name": "ConformityRecordStatus",
+    "public.conformity_record_status": {
+      "name": "conformity_record_status",
       "schema": "public",
       "values": [
         "PENDING",
@@ -6348,8 +6336,8 @@
         "EXPIRED"
       ]
     },
-    "public.ConformityStatus": {
-      "name": "ConformityStatus",
+    "public.conformity_status": {
+      "name": "conformity_status",
       "schema": "public",
       "values": [
         "INCOMPLETE",
@@ -6358,8 +6346,8 @@
         "NON_CONFORMING"
       ]
     },
-    "public.ContactType": {
-      "name": "ContactType",
+    "public.contact_type": {
+      "name": "contact_type",
       "schema": "public",
       "values": [
         "PROFESSIONAL",
@@ -6367,8 +6355,8 @@
         "COMPRADOR"
       ]
     },
-    "public.HealthcareProviderShareSource": {
-      "name": "HealthcareProviderShareSource",
+    "public.healthcare_provider_share_source": {
+      "name": "healthcare_provider_share_source",
       "schema": "public",
       "values": [
         "MANUAL",
@@ -6376,8 +6364,8 @@
         "IMPORT"
       ]
     },
-    "public.HealthcareProviderType": {
-      "name": "HealthcareProviderType",
+    "public.healthcare_provider_type": {
+      "name": "healthcare_provider_type",
       "schema": "public",
       "values": [
         "PRIVATE",
@@ -6386,16 +6374,16 @@
         "OTHER"
       ]
     },
-    "public.IngestionDiffScope": {
-      "name": "IngestionDiffScope",
+    "public.ingestion_diff_scope": {
+      "name": "ingestion_diff_scope",
       "schema": "public",
       "values": [
         "WAREHOUSE",
         "CRM"
       ]
     },
-    "public.IngestionRunPhase": {
-      "name": "IngestionRunPhase",
+    "public.ingestion_run_phase": {
+      "name": "ingestion_run_phase",
       "schema": "public",
       "values": [
         "DISCOVERING",
@@ -6411,8 +6399,8 @@
         "FAILED"
       ]
     },
-    "public.IngestionRunStatus": {
-      "name": "IngestionRunStatus",
+    "public.ingestion_run_status": {
+      "name": "ingestion_run_status",
       "schema": "public",
       "values": [
         "RUNNING",
@@ -6420,8 +6408,8 @@
         "FAILED"
       ]
     },
-    "public.IngestionSuggestionStatus": {
-      "name": "IngestionSuggestionStatus",
+    "public.ingestion_suggestion_status": {
+      "name": "ingestion_suggestion_status",
       "schema": "public",
       "values": [
         "PENDING",
@@ -6431,8 +6419,8 @@
         "SUPERSEDED"
       ]
     },
-    "public.IngestionSuggestionType": {
-      "name": "IngestionSuggestionType",
+    "public.ingestion_suggestion_type": {
+      "name": "ingestion_suggestion_type",
       "schema": "public",
       "values": [
         "FACILITY_FIELD_UPDATE",
@@ -6449,8 +6437,8 @@
         "DOCTOR_CLINIC_REMOVAL"
       ]
     },
-    "public.InvitationStatus": {
-      "name": "InvitationStatus",
+    "public.invitation_status": {
+      "name": "invitation_status",
       "schema": "public",
       "values": [
         "PENDING",
@@ -6459,18 +6447,18 @@
         "REVOKED"
       ]
     },
-    "public.PurchaseStatus": {
-      "name": "PurchaseStatus",
+    "public.purchase_status": {
+      "name": "purchase_status",
       "schema": "public",
       "values": [
-        "NAO_COMPRA",
-        "COMPRA",
-        "COMPRA_POUCO",
-        "COMPRA_MUITO"
+        "NON_BUYER",
+        "LOW_BUYER",
+        "REGULAR_BUYER",
+        "HIGH_BUYER"
       ]
     },
-    "public.RelationshipLevel": {
-      "name": "RelationshipLevel",
+    "public.relationship_level": {
+      "name": "relationship_level",
       "schema": "public",
       "values": [
         "LOW",
@@ -6478,8 +6466,8 @@
         "HIGH"
       ]
     },
-    "public.TerritoryApprovalStatus": {
-      "name": "TerritoryApprovalStatus",
+    "public.territory_approval_status": {
+      "name": "territory_approval_status",
       "schema": "public",
       "values": [
         "pending",
@@ -6488,8 +6476,8 @@
         "superseded"
       ]
     },
-    "public.TerritoryApprovalType": {
-      "name": "TerritoryApprovalType",
+    "public.territory_approval_type": {
+      "name": "territory_approval_type",
       "schema": "public",
       "values": [
         "create_territory",
@@ -6498,16 +6486,16 @@
         "clinic_territory_change"
       ]
     },
-    "public.TerritoryAssignmentSource": {
-      "name": "TerritoryAssignmentSource",
+    "public.territory_assignment_source": {
+      "name": "territory_assignment_source",
       "schema": "public",
       "values": [
         "geo",
         "manual"
       ]
     },
-    "public.TerritoryAssignmentStatus": {
-      "name": "TerritoryAssignmentStatus",
+    "public.territory_assignment_status": {
+      "name": "territory_assignment_status",
       "schema": "public",
       "values": [
         "assigned",
@@ -6515,8 +6503,8 @@
         "ambiguous"
       ]
     },
-    "public.TerritoryNodeType": {
-      "name": "TerritoryNodeType",
+    "public.territory_node_type": {
+      "name": "territory_node_type",
       "schema": "public",
       "values": [
         "root",
@@ -6526,8 +6514,8 @@
         "patch"
       ]
     },
-    "public.UserStatus": {
-      "name": "UserStatus",
+    "public.user_status": {
+      "name": "user_status",
       "schema": "public",
       "values": [
         "ACTIVE",
@@ -6536,8 +6524,8 @@
         "PENDING"
       ]
     },
-    "public.VerificationTokenType": {
-      "name": "VerificationTokenType",
+    "public.verification_token_type": {
+      "name": "verification_token_type",
       "schema": "public",
       "values": [
         "EMAIL_VERIFICATION",
@@ -6546,8 +6534,8 @@
         "PHONE_CHANGE"
       ]
     },
-    "audit.AuditEventSeverity": {
-      "name": "AuditEventSeverity",
+    "audit.audit_event_severity": {
+      "name": "audit_event_severity",
       "schema": "audit",
       "values": [
         "INFO",
@@ -6555,8 +6543,8 @@
         "CRITICAL"
       ]
     },
-    "audit.AuditEventType": {
-      "name": "AuditEventType",
+    "audit.audit_event_type": {
+      "name": "audit_event_type",
       "schema": "audit",
       "values": [
         "USER_LOGIN",

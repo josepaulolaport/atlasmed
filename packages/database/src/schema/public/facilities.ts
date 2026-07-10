@@ -30,70 +30,85 @@ export const sectors = pgTable(
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("sectors_isActive_idx").on(t.isActive)]
+  (t) => [index("sectors_is_active_idx").on(t.isActive)]
 );
 
 export const facilities = pgTable(
   "facilities",
   {
+    // --- Identity ---
     id: text("id").primaryKey().$defaultFn(() => createId()),
     displayName: text("name").notNull(),
-    address: text("address"),
-    location: geometryPoint("location"),
-    cnesCode: text("cnes_code"),
     legalName: text("legal_name"),
     tradeName: text("trade_name"),
+
+    // --- Registry provenance ---
+    cnesCode: text("cnes_code"),
+    facilityTypeCode: text("facility_type_code"),
+    isActiveInRegistry: boolean("is_active_in_registry").notNull().default(true),
+    registryDeactivationCode: text("registry_deactivation_code"),
+
+    // --- Tax identifiers ---
+    cnpj: text("cnpj"),
+    cpf: text("cpf"),
+
+    // --- Address ---
+    country: text("country"),
+    state: text("state"),
+    city: text("city"),
+    neighborhood: text("neighborhood"),
     streetAddress: text("street_address"),
     streetNumber: text("street_number"),
     addressComplement: text("address_complement"),
-    neighborhood: text("neighborhood"),
     postalCode: text("postal_code"),
+    location: geometryPoint("location"),
+
+    // --- Contact ---
     phoneNumber: text("phone_number"),
     faxNumber: text("fax_number"),
     email: text("email"),
     websiteUrl: text("website_url"),
-    taxIdCnpj: text("tax_id_cnpj"),
-    taxIdCpf: text("tax_id_cpf"),
-    ownerTaxId: text("owner_tax_id"),
-    facilityTypeCode: text("facility_type_code"),
-    registryDeactivationCode: text("registry_deactivation_code"),
-    isActiveInRegistry: boolean("is_active_in_registry").notNull().default(true),
-    referenceMunicipalityCode: text("reference_municipality_code"),
-    conformityStatus: conformityStatusEnum("conformityStatus").notNull().default("INCOMPLETE"),
+
+    // --- Classification ---
+    primarySectorId: text("primary_sector_id").references(() => sectors.id, { onDelete: "set null" }),
+    conformityStatus: conformityStatusEnum("conformity_status").notNull().default("INCOMPLETE"),
     commercialStatus: commercialStatusEnum("commercial_status"),
     purchaseStatus: purchaseStatusEnum("purchase_status"),
-    city: text("city"),
-    stateCode: text("state_code"),
-    primarySectorId: text("primary_sector_id").references(() => sectors.id, { onDelete: "set null" }),
     imageUrl: text("image_url"),
-    territoryId: text("territoryId").references(() => territories.id, { onDelete: "set null" }),
-    territoryAssignmentStatus: territoryAssignmentStatusEnum("territoryAssignmentStatus").notNull().default("unassigned"),
-    territoryAssignmentSource: territoryAssignmentSourceEnum("territoryAssignmentSource").notNull().default("geo"),
-    sourceProvider: text("sourceProvider"),
-    externalSourceId: text("externalSourceId"),
-    sourceContentHash: text("sourceContentHash"),
-    sourceFirstSeenAt: timestamp("sourceFirstSeenAt"),
-    sourceLastSeenAt: timestamp("sourceLastSeenAt"),
-    sourcePresent: boolean("sourcePresent").notNull().default(false),
-    sourceTracked: boolean("sourceTracked").notNull().default(false),
-    manuallyEditedAt: timestamp("manuallyEditedAt"),
-    deletedAt: timestamp("deletedAt"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+
+    // --- Territory ---
+    territoryId: text("territory_id").references(() => territories.id, { onDelete: "set null" }),
+    territoryAssignmentStatus: territoryAssignmentStatusEnum("territory_assignment_status").notNull().default("unassigned"),
+    territoryAssignmentSource: territoryAssignmentSourceEnum("territory_assignment_source").notNull().default("geo"),
+
+    // --- Source tracking ---
+    sourceProvider: text("source_provider"),
+    externalSourceId: text("external_source_id"),
+    sourceContentHash: text("source_content_hash"),
+    sourceFirstSeenAt: timestamp("source_first_seen_at"),
+    sourceLastSeenAt: timestamp("source_last_seen_at"),
+    sourcePresent: boolean("source_present").notNull().default(false),
+    sourceTracked: boolean("source_tracked").notNull().default(false),
+
+    // --- Lifecycle ---
+    manuallyEditedAt: timestamp("manually_edited_at"),
+    deactivatedAt: timestamp("deactivated_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facilities_sourceProvider_externalSourceId_uidx").on(t.sourceProvider, t.externalSourceId),
-    uniqueIndex("facilities_sourceProvider_cnesCode_uidx").on(t.sourceProvider, t.cnesCode),
-    index("facilities_territoryId_idx").on(t.territoryId),
-    index("facilities_deletedAt_idx").on(t.deletedAt),
-    index("facilities_displayName_idx").on(t.displayName),
-    index("facilities_sourceProvider_sourcePresent_idx").on(t.sourceProvider, t.sourcePresent),
-    index("facilities_territoryAssignmentStatus_idx").on(t.territoryAssignmentStatus),
-    index("facilities_primarySectorId_idx").on(t.primarySectorId),
-    index("facilities_conformityStatus_idx").on(t.conformityStatus),
+    uniqueIndex("facilities_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
+    uniqueIndex("facilities_source_provider_cnes_code_uidx").on(t.sourceProvider, t.cnesCode),
+    index("facilities_territory_id_idx").on(t.territoryId),
+    index("facilities_deactivated_at_idx").on(t.deactivatedAt),
+    index("facilities_name_idx").on(t.displayName),
+    index("facilities_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
+    index("facilities_territory_assignment_status_idx").on(t.territoryAssignmentStatus),
+    index("facilities_primary_sector_id_idx").on(t.primarySectorId),
+    index("facilities_conformity_status_idx").on(t.conformityStatus),
   ]
 );
 
@@ -101,8 +116,8 @@ export const professionals = pgTable(
   "professionals",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    firstName: text("firstName").notNull(),
-    lastName: text("lastName").notNull(),
+    firstName: text("first_name").notNull(),
+    lastName: text("last_name").notNull(),
     fullName: text("full_name"),
     socialName: text("social_name"),
     taxId: text("tax_id"),
@@ -120,24 +135,24 @@ export const professionals = pgTable(
     crmCouncil: text("crm_council"),
     crmNumber: text("crm_number"),
     crmState: text("crm_state"),
-    sourceProvider: text("sourceProvider"),
-    externalSourceId: text("externalSourceId"),
-    sourceContentHash: text("sourceContentHash"),
-    sourceFirstSeenAt: timestamp("sourceFirstSeenAt"),
-    sourceLastSeenAt: timestamp("sourceLastSeenAt"),
-    sourcePresent: boolean("sourcePresent").notNull().default(false),
-    sourceTracked: boolean("sourceTracked").notNull().default(false),
-    manuallyEditedAt: timestamp("manuallyEditedAt"),
-    deletedAt: timestamp("deletedAt"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    sourceProvider: text("source_provider"),
+    externalSourceId: text("external_source_id"),
+    sourceContentHash: text("source_content_hash"),
+    sourceFirstSeenAt: timestamp("source_first_seen_at"),
+    sourceLastSeenAt: timestamp("source_last_seen_at"),
+    sourcePresent: boolean("source_present").notNull().default(false),
+    sourceTracked: boolean("source_tracked").notNull().default(false),
+    manuallyEditedAt: timestamp("manually_edited_at"),
+    deletedAt: timestamp("deleted_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("professionals_sourceProvider_externalSourceId_uidx").on(t.sourceProvider, t.externalSourceId),
-    index("professionals_deletedAt_idx").on(t.deletedAt),
-    index("professionals_lastName_firstName_idx").on(t.lastName, t.firstName),
-    index("professionals_sourceProvider_sourcePresent_idx").on(t.sourceProvider, t.sourcePresent),
-    index("professionals_taxId_idx").on(t.taxId),
+    uniqueIndex("professionals_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
+    index("professionals_deleted_at_idx").on(t.deletedAt),
+    index("professionals_last_name_first_name_idx").on(t.lastName, t.firstName),
+    index("professionals_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
+    index("professionals_tax_id_idx").on(t.taxId),
   ]
 );
 
@@ -145,8 +160,8 @@ export const facilityProfessionals = pgTable(
   "facility_professionals",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    professionalId: text("professionalId").notNull().references(() => professionals.id, { onDelete: "cascade" }),
-    facilityId: text("facilityId").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    professionalId: text("professional_id").notNull().references(() => professionals.id, { onDelete: "cascade" }),
+    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
     occupationCode: text("occupation_code").notNull().default("LEGACY"),
     specialtyLabel: text("specialty_label"),
     employmentTypeCode: text("employment_type_code"),
@@ -157,31 +172,31 @@ export const facilityProfessionals = pgTable(
     isPartner: boolean("is_partner").notNull().default(false),
     relationshipLevel: relationshipLevelEnum("relationship_level"),
     notes: text("notes"),
-    sourceActive: boolean("sourceActive").notNull().default(false),
-    sourceFirstSeenAt: timestamp("sourceFirstSeenAt"),
-    sourceLastSeenAt: timestamp("sourceLastSeenAt"),
-    confirmedAt: timestamp("confirmedAt"),
-    confirmedByUserId: text("confirmedByUserId"),
-    endedAt: timestamp("endedAt"),
-    endedByUserId: text("endedByUserId"),
-    endReason: text("endReason"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    sourceActive: boolean("source_active").notNull().default(false),
+    sourceFirstSeenAt: timestamp("source_first_seen_at"),
+    sourceLastSeenAt: timestamp("source_last_seen_at"),
+    confirmedAt: timestamp("confirmed_at"),
+    confirmedByUserId: text("confirmed_by_user_id"),
+    endedAt: timestamp("ended_at"),
+    endedByUserId: text("ended_by_user_id"),
+    endReason: text("end_reason"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facility_professionals_facilityId_professionalId_occupationCode_uidx").on(
+    uniqueIndex("facility_professionals_facility_id_professional_id_occupation_code_uidx").on(
       t.facilityId,
       t.professionalId,
       t.occupationCode
     ),
-    index("facility_professionals_professionalId_idx").on(t.professionalId),
-    index("facility_professionals_facilityId_idx").on(t.facilityId),
-    index("facility_professionals_facilityId_sourceActive_endedAt_idx").on(
+    index("facility_professionals_professional_id_idx").on(t.professionalId),
+    index("facility_professionals_facility_id_idx").on(t.facilityId),
+    index("facility_professionals_facility_id_source_active_ended_at_idx").on(
       t.facilityId,
       t.sourceActive,
       t.endedAt
     ),
-    index("facility_professionals_facilityId_confirmedAt_endedAt_idx").on(
+    index("facility_professionals_facility_id_confirmed_at_ended_at_idx").on(
       t.facilityId,
       t.confirmedAt,
       t.endedAt
@@ -193,7 +208,7 @@ export const facilityRepresentatives = pgTable(
   "facility_representatives",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facilityId").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
     representativeName: text("representative_name").notNull(),
     roleTitle: text("role_title"),
     email: text("email"),
@@ -209,16 +224,16 @@ export const facilityRepresentatives = pgTable(
     confirmedByUserId: text("confirmed_by_user_id"),
     endedAt: timestamp("ended_at"),
     manuallyEditedAt: timestamp("manually_edited_at"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facility_representatives_facilityId_externalSourceKey_uidx").on(
+    uniqueIndex("facility_representatives_facility_id_external_source_key_uidx").on(
       t.facilityId,
       t.externalSourceKey
     ),
-    index("facility_representatives_facilityId_idx").on(t.facilityId),
-    index("facility_representatives_facilityId_sourceActive_endedAt_idx").on(
+    index("facility_representatives_facility_id_idx").on(t.facilityId),
+    index("facility_representatives_facility_id_source_active_ended_at_idx").on(
       t.facilityId,
       t.sourceActive,
       t.endedAt
@@ -230,19 +245,19 @@ export const facilityConsultantAssignments = pgTable(
   "facility_consultant_assignments",
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
-    facilityId: text("facilityId").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    userId: text("userId").notNull(),
+    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
     assignedByUserId: text("assigned_by_user_id"),
     endReason: text("end_reason"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("facility_consultant_assignments_facilityId_idx").on(t.facilityId),
-    index("facility_consultant_assignments_userId_idx").on(t.userId),
-    index("facility_consultant_assignments_facilityId_endedAt_idx").on(t.facilityId, t.endedAt),
+    index("facility_consultant_assignments_facility_id_idx").on(t.facilityId),
+    index("facility_consultant_assignments_user_id_idx").on(t.userId),
+    index("facility_consultant_assignments_facility_id_ended_at_idx").on(t.facilityId, t.endedAt),
   ]
 );
 
@@ -253,10 +268,10 @@ export const healthcareProviders = pgTable(
     name: text("name").notNull(),
     type: healthcareProviderTypeEnum("type").notNull(),
     isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
-  (t) => [index("healthcare_providers_isActive_idx").on(t.isActive)]
+  (t) => [index("healthcare_providers_is_active_idx").on(t.isActive)]
 );
 
 export const facilityHealthcareProviderShares = pgTable(
@@ -270,16 +285,16 @@ export const facilityHealthcareProviderShares = pgTable(
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
     sourceLastSeenAt: timestamp("source_last_seen_at"),
     manuallyEditedAt: timestamp("manually_edited_at"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("facility_healthcare_provider_shares_facilityId_providerId_uidx").on(
+    uniqueIndex("facility_healthcare_provider_shares_facility_id_provider_id_uidx").on(
       t.facilityId,
       t.healthcareProviderId
     ),
-    index("facility_healthcare_provider_shares_facilityId_idx").on(t.facilityId),
-    index("facility_healthcare_provider_shares_healthcareProviderId_idx").on(t.healthcareProviderId),
+    index("facility_healthcare_provider_shares_facility_id_idx").on(t.facilityId),
+    index("facility_healthcare_provider_shares_healthcare_provider_id_idx").on(t.healthcareProviderId),
   ]
 );
 
@@ -292,12 +307,12 @@ export const conformityRequirements = pgTable(
     description: text("description"),
     sectorId: text("sector_id").references(() => sectors.id, { onDelete: "set null" }),
     isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("conformity_requirements_sectorId_idx").on(t.sectorId),
-    index("conformity_requirements_isActive_idx").on(t.isActive),
+    index("conformity_requirements_sector_id_idx").on(t.sectorId),
+    index("conformity_requirements_is_active_idx").on(t.isActive),
   ]
 );
 
@@ -312,13 +327,13 @@ export const conformityRecords = pgTable(
     validatedAt: timestamp("validated_at"),
     expiresAt: timestamp("expires_at"),
     validatedByUserId: text("validated_by_user_id"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("conformity_records_facilityId_requirementId_uidx").on(t.facilityId, t.requirementId),
-    index("conformity_records_facilityId_idx").on(t.facilityId),
-    index("conformity_records_requirementId_idx").on(t.requirementId),
+    uniqueIndex("conformity_records_facility_id_requirement_id_uidx").on(t.facilityId, t.requirementId),
+    index("conformity_records_facility_id_idx").on(t.facilityId),
+    index("conformity_records_requirement_id_idx").on(t.requirementId),
     index("conformity_records_status_idx").on(t.status),
   ]
 );

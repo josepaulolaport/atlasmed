@@ -1,7 +1,6 @@
 export interface SanitizedFacilityRecord {
   externalSourceId: string;
   name: string;
-  address: string | null;
   lat: number | null;
   lng: number | null;
   contentHash: string;
