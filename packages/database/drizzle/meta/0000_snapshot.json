@@ -1,248 +1,9 @@
 {
-  "id": "e0da69ac-de97-4179-afc1-362be1e69f8b",
+  "id": "26d02a36-32a6-4e9b-a02e-8275e152da8a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.audit_logs": {
-      "name": "audit_logs",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "userId": {
-          "name": "userId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "eventType": {
-          "name": "eventType",
-          "type": "AuditEventType",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "severity": {
-          "name": "severity",
-          "type": "AuditEventSeverity",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'INFO'"
-        },
-        "actor": {
-          "name": "actor",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "actorId": {
-          "name": "actorId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "resource": {
-          "name": "resource",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "resourceId": {
-          "name": "resourceId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "action": {
-          "name": "action",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "details": {
-          "name": "details",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ipAddress": {
-          "name": "ipAddress",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "userAgent": {
-          "name": "userAgent",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sessionId": {
-          "name": "sessionId",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "outcome": {
-          "name": "outcome",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "errorMessage": {
-          "name": "errorMessage",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "json",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "audit_logs_userId_idx": {
-          "name": "audit_logs_userId_idx",
-          "columns": [
-            {
-              "expression": "userId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_logs_eventType_idx": {
-          "name": "audit_logs_eventType_idx",
-          "columns": [
-            {
-              "expression": "eventType",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_logs_severity_idx": {
-          "name": "audit_logs_severity_idx",
-          "columns": [
-            {
-              "expression": "severity",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_logs_createdAt_idx": {
-          "name": "audit_logs_createdAt_idx",
-          "columns": [
-            {
-              "expression": "createdAt",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_logs_actorId_idx": {
-          "name": "audit_logs_actorId_idx",
-          "columns": [
-            {
-              "expression": "actorId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_logs_resourceId_idx": {
-          "name": "audit_logs_resourceId_idx",
-          "columns": [
-            {
-              "expression": "resourceId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "audit_logs_sessionId_idx": {
-          "name": "audit_logs_sessionId_idx",
-          "columns": [
-            {
-              "expression": "sessionId",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "audit_logs_userId_users_id_fk": {
-          "name": "audit_logs_userId_users_id_fk",
-          "tableFrom": "audit_logs",
-          "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.invitations": {
       "name": "invitations",
       "schema": "",
@@ -5193,6 +4954,245 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "audit.audit_logs": {
+      "name": "audit_logs",
+      "schema": "audit",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eventType": {
+          "name": "eventType",
+          "type": "AuditEventType",
+          "typeSchema": "audit",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "AuditEventSeverity",
+          "typeSchema": "audit",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'INFO'"
+        },
+        "actor": {
+          "name": "actor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "actorId": {
+          "name": "actorId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resource": {
+          "name": "resource",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resourceId": {
+          "name": "resourceId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ipAddress": {
+          "name": "ipAddress",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "userAgent": {
+          "name": "userAgent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sessionId": {
+          "name": "sessionId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "errorMessage": {
+          "name": "errorMessage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "json",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "createdAt": {
+          "name": "createdAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "audit_logs_userId_idx": {
+          "name": "audit_logs_userId_idx",
+          "columns": [
+            {
+              "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_logs_eventType_idx": {
+          "name": "audit_logs_eventType_idx",
+          "columns": [
+            {
+              "expression": "eventType",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_logs_severity_idx": {
+          "name": "audit_logs_severity_idx",
+          "columns": [
+            {
+              "expression": "severity",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_logs_createdAt_idx": {
+          "name": "audit_logs_createdAt_idx",
+          "columns": [
+            {
+              "expression": "createdAt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_logs_actorId_idx": {
+          "name": "audit_logs_actorId_idx",
+          "columns": [
+            {
+              "expression": "actorId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_logs_resourceId_idx": {
+          "name": "audit_logs_resourceId_idx",
+          "columns": [
+            {
+              "expression": "resourceId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_logs_sessionId_idx": {
+          "name": "audit_logs_sessionId_idx",
+          "columns": [
+            {
+              "expression": "sessionId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_logs_userId_users_id_fk": {
+          "name": "audit_logs_userId_users_id_fk",
+          "tableFrom": "audit_logs",
+          "tableTo": "users",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "registry.agreement_types": {
       "name": "agreement_types",
       "schema": "registry",
@@ -6308,59 +6308,6 @@
     }
   },
   "enums": {
-    "public.AuditEventSeverity": {
-      "name": "AuditEventSeverity",
-      "schema": "public",
-      "values": [
-        "INFO",
-        "WARNING",
-        "CRITICAL"
-      ]
-    },
-    "public.AuditEventType": {
-      "name": "AuditEventType",
-      "schema": "public",
-      "values": [
-        "USER_LOGIN",
-        "USER_LOGOUT",
-        "USER_REGISTER",
-        "USER_INVITE",
-        "USER_ACCEPT_INVITE",
-        "USER_DEACTIVATE",
-        "USER_ACTIVATE",
-        "USER_SUSPEND",
-        "USER_UNSUSPEND",
-        "USER_MANAGER_ASSIGNED",
-        "USER_MANAGER_REMOVED",
-        "USER_TERRITORY_ASSIGNED",
-        "USER_TERRITORY_REVOKED",
-        "PASSWORD_CHANGE",
-        "PASSWORD_RESET_REQUEST",
-        "PASSWORD_RESET_COMPLETE",
-        "EMAIL_CHANGE",
-        "PHONE_CHANGE",
-        "EMAIL_VERIFY",
-        "PHONE_VERIFY",
-        "ROLE_CHANGE",
-        "SESSION_CREATE",
-        "SESSION_REVOKE",
-        "PERMISSION_GRANT",
-        "PERMISSION_REVOKE",
-        "TWO_FACTOR_ENABLE",
-        "TWO_FACTOR_DISABLE",
-        "SUSPICIOUS_ACTIVITY",
-        "DATA_ACCESS",
-        "DATA_EXPORT",
-        "REGISTRY_INGESTION_STARTED",
-        "REGISTRY_INGESTION_COMPLETED",
-        "REGISTRY_SUGGESTION_APPROVED",
-        "REGISTRY_SUGGESTION_REJECTED",
-        "DOCTOR_CLINIC_CONFIRMED",
-        "DOCTOR_CLINIC_ASSOCIATION_ENDED",
-        "DOCTOR_CLINIC_MANUAL_ASSOCIATED",
-        "CLINIC_REACTIVATED"
-      ]
-    },
     "public.AuthSessionDeviceType": {
       "name": "AuthSessionDeviceType",
       "schema": "public",
@@ -6598,9 +6545,63 @@
         "EMAIL_CHANGE",
         "PHONE_CHANGE"
       ]
+    },
+    "audit.AuditEventSeverity": {
+      "name": "AuditEventSeverity",
+      "schema": "audit",
+      "values": [
+        "INFO",
+        "WARNING",
+        "CRITICAL"
+      ]
+    },
+    "audit.AuditEventType": {
+      "name": "AuditEventType",
+      "schema": "audit",
+      "values": [
+        "USER_LOGIN",
+        "USER_LOGOUT",
+        "USER_REGISTER",
+        "USER_INVITE",
+        "USER_ACCEPT_INVITE",
+        "USER_DEACTIVATE",
+        "USER_ACTIVATE",
+        "USER_SUSPEND",
+        "USER_UNSUSPEND",
+        "USER_MANAGER_ASSIGNED",
+        "USER_MANAGER_REMOVED",
+        "USER_TERRITORY_ASSIGNED",
+        "USER_TERRITORY_REVOKED",
+        "PASSWORD_CHANGE",
+        "PASSWORD_RESET_REQUEST",
+        "PASSWORD_RESET_COMPLETE",
+        "EMAIL_CHANGE",
+        "PHONE_CHANGE",
+        "EMAIL_VERIFY",
+        "PHONE_VERIFY",
+        "ROLE_CHANGE",
+        "SESSION_CREATE",
+        "SESSION_REVOKE",
+        "PERMISSION_GRANT",
+        "PERMISSION_REVOKE",
+        "TWO_FACTOR_ENABLE",
+        "TWO_FACTOR_DISABLE",
+        "SUSPICIOUS_ACTIVITY",
+        "DATA_ACCESS",
+        "DATA_EXPORT",
+        "REGISTRY_INGESTION_STARTED",
+        "REGISTRY_INGESTION_COMPLETED",
+        "REGISTRY_SUGGESTION_APPROVED",
+        "REGISTRY_SUGGESTION_REJECTED",
+        "DOCTOR_CLINIC_CONFIRMED",
+        "DOCTOR_CLINIC_ASSOCIATION_ENDED",
+        "DOCTOR_CLINIC_MANUAL_ASSOCIATED",
+        "CLINIC_REACTIVATED"
+      ]
     }
   },
   "schemas": {
+    "audit": "audit",
     "registry": "registry"
   },
   "sequences": {},

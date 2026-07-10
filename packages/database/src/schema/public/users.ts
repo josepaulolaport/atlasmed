@@ -16,8 +16,6 @@ import {
   authSessionTypeEnum,
   verificationTokenTypeEnum,
   invitationStatusEnum,
-  auditEventTypeEnum,
-  auditEventSeverityEnum,
 } from "./enums";
 
 export const roles = pgTable(
@@ -221,38 +219,6 @@ export const permissions = pgTable(
   ]
 );
 
-export const auditLogs = pgTable(
-  "audit_logs",
-  {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    userId: text("userId").references(() => users.id, { onDelete: "set null" }),
-    eventType: auditEventTypeEnum("eventType").notNull(),
-    severity: auditEventSeverityEnum("severity").notNull().default("INFO"),
-    actor: text("actor"),
-    actorId: text("actorId"),
-    resource: text("resource"),
-    resourceId: text("resourceId"),
-    action: text("action").notNull(),
-    details: json("details"),
-    ipAddress: text("ipAddress"),
-    userAgent: text("userAgent"),
-    sessionId: text("sessionId"),
-    outcome: text("outcome"),
-    errorMessage: text("errorMessage"),
-    metadata: json("metadata"),
-    createdAt: timestamp("createdAt").notNull().defaultNow(),
-  },
-  (t) => [
-    index("audit_logs_userId_idx").on(t.userId),
-    index("audit_logs_eventType_idx").on(t.eventType),
-    index("audit_logs_severity_idx").on(t.severity),
-    index("audit_logs_createdAt_idx").on(t.createdAt),
-    index("audit_logs_actorId_idx").on(t.actorId),
-    index("audit_logs_resourceId_idx").on(t.resourceId),
-    index("audit_logs_sessionId_idx").on(t.sessionId),
-  ]
-);
-
 // --- Relations ---
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -271,7 +237,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   sessions: many(sessions),
   passwordResets: many(passwordResets),
   verificationTokens: many(verificationTokens),
-  auditLogs: many(auditLogs),
   sentInvitations: many(invitations, { relationName: "InvitedByUser" }),
   managerInvitations: many(invitations, { relationName: "InvitationManager" }),
   permissions: many(permissions),
@@ -305,8 +270,4 @@ export const invitationsRelations = relations(invitations, ({ one }) => ({
 
 export const permissionsRelations = relations(permissions, ({ one }) => ({
   user: one(users, { fields: [permissions.userId], references: [users.id] }),
-}));
-
-export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
-  user: one(users, { fields: [auditLogs.userId], references: [users.id] }),
 }));

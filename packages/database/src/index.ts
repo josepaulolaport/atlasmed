@@ -1,13 +1,16 @@
 export { createDatabase, type Database } from "./client";
 
 export * from "./schema/public/index";
+export * from "./schema/audit/index";
 export * from "./schema/registry/index";
 export * from "./types/geometry";
 
-// Explicit enum value types for backward-compat with callers that imported from @prisma/client
+// Explicit enum value types for backward-compat
 import {
   auditEventTypeEnum,
   auditEventSeverityEnum,
+} from "./schema/audit/index";
+import {
   userStatusEnum,
   invitationStatusEnum,
   ingestionRunStatusEnum,

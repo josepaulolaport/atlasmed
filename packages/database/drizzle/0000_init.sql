@@ -1,7 +1,7 @@
+CREATE SCHEMA "audit";
+--> statement-breakpoint
 CREATE SCHEMA "registry";
 --> statement-breakpoint
-CREATE TYPE "public"."AuditEventSeverity" AS ENUM('INFO', 'WARNING', 'CRITICAL');--> statement-breakpoint
-CREATE TYPE "public"."AuditEventType" AS ENUM('USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTER', 'USER_INVITE', 'USER_ACCEPT_INVITE', 'USER_DEACTIVATE', 'USER_ACTIVATE', 'USER_SUSPEND', 'USER_UNSUSPEND', 'USER_MANAGER_ASSIGNED', 'USER_MANAGER_REMOVED', 'USER_TERRITORY_ASSIGNED', 'USER_TERRITORY_REVOKED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_COMPLETE', 'EMAIL_CHANGE', 'PHONE_CHANGE', 'EMAIL_VERIFY', 'PHONE_VERIFY', 'ROLE_CHANGE', 'SESSION_CREATE', 'SESSION_REVOKE', 'PERMISSION_GRANT', 'PERMISSION_REVOKE', 'TWO_FACTOR_ENABLE', 'TWO_FACTOR_DISABLE', 'SUSPICIOUS_ACTIVITY', 'DATA_ACCESS', 'DATA_EXPORT', 'REGISTRY_INGESTION_STARTED', 'REGISTRY_INGESTION_COMPLETED', 'REGISTRY_SUGGESTION_APPROVED', 'REGISTRY_SUGGESTION_REJECTED', 'DOCTOR_CLINIC_CONFIRMED', 'DOCTOR_CLINIC_ASSOCIATION_ENDED', 'DOCTOR_CLINIC_MANUAL_ASSOCIATED', 'CLINIC_REACTIVATED');--> statement-breakpoint
 CREATE TYPE "public"."AuthSessionDeviceType" AS ENUM('DESKTOP', 'MOBILE', 'TABLET', 'UNKNOWN');--> statement-breakpoint
 CREATE TYPE "public"."AuthSessionType" AS ENUM('WEB', 'MOBILE', 'API');--> statement-breakpoint
 CREATE TYPE "public"."CommercialStatus" AS ENUM('REGISTERED', 'COMMERCIALLY_ACTIVE', 'COMMERCIALLY_SUSPENDED', 'COMMERCIALLY_INACTIVE');--> statement-breakpoint
@@ -25,26 +25,8 @@ CREATE TYPE "public"."TerritoryAssignmentStatus" AS ENUM('assigned', 'unassigned
 CREATE TYPE "public"."TerritoryNodeType" AS ENUM('root', 'region', 'state', 'intermediate', 'patch');--> statement-breakpoint
 CREATE TYPE "public"."UserStatus" AS ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING');--> statement-breakpoint
 CREATE TYPE "public"."VerificationTokenType" AS ENUM('EMAIL_VERIFICATION', 'PHONE_VERIFICATION', 'EMAIL_CHANGE', 'PHONE_CHANGE');--> statement-breakpoint
-CREATE TABLE "audit_logs" (
-	"id" text PRIMARY KEY NOT NULL,
-	"userId" text,
-	"eventType" "AuditEventType" NOT NULL,
-	"severity" "AuditEventSeverity" DEFAULT 'INFO' NOT NULL,
-	"actor" text,
-	"actorId" text,
-	"resource" text,
-	"resourceId" text,
-	"action" text NOT NULL,
-	"details" json,
-	"ipAddress" text,
-	"userAgent" text,
-	"sessionId" text,
-	"outcome" text,
-	"errorMessage" text,
-	"metadata" json,
-	"createdAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
+CREATE TYPE "audit"."AuditEventSeverity" AS ENUM('INFO', 'WARNING', 'CRITICAL');--> statement-breakpoint
+CREATE TYPE "audit"."AuditEventType" AS ENUM('USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTER', 'USER_INVITE', 'USER_ACCEPT_INVITE', 'USER_DEACTIVATE', 'USER_ACTIVATE', 'USER_SUSPEND', 'USER_UNSUSPEND', 'USER_MANAGER_ASSIGNED', 'USER_MANAGER_REMOVED', 'USER_TERRITORY_ASSIGNED', 'USER_TERRITORY_REVOKED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_COMPLETE', 'EMAIL_CHANGE', 'PHONE_CHANGE', 'EMAIL_VERIFY', 'PHONE_VERIFY', 'ROLE_CHANGE', 'SESSION_CREATE', 'SESSION_REVOKE', 'PERMISSION_GRANT', 'PERMISSION_REVOKE', 'TWO_FACTOR_ENABLE', 'TWO_FACTOR_DISABLE', 'SUSPICIOUS_ACTIVITY', 'DATA_ACCESS', 'DATA_EXPORT', 'REGISTRY_INGESTION_STARTED', 'REGISTRY_INGESTION_COMPLETED', 'REGISTRY_SUGGESTION_APPROVED', 'REGISTRY_SUGGESTION_REJECTED', 'DOCTOR_CLINIC_CONFIRMED', 'DOCTOR_CLINIC_ASSOCIATION_ENDED', 'DOCTOR_CLINIC_MANUAL_ASSOCIATED', 'CLINIC_REACTIVATED');--> statement-breakpoint
 CREATE TABLE "invitations" (
 	"id" text PRIMARY KEY NOT NULL,
 	"email" text,
@@ -513,6 +495,26 @@ CREATE TABLE "ingestion_suggestions" (
 	"resolutionNote" text
 );
 --> statement-breakpoint
+CREATE TABLE "audit"."audit_logs" (
+	"id" text PRIMARY KEY NOT NULL,
+	"userId" text,
+	"eventType" "audit"."AuditEventType" NOT NULL,
+	"severity" "audit"."AuditEventSeverity" DEFAULT 'INFO' NOT NULL,
+	"actor" text,
+	"actorId" text,
+	"resource" text,
+	"resourceId" text,
+	"action" text NOT NULL,
+	"details" json,
+	"ipAddress" text,
+	"userAgent" text,
+	"sessionId" text,
+	"outcome" text,
+	"errorMessage" text,
+	"metadata" json,
+	"createdAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "registry"."agreement_types" (
 	"agreement_code" text PRIMARY KEY NOT NULL,
 	"agreement_name" text NOT NULL,
@@ -710,7 +712,6 @@ CREATE TABLE "registry"."states" (
 	"updated_at" timestamp
 );
 --> statement-breakpoint
-ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_roleId_roles_id_fk" FOREIGN KEY ("roleId") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_invitedByUserId_users_id_fk" FOREIGN KEY ("invitedByUserId") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_managerId_users_id_fk" FOREIGN KEY ("managerId") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -743,13 +744,7 @@ ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_ingest
 ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_facilityId_facilities_id_fk" FOREIGN KEY ("facilityId") REFERENCES "public"."facilities"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_professionalId_professionals_id_fk" FOREIGN KEY ("professionalId") REFERENCES "public"."professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_facilityProfessionalId_facility_professionals_id_fk" FOREIGN KEY ("facilityProfessionalId") REFERENCES "public"."facility_professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "audit_logs_userId_idx" ON "audit_logs" USING btree ("userId");--> statement-breakpoint
-CREATE INDEX "audit_logs_eventType_idx" ON "audit_logs" USING btree ("eventType");--> statement-breakpoint
-CREATE INDEX "audit_logs_severity_idx" ON "audit_logs" USING btree ("severity");--> statement-breakpoint
-CREATE INDEX "audit_logs_createdAt_idx" ON "audit_logs" USING btree ("createdAt");--> statement-breakpoint
-CREATE INDEX "audit_logs_actorId_idx" ON "audit_logs" USING btree ("actorId");--> statement-breakpoint
-CREATE INDEX "audit_logs_resourceId_idx" ON "audit_logs" USING btree ("resourceId");--> statement-breakpoint
-CREATE INDEX "audit_logs_sessionId_idx" ON "audit_logs" USING btree ("sessionId");--> statement-breakpoint
+ALTER TABLE "audit"."audit_logs" ADD CONSTRAINT "audit_logs_userId_users_id_fk" FOREIGN KEY ("userId") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "invitations_email_idx" ON "invitations" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "invitations_phoneNumber_idx" ON "invitations" USING btree ("phoneNumber");--> statement-breakpoint
 CREATE INDEX "invitations_tokenHash_idx" ON "invitations" USING btree ("tokenHash");--> statement-breakpoint
@@ -847,4 +842,11 @@ CREATE INDEX "ingestion_runs_status_idx" ON "ingestion_runs" USING btree ("statu
 CREATE INDEX "ingestion_runs_temporalWorkflowId_idx" ON "ingestion_runs" USING btree ("temporalWorkflowId");--> statement-breakpoint
 CREATE INDEX "ingestion_suggestions_status_type_idx" ON "ingestion_suggestions" USING btree ("status","type");--> statement-breakpoint
 CREATE INDEX "ingestion_suggestions_facilityId_status_idx" ON "ingestion_suggestions" USING btree ("facilityId","status");--> statement-breakpoint
-CREATE INDEX "ingestion_suggestions_ingestionRunId_idx" ON "ingestion_suggestions" USING btree ("ingestionRunId");
+CREATE INDEX "ingestion_suggestions_ingestionRunId_idx" ON "ingestion_suggestions" USING btree ("ingestionRunId");--> statement-breakpoint
+CREATE INDEX "audit_logs_userId_idx" ON "audit"."audit_logs" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "audit_logs_eventType_idx" ON "audit"."audit_logs" USING btree ("eventType");--> statement-breakpoint
+CREATE INDEX "audit_logs_severity_idx" ON "audit"."audit_logs" USING btree ("severity");--> statement-breakpoint
+CREATE INDEX "audit_logs_createdAt_idx" ON "audit"."audit_logs" USING btree ("createdAt");--> statement-breakpoint
+CREATE INDEX "audit_logs_actorId_idx" ON "audit"."audit_logs" USING btree ("actorId");--> statement-breakpoint
+CREATE INDEX "audit_logs_resourceId_idx" ON "audit"."audit_logs" USING btree ("resourceId");--> statement-breakpoint
+CREATE INDEX "audit_logs_sessionId_idx" ON "audit"."audit_logs" USING btree ("sessionId");
