@@ -1,5 +1,5 @@
 import { REGISTRY_TABLES } from "@atlasmed/cnes-ingestion";
-import { facilities, professionals, ingestionRuns } from "@atlasmed/database";
+import { facilities, professionals, cnesRuns } from "@atlasmed/database";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../infrastructure/db";
 import { updateIngestionRunPhase } from "./discover-download.activities";
@@ -13,7 +13,8 @@ export async function reconcileCrmDiffActivity(input: {
   ingestionRunId: string;
 }): Promise<Record<string, unknown>> {
   await updateIngestionRunPhase(input.ingestionRunId, "RECONCILING");
-  return reconcileCrmFromStaging(input) as Promise<Record<string, unknown>>;
+  const stats = await reconcileCrmFromStaging(input);
+  return stats as unknown as Record<string, unknown>;
 }
 
 export async function reconcileWarehouseDiffActivity(_input: {
@@ -194,11 +195,11 @@ export async function finalizeIngestionRunActivity(input: {
   stats: Record<string, unknown>;
 }): Promise<void> {
   await db
-    .update(ingestionRuns)
+    .update(cnesRuns)
     .set({
       status: "COMPLETED",
       completedAt: new Date(),
       stats: input.stats as object,
     })
-    .where(eq(ingestionRuns.id, input.ingestionRunId));
+    .where(eq(cnesRuns.id, input.ingestionRunId));
 }

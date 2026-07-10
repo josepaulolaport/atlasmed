@@ -20,7 +20,8 @@ const mockLimit = mock(() =>
   Promise.resolve(mockSelectResult !== null ? [mockSelectResult] : [])
 );
 const mockSelectWhere = mock(() => ({ limit: mockLimit }));
-const mockFromInner = mock(() => ({ where: mockSelectWhere }));
+const mockInnerJoin = mock(() => ({ where: mockSelectWhere }));
+const mockFromInner = mock(() => ({ where: mockSelectWhere, innerJoin: mockInnerJoin }));
 const mockSelect = mock(() => ({ from: mockFromInner }));
 
 const mockUpdateWhere = mock((expr: any) => {
@@ -63,6 +64,7 @@ describe("DrizzlePasswordResetRepository", () => {
     mockLimit.mockClear();
     mockSelectWhere.mockClear();
     mockFromInner.mockClear();
+    mockInnerJoin.mockClear();
     mockSelect.mockClear();
     mockUpdateWhere.mockClear();
     mockSet.mockClear();

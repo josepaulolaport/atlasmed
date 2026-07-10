@@ -155,6 +155,7 @@ Examples:
 - Delete branch after merge — locally AND remotely.
 - Never commit directly to `main`.
 - Never force-push to `main`.
+- **All four CI jobs must pass before merge.** GitHub ruleset `Protect main` (`.github/rulesets/protect-main.json`) enforces this on the remote. Local pre-push hooks are not sufficient on their own.
 
 ### Cleanup cadence (weekly)
 
@@ -170,7 +171,11 @@ For `experiment/` branches older than 7 days, delete regardless of merge status.
 
 ### Enforcement
 
-Pre-commit + pre-push hooks reject direct commits to `main` and branch names that don't match the pattern. Install with `./scripts/install-git-hooks.sh` (run once per clone / worktree).
+- **GitHub:** ruleset `Protect main` requires PRs to `main` and passing status checks (`Packages — typecheck`, `API — typecheck + test`, `Web — build`, `Workers — typecheck + test`). Apply or update with:
+  ```bash
+  gh api repos/josepaulolaport/atlasmed/rulesets -X POST --input .github/rulesets/protect-main.json
+  ```
+- **Local:** pre-commit + pre-push hooks reject direct commits to `main` and branch names that don't match the pattern. Install with `./scripts/install-git-hooks.sh` (run once per clone / worktree).
 
 ## Behavior rules
 

@@ -70,7 +70,13 @@ describe("InviteUserUseCase", () => {
       ),
     });
 
-    mockRoleRepository = createMockRoleRepository();
+    mockRoleRepository = createMockRoleRepository({
+      findById: mock(async () => ({
+        id: "role-123",
+        name: "ADMIN",
+        priority: ROLE_PRIORITY_BY_NAME.ADMIN,
+      })),
+    });
 
     inviteUserUseCase = new InviteUserUseCase({
       inviteRepository: mockInviteRepository,
@@ -388,7 +394,13 @@ describe("InviteUserUseCase", () => {
       setupInviter("MANAGER");
       setupTargetRole("REP");
 
-      await expect(inviteUserUseCase.execute(inviteParams)).resolves.toBeDefined();
+      await expect(
+        inviteUserUseCase.execute({
+          ...inviteParams,
+          managerId: "manager-123",
+          repTerritoryId: "territory-rep-1",
+        })
+      ).resolves.toBeDefined();
     });
 
     it("should reject MANAGER inviting MANAGER", async () => {

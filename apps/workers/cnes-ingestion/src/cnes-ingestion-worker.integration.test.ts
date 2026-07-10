@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { ingestionRuns, ingestionDiffs, ingestionSuggestions, facilities } from "@atlasmed/database";
+import { cnesRuns, cnesDiffs, cnesSuggestions, facilities } from "@atlasmed/database";
 import { eq, and, sql } from "drizzle-orm";
 
 function loadApiEnv(): void {
@@ -10,21 +10,25 @@ function loadApiEnv(): void {
   }
 
   const envPath = resolve(import.meta.dir, "../../../api/.env");
-  const contents = readFileSync(envPath, "utf8");
-  for (const line of contents.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
+  try {
+    const contents = readFileSync(envPath, "utf8");
+    for (const line of contents.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+      const separator = trimmed.indexOf("=");
+      if (separator === -1) {
+        continue;
+      }
+      const key = trimmed.slice(0, separator);
+      const value = trimmed.slice(separator + 1).replace(/^"|"$/g, "");
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
     }
-    const separator = trimmed.indexOf("=");
-    if (separator === -1) {
-      continue;
-    }
-    const key = trimmed.slice(0, separator);
-    const value = trimmed.slice(separator + 1).replace(/^"|"$/g, "");
-    if (!process.env[key]) {
-      process.env[key] = value;
-    }
+  } catch {
+    // Local .env is optional — CI provides DATABASE_URL via workflow env.
   }
 }
 
@@ -61,7 +65,7 @@ describe("CNES ingestion worker Integration Tests", () => {
     );
 
     const [run] = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({ sourceProvider: "cnes", status: "RUNNING" })
       .returning();
 
@@ -75,14 +79,14 @@ describe("CNES ingestion worker Integration Tests", () => {
 
     const [updated] = await db
       .select()
-      .from(ingestionRuns)
-      .where(eq(ingestionRuns.id, run!.id))
+      .from(cnesRuns)
+      .where(eq(cnesRuns.id, run!.id))
       .limit(1);
     expect(updated?.phase).toBe("DISCOVERING");
     expect(updated?.referenceAno).toBe(2026);
     expect(updated?.referenceMes).toBe(1);
 
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run!.id));
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run!.id));
   });
 
   it("validation fails when staging facilities table is empty", async () => {
@@ -97,7 +101,7 @@ describe("CNES ingestion worker Integration Tests", () => {
     await truncateRegistryStaging();
 
     const [run] = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({ sourceProvider: "cnes", status: "RUNNING" })
       .returning();
 
@@ -105,7 +109,7 @@ describe("CNES ingestion worker Integration Tests", () => {
       /Staging validation failed/
     );
 
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run!.id));
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run!.id));
   });
 
   it("reconcile creates facility shell from minimal staging row", async () => {
@@ -120,7 +124,7 @@ describe("CNES ingestion worker Integration Tests", () => {
     await truncateRegistryStaging();
 
     const [run] = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({ sourceProvider: "cnes", status: "RUNNING" })
       .returning();
 
@@ -145,8 +149,8 @@ describe("CNES ingestion worker Integration Tests", () => {
           eq(facilities.sourceProvider, "cnes")
         )
       );
-    await db.delete(ingestionDiffs).where(eq(ingestionDiffs.ingestionRunId, run!.id));
-    await db.delete(ingestionSuggestions).where(eq(ingestionSuggestions.ingestionRunId, run!.id));
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run!.id));
+    await db.delete(cnesDiffs).where(eq(cnesDiffs.cnesRunId, run!.id));
+    await db.delete(cnesSuggestions).where(eq(cnesSuggestions.cnesRunId, run!.id));
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run!.id));
   });
 });

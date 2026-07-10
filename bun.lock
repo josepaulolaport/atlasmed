@@ -17,6 +17,7 @@
         "@atlasmed/access": "workspace:*",
         "@atlasmed/cnes-ingestion": "workspace:*",
         "@atlasmed/config": "workspace:*",
+        "@atlasmed/database": "workspace:*",
         "@atlasmed/mapbox": "workspace:*",
         "@aws-sdk/client-s3": "^3.1084.0",
         "@aws-sdk/s3-request-presigner": "^3.1084.0",

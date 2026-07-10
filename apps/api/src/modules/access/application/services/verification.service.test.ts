@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 import { TokenInvalidError } from "../../../../shared/errors";
+import { hashToken } from "../../../../shared/utils/hash-token";
 import { VerificationService } from "./verification.service";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 import {
@@ -17,14 +18,6 @@ mock.module("../../../../infrastructure/jobs/notification.queue", () => ({
     sendEmail: mock(() => Promise.resolve()),
     sendSms: mock(() => Promise.resolve()),
   },
-}));
-
-mock.module("../../../../shared/utils/generate-random-token", () => ({
-  generateRandomToken: mock(() => "raw-token"),
-}));
-
-mock.module("../../../../shared/utils/hash-token", () => ({
-  hashToken: mock((token: string) => `hash-${token}`),
 }));
 
 describe("VerificationService", () => {
@@ -51,10 +44,10 @@ describe("VerificationService", () => {
         Promise.resolve({ email: "user@example.com", emailVerified: true })
       );
 
-      await service.verifyEmail({ userId: "user-123", token: "raw-token" });
+      await service.verifyEmail({ userId: "user-123", token: "known-token" });
 
       expect(verificationTokenRepository.findValidToken).toHaveBeenCalledWith({
-        tokenHash: "hash-raw-token",
+        tokenHash: hashToken("known-token"),
         userId: "user-123",
         type: "EMAIL_VERIFICATION",
       });
