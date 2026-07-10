@@ -36,8 +36,8 @@ export default function TerritoryApprovalsPage() {
       setRequests(response.items);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load approval requests",
+        title: "Erro",
+        description: "Falha ao carregar solicitações de aprovação",
         variant: "destructive",
       });
     } finally {

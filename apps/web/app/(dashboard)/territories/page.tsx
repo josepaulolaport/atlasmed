@@ -114,8 +114,8 @@ export default function TerritoriesPage() {
       });
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load territories",
+        title: "Erro",
+        description: "Falha ao carregar territórios",
         variant: "destructive",
       });
     } finally {
@@ -158,8 +158,8 @@ export default function TerritoriesPage() {
       await loadTree();
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to recompute membership"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao reprocessar atribuições"),
         variant: "destructive",
       });
     } finally {

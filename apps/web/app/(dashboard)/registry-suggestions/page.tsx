@@ -75,8 +75,8 @@ export default function RegistrySuggestionsPage() {
       );
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load registry suggestions",
+        title: "Erro",
+        description: "Falha ao carregar sugestões de cadastro",
         variant: "destructive",
       });
     } finally {
@@ -91,12 +91,12 @@ export default function RegistrySuggestionsPage() {
   const handleApprove = async (id: string) => {
     try {
       await registryApi.approveSuggestion(id);
-      toast({ title: "Approved", description: "Suggestion applied" });
+      toast({ title: "Aprovado", description: "Sugestão aplicada" });
       await loadSuggestions();
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to approve suggestion",
+        title: "Erro",
+        description: "Falha ao aprovar sugestão",
         variant: "destructive",
       });
     }
@@ -105,12 +105,12 @@ export default function RegistrySuggestionsPage() {
   const handleReject = async (id: string) => {
     try {
       await registryApi.rejectSuggestion(id);
-      toast({ title: "Rejected", description: "Suggestion dismissed" });
+      toast({ title: "Descartado", description: "Sugestão rejeitada" });
       await loadSuggestions();
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to reject suggestion",
+        title: "Erro",
+        description: "Falha ao rejeitar sugestão",
         variant: "destructive",
       });
     }
@@ -123,13 +123,13 @@ export default function RegistrySuggestionsPage() {
       setDemoResult(result);
       setSuggestions(result.pendingSuggestions);
       toast({
-        title: "Demo scenario complete",
-        description: `${result.summary.pendingCount} pending suggestion(s) generated`,
+        title: "Cenário de demonstração concluído",
+        description: `${result.summary.pendingCount} sugestão(ões) gerada(s)`,
       });
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to run demo scenario",
+        title: "Erro",
+        description: "Falha ao executar cenário de demonstração",
         variant: "destructive",
       });
     } finally {
@@ -152,7 +152,7 @@ export default function RegistrySuggestionsPage() {
               fonte antes de aplicá-las.
             </p>
           </div>
-          {isAdmin && (
+          {isAdmin && process.env.NODE_ENV === "development" && (
             <Button onClick={handleRunDemo} disabled={runningDemo}>
               <iconify-icon icon="solar:play-circle-linear" stroke-width="1.5" />
               {runningDemo ? "Executando…" : "Executar cenário de demonstração"}

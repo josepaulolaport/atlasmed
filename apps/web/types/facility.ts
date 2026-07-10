@@ -24,6 +24,8 @@ export interface Facility {
   territoryId?: string;
   territoryAssignmentStatus?: TerritoryAssignmentStatus;
   purchaseStatus?: PurchaseStatus;
+  professionalCount?: number;
+  consultantName?: string | null;
   createdAt: string;
   updatedAt: string;
 }

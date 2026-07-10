@@ -87,43 +87,7 @@ export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
         )}
       </nav>
 
-      <div className="flex items-center gap-4">
-        <div className="relative hidden sm:block w-64">
-          <iconify-icon
-            icon="solar:magnifer-linear"
-            stroke-width="1.5"
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 text-base"
-          />
-          <input
-            type="text"
-            placeholder="Buscar em tudo..."
-            className="w-full h-8 pl-8 pr-3 text-sm bg-zinc-50 border border-zinc-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder:text-zinc-400"
-          />
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            <kbd className="text-xs font-sans text-zinc-400 bg-white border border-zinc-200 rounded px-1">
-              ⌘
-            </kbd>
-            <kbd className="text-xs font-sans text-zinc-400 bg-white border border-zinc-200 rounded px-1">
-              K
-            </kbd>
-          </div>
-        </div>
-        <div className="w-px h-4 bg-zinc-200 hidden sm:block" />
-        {actions ?? (
-          <button
-            type="button"
-            className="text-zinc-400 hover:text-zinc-900 transition-colors relative"
-            aria-label="Notificações"
-          >
-            <iconify-icon
-              icon="solar:bell-linear"
-              stroke-width="1.5"
-              className="text-xl"
-            />
-            <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500 ring-2 ring-white" />
-          </button>
-        )}
-      </div>
+      {actions && <div className="flex items-center gap-4">{actions}</div>}
     </header>
   );
 }

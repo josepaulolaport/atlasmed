@@ -36,8 +36,8 @@ export default function VerifyPhonePage() {
       await verificationApi.verifyPhone({ token: data.code });
       await refreshUser();
       toast({
-        title: "Success",
-        description: "Phone verified successfully",
+        title: "Sucesso",
+        description: "Telefone verificado com sucesso",
         variant: "success",
       });
       router.push("/security");

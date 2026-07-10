@@ -98,8 +98,8 @@ export default function FacilitiesPage() {
         setTotalPages(response.pagination.totalPages);
       } catch (error) {
         toast({
-          title: "Error",
-          description: getApiErrorMessage(error, "Failed to load facilities"),
+          title: "Erro",
+          description: getApiErrorMessage(error, "Falha ao carregar unidades"),
           variant: "destructive",
         });
       } finally {
@@ -166,14 +166,14 @@ export default function FacilitiesPage() {
       setFormLat(String(result.latitude));
       setFormLng(String(result.longitude));
       toast({
-        title: "Geocoded",
-        description: result.fullAddress ?? "Coordinates updated from address",
+        title: "Geocodificado",
+        description: result.fullAddress ?? "Coordenadas atualizadas a partir do endereço",
         variant: "success",
       });
     } catch {
       toast({
-        title: "Error",
-        description: "Geocoding failed. Check that Mapbox is configured on the API.",
+        title: "Erro",
+        description: "Geocodificação falhou. Verifique se o Mapbox está configurado na API.",
         variant: "destructive",
       });
     } finally {
@@ -184,8 +184,8 @@ export default function FacilitiesPage() {
   const handleSave = async () => {
     if (!formName.trim()) {
       toast({
-        title: "Validation",
-        description: "Name is required",
+        title: "Validação",
+        description: "O nome é obrigatório",
         variant: "destructive",
       });
       return;
@@ -195,8 +195,8 @@ export default function FacilitiesPage() {
     const lng = parseCoordinate(formLng);
     if (lat === undefined || lng === undefined) {
       toast({
-        title: "Validation",
-        description: "Latitude and longitude must be valid numbers when provided",
+        title: "Validação",
+        description: "Latitude e longitude devem ser números válidos quando informados",
         variant: "destructive",
       });
       return;
@@ -204,8 +204,8 @@ export default function FacilitiesPage() {
 
     if (lat == null && lng == null && !formAddress.trim()) {
       toast({
-        title: "Validation",
-        description: "Provide an address or coordinates",
+        title: "Validação",
+        description: "Informe um endereço ou coordenadas",
         variant: "destructive",
       });
       return;
@@ -224,8 +224,8 @@ export default function FacilitiesPage() {
           lng,
         });
         toast({
-          title: "Success",
-          description: "Facility updated. Territory will be assigned automatically from coordinates.",
+          title: "Sucesso",
+          description: "Unidade atualizada. O território será atribuído automaticamente pelas coordenadas.",
           variant: "success",
         });
       } else {
@@ -239,8 +239,8 @@ export default function FacilitiesPage() {
           lng: lng ?? undefined,
         });
         toast({
-          title: "Success",
-          description: "Facility created. Territory will be assigned automatically when coordinates match a boundary.",
+          title: "Sucesso",
+          description: "Unidade criada. O território será atribuído automaticamente quando as coordenadas corresponderem a uma região.",
           variant: "success",
         });
       }
@@ -249,8 +249,8 @@ export default function FacilitiesPage() {
       setRefreshKey((value) => value + 1);
     } catch (error) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(error, "Failed to save facility"),
+        title: "Erro",
+        description: getApiErrorMessage(error, "Falha ao salvar unidade"),
         variant: "destructive",
       });
     } finally {
@@ -263,12 +263,12 @@ export default function FacilitiesPage() {
 
     try {
       await facilitiesApi.deleteFacility(facility.id);
-      toast({ title: "Success", description: "Facility deleted", variant: "success" });
+      toast({ title: "Sucesso", description: "Unidade excluída", variant: "success" });
       setRefreshKey((value) => value + 1);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to delete clinic",
+        title: "Erro",
+        description: "Falha ao excluir unidade",
         variant: "destructive",
       });
     }
@@ -337,8 +337,10 @@ export default function FacilitiesPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <Users className="h-4 w-4 text-zinc-400 flex-shrink-0" />
                           <span className="text-xs text-zinc-500">
-                            Consultor: {/* TODO: Get from territory */}
-                            <span className="text-zinc-900 font-medium">—</span>
+                            Consultor:{" "}
+                            <span className="text-zinc-900 font-medium">
+                              {facility.consultantName ?? "—"}
+                            </span>
                           </span>
                         </div>
                         <Link
@@ -352,8 +354,7 @@ export default function FacilitiesPage() {
                         <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-white border border-zinc-200">
                           <Users className="h-3.5 w-3.5 text-zinc-500" />
                           <span className="text-sm font-medium text-zinc-700">
-                            {/* TODO: Get actual professional count */}
-                            0
+                            {facility.professionalCount ?? 0}
                           </span>
                         </div>
                         {canManage && (

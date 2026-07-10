@@ -78,8 +78,8 @@ export default function InvitationsPage() {
         setTotalPages(response.pagination.totalPages);
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load invitations",
+          title: "Erro",
+          description: "Falha ao carregar convites",
           variant: "destructive",
         });
       } finally {
@@ -102,8 +102,8 @@ export default function InvitationsPage() {
     try {
       await usersApi.revokeInvite(inviteId);
       toast({
-        title: "Success",
-        description: "Invitation revoked successfully",
+        title: "Sucesso",
+        description: "Convite revogado com sucesso",
         variant: "success",
       });
 
@@ -116,8 +116,8 @@ export default function InvitationsPage() {
       setTotalPages(response.pagination.totalPages);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to revoke invitation",
+        title: "Erro",
+        description: "Falha ao revogar convite",
         variant: "destructive",
       });
     } finally {
@@ -131,8 +131,8 @@ export default function InvitationsPage() {
     try {
       await usersApi.resendInvite(inviteId);
       toast({
-        title: "Success",
-        description: "Invitation resent successfully",
+        title: "Sucesso",
+        description: "Convite reenviado com sucesso",
         variant: "success",
       });
 
@@ -145,8 +145,8 @@ export default function InvitationsPage() {
       setTotalPages(response.pagination.totalPages);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to resend invitation",
+        title: "Erro",
+        description: "Falha ao reenviar convite",
         variant: "destructive",
       });
     } finally {

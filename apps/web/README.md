@@ -12,7 +12,7 @@ A production-ready Next.js frontend application for the AtlasMed healthcare mana
 - JWT token management with automatic refresh
 - Session management and device tracking
 - Email and phone verification
-- Role-based access control (ADMIN, MANAGER, USER)
+- Role-based access control (ADMIN, MANAGER, REP, OPS)
 
 ### User Management (Admin/Manager)
 

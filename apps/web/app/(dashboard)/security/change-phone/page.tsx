@@ -58,8 +58,8 @@ export default function ChangePhonePage() {
     try {
       await verificationApi.confirmPhoneChange(data);
       toast({
-        title: "Success",
-        description: "Phone number updated",
+        title: "Sucesso",
+        description: "Número de telefone atualizado",
         variant: "success",
       });
     } catch (err) {

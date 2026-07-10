@@ -60,8 +60,8 @@ export default function UnassignedFacilitiesPage() {
       setTotalPages(response.pagination.totalPages);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load unassigned facilities",
+        title: "Erro",
+        description: "Falha ao carregar unidades sem território",
         variant: "destructive",
       });
     } finally {
@@ -91,8 +91,8 @@ export default function UnassignedFacilitiesPage() {
         reason: overrideReason.trim() || undefined,
       });
       toast({
-        title: "Success",
-        description: "Facility territory overridden",
+        title: "Sucesso",
+        description: "Território da unidade sobrescrito",
         variant: "success",
       });
       setOverrideFacility(null);
@@ -101,8 +101,8 @@ export default function UnassignedFacilitiesPage() {
       await loadFacilities();
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to override territory"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao sobrescrever território"),
         variant: "destructive",
       });
     } finally {
@@ -115,15 +115,15 @@ export default function UnassignedFacilitiesPage() {
     try {
       await territoriesApi.unlockClinicGeo(facilityId);
       toast({
-        title: "Success",
-        description: "Facility geo lock removed",
+        title: "Sucesso",
+        description: "Bloqueio geográfico da unidade removido",
         variant: "success",
       });
       await loadFacilities();
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to unlock clinic geo"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao remover bloqueio geográfico"),
         variant: "destructive",
       });
     } finally {

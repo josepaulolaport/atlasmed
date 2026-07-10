@@ -69,8 +69,8 @@ export default function UsersPage() {
         setTotalPages(response.pagination.totalPages);
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load users",
+          title: "Erro",
+          description: "Falha ao carregar usuários",
           variant: "destructive",
         });
       } finally {
@@ -101,9 +101,15 @@ export default function UsersPage() {
           break;
       }
 
+      const actionLabels: Record<string, string> = {
+        activate: "ativado",
+        deactivate: "desativado",
+        suspend: "suspenso",
+        unsuspend: "reativado",
+      };
       toast({
-        title: "Success",
-        description: `User ${action}d successfully`,
+        title: "Sucesso",
+        description: `Usuário ${actionLabels[action] ?? action} com sucesso`,
         variant: "success",
       });
 
@@ -116,9 +122,15 @@ export default function UsersPage() {
       setTotalPages(response.pagination.totalPages);
     } catch (err) {
       const error = err as { response?: { data?: { message?: string } } };
+      const actionVerbLabels: Record<string, string> = {
+        activate: "ativar",
+        deactivate: "desativar",
+        suspend: "suspender",
+        unsuspend: "reativar",
+      };
       toast({
-        title: "Error",
-        description: error.response?.data?.message || `Failed to ${action} user`,
+        title: "Erro",
+        description: error.response?.data?.message || `Falha ao ${actionVerbLabels[action] ?? action} usuário`,
         variant: "destructive",
       });
     }

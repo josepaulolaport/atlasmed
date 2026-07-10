@@ -23,6 +23,11 @@ export interface FacilityRecord {
   updatedAt: Date;
 }
 
+export interface FacilityListRecord extends FacilityRecord {
+  professionalCount: number;
+  consultantName: string | null;
+}
+
 export interface FacilityListScopeFilter {
   isGlobal: boolean;
   facilityIds?: string[];
@@ -44,7 +49,7 @@ export interface FacilityRepository {
     limit: number;
     search?: string;
     scope: FacilityListScopeFilter;
-  }): Promise<{ facilities: FacilityRecord[]; total: number }>;
+  }): Promise<{ facilities: FacilityListRecord[]; total: number }>;
 
   findById(id: string): Promise<FacilityRecord | null>;
 

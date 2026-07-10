@@ -1,9 +1,13 @@
 import {
   facilities,
+  facilityProfessionals,
+  facilityConsultantAssignments,
+  users,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
+  FacilityListRecord,
   FacilityListScopeFilter,
   FacilityRecord,
   FacilityRepository,
@@ -52,7 +56,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     limit: number;
     search?: string;
     scope: FacilityListScopeFilter;
-  }): Promise<{ facilities: FacilityRecord[]; total: number }> {
+  }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
     const conditions = [isNull(facilities.deactivatedAt)];
 
     const scopeCondition = buildScopeCondition(params.scope);
@@ -70,8 +74,46 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       db.select({ count: sql<number>`count(*)::int` }).from(facilities).where(where),
     ]);
 
+    if (rows.length === 0) {
+      return { facilities: [], total: countRows[0]?.count ?? 0 };
+    }
+
+    const ids = rows.map((r) => r.id);
+
+    const [profCounts, consultantRows] = await Promise.all([
+      db
+        .select({
+          facilityId: facilityProfessionals.facilityId,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(facilityProfessionals)
+        .where(and(inArray(facilityProfessionals.facilityId, ids), isNull(facilityProfessionals.endedAt)))
+        .groupBy(facilityProfessionals.facilityId),
+      db
+        .select({
+          facilityId: facilityConsultantAssignments.facilityId,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        })
+        .from(facilityConsultantAssignments)
+        .innerJoin(users, eq(users.id, facilityConsultantAssignments.userId))
+        .where(and(inArray(facilityConsultantAssignments.facilityId, ids), isNull(facilityConsultantAssignments.endedAt))),
+    ]);
+
+    const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
+    const consultantMap = new Map(
+      consultantRows.map((r) => [
+        r.facilityId,
+        [r.firstName, r.lastName].filter(Boolean).join(" ") || null,
+      ])
+    );
+
     return {
-      facilities: rows.map(mapFacility),
+      facilities: rows.map((row) => ({
+        ...mapFacility(row),
+        professionalCount: countMap.get(row.id) ?? 0,
+        consultantName: consultantMap.get(row.id) ?? null,
+      })),
       total: countRows[0]?.count ?? 0,
     };
   }

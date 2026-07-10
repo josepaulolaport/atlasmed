@@ -98,17 +98,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setBootstrappedPath("/dashboard");
 
       toast({
-        title: "Success",
-        description: "Logged in successfully",
+        title: "Sucesso",
+        description: "Login realizado com sucesso",
         variant: "success",
       });
 
       router.push("/dashboard");
     } catch (err) {
       const error = err as { response?: { data?: { error?: { message?: string; code?: string } } } };
-      const message = error.response?.data?.error?.message || "Invalid credentials";
+      const message = error.response?.data?.error?.message || "Credenciais inválidas";
       toast({
-        title: "Error",
+        title: "Erro",
         description: message,
         variant: "destructive",
       });
@@ -128,8 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setBootstrappedPath("/dashboard");
 
     toast({
-      title: "Success",
-      description: "Logged in successfully",
+      title: "Sucesso",
+      description: "Login realizado com sucesso",
       variant: "success",
     });
 
@@ -141,17 +141,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await authApi.register(data);
 
       toast({
-        title: "Success",
-        description: "Registration successful. Please sign in.",
+        title: "Sucesso",
+        description: "Cadastro realizado. Faça login para continuar.",
         variant: "success",
       });
 
       router.push("/login");
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
-      const message = error.response?.data?.error || "Registration failed";
+      const message = error.response?.data?.error || "Falha no cadastro";
       toast({
-        title: "Error",
+        title: "Erro",
         description: message,
         variant: "destructive",
       });
@@ -175,15 +175,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(updatedUser);
 
       toast({
-        title: "Success",
-        description: "Profile updated successfully",
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso",
         variant: "success",
       });
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
-      const message = error.response?.data?.error || "Failed to update profile";
+      const message = error.response?.data?.error || "Falha ao atualizar perfil";
       toast({
-        title: "Error",
+        title: "Erro",
         description: message,
         variant: "destructive",
       });
