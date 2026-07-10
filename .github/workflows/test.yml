@@ -118,6 +118,11 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
         run: bun run db:migrate
+      - name: Prepare registry staging for worker tests
+        working-directory: ./apps/workers/cnes-ingestion
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
+        run: bun -e "import { recreateRegistryStagingSchema } from './src/infrastructure/registry-schemas.ts'; await recreateRegistryStagingSchema();"
       - name: Typecheck
         working-directory: ./apps/workers/cnes-ingestion
         run: bun run typecheck
