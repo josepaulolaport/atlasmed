@@ -40,7 +40,6 @@ const RESOURCES = [
   "REP",
   "FACILITY",
   "PROFESSIONAL",
-  "VISIT",
   "TERRITORY",
   "INVITATION",
 ] as const;

@@ -1,6 +1,7 @@
 import { createQueue, createWorker, type JobOptions } from "./queue.client";
 import { sendInviteEmail, sendPasswordResetEmail } from "../external-services/resend/send-invite-email";
 import { sendPasswordResetWhatsApp } from "../external-services/twilio/send-whatsapp";
+import { logger } from "../logging/logger";
 
 export interface EmailNotification {
   type: "email";
@@ -139,19 +140,22 @@ const notificationWorker = createWorker<NotificationJob>(
           case "password-changed":
           case "email-verification":
           case "security-alert":
-            console.log(`Sending ${data.template} email to ${data.to}`, data.data);
+            logger.info("Sending template email", {
+              template: data.template,
+              to: data.to,
+            });
             break;
         }
       } else if (data.type === "sms") {
         await sendPasswordResetWhatsApp(data.to, data.message);
       }
 
-      console.log(`Notification sent successfully:`, {
+      logger.info("Notification sent", {
         type: data.type,
-        to: data.type === "email" ? data.to : data.to,
+        to: data.to,
       });
     } catch (error) {
-      console.error(`Failed to send notification:`, error);
+      logger.error("Failed to send notification", error);
       throw error;
     }
   },
@@ -159,11 +163,11 @@ const notificationWorker = createWorker<NotificationJob>(
 );
 
 notificationWorker.on("completed", (job) => {
-  console.log(`Notification job ${job.id} completed`);
+  logger.info("Notification job completed", { jobId: job.id });
 });
 
 notificationWorker.on("failed", (job, error) => {
-  console.error(`Notification job ${job?.id} failed:`, error);
+  logger.error("Notification job failed", error, { jobId: job?.id });
 });
 
 export const notificationQueue = new NotificationQueue();

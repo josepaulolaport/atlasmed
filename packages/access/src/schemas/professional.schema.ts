@@ -35,7 +35,7 @@ export const optionalCpfSchema = z
     message: "Invalid CPF",
   });
 
-export const relationshipLevelSchema = z.enum(["LOW", "MEDIUM", "HIGH"]);
+export const relationshipLevelSchema = z.number().int().min(1).max(10);
 
 export const listProfessionalsQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional(),
@@ -168,7 +168,7 @@ export interface FacilityProfessionalRole {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
-  relationshipLevel?: "LOW" | "MEDIUM" | "HIGH";
+  relationshipLevel?: number;
   specialtyLabel?: string;
   notes?: string;
 }

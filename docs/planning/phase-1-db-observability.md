@@ -2,7 +2,9 @@
 
 **Goal:** Get the data model right and get real visibility into what the system is doing.  
 **Rule:** Schema changes here. No new API routes or web pages. No feature work.  
-**Status:** 🟡 Part A (DB) complete — Part B (Observability) pending
+**Status:** ✅ Complete — console logging always on; SigNoz/OTEL optional in dev
+
+> **ClickHouse:** You never talk to ClickHouse directly. SigNoz (Phase 0.5 `bun run observability:up`) runs ClickHouse + OTEL Collector internally. Apps export OTLP → collector → ClickHouse (`signoz_traces`, `signoz_logs`, `signoz_metrics`). Query/visualize via SigNoz UI at `http://localhost:8080`.
 
 > **Note:** Part C (Environment Setup, Docker Compose, MinIO, Meilisearch, ClickHouse) has been moved to its own **Phase 0.5 — Infrastructure** (`phase-0.5-infrastructure.md`). Part B below focuses purely on OTEL wiring, structured logging, and business spans.
 
@@ -51,119 +53,95 @@ ClickHouse (SigNoz stack)
 - Add monthly range partitioning on `audit_logs(created_at)` via raw SQL in migration
 - Drop `AuditLog` from `crm` schema
 
-### Known gaps to resolve
+#### 1. Healthcare sectors (not multi-tenant org) — DECIDED ✅
 
-Work through each item below. For each one, make an explicit decision: **build**, **remove**, or **defer**.
+Single deployment. Vertical partition is **`sectors`** (catalog table), not `Organization`.
+
+**Phase 1 (schema prep — done):**
+- [x] Drop `territories.organization_id`
+- [x] Add `territories.sector_id` → `sectors.id`
+- [x] Add `user_sector_assignments` (manager/rep ↔ sector M2M)
+
+**Phase 3/4 (application enforcement — planned):** see `phase-3-contracts.md` §6 and `phase-4-features.md` §4.8.
+
+**Resolution model (intersection):**
+```
+effectiveTerritories(user) =
+  assignedTerritories(user)
+  ∩ { t | t.sector_id ∈ assignedSectors(user) }
+```
+
+- Each **territory** belongs to exactly one healthcare sector.
+- Each **manager/rep** is assigned one or more sectors via `user_sector_assignments`.
+- Territory assignments stay in `user_territory_assignments`; sector is not duplicated on that row.
+- A user only sees territories whose sector they operate in.
+- **ADMIN / OPS:** global (all sectors).
+- **Validation:** assigning a territory to a user requires `territory.sector_id ∈ user.sector_ids`.
+
+#### 2. Missing FK relations — DECIDED & IMPLEMENTED ✅
+
+- [x] Added Drizzle FK relations on all listed user reference fields (`onDelete: set null` or `cascade` as appropriate)
+- [x] Migration `0002_phase1_schema_decisions.sql`
+
+#### 3. Visit domain — DECIDED ✅
+
+- [x] **Remove** `VISIT` from `packages/access` (deferred domain — rebuild in Phase 4 §4.6 when product-ready)
+
+#### 4. OPS role — DECIDED & IMPLEMENTED ✅
+
+- [x] **Global read-only scope** (`createGlobalScopeContext` in `ScopeResolver`; CASL already denies writes)
+- [x] OPS already in `ROLE_PRIORITY_BY_NAME` (priority 20)
+
+#### 5. FacilityProfessional.relationshipLevel — DECIDED & IMPLEMENTED ✅
+
+- [x] **Integer 1–10** on `facility_professionals` only (replaced `LOW/MEDIUM/HIGH` enum)
+- [x] Removed unused `relationship_level` from `facility_representatives`
+- [x] DB check constraint on `facility_professionals`: `>= 1 AND <= 10`
+
+#### 6. cnes_diffs — DECIDED ✅
+
+- [x] **Keep** warehouse records; read API in Phase 4 §4.7
+
+#### 7. Registry warehouse tables — DECIDED ✅
+
+- [x] **Keep warehouse-only**; expose via API only when a Phase 4 feature needs them
+
+#### 8. Territory geo fields — DECIDED ✅
+
+- [x] PostGIS columns already in Drizzle (`boundary`, `centroid`, `location`); geo **queries** deferred to backlog
+
+---
+
+### Legacy gaps (superseded — kept for history)
+
+<details>
+<summary>Original organization / FK / visit / OPS prompts (pre-decision)</summary>
 
 #### 1. Organization / multi-tenancy
 
-`Territory.organizationId` is a plain string FK with no `Organization` model behind it. This is a placeholder for multi-tenancy.
+`Territory.organizationId` — **removed**. Use sectors instead.
 
-- [ ] **Decision:** Build `Organization` model now / defer / remove the FK
-- [ ] If build: define the model (name, slug, plan, status, created), add FK relations on Territory and User, create migration
-- [ ] If defer: add a comment to the schema noting this is a planned FK and leave it
-- [ ] If remove: drop the column, create migration
+#### 2. Missing FK relations
 
-#### 2. Missing FK relations (plain string IDs with no Prisma relation)
-
-These exist in the schema but are plain strings, not proper relations. This blocks join queries and causes type safety holes.
-
-| Field | Should relate to |
-|---|---|
-| `FacilityConsultantAssignment.userId` | `User` |
-| `ConformityRecord.validatedByUserId` | `User` |
-| `FacilityProfessional.confirmedByUserId` | `User` |
-| `FacilityProfessional.endedByUserId` | `User` |
-| `TerritoryApprovalRequest.requesterId` | `User` |
-| `TerritoryApprovalRequest.reviewerId` | `User` |
-| `Permission.grantedBy` | `User` |
-
-- [ ] **Decision for each field:** add proper `@relation` / leave as string / remove
-- [ ] Create migration for approved changes
+All listed fields now have proper FK relations.
 
 #### 3. Visit domain
 
-CASL subject `VISIT` exists. Permissions and tests are defined. There is no Prisma `Visit` model and no API module.
+Removed from CASL; model deferred to Phase 4.
 
-- [ ] **Decision:** Build Visit domain now / defer / remove VISIT from `packages/access`
-- [ ] If remove: delete VISIT from abilities, subjects, and tests in `packages/access`
-- [ ] If defer: document expected model shape here so the next person doesn't have to guess
+#### 4. OPS role
 
-**Expected Visit model shape (draft — confirm before building):**
-```
-Visit {
-  id          String
-  facilityId  String → Facility
-  userId      String → User (the rep who made the visit)
-  date        DateTime
-  notes       String?
-  outcome     VisitOutcome (enum: CONTACTED, NO_SHOW, FOLLOW_UP, CLOSED)
-  createdAt   DateTime
-  updatedAt   DateTime
-}
-```
+Implemented as global read-only.
 
-#### 4. OPS role completion
-
-OPS exists in enum and migration. It has CASL read permissions. Its scope resolver returns an empty set, so it can't actually see anything.
-
-- [ ] **Decision:** Implement OPS fully / remove it
-- [ ] If implement:
-  - [ ] Define what OPS should see (likely: all facilities/professionals read-only, no territory or user management)
-  - [ ] Add OPS to `ROLE_PRIORITY` in `packages/access`
-  - [ ] Implement OPS scope resolver (likely: same as ADMIN read path, no territory filter)
-  - [ ] Add OPS to seed data
-- [ ] If remove:
-  - [ ] Remove from `UserRole` enum in schema
-  - [ ] Remove from `packages/access` abilities
-  - [ ] Create migration to drop the enum value (careful: needs `ALTER TYPE` in Postgres)
-
-#### 5. FacilityRepresentative.relationshipLevel type mismatch
-
-This field is typed as `String` but a `RelationshipLevel` enum exists elsewhere in the CRM.
-
-- [ ] **Decision:** Change to enum / leave as string
-- [ ] If enum: add `relationshipLevel RelationshipLevel?` to `FacilityRepresentative`, create migration
-
-#### 6. IngestionDiff — written but never read
-
-`IngestionDiff` records are created by the Temporal worker reconcile step. No API route reads them.
-
-- [ ] **Decision:** Build read API for IngestionDiff / remove the model
-- [ ] If build: add to Phase 4 feature list as "Ingestion diff viewer"
-- [ ] If remove: drop model and migration, remove worker write code
-
-#### 7. Registry schema — unused tables
-
-The following registry warehouse tables are loaded by the ingestion pipeline but never queried by any API:
-
-- `RegistryEquipmentCatalog`, `RegistryEquipmentCategory`, `RegistryFacilityEquipment`
-- `RegistryFacilityService`, `RegistryServiceClassification`, `RegistryServiceSpecialty`
-- `RegistryMaintainer`, `RegistryFacilityAgreement`, `RegistryAgreementType`
-- `RegistryPhysicalInstallation`, `RegistryPhysicalInstallationType`, `RegistryFacilityPhysicalInstallation`, `RegistryInstallationSubtype`
-- `RegistryCareType`, `RegistryDeactivationReason`
-
-- [ ] **Decision for each group:** expose via API (add to Phase 4) / keep in warehouse only (no action) / remove from schema
-- [ ] Document the decision per table group
-
-#### 8. Territory geo fields
-
-`Territory` has bbox fields (`boundaryMinLng`, `boundaryMinLat`, etc.) but no PostGIS geometry column in the Prisma schema. PostGIS queries likely use raw SQL.
-
-- [ ] Confirm whether PostGIS geometry columns exist (check via `prisma db pull` or direct DB inspection)
-- [ ] If geometry columns exist outside Prisma schema: document them and decide whether to add as `Unsupported("geometry")`
-- [ ] If not: no action needed
+</details>
 
 ---
 
 ### Migration checklist
 
-After all decisions are made:
-
-- [ ] All schema changes collected into one or more migrations with meaningful names
-- [ ] Migrations run cleanly on a fresh DB (`prisma migrate reset`)
-- [ ] Prisma client regenerated (`prisma generate`)
-- [ ] `packages/database` types verified in all consumers
+- [x] Schema changes in migration `0002_phase1_schema_decisions.sql`
+- [x] Migrations verified on fresh DB (`bun run db:migrate`)
+- [x] Consumers typecheck after relationship level type change
 
 ---
 
@@ -200,60 +178,35 @@ Operational observability (what the system is doing at runtime) goes to SigNoz/C
 
 ### Step B1 — Fix `packages/observability`
 
-The package has the right structure but has a stale reference (`'real-trend'` scope name) and needs minor cleanup.
-
-- [ ] Search and replace `'real-trend'` scope reference in `packages/observability/src/otel.ts`
-- [ ] Verify `initOpenTelemetry()`, `createLogger()`, `createTracer()` are all exported from `packages/observability/src/index.ts`
-- [ ] Run existing observability unit tests — all must pass
+- [x] Replace `'real-trend'` scope reference in `packages/observability/src/otel.ts`
+- [x] Add `ConsoleLogger` + composite logger (console always; OTEL when configured)
+- [x] Export `initOpenTelemetry()`, `createLogger()`, `createTracer()` from package index
+- [x] Run observability unit tests
 
 ### Step B2 — Wire `apps/api`
 
 **Bootstrap (call before server starts):**
 
-- [ ] Add `initOpenTelemetry()` call in `apps/api/src/app/server.ts` (before `app.listen()`):
-  ```ts
-  import { initOpenTelemetry } from '@atlasmed/observability'
-  initOpenTelemetry({
-    serviceName: environment.OTEL_SERVICE_NAME,
-    endpoint: environment.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-    logsEndpoint: environment.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
-  })
-  ```
-- [ ] Create `apps/api/src/infrastructure/logging/logger.ts` — exports `createLogger('api')` from `@atlasmed/observability`
-- [ ] Create `apps/api/src/infrastructure/tracing/tracer.ts` — exports `createTracer('api')` from `@atlasmed/observability`
-- [ ] Delete the Pino-based `logger.ts` once the new one is wired everywhere
-- [ ] Remove QuestDB integration (`questdb.logger.ts`, QuestDB env vars) — SigNoz replaces it
-- [ ] Update `apps/api/src/infrastructure/plugins/observability.plugin.ts` to use the shared logger for structured request logging (keep the Elysia OTEL plugin for auto HTTP spans)
+- [x] `initOpenTelemetry()` in `bootstrap-telemetry.ts` (imported first in `server.ts`)
+- [x] `apps/api/src/infrastructure/logging/logger.ts` — Pino-compatible wrapper over `@atlasmed/observability`
+- [x] `apps/api/src/infrastructure/tracing/tracer.ts` — `createTracer('api')`
+- [x] Removed Pino + QuestDB from API
+- [x] `observability.plugin.ts` uses shared logger (QuestDB writes removed)
+- [x] Runtime `console.*` replaced in request path, jobs, cache, email/twilio, audit
 
-**Replace `console.*` in runtime paths** (in priority order — request path first):
+**Business spans (`tracer.with()`):**
 
-- [ ] `apps/api/src/app/app.ts` — global error handler
-- [ ] `apps/api/src/app/server.ts` — startup messages
-- [ ] `apps/api/src/app/config/environment.ts` — config error
-- [ ] `apps/api/src/infrastructure/cache/redis.client.ts`
-- [ ] `apps/api/src/infrastructure/audit/audit-log.service.ts`
-- [ ] `apps/api/src/infrastructure/jobs/init.ts`
-- [ ] `apps/api/src/infrastructure/jobs/cleanup.jobs.ts`
-- [ ] `apps/api/src/infrastructure/jobs/notification.queue.ts`
-- [ ] `apps/api/src/infrastructure/external-services/resend/resend-email.service.ts`
-- [ ] `apps/api/src/infrastructure/external-services/resend/send-invite-email.ts`
-- [ ] `apps/api/src/infrastructure/external-services/twilio/send-whatsapp.ts`
-- [ ] `apps/api/src/infrastructure/external-services/twilio/twilio-messaging.service.ts`
-- [ ] `apps/api/src/modules/access/infrastructure/email/send-email.ts`
-- [ ] `apps/api/src/modules/access/infrastructure/cache/auth-cache.service.ts` (6 calls)
-- [ ] `apps/api/src/modules/access/infrastructure/cache/session-cache.service.ts` (10 calls)
-- [ ] `apps/api/src/modules/access/infrastructure/cache/scope-cache.service.ts` (4 calls)
-- [ ] `apps/api/src/modules/access/infrastructure/cache/access-grant-cache.service.ts` (3 calls)
-- [ ] `apps/api/src/modules/access/application/services/notification.service.ts`
-- [ ] `apps/api/src/modules/access/application/services/rate-limiter.service.ts`
+- [x] Login use-case: `user.login`
+- [x] Session refresh: `session.refresh`
+- [x] Invite flow: `user.invite`
+- [x] Scope resolve: `scope.resolve`
+- [x] Registry ingestion run: `registry.ingestion.run`
 
-**Add business spans with `tracer.with()` on key operations:**
+**Dev ergonomics:**
 
-- [ ] Login use-case: `tracer.with('user.login', ..., { 'user.id': userId })`
-- [ ] Session refresh: `tracer.with('session.refresh', ..., { 'user.id': userId, 'session.id': sessionId })`
-- [ ] Invite flow: `tracer.with('user.invite', ..., { 'user.id': invitedByUserId })`
-- [ ] Facility scope query: `tracer.with('scope.resolve.facilities', ..., { 'user.id': userId })`
-- [ ] Registry ingestion run: `tracer.with('registry.ingestion.run', ..., { 'ingestion.run.id': runId })`
+- [x] Console logging always on (`ConsoleLogger` in every `createLogger()`)
+- [x] OTEL export optional — no endpoints → no exporter, app still runs
+- [x] Pretty console lines in development; JSON when `LOG_FORMAT=json` or production
 
 **AtlasMed-specific OTEL attribute naming:**
 
@@ -269,97 +222,30 @@ The package has the right structure but has a stale reference (`'real-trend'` sc
 
 ### Step B3 — Wire `apps/workers`
 
-- [ ] Add `initOpenTelemetry()` call in `apps/workers/cnes-ingestion/src/worker.ts`
-  ```ts
-  initOpenTelemetry({
-    serviceName: 'atlasmed-cnes-worker',
-    endpoint: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
-    logsEndpoint: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
-  })
-  ```
-- [ ] Create a logger instance in the worker using `createLogger('cnes-worker')`
-- [ ] Replace all `console.*` in `apps/workers/cnes-ingestion/src/` with `logger.*`
-- [ ] Add `tracer.with()` around each Temporal activity for per-activity span visibility
+- [x] `initOpenTelemetry()` in `bootstrap-telemetry.ts` (imported first in `worker.ts`)
+- [x] Logger via `createLogger('cnes-worker')`
+- [x] Worker startup/shutdown uses structured logger
+- [x] `tracer.with()` around each Temporal activity (`instrumentation/wrap-activity.ts`)
 
 ### Step B4 — Config cleanup
 
-- [ ] **Decision: keep TypeBox in API** (`environment.ts` is comprehensive and the server boots from it)
-- [ ] Add OTEL env vars to the TypeBox schema in `apps/api/src/app/config/environment.ts` (already present, verify they're wired through)
-- [ ] Deprecate `packages/config` — its Zod subset duplicates what TypeBox already validates. Mark it for removal in backlog.
-- [ ] Implement `apps/web` env config:
-  - [ ] `packages/config/src/env/web/web-env.ts` — add `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_MAPBOX_TOKEN`
-  - [ ] Wire into `apps/web` at startup (or `next.config.ts`)
+- [x] OTEL env vars wired through TypeBox `environment.ts`
+- [ ] Web env config (`NEXT_PUBLIC_API_URL`, etc.) — backlog
+- [ ] Deprecate `packages/config` — backlog
 
-### Step B5 — Infrastructure: SigNoz Docker Compose
+### Step B5 — Infrastructure: SigNoz + ClickHouse
 
-Create `deploy/observability.compose.yml` with the following services (mirroring Real Trend):
+> **Done in Phase 0.5.** `bun run observability:up` downloads and starts the official SigNoz stack (ClickHouse + OTEL Collector + UI). No custom `observability.compose.yml` needed — SigNoz owns ClickHouse schema.
 
-```yaml
-services:
-  zookeeper-1:
-    image: signoz/zookeeper:3.7.1
-    # ClickHouse coordination
-
-  clickhouse:
-    image: clickhouse/clickhouse-server:25.5.6
-    # Telemetry storage — signoz_traces, signoz_logs, signoz_metrics, signoz_metadata
-    volumes:
-      - clickhouse_data:/var/lib/clickhouse
-
-  signoz-telemetrystore-migrator:
-    image: signoz/signoz-otel-collector:v0.144.2
-    # One-shot: runs ClickHouse schema migrations then exits
-    restart: on-failure
-
-  signoz:
-    image: signoz/signoz:latest
-    # Web UI + query API
-    # SQLite at /var/lib/signoz/signoz.db for dashboards/users/alerts (not telemetry)
-
-  otel-collector-config:
-    image: alpine:3.20
-    # Config writer sidecar — writes collector YAML to shared volume
-
-  otel-collector:
-    image: signoz/signoz-otel-collector:v0.144.2
-    # OTLP receiver: gRPC :4317, HTTP :4318
-    # Pipelines:
-    #   traces  → signozspanmetrics → clickhouse (traces + metrics + metadata)
-    #   logs    → clickhouse logs
-    #   metrics → clickhouse metrics
-    #   host    → hostmetrics receiver → clickhouse metrics
-```
-
-- [ ] Create `deploy/observability.compose.yml` with all 6 services above
-- [ ] Configure collector pipelines:
-  - `otlp` receiver (`:4317` gRPC, `:4318` HTTP)
-  - `hostmetrics` receiver with `/hostfs` for VPS host metrics
-  - `signozspanmetrics/delta` processor for latency histograms from traces
-  - `batch` processor
-  - ClickHouse exporters for traces, logs, metrics, metadata
-- [ ] Add `bun run observability:up` script to root `package.json`
-- [ ] Document access URL in compose file (SigNoz UI on port 3301 or similar)
+- [x] SigNoz stack via `deploy/scripts/signoz-up.sh`
+- [x] `bun run observability:up` / `observability:down` in root `package.json`
+- [ ] End-to-end verify: `bash deploy/scripts/verify-observability.sh` after `bun run observability:up`
 
 ### Step B6 — Update env vars
 
-Add to `apps/api/.env` and `.env.example`:
-
-```bash
-# Observability — OTEL (optional in local dev, required in production)
-OTEL_SERVICE_NAME=atlasmed-api
-# OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
-# OTEL_EXPORTER_OTLP_LOGS_ENDPOINT=http://otel-collector:4318/v1/logs
-# OTEL_RESOURCE_ATTRIBUTES=deployment.environment=production
-```
-
-Add to workers env:
-```bash
-OTEL_SERVICE_NAME=atlasmed-cnes-worker
-```
-
-- [ ] Add env vars to `apps/api/.env.example`
-- [ ] Add env vars to `apps/workers/cnes-ingestion` config
-- [ ] Verify TypeBox schema in `environment.ts` accepts these vars without requiring them in dev
+- [x] OTEL vars in `apps/api/.env.development.example`
+- [x] Worker `.env.development.example` OTEL vars
+- [x] TypeBox schema accepts OTEL vars (optional in dev)
 
 ### Deployment environment matrix
 

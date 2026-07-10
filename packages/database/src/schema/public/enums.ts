@@ -63,11 +63,9 @@ export const contactTypeEnum = pgEnum("contact_type", [
   "COMPRADOR",
 ]);
 
-export const relationshipLevelEnum = pgEnum("relationship_level", [
-  "LOW",
-  "MEDIUM",
-  "HIGH",
-]);
+/** Relationship strength on a 1–10 scale (validated in DB + application). */
+export const RELATIONSHIP_LEVEL_MIN = 1;
+export const RELATIONSHIP_LEVEL_MAX = 10;
 
 export const healthcareProviderTypeEnum = pgEnum("healthcare_provider_type", [
   "PRIVATE",

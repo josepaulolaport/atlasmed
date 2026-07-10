@@ -32,6 +32,20 @@ describe("ScopeResolver", () => {
     expect(scope.isOperationallyActive).toBe(true);
   });
 
+  it("returns global read scope for OPS", async () => {
+    const scopeRepository = {} as ScopeRepository;
+    const resolver = new ScopeResolver({
+      scopeRepository,
+      territoryScopePort,
+      territoryHierarchyPort,
+    });
+
+    const scope = await resolver.resolve("ops-1", Role.OPS);
+
+    expect(scope.isGlobal).toBe(true);
+    expect(scope.isOperationallyActive).toBe(true);
+  });
+
   it("expands user territory assignments via effective territory resolution", async () => {
     const scopeRepository: ScopeRepository = {
       findTerritoryIdsByUserId: mock(async () => ["territory-1"]),

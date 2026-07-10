@@ -155,19 +155,24 @@ export function FacilityRoleForm({
               render={({ field }) => (
                 <Select
                   disabled={!canEdit}
-                  value={field.value ?? "none"}
+                  value={field.value != null ? String(field.value) : "none"}
                   onValueChange={(value) =>
-                    field.onChange(value === "none" ? null : value)
+                    field.onChange(value === "none" ? null : Number(value))
                   }
                 >
                   <SelectTrigger id="relationshipLevel">
-                    <SelectValue placeholder="Selecione o nível" />
+                    <SelectValue placeholder="Selecione o nível (1–10)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Não definido</SelectItem>
-                    <SelectItem value="LOW">Baixo</SelectItem>
-                    <SelectItem value="MEDIUM">Médio</SelectItem>
-                    <SelectItem value="HIGH">Alto</SelectItem>
+                    {Array.from({ length: 10 }, (_, index) => {
+                      const level = index + 1;
+                      return (
+                        <SelectItem key={level} value={String(level)}>
+                          {level}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               )}

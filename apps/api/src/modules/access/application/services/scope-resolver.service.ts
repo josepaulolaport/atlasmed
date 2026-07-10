@@ -5,6 +5,7 @@ import type {
   TerritoryHierarchyPort,
   TerritoryScopePort,
 } from "../interfaces/scope.repository.interface";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 export interface ScopeResolverDependencies {
   scopeRepository: ScopeRepository;
@@ -16,6 +17,14 @@ export class ScopeResolver {
   constructor(private readonly deps: ScopeResolverDependencies) {}
 
   async resolve(userId: string, roleName: string): Promise<ScopeContext> {
+    return tracer.with(
+      "scope.resolve",
+      async () => this.resolveScope(userId, roleName),
+      { "user.id": userId, "app.module": "access" }
+    );
+  }
+
+  private async resolveScope(userId: string, roleName: string): Promise<ScopeContext> {
     if (roleName === Role.ADMIN) {
       return createGlobalScopeContext();
     }
@@ -102,6 +111,10 @@ export class ScopeResolver {
           managedUserIds.length > 0 &&
           (oversightTerritoryIds.length > 0 || analyticsEffectiveTerritoryIds.length > 0),
       });
+    }
+
+    if (roleName === Role.OPS) {
+      return createGlobalScopeContext();
     }
 
     return createEmptyScopeContext();

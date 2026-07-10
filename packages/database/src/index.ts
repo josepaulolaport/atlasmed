@@ -18,7 +18,8 @@ import {
   territoryAssignmentSourceEnum,
   territoryApprovalTypeEnum,
   territoryApprovalStatusEnum,
-  relationshipLevelEnum,
+  RELATIONSHIP_LEVEL_MIN,
+  RELATIONSHIP_LEVEL_MAX,
   conformityStatusEnum,
   conformityRecordStatusEnum,
   purchaseStatusEnum,
@@ -45,7 +46,9 @@ export type TerritoryAssignmentStatus = (typeof territoryAssignmentStatusEnum.en
 export type TerritoryAssignmentSource = (typeof territoryAssignmentSourceEnum.enumValues)[number];
 export type TerritoryApprovalType = (typeof territoryApprovalTypeEnum.enumValues)[number];
 export type TerritoryApprovalStatus = (typeof territoryApprovalStatusEnum.enumValues)[number];
-export type RelationshipLevel = (typeof relationshipLevelEnum.enumValues)[number];
+/** Integer 1–10 relationship strength between rep and facility contact. */
+export type RelationshipLevel = number;
+export { RELATIONSHIP_LEVEL_MIN, RELATIONSHIP_LEVEL_MAX };
 export type ConformityStatus = (typeof conformityStatusEnum.enumValues)[number];
 export type ConformityRecordStatus = (typeof conformityRecordStatusEnum.enumValues)[number];
 export type PurchaseStatus = (typeof purchaseStatusEnum.enumValues)[number];

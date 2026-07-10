@@ -19,6 +19,7 @@ import { Role } from "@atlasmed/access";
 import { canAssignRole } from "../constants/role-priority.constants";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
 import type { IMetrics } from "../interfaces/metrics.interface";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -58,6 +59,14 @@ export class InviteUserUseCase {
   }
 
   async execute(params: InviteUserParams) {
+    return tracer.with(
+      "user.invite",
+      async () => this.executeInvite(params),
+      { "user.id": params.invitedByUserId, "app.module": "access" }
+    );
+  }
+
+  private async executeInvite(params: InviteUserParams) {
     if (!params.email && !params.phoneNumber) {
       throw new ValidationError([
         { field: 'email', message: 'Either email or phone number is required' }

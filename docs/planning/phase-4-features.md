@@ -6,6 +6,8 @@
 
 Each feature section has its own checklist. Work through them in order.
 
+> **Healthcare sectors:** Schema prep is in Phase 1. Application enforcement is Phase 3 §6. UI surfaces for sector management appear in §4.1 and §4.8 below.
+
 ---
 
 ## Feature template
@@ -121,30 +123,28 @@ Backend: `GET /facilities/:id/registry/facility`, `GET /facilities/:id/registry/
 
 ## 4.6 — Visit domain
 
-> **Depends on Phase 1 decision.** If VISIT was removed from `packages/access` in Phase 1, skip this section. If deferred, build it now.
+> **Deferred.** VISIT was removed from CASL in Phase 1. Build when product prioritizes field visit tracking.
 
 **Scope:** Build the full visit tracking domain from scratch.
 
 **Backend:**
-- [ ] Define `Visit` Prisma model (see schema draft in phase-1-db-observability.md)
+- [ ] Define `Visit` Drizzle model (see draft in phase-1-db-observability.md legacy section)
 - [ ] Create migration
-- [ ] Build visit module: repository interface, Prisma implementation, use-cases, routes
-- [ ] Scope enforcement: REP sees only their own visits, MANAGER sees reports' visits, ADMIN sees all
-- [ ] Unit tests for use-cases
-- [ ] Integration tests for HTTP routes
+- [ ] Re-add `VISIT` CASL subject with role abilities
+- [ ] Build visit module: repository, use-cases, routes
+- [ ] Scope enforcement: REP sees own visits; MANAGER sees reports'; ADMIN/OPS read-all
+- [ ] Unit + integration tests
 
 **Frontend:**
-- [ ] `/visits` page — list visits with filters (by rep, by facility, by date, by outcome)
-- [ ] Create visit form (facility, date, notes, outcome)
-- [ ] Visit history on facility detail page
-- [ ] All strings in pt-BR
-- [ ] All loading/error/empty states handled
+- [ ] `/visits` list + create form
+- [ ] Visit history on facility detail
+- [ ] pt-BR strings; loading/error/empty states
 
 ---
 
 ## 4.7 — IngestionDiff viewer
 
-> **Depends on Phase 1 decision.** If IngestionDiff model was removed in Phase 1, skip this. If kept, build the read API here.
+> **Kept in Phase 1.** Build read API here (`cnes_diffs` table).
 
 **Scope:** Expose the stored ingestion diffs via API so they can be viewed in the admin UI.
 
@@ -159,9 +159,32 @@ Backend: `GET /facilities/:id/registry/facility`, `GET /facilities/:id/registry/
 
 ---
 
+## 4.8 — Healthcare sector management UI
+
+> **Depends on Phase 3 §6** (sector scope enforcement). Schema exists from Phase 1.
+
+**Scope:** Admin/manager surfaces for sectors beyond basic catalog CRUD — tying sectors to users and territories.
+
+**Backend (if not done in Phase 3):**
+- [ ] `GET/POST/DELETE /access/users/:id/sectors` — list and manage user sector assignments
+- [ ] Territory admin: require `sectorId` when creating manager zones and rep patches
+
+**Frontend:**
+- [ ] User detail / invite: multi-select healthcare sectors (uses existing `sectors` catalog)
+- [ ] Territory admin: sector picker on create/edit territory forms
+- [ ] Facility list: sector badge + filter (for managers with multiple sectors)
+- [ ] Dashboard/header: active sector context indicator when user has multiple sectors (optional UX polish)
+- [ ] pt-BR labels ("Setor", "Setores de atuação", etc.)
+
+**Tests:**
+- [ ] E2E: create manager with two sectors, assign territories in each, verify list scoping
+
+---
+
 ## Notes
 
 - Features 4.1–4.4 have complete backends. They are frontend-completion tasks.
-- Features 4.5–4.7 require backend work too.
+- Features 4.5–4.8 require backend work too.
+- **Sector scoping:** Phase 3 §6 (enforcement) must ship before or with 4.8 UI.
 - Do not start a feature until the previous one's checklist is fully checked.
 - After each feature, update `PLAN.md` Feature Inventory.

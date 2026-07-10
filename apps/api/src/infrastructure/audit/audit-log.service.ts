@@ -2,6 +2,7 @@ import { db } from "../database/db";
 import { auditLogs } from "@atlasmed/database";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { metricsService } from "../monitoring/metrics.service";
+import { logger } from "../logging/logger";
 import { environment } from "../../app/config/environment";
 import type { AuditEventSeverity } from "@atlasmed/database";
 
@@ -65,13 +66,13 @@ export class AuditLogService {
     try {
       await this.writeLog(entry);
     } catch (error) {
-      console.error("Failed to write audit log, retrying once:", error);
+      logger.error("Failed to write audit log, retrying once", error);
       metricsService.recordAuditLogFailure(entry.eventType);
 
       try {
         await this.writeLog(entry);
       } catch (retryError) {
-        console.error("Audit log retry failed:", retryError);
+        logger.error("Audit log retry failed", retryError);
         metricsService.recordAuditLogFailure(entry.eventType);
       }
     }

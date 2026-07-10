@@ -230,7 +230,7 @@ describe("Facility HTTP auth integration", () => {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           isPartner: true,
-          relationshipLevel: "HIGH",
+          relationshipLevel: 8,
           notes: "Primary partner",
         }),
       }
@@ -239,11 +239,11 @@ describe("Facility HTTP auth integration", () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as {
       isPartner: boolean;
-      relationshipLevel?: string;
+      relationshipLevel?: number;
       notes?: string;
     };
     expect(body.isPartner).toBe(true);
-    expect(body.relationshipLevel).toBe("HIGH");
+    expect(body.relationshipLevel).toBe(8);
     expect(body.notes).toBe("Primary partner");
   });
 
@@ -259,7 +259,7 @@ describe("Facility HTTP auth integration", () => {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          relationshipLevel: "INVALID",
+          relationshipLevel: 99,
         }),
       }
     );

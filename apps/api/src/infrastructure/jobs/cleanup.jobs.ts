@@ -9,6 +9,7 @@ import {
   postSiemBatch,
 } from "../audit/siem-export.helper";
 import { metricsService } from "../monitoring/metrics.service";
+import { logger } from "../logging/logger";
 
 const SIEM_CURSOR_KEY = "siem:lastExportAt";
 
@@ -133,7 +134,7 @@ export class CleanupJobs {
       this.scheduleSiemAuditExport(),
     ]);
 
-    console.log("✅ All cleanup jobs scheduled successfully");
+    logger.info("All cleanup jobs scheduled");
   }
 }
 
@@ -142,7 +143,7 @@ const cleanupWorker = createWorker<any>(
   async (job) => {
     const { data, name } = job as { data: any; name?: string };
 
-    console.log(`Running cleanup job: ${name}`);
+    logger.info("Running cleanup job", { jobName: name });
 
     try {
       switch (name) {
@@ -156,7 +157,7 @@ const cleanupWorker = createWorker<any>(
               )
             )
           ).returning({ id: sessions.id });
-          console.log(`Cleaned up ${deleted.length} expired/revoked sessions`);
+          logger.info("Cleaned up expired sessions", { count: deleted.length });
           break;
         }
 
@@ -165,7 +166,7 @@ const cleanupWorker = createWorker<any>(
             .set({ status: "EXPIRED", updatedAt: new Date() })
             .where(and(eq(invitations.status, "PENDING"), lt(invitations.expiresAt, new Date())))
             .returning({ id: invitations.id });
-          console.log(`Marked ${updated.length} invites as expired`);
+          logger.info("Marked invites as expired", { count: updated.length });
           break;
         }
 
@@ -179,7 +180,7 @@ const cleanupWorker = createWorker<any>(
               )
             )
           ).returning({ id: passwordResets.id });
-          console.log(`Cleaned up ${deleted.length} expired/used password resets`);
+          logger.info("Cleaned up password resets", { count: deleted.length });
           break;
         }
 
@@ -193,7 +194,7 @@ const cleanupWorker = createWorker<any>(
               )
             )
           ).returning({ id: verificationTokens.id });
-          console.log(`Cleaned up ${deleted.length} expired/verified tokens`);
+          logger.info("Cleaned up verification tokens", { count: deleted.length });
           break;
         }
 
@@ -202,7 +203,7 @@ const cleanupWorker = createWorker<any>(
             "../../modules/access/composition"
           );
           const removed = await accessGrantService.cleanupExpiredPermissions();
-          console.log(`Cleaned up ${removed} expired permission grants`);
+          logger.info("Cleaned up expired permissions", { count: removed });
           break;
         }
 
@@ -237,7 +238,7 @@ const cleanupWorker = createWorker<any>(
             const lastExported = logs[logs.length - 1]!.createdAt.toISOString();
             await redis.set(SIEM_CURSOR_KEY, lastExported);
             metricsService.recordSiemExportBatch(true);
-            console.log(`Exported ${logs.length} audit events to SIEM webhook`);
+            logger.info("Exported audit events to SIEM", { count: logs.length });
           } catch (error) {
             metricsService.recordSiemExportBatch(false);
             throw error;
@@ -255,15 +256,18 @@ const cleanupWorker = createWorker<any>(
               inArray(auditLogs.severity, ["INFO"])
             )
           ).returning({ id: auditLogs.id });
-          console.log(`Cleaned up ${deleted.length} old audit logs (retention: ${retentionDays} days)`);
+          logger.info("Cleaned up old audit logs", {
+            count: deleted.length,
+            retentionDays,
+          });
           break;
         }
 
         default:
-          console.warn(`Unknown cleanup job: ${name}`);
+          logger.warn("Unknown cleanup job", { jobName: name });
       }
     } catch (error) {
-      console.error(`Cleanup job ${name} failed:`, error);
+      logger.error("Cleanup job failed", error, { jobName: name });
       throw error;
     }
   },
@@ -271,11 +275,11 @@ const cleanupWorker = createWorker<any>(
 );
 
 cleanupWorker.on("completed", (job) => {
-  console.log(`✅ Cleanup job ${job.name} completed`);
+  logger.info("Cleanup job completed", { jobName: job.name });
 });
 
 cleanupWorker.on("failed", (job, error) => {
-  console.error(`❌ Cleanup job ${job?.name} failed:`, error);
+  logger.error("Cleanup job failed", error, { jobName: job?.name });
 });
 
 export const cleanupJobs = new CleanupJobs();

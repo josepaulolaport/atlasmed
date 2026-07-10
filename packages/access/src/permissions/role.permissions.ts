@@ -17,7 +17,6 @@ export function applyRoleAbilities(
       can("manage", "USER");
       can("manage", "FACILITY");
       can("manage", "PROFESSIONAL");
-      can("manage", "VISIT");
       can("manage", "TERRITORY");
       can("manage", "INVITATION");
       can("manage", "REGISTRY_INGESTION");
@@ -36,7 +35,6 @@ export function applyRoleAbilities(
       can("update", "FACILITY");
       can("read", "PROFESSIONAL");
       can("update", "PROFESSIONAL");
-      can("read", "VISIT");
       can("read", "TERRITORY");
       can("create", "TERRITORY");
       can("update", "TERRITORY");
@@ -49,7 +47,6 @@ export function applyRoleAbilities(
       can("update", "FACILITY");
       can("read", "PROFESSIONAL");
       can("update", "PROFESSIONAL");
-      can("read", "VISIT");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");
@@ -58,7 +55,6 @@ export function applyRoleAbilities(
     case "OPS":
       can("read", "FACILITY");
       can("read", "PROFESSIONAL");
-      can("read", "VISIT");
       can("read", "TERRITORY");
       can("read", "USER");
       cannot("create", "FACILITY");
@@ -67,9 +63,6 @@ export function applyRoleAbilities(
       cannot("create", "PROFESSIONAL");
       cannot("update", "PROFESSIONAL");
       cannot("delete", "PROFESSIONAL");
-      cannot("create", "VISIT");
-      cannot("update", "VISIT");
-      cannot("delete", "VISIT");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");

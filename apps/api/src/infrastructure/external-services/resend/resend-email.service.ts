@@ -6,12 +6,13 @@ import type {
 } from "../../../modules/access/application/interfaces/email.service.interface";
 
 import { resend } from "./resend.client";
+import { logger } from "../../logging/logger";
 import { ExternalServiceError } from "../../../shared/errors";
 
 export class ResendEmailService implements EmailService {
   async send(params: SendEmailParams): Promise<void> {
     if (!resend) {
-      console.warn("Resend client not initialized. Skipping email send.");
+      logger.warn("Resend client not initialized — skipping email send");
       return;
     }
 

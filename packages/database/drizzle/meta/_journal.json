@@ -10,10 +10,10 @@
       "breakpoints": true
     },
     {
-      "idx": 1,
+      "idx": 2,
       "version": "7",
-      "when": 1783672650091,
-      "tag": "0001_audit_event_type_text",
+      "when": 1783679000000,
+      "tag": "0002_phase1_schema_decisions",
       "breakpoints": true
     }
   ]

@@ -1,4 +1,5 @@
 import type { TerritoryScopePort } from "../../application/interfaces/scope.repository.interface";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { metricsService } from "../../../../infrastructure/monitoring/metrics.service";
 
 /**
@@ -12,7 +13,7 @@ import { metricsService } from "../../../../infrastructure/monitoring/metrics.se
 export class StubTerritoryScopePort implements TerritoryScopePort {
   async getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]> {
     if (territoryIds.length > 0) {
-      console.warn("[StubTerritoryScopePort] facilityIds unresolved for territories", {
+      logger.warn("[StubTerritoryScopePort] facilityIds unresolved for territories", {
         territoryCount: territoryIds.length,
         territoryIds: territoryIds.slice(0, 5),
       });

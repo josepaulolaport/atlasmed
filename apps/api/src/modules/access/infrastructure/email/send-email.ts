@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { apiEnv } from "@atlasmed/config";
 
 import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { InviteEmail } from "./templates/invite.email";
 
 export async function sendInviteEmail(
@@ -15,19 +16,17 @@ export async function sendInviteEmail(
   },
 ): Promise<void> {
   if (!resend) {
-    console.warn("⚠️  Resend client not initialized. Skipping email send.");
-    console.warn("   Set RESEND_API_KEY in your .env file");
+    logger.warn("Resend client not initialized — skipping email send");
     return;
   }
 
   if (!apiEnv.RESEND_FROM_EMAIL) {
-    console.error("❌ RESEND_FROM_EMAIL is not set. Cannot send invite email.");
-    console.error("   Add RESEND_FROM_EMAIL to apps/api/.env (e.g. onboarding@resend.dev for testing)");
+    logger.error("RESEND_FROM_EMAIL is not set — cannot send invite email");
     return;
   }
 
   try {
-    console.log(`📧 Sending invite email to ${to}...`);
+    logger.info("Sending invite email", { to });
     const result = await resend.emails.send({
       from: apiEnv.RESEND_FROM_EMAIL,
       to,
@@ -41,12 +40,12 @@ export async function sendInviteEmail(
     });
 
     if (result.error) {
-      console.error("❌ Failed to send invite email:", result.error);
+      logger.error("Failed to send invite email", result.error);
       return;
     }
 
-    console.log(`✅ Invite email sent successfully! ID: ${result.data?.id}`);
+    logger.info("Invite email sent", { messageId: result.data?.id, to });
   } catch (error) {
-    console.error("❌ Failed to send invite email:", error);
+    logger.error("Failed to send invite email", error);
   }
 }

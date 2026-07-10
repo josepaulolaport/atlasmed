@@ -16,6 +16,7 @@ import {
   RefreshTokenReuseDetectedError,
   SessionSecurityViolationError,
 } from "../../../../shared/errors";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 interface Dependencies {
   sessionRepository: SessionRepository;
@@ -38,6 +39,14 @@ export class RefreshSessionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: RefreshSessionParams) {
+    return tracer.with(
+      "session.refresh",
+      async () => this.executeRefresh(params),
+      { "app.module": "access" }
+    );
+  }
+
+  private async executeRefresh(params: RefreshSessionParams) {
     const tokenHash = hashToken(params.refreshToken);
 
     let oldSession = await this.deps.sessionCache.getByTokenHash(tokenHash);

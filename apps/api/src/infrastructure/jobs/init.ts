@@ -1,14 +1,15 @@
 import { cleanupJobs } from "./cleanup.jobs";
+import { logger } from "../logging/logger";
 
 export async function initializeBackgroundJobs(): Promise<void> {
   try {
-    console.log("🚀 Initializing background jobs...");
-    
+    logger.info("Initializing background jobs");
+
     await cleanupJobs.initializeAllJobs();
-    
-    console.log("✅ Background jobs initialized successfully");
+
+    logger.info("Background jobs initialized");
   } catch (error) {
-    console.error("❌ Failed to initialize background jobs:", error);
+    logger.error("Failed to initialize background jobs", error);
     throw error;
   }
 }

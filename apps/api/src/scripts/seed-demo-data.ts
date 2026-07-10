@@ -477,7 +477,7 @@ async function seedAssociations(params: {
       isPrescriber: true,
       isBuyer: false,
       isDecisionMaker: true,
-      relationshipLevel: "HIGH",
+      relationshipLevel: 8,
       notes: "Primary contact at Alpha — partner and decision maker.",
       confirmedAt: now,
       confirmedByUserId: adminUserId,
@@ -491,7 +491,7 @@ async function seedAssociations(params: {
     isPrescriber: true,
     isBuyer: true,
     isDecisionMaker: false,
-    relationshipLevel: "MEDIUM",
+    relationshipLevel: 5,
     confirmedAt: now,
     confirmedByUserId: adminUserId,
   });
@@ -505,7 +505,7 @@ async function seedAssociations(params: {
       sourceFirstSeenAt: now,
       sourceLastSeenAt: now,
       isPrescriber: true,
-      relationshipLevel: "LOW",
+      relationshipLevel: 3,
       notes: "Awaiting manager confirmation.",
     })
     .returning();
@@ -516,7 +516,7 @@ async function seedAssociations(params: {
     confirmedAt: now,
     confirmedByUserId: adminUserId,
     isDecisionMaker: true,
-    relationshipLevel: "MEDIUM",
+    relationshipLevel: 5,
   });
 
   await db.insert(facilityProfessionals).values({
@@ -525,7 +525,7 @@ async function seedAssociations(params: {
     confirmedAt: now,
     confirmedByUserId: adminUserId,
     isPartner: true,
-    relationshipLevel: "HIGH",
+    relationshipLevel: 8,
   });
 
   const [fernandaSource] = await db

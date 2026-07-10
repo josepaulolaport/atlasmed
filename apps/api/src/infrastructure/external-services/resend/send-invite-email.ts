@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import { apiEnv } from "@atlasmed/config";
 
 import { resend } from "./resend.client";
+import { logger } from "../../logging/logger";
 import { InviteEmail } from "./templates/invite.email";
 import { PasswordResetEmail } from "./templates/password-reset.email";
 import { ExternalServiceError } from "../../../shared/errors";
@@ -17,7 +18,7 @@ export async function sendInviteEmail(
   }
 ): Promise<void> {
   if (!resend) {
-    console.warn("Resend client not initialized. Skipping email send.");
+    logger.warn("Resend client not initialized — skipping email send");
     return;
   }
 
@@ -46,7 +47,7 @@ export async function sendPasswordResetEmail(
   }
 ): Promise<void> {
   if (!resend) {
-    console.warn("Resend client not initialized. Skipping email send.");
+    logger.warn("Resend client not initialized — skipping email send");
     return;
   }
 
