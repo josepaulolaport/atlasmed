@@ -24,8 +24,8 @@ interface Dependencies {
   inviteRepository: InviteRepository;
   userRepository: UserRepository;
   roleRepository: RoleRepository;
-  territoryRepository: TerritoryRepository;
-  territoryTypeRepository: TerritoryTypeRepository;
+  territoryRepository?: TerritoryRepository;
+  territoryTypeRepository?: TerritoryTypeRepository;
   emailService?: EmailService;
   messagingService?: MessagingService;
   auditLog: IAuditLog;
@@ -37,8 +37,8 @@ interface InviteUserParams {
   phoneNumber?: string | undefined;
   roleId: string;
   invitedByUserId: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;

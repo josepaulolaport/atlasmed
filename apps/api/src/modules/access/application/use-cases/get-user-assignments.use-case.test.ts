@@ -73,7 +73,7 @@ describe("GetUserAssignmentsUseCase", () => {
           managerId: null,
           username: "unassigned",
           email: "u@example.com",
-          role: { name: Role.USER },
+          role: { name: Role.REP },
         })
       ),
     });

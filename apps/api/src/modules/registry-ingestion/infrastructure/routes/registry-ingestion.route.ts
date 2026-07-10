@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import type { IngestionSuggestionType } from "@atlasmed/database";
+import type { CnesSuggestionType as IngestionSuggestionType } from "@atlasmed/database";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { registryIngestionUseCases } from "../../composition";

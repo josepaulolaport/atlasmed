@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { Elysia } from "elysia";
 import { AppError, UnauthorizedError } from "../../../../shared/errors";
-import { UserStatus, AuthSessionDeviceType, AuthSessionType } from "@atlasmed/database";
 import { TokenService } from "../../application/services/token.service";
 import { createAuthPlugin } from "./auth.plugin";
 import type { SessionRepository } from "../../application/interfaces/session.repository.interface";
@@ -45,7 +44,7 @@ describe("Auth Plugin", () => {
     firstName: "Test",
     lastName: "User",
     avatarUrl: null,
-    status: UserStatus.ACTIVE,
+    status: "ACTIVE",
     tokenVersion: 1,
     emailVerified: true,
     phoneVerified: false,
@@ -59,7 +58,7 @@ describe("Auth Plugin", () => {
     updatedAt: new Date(),
     role: {
       id: "role-123",
-      name: "USER",
+      name: "REP",
       description: null,
       priority: 100,
       createdAt: new Date(),
@@ -76,8 +75,8 @@ describe("Auth Plugin", () => {
     browserName: "Chrome",
     browserVersion: "120.0",
     osName: "macOS",
-    deviceType: AuthSessionDeviceType.DESKTOP,
-    sessionType: AuthSessionType.WEB,
+    deviceType: "DESKTOP",
+    sessionType: "WEB",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -100,10 +99,10 @@ describe("Auth Plugin", () => {
     mockUserRepository = {
       findById: mock(async () => mockUser),
       findUserAuthStatus: mock(async () => ({
-        status: UserStatus.ACTIVE,
+        status: "ACTIVE",
         tokenVersion: 1,
         roleId: "role-123",
-        roleName: "USER",
+        roleName: "REP",
       })),
     } as any;
     
@@ -142,7 +141,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -247,7 +246,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "non-existent-session",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -290,7 +289,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -338,7 +337,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -386,7 +385,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -405,11 +404,11 @@ describe("Auth Plugin", () => {
           id: "user-123",
           email: "user@example.com",
           username: "testuser",
-          status: UserStatus.ACTIVE,
+          status: "ACTIVE",
           tokenVersion: 1,
           role: {
             id: "role-123",
-            name: "USER",
+            name: "REP",
           },
         },
       };
@@ -464,7 +463,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -483,11 +482,11 @@ describe("Auth Plugin", () => {
           id: "user-123",
           email: "user@example.com",
           username: "testuser",
-          status: UserStatus.ACTIVE,
+          status: "ACTIVE",
           tokenVersion: 1,
           role: {
             id: "role-123",
-            name: "USER",
+            name: "REP",
           },
         },
       };
@@ -541,7 +540,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -608,7 +607,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -675,7 +674,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -683,17 +682,17 @@ describe("Auth Plugin", () => {
       mockAuthCacheService.get = mock(async () => ({
         userId: "user-123",
         roleId: "role-123",
-        roleName: "USER",
-        status: UserStatus.ACTIVE,
+        roleName: "REP",
+        status: "ACTIVE",
         tokenVersion: 1,
       }));
       mockAuthCacheService.isRecentlyValidated = mock(async () => false);
 
       mockUserRepository.findUserAuthStatus = mock(async () => ({
-        status: UserStatus.SUSPENDED,
+        status: "SUSPENDED",
         tokenVersion: 1,
         roleId: "role-123",
-        roleName: "USER",
+        roleName: "REP",
       }));
 
       const auth = createAuthPlugin({
@@ -729,8 +728,8 @@ describe("Auth Plugin", () => {
       expect(mockAuthCacheService.set).toHaveBeenCalledWith("user-123", {
         userId: "user-123",
         roleId: "role-123",
-        roleName: "USER",
-        status: UserStatus.SUSPENDED,
+        roleName: "REP",
+        status: "SUSPENDED",
         tokenVersion: 1,
       });
     });
@@ -739,7 +738,7 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
@@ -786,14 +785,14 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const suspendedUser = {
         ...mockUser,
-        status: UserStatus.SUSPENDED,
+        status: "SUSPENDED",
       };
 
       const sessionWithSuspendedUser = {
@@ -845,14 +844,14 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const inactiveUser = {
         ...mockUser,
-        status: UserStatus.INACTIVE,
+        status: "INACTIVE",
       };
 
       const sessionWithInactiveUser = {
@@ -904,14 +903,14 @@ describe("Auth Plugin", () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
-        role: "USER",
+        role: "REP",
         tokenVersion: 1,
         iat: Math.floor(Date.now() / 1000),
       });
 
       const pendingUser = {
         ...mockUser,
-        status: UserStatus.PENDING,
+        status: "PENDING",
       };
 
       const sessionWithPendingUser = {

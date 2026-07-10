@@ -14,7 +14,7 @@ describe("DrizzleInviteRepository (Integration)", () => {
     const testRole = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, "USER"))
+      .where(eq(roles.name, "REP"))
       .limit(1)
       .then((r) => r[0] ?? null);
 

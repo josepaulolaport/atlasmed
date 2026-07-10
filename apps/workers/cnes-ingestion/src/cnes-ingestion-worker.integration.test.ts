@@ -53,7 +53,7 @@ describe("CNES ingestion worker Integration Tests", () => {
   });
 
   it("discover activity sets reference on ingestion run", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { db } = await import("../src/infrastructure/db");
     const { discoverLatestReferenceActivity } = await import(
@@ -86,7 +86,7 @@ describe("CNES ingestion worker Integration Tests", () => {
   });
 
   it("validation fails when staging facilities table is empty", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { db } = await import("../src/infrastructure/db");
     const { truncateRegistryStaging } = await import("../src/infrastructure/registry-schemas");
@@ -109,7 +109,7 @@ describe("CNES ingestion worker Integration Tests", () => {
   });
 
   it("reconcile creates facility shell from minimal staging row", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { db } = await import("../src/infrastructure/db");
     const { truncateRegistryStaging } = await import("../src/infrastructure/registry-schemas");

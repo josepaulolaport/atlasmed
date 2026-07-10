@@ -122,17 +122,17 @@ export function createMockRoleRepository(overrides?: Partial<RoleRepository>): R
     findById: mock(() =>
       Promise.resolve({
         id: "role-123",
-        name: "USER",
-        priority: ROLE_PRIORITY_BY_NAME.USER,
+        name: "REP",
+        priority: ROLE_PRIORITY_BY_NAME.REP,
       })
     ),
     findAll: mock(() =>
       Promise.resolve([
         {
           id: "role-123",
-          name: "USER",
+          name: "REP",
           description: "Standard user",
-          priority: ROLE_PRIORITY_BY_NAME.USER,
+          priority: ROLE_PRIORITY_BY_NAME.REP,
         },
       ])
     ),

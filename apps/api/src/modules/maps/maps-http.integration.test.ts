@@ -31,7 +31,7 @@ describe("Maps HTTP auth integration", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -40,7 +40,7 @@ describe("Maps HTTP auth integration", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
       fixtures.fieldUser.id,
@@ -66,7 +66,7 @@ describe("Maps HTTP auth integration", () => {
   }
 
   it("returns 401 for unauthenticated maps config", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest(
       app,
@@ -78,7 +78,7 @@ describe("Maps HTTP auth integration", () => {
   });
 
   it("allows USER with facility read to access maps config", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(

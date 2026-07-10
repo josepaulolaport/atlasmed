@@ -6,6 +6,7 @@ import {
 import type Redis from "ioredis";
 import { generateSecret, generateURI, verify } from "otplib";
 import { environment } from "../../../../app/config/environment";
+import { ConfigurationError } from "../../../../shared/errors";
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
@@ -65,7 +66,7 @@ export class TwoFactorService {
   private getEncryptionKey(): Buffer {
     const hex = environment.TWO_FACTOR_ENCRYPTION_KEY;
     if (!hex) {
-      throw new Error("TWO_FACTOR_ENCRYPTION_KEY is not configured");
+      throw new ConfigurationError("TWO_FACTOR_ENCRYPTION_KEY is not configured");
     }
     return Buffer.from(hex, "hex");
   }

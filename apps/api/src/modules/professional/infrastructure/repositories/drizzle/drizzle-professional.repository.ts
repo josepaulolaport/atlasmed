@@ -5,6 +5,7 @@ import {
 } from "@atlasmed/database";
 import { eq, and, or, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
+import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
   ProfessionalCreateInput,
   ProfessionalFacilitySummary,
@@ -350,7 +351,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(eq(professionals.id, id))
       .limit(1);
 
-    if (!existing) throw new Error("Professional not found");
+    if (!existing) throw new ResourceNotFoundError("Professional", id);
 
     const patch = buildPersonUpdateData(data);
 
@@ -475,7 +476,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     const rows = await db
       .select({ id: facilities.id })
       .from(facilities)
-      .where(and(inArray(facilities.id, facilityIds), isNull(facilities.deletedAt)));
+      .where(and(inArray(facilities.id, facilityIds), isNull(facilities.deactivatedAt)));
 
     return rows.map((r) => r.id);
   }

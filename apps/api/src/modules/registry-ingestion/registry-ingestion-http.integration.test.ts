@@ -60,7 +60,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -69,7 +69,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await cleanupMockRegistryData();
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
@@ -117,7 +117,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   }
 
   it("returns 401 for unauthenticated registry suggestions list", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest(
       "http://localhost/api/v1/registry-suggestions",
@@ -128,7 +128,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("returns 403 when USER tries to run ingestion", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -141,7 +141,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("allows ADMIN to list registry suggestions", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -155,7 +155,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("scoped MANAGER can approve suggestion for facility in territory", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const clinicRecord = await db
       .insert(facilities)
@@ -202,7 +202,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("MANAGER list only returns suggestions for facilities in scope", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const inScopeFacility = await db
       .insert(facilities)
@@ -271,7 +271,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("returns 403 when MANAGER approves suggestion outside scope", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const clinicRecord = await db
       .insert(facilities)
@@ -318,7 +318,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("allows ADMIN to list registry ingestion runs with phase fields", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const run = await db
       .insert(cnesRuns)
@@ -362,7 +362,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
   });
 
   it("returns 401 for unauthenticated clinic doctors list", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest(
       "http://localhost/api/v1/facilities/some-id/professionals",

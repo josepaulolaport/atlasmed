@@ -42,9 +42,9 @@ export async function seedTestDatabase() {
         priority: ROLE_PRIORITY_BY_NAME.MANAGER,
       },
       {
-        name: "USER",
+        name: "REP",
         description: "Regular user",
-        priority: ROLE_PRIORITY_BY_NAME.USER,
+        priority: ROLE_PRIORITY_BY_NAME.REP,
       },
     ];
 
@@ -59,7 +59,7 @@ export async function seedTestDatabase() {
     }
 
     const userRole = await db.query.roles.findFirst({
-      where: eq(roles.name, "USER"),
+      where: eq(roles.name, "REP"),
     });
 
     if (!userRole) {

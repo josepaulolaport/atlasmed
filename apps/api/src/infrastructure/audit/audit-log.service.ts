@@ -516,12 +516,12 @@ export class AuditLogService {
       count: m.count,
     }));
 
-    const [logs, [{ total }]] = await Promise.all([
+    const [logs, countResult] = await Promise.all([
       db.select().from(auditLogs).where(where).orderBy(auditLogs.createdAt).limit(limit).offset(offset),
       db.select({ total: count() }).from(auditLogs).where(where),
     ]);
 
-    return { logs, total: Number(total) };
+    return { logs, total: Number(countResult[0]?.total ?? 0) };
   }
 }
 

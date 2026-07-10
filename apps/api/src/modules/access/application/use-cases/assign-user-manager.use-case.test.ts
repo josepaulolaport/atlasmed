@@ -123,7 +123,7 @@ describe("AssignUserManagerUseCase", () => {
   it("rejects manager with USER role", async () => {
     userRepository.findById = mock(async (id: string) => {
       if (id === targetUser.id) return targetUser;
-      if (id === "bad-manager") return { id: "bad-manager", role: { name: Role.USER } };
+      if (id === "bad-manager") return { id: "bad-manager", role: { name: Role.REP } };
       return null;
     });
 

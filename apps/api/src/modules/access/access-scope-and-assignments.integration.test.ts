@@ -49,7 +49,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -91,7 +91,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   }
 
   it("ADMIN lists all scope fixture users", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -110,7 +110,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER list is scoped to managed field user with territory", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -127,7 +127,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER cannot read assignments", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -139,7 +139,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER can suspend managed field user", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     await db
       .update(users)
@@ -161,7 +161,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER cannot suspend user outside their management scope", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     await db
       .update(users)
@@ -183,7 +183,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("ADMIN reads assignments and performs manager/territory CRUD", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const newTerritory = fixtures.extraTerritoryId;

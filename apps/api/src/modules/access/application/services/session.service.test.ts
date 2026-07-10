@@ -49,7 +49,7 @@ describe("SessionService", () => {
     it("should create a session with userId", async () => {
       const userId = "user-123";
 
-      await sessionService.create({ userId, userRole: "USER" });
+      await sessionService.create({ userId, userRole: "REP" });
 
       expect(mockSessionRepository.createLoginSessionTransaction).toHaveBeenCalledTimes(1);
       const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
@@ -58,7 +58,7 @@ describe("SessionService", () => {
     });
 
     it("should call createLoginSessionTransaction once per login", async () => {
-      await sessionService.create({ userId: "user-123", userRole: "USER" });
+      await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(mockSessionRepository.createLoginSessionTransaction).toHaveBeenCalledTimes(1);
       expect(mockSessionRepository.revokeAllActiveForDevice).not.toHaveBeenCalled();
@@ -79,7 +79,7 @@ describe("SessionService", () => {
         revokedSessionIds: ["old-session-1", "old-session-2"],
       }));
 
-      await sessionService.create({ userId: "user-123", userRole: "USER" });
+      await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(mockSessionCache.invalidate).toHaveBeenCalledTimes(2);
       expect(mockSessionCache.invalidate).toHaveBeenCalledWith("old-session-1");
@@ -87,7 +87,7 @@ describe("SessionService", () => {
     });
 
     it("should set cache for the new session", async () => {
-      await sessionService.create({ userId: "user-123", userRole: "USER" });
+      await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(mockSessionCache.set).toHaveBeenCalledTimes(1);
       const setCall = (mockSessionCache.set as any).mock.calls[0][0];
@@ -96,14 +96,14 @@ describe("SessionService", () => {
     });
 
     it("should generate a refresh token", async () => {
-      const result = await sessionService.create({ userId: "user-123", userRole: "USER" });
+      const result = await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(result.refreshToken).toBeString();
       expect(result.refreshToken.length).toBeGreaterThan(0);
     });
 
     it("should store HASHED refresh token only", async () => {
-      const result = await sessionService.create({ userId: "user-123", userRole: "USER" });
+      const result = await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
         .calls[0][0];
@@ -113,7 +113,7 @@ describe("SessionService", () => {
 
     it("should set expiration to 24 hours (USER role)", async () => {
       const beforeCreate = Date.now();
-      await sessionService.create({ userId: "user-123", userRole: "USER" });
+      await sessionService.create({ userId: "user-123", userRole: "REP" });
       const afterCreate = Date.now();
 
       const createCall = (mockSessionRepository.createLoginSessionTransaction as any).mock
@@ -132,7 +132,7 @@ describe("SessionService", () => {
 
       await sessionService.create({
         userId: "user-123",
-        userRole: "USER",
+        userRole: "REP",
         ipAddress,
       });
 
@@ -146,7 +146,7 @@ describe("SessionService", () => {
 
       await sessionService.create({
         userId: "user-123",
-        userRole: "USER",
+        userRole: "REP",
         userAgent,
       });
 
@@ -158,7 +158,7 @@ describe("SessionService", () => {
     it("should handle undefined ipAddress", async () => {
       await sessionService.create({
         userId: "user-123",
-        userRole: "USER",
+        userRole: "REP",
         ipAddress: undefined,
       });
 
@@ -170,7 +170,7 @@ describe("SessionService", () => {
     it("should handle undefined userAgent", async () => {
       await sessionService.create({
         userId: "user-123",
-        userRole: "USER",
+        userRole: "REP",
         userAgent: undefined,
       });
 
@@ -180,21 +180,21 @@ describe("SessionService", () => {
     });
 
     it("should generate unique session IDs", async () => {
-      const result1 = await sessionService.create({ userId: "user-123", userRole: "USER" });
-      const result2 = await sessionService.create({ userId: "user-123", userRole: "USER" });
+      const result1 = await sessionService.create({ userId: "user-123", userRole: "REP" });
+      const result2 = await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(result1.id).not.toBe(result2.id);
     });
 
     it("should generate unique refresh tokens", async () => {
-      const result1 = await sessionService.create({ userId: "user-123", userRole: "USER" });
-      const result2 = await sessionService.create({ userId: "user-123", userRole: "USER" });
+      const result1 = await sessionService.create({ userId: "user-123", userRole: "REP" });
+      const result2 = await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(result1.refreshToken).not.toBe(result2.refreshToken);
     });
 
     it("should return session with refresh token", async () => {
-      const result = await sessionService.create({ userId: "user-123", userRole: "USER" });
+      const result = await sessionService.create({ userId: "user-123", userRole: "REP" });
 
       expect(result).toHaveProperty("id");
       expect(result).toHaveProperty("userId");
@@ -206,7 +206,7 @@ describe("SessionService", () => {
     it("should handle empty string ipAddress", async () => {
       await sessionService.create({
         userId: "user-123",
-        userRole: "USER",
+        userRole: "REP",
         ipAddress: "",
       });
 
@@ -218,7 +218,7 @@ describe("SessionService", () => {
     it("should handle empty string userAgent", async () => {
       await sessionService.create({
         userId: "user-123",
-        userRole: "USER",
+        userRole: "REP",
         userAgent: "",
       });
 

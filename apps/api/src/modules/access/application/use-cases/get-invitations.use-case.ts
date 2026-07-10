@@ -21,7 +21,7 @@ export class GetInvitationsUseCase {
   constructor(private readonly dependencies: GetInvitationsDependencies) {}
 
   async execute(input: GetInvitationsInput) {
-    if (input.actorRole === "USER") {
+    if (input.actorRole === "REP") {
       throw new InsufficientPermissionsError(
         ["invitation:list"],
         [`role:${input.actorRole}`]

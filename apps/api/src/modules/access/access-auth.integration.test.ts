@@ -40,7 +40,7 @@ describe("Access Auth HTTP Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     app = createAuthIntegrationApp();
     await redis.flushdb();
@@ -51,7 +51,7 @@ describe("Access Auth HTTP Integration Tests", () => {
     const userRole = await db
       .select()
       .from(roles)
-      .where(eq(roles.name, "USER"))
+      .where(eq(roles.name, "REP"))
       .limit(1)
       .then((r) => r[0] ?? null);
     if (!userRole) {
@@ -75,7 +75,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await db.delete(sessions).where(eq(sessions.userId, userId));
     await db.delete(users).where(eq(users.id, userId)).catch(() => {});
   });
@@ -110,7 +110,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   }
 
   it("logs in and returns access token with refresh cookie", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken, refreshToken } = await loginViaHttp();
     expect(accessToken.split(".")).toHaveLength(3);
@@ -118,7 +118,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("returns profile for authenticated user", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken } = await loginViaHttp();
 
@@ -134,7 +134,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("rejects profile without auth", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await app.handle(
       new Request("http://localhost/access/profile")
@@ -144,7 +144,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("refreshes session with refresh token in body (non-production)", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { refreshToken } = await loginViaHttp();
     expect(refreshToken).toBeTruthy();
@@ -163,7 +163,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("logs out and invalidates session for subsequent profile access", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken } = await loginViaHttp();
 

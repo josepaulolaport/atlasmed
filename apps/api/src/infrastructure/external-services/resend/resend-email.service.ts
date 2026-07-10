@@ -6,6 +6,7 @@ import type {
 } from "../../../modules/access/application/interfaces/email.service.interface";
 
 import { resend } from "./resend.client";
+import { ExternalServiceError } from "../../../shared/errors";
 
 export class ResendEmailService implements EmailService {
   async send(params: SendEmailParams): Promise<void> {
@@ -22,8 +23,7 @@ export class ResendEmailService implements EmailService {
         react: params.react,
       });
     } catch (error) {
-      console.error("Failed to send email:", error);
-      throw new Error("Failed to send email");
+      throw new ExternalServiceError("Resend", error instanceof Error ? error : undefined);
     }
   }
 }

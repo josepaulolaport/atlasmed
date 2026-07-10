@@ -21,13 +21,18 @@ async function createRoles() {
     },
     {
       name: "MANAGER",
-      description: "Can manage clinics, visits, and view users",
+      description: "Can manage facilities, territories, and users within their scope",
       priority: ROLE_PRIORITY_BY_NAME.MANAGER,
     },
     {
-      name: "USER",
-      description: "Basic access - can view clinics and visits",
-      priority: ROLE_PRIORITY_BY_NAME.USER,
+      name: "OPS",
+      description: "Operations team — read access to facilities and registry data",
+      priority: ROLE_PRIORITY_BY_NAME.OPS,
+    },
+    {
+      name: "REP",
+      description: "Field representative — can view assigned facilities and log visits",
+      priority: ROLE_PRIORITY_BY_NAME.REP,
     },
   ];
 

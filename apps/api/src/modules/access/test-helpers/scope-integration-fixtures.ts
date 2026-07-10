@@ -46,7 +46,7 @@ export async function seedScopeIntegrationFixtures(
   const passwordHash = await hash(TEST_PASSWORD);
   const codeSuffix = uniqueId.replace(/[^a-zA-Z0-9]/g, "").slice(0, 8).toUpperCase();
 
-  let root = await db
+  let rootOrNull = await db
     .select()
     .from(territories)
     .where(
@@ -59,8 +59,8 @@ export async function seedScopeIntegrationFixtures(
     .limit(1)
     .then((r) => r[0] ?? null);
 
-  if (!root) {
-    root = await db
+  if (!rootOrNull) {
+    rootOrNull = await db
       .insert(territories)
       .values({
         name: `Brazil ${uniqueId}`,
@@ -73,8 +73,10 @@ export async function seedScopeIntegrationFixtures(
       })
       .returning()
       .then((r) => r[0]!);
-    await rebuildClosure(root.id);
+    await rebuildClosure(rootOrNull.id);
   }
+
+  const root = rootOrNull;
 
   const region = await db
     .insert(territories)
@@ -190,13 +192,13 @@ export async function seedScopeIntegrationFixtures(
     db
       .insert(roles)
       .values({
-        name: "USER",
+        name: "REP",
         description: "Regular user",
-        priority: ROLE_PRIORITY_BY_NAME.USER,
+        priority: ROLE_PRIORITY_BY_NAME.REP,
       })
       .onConflictDoUpdate({
         target: roles.name,
-        set: { priority: ROLE_PRIORITY_BY_NAME.USER, updatedAt: new Date() },
+        set: { priority: ROLE_PRIORITY_BY_NAME.REP, updatedAt: new Date() },
       })
       .returning()
       .then((r) => r[0]!),

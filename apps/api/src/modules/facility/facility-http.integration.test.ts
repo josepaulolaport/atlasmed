@@ -36,7 +36,7 @@ describe("Facility HTTP auth integration", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -62,7 +62,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
       fixtures.manager.id,
@@ -103,7 +103,7 @@ describe("Facility HTTP auth integration", () => {
   }
 
   it("returns 401 for unauthenticated facility list", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest(
       app,
@@ -115,7 +115,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("returns 403 when USER tries to create a facility", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -135,7 +135,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("allows ADMIN to list facilities", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -153,7 +153,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("scoped field USER can read in-territory facility", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -168,7 +168,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("scoped field USER gets 403 for out-of-territory facility", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -181,7 +181,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("field USER facility list excludes out-of-scope facilities", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -198,7 +198,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("scoped field USER can read facility professional context", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -218,7 +218,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("allows ADMIN to patch facility professional role flags", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -248,7 +248,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("rejects invalid relationship level on facility professional patch", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(

@@ -1,4 +1,5 @@
 import { createQueue, createWorker, type JobOptions } from "./queue.client";
+import { ConfigurationError } from "../../shared/errors";
 
 export interface TerritoryMembershipJob {
   territoryId?: string;
@@ -25,7 +26,7 @@ export class TerritoryMembershipQueue {
 
     createWorker<TerritoryMembershipJob>("territory-membership", async (job) => {
       if (!this.handler) {
-        throw new Error("Territory membership handler not registered");
+        throw new ConfigurationError("Territory membership handler not registered");
       }
       await this.handler(job.data);
     });

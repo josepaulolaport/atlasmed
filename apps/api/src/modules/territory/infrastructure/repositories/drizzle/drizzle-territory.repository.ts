@@ -188,7 +188,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     const [result] = await db
       .select({ count: sql<number>`count(*)` })
       .from(facilities)
-      .where(and(isNull(facilities.deletedAt), eq(facilities.territoryId, territoryId)));
+      .where(and(isNull(facilities.deactivatedAt), eq(facilities.territoryId, territoryId)));
     return Number(result?.count ?? 0);
   }
 

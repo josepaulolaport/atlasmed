@@ -35,29 +35,42 @@ All `*-http.integration.test.ts` files and `access-auth.integration.test.ts` use
   - `maps-http.integration.test.ts`
   - `catalog-http.integration.test.ts`
   - `cnes-ingestion-worker.integration.test.ts`
+  - `refresh-session.race-condition.test.ts`
+  - `accept-invite.race-condition.test.ts`
+  - `reset-password.race-condition.test.ts`
+  - `login.race-condition.test.ts`
 
 ## ESLint scope
 
-- [ ] Update `apps/api/package.json` lint script to cover all of `src/` (not just `src/app`)
+- [ ] Update `apps/api/package.json` lint script from `eslint src/app` to `eslint src`
 - [ ] Run lint and fix all errors before marking complete
+
+## `packages/access` typecheck script
+
+`packages/access/package.json` has no `scripts` block. CI cannot run typecheck on it without one.
+
+- [ ] Add `"scripts": { "typecheck": "tsc --noEmit" }` to `packages/access/package.json`
+- [ ] Ensure `packages/access` has a `tsconfig.json` (create one if missing)
 
 ## Seed script
 
-- [ ] `apps/api/src/infrastructure/database/seed.ts`: rename `REPRESENTATIVE` → `REP`
+- [ ] `apps/api/src/infrastructure/database/seed.ts`: rename `USER` → `REP`
 - [ ] `apps/api/src/infrastructure/database/seed.ts`: add `OPS` role entry
 - [ ] Verify seed runs cleanly on a fresh DB
 
 ## Raw `Error()` throws → typed domain errors
 
-Replace every raw `throw new Error(...)` in production module code with the appropriate typed error from `apps/api/src/shared/errors/`.
+Replace every raw `throw new Error(...)` in production code with the appropriate typed error from `apps/api/src/shared/errors/`.
+
+### Module code
 
 | File | Current | Replace with |
 |---|---|---|
 | `modules/access/application/use-cases/revoke-invite.use-case.ts:22` | `"Invite not found"` | `ResourceNotFoundError` |
-| `modules/access/application/use-cases/revoke-invite.use-case.ts:26` | `"Only pending invites can be revoked"` | `ValidationError` or domain-specific |
-| `modules/access/application/services/two-factor.service.ts:68` | `"TWO_FACTOR_ENCRYPTION_KEY is not configured"` | `ConfigurationError` (create if missing) |
-| `modules/access/infrastructure/repositories/prisma/prisma-invite.repository.ts:238` | `"User already exists"` | `ConflictError` |
-| `modules/professional/infrastructure/repositories/prisma/prisma-professional.repository.ts:314` | `"Professional not found"` | `ResourceNotFoundError` |
+| `modules/access/application/use-cases/revoke-invite.use-case.ts:26` | `"Only pending invites can be revoked"` | `ValidationError` |
+| `modules/access/application/services/two-factor.service.ts:68` | `"TWO_FACTOR_ENCRYPTION_KEY is not configured"` | `ConfigurationError` |
+| `modules/access/infrastructure/repositories/drizzle/drizzle-invite.repository.ts` | `"User already exists"` | `ConflictError` |
+| `modules/professional/infrastructure/repositories/drizzle/drizzle-professional.repository.ts` | `"Professional not found"` | `ResourceNotFoundError` |
 | `modules/registry-ingestion/application/use-cases/run-registry-ingestion.use-case.ts:62` | `"Temporal workflow starter is not configured"` | `ConfigurationError` |
 | `modules/registry-ingestion/application/use-cases/suggestion.use-cases.ts:272` | `"professionalRepository is required"` | `ConfigurationError` |
 | `modules/registry-ingestion/application/use-cases/suggestion.use-cases.ts:299` | `"facilityRepresentativeRepository is required"` | `ConfigurationError` |
@@ -66,9 +79,26 @@ Replace every raw `throw new Error(...)` in production module code with the appr
 | `modules/territory/application/constants/territory-roles.constants.ts:26` | rep patch constraint | `ValidationError` |
 | `modules/territory/application/use-cases/territory-crud.use-cases.ts:85` | missing territoryType | `ValidationError` |
 
-- [ ] Create `ConfigurationError` in `apps/api/src/shared/errors/` if it doesn't exist
-- [ ] Replace all 12 throws listed above
+### Infrastructure code
+
+| File | Current | Replace with |
+|---|---|---|
+| `infrastructure/external-services/resend/resend-email.service.ts` | `"Failed to send email"` | `ExternalServiceError` |
+| `infrastructure/external-services/resend/send-invite-email.ts` (×2) | `"Failed to send invite/reset email"` | `ExternalServiceError` |
+| `infrastructure/external-services/twilio/twilio-messaging.service.ts` | `"Failed to send WhatsApp message"` | `ExternalServiceError` |
+| `infrastructure/audit/siem-export.helper.ts` | `"SIEM webhook returned ${status}"` | `ExternalServiceError` |
+| `infrastructure/jobs/territory-membership.queue.ts` | `"Territory membership handler not registered"` | `ConfigurationError` |
+
+- [ ] Create `ConfigurationError` in `apps/api/src/shared/errors/domain-errors.ts` if it doesn't exist
+- [ ] Replace all throws in both tables above
 - [ ] Verify global error handler maps each new error type to the correct HTTP status
+
+## `any` types in repository interfaces
+
+`apps/api/src/modules/access/application/interfaces/` has 11 `any` usages across `session.repository.interface.ts`, `user.repository.interface.ts`, and `invite.repository.interface.ts`. These are the ones already listed as P3-5 in the problem inventory (location was wrong — they are in `apps/api`, not `packages/access`; `packages/access` is clean).
+
+- [ ] Replace `any` with proper domain types in all three interface files
+- [ ] Run typecheck to confirm no regressions
 
 ## Role name fix in tests
 
@@ -77,4 +107,4 @@ Replace every raw `throw new Error(...)` in production module code with the appr
 
 ## Done criteria
 
-All checkboxes above are checked. `bun test` in CI passes with real assertions. `bun run build` passes for web. Seed runs cleanly. No raw `Error()` in module code.
+All checkboxes above are checked. `bun test` in CI passes with real assertions. `bun run build` passes for web. Seed runs cleanly. No raw `Error()` in module or infra code. Typecheck passes for all packages.

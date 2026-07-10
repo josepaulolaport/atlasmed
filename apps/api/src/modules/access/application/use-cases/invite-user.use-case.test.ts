@@ -384,9 +384,9 @@ describe("InviteUserUseCase", () => {
       }));
     }
 
-    it("should allow MANAGER to invite USER", async () => {
+    it("should allow MANAGER to invite REP", async () => {
       setupInviter("MANAGER");
-      setupTargetRole("USER");
+      setupTargetRole("REP");
 
       await expect(inviteUserUseCase.execute(inviteParams)).resolves.toBeDefined();
     });
