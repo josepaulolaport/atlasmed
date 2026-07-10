@@ -15,6 +15,7 @@ import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
 import { observabilityPlugin } from "../infrastructure/plugins/observability.plugin";
 import { securityHeadersPlugin } from "../infrastructure/middleware/security-headers.middleware";
+import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 
@@ -111,8 +112,18 @@ const app = new Elysia()
   .use(healthRoute)
 
   // Versioned API routes
+  // auditMiddleware is applied first in the group so its onAfterHandle runs
+  // for all authenticated routes within this group.
   .group('/api/v1', (app) =>
-    app.use(access).use(facility).use(catalog).use(professional).use(registryIngestion).use(territory).use(maps)
+    app
+      .use(auditMiddleware)
+      .use(access)
+      .use(facility)
+      .use(catalog)
+      .use(professional)
+      .use(registryIngestion)
+      .use(territory)
+      .use(maps)
   );
 
 export default app;

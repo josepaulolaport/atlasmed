@@ -8,6 +8,13 @@
       "when": 1783666545757,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783672650091,
+      "tag": "0001_audit_event_type_text",
+      "breakpoints": true
     }
   ]
 }

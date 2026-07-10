@@ -3,11 +3,11 @@ import { auditLogs } from "@atlasmed/database";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { metricsService } from "../monitoring/metrics.service";
 import { environment } from "../../app/config/environment";
-import type { AuditEventType, AuditEventSeverity } from "@atlasmed/database";
+import type { AuditEventSeverity } from "@atlasmed/database";
 
 export interface AuditLogEntry {
   userId?: string | undefined;
-  eventType: AuditEventType;
+  eventType: string;
   severity?: AuditEventSeverity | undefined;
   actor?: string | undefined;
   actorId?: string | undefined;
@@ -23,6 +23,15 @@ export interface AuditLogEntry {
   metadata?: Record<string, unknown> | undefined;
 }
 
+/**
+ * The typed helper methods on this class (`logUserLogin`, `logInviteUser`, etc.)
+ * are @deprecated. New routes must NOT call them — the `auditMiddleware` plugin
+ * records audit entries automatically from HTTP method + path.
+ *
+ * The helpers remain only for flows that run outside the normal request/response
+ * lifecycle (e.g. failed login attempts that never reach onAfterHandle).
+ * They will be removed in Phase 2.
+ */
 export class AuditLogService {
   private async writeLog(entry: AuditLogEntry): Promise<void> {
     const severity = entry.severity || "INFO";
@@ -68,6 +77,12 @@ export class AuditLogService {
     }
   }
 
+  /**
+   * @deprecated Use the automatic audit middleware instead.
+   * These typed helpers remain only for login/logout flows that run outside
+   * the normal HTTP handler lifecycle (e.g. failed logins that never reach
+   * onAfterHandle). Remove in Phase 2 once those flows are covered.
+   */
   async logFailedLoginAttempt(params: {
     identifier: string;
     reason: string;
@@ -92,6 +107,7 @@ export class AuditLogService {
     });
   }
 
+  /** @deprecated Use the automatic audit middleware instead. */
   async logUserLogin(params: {
     userId: string;
     sessionId: string;
@@ -483,7 +499,7 @@ export class AuditLogService {
   private resolveStatusChangeEventType(
     oldStatus: string,
     newStatus: string
-  ): AuditEventType {
+  ): string {
     if (newStatus === "SUSPENDED") return "USER_SUSPEND";
     if (newStatus === "INACTIVE") return "USER_DEACTIVATE";
     if (newStatus === "ACTIVE" && oldStatus === "SUSPENDED") return "USER_UNSUSPEND";
@@ -493,7 +509,7 @@ export class AuditLogService {
 
   async getAuditLogs(params: {
     userId?: string;
-    eventType?: AuditEventType;
+    eventType?: string;
     severity?: AuditEventSeverity;
     startDate?: Date;
     endDate?: Date;

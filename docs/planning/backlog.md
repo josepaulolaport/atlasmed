@@ -115,6 +115,45 @@ If the Phase 1 decision was to defer the `Organization` model, it lives here.
 
 ---
 
+## PostGIS geographical queries
+
+The database schema uses PostGIS geometry types (`point`, `geometry(Polygon, 4326)`) for facility locations and territory boundaries, but queries currently use flat column comparisons or skip spatial filtering entirely. PostGIS operators and indexes are unused.
+
+**Why this matters:**
+- `ST_DWithin` on a spatial index is orders of magnitude faster than bounding-box lat/lng arithmetic on large datasets
+- Territory scoping (which facilities a rep sees) is currently done by joining `user_territory_assignments` and matching against a list; it should use `ST_Within` or `ST_Intersects`
+- Distance-ordered searches ("find the 10 nearest facilities") are impossible without `ST_Distance` / `ST_ClosestPoint`
+
+**Affected queries (in priority order):**
+
+| Query | Current | Target |
+|---|---|---|
+| Facility search: spatial filter | none | `ST_DWithin(facilities.location, ST_SetSRID(ST_Point($lng,$lat),4326), $radius_meters)` |
+| Facility search: order by distance | manual in-process sort | `ORDER BY ST_Distance(facilities.location, ...)` |
+| Territory membership check | join on assignment table | `ST_Within(facility.location, territory.boundary)` |
+| Territory boundary query: which facilities fall in a territory | none | `ST_Within(f.location, t.boundary)` |
+| Find territories containing a point | none | `ST_Contains(t.boundary, ST_SetSRID(ST_Point($lng,$lat),4326))` |
+
+**Tasks:**
+- [ ] Enable GIST index on `facilities.location` (confirm it exists in schema — it should, check migration)
+- [ ] Enable GIST index on `territories.boundary`
+- [ ] Add `ST_DWithin` filter to `DrizzleFacilityRepository.findAll` (accepts optional `nearLat`, `nearLng`, `radiusMeters`)
+- [ ] Add `ST_Distance` ordering to facility search when `near*` params are provided
+- [ ] Add `ST_Within(facility.location, territory.boundary)` join to territory-scoped facility queries in `DrizzleFacilityMembershipWriter`
+- [ ] Add `findFacilitiesInTerritory(territoryId)` to `FacilityRepository` using boundary join
+- [ ] Add `findTerritoriesContainingPoint(lat, lng)` to `TerritoryRepository`
+- [ ] Write typed raw SQL helpers for complex spatial queries (e.g. nearest-N with distance returned)
+- [ ] Update API endpoints to accept and forward spatial params (`nearLat`, `nearLng`, `radiusKm`)
+- [ ] Add spatial param validation in route schemas
+
+**Notes:**
+- All PostGIS calls should go through typed raw SQL helpers in `packages/database/src/` — never inline SQL strings in repositories
+- Use geography type (`ST_SetSRID(..., 4326)`) for distance calculations involving real-world meters
+- Use a GiST index, not a B-tree, for spatial columns — verify in migration
+- Test with real Brazilian municipality coordinates
+
+---
+
 ## Auth context performance
 
 The auth context re-bootstraps (re-fetches profile) on every `pathname` change in the dashboard. This causes unnecessary API calls and loading flickers when navigating between pages.
