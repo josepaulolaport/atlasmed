@@ -58,12 +58,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("manage", "FACILITY")).toBe(true);
     });
 
-    it("should allow ADMIN to manage VISIT", () => {
-      const ability = defineAbilitiesFor("ADMIN");
-
-      expect(ability.can("manage", "VISIT")).toBe(true);
-    });
-
     it("should allow ADMIN to manage TERRITORY", () => {
       const ability = defineAbilitiesFor("ADMIN");
 
@@ -83,13 +77,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("manage", "FACILITY")).toBe(false);
     });
 
-    it("should allow MANAGER to read VISIT", () => {
-      const ability = defineAbilitiesFor("MANAGER");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("manage", "VISIT")).toBe(false);
-    });
-
     it("should allow MANAGER to read TERRITORY", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
@@ -102,11 +89,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("read", "FACILITY")).toBe(true);
     });
 
-    it("should allow USER to read VISIT", () => {
-      const ability = defineAbilitiesFor("REP");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-    });
   });
 
   describe("missing permission", () => {
@@ -145,12 +127,6 @@ describe("PermissionMiddleware", () => {
 
       expect(ability.can("manage", "FACILITY")).toBe(false);
     });
-
-    it("should deny USER from managing VISIT", () => {
-      const ability = defineAbilitiesFor("REP");
-
-      expect(ability.can("manage", "VISIT")).toBe(false);
-    });
   });
 
   describe("multiple permission checks", () => {
@@ -169,7 +145,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("read", "USER")).toBe(true);
       expect(ability.can("create", "USER")).toBe(true);
       expect(ability.can("read", "FACILITY")).toBe(true);
-      expect(ability.can("read", "VISIT")).toBe(true);
       expect(ability.can("update", "FACILITY")).toBe(true);
       expect(ability.can("create", "TERRITORY")).toBe(true);
       expect(ability.can("update", "TERRITORY")).toBe(true);
@@ -223,15 +198,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "FACILITY")).toBe(true);
     });
 
-    it("should have full CRUD on VISIT", () => {
-      const ability = defineAbilitiesFor("ADMIN");
-
-      expect(ability.can("create", "VISIT")).toBe(true);
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("update", "VISIT")).toBe(true);
-      expect(ability.can("delete", "VISIT")).toBe(true);
-    });
-
     it("should have full CRUD on TERRITORY", () => {
       const ability = defineAbilitiesFor("ADMIN");
 
@@ -261,15 +227,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "FACILITY")).toBe(false);
     });
 
-    it("should have read-only on VISIT", () => {
-      const ability = defineAbilitiesFor("MANAGER");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("create", "VISIT")).toBe(false);
-      expect(ability.can("update", "VISIT")).toBe(false);
-      expect(ability.can("delete", "VISIT")).toBe(false);
-    });
-
     it("should have read, create, and update on TERRITORY", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
@@ -289,15 +246,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("create", "FACILITY")).toBe(false);
       expect(ability.can("update", "FACILITY")).toBe(true);
       expect(ability.can("delete", "FACILITY")).toBe(false);
-    });
-
-    it("should have read-only on VISIT", () => {
-      const ability = defineAbilitiesFor("REP");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("create", "VISIT")).toBe(false);
-      expect(ability.can("update", "VISIT")).toBe(false);
-      expect(ability.can("delete", "VISIT")).toBe(false);
     });
 
     it("should have no permissions on USER", () => {

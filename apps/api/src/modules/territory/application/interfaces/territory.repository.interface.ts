@@ -17,7 +17,7 @@ export interface TerritoryRecord {
   parentId: string | null;
   managerTerritoryId: string | null;
   isActive: boolean;
-  organizationId: string | null;
+  sectorId: string | null;
   createdAt: Date;
   updatedAt: Date;
   activeChildCount?: number;
@@ -38,7 +38,7 @@ export interface CreateTerritoryInput {
   stateCode?: string | null;
   parentId?: string | null;
   managerTerritoryId?: string | null;
-  organizationId?: string | null;
+  sectorId?: string | null;
 }
 
 export interface TerritoryRepository {

@@ -26,7 +26,7 @@ function serializeAssociationRole(association: {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
-  relationshipLevel: "LOW" | "MEDIUM" | "HIGH" | null;
+  relationshipLevel: number | null;
   specialtyLabel: string | null;
   notes: string | null;
 }): FacilityProfessionalRole {
@@ -54,7 +54,7 @@ function serializeAssociation(row: {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
-  relationshipLevel: "LOW" | "MEDIUM" | "HIGH" | null;
+  relationshipLevel: number | null;
   specialtyLabel: string | null;
   notes: string | null;
   sourceActive: boolean;
@@ -246,7 +246,7 @@ export class UpdateFacilityProfessionalRoleUseCase {
     isPrescriber?: boolean;
     isBuyer?: boolean;
     isDecisionMaker?: boolean;
-    relationshipLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+    relationshipLevel?: number | null;
     specialtyLabel?: string | null;
     notes?: string | null;
   }) {

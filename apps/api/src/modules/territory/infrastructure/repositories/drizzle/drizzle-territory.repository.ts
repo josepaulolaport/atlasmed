@@ -47,7 +47,7 @@ function mapTerritory(territory: {
   parentId: string | null;
   managerTerritoryId: string | null;
   isActive: boolean;
-  organizationId: string | null;
+  sectorId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }): TerritoryRecord {
@@ -65,7 +65,7 @@ function mapTerritory(territory: {
     parentId: territory.parentId,
     managerTerritoryId: territory.managerTerritoryId,
     isActive: territory.isActive,
-    organizationId: territory.organizationId,
+    sectorId: territory.sectorId,
     createdAt: territory.createdAt,
     updatedAt: territory.updatedAt,
   };
@@ -214,7 +214,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         stateCode: input.stateCode ?? null,
         parentId: input.parentId ?? null,
         managerTerritoryId: input.managerTerritoryId ?? null,
-        organizationId: input.organizationId ?? null,
+        sectorId: input.sectorId ?? null,
       })
       .returning({ id: territories.id });
     return (await this.findOneWithType(inserted!.id))!;

@@ -3,6 +3,7 @@ import {
   text,
   boolean,
   timestamp,
+  smallint,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -14,7 +15,6 @@ import {
   commercialStatusEnum,
   purchaseStatusEnum,
   contactTypeEnum,
-  relationshipLevelEnum,
   healthcareProviderTypeEnum,
   healthcareProviderShareSourceEnum,
   conformityRecordStatusEnum,
@@ -22,19 +22,10 @@ import {
   territoryAssignmentSourceEnum,
 } from "./enums";
 import { territories } from "./territories";
+import { sectors } from "./sectors";
+import { users } from "./users";
 
-export const sectors = pgTable(
-  "sectors",
-  {
-    id: text("id").primaryKey().$defaultFn(() => createId()),
-    slug: text("slug").notNull().unique(),
-    name: text("name").notNull(),
-    isActive: boolean("is_active").notNull().default(true),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (t) => [index("sectors_is_active_idx").on(t.isActive)]
-);
+export { sectors } from "./sectors";
 
 export const facilities = pgTable(
   "facilities",
@@ -170,15 +161,19 @@ export const facilityProfessionals = pgTable(
     isBuyer: boolean("is_buyer").notNull().default(false),
     isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
     isPartner: boolean("is_partner").notNull().default(false),
-    relationshipLevel: relationshipLevelEnum("relationship_level"),
+    relationshipLevel: smallint("relationship_level"),
     notes: text("notes"),
     sourceActive: boolean("source_active").notNull().default(false),
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
     sourceLastSeenAt: timestamp("source_last_seen_at"),
     confirmedAt: timestamp("confirmed_at"),
-    confirmedByUserId: text("confirmed_by_user_id"),
+    confirmedByUserId: text("confirmed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     endedAt: timestamp("ended_at"),
-    endedByUserId: text("ended_by_user_id"),
+    endedByUserId: text("ended_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     endReason: text("end_reason"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -214,14 +209,15 @@ export const facilityRepresentatives = pgTable(
     email: text("email"),
     taxId: text("tax_id"),
     contactType: contactTypeEnum("contact_type").notNull().default("PROFESSIONAL"),
-    relationshipLevel: text("relationship_level"),
     phone: text("phone"),
     notes: text("notes"),
     sourceProvider: text("source_provider"),
     externalSourceKey: text("external_source_key"),
     sourceActive: boolean("source_active").notNull().default(false),
     confirmedAt: timestamp("confirmed_at"),
-    confirmedByUserId: text("confirmed_by_user_id"),
+    confirmedByUserId: text("confirmed_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     endedAt: timestamp("ended_at"),
     manuallyEditedAt: timestamp("manually_edited_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -246,10 +242,14 @@ export const facilityConsultantAssignments = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    userId: text("user_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
-    assignedByUserId: text("assigned_by_user_id"),
+    assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     endReason: text("end_reason"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -326,7 +326,9 @@ export const conformityRecords = pgTable(
     submittedAt: timestamp("submitted_at"),
     validatedAt: timestamp("validated_at"),
     expiresAt: timestamp("expires_at"),
-    validatedByUserId: text("validated_by_user_id"),
+    validatedByUserId: text("validated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -339,11 +341,6 @@ export const conformityRecords = pgTable(
 );
 
 // --- Relations ---
-
-export const sectorsRelations = relations(sectors, ({ many }) => ({
-  facilities: many(facilities),
-  conformityRequirements: many(conformityRequirements),
-}));
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   territory: one(territories, { fields: [facilities.territoryId], references: [territories.id] }),
@@ -362,14 +359,38 @@ export const professionalsRelations = relations(professionals, ({ many }) => ({
 export const facilityProfessionalsRelations = relations(facilityProfessionals, ({ one }) => ({
   professional: one(professionals, { fields: [facilityProfessionals.professionalId], references: [professionals.id] }),
   facility: one(facilities, { fields: [facilityProfessionals.facilityId], references: [facilities.id] }),
+  confirmedBy: one(users, {
+    fields: [facilityProfessionals.confirmedByUserId],
+    references: [users.id],
+    relationName: "FacilityProfessionalConfirmedBy",
+  }),
+  endedBy: one(users, {
+    fields: [facilityProfessionals.endedByUserId],
+    references: [users.id],
+    relationName: "FacilityProfessionalEndedBy",
+  }),
 }));
 
 export const facilityRepresentativesRelations = relations(facilityRepresentatives, ({ one }) => ({
   facility: one(facilities, { fields: [facilityRepresentatives.facilityId], references: [facilities.id] }),
+  confirmedBy: one(users, {
+    fields: [facilityRepresentatives.confirmedByUserId],
+    references: [users.id],
+  }),
 }));
 
 export const facilityConsultantAssignmentsRelations = relations(facilityConsultantAssignments, ({ one }) => ({
   facility: one(facilities, { fields: [facilityConsultantAssignments.facilityId], references: [facilities.id] }),
+  user: one(users, {
+    fields: [facilityConsultantAssignments.userId],
+    references: [users.id],
+    relationName: "FacilityConsultantUser",
+  }),
+  assignedBy: one(users, {
+    fields: [facilityConsultantAssignments.assignedByUserId],
+    references: [users.id],
+    relationName: "FacilityConsultantAssignedBy",
+  }),
 }));
 
 export const healthcareProvidersRelations = relations(healthcareProviders, ({ many }) => ({
@@ -394,5 +415,9 @@ export const conformityRecordsRelations = relations(conformityRecords, ({ one })
   requirement: one(conformityRequirements, {
     fields: [conformityRecords.requirementId],
     references: [conformityRequirements.id],
+  }),
+  validatedBy: one(users, {
+    fields: [conformityRecords.validatedByUserId],
+    references: [users.id],
   }),
 }));

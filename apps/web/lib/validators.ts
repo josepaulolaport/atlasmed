@@ -126,7 +126,6 @@ export const grantPermissionSchema = z.object({
     "REP",
     "FACILITY",
     "PROFESSIONAL",
-    "VISIT",
     "TERRITORY",
     "INVITATION",
   ]),

@@ -43,7 +43,7 @@ function createTerritoryRepository(
             parentId: "region-1",
             managerTerritoryId: "manager-zone-1",
             isActive: true,
-            organizationId: null,
+            sectorId: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           }

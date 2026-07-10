@@ -5,8 +5,6 @@ export const Subjects = {
 
   PROFESSIONAL: "PROFESSIONAL",
 
-  VISIT: "VISIT",
-
   TERRITORY: "TERRITORY",
 
   INVITATION: "INVITATION",

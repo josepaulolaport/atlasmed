@@ -18,6 +18,7 @@ import { securityHeadersPlugin } from "../infrastructure/middleware/security-hea
 import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
+import { logger } from "../infrastructure/logging/logger";
 
 const app = new Elysia()
   // Observability MUST come first to track all requests
@@ -30,13 +31,11 @@ const app = new Elysia()
     const method = request.method;
     
     // Log error with context
-    console.error("[ErrorHandler]", {
-      code,
-      error: error instanceof Error ? error.message : String(error),
-      errorType: error?.constructor?.name,
+    logger.error("Request failed", error instanceof Error ? error : undefined, {
+      code: String(code),
+      errorType: error?.constructor?.name ?? "unknown",
       path,
       method,
-      timestamp: new Date().toISOString(),
       ...(error instanceof AppError && { errorCode: error.code }),
       ...(error instanceof HttpError && {
         errorCode: error.code,
@@ -77,7 +76,7 @@ const app = new Elysia()
     
     // Log full error details in development
     if (environment.NODE_ENV === 'development') {
-      console.error("[ErrorHandler] Full error:", error);
+      logger.error("Unhandled error details", error instanceof Error ? error : undefined);
     }
     
     return {

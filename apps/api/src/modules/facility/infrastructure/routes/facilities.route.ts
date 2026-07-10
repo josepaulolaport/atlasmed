@@ -307,9 +307,7 @@ const updateFacilityProfessionalRoleRoute = new Elysia()
         isDecisionMaker: t.Optional(t.Boolean()),
         relationshipLevel: t.Optional(
           t.Union([
-            t.Literal("LOW"),
-            t.Literal("MEDIUM"),
-            t.Literal("HIGH"),
+            t.Number({ minimum: 1, maximum: 10 }),
             t.Null(),
           ])
         ),

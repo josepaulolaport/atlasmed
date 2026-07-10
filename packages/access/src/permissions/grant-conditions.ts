@@ -8,7 +8,6 @@ const SCOPED_SUBJECTS = new Set<Subject>([
   "USER",
   "FACILITY",
   "PROFESSIONAL",
-  "VISIT",
   "TERRITORY",
 ]);
 

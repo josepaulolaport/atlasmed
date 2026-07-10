@@ -2,7 +2,7 @@
 
 **Created:** 2026-07-09  
 **Last updated:** 2026-07-10  
-**Status:** Phase 0.5 complete → Phase 2 next
+**Status:** Phase 0.5 complete → Phase 1 complete (SigNoz E2E verify optional when stack is running)
 
 This document is the single source of truth for the project recovery. Update it as work progresses. Every checkbox represents a concrete task. Every phase must be fully checked before the next one begins.
 
@@ -84,7 +84,7 @@ This document is the single source of truth for the project recovery. Update it 
 | P1-2 | Manager/territory selectors use query params the API ignores | `lib/api/territories.ts`, `lib/api/users.ts` |
 | P1-3 | Integration tests pass silently when DB is unavailable | All `*-http.integration.test.ts` |
 | P1-4 | Seed script creates role `REPRESENTATIVE` (not `REP`), missing `OPS` | `seed.ts` |
-| P1-5 | OPS role has empty scope — sees nothing despite read permissions | `packages/access`, scope resolvers |
+| P1-5 | OPS role scope — **fixed in Phase 1** (global read-only) | `ScopeResolver` |
 
 ### P2 — High
 
@@ -108,7 +108,7 @@ This document is the single source of truth for the project recovery. Update it 
 | P3-4 | ESLint only covers `src/app` — 95% of API source is unlinted | `apps/api/package.json` |
 | P3-5 | Access repository interfaces use pervasive `any` types | `user/session/invite/password-reset.repository.interface.ts` |
 | P3-6 | Auth context re-bootstraps on every route change | `auth-context.tsx` |
-| P3-7 | VISIT CASL subject has no domain (no model, no routes) | `packages/access` |
+| P3-7 | ~~VISIT CASL subject has no domain~~ — removed in Phase 1; rebuild in Phase 4 | `packages/access` |
 | P3-8 | `packages/access` tests reference old role name `USER` instead of `REP` | `permission.middleware.test.ts` |
 | P3-9 | MANAGER role lacks registry ingestion permissions | `packages/access` |
 | P3-10 | Temporal workflow has no versioning/patch guards | `apps/workers` |
@@ -138,9 +138,9 @@ This document is the single source of truth for the project recovery. Update it 
 |---|---|---|
 | **Phase 0** | Foundation: CI, tests, linting, seed, raw errors | ✅ Done (PR #20) |
 | **Phase 0.5** | Infrastructure: local dev stack, audit log redesign, MinIO, Meilisearch, SigNoz, env files | ✅ Done |
-| **Phase 1** | DB schema decisions + observability wiring (OTEL, structured logging, spans) | 🟡 DB done — observability pending |
+| **Phase 1** | DB schema decisions + sector prep + observability wiring (OTEL, structured logging, spans) | ✅ Complete |
 | **Phase 2** | Delete stubs, dead code, decorative UI | ⬜ Not started |
-| **Phase 3** | Contract bugs: invite flow, selectors, OPS role | ⬜ Not started |
+| **Phase 3** | Contract bugs: invite flow, selectors, OPS, **healthcare sector scoping** | ⬜ Not started |
 | **Phase 4** | Feature completion, one at a time | ⬜ Not started |
 | **Backlog** | Design system, RSC, TanStack Query, Temporal versioning, PostGIS geo queries | ⬜ Deferred |
 

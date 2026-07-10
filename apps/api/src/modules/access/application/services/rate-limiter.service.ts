@@ -1,4 +1,5 @@
 import type Redis from "ioredis";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { TooManyLoginAttemptsError } from "../../../../shared/errors";
 import { environment } from "../../../../app/config/environment";
 
@@ -61,7 +62,7 @@ export class RateLimiterService {
 
     const remaining = this.maxAttempts - current;
     if (remaining > 0 && remaining <= 2) {
-      console.warn(`User ${identifier} has ${remaining} login attempt(s) remaining`);
+      logger.warn(`User ${identifier} has ${remaining} login attempt(s) remaining`);
     }
   }
 

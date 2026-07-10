@@ -7,7 +7,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { sectors } from "./facilities";
+import { sectors } from "./sectors";
 
 export const products = pgTable(
   "products",

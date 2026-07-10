@@ -46,7 +46,7 @@ function baseAssociation(
     confirmedAt: Date | null;
     endedAt: Date | null;
     isPartner: boolean;
-    relationshipLevel: "LOW" | "MEDIUM" | "HIGH" | null;
+    relationshipLevel: number | null;
     notes: string | null;
   }> = {}
 ) {
@@ -60,7 +60,7 @@ function baseAssociation(
     isPrescriber: false,
     isBuyer: false,
     isDecisionMaker: false,
-    relationshipLevel: null as "LOW" | "MEDIUM" | "HIGH" | null,
+    relationshipLevel: null as number | null,
     notes: null as string | null,
     sourceActive: true,
     sourceFirstSeenAt: new Date("2024-01-01"),
@@ -176,12 +176,12 @@ describe("Facility professional use cases", () => {
       professionalId,
       scope: createGlobalScopeContext(),
       isPartner: true,
-      relationshipLevel: "HIGH",
+      relationshipLevel: 8,
       notes: "Key contact",
     });
 
     expect(result?.isPartner).toBe(true);
-    expect(result?.relationshipLevel).toBe("HIGH");
+    expect(result?.relationshipLevel).toBe(8);
     expect(result?.notes).toBe("Key contact");
     expect(facilityProfessionalRepository.updateAssociationRoles).toHaveBeenCalled();
   });

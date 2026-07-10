@@ -14,6 +14,7 @@ import {
 } from "../../../../shared/errors";
 import { environment } from "../../../../app/config/environment";
 import { DUMMY_PASSWORD_HASH } from "../constants/password.constants";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 interface Dependencies {
   userRepository: UserRepository;
@@ -40,6 +41,14 @@ export class LoginUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: LoginParams) {
+    return tracer.with(
+      "user.login",
+      async () => this.executeLogin(params),
+      { "app.module": "access" }
+    );
+  }
+
+  private async executeLogin(params: LoginParams) {
     try {
       await this.deps.rateLimiterService.checkLoginAttempts(params.identifier);
     } catch (error) {

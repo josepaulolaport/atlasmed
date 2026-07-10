@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 import {
   REDIS_CACHE_RETRY_ATTEMPTS,
@@ -100,7 +101,7 @@ export class SessionCacheService implements ISessionCache {
 
       return JSON.parse(data) as CachedSession;
     } catch (error) {
-      console.error("Failed to get session from cache:", error);
+      logger.error("Failed to get session from cache", error);
       return null;
     }
   }
@@ -117,7 +118,7 @@ export class SessionCacheService implements ISessionCache {
 
       return JSON.parse(data) as SupersededRefreshTokenInfo;
     } catch (error) {
-      console.error("Failed to get superseded refresh token from cache:", error);
+      logger.error("Failed to get superseded refresh token from cache", error);
       return null;
     }
   }
@@ -132,7 +133,7 @@ export class SessionCacheService implements ISessionCache {
 
       return await this.getById(sessionId);
     } catch (error) {
-      console.error("Failed to get session by token hash from cache:", error);
+      logger.error("Failed to get session by token hash from cache", error);
       return null;
     }
   }
@@ -160,7 +161,7 @@ export class SessionCacheService implements ISessionCache {
 
       await pipeline.exec();
     } catch (error) {
-      console.error("Failed to cache session:", error);
+      logger.error("Failed to cache session", error);
     }
   }
 
@@ -197,7 +198,7 @@ export class SessionCacheService implements ISessionCache {
   ): Promise<void> {
     const userSessionsKey = this.getUserSessionsKey(userId);
     const sessionIds = await this.redis.smembers(userSessionsKey).catch((error) => {
-      console.error("Failed to list user sessions from cache:", error);
+      logger.error("Failed to list user sessions from cache", error);
       return [] as string[];
     });
 
@@ -256,7 +257,7 @@ export class SessionCacheService implements ISessionCache {
 
       await pipeline.exec();
     } catch (error) {
-      console.error("Failed to update session cache after refresh:", error);
+      logger.error("Failed to update session cache after refresh", error);
     }
   }
 
@@ -271,7 +272,7 @@ export class SessionCacheService implements ISessionCache {
       session.lastSeenAt = new Date().toISOString();
       await this.set(session);
     } catch (error) {
-      console.error("Failed to update session last seen in cache:", error);
+      logger.error("Failed to update session last seen in cache", error);
     }
   }
 
@@ -281,7 +282,7 @@ export class SessionCacheService implements ISessionCache {
       const result = await this.redis.exists(this.getRevokedKey(sessionId));
       return result === 1;
     } catch (error) {
-      console.error("Failed to check session revoked marker:", error);
+      logger.error("Failed to check session revoked marker", error);
       return true;
     }
   }
@@ -292,7 +293,7 @@ export class SessionCacheService implements ISessionCache {
       const result = await this.redis.exists(this.getValidatedKey(sessionId));
       return result === 1;
     } catch (error) {
-      console.error("Failed to check session validation stamp:", error);
+      logger.error("Failed to check session validation stamp", error);
       return false;
     }
   }
@@ -305,7 +306,7 @@ export class SessionCacheService implements ISessionCache {
         "1"
       );
     } catch (error) {
-      console.error("Failed to mark session as validated:", error);
+      logger.error("Failed to mark session as validated", error);
     }
   }
 }

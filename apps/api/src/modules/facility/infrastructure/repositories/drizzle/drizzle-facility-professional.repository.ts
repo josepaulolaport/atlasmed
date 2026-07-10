@@ -25,7 +25,7 @@ type AssociationRow = {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
-  relationshipLevel: string | null;
+  relationshipLevel: number | null;
   notes: string | null;
   sourceActive: boolean;
   sourceFirstSeenAt: Date | null;
@@ -50,7 +50,7 @@ function mapAssociation(association: AssociationRow): FacilityProfessionalRecord
     isPrescriber: association.isPrescriber,
     isBuyer: association.isBuyer,
     isDecisionMaker: association.isDecisionMaker,
-    relationshipLevel: association.relationshipLevel as RelationshipLevel | null,
+    relationshipLevel: association.relationshipLevel,
     notes: association.notes,
     sourceActive: association.sourceActive,
     sourceFirstSeenAt: association.sourceFirstSeenAt,

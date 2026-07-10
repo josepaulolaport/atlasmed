@@ -62,17 +62,14 @@
 
 ---
 
-## 4. OPS role — empty scope
+## 4. OPS role — global read-only scope
 
-**The bug:** OPS is in the enum, in the migration, and in CASL abilities with read permissions. But the scope resolver returns an empty set for OPS users, so they see nothing despite having read rights. This was likely deferred from the OPS decision in Phase 1.
+> **Done in Phase 1.** OPS uses `createGlobalScopeContext()` (read all data; CASL denies writes). Verify end-to-end after sector scoping lands in §6.
 
-> **Depends on Phase 1 decision.** If OPS was removed in Phase 1, skip this. If OPS was kept, complete it here.
-
-**Tasks (if OPS is kept):**
-- [ ] Implement OPS scope in territory scope resolver — OPS sees all facilities (no territory filter) or a defined subset
-- [ ] Add OPS to `ROLE_PRIORITY` in `packages/access`
-- [ ] Add OPS test cases to `permission.middleware.test.ts`
-- [ ] Add OPS user to seed data
+**Tasks:**
+- [x] Implement OPS scope in `ScopeResolver`
+- [x] OPS in `ROLE_PRIORITY_BY_NAME`
+- [ ] Add OPS user to seed data (if not already present)
 - [ ] Verify OPS user can log in and read facilities/professionals via the web app
 
 ---
@@ -89,10 +86,56 @@
 
 ---
 
+## 6. Healthcare sector scoping (application layer)
+
+**Context:** Phase 1 added schema hooks only (`territories.sector_id`, `user_sector_assignments`). This section wires sector through access, territory, invite, and list APIs.
+
+**Model:** A territory belongs to **one sector**. A user operates in **one or more sectors**. Effective scope is the **intersection** of territory assignments and sector assignments:
+
+```
+visibleTerritories(user) = assignedTerritories(user) ∩ territoriesWhere(sector ∈ user.sectors)
+```
+
+**Backend — scope & repositories:**
+- [ ] Extend `ScopeContext` with `assignedSectorIds: string[]`
+- [ ] Load sector IDs in `ScopeResolver` (new `ScopeRepository.findSectorIdsByUserId`)
+- [ ] Filter `assignedTerritoryIds` / `effectiveTerritoryIds` to territories whose `sector_id` is in the user's sectors (REP + MANAGER paths)
+- [ ] ADMIN / OPS: skip sector filter (global)
+- [ ] Add validation service: cannot assign territory T to user U unless `T.sector_id ∈ U.sector_ids`
+- [ ] Facility list/detail queries: optional sector filter for managers viewing cross-territory analytics
+
+**Backend — territory & user APIs:**
+- [ ] `GET /territory/territories` — add optional `sectorId` query param (combine with type/manager filters from §3)
+- [ ] Territory create/update — require `sectorId` on assignable territory types
+- [ ] User sector assignment CRUD (assign/revoke sectors on manager/rep profiles)
+- [ ] Invite flow — when inviting REP/MANAGER, assign sectors + validate territory sector alignment
+
+**Backend — invite integration (extends §1):**
+- [ ] Store `sectorIds` on invitation or derive from `repTerritoryId.sector_id` at accept time
+- [ ] On register/accept: create `user_sector_assignments` rows alongside territory assignments
+
+**Web:**
+- [ ] Sector multi-select on invite form (manager/rep roles)
+- [ ] Filter territory dropdowns by selected sector(s)
+- [ ] User profile: show/edit assigned sectors (admin/manager)
+- [ ] Optional sector filter on facility list for managers with multiple sectors
+
+**Tests:**
+- [ ] Unit: scope resolver filters territories by sector intersection
+- [ ] Integration: manager with sectors A+B only sees territories in A+B
+- [ ] Integration: rep cannot access territory in unassigned sector even if row exists in `user_territory_assignments`
+- [ ] Integration: invite → register creates sector + territory assignments
+
+**Data integrity (optional hardening):**
+- [ ] Validate `facilities.primary_sector_id` matches `facilities.territory.sector_id` when both set (warn or block)
+
+---
+
 ## Done criteria
 
-- Invite flow correctly stores name and territory assignments; registered users arrive with assignments
+- Invite flow correctly stores name, sector, and territory assignments; registered users arrive with assignments
 - Manager dropdown in invite form shows only MANAGER users
-- Territory dropdowns in invite form are correctly filtered
-- OPS role either fully works or is fully removed (no half-state)
+- Territory dropdowns in invite form are correctly filtered by type, manager zone, **and sector**
+- OPS role reads globally; writes remain denied
 - MANAGER's access to registry ingestion is explicitly defined and tested
+- **Sector scoping enforced server-side** on all scoped modules (access, territory, facility, catalog)

@@ -5,6 +5,7 @@ import { sanitizeProfessionalBatch } from "../sanitize/sanitize-professional";
 import { RegistrySyncService } from "../services/registry-sync.service";
 import type { AuditLogService } from "../../../../infrastructure/audit/audit-log.service";
 import { ConfigurationError } from "../../../../shared/errors";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 interface Dependencies {
   registrySource: RegistrySourcePort;
@@ -51,11 +52,20 @@ export class RunRegistryIngestionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input?: { actorUserId?: string; ano?: number; mes?: number }) {
-    if (this.deps.registrySourceMode === "temporal") {
-      return this.executeTemporal(input);
-    }
+    return tracer.with(
+      "registry.ingestion.run",
+      async () => {
+        if (this.deps.registrySourceMode === "temporal") {
+          return this.executeTemporal(input);
+        }
 
-    return this.executeMock(input);
+        return this.executeMock(input);
+      },
+      {
+        "app.module": "registry",
+        ...(input?.actorUserId ? { "user.id": input.actorUserId } : {}),
+      }
+    );
   }
 
   private async executeTemporal(input?: { actorUserId?: string; ano?: number; mes?: number }) {

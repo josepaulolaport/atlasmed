@@ -19,6 +19,7 @@ import {
   territoryApprovalStatusEnum,
 } from "./enums";
 import { users } from "./users";
+import { sectors } from "./sectors";
 
 export const territoryTypes = pgTable(
   "territory_types",
@@ -57,7 +58,7 @@ export const territories = pgTable(
     parentId: text("parent_id"),
     managerTerritoryId: text("manager_territory_id"),
     isActive: boolean("is_active").notNull().default(true),
-    organizationId: text("organization_id"),
+    sectorId: text("sector_id").references(() => sectors.id, { onDelete: "restrict" }),
     boundary: geometryMultiPolygon("boundary"),
     centroid: geometryPoint("centroid"),
     boundaryMinLng: doublePrecision("boundary_min_lng"),
@@ -76,6 +77,7 @@ export const territories = pgTable(
     index("territories_node_type_idx").on(t.nodeType),
     index("territories_country_code_idx").on(t.countryCode),
     index("territories_territory_type_id_idx").on(t.territoryTypeId),
+    index("territories_sector_id_idx").on(t.sectorId),
   ]
 );
 
@@ -98,7 +100,7 @@ export const userTerritoryAssignments = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     territoryId: text("territory_id").notNull().references(() => territories.id, { onDelete: "restrict" }),
-    assignedBy: text("assigned_by"),
+    assignedBy: text("assigned_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -115,8 +117,10 @@ export const territoryApprovalRequests = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     type: territoryApprovalTypeEnum("type").notNull(),
     status: territoryApprovalStatusEnum("status").notNull().default("pending"),
-    requesterId: text("requester_id").notNull(),
-    reviewerId: text("reviewer_id"),
+    requesterId: text("requester_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    reviewerId: text("reviewer_id").references(() => users.id, { onDelete: "set null" }),
     entityPayload: json("entity_payload").notNull().default({}),
     targetTerritoryId: text("target_territory_id").references(() => territories.id, { onDelete: "set null" }),
     facilityId: text("facility_id"),
@@ -158,6 +162,7 @@ export const territoriesRelations = relations(territories, ({ one, many }) => ({
     references: [territories.id],
     relationName: "ManagerZonePatches",
   }),
+  sector: one(sectors, { fields: [territories.sectorId], references: [sectors.id] }),
   repPatches: many(territories, { relationName: "ManagerZonePatches" }),
   userAssignments: many(userTerritoryAssignments),
   closureAsAncestor: many(territoryClosure, { relationName: "ClosureAncestor" }),

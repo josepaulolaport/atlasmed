@@ -431,6 +431,8 @@ const processEnv = {
   
   // Observability
   OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME ?? 'atlasmed-api',
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
   OTEL_RESOURCE_ATTRIBUTES: process.env.OTEL_RESOURCE_ATTRIBUTES,
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
 
@@ -444,11 +446,6 @@ const processEnv = {
   // Search
   MEILISEARCH_URL: process.env.MEILISEARCH_URL,
   MEILISEARCH_API_KEY: process.env.MEILISEARCH_API_KEY,
-  
-  // QuestDB
-  QUESTDB_ENABLED: process.env.QUESTDB_ENABLED === 'true',
-  QUESTDB_HOST: process.env.QUESTDB_HOST ?? 'localhost',
-  QUESTDB_PORT: parseInt(process.env.QUESTDB_PORT ?? '9009', 10),
   
   // Feature Flags
   ENABLE_SWAGGER: process.env.ENABLE_SWAGGER !== 'false',

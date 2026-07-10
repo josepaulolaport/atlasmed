@@ -1,4 +1,5 @@
 import { Counter, Histogram, Gauge, register } from "prom-client";
+import { logger } from "../logging/logger";
 
 export class MetricsService {
   private static instance: MetricsService;
@@ -256,7 +257,7 @@ export class MetricsService {
       this.activeUsers.set(activeUserCount);
       this.activeSessions.set(activeSessionCount);
     } catch (error) {
-      console.error("Failed to update active metrics:", error);
+      logger.error("Failed to update active metrics", error);
     }
   }
 }
@@ -264,5 +265,7 @@ export class MetricsService {
 export const metricsService = MetricsService.getInstance();
 
 setInterval(() => {
-  metricsService.updateActiveMetrics().catch(console.error);
+  metricsService.updateActiveMetrics().catch((error) => {
+    logger.error("Failed to update active metrics on interval", error);
+  });
 }, 60000);

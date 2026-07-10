@@ -1,8 +1,10 @@
+import "./bootstrap-telemetry";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { NativeConnection, Worker } from "@temporalio/worker";
 import * as activities from "./activities/index";
 import { loadWorkerConfig } from "./config";
+import { logger } from "./logger";
 
 async function run() {
   const config = loadWorkerConfig();
@@ -20,14 +22,15 @@ async function run() {
     activities,
   });
 
-  console.log(
-    `CNES ingestion worker listening on ${config.temporalAddress} queue=${config.taskQueue}`
-  );
+  logger.info("CNES ingestion worker started", {
+    temporalAddress: config.temporalAddress,
+    taskQueue: config.taskQueue,
+  });
 
   await worker.run();
 }
 
 run().catch((error) => {
-  console.error(error);
+  logger.error("CNES ingestion worker failed", error);
   process.exit(1);
 });

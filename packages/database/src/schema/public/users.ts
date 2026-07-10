@@ -200,7 +200,7 @@ export const permissions = pgTable(
     resourceId: text("resource_id"),
     action: text("action").notNull(),
     conditions: json("conditions"),
-    grantedBy: text("granted_by"),
+    grantedBy: text("granted_by").references(() => users.id, { onDelete: "set null" }),
     expiresAt: timestamp("expires_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

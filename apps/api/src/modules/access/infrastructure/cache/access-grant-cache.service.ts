@@ -1,5 +1,6 @@
 import type { Redis } from "ioredis";
 import type { AccessGrantRecord } from "@atlasmed/access";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 
 const CACHE_KEY_PREFIX = "permissions:user:";
@@ -24,7 +25,7 @@ export class AccessGrantCacheService {
       }
       return JSON.parse(data) as AccessGrantRecord[];
     } catch (error) {
-      console.error("Failed to get access grants from cache:", error);
+      logger.error("Failed to get access grants from cache", error);
       return null;
     }
   }
@@ -37,7 +38,7 @@ export class AccessGrantCacheService {
         JSON.stringify(grants)
       );
     } catch (error) {
-      console.error("Failed to set access grants in cache:", error);
+      logger.error("Failed to set access grants in cache", error);
     }
   }
 
@@ -45,7 +46,7 @@ export class AccessGrantCacheService {
     try {
       await this.redis.del(this.getKey(userId));
     } catch (error) {
-      console.error("Failed to invalidate access grant cache:", error);
+      logger.error("Failed to invalidate access grant cache", error);
     }
   }
 }
