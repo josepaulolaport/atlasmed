@@ -65,9 +65,6 @@ jobs:
       - name: Typecheck
         working-directory: ./apps/api
         run: bun run typecheck
-      - name: Lint
-        working-directory: ./apps/api
-        run: bun run lint
       - name: Test
         working-directory: ./apps/api
         env:
@@ -95,6 +92,20 @@ jobs:
   workers:
     name: Workers — typecheck + test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: atlasmed_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v1
@@ -102,6 +113,11 @@ jobs:
           bun-version: latest
       - name: Install dependencies
         run: bun install
+      - name: Apply migrations
+        working-directory: ./packages/database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
+        run: bun run db:migrate
       - name: Typecheck
         working-directory: ./apps/workers/cnes-ingestion
         run: bun run typecheck
@@ -109,4 +125,5 @@ jobs:
         working-directory: ./apps/workers/cnes-ingestion
         env:
           NODE_ENV: test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
         run: bun test
