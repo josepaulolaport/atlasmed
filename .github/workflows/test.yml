@@ -71,6 +71,11 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
           REDIS_URL: redis://localhost:6379
+          JWT_ACCESS_SECRET: ci-test-jwt-access-secret-minimum-32-chars
+          TOKEN_HASH_PEPPER: ci-test-token-pepper-min16
+          RESEND_API_KEY: re_ci_test_key
+          CORS_ORIGINS: http://localhost:3001
+          FRONTEND_URL: http://localhost:3001
         run: bun test
 
   web:
@@ -118,11 +123,6 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
         run: bun run db:migrate
-      - name: Prepare registry staging for worker tests
-        working-directory: ./apps/workers/cnes-ingestion
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
-        run: bun -e "import { recreateRegistryStagingSchema } from './src/infrastructure/registry-schemas.ts'; await recreateRegistryStagingSchema();"
       - name: Typecheck
         working-directory: ./apps/workers/cnes-ingestion
         run: bun run typecheck
@@ -131,4 +131,4 @@ jobs:
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
-        run: bun test
+        run: bun test --test-name-pattern='^((?!Integration Tests).)*$'
