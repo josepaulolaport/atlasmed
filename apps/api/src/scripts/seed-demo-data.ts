@@ -16,16 +16,16 @@ import {
 import { eq, and, or, inArray, like, sql } from "drizzle-orm";
 import { ROLE_PRIORITY_BY_NAME } from "../modules/access/application/constants/role-priority.constants";
 import { TerritoryClosureService } from "../modules/territory/application/services/territory-closure.service";
-import { PrismaTerritoryRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory.repository";
-import { PrismaTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory-closure.repository";
+import { DrizzleTerritoryRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory.repository";
+import { DrizzleTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
 
 const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD || "Password123!";
 const DEMO_DOMAIN = "demo.atlasmed.local";
 const DEMO_TAG = "[Demo]";
 
 const closureService = new TerritoryClosureService({
-  territoryRepository: new PrismaTerritoryRepository(),
-  closureRepository: new PrismaTerritoryClosureRepository(),
+  territoryRepository: new DrizzleTerritoryRepository(),
+  closureRepository: new DrizzleTerritoryClosureRepository(),
 });
 
 async function rebuildClosure(territoryId: string): Promise<void> {

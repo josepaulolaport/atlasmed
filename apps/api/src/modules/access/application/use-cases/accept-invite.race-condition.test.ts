@@ -4,9 +4,9 @@ import { eq, or, like, sql } from "drizzle-orm";
 import { roles, users, invitations } from "@atlasmed/database";
 import { db } from "../../../../infrastructure/database/db";
 import { AcceptInviteUseCase } from "./accept-invite.use-case";
-import { PrismaInviteRepository } from "../../infrastructure/repositories/prisma/prisma-invite.repository";
-import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
-import { PrismaRoleRepository } from "../../infrastructure/repositories/prisma/prisma-role.repository";
+import { DrizzleInviteRepository } from "../../infrastructure/repositories/drizzle/drizzle-invite.repository";
+import { DrizzleUserRepository } from "../../infrastructure/repositories/drizzle/drizzle-user.repository";
+import { DrizzleRoleRepository } from "../../infrastructure/repositories/drizzle/drizzle-role.repository";
 import { accessUseCases } from "../../composition";
 import { getUniqueTestId } from "../../../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-database";
@@ -23,9 +23,9 @@ import { isIntegrationDatabaseReady } from "../../../../test-utils/integration-d
  */
 describe("Accept Invite Race Condition Integration Tests", () => {
   let dbReady = false;
-  let inviteRepository: PrismaInviteRepository;
-  let userRepository: PrismaUserRepository;
-  let roleRepository: PrismaRoleRepository;
+  let inviteRepository: DrizzleInviteRepository;
+  let userRepository: DrizzleUserRepository;
+  let roleRepository: DrizzleRoleRepository;
   let acceptInviteUseCase: AcceptInviteUseCase;
   let inviteUser: ReturnType<typeof accessUseCases.inviteUser>;
   let adminUserId: string;
@@ -35,9 +35,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
     dbReady = await isIntegrationDatabaseReady();
     if (!dbReady) return;
 
-    inviteRepository = new PrismaInviteRepository();
-    userRepository = new PrismaUserRepository();
-    roleRepository = new PrismaRoleRepository();
+    inviteRepository = new DrizzleInviteRepository();
+    userRepository = new DrizzleUserRepository();
+    roleRepository = new DrizzleRoleRepository();
 
     acceptInviteUseCase = accessUseCases.acceptInvite();
 

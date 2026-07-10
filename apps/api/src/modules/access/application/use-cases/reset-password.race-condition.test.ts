@@ -4,8 +4,8 @@ import { eq, and } from "drizzle-orm";
 import { roles, users, sessions, passwordResets } from "@atlasmed/database";
 import { db } from "../../../../infrastructure/database/db";
 import { ResetPasswordUseCase } from "./reset-password.use-case";
-import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
-import { PrismaPasswordResetRepository } from "../../infrastructure/repositories/prisma/prisma-password-reset.repository";
+import { DrizzleUserRepository } from "../../infrastructure/repositories/drizzle/drizzle-user.repository";
+import { DrizzlePasswordResetRepository } from "../../infrastructure/repositories/drizzle/drizzle-password-reset.repository";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 import { PasswordService } from "../services/password.service";
@@ -27,8 +27,8 @@ import { ResetTokenUsedError } from "../../../../shared/errors";
  */
 describe("Reset Password Race Condition Integration Tests", () => {
   let dbReady = false;
-  let userRepository: PrismaUserRepository;
-  let passwordResetRepository: PrismaPasswordResetRepository;
+  let userRepository: DrizzleUserRepository;
+  let passwordResetRepository: DrizzlePasswordResetRepository;
   let resetPasswordUseCase: ResetPasswordUseCase;
   let testUser: any;
   let resetToken: string;
@@ -37,8 +37,8 @@ describe("Reset Password Race Condition Integration Tests", () => {
     dbReady = await isIntegrationDatabaseReady();
     if (!dbReady) return;
 
-    userRepository = new PrismaUserRepository();
-    passwordResetRepository = new PrismaPasswordResetRepository();
+    userRepository = new DrizzleUserRepository();
+    passwordResetRepository = new DrizzlePasswordResetRepository();
 
     resetPasswordUseCase = new ResetPasswordUseCase({
       userRepository,

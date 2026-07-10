@@ -12,8 +12,8 @@ import {
 import { db } from "../../../infrastructure/database/db";
 import { ROLE_PRIORITY_BY_NAME } from "../application/constants/role-priority.constants";
 import { TerritoryClosureService } from "../../territory/application/services/territory-closure.service";
-import { PrismaTerritoryRepository } from "../../territory/infrastructure/repositories/prisma/prisma-territory.repository";
-import { PrismaTerritoryClosureRepository } from "../../territory/infrastructure/repositories/prisma/prisma-territory-closure.repository";
+import { DrizzleTerritoryRepository } from "../../territory/infrastructure/repositories/drizzle/drizzle-territory.repository";
+import { DrizzleTerritoryClosureRepository } from "../../territory/infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
 
 const TEST_PASSWORD = "Password123!";
 
@@ -34,8 +34,8 @@ export interface ScopeIntegrationFixtures {
 
 async function rebuildClosure(territoryId: string): Promise<void> {
   const closureService = new TerritoryClosureService({
-    territoryRepository: new PrismaTerritoryRepository(),
-    closureRepository: new PrismaTerritoryClosureRepository(),
+    territoryRepository: new DrizzleTerritoryRepository(),
+    closureRepository: new DrizzleTerritoryClosureRepository(),
   });
   await closureService.rebuildSubtree(territoryId);
 }

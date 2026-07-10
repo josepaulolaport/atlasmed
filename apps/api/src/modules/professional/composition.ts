@@ -1,4 +1,4 @@
-import { PrismaProfessionalRepository } from "./infrastructure/repositories/prisma/prisma-professional.repository";
+import { DrizzleProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-professional.repository";
 import {
   CreateDoctorUseCase,
   DeleteDoctorUseCase,
@@ -8,7 +8,7 @@ import {
 } from "./application/use-cases/professional.use-cases";
 
 export const professionalRepositories = {
-  professional: new PrismaProfessionalRepository(),
+  professional: new DrizzleProfessionalRepository(),
 };
 
 export const professionalUseCases = {

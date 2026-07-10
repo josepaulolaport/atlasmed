@@ -2,9 +2,9 @@ import "dotenv/config";
 import { db } from "../infrastructure/database/db";
 import { territories, territoryTypes } from "@atlasmed/database";
 import { eq, and, ne, inArray } from "drizzle-orm";
-import { PrismaTerritoryRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory.repository";
-import { PrismaTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory-closure.repository";
-import { PrismaTerritorySpatialRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory-spatial.repository";
+import { DrizzleTerritoryRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory.repository";
+import { DrizzleTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
+import { DrizzleTerritorySpatialRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
 import { TerritoryClosureService } from "../modules/territory/application/services/territory-closure.service";
 import type { GeoJsonGeometry } from "../modules/territory/application/interfaces/territory-spatial.repository.interface";
 import type { TerritoryRecord } from "../modules/territory/application/interfaces/territory.repository.interface";
@@ -19,9 +19,9 @@ import {
   type BrazilStateSigla,
 } from "./brazil-geography.constants";
 
-const territoryRepository = new PrismaTerritoryRepository();
-const closureRepository = new PrismaTerritoryClosureRepository();
-const spatialRepository = new PrismaTerritorySpatialRepository();
+const territoryRepository = new DrizzleTerritoryRepository();
+const closureRepository = new DrizzleTerritoryClosureRepository();
+const spatialRepository = new DrizzleTerritorySpatialRepository();
 
 type GeoJsonFeature = {
   type: "Feature";

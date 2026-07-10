@@ -1,7 +1,7 @@
-import { PrismaSectorRepository } from "./infrastructure/repositories/prisma/prisma-sector.repository";
-import { PrismaProductRepository } from "./infrastructure/repositories/prisma/prisma-product.repository";
-import { PrismaHealthcareProviderRepository } from "./infrastructure/repositories/prisma/prisma-healthcare-provider.repository";
-import { PrismaFacilityHealthcareProviderShareRepository } from "./infrastructure/repositories/prisma/prisma-facility-healthcare-provider-share.repository";
+import { DrizzleSectorRepository } from "./infrastructure/repositories/drizzle/drizzle-sector.repository";
+import { DrizzleProductRepository } from "./infrastructure/repositories/drizzle/drizzle-product.repository";
+import { DrizzleHealthcareProviderRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-provider.repository";
+import { DrizzleFacilityHealthcareProviderShareRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-healthcare-provider-share.repository";
 import {
   ListSectorsUseCase,
   CreateSectorUseCase,
@@ -17,10 +17,10 @@ import {
 } from "./application/use-cases/catalog.use-cases";
 
 export const catalogRepositories = {
-  sector: new PrismaSectorRepository(),
-  product: new PrismaProductRepository(),
-  healthcareProvider: new PrismaHealthcareProviderRepository(),
-  facilityShare: new PrismaFacilityHealthcareProviderShareRepository(),
+  sector: new DrizzleSectorRepository(),
+  product: new DrizzleProductRepository(),
+  healthcareProvider: new DrizzleHealthcareProviderRepository(),
+  facilityShare: new DrizzleFacilityHealthcareProviderShareRepository(),
 };
 
 export const catalogUseCases = {

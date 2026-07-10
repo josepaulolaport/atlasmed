@@ -7,16 +7,16 @@ import {
   describeCnesIngestionWorkflow,
   startCnesIngestionWorkflow,
 } from "../../infrastructure/temporal/temporal.client";
-import { PrismaFacilityRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility.repository";
-import { PrismaFacilityProfessionalRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility-professional.repository";
-import { PrismaFacilityRepresentativeRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility-representative.repository";
-import { PrismaProfessionalRepository } from "../professional/infrastructure/repositories/prisma/prisma-professional.repository";
+import { DrizzleFacilityRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
+import { DrizzleFacilityProfessionalRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
+import { DrizzleFacilityRepresentativeRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
+import { DrizzleProfessionalRepository } from "../professional/infrastructure/repositories/drizzle/drizzle-professional.repository";
 import { MockRegistrySourceAdapter } from "./infrastructure/adapters/mock-registry-source.adapter";
 import {
-  PrismaIngestionRunRepository,
-  PrismaIngestionSuggestionRepository,
-} from "./infrastructure/repositories/prisma/prisma-ingestion.repository";
-import { PrismaRegistryReadRepository } from "./infrastructure/repositories/prisma/prisma-registry-read.repository";
+  DrizzleIngestionRunRepository,
+  DrizzleIngestionSuggestionRepository,
+} from "./infrastructure/repositories/drizzle/drizzle-ingestion.repository";
+import { DrizzleRegistryReadRepository } from "./infrastructure/repositories/drizzle/drizzle-registry-read.repository";
 import { RegistrySyncService } from "./application/services/registry-sync.service";
 import { RegistryDiffService } from "./application/services/registry-diff.service";
 import { RegistryReadService } from "./application/services/registry-read.service";
@@ -46,12 +46,12 @@ const fixturesDir = join(
 );
 
 export const registryIngestionRepositories = {
-  facility: new PrismaFacilityRepository(),
-  professional: new PrismaProfessionalRepository(),
-  association: new PrismaFacilityProfessionalRepository(),
-  ingestionRun: new PrismaIngestionRunRepository(),
-  suggestion: new PrismaIngestionSuggestionRepository(),
-  registryRead: new PrismaRegistryReadRepository(),
+  facility: new DrizzleFacilityRepository(),
+  professional: new DrizzleProfessionalRepository(),
+  association: new DrizzleFacilityProfessionalRepository(),
+  ingestionRun: new DrizzleIngestionRunRepository(),
+  suggestion: new DrizzleIngestionSuggestionRepository(),
+  registryRead: new DrizzleRegistryReadRepository(),
 };
 
 const registrySource = new MockRegistrySourceAdapter(
@@ -137,7 +137,7 @@ export const registryIngestionUseCases = {
       facilityRepository: registryIngestionRepositories.facility,
       professionalRepository: registryIngestionRepositories.professional,
       facilityProfessionalRepository: registryIngestionRepositories.association,
-      facilityRepresentativeRepository: new PrismaFacilityRepresentativeRepository(),
+      facilityRepresentativeRepository: new DrizzleFacilityRepresentativeRepository(),
       facilityGeocodingService,
       auditLogService,
     }),
