@@ -196,6 +196,70 @@ const EnvironmentSchema = Type.Object({
       description: 'OpenTelemetry logs endpoint (optional)'
     })
   ),
+
+  OTEL_RESOURCE_ATTRIBUTES: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'OpenTelemetry resource attributes (comma-separated key=value pairs)',
+    })
+  ),
+
+  // ============================================================================
+  // Object Storage (S3 / MinIO)
+  // ============================================================================
+  STORAGE_ENDPOINT: Type.Optional(
+    Type.String({
+      minLength: 1,
+      pattern: URL_PATTERN,
+      description: 'S3-compatible endpoint (MinIO in dev; omit for AWS S3 in prod)',
+    })
+  ),
+
+  STORAGE_ACCESS_KEY_ID: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Object storage access key ID',
+    })
+  ),
+
+  STORAGE_SECRET_ACCESS_KEY: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Object storage secret access key',
+    })
+  ),
+
+  STORAGE_BUCKET: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Default object storage bucket name',
+    })
+  ),
+
+  STORAGE_REGION: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Object storage region (defaults to us-east-1)',
+    })
+  ),
+
+  // ============================================================================
+  // Search (Meilisearch)
+  // ============================================================================
+  MEILISEARCH_URL: Type.Optional(
+    Type.String({
+      minLength: 1,
+      pattern: URL_PATTERN,
+      description: 'Meilisearch server URL',
+    })
+  ),
+
+  MEILISEARCH_API_KEY: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Meilisearch API key',
+    })
+  ),
   
   LOG_LEVEL: Type.Union([
     Type.Literal('debug'),
@@ -367,7 +431,19 @@ const processEnv = {
   
   // Observability
   OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME ?? 'atlasmed-api',
+  OTEL_RESOURCE_ATTRIBUTES: process.env.OTEL_RESOURCE_ATTRIBUTES,
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
+
+  // Object storage
+  STORAGE_ENDPOINT: process.env.STORAGE_ENDPOINT,
+  STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID,
+  STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY,
+  STORAGE_BUCKET: process.env.STORAGE_BUCKET,
+  STORAGE_REGION: process.env.STORAGE_REGION ?? 'us-east-1',
+
+  // Search
+  MEILISEARCH_URL: process.env.MEILISEARCH_URL,
+  MEILISEARCH_API_KEY: process.env.MEILISEARCH_API_KEY,
   
   // QuestDB
   QUESTDB_ENABLED: process.env.QUESTDB_ENABLED === 'true',
