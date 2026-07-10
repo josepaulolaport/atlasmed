@@ -28,7 +28,7 @@ describe("GetInvitationsUseCase", () => {
     await expect(
       useCase.execute({
         actorId: "user-1",
-        actorRole: Role.USER,
+        actorRole: Role.REP,
         scope: createGlobalScopeContext(),
       })
     ).rejects.toThrow(InsufficientPermissionsError);

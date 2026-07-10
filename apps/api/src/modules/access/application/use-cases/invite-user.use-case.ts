@@ -4,6 +4,9 @@ import type { InviteRepository } from "../interfaces/invite.repository.interface
 import type { UserRepository } from "../interfaces/user.repository.interface";
 import type { RoleRepository } from "../interfaces/role.repository.interface";
 import { InviteService } from "../services/invite.service";
+import { InvitationTerritoryValidatorService } from "../services/invitation-territory-validator.service";
+import type { TerritoryRepository } from "../../../territory/application/interfaces/territory.repository.interface";
+import type { TerritoryTypeRepository } from "../../../territory/application/interfaces/territory-type.repository.interface";
 import { 
   ValidationError,
   EmailAlreadyExistsError,
@@ -21,6 +24,8 @@ interface Dependencies {
   inviteRepository: InviteRepository;
   userRepository: UserRepository;
   roleRepository: RoleRepository;
+  territoryRepository: TerritoryRepository;
+  territoryTypeRepository: TerritoryTypeRepository;
   emailService?: EmailService;
   messagingService?: MessagingService;
   auditLog: IAuditLog;
@@ -32,13 +37,24 @@ interface InviteUserParams {
   phoneNumber?: string | undefined;
   roleId: string;
   invitedByUserId: string;
+  firstName: string;
+  lastName: string;
+  managerId?: string | undefined;
+  managerTerritoryId?: string | undefined;
+  repTerritoryId?: string | undefined;
 }
 
 export class InviteUserUseCase {
   private readonly inviteService: InviteService;
+  private readonly territoryValidator: InvitationTerritoryValidatorService;
 
   constructor(private readonly deps: Dependencies) {
     this.inviteService = new InviteService({ inviteRepository: deps.inviteRepository });
+    this.territoryValidator = new InvitationTerritoryValidatorService({
+      userRepository: deps.userRepository,
+      territoryRepository: deps.territoryRepository,
+      territoryTypeRepository: deps.territoryTypeRepository,
+    });
   }
 
   async execute(params: InviteUserParams) {
@@ -71,12 +87,20 @@ export class InviteUserUseCase {
       );
     }
 
-    if (inviterRole.name === Role.MANAGER && role.name !== Role.USER) {
+    if (inviterRole.name === Role.MANAGER && role.name !== Role.REP) {
       throw new InsufficientPermissionsError(
         [`role:${role.name}`],
         [`role:${Role.MANAGER}`]
       );
     }
+
+    await this.territoryValidator.validateInvitationTerritories({
+      roleId: params.roleId,
+      roleName: role.name,
+      managerId: params.managerId,
+      managerTerritoryId: params.managerTerritoryId,
+      repTerritoryId: params.repTerritoryId,
+    });
 
     const identifier = params.email || params.phoneNumber!;
     const existingUser = await this.deps.userRepository.findByIdentifier({ identifier });
@@ -104,6 +128,11 @@ export class InviteUserUseCase {
       phoneNumber: params.phoneNumber || undefined,
       roleId: params.roleId,
       invitedByUserId: params.invitedByUserId,
+      firstName: params.firstName,
+      lastName: params.lastName,
+      managerId: params.managerId,
+      managerTerritoryId: params.managerTerritoryId,
+      repTerritoryId: params.repTerritoryId,
     });
 
     await this.deps.auditLog.logInviteUser({

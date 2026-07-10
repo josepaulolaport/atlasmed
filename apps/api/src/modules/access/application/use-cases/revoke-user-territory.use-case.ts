@@ -38,7 +38,7 @@ export class RevokeUserTerritoryUseCase {
       throw new UserNotFoundError(params.targetUserId);
     }
 
-    if (target.role.name !== Role.USER) {
+    if (target.role.name !== Role.REP) {
       throw new OperationNotAllowedError(
         "revoke_territory",
         "Territory assignments are only supported for USER accounts"

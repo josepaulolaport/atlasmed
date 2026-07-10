@@ -289,6 +289,7 @@ model User {
   auditLogs           AuditLog[]
   verificationTokens  VerificationToken[]
   sentInvitations     Invitation[]        @relation("InvitedByUser")
+  managerInvitations  Invitation[]        @relation("InvitationManager")
   permissions         Permission[]
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
@@ -376,6 +377,8 @@ model Territory {
   closureAsDescendant          TerritoryClosure[]         @relation("ClosureDescendant")
   approvalRequests             TerritoryApprovalRequest[] @relation("ApprovalTargetTerritory")
   facilityApprovalRequests     TerritoryApprovalRequest[] @relation("ApprovalFacilityTerritory")
+  managerTerritoryInvitations  Invitation[]               @relation("InvitationManagerTerritory")
+  repTerritoryInvitations      Invitation[]               @relation("InvitationRepTerritory")
 
   @@unique([parentId, name])
   @@unique([slug])
@@ -489,23 +492,31 @@ model Session {
 }
 
 model Invitation {
-  id              String           @id @default(cuid())
-  email           String?
-  phoneNumber     String?
-  tokenHash       String           @unique
-  status          InvitationStatus @default(PENDING)
-  expiresAt       DateTime
-  acceptedAt      DateTime?
-  acceptedByUserId String?
-  revokedAt       DateTime?
-  resendCount     Int              @default(0)
-  lastResendAt    DateTime?
-  roleId          String
-  role            Role             @relation(fields: [roleId], references: [id])
-  invitedByUserId String
-  invitedBy       User             @relation("InvitedByUser", fields: [invitedByUserId], references: [id], onDelete: Restrict)
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  email              String?
+  phoneNumber        String?
+  tokenHash          String           @unique
+  status             InvitationStatus @default(PENDING)
+  expiresAt          DateTime
+  acceptedAt         DateTime?
+  acceptedByUserId   String?
+  revokedAt          DateTime?
+  resendCount        Int              @default(0)
+  lastResendAt       DateTime?
+  roleId             String
+  role               Role             @relation(fields: [roleId], references: [id])
+  invitedByUserId    String
+  invitedBy          User             @relation("InvitedByUser", fields: [invitedByUserId], references: [id], onDelete: Restrict)
+  firstName          String?
+  lastName           String?
+  managerId          String?
+  manager            User?            @relation("InvitationManager", fields: [managerId], references: [id], onDelete: SetNull)
+  managerTerritoryId String?
+  managerTerritory   Territory?       @relation("InvitationManagerTerritory", fields: [managerTerritoryId], references: [id], onDelete: SetNull)
+  repTerritoryId     String?
+  repTerritory       Territory?       @relation("InvitationRepTerritory", fields: [repTerritoryId], references: [id], onDelete: SetNull)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([email])
   @@index([phoneNumber])
@@ -514,6 +525,9 @@ model Invitation {
   @@index([status, expiresAt])
   @@index([acceptedByUserId])
   @@index([invitedByUserId])
+  @@index([managerId])
+  @@index([managerTerritoryId])
+  @@index([repTerritoryId])
   @@schema("public")
   @@map("invitations")
 }

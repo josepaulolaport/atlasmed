@@ -22,7 +22,7 @@ describe("AssignUserManagerUseCase", () => {
   const targetUser = {
     id: "user-target",
     managerId: null,
-    role: { name: Role.USER },
+    role: { name: Role.REP },
   };
 
   const managerUser = {

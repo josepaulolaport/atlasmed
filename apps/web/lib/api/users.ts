@@ -26,6 +26,13 @@ export const usersApi = {
     return response.data.roles;
   },
 
+  getManagers: async (): Promise<User[]> => {
+    const response = await apiClient.get<PaginatedResponse<User>>("/access/users", {
+      params: { role: "MANAGER", status: "ACTIVE", limit: 1000 },
+    });
+    return response.data.data;
+  },
+
   inviteUser: async (data: InviteUserRequest): Promise<Invitation> => {
     const response = await apiClient.post<{ invite: Invitation }>("/access/invite", data);
     return response.data.invite;

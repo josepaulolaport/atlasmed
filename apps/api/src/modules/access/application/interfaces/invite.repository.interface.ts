@@ -4,6 +4,11 @@ export interface CreateInviteParams {
   tokenHash: string;
   roleId: string;
   invitedByUserId: string;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
+  managerId?: string | undefined;
+  managerTerritoryId?: string | undefined;
+  repTerritoryId?: string | undefined;
   expiresAt: Date;
 }
 

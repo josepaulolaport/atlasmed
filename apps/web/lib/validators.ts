@@ -49,6 +49,11 @@ export const inviteUserSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   phoneNumber: z.string().optional(),
   roleId: z.string().min(1, "Role is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  managerId: z.string().optional(),
+  managerTerritoryId: z.string().optional(),
+  repTerritoryId: z.string().optional(),
 }).refine((data) => data.email || data.phoneNumber, {
   message: "Either email or phone number is required",
   path: ["email"],
