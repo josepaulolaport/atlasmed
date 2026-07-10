@@ -1,5 +1,5 @@
 import { db } from "../../../../infrastructure/database/db";
-import { facilities, professionals, ingestionSuggestions, facilityProfessionals, ingestionRuns } from "@atlasmed/database";
+import { facilities, professionals, cnesSuggestions, facilityProfessionals, cnesRuns } from "@atlasmed/database";
 import { eq, or, inArray } from "drizzle-orm";
 import { MOCK_REGISTRY_PROVIDER } from "../../application/interfaces/registry-source.port";
 
@@ -19,10 +19,10 @@ export async function cleanupMockRegistryData(): Promise<void> {
 
   if (facilityIds.length > 0 || professionalIds.length > 0) {
     const suggestionConditions = [
-      ...(facilityIds.length > 0 ? [inArray(ingestionSuggestions.facilityId, facilityIds)] : []),
-      ...(professionalIds.length > 0 ? [inArray(ingestionSuggestions.professionalId, professionalIds)] : []),
+      ...(facilityIds.length > 0 ? [inArray(cnesSuggestions.facilityId, facilityIds)] : []),
+      ...(professionalIds.length > 0 ? [inArray(cnesSuggestions.professionalId, professionalIds)] : []),
     ];
-    await db.delete(ingestionSuggestions).where(or(...suggestionConditions));
+    await db.delete(cnesSuggestions).where(or(...suggestionConditions));
 
     const fpConditions = [
       ...(facilityIds.length > 0 ? [inArray(facilityProfessionals.facilityId, facilityIds)] : []),
@@ -31,7 +31,7 @@ export async function cleanupMockRegistryData(): Promise<void> {
     await db.delete(facilityProfessionals).where(or(...fpConditions));
   }
 
-  await db.delete(ingestionRuns).where(eq(ingestionRuns.sourceProvider, MOCK_REGISTRY_PROVIDER));
+  await db.delete(cnesRuns).where(eq(cnesRuns.sourceProvider, MOCK_REGISTRY_PROVIDER));
   await db.delete(professionals).where(eq(professionals.sourceProvider, MOCK_REGISTRY_PROVIDER));
   await db.delete(facilities).where(eq(facilities.sourceProvider, MOCK_REGISTRY_PROVIDER));
 }

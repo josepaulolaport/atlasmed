@@ -1,10 +1,10 @@
 import { db } from "../../../../../infrastructure/database/db";
-import { ingestionRuns, ingestionSuggestions } from "@atlasmed/database";
+import { cnesRuns, cnesSuggestions } from "@atlasmed/database";
 import {
-  ingestionRunStatusEnum,
-  ingestionRunPhaseEnum,
-  ingestionSuggestionStatusEnum,
-  ingestionSuggestionTypeEnum,
+  cnesRunStatusEnum,
+  cnesRunPhaseEnum,
+  cnesSuggestionStatusEnum,
+  cnesSuggestionTypeEnum,
 } from "@atlasmed/database";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import type {
@@ -15,16 +15,16 @@ import type {
   CreateSuggestionInput,
 } from "../../../application/interfaces/ingestion.repository.interface";
 
-type IngestionRunStatus = typeof ingestionRunStatusEnum.enumValues[number];
-type IngestionRunPhase = typeof ingestionRunPhaseEnum.enumValues[number];
-type IngestionSuggestionStatus = typeof ingestionSuggestionStatusEnum.enumValues[number];
-type IngestionSuggestionType = typeof ingestionSuggestionTypeEnum.enumValues[number];
+type CnesRunStatus = typeof cnesRunStatusEnum.enumValues[number];
+type CnesRunPhase = typeof cnesRunPhaseEnum.enumValues[number];
+type CnesSuggestionStatus = typeof cnesSuggestionStatusEnum.enumValues[number];
+type CnesSuggestionType = typeof cnesSuggestionTypeEnum.enumValues[number];
 
 function mapRun(run: {
   id: string;
   sourceProvider: string;
-  status: IngestionRunStatus;
-  phase: IngestionRunPhase | null;
+  status: CnesRunStatus;
+  phase: CnesRunPhase | null;
   temporalWorkflowId: string | null;
   referenceAno: number | null;
   referenceMes: number | null;
@@ -56,9 +56,9 @@ function mapRun(run: {
 
 function mapSuggestion(suggestion: {
   id: string;
-  ingestionRunId: string;
-  type: IngestionSuggestionType;
-  status: IngestionSuggestionStatus;
+  cnesRunId: string;
+  type: CnesSuggestionType;
+  status: CnesSuggestionStatus;
   facilityId: string | null;
   professionalId: string | null;
   facilityProfessionalId: string | null;
@@ -71,7 +71,7 @@ function mapSuggestion(suggestion: {
 }): IngestionSuggestionRecord {
   return {
     id: suggestion.id,
-    ingestionRunId: suggestion.ingestionRunId,
+    ingestionRunId: suggestion.cnesRunId,
     type: suggestion.type,
     status: suggestion.status,
     facilityId: suggestion.facilityId,
@@ -96,7 +96,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
     }
   ): Promise<IngestionRunRecord> {
     const [run] = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({
         sourceProvider,
         temporalWorkflowId: options?.temporalWorkflowId,
@@ -111,8 +111,8 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
   async findById(id: string): Promise<IngestionRunRecord | null> {
     const rows = await db
       .select()
-      .from(ingestionRuns)
-      .where(eq(ingestionRuns.id, id));
+      .from(cnesRuns)
+      .where(eq(cnesRuns.id, id));
     return rows[0] ? mapRun(rows[0]) : null;
   }
 
@@ -121,13 +121,13 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
     stats: Record<string, unknown>
   ): Promise<IngestionRunRecord> {
     const [run] = await db
-      .update(ingestionRuns)
+      .update(cnesRuns)
       .set({
         status: "COMPLETED",
         completedAt: new Date(),
         stats,
       })
-      .where(eq(ingestionRuns.id, id))
+      .where(eq(cnesRuns.id, id))
       .returning();
 
     return mapRun(run);
@@ -135,14 +135,14 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
 
   async fail(id: string, error: string): Promise<IngestionRunRecord> {
     const [run] = await db
-      .update(ingestionRuns)
+      .update(cnesRuns)
       .set({
         status: "FAILED",
         phase: "FAILED",
         completedAt: new Date(),
         error,
       })
-      .where(eq(ingestionRuns.id, id))
+      .where(eq(cnesRuns.id, id))
       .returning();
 
     return mapRun(run);
@@ -154,7 +154,7 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
     sourceProvider?: string;
   }): Promise<{ runs: IngestionRunRecord[]; total: number }> {
     const where = params.sourceProvider
-      ? eq(ingestionRuns.sourceProvider, params.sourceProvider)
+      ? eq(cnesRuns.sourceProvider, params.sourceProvider)
       : undefined;
 
     const skip = (params.page - 1) * params.limit;
@@ -162,12 +162,12 @@ export class DrizzleIngestionRunRepository implements IngestionRunRepository {
     const [rows, [{ count }]] = await Promise.all([
       db
         .select()
-        .from(ingestionRuns)
+        .from(cnesRuns)
         .where(where)
-        .orderBy(desc(ingestionRuns.startedAt))
+        .orderBy(desc(cnesRuns.startedAt))
         .offset(skip)
         .limit(params.limit),
-      db.select({ count: sql<number>`count(*)` }).from(ingestionRuns).where(where),
+      db.select({ count: sql<number>`count(*)` }).from(cnesRuns).where(where),
     ]);
 
     return { runs: rows.map(mapRun), total: Number(count) };
@@ -179,9 +179,9 @@ export class DrizzleIngestionSuggestionRepository
 {
   async create(input: CreateSuggestionInput): Promise<IngestionSuggestionRecord> {
     const [suggestion] = await db
-      .insert(ingestionSuggestions)
+      .insert(cnesSuggestions)
       .values({
-        ingestionRunId: input.ingestionRunId,
+        cnesRunId: input.ingestionRunId,
         type: input.type,
         facilityId: input.facilityId,
         professionalId: input.professionalId,
@@ -195,28 +195,28 @@ export class DrizzleIngestionSuggestionRepository
   }
 
   async findPendingDuplicate(params: {
-    type: IngestionSuggestionType;
+    type: CnesSuggestionType;
     facilityId?: string;
     professionalId?: string;
     facilityProfessionalId?: string;
   }): Promise<IngestionSuggestionRecord | null> {
     const conditions = [
-      eq(ingestionSuggestions.type, params.type),
-      eq(ingestionSuggestions.status, "PENDING"),
+      eq(cnesSuggestions.type, params.type),
+      eq(cnesSuggestions.status, "PENDING"),
       ...(params.facilityId != null
-        ? [eq(ingestionSuggestions.facilityId, params.facilityId)]
+        ? [eq(cnesSuggestions.facilityId, params.facilityId)]
         : []),
       ...(params.professionalId != null
-        ? [eq(ingestionSuggestions.professionalId, params.professionalId)]
+        ? [eq(cnesSuggestions.professionalId, params.professionalId)]
         : []),
       ...(params.facilityProfessionalId != null
-        ? [eq(ingestionSuggestions.facilityProfessionalId, params.facilityProfessionalId)]
+        ? [eq(cnesSuggestions.facilityProfessionalId, params.facilityProfessionalId)]
         : []),
     ];
 
     const rows = await db
       .select()
-      .from(ingestionSuggestions)
+      .from(cnesSuggestions)
       .where(and(...conditions))
       .limit(1);
 
@@ -224,27 +224,27 @@ export class DrizzleIngestionSuggestionRepository
   }
 
   async supersedePending(params: {
-    type: IngestionSuggestionType;
+    type: CnesSuggestionType;
     facilityId?: string;
     professionalId?: string;
     facilityProfessionalId?: string;
   }): Promise<void> {
     const conditions = [
-      eq(ingestionSuggestions.type, params.type),
-      eq(ingestionSuggestions.status, "PENDING"),
+      eq(cnesSuggestions.type, params.type),
+      eq(cnesSuggestions.status, "PENDING"),
       ...(params.facilityId != null
-        ? [eq(ingestionSuggestions.facilityId, params.facilityId)]
+        ? [eq(cnesSuggestions.facilityId, params.facilityId)]
         : []),
       ...(params.professionalId != null
-        ? [eq(ingestionSuggestions.professionalId, params.professionalId)]
+        ? [eq(cnesSuggestions.professionalId, params.professionalId)]
         : []),
       ...(params.facilityProfessionalId != null
-        ? [eq(ingestionSuggestions.facilityProfessionalId, params.facilityProfessionalId)]
+        ? [eq(cnesSuggestions.facilityProfessionalId, params.facilityProfessionalId)]
         : []),
     ];
 
     await db
-      .update(ingestionSuggestions)
+      .update(cnesSuggestions)
       .set({ status: "SUPERSEDED", resolvedAt: new Date() })
       .where(and(...conditions));
   }
@@ -252,8 +252,8 @@ export class DrizzleIngestionSuggestionRepository
   async findById(id: string): Promise<IngestionSuggestionRecord | null> {
     const rows = await db
       .select()
-      .from(ingestionSuggestions)
-      .where(eq(ingestionSuggestions.id, id));
+      .from(cnesSuggestions)
+      .where(eq(cnesSuggestions.id, id));
 
     return rows[0] ? mapSuggestion(rows[0]) : null;
   }
@@ -261,8 +261,8 @@ export class DrizzleIngestionSuggestionRepository
   async findAll(params: {
     page?: number;
     limit?: number;
-    status?: IngestionSuggestionStatus;
-    type?: IngestionSuggestionType;
+    status?: CnesSuggestionStatus;
+    type?: CnesSuggestionType;
     facilityIds?: string[];
   }): Promise<{ suggestions: IngestionSuggestionRecord[]; total: number }> {
     const page = params.page ?? 1;
@@ -273,10 +273,10 @@ export class DrizzleIngestionSuggestionRepository
     }
 
     const conditions = [
-      ...(params.status ? [eq(ingestionSuggestions.status, params.status)] : []),
-      ...(params.type ? [eq(ingestionSuggestions.type, params.type)] : []),
+      ...(params.status ? [eq(cnesSuggestions.status, params.status)] : []),
+      ...(params.type ? [eq(cnesSuggestions.type, params.type)] : []),
       ...(params.facilityIds
-        ? [inArray(ingestionSuggestions.facilityId, params.facilityIds)]
+        ? [inArray(cnesSuggestions.facilityId, params.facilityIds)]
         : []),
     ];
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -285,12 +285,12 @@ export class DrizzleIngestionSuggestionRepository
     const [rows, [{ count }]] = await Promise.all([
       db
         .select()
-        .from(ingestionSuggestions)
+        .from(cnesSuggestions)
         .where(where)
-        .orderBy(desc(ingestionSuggestions.suggestedAt))
+        .orderBy(desc(cnesSuggestions.suggestedAt))
         .offset(skip)
         .limit(limit),
-      db.select({ count: sql<number>`count(*)` }).from(ingestionSuggestions).where(where),
+      db.select({ count: sql<number>`count(*)` }).from(cnesSuggestions).where(where),
     ]);
 
     return { suggestions: rows.map(mapSuggestion), total: Number(count) };
@@ -298,19 +298,19 @@ export class DrizzleIngestionSuggestionRepository
 
   async resolve(params: {
     id: string;
-    status: Extract<IngestionSuggestionStatus, "APPROVED" | "REJECTED">;
+    status: Extract<CnesSuggestionStatus, "APPROVED" | "REJECTED">;
     resolvedByUserId: string;
     resolutionNote?: string;
   }): Promise<IngestionSuggestionRecord> {
     const [suggestion] = await db
-      .update(ingestionSuggestions)
+      .update(cnesSuggestions)
       .set({
         status: params.status,
         resolvedAt: new Date(),
         resolvedByUserId: params.resolvedByUserId,
         resolutionNote: params.resolutionNote,
       })
-      .where(eq(ingestionSuggestions.id, params.id))
+      .where(eq(cnesSuggestions.id, params.id))
       .returning();
 
     return mapSuggestion(suggestion);

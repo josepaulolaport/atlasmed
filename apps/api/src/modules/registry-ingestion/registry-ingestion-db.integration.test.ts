@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { createGlobalScopeContext } from "@atlasmed/access";
 import { eq, and, sql } from "drizzle-orm";
-import { facilities, ingestionSuggestions, professionals } from "@atlasmed/database";
+import { facilities, cnesSuggestions, professionals } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
 import {
@@ -56,12 +56,12 @@ describe("Registry Ingestion DB Integration Tests", () => {
 
     const suggestion = await db
       .select()
-      .from(ingestionSuggestions)
+      .from(cnesSuggestions)
       .where(
         and(
-          eq(ingestionSuggestions.type, "FACILITY_REGISTRY_DEACTIVATED"),
-          eq(ingestionSuggestions.status, "PENDING"),
-          eq(ingestionSuggestions.facilityId, clinic!.id),
+          eq(cnesSuggestions.type, "FACILITY_REGISTRY_DEACTIVATED"),
+          eq(cnesSuggestions.status, "PENDING"),
+          eq(cnesSuggestions.facilityId, clinic!.id),
         ),
       )
       .limit(1)
@@ -93,12 +93,12 @@ describe("Registry Ingestion DB Integration Tests", () => {
 
     const suggestion = await db
       .select()
-      .from(ingestionSuggestions)
+      .from(cnesSuggestions)
       .where(
         and(
-          eq(ingestionSuggestions.type, "FACILITY_REGISTRY_DEACTIVATED"),
-          eq(ingestionSuggestions.status, "PENDING"),
-          eq(ingestionSuggestions.facilityId, clinic!.id),
+          eq(cnesSuggestions.type, "FACILITY_REGISTRY_DEACTIVATED"),
+          eq(cnesSuggestions.status, "PENDING"),
+          eq(cnesSuggestions.facilityId, clinic!.id),
         ),
       )
       .limit(1)
@@ -147,12 +147,12 @@ describe("Registry Ingestion DB Integration Tests", () => {
 
     const reactivation = await db
       .select()
-      .from(ingestionSuggestions)
+      .from(cnesSuggestions)
       .where(
         and(
-          eq(ingestionSuggestions.type, "FACILITY_REGISTRY_REACTIVATED"),
-          eq(ingestionSuggestions.status, "PENDING"),
-          eq(ingestionSuggestions.facilityId, clinic!.id),
+          eq(cnesSuggestions.type, "FACILITY_REGISTRY_REACTIVATED"),
+          eq(cnesSuggestions.status, "PENDING"),
+          eq(cnesSuggestions.facilityId, clinic!.id),
         ),
       )
       .limit(1)
@@ -188,11 +188,11 @@ describe("Registry Ingestion DB Integration Tests", () => {
 
     const suggestion = await db
       .select()
-      .from(ingestionSuggestions)
+      .from(cnesSuggestions)
       .where(
         and(
-          eq(ingestionSuggestions.type, "FACILITY_PROFESSIONAL_REMOVAL"),
-          eq(ingestionSuggestions.status, "PENDING"),
+          eq(cnesSuggestions.type, "FACILITY_PROFESSIONAL_REMOVAL"),
+          eq(cnesSuggestions.status, "PENDING"),
         ),
       )
       .limit(1)

@@ -13,7 +13,7 @@ import { facility } from "../facility/index";
 import { registryIngestion } from "../registry-ingestion/index";
 import { AppError } from "../../shared/errors";
 import { eq } from "drizzle-orm";
-import { facilities, ingestionRuns, ingestionSuggestions } from "@atlasmed/database";
+import { facilities, cnesRuns, cnesSuggestions } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -167,13 +167,13 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
       .then((r) => r[0]!);
 
     const run = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({ sourceProvider: "mock_registry", status: "COMPLETED" })
       .returning()
       .then((r) => r[0]!);
 
     const suggestion = await db
-      .insert(ingestionSuggestions)
+      .insert(cnesSuggestions)
       .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
@@ -198,7 +198,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     expect(approveResponse.status).toBe(200);
 
     await db.delete(facilities).where(eq(facilities.id, clinicRecord.id)).catch(() => {});
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id)).catch(() => {});
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run.id)).catch(() => {});
   });
 
   it("MANAGER list only returns suggestions for facilities in scope", async () => {
@@ -223,13 +223,13 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
       .then((r) => r[0]!);
 
     const run = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({ sourceProvider: "mock_registry", status: "COMPLETED" })
       .returning()
       .then((r) => r[0]!);
 
     const inScopeSuggestion = await db
-      .insert(ingestionSuggestions)
+      .insert(cnesSuggestions)
       .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
@@ -241,7 +241,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
       .then((r) => r[0]!);
 
     const outOfScopeSuggestion = await db
-      .insert(ingestionSuggestions)
+      .insert(cnesSuggestions)
       .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
@@ -267,7 +267,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
 
     await db.delete(facilities).where(eq(facilities.id, inScopeFacility.id)).catch(() => {});
     await db.delete(facilities).where(eq(facilities.id, outOfScopeFacility.id)).catch(() => {});
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id)).catch(() => {});
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run.id)).catch(() => {});
   });
 
   it("returns 403 when MANAGER approves suggestion outside scope", async () => {
@@ -283,13 +283,13 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
       .then((r) => r[0]!);
 
     const run = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({ sourceProvider: "mock_registry", status: "COMPLETED" })
       .returning()
       .then((r) => r[0]!);
 
     const suggestion = await db
-      .insert(ingestionSuggestions)
+      .insert(cnesSuggestions)
       .values({
         ingestionRunId: run.id,
         type: "FACILITY_REGISTRY_DEACTIVATED",
@@ -314,14 +314,14 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     expect(response.status).toBe(403);
 
     await db.delete(facilities).where(eq(facilities.id, clinicRecord.id)).catch(() => {});
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id)).catch(() => {});
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run.id)).catch(() => {});
   });
 
   it("allows ADMIN to list registry ingestion runs with phase fields", async () => {
     if (!dbReady) return;
 
     const run = await db
-      .insert(ingestionRuns)
+      .insert(cnesRuns)
       .values({
         sourceProvider: "cnes",
         status: "RUNNING",
@@ -358,7 +358,7 @@ describe("Registry Ingestion HTTP Integration Tests", () => {
     expect(statusBody.run.id).toBe(run.id);
     expect(statusBody.run.temporalWorkflowId).toBe("cnes-ingestion-2026-06");
 
-    await db.delete(ingestionRuns).where(eq(ingestionRuns.id, run.id));
+    await db.delete(cnesRuns).where(eq(cnesRuns.id, run.id));
   });
 
   it("returns 401 for unauthenticated clinic doctors list", async () => {

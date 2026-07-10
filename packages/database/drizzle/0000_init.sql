@@ -2,6 +2,8 @@ CREATE SCHEMA "audit";
 --> statement-breakpoint
 CREATE SCHEMA "registry";
 --> statement-breakpoint
+CREATE SCHEMA "ingestion";
+--> statement-breakpoint
 CREATE TYPE "public"."auth_session_device_type" AS ENUM('DESKTOP', 'MOBILE', 'TABLET', 'UNKNOWN');--> statement-breakpoint
 CREATE TYPE "public"."auth_session_type" AS ENUM('WEB', 'MOBILE', 'API');--> statement-breakpoint
 CREATE TYPE "public"."commercial_status" AS ENUM('REGISTERED', 'ACTIVE', 'SUSPENDED', 'INACTIVE');--> statement-breakpoint
@@ -10,11 +12,6 @@ CREATE TYPE "public"."conformity_status" AS ENUM('INCOMPLETE', 'COMPLETE', 'EXPI
 CREATE TYPE "public"."contact_type" AS ENUM('PROFESSIONAL', 'DECISOR', 'COMPRADOR');--> statement-breakpoint
 CREATE TYPE "public"."healthcare_provider_share_source" AS ENUM('MANUAL', 'REGISTRY', 'IMPORT');--> statement-breakpoint
 CREATE TYPE "public"."healthcare_provider_type" AS ENUM('PRIVATE', 'PUBLIC', 'MIXED', 'OTHER');--> statement-breakpoint
-CREATE TYPE "public"."ingestion_diff_scope" AS ENUM('WAREHOUSE', 'CRM');--> statement-breakpoint
-CREATE TYPE "public"."ingestion_run_phase" AS ENUM('DISCOVERING', 'DOWNLOADING', 'EXTRACTING', 'PREFLIGHT', 'PARSING', 'LOADING', 'VALIDATING', 'RECONCILING', 'PROMOTING', 'SYNCING', 'FAILED');--> statement-breakpoint
-CREATE TYPE "public"."ingestion_run_status" AS ENUM('RUNNING', 'COMPLETED', 'FAILED');--> statement-breakpoint
-CREATE TYPE "public"."ingestion_suggestion_status" AS ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'SUPERSEDED');--> statement-breakpoint
-CREATE TYPE "public"."ingestion_suggestion_type" AS ENUM('FACILITY_FIELD_UPDATE', 'PROFESSIONAL_FIELD_UPDATE', 'FACILITY_REGISTRY_DEACTIVATED', 'FACILITY_REGISTRY_REACTIVATED', 'FACILITY_PROFESSIONAL_REMOVAL', 'FACILITY_PROFESSIONAL_ADD', 'FACILITY_REPRESENTATIVE_REMOVAL', 'FACILITY_REPRESENTATIVE_ADD', 'FACILITY_REPRESENTATIVE_FIELD_UPDATE', 'CLINIC_REMOVAL', 'CLINIC_REACTIVATION', 'DOCTOR_CLINIC_REMOVAL');--> statement-breakpoint
 CREATE TYPE "public"."invitation_status" AS ENUM('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED');--> statement-breakpoint
 CREATE TYPE "public"."purchase_status" AS ENUM('NON_BUYER', 'LOW_BUYER', 'REGULAR_BUYER', 'HIGH_BUYER');--> statement-breakpoint
 CREATE TYPE "public"."relationship_level" AS ENUM('LOW', 'MEDIUM', 'HIGH');--> statement-breakpoint
@@ -27,6 +24,11 @@ CREATE TYPE "public"."user_status" AS ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'P
 CREATE TYPE "public"."verification_token_type" AS ENUM('EMAIL_VERIFICATION', 'PHONE_VERIFICATION', 'EMAIL_CHANGE', 'PHONE_CHANGE');--> statement-breakpoint
 CREATE TYPE "audit"."audit_event_severity" AS ENUM('INFO', 'WARNING', 'CRITICAL');--> statement-breakpoint
 CREATE TYPE "audit"."audit_event_type" AS ENUM('USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTER', 'USER_INVITE', 'USER_ACCEPT_INVITE', 'USER_DEACTIVATE', 'USER_ACTIVATE', 'USER_SUSPEND', 'USER_UNSUSPEND', 'USER_MANAGER_ASSIGNED', 'USER_MANAGER_REMOVED', 'USER_TERRITORY_ASSIGNED', 'USER_TERRITORY_REVOKED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_COMPLETE', 'EMAIL_CHANGE', 'PHONE_CHANGE', 'EMAIL_VERIFY', 'PHONE_VERIFY', 'ROLE_CHANGE', 'SESSION_CREATE', 'SESSION_REVOKE', 'PERMISSION_GRANT', 'PERMISSION_REVOKE', 'TWO_FACTOR_ENABLE', 'TWO_FACTOR_DISABLE', 'SUSPICIOUS_ACTIVITY', 'DATA_ACCESS', 'DATA_EXPORT', 'REGISTRY_INGESTION_STARTED', 'REGISTRY_INGESTION_COMPLETED', 'REGISTRY_SUGGESTION_APPROVED', 'REGISTRY_SUGGESTION_REJECTED', 'DOCTOR_CLINIC_CONFIRMED', 'DOCTOR_CLINIC_ASSOCIATION_ENDED', 'DOCTOR_CLINIC_MANUAL_ASSOCIATED', 'CLINIC_REACTIVATED');--> statement-breakpoint
+CREATE TYPE "ingestion"."cnes_diff_scope" AS ENUM('WAREHOUSE', 'CRM');--> statement-breakpoint
+CREATE TYPE "ingestion"."cnes_run_phase" AS ENUM('DISCOVERING', 'DOWNLOADING', 'EXTRACTING', 'PREFLIGHT', 'PARSING', 'LOADING', 'VALIDATING', 'RECONCILING', 'PROMOTING', 'SYNCING', 'FAILED');--> statement-breakpoint
+CREATE TYPE "ingestion"."cnes_run_status" AS ENUM('RUNNING', 'COMPLETED', 'FAILED');--> statement-breakpoint
+CREATE TYPE "ingestion"."cnes_suggestion_status" AS ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'SUPERSEDED');--> statement-breakpoint
+CREATE TYPE "ingestion"."cnes_suggestion_type" AS ENUM('FACILITY_FIELD_UPDATE', 'PROFESSIONAL_FIELD_UPDATE', 'FACILITY_REGISTRY_DEACTIVATED', 'FACILITY_REGISTRY_REACTIVATED', 'FACILITY_PROFESSIONAL_REMOVAL', 'FACILITY_PROFESSIONAL_ADD', 'FACILITY_REPRESENTATIVE_REMOVAL', 'FACILITY_REPRESENTATIVE_ADD', 'FACILITY_REPRESENTATIVE_FIELD_UPDATE', 'CLINIC_REMOVAL', 'CLINIC_REACTIVATION', 'DOCTOR_CLINIC_REMOVAL');--> statement-breakpoint
 CREATE TABLE "invitations" (
 	"id" text PRIMARY KEY NOT NULL,
 	"email" text,
@@ -448,51 +450,6 @@ CREATE TABLE "products" (
 	CONSTRAINT "products_code_unique" UNIQUE("code")
 );
 --> statement-breakpoint
-CREATE TABLE "ingestion_diffs" (
-	"id" text PRIMARY KEY NOT NULL,
-	"ingestion_run_id" text NOT NULL,
-	"scope" "ingestion_diff_scope" NOT NULL,
-	"entity_type" text NOT NULL,
-	"external_source_id" text,
-	"diff_type" text NOT NULL,
-	"payload" json DEFAULT '{}'::json NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "ingestion_runs" (
-	"id" text PRIMARY KEY NOT NULL,
-	"source_provider" text NOT NULL,
-	"status" "ingestion_run_status" DEFAULT 'RUNNING' NOT NULL,
-	"phase" "ingestion_run_phase",
-	"phase_started_at" timestamp,
-	"temporal_workflow_id" text,
-	"reference_ano" integer,
-	"reference_mes" integer,
-	"started_at" timestamp DEFAULT now() NOT NULL,
-	"completed_at" timestamp,
-	"promoted_at" timestamp,
-	"stats" json,
-	"validation_report" json,
-	"archive_manifest" json,
-	"error" text
-);
---> statement-breakpoint
-CREATE TABLE "ingestion_suggestions" (
-	"id" text PRIMARY KEY NOT NULL,
-	"ingestion_run_id" text NOT NULL,
-	"type" "ingestion_suggestion_type" NOT NULL,
-	"status" "ingestion_suggestion_status" DEFAULT 'PENDING' NOT NULL,
-	"facility_id" text,
-	"professional_id" text,
-	"facility_professional_id" text,
-	"reason" text,
-	"payload" json DEFAULT '{}'::json NOT NULL,
-	"suggested_at" timestamp DEFAULT now() NOT NULL,
-	"resolved_at" timestamp,
-	"resolved_by_user_id" text,
-	"resolution_note" text
-);
---> statement-breakpoint
 CREATE TABLE "audit"."audit_logs" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text,
@@ -710,6 +667,51 @@ CREATE TABLE "registry"."states" (
 	"updated_at" timestamp
 );
 --> statement-breakpoint
+CREATE TABLE "ingestion"."cnes_diffs" (
+	"id" text PRIMARY KEY NOT NULL,
+	"cnes_run_id" text NOT NULL,
+	"scope" "ingestion"."cnes_diff_scope" NOT NULL,
+	"entity_type" text NOT NULL,
+	"external_source_id" text,
+	"diff_type" text NOT NULL,
+	"payload" json DEFAULT '{}'::json NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "ingestion"."cnes_runs" (
+	"id" text PRIMARY KEY NOT NULL,
+	"source_provider" text NOT NULL,
+	"status" "ingestion"."cnes_run_status" DEFAULT 'RUNNING' NOT NULL,
+	"phase" "ingestion"."cnes_run_phase",
+	"phase_started_at" timestamp,
+	"temporal_workflow_id" text,
+	"reference_ano" integer,
+	"reference_mes" integer,
+	"started_at" timestamp DEFAULT now() NOT NULL,
+	"completed_at" timestamp,
+	"promoted_at" timestamp,
+	"stats" json,
+	"validation_report" json,
+	"archive_manifest" json,
+	"error" text
+);
+--> statement-breakpoint
+CREATE TABLE "ingestion"."cnes_suggestions" (
+	"id" text PRIMARY KEY NOT NULL,
+	"cnes_run_id" text NOT NULL,
+	"type" "ingestion"."cnes_suggestion_type" NOT NULL,
+	"status" "ingestion"."cnes_suggestion_status" DEFAULT 'PENDING' NOT NULL,
+	"facility_id" text,
+	"professional_id" text,
+	"facility_professional_id" text,
+	"reason" text,
+	"payload" json DEFAULT '{}'::json NOT NULL,
+	"suggested_at" timestamp DEFAULT now() NOT NULL,
+	"resolved_at" timestamp,
+	"resolved_by_user_id" text,
+	"resolution_note" text
+);
+--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_invited_by_user_id_users_id_fk" FOREIGN KEY ("invited_by_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_manager_id_users_id_fk" FOREIGN KEY ("manager_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
@@ -737,12 +739,12 @@ ALTER TABLE "facility_professionals" ADD CONSTRAINT "facility_professionals_prof
 ALTER TABLE "facility_professionals" ADD CONSTRAINT "facility_professionals_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_representatives" ADD CONSTRAINT "facility_representatives_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "products" ADD CONSTRAINT "products_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ingestion_diffs" ADD CONSTRAINT "ingestion_diffs_ingestion_run_id_ingestion_runs_id_fk" FOREIGN KEY ("ingestion_run_id") REFERENCES "public"."ingestion_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_ingestion_run_id_ingestion_runs_id_fk" FOREIGN KEY ("ingestion_run_id") REFERENCES "public"."ingestion_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_professional_id_professionals_id_fk" FOREIGN KEY ("professional_id") REFERENCES "public"."professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ingestion_suggestions" ADD CONSTRAINT "ingestion_suggestions_facility_professional_id_facility_professionals_id_fk" FOREIGN KEY ("facility_professional_id") REFERENCES "public"."facility_professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit"."audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ingestion"."cnes_diffs" ADD CONSTRAINT "cnes_diffs_cnes_run_id_cnes_runs_id_fk" FOREIGN KEY ("cnes_run_id") REFERENCES "ingestion"."cnes_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_cnes_run_id_cnes_runs_id_fk" FOREIGN KEY ("cnes_run_id") REFERENCES "ingestion"."cnes_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_professional_id_professionals_id_fk" FOREIGN KEY ("professional_id") REFERENCES "public"."professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_facility_professional_id_facility_professionals_id_fk" FOREIGN KEY ("facility_professional_id") REFERENCES "public"."facility_professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "invitations_email_idx" ON "invitations" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "invitations_phone_number_idx" ON "invitations" USING btree ("phone_number");--> statement-breakpoint
 CREATE INDEX "invitations_token_hash_idx" ON "invitations" USING btree ("token_hash");--> statement-breakpoint
@@ -833,18 +835,18 @@ CREATE INDEX "professionals_tax_id_idx" ON "professionals" USING btree ("tax_id"
 CREATE INDEX "sectors_is_active_idx" ON "sectors" USING btree ("is_active");--> statement-breakpoint
 CREATE INDEX "products_sector_id_idx" ON "products" USING btree ("sector_id");--> statement-breakpoint
 CREATE INDEX "products_is_active_idx" ON "products" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "ingestion_diffs_ingestion_run_id_idx" ON "ingestion_diffs" USING btree ("ingestion_run_id");--> statement-breakpoint
-CREATE INDEX "ingestion_diffs_scope_entity_type_idx" ON "ingestion_diffs" USING btree ("scope","entity_type");--> statement-breakpoint
-CREATE INDEX "ingestion_runs_source_provider_started_at_idx" ON "ingestion_runs" USING btree ("source_provider","started_at");--> statement-breakpoint
-CREATE INDEX "ingestion_runs_status_idx" ON "ingestion_runs" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "ingestion_runs_temporal_workflow_id_idx" ON "ingestion_runs" USING btree ("temporal_workflow_id");--> statement-breakpoint
-CREATE INDEX "ingestion_suggestions_status_type_idx" ON "ingestion_suggestions" USING btree ("status","type");--> statement-breakpoint
-CREATE INDEX "ingestion_suggestions_facility_id_status_idx" ON "ingestion_suggestions" USING btree ("facility_id","status");--> statement-breakpoint
-CREATE INDEX "ingestion_suggestions_ingestion_run_id_idx" ON "ingestion_suggestions" USING btree ("ingestion_run_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_user_id_idx" ON "audit"."audit_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_event_type_idx" ON "audit"."audit_logs" USING btree ("event_type");--> statement-breakpoint
 CREATE INDEX "audit_logs_severity_idx" ON "audit"."audit_logs" USING btree ("severity");--> statement-breakpoint
 CREATE INDEX "audit_logs_created_at_idx" ON "audit"."audit_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "audit_logs_actor_id_idx" ON "audit"."audit_logs" USING btree ("actor_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_resource_id_idx" ON "audit"."audit_logs" USING btree ("resource_id");--> statement-breakpoint
-CREATE INDEX "audit_logs_session_id_idx" ON "audit"."audit_logs" USING btree ("session_id");
+CREATE INDEX "audit_logs_session_id_idx" ON "audit"."audit_logs" USING btree ("session_id");--> statement-breakpoint
+CREATE INDEX "cnes_diffs_cnes_run_id_idx" ON "ingestion"."cnes_diffs" USING btree ("cnes_run_id");--> statement-breakpoint
+CREATE INDEX "cnes_diffs_scope_entity_type_idx" ON "ingestion"."cnes_diffs" USING btree ("scope","entity_type");--> statement-breakpoint
+CREATE INDEX "cnes_runs_source_provider_started_at_idx" ON "ingestion"."cnes_runs" USING btree ("source_provider","started_at");--> statement-breakpoint
+CREATE INDEX "cnes_runs_status_idx" ON "ingestion"."cnes_runs" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "cnes_runs_temporal_workflow_id_idx" ON "ingestion"."cnes_runs" USING btree ("temporal_workflow_id");--> statement-breakpoint
+CREATE INDEX "cnes_suggestions_status_type_idx" ON "ingestion"."cnes_suggestions" USING btree ("status","type");--> statement-breakpoint
+CREATE INDEX "cnes_suggestions_facility_id_status_idx" ON "ingestion"."cnes_suggestions" USING btree ("facility_id","status");--> statement-breakpoint
+CREATE INDEX "cnes_suggestions_cnes_run_id_idx" ON "ingestion"."cnes_suggestions" USING btree ("cnes_run_id");
