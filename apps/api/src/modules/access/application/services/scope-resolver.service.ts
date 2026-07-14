@@ -30,8 +30,16 @@ export class ScopeResolver {
     }
 
     if (roleName === Role.REP) {
-      const assignedTerritoryIds =
-        await this.deps.scopeRepository.findTerritoryIdsByUserId(userId);
+      const [assignedSectorIds, rawTerritoryIds] = await Promise.all([
+        this.deps.scopeRepository.findSectorIdsByUserId(userId),
+        this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
+      ]);
+
+      const assignedTerritoryIds = await this.applySectorFilter(
+        rawTerritoryIds,
+        assignedSectorIds
+      );
+
       const effectiveTerritoryIds =
         await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
           assignedTerritoryIds,
@@ -50,14 +58,20 @@ export class ScopeResolver {
         facilityIds,
         analyticsFacilityIds: facilityIds,
         managedUserIds: [],
+        assignedSectorIds,
         isOperationallyActive: effectiveTerritoryIds.length > 0,
       });
     }
 
     if (roleName === Role.MANAGER) {
-      const managedUserIds = await this.deps.scopeRepository.findManagedUserIds(userId);
-      const ownAssignments =
-        await this.deps.scopeRepository.findTerritoryIdsByUserId(userId);
+      const [assignedSectorIds, managedUserIds, rawOwnAssignments] = await Promise.all([
+        this.deps.scopeRepository.findSectorIdsByUserId(userId),
+        this.deps.scopeRepository.findManagedUserIds(userId),
+        this.deps.scopeRepository.findTerritoryIdsByUserId(userId),
+      ]);
+
+      const ownAssignments = await this.applySectorFilter(rawOwnAssignments, assignedSectorIds);
+
       const reportAssignments =
         managedUserIds.length > 0
           ? await this.deps.scopeRepository.findTerritoryIdsByUserIds(managedUserIds)
@@ -107,6 +121,7 @@ export class ScopeResolver {
         analyticsFacilityIds: [...new Set(analyticsFacilityIds)],
         managedUserIds,
         reportAssignedTerritoryIds: reportAssignments,
+        assignedSectorIds,
         isOperationallyActive:
           managedUserIds.length > 0 &&
           (oversightTerritoryIds.length > 0 || analyticsEffectiveTerritoryIds.length > 0),
@@ -118,5 +133,24 @@ export class ScopeResolver {
     }
 
     return createEmptyScopeContext();
+  }
+
+  /**
+   * Intersects territory IDs with the user's assigned sectors.
+   * Falls back to all territory IDs when the user has no sector assignments,
+   * preserving backward-compatible behavior for users without sectors.
+   */
+  private async applySectorFilter(
+    territoryIds: string[],
+    sectorIds: string[]
+  ): Promise<string[]> {
+    if (sectorIds.length === 0 || territoryIds.length === 0) {
+      return territoryIds;
+    }
+
+    const sectorTerritoryIds =
+      await this.deps.scopeRepository.findTerritoryIdsBySectorIds(sectorIds);
+    const allowed = new Set(sectorTerritoryIds);
+    return territoryIds.filter((id) => allowed.has(id));
   }
 }

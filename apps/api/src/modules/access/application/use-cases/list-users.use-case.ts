@@ -5,6 +5,7 @@ interface ListUsersInput {
   page?: number;
   limit?: number;
   status?: string;
+  role?: string;
   search?: string;
   scope: ScopeContext;
 }
@@ -68,6 +69,7 @@ export class ListUsersUseCase {
       page,
       limit,
       status: input.status,
+      role: input.role,
       search: input.search,
       scope: input.scope.isGlobal
         ? { isGlobal: true, territoryIds: [] }

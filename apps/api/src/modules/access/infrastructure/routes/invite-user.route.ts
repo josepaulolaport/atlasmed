@@ -27,6 +27,11 @@ export const inviteUserRoute = new Elysia({
         phoneNumber: parsed.phoneNumber || undefined,
         roleId: parsed.roleId,
         invitedByUserId: user.id,
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        managerId: parsed.managerId || undefined,
+        managerTerritoryId: parsed.managerTerritoryId || undefined,
+        repTerritoryId: parsed.repTerritoryId || undefined,
       });
 
       if (parsed.email) {
@@ -108,6 +113,11 @@ export const inviteUserRoute = new Elysia({
       email: t.Optional(t.String({ format: "email", description: "User email address" })),
       phoneNumber: t.Optional(t.String({ description: "User phone number" })),
       roleId: t.String({ description: "Role ID to assign to the invited user" }),
+      firstName: t.String({ minLength: 1, description: "First name of the invited user" }),
+      lastName: t.String({ minLength: 1, description: "Last name of the invited user" }),
+      managerId: t.Optional(t.String({ description: "Manager user ID (required for REP role)" })),
+      managerTerritoryId: t.Optional(t.String({ description: "Manager zone territory ID (required for MANAGER role)" })),
+      repTerritoryId: t.Optional(t.String({ description: "Rep patch territory ID (required for REP role)" })),
     }),
     response: {
       200: t.Object({

@@ -475,6 +475,10 @@ export class DrizzleUserRepository implements UserRepository {
       );
     }
 
+    if (params.role) {
+      conditions.push(eq(roles.name, params.role as any));
+    }
+
     if (params.scope && !params.scope.isGlobal) {
       const managedUserIds = params.scope.managedUserIds ?? [];
 
@@ -496,7 +500,7 @@ export class DrizzleUserRepository implements UserRepository {
         .orderBy(desc(users.createdAt))
         .offset(skip)
         .limit(limit),
-      db.select({ count: sql<number>`count(*)::int` }).from(users).where(where),
+      db.select({ count: sql<number>`count(*)::int` }).from(users).leftJoin(roles, eq(users.roleId, roles.id)).where(where),
     ]);
 
     return {

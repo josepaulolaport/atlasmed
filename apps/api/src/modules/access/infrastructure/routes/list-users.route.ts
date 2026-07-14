@@ -15,6 +15,7 @@ export const listUsersRoute = new Elysia({
       const scope = await getScope();
       const result = await accessUseCases.listUsers().execute({
         status: query.status,
+        role: query.role,
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
@@ -39,6 +40,7 @@ export const listUsersRoute = new Elysia({
             t.Literal("PENDING"),
           ])
         ),
+        role: t.Optional(t.String({ description: "Filter by role name (e.g. MANAGER, REP)" })),
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),

@@ -40,6 +40,7 @@ export function applyRoleAbilities(
       can("update", "TERRITORY");
       can("read", "REGISTRY_SUGGESTION");
       can("update", "REGISTRY_SUGGESTION");
+      can("read", "REGISTRY_INGESTION");
       break;
 
     case "REP":

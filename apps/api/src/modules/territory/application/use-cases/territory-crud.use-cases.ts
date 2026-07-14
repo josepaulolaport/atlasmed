@@ -254,7 +254,8 @@ export class TerritoryCrudUseCases {
 
   async listTerritories(
     format: "tree" | "flat" = "flat",
-    scope?: ScopeContext
+    scope?: ScopeContext,
+    filters?: { typeSlug?: string; managerTerritoryId?: string; sectorId?: string }
   ) {
     const territories = await this.deps.territoryRepository.findAllActive();
 
@@ -268,6 +269,22 @@ export class TerritoryCrudUseCases {
         readableIds === null
           ? territories
           : territories.filter((territory) => readableIds.has(territory.id));
+    }
+
+    if (filters?.typeSlug) {
+      filtered = filtered.filter(
+        (t) => t.territoryType?.slug === filters.typeSlug
+      );
+    }
+
+    if (filters?.managerTerritoryId) {
+      filtered = filtered.filter(
+        (t) => t.managerTerritoryId === filters.managerTerritoryId
+      );
+    }
+
+    if (filters?.sectorId) {
+      filtered = filtered.filter((t) => t.sectorId === filters.sectorId);
     }
 
     const enriched = await Promise.all(

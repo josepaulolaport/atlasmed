@@ -17,6 +17,12 @@ export function createMockScopeRepository(overrides?: Partial<ScopeRepository>):
     revokeTerritory: mock(() => Promise.resolve()),
     findTerritoryAssignmentsByUserId: mock(() => Promise.resolve([])),
     findManagerIdByUserId: mock(() => Promise.resolve(null)),
+    findSectorIdsByUserId: mock(() => Promise.resolve([])),
+    findTerritoryIdsBySectorIds: mock(() => Promise.resolve([])),
+    assignSector: mock(() => Promise.resolve()),
+    revokeSector: mock(() => Promise.resolve()),
+    findSectorAssignmentsByUserId: mock(() => Promise.resolve([])),
+    listActiveSectors: mock(() => Promise.resolve([])),
     ...overrides,
   };
 }

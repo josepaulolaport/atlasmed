@@ -28,6 +28,7 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/access/infrastructure/routes/resend-invite.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/revoke-invite.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/roles.route.ts": "auth+permission",
+  "modules/access/infrastructure/routes/sectors.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/user-assignments.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/user-management.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/user-permissions.route.ts": "auth+permission",

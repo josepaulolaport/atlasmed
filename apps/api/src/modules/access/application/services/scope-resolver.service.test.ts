@@ -55,6 +55,12 @@ describe("ScopeResolver", () => {
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
+      findSectorIdsByUserId: mock(async () => []),
+      findTerritoryIdsBySectorIds: mock(async () => []),
+      assignSector: mock(async () => undefined),
+      revokeSector: mock(async () => undefined),
+      findSectorAssignmentsByUserId: mock(async () => []),
+      listActiveSectors: mock(async () => []),
     };
 
     const resolver = new ScopeResolver({
@@ -80,6 +86,12 @@ describe("ScopeResolver", () => {
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
+      findSectorIdsByUserId: mock(async () => []),
+      findTerritoryIdsBySectorIds: mock(async () => []),
+      assignSector: mock(async () => undefined),
+      revokeSector: mock(async () => undefined),
+      findSectorAssignmentsByUserId: mock(async () => []),
+      listActiveSectors: mock(async () => []),
     };
 
     const resolver = new ScopeResolver({
@@ -93,5 +105,61 @@ describe("ScopeResolver", () => {
     expect(scope.reportAssignedTerritoryIds).toEqual(["patch-1"]);
     expect(scope.effectiveTerritoryIds).toEqual(["manager-zone-1", "manager-zone-1-patch"]);
     expect(scope.analyticsEffectiveTerritoryIds).toEqual(["patch-1", "patch-1-patch"]);
+  });
+
+  it("filters REP territory assignments to assigned sectors only", async () => {
+    const scopeRepository: ScopeRepository = {
+      findTerritoryIdsByUserId: mock(async () => ["territory-sector-a", "territory-sector-b"]),
+      findTerritoryIdsByUserIds: mock(async () => []),
+      findManagedUserIds: mock(async () => []),
+      assignTerritory: mock(async () => undefined),
+      revokeTerritory: mock(async () => undefined),
+      findTerritoryAssignmentsByUserId: mock(async () => []),
+      findManagerIdByUserId: mock(async () => null),
+      findSectorIdsByUserId: mock(async () => ["sector-a"]),
+      findTerritoryIdsBySectorIds: mock(async () => ["territory-sector-a"]),
+      assignSector: mock(async () => undefined),
+      revokeSector: mock(async () => undefined),
+      findSectorAssignmentsByUserId: mock(async () => []),
+      listActiveSectors: mock(async () => []),
+    };
+
+    const resolver = new ScopeResolver({
+      scopeRepository,
+      territoryScopePort,
+      territoryHierarchyPort,
+    });
+    const scope = await resolver.resolve("rep-1", Role.REP);
+
+    expect(scope.assignedTerritoryIds).toEqual(["territory-sector-a"]);
+    expect(scope.assignedSectorIds).toEqual(["sector-a"]);
+  });
+
+  it("falls back to all territory assignments when REP has no sectors", async () => {
+    const scopeRepository: ScopeRepository = {
+      findTerritoryIdsByUserId: mock(async () => ["territory-1", "territory-2"]),
+      findTerritoryIdsByUserIds: mock(async () => []),
+      findManagedUserIds: mock(async () => []),
+      assignTerritory: mock(async () => undefined),
+      revokeTerritory: mock(async () => undefined),
+      findTerritoryAssignmentsByUserId: mock(async () => []),
+      findManagerIdByUserId: mock(async () => null),
+      findSectorIdsByUserId: mock(async () => []),
+      findTerritoryIdsBySectorIds: mock(async () => []),
+      assignSector: mock(async () => undefined),
+      revokeSector: mock(async () => undefined),
+      findSectorAssignmentsByUserId: mock(async () => []),
+      listActiveSectors: mock(async () => []),
+    };
+
+    const resolver = new ScopeResolver({
+      scopeRepository,
+      territoryScopePort,
+      territoryHierarchyPort,
+    });
+    const scope = await resolver.resolve("rep-2", Role.REP);
+
+    expect(scope.assignedTerritoryIds).toEqual(["territory-1", "territory-2"]);
+    expect(scope.assignedSectorIds).toEqual([]);
   });
 });
