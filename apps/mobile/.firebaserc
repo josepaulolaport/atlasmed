@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "atlasmed-app"
+  },
+  "etags": {},
+  "targets": {
+    "atlasmed-app": {
+      "hosting": {
+        "flutter-web": [
+          "atlasmed-app"
+        ]
+      }
+    }
+  }
+}

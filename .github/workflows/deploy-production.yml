@@ -1,0 +1,75 @@
+name: 🚀 Flutter Web — Produção
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/deploy-production.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Testar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+        working-directory: ./apps/mobile
+
+      - name: Analisar código
+        run: flutter analyze
+        working-directory: ./apps/mobile
+
+      - name: Executar testes
+        run: flutter test
+        working-directory: ./apps/mobile
+
+  deploy_web_production:
+    name: Deploy Web (Produção)
+    needs: test
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+        working-directory: ./apps/mobile
+
+      - name: Build Flutter Web (Release)
+        run: flutter build web --release
+        working-directory: ./apps/mobile
+
+      - name: Deploy para Firebase Hosting (Produção)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ATLASMED_APP }}
+          projectId: atlasmed-app
+          entryPoint: ./apps/mobile
+          channelId: live
