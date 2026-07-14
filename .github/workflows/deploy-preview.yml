@@ -19,9 +19,9 @@ on:
         required: true
         type: string
       expires:
-        description: Tempo de vida do canal (ex: 7d)
+        description: "Tempo de vida do canal (ex: 7d)"
         required: false
-        default: 7d
+        default: "7d"
         type: string
 
 concurrency:
