@@ -65,6 +65,9 @@ jobs:
         run: flutter build web --release
         working-directory: ./apps/mobile
 
+      - name: Instalar Firebase CLI
+        run: npm install --global firebase-tools
+
       - name: Deploy para Firebase Hosting (Produção)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
