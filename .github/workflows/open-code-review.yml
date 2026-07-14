@@ -17,6 +17,7 @@ jobs:
   code-review:
     name: AI Code Review
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Validate API key
@@ -28,7 +29,7 @@ jobs:
             exit 1
           fi
 
-      - uses: alibaba/open-code-review@main
+      - uses: alibaba/open-code-review@a32f85272bac1d21e80762d40470b975ec1d84d9
         with:
           llm_url: https://opencode.ai/zen/go/v1/
           llm_auth_token: ${{ secrets.OPEN_CODE_REVIEW_API_KEY }}
