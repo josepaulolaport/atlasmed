@@ -83,7 +83,7 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("read", "TERRITORY")).toBe(true);
     });
 
-    it("should allow USER to read CLINIC", () => {
+    it("should allow REP to read CLINIC", () => {
       const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "FACILITY")).toBe(true);
@@ -92,19 +92,19 @@ describe("PermissionMiddleware", () => {
   });
 
   describe("missing permission", () => {
-    it("should deny USER from creating USER", () => {
+    it("should deny REP from creating USER", () => {
       const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
     });
 
-    it("should deny USER from updating USER", () => {
+    it("should deny REP from updating USER", () => {
       const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("update", "USER")).toBe(false);
     });
 
-    it("should deny USER from deleting USER", () => {
+    it("should deny REP from deleting USER", () => {
       const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("delete", "USER")).toBe(false);
@@ -122,7 +122,7 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("manage", "TERRITORY")).toBe(false);
     });
 
-    it("should deny USER from managing CLINIC", () => {
+    it("should deny REP from managing CLINIC", () => {
       const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("manage", "FACILITY")).toBe(false);
@@ -151,7 +151,7 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("manage", "TERRITORY")).toBe(false);
     });
 
-    it("should check multiple denied permissions for USER", () => {
+    it("should check multiple denied permissions for REP", () => {
       const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
@@ -238,7 +238,7 @@ describe("PermissionMiddleware", () => {
     });
   });
 
-  describe("USER permissions", () => {
+  describe("REP permissions", () => {
     it("should have read and update on CLINIC", () => {
       const ability = defineAbilitiesFor("REP");
 
@@ -264,6 +264,38 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("read", "TERRITORY")).toBe(false);
       expect(ability.can("update", "TERRITORY")).toBe(false);
       expect(ability.can("delete", "TERRITORY")).toBe(false);
+    });
+
+    it("should not be able to read REGISTRY_INGESTION", () => {
+      const ability = defineAbilitiesFor("REP");
+
+      expect(ability.can("read", "REGISTRY_INGESTION")).toBe(false);
+    });
+  });
+
+  describe("REGISTRY_INGESTION permissions", () => {
+    it("should allow ADMIN to manage REGISTRY_INGESTION", () => {
+      const ability = defineAbilitiesFor("ADMIN");
+
+      expect(ability.can("manage", "REGISTRY_INGESTION")).toBe(true);
+    });
+
+    it("should allow MANAGER to read REGISTRY_INGESTION", () => {
+      const ability = defineAbilitiesFor("MANAGER");
+
+      expect(ability.can("read", "REGISTRY_INGESTION")).toBe(true);
+    });
+
+    it("should deny MANAGER from managing REGISTRY_INGESTION", () => {
+      const ability = defineAbilitiesFor("MANAGER");
+
+      expect(ability.can("manage", "REGISTRY_INGESTION")).toBe(false);
+    });
+
+    it("should deny REP from reading REGISTRY_INGESTION", () => {
+      const ability = defineAbilitiesFor("REP");
+
+      expect(ability.can("read", "REGISTRY_INGESTION")).toBe(false);
     });
   });
 
@@ -303,7 +335,7 @@ describe("PermissionMiddleware", () => {
       expect(response.status).toBe(403);
     });
 
-    it("blocks USER on manage USER routes", async () => {
+    it("blocks REP on manage USER routes", async () => {
       const app = createTestApp("REP");
       const response = await app.handle(new Request("http://localhost/protected"));
 
