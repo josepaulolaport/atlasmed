@@ -61,6 +61,7 @@ describe("GetUserAssignmentsUseCase", () => {
         lastName: "Manager",
       },
       territories: [{ territoryId: "territory-a", assignedAt: assignedAt.toISOString() }],
+      sectors: [],
       isOperationallyActive: true,
     });
   });
