@@ -1,16 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  User,
-  Shield,
-  CheckCircle2,
-  XCircle,
-  Activity,
-  Clock,
-} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/utils";
 import { canManageUsers } from "@/lib/permissions";
 
@@ -19,148 +12,130 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
+  const displayName = user.firstName || user.username;
+  const securityLevel =
+    user.emailVerified && user.phoneVerified ? "Forte" : "Médio";
+
+  const stats = [
+    {
+      label: "Status da conta",
+      icon: "solar:user-linear",
+      value: user.status,
+      hint: `Função: ${user.role.name}`,
+      badge: true,
+      badgeVariant:
+        user.status === "ACTIVE"
+          ? "success"
+          : user.status === "SUSPENDED"
+          ? "destructive"
+          : "secondary",
+    },
+    {
+      label: "Verificação de email",
+      icon: user.emailVerified
+        ? "solar:check-circle-linear"
+        : "solar:close-circle-linear",
+      value: user.emailVerified ? "Verificado" : "Não verificado",
+      hint: user.email,
+    },
+    {
+      label: "Verificação de telefone",
+      icon: user.phoneVerified
+        ? "solar:check-circle-linear"
+        : "solar:close-circle-linear",
+      value: user.phoneVerified ? "Verificado" : "Não verificado",
+      hint: user.phoneNumber || "Sem número de telefone",
+    },
+    {
+      label: "Segurança",
+      icon: "solar:shield-check-linear",
+      value: securityLevel,
+      hint: "Nível de segurança da conta",
+    },
+    {
+      label: "Última atividade",
+      icon: "solar:pulse-linear",
+      value: formatDateTime(user.updatedAt),
+      hint: "Perfil atualizado pela última vez",
+    },
+    {
+      label: "Membro desde",
+      icon: "solar:calendar-linear",
+      value: formatDateTime(user.createdAt),
+      hint: "Conta criada",
+    },
+  ] as const;
+
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">
-          Welcome back, {user.firstName || user.username}!
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+          Bem-vindo(a) de volta, {displayName}
         </h1>
-        <p className="mt-2 text-gray-600">
-          Here's an overview of your account and activity.
+        <p className="text-sm text-zinc-500 mt-1">
+          Visão geral da sua conta e atividade.
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Account Status</CardTitle>
-            <User className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              <Badge
-                variant={
-                  user.status === "ACTIVE"
-                    ? "success"
-                    : user.status === "SUSPENDED"
-                    ? "destructive"
-                    : "secondary"
-                }
-              >
-                {user.status}
-              </Badge>
+      <div className="p-6 max-w-6xl mx-auto w-full">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {stats.map((stat) => (
+            <div
+              key={stat.label}
+              className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-zinc-500">
+                  {stat.label}
+                </span>
+                <iconify-icon
+                  icon={stat.icon}
+                  stroke-width="1.5"
+                  className="text-zinc-400 text-base"
+                />
+              </div>
+              {"badge" in stat && stat.badge ? (
+                <Badge
+                  variant={
+                    stat.badgeVariant as
+                      | "success"
+                      | "destructive"
+                      | "secondary"
+                  }
+                >
+                  {stat.value}
+                </Badge>
+              ) : (
+                <div className="text-lg font-semibold tracking-tight text-zinc-900">
+                  {stat.value}
+                </div>
+              )}
+              <p className="text-xs text-zinc-500 mt-2">{stat.hint}</p>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Role: {user.role.name}
-            </p>
-          </CardContent>
-        </Card>
+          ))}
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Email Verification
-            </CardTitle>
-            {user.emailVerified ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-            ) : (
-              <XCircle className="h-4 w-4 text-red-600" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {user.emailVerified ? "Verified" : "Not Verified"}
+        {canManageUsers(user.role.name) && (
+          <div className="mt-6 rounded-xl border border-zinc-200 bg-white shadow-sm">
+            <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+              <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+                Ações rápidas
+              </h3>
             </div>
-            <p className="text-xs text-gray-500 mt-2">{user.email}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Phone Verification
-            </CardTitle>
-            {user.phoneVerified ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-            ) : (
-              <XCircle className="h-4 w-4 text-red-600" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {user.phoneVerified ? "Verified" : "Not Verified"}
+            <div className="p-5 flex flex-wrap gap-3">
+              <Button asChild>
+                <Link href="/users">Gerenciar usuários</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/facilities">Ver unidades de saúde</Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/registry-suggestions">Revisar sugestões</Link>
+              </Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              {user.phoneNumber || "No phone number"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Security</CardTitle>
-            <Shield className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {user.emailVerified && user.phoneVerified ? "Strong" : "Medium"}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Account security level
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Last Activity</CardTitle>
-            <Activity className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm font-bold">
-              {formatDateTime(user.updatedAt)}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Profile last updated</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Member Since</CardTitle>
-            <Clock className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm font-bold">
-              {formatDateTime(user.createdAt)}
-            </div>
-            <p className="text-xs text-gray-500 mt-2">Account created</p>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
-
-      {canManageUsers(user.role.name) && (
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-4">
-              <a
-                href="/users"
-                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Manage Users
-              </a>
-              <a
-                href="/users/invite"
-                className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Invite User
-              </a>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+    </>
   );
 }

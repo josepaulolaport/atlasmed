@@ -89,25 +89,25 @@ export function ReparentTerritoryDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Reparent {territory?.slug}</DialogTitle>
+          <DialogTitle>Alterar pai de {territory?.slug}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Manual reparent overrides geo-linking. Leave empty to clear the parent (country-level
-            only).
+            A alteração manual de pai sobrepõe o geovínculo. Deixe vazio para remover o pai
+            (apenas nível de país).
           </p>
           <div>
-            <Label>New parent</Label>
+            <Label>Novo pai</Label>
             <TerritoryPicker
               value={parentId}
               onChange={setParentId}
               excludeTerritoryIds={territory ? [territory.id] : []}
-              placeholder="Select parent territory"
+              placeholder="Selecionar território pai"
             />
           </div>
           {!isAdmin && (
             <div>
-              <Label htmlFor="reparent-reason">Reason (optional)</Label>
+              <Label htmlFor="reparent-reason">Motivo (opcional)</Label>
               <Input
                 id="reparent-reason"
                 value={reason}
@@ -118,10 +118,10 @@ export function ReparentTerritoryDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : isAdmin ? "Save" : "Submit for approval"}
+            {saving ? "Salvando..." : isAdmin ? "Salvar" : "Enviar para aprovação"}
           </Button>
         </DialogFooter>
       </DialogContent>

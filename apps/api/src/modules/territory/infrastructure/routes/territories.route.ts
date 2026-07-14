@@ -56,6 +56,7 @@ export const territoriesRoute = new Elysia()
         assignableToManagers: t.Optional(t.Boolean()),
         isCountryLevel: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
+        participatesInGroupingHierarchy: t.Optional(t.Boolean()),
         sortOrder: t.Optional(t.Number()),
       }),
     }
@@ -80,17 +81,16 @@ export const territoriesRoute = new Elysia()
         assignableToManagers: t.Optional(t.Boolean()),
         isCountryLevel: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
+        participatesInGroupingHierarchy: t.Optional(t.Boolean()),
         sortOrder: t.Optional(t.Number()),
         isActive: t.Optional(t.Boolean()),
       }),
     }
   )
   .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/ambiguous-parents", async ({ getScope }) => {
+  .get("/territories/grouping-tree", async ({ getScope }) => {
     const scope = await getScope();
-    return territoryUseCases
-      .listAmbiguousParentTerritories()
-      .listAmbiguousParentTerritories(scope);
+    return territoryUseCases.listGroupingTree().listGroupingTree(scope);
   })
   .use(requirePermission("read", "TERRITORY"))
   .get("/territories/:id", async ({ params, getScope }) => {
@@ -311,7 +311,7 @@ export const territoriesRoute = new Elysia()
           t.Literal("create_territory"),
           t.Literal("reparent_territory"),
           t.Literal("deactivate_territory"),
-          t.Literal("facility_territory_change"),
+          t.Literal("clinic_territory_change"),
         ]),
         entityPayload: t.Optional(t.Record(t.String(), t.Any())),
         targetTerritoryId: t.Optional(t.String()),
@@ -378,68 +378,10 @@ export const territoriesRoute = new Elysia()
     }
   )
   .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/rollup-links", async ({ params, getScope }) => {
+  .get("/territories/:id/analytics-view", async ({ params, getScope }) => {
     const scope = await getScope();
-    return territoryUseCases.listRollupLinks().listRollupLinks(params.id, scope);
-  })
-  .use(requirePermission("update", "TERRITORY"))
-  .post(
-    "/territories/:id/rollup-links",
-    async ({ params, body, getUser }) => {
-      const user = await getUser();
-      if (!isAdminRole(user.role.name as Role)) {
-        throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
-      }
-      return territoryUseCases.addRollupLink().addRollupLink({
-        territoryId: params.id,
-        ancestorId: body.ancestorId,
-        relationshipType: body.relationshipType,
-      });
-    },
-    {
-      body: t.Object({
-        ancestorId: t.String(),
-        relationshipType: t.Optional(t.Literal("reporting")),
-      }),
-    }
-  )
-  .delete("/territories/:id/rollup-links/:linkId", async ({ params, getUser }) => {
-    const user = await getUser();
-    if (!isAdminRole(user.role.name as Role)) {
-      throw new InsufficientPermissionsError(["territory:update"], [`role:${user.role.name}`]);
-    }
-    return territoryUseCases.removeRollupLink().removeRollupLink(params.id, params.linkId);
-  })
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/operational-members", async ({ params, getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.listOperationalMembers().listOperationalMembers({
-      referenceTerritoryId: params.id,
-      scope,
-    });
-  })
-  .get("/territories/:id/geo-memberships", async ({ params, getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.listReferenceMemberships().listReferenceMemberships({
-      operationalTerritoryId: params.id,
-      scope,
-    });
-  })
-  .get(
-    "/territories/:id/clipped-boundary/:referenceId",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      return territoryUseCases.getClippedBoundary().getClippedBoundary({
-        operationalTerritoryId: params.id,
-        referenceTerritoryId: params.referenceId,
-        scope,
-      });
-    }
-  )
-  .get("/territories/:id/coverage-view", async ({ params, getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.getReferenceCoverage().getReferenceCoverage({
-      referenceTerritoryId: params.id,
+    return territoryUseCases.getAnalyticsView().getAnalyticsView({
+      groupingTerritoryId: params.id,
       scope,
     });
   });

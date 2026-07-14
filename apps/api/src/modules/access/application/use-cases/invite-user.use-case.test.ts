@@ -58,7 +58,7 @@ describe("InviteUserUseCase", () => {
 
   beforeEach(() => {
     mockInviteRepository = createMockInviteRepository({
-      create: mock(async () => mockInvite),
+      create: mock(async () => mockInvite) as any,
     });
 
     mockUserRepository = createMockUserRepository({
@@ -70,7 +70,13 @@ describe("InviteUserUseCase", () => {
       ),
     });
 
-    mockRoleRepository = createMockRoleRepository();
+    mockRoleRepository = createMockRoleRepository({
+      findById: mock(async () => ({
+        id: "role-123",
+        name: "ADMIN",
+        priority: ROLE_PRIORITY_BY_NAME.ADMIN,
+      })),
+    });
 
     inviteUserUseCase = new InviteUserUseCase({
       inviteRepository: mockInviteRepository,
@@ -135,7 +141,7 @@ describe("InviteUserUseCase", () => {
         invitedByUserId: "admin-456",
       });
 
-      expect(result.invite).toEqual(mockInvite);
+      expect(result.invite).toEqual(mockInvite as any);
     });
 
     it("should link invite to role", async () => {
@@ -217,7 +223,7 @@ describe("InviteUserUseCase", () => {
     it("should throw error when user already exists with email", async () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
         id: "existing-user",
-      }));
+      })) as any;
 
       await expect(
         inviteUserUseCase.execute({
@@ -231,7 +237,7 @@ describe("InviteUserUseCase", () => {
     it("should throw error when user already exists with phone number", async () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
         id: "existing-user",
-      }));
+      })) as any;
 
       await expect(
         inviteUserUseCase.execute({
@@ -273,7 +279,7 @@ describe("InviteUserUseCase", () => {
     it("should not create invite when user already exists", async () => {
       mockUserRepository.findByIdentifier = mock(async () => ({
         id: "existing-user",
-      }));
+      })) as any;
 
       try {
         await inviteUserUseCase.execute({
@@ -289,7 +295,7 @@ describe("InviteUserUseCase", () => {
 
   describe("existing invite check", () => {
     it("should throw error when active invite already exists for email", async () => {
-      mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite);
+      mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite) as any;
 
       await expect(
         inviteUserUseCase.execute({
@@ -301,7 +307,7 @@ describe("InviteUserUseCase", () => {
     });
 
     it("should throw error when active invite already exists for phone", async () => {
-      mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite);
+      mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite) as any;
 
       await expect(
         inviteUserUseCase.execute({
@@ -343,7 +349,7 @@ describe("InviteUserUseCase", () => {
     });
 
     it("should not create invite when active invite already exists", async () => {
-      mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite);
+      mockInviteRepository.findByEmailOrPhone = mock(async () => mockInvite) as any;
 
       try {
         await inviteUserUseCase.execute({
@@ -384,11 +390,17 @@ describe("InviteUserUseCase", () => {
       }));
     }
 
-    it("should allow MANAGER to invite USER", async () => {
+    it("should allow MANAGER to invite REP", async () => {
       setupInviter("MANAGER");
-      setupTargetRole("USER");
+      setupTargetRole("REP");
 
-      await expect(inviteUserUseCase.execute(inviteParams)).resolves.toBeDefined();
+      await expect(
+        inviteUserUseCase.execute({
+          ...inviteParams,
+          managerId: "manager-123",
+          repTerritoryId: "territory-rep-1",
+        })
+      ).resolves.toBeDefined();
     });
 
     it("should reject MANAGER inviting MANAGER", async () => {

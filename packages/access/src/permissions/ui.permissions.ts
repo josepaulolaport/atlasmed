@@ -4,7 +4,8 @@ import { defineAbilitiesFor } from "./role.permissions";
 const ROLE_PRIORITY: Record<Role, number> = {
   [Role.ADMIN]: 3,
   [Role.MANAGER]: 2,
-  [Role.USER]: 1,
+  [Role.OPS]: 1,
+  [Role.REP]: 1,
 };
 
 export function hasMinimumRole(userRole: Role, required: Role): boolean {
@@ -34,6 +35,16 @@ export function canReadProfessionals(role: Role): boolean {
 export function canManageProfessionals(role: Role): boolean {
   const ability = defineAbilitiesFor(role);
   return ability.can("create", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
+}
+
+export function canUpdateProfessionals(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("update", "PROFESSIONAL") || ability.can("manage", "PROFESSIONAL");
+}
+
+export function canUpdateFacilities(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return ability.can("update", "FACILITY") || ability.can("manage", "FACILITY");
 }
 
 export function canReadTerritories(role: Role): boolean {

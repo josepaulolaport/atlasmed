@@ -3,15 +3,20 @@ import { fileURLToPath } from "node:url";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { auditLogService } from "../../infrastructure/audit/audit-log.service";
 import { environment } from "../../app/config/environment";
-import { PrismaFacilityRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility.repository";
-import { PrismaFacilityProfessionalRepository } from "../facility/infrastructure/repositories/prisma/prisma-facility-professional.repository";
-import { PrismaProfessionalRepository } from "../professional/infrastructure/repositories/prisma/prisma-professional.repository";
+import {
+  describeCnesIngestionWorkflow,
+  startCnesIngestionWorkflow,
+} from "../../infrastructure/temporal/temporal.client";
+import { DrizzleFacilityRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility.repository";
+import { DrizzleFacilityProfessionalRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
+import { DrizzleFacilityRepresentativeRepository } from "../facility/infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
+import { DrizzleProfessionalRepository } from "../professional/infrastructure/repositories/drizzle/drizzle-professional.repository";
 import { MockRegistrySourceAdapter } from "./infrastructure/adapters/mock-registry-source.adapter";
 import {
-  PrismaIngestionRunRepository,
-  PrismaIngestionSuggestionRepository,
-} from "./infrastructure/repositories/prisma/prisma-ingestion.repository";
-import { PrismaRegistryReadRepository } from "./infrastructure/repositories/prisma/prisma-registry-read.repository";
+  DrizzleIngestionRunRepository,
+  DrizzleIngestionSuggestionRepository,
+} from "./infrastructure/repositories/drizzle/drizzle-ingestion.repository";
+import { DrizzleRegistryReadRepository } from "./infrastructure/repositories/drizzle/drizzle-registry-read.repository";
 import { RegistrySyncService } from "./application/services/registry-sync.service";
 import { RegistryDiffService } from "./application/services/registry-diff.service";
 import { RegistryReadService } from "./application/services/registry-read.service";
@@ -23,6 +28,7 @@ import {
   RejectSuggestionUseCase,
 } from "./application/use-cases/suggestion.use-cases";
 import { ListIngestionRunsUseCase } from "./application/use-cases/list-ingestion-runs.use-case";
+import { GetIngestionRunStatusUseCase } from "./application/use-cases/get-ingestion-run-status.use-case";
 import { RunRegistryDemoUseCase } from "./application/use-cases/run-registry-demo.use-case";
 import { cleanupMockRegistryData } from "./infrastructure/demo/registry-mock-cleanup";
 import {
@@ -40,12 +46,12 @@ const fixturesDir = join(
 );
 
 export const registryIngestionRepositories = {
-  facility: new PrismaFacilityRepository(),
-  professional: new PrismaProfessionalRepository(),
-  association: new PrismaFacilityProfessionalRepository(),
-  ingestionRun: new PrismaIngestionRunRepository(),
-  suggestion: new PrismaIngestionSuggestionRepository(),
-  registryRead: new PrismaRegistryReadRepository(),
+  facility: new DrizzleFacilityRepository(),
+  professional: new DrizzleProfessionalRepository(),
+  association: new DrizzleFacilityProfessionalRepository(),
+  ingestionRun: new DrizzleIngestionRunRepository(),
+  suggestion: new DrizzleIngestionSuggestionRepository(),
+  registryRead: new DrizzleRegistryReadRepository(),
 };
 
 const registrySource = new MockRegistrySourceAdapter(
@@ -95,10 +101,23 @@ export const registryIngestionUseCases = {
       auditLogService,
       acquireLock: acquireIngestionLock,
       releaseLock: releaseIngestionLock,
+      registrySourceMode: environment.REGISTRY_SOURCE,
+      startTemporalWorkflow: startCnesIngestionWorkflow,
     }),
   listRuns: () =>
     new ListIngestionRunsUseCase({
       ingestionRunRepository: registryIngestionRepositories.ingestionRun,
+    }),
+  getRunStatus: () =>
+    new GetIngestionRunStatusUseCase({
+      ingestionRunRepository: registryIngestionRepositories.ingestionRun,
+      describeWorkflow: async (workflowId) => {
+        const description = await describeCnesIngestionWorkflow(workflowId);
+        return {
+          status: { name: description.status.name },
+          runId: description.runId,
+        };
+      },
     }),
   listSuggestions: () =>
     new ListSuggestionsUseCase({
@@ -116,7 +135,9 @@ export const registryIngestionUseCases = {
     new ApproveSuggestionUseCase({
       suggestionRepository: registryIngestionRepositories.suggestion,
       facilityRepository: registryIngestionRepositories.facility,
+      professionalRepository: registryIngestionRepositories.professional,
       facilityProfessionalRepository: registryIngestionRepositories.association,
+      facilityRepresentativeRepository: new DrizzleFacilityRepresentativeRepository(),
       facilityGeocodingService,
       auditLogService,
     }),

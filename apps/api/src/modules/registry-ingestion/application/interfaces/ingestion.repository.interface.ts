@@ -1,21 +1,38 @@
 import type {
-  IngestionRunStatus,
-  IngestionSuggestionStatus,
-  IngestionSuggestionType,
+  CnesRunPhase as IngestionRunPhase,
+  CnesRunStatus as IngestionRunStatus,
+  CnesSuggestionStatus as IngestionSuggestionStatus,
+  CnesSuggestionType as IngestionSuggestionType,
 } from "@atlasmed/database";
 
 export interface IngestionRunRecord {
   id: string;
   sourceProvider: string;
   status: IngestionRunStatus;
+  phase: IngestionRunPhase | null;
+  temporalWorkflowId: string | null;
+  referenceAno: number | null;
+  referenceMes: number | null;
   startedAt: Date;
   completedAt: Date | null;
+  promotedAt: Date | null;
   stats: Record<string, unknown> | null;
+  validationReport: Record<string, unknown> | null;
+  archiveManifest: Record<string, unknown> | null;
   error: string | null;
 }
 
 export interface IngestionRunRepository {
-  create(sourceProvider: string): Promise<IngestionRunRecord>;
+  create(
+    sourceProvider: string,
+    options?: {
+      temporalWorkflowId?: string;
+      referenceAno?: number;
+      referenceMes?: number;
+    }
+  ): Promise<IngestionRunRecord>;
+
+  findById(id: string): Promise<IngestionRunRecord | null>;
 
   complete(
     id: string,

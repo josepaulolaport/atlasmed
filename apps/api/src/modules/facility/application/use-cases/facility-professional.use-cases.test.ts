@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { createGlobalScopeContext } from "@atlasmed/access";
 import type { FacilityProfessionalRepository } from "../interfaces/facility-professional.repository.interface";
+import type { ProfessionalRepository } from "../../../professional/application/interfaces/professional.repository.interface";
 import {
   ConfirmProfessionalAtFacilityUseCase,
   EndFacilityProfessionalUseCase,
+  GetFacilityProfessionalContextUseCase,
   ListFacilityProfessionalsUseCase,
   ManuallyAssociateProfessionalUseCase,
+  UpdateFacilityProfessionalRoleUseCase,
 } from "./facility-professional.use-cases";
 
 const facilityId = "facility-1";
@@ -16,21 +19,49 @@ const professional = {
   id: professionalId,
   firstName: "Jane",
   lastName: "Smith",
-  specialty: "Cardiology",
+  fullName: "Jane Smith",
+  socialName: null,
+  taxId: "52998224725",
+  birthDate: new Date("1990-05-15"),
+  mobilePhone: null,
+  landlinePhone: null,
+  email: null,
+  websiteUrl: null,
+  imageUrl: null,
+  primarySpecialtyLabel: "Cardiology",
+  crmCouncil: "CRM",
+  crmNumber: "123456",
+  crmState: "SP",
+  favoriteTeam: null,
+  favoriteSport: null,
+  hobbies: null,
+  notes: null,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };
 
-function baseAssociation(overrides: Partial<{
-  sourceActive: boolean;
-  confirmedAt: Date | null;
-  endedAt: Date | null;
-}> = {}) {
+function baseAssociation(
+  overrides: Partial<{
+    sourceActive: boolean;
+    confirmedAt: Date | null;
+    endedAt: Date | null;
+    isPartner: boolean;
+    relationshipLevel: number | null;
+    notes: string | null;
+  }> = {}
+) {
   return {
     id: "assoc-1",
     professionalId,
     facilityId,
     occupationCode: "LEGACY",
+    specialtyLabel: null,
+    isPartner: false,
+    isPrescriber: false,
+    isBuyer: false,
+    isDecisionMaker: false,
+    relationshipLevel: null as number | null,
+    notes: null as string | null,
     sourceActive: true,
     sourceFirstSeenAt: new Date("2024-01-01"),
     sourceLastSeenAt: new Date("2024-01-02"),
@@ -47,6 +78,7 @@ function baseAssociation(overrides: Partial<{
 
 describe("Facility professional use cases", () => {
   let facilityProfessionalRepository: FacilityProfessionalRepository;
+  let professionalRepository: ProfessionalRepository;
 
   beforeEach(() => {
     facilityProfessionalRepository = {
@@ -61,6 +93,17 @@ describe("Facility professional use cases", () => {
 
         return { associations, total: associations.length };
       }),
+      findActiveWithProfessional: mock(async () => ({
+        association: baseAssociation(),
+        professional,
+      })),
+      updateAssociationRoles: mock(async ({ data }) =>
+        baseAssociation({
+          isPartner: data.isPartner ?? false,
+          relationshipLevel: data.relationshipLevel ?? null,
+          notes: data.notes ?? null,
+        })
+      ),
       confirmAssociation: mock(async ({ confirmedByUserId }) => ({
         ...baseAssociation({
           confirmedAt: new Date("2024-02-01"),
@@ -82,6 +125,12 @@ describe("Facility professional use cases", () => {
         endReason: "manual",
       })),
     } as unknown as FacilityProfessionalRepository;
+
+    professionalRepository = {
+      findActiveFacilities: mock(async () => [
+        { id: facilityId, name: "Facility One" },
+      ]),
+    } as unknown as ProfessionalRepository;
   });
 
   it("lists professionals for pending view", async () => {
@@ -98,6 +147,43 @@ describe("Facility professional use cases", () => {
     expect(
       facilityProfessionalRepository.findActiveByFacilityWithProfessionals
     ).toHaveBeenCalledWith(expect.objectContaining({ facilityId, view: "pending" }));
+  });
+
+  it("returns composite professional facility context", async () => {
+    const useCase = new GetFacilityProfessionalContextUseCase({
+      facilityProfessionalRepository,
+      professionalRepository,
+    });
+
+    const result = await useCase.execute({
+      facilityId,
+      professionalId,
+      scope: createGlobalScopeContext(),
+    });
+
+    expect(result?.professional.taxId).toBe("52998224725");
+    expect(result?.association.facilityId).toBe(facilityId);
+    expect(result?.facilities).toEqual([{ id: facilityId, name: "Facility One" }]);
+  });
+
+  it("updates facility-scoped role flags", async () => {
+    const useCase = new UpdateFacilityProfessionalRoleUseCase({
+      facilityProfessionalRepository,
+    });
+
+    const result = await useCase.execute({
+      facilityId,
+      professionalId,
+      scope: createGlobalScopeContext(),
+      isPartner: true,
+      relationshipLevel: 8,
+      notes: "Key contact",
+    });
+
+    expect(result?.isPartner).toBe(true);
+    expect(result?.relationshipLevel).toBe(8);
+    expect(result?.notes).toBe("Key contact");
+    expect(facilityProfessionalRepository.updateAssociationRoles).toHaveBeenCalled();
   });
 
   it("confirms a pending professional at facility", async () => {

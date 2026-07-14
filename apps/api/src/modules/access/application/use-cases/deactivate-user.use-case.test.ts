@@ -62,7 +62,7 @@ describe("DeactivateUserUseCase", () => {
 
   beforeEach(() => {
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => mockUser),
+      findById: mock(async () => mockUser) as any,
     });
 
     mockSessionRepository = createMockSessionRepository();
@@ -134,7 +134,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         managerId: "manager-456",
-      }));
+      })) as any;
 
       await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
 
@@ -182,7 +182,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         status: "INACTIVE",
-      }));
+      })) as any;
 
       await expect(
         deactivateUserUseCase.execute(adminDeactivateParams("user-123"))
@@ -193,7 +193,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         status: "INACTIVE",
-      }));
+      })) as any;
 
       try {
         await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));
@@ -206,7 +206,7 @@ describe("DeactivateUserUseCase", () => {
       mockUserRepository.findById = mock(async () => ({
         ...mockUser,
         status: "INACTIVE",
-      }));
+      })) as any;
 
       try {
         await deactivateUserUseCase.execute(adminDeactivateParams("user-123"));

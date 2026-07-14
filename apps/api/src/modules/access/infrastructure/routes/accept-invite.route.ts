@@ -71,7 +71,7 @@ export const acceptInviteRoute = new Elysia({
       status: string;
     } = {
       id: user.id,
-      email: user.email,
+      email: user.email!,
       username: user.username,
       status: user.status as string,
     };

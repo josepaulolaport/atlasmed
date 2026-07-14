@@ -111,7 +111,7 @@ export const userRouteTestUser: RouteTestUser = {
   id: "user-test",
   email: "user@test.example.com",
   username: "usertest",
-  role: { id: "role-user", name: "USER" },
+  role: { id: "role-user", name: "REP" },
 };
 
 export function managerScopedContext(territoryIds: string[]): ScopeContext {

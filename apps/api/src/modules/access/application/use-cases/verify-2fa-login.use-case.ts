@@ -62,7 +62,7 @@ export class Verify2FALoginUseCase {
 
       this.deps.metrics.recordLoginAttempt(false, "invalid_2fa_code");
       await this.deps.auditLog.logFailedLoginAttempt({
-        identifier: user.email,
+        identifier: user.email!,
         reason: attemptsRemaining
           ? "invalid_2fa_code"
           : "invalid_2fa_code_max_attempts",
@@ -92,7 +92,7 @@ export class Verify2FALoginUseCase {
 
     const session = await this.deps.sessionService.create({
       userId: user.id,
-      userRole: user.role.name,
+      userRole: user.role.name as any,
       ipAddress: params.ipAddress ?? pendingLogin.ipAddress,
       userAgent: params.userAgent ?? pendingLogin.userAgent,
       acceptLanguage: params.acceptLanguage ?? pendingLogin.acceptLanguage,
@@ -106,11 +106,11 @@ export class Verify2FALoginUseCase {
       revokedAt: session.revokedAt?.toISOString() || null,
       ipAddress: session.ipAddress,
       userAgent: session.userAgent,
-      lastSeenAt: session.lastSeenAt.toISOString(),
+      lastSeenAt: (session.lastSeenAt ?? new Date()).toISOString(),
       createdAt: session.createdAt.toISOString(),
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email!,
         username: user.username,
         status: user.status,
         tokenVersion: user.tokenVersion,
@@ -124,7 +124,7 @@ export class Verify2FALoginUseCase {
     const accessToken = await this.deps.tokenService.signAccessToken({
       sub: user.id,
       sid: session.id,
-      role: user.role.name,
+      role: user.role.name as any,
       tokenVersion: user.tokenVersion,
       iat: Math.floor(Date.now() / 1000),
     });

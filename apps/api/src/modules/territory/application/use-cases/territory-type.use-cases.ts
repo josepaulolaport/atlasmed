@@ -17,6 +17,7 @@ function serializeType(type: {
   assignableToManagers: boolean;
   isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
+  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -33,6 +34,7 @@ function serializeType(type: {
     assignableToManagers: type.assignableToManagers,
     isCountryLevel: type.isCountryLevel,
     blockSiblingOverlap: type.blockSiblingOverlap,
+    participatesInGroupingHierarchy: type.participatesInGroupingHierarchy,
     sortOrder: type.sortOrder,
     isActive: type.isActive,
     createdAt: type.createdAt.toISOString(),
@@ -66,6 +68,7 @@ export class TerritoryTypeUseCases {
     assignableToManagers?: boolean;
     isCountryLevel?: boolean;
     blockSiblingOverlap?: boolean;
+    participatesInGroupingHierarchy?: boolean;
     sortOrder?: number;
   }) {
     const slug = input.slug.trim().toLowerCase();
@@ -94,6 +97,7 @@ export class TerritoryTypeUseCases {
       assignableToManagers: input.assignableToManagers,
       isCountryLevel: input.isCountryLevel,
       blockSiblingOverlap: input.blockSiblingOverlap,
+      participatesInGroupingHierarchy: input.participatesInGroupingHierarchy,
       sortOrder: input.sortOrder,
     });
 
@@ -111,6 +115,7 @@ export class TerritoryTypeUseCases {
       assignableToManagers?: boolean;
       isCountryLevel?: boolean;
       blockSiblingOverlap?: boolean;
+      participatesInGroupingHierarchy?: boolean;
       sortOrder?: number;
       isActive?: boolean;
     }

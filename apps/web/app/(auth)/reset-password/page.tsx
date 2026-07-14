@@ -10,15 +10,6 @@ import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { AlertCircle, CheckCircle2, X } from "lucide-react";
 import type { PasswordResetConfirm } from "@/types/auth";
 
 function ResetPasswordForm() {
@@ -45,12 +36,12 @@ function ResetPasswordForm() {
   const password = watch("password");
 
   const passwordRequirements = [
-    { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-    { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-    { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
-    { label: "One number", test: (p: string) => /[0-9]/.test(p) },
+    { label: "Pelo menos 8 caracteres", test: (p: string) => p.length >= 8 },
+    { label: "Uma letra maiúscula", test: (p: string) => /[A-Z]/.test(p) },
+    { label: "Uma letra minúscula", test: (p: string) => /[a-z]/.test(p) },
+    { label: "Um número", test: (p: string) => /[0-9]/.test(p) },
     {
-      label: "One special character",
+      label: "Um caractere especial",
       test: (p: string) => /[^A-Za-z0-9]/.test(p),
     },
   ];
@@ -78,77 +69,121 @@ function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-red-600">Invalid Reset Link</CardTitle>
-            <CardDescription>
-              The password reset link is missing or invalid.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Link href="/forgot-password" className="w-full">
-              <Button className="w-full">Request new reset link</Button>
-            </Link>
-          </CardFooter>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-xl font-semibold tracking-tighter text-zinc-900">
+              ATLASMED
+            </h1>
+            <p className="text-sm text-zinc-500 mt-2">
+              Operações Comerciais em Saúde
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
+            <h2 className="text-lg font-medium text-red-600">
+              Link de redefinição inválido
+            </h2>
+            <p className="text-sm text-zinc-500 mt-1">
+              O link de redefinição de senha está ausente ou é inválido.
+            </p>
+            <div className="mt-6">
+              <Link href="/forgot-password" className="block">
+                <Button variant="primary" className="w-full">
+                  Solicitar novo link
+                </Button>
+              </Link>
+            </div>
+          </div>
+          <p className="text-center text-xs text-zinc-500 mt-6">
+            &copy; AtlasMed 2026
+          </p>
+        </div>
       </div>
     );
   }
 
   if (success) {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <CheckCircle2 className="h-6 w-6 text-green-600" />
+      <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-xl font-semibold tracking-tighter text-zinc-900">
+              ATLASMED
+            </h1>
+            <p className="text-sm text-zinc-500 mt-2">
+              Operações Comerciais em Saúde
+            </p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6 text-center">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+              <iconify-icon
+                icon="solar:check-circle-linear"
+                stroke-width="1.5"
+                className="text-2xl"
+              />
             </div>
-            <CardTitle>Password reset successful</CardTitle>
-            <CardDescription>
-              Your password has been reset. Redirecting to login...
-            </CardDescription>
-          </CardHeader>
-        </Card>
+            <h2 className="text-lg font-medium text-zinc-900">
+              Senha redefinida com sucesso
+            </h2>
+            <p className="text-sm text-zinc-500 mt-1">
+              Sua senha foi redefinida. Redirecionando para o login...
+            </p>
+          </div>
+          <p className="text-center text-xs text-zinc-500 mt-6">
+            &copy; AtlasMed 2026
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold">Reset your password</CardTitle>
-          <CardDescription>
-            Enter your new password below.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50 px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-xl font-semibold tracking-tighter text-zinc-900">
+            ATLASMED
+          </h1>
+          <p className="text-sm text-zinc-500 mt-2">
+            Healthcare Commercial Operations
+          </p>
+        </div>
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-6">
+          <h2 className="text-lg font-medium text-zinc-900">
+            Redefinir sua senha
+          </h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            Digite sua nova senha abaixo.
+          </p>
+          <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-4">
             {error && (
-              <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
-                <AlertCircle className="h-4 w-4" />
+              <div className="flex items-start gap-2 rounded-md bg-red-50 border border-red-100 p-3 text-sm text-red-600">
+                <iconify-icon
+                  icon="solar:danger-circle-linear"
+                  stroke-width="1.5"
+                  className="text-base mt-0.5"
+                />
                 <p>{error}</p>
               </div>
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
+              <Label htmlFor="password">Nova senha</Label>
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your new password"
+                placeholder="Digite sua nova senha"
                 {...register("password")}
                 disabled={isLoading}
               />
               {errors.password && (
-                <p className="text-sm text-red-600">{errors.password.message}</p>
+                <p className="text-xs text-red-600">{errors.password.message}</p>
               )}
 
               {password && (
-                <div className="space-y-2 rounded-md bg-gray-50 p-3">
-                  <p className="text-xs font-medium text-gray-700">
-                    Password requirements:
+                <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+                  <p className="text-xs font-medium text-zinc-700">
+                    Requisitos da senha
                   </p>
                   <ul className="space-y-1">
                     {passwordRequirements.map((req, index) => {
@@ -158,14 +193,22 @@ function ResetPasswordForm() {
                           key={index}
                           className="flex items-center gap-2 text-xs"
                         >
-                          {passed ? (
-                            <CheckCircle2 className="h-3 w-3 text-green-600" />
-                          ) : (
-                            <X className="h-3 w-3 text-gray-400" />
-                          )}
+                          <iconify-icon
+                            icon={
+                              passed
+                                ? "solar:check-circle-linear"
+                                : "solar:close-circle-linear"
+                            }
+                            stroke-width="1.5"
+                            className={
+                              passed
+                                ? "text-sm text-emerald-600"
+                                : "text-sm text-zinc-400"
+                            }
+                          />
                           <span
                             className={
-                              passed ? "text-green-600" : "text-gray-500"
+                              passed ? "text-emerald-700" : "text-zinc-500"
                             }
                           >
                             {req.label}
@@ -177,28 +220,42 @@ function ResetPasswordForm() {
                 </div>
               )}
             </div>
-          </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Resetting password..." : "Reset password"}
+            <Button
+              type="submit"
+              variant="primary"
+              className="w-full"
+              disabled={isLoading}
+            >
+              {isLoading ? "Redefinindo senha..." : "Redefinir senha"}
             </Button>
 
-            <Link href="/login" className="w-full">
+            <Link href="/login" className="block">
               <Button variant="ghost" className="w-full">
-                Back to Login
+                Voltar para o login
               </Button>
             </Link>
-          </CardFooter>
-        </form>
-      </Card>
+          </form>
+        </div>
+        <p className="text-center text-xs text-zinc-500 mt-6">
+          &copy; AtlasMed 2026
+        </p>
+      </div>
     </div>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-zinc-50">
+          <div className="py-10 text-center text-sm text-zinc-500">
+            Carregando…
+          </div>
+        </div>
+      }
+    >
       <ResetPasswordForm />
     </Suspense>
   );

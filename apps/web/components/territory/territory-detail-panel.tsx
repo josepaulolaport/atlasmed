@@ -10,7 +10,6 @@ import { territoriesApi } from "@/lib/api/territories";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { toast } from "@/hooks/use-toast";
 import { TerritoryBoundarySection } from "@/components/territory/territory-boundary-section";
-import { TerritoryRollupLinksSection } from "@/components/territory/territory-rollup-links-section";
 import { AssignUserToTerritoryDialog } from "@/components/territory/assign-user-to-territory-dialog";
 import { isApprovalRequest } from "@/components/territory/territory-utils";
 import { Loader2 } from "lucide-react";
@@ -70,7 +69,7 @@ export function TerritoryDetailPanel({
     return (
       <Card className="h-full">
         <CardContent className="flex h-64 items-center justify-center text-sm text-gray-500">
-          Select a territory from the tree to view details.
+          Selecione um território na árvore para ver os detalhes.
         </CardContent>
       </Card>
     );
@@ -106,7 +105,7 @@ export function TerritoryDetailPanel({
   };
 
   const handleDeactivate = async () => {
-    if (!confirm(`Deactivate territory ${territory.code}?`)) return;
+    if (!confirm(`Desativar território ${territory.code}?`)) return;
 
     setDeactivating(true);
     try {
@@ -147,7 +146,7 @@ export function TerritoryDetailPanel({
               <p className="mt-1 text-sm text-gray-500">
                 {territory.isCountryLevel ? (
                   <>
-                    Market: <span className="font-medium">{territory.countryCode}</span>
+                    Mercado: <span className="font-medium">{territory.countryCode}</span>
                   </>
                 ) : (
                   <>
@@ -155,7 +154,7 @@ export function TerritoryDetailPanel({
                     {territory.countryCode ? (
                       <>
                         {" "}
-                        · market {territory.countryCode}
+                        · mercado {territory.countryCode}
                       </>
                     ) : null}
                   </>
@@ -165,27 +164,27 @@ export function TerritoryDetailPanel({
                 <Badge variant="secondary">
                   {territory.territoryType.name}
                 </Badge>
-                {territory.isCountryLevel && <Badge variant="outline">country</Badge>}
-                {territory.isLeaf && <Badge variant="outline">leaf</Badge>}
-                {territory.hasBoundary && <Badge variant="outline">has boundary</Badge>}
-                {territory.parentAssignmentStatus === "ambiguous" && (
-                  <Badge variant="destructive">ambiguous parent</Badge>
+                {territory.isCountryLevel && <Badge variant="outline">país</Badge>}
+                {territory.isLeaf && <Badge variant="outline">folha</Badge>}
+                {territory.hasBoundary && <Badge variant="outline">com limite</Badge>}
+                {territory.managerTerritoryId && (
+                  <Badge variant="outline">zona de gestor vinculada</Badge>
                 )}
-                {territory.parentAssignmentSource && (
-                  <Badge variant="outline">parent: {territory.parentAssignmentSource}</Badge>
+                {typeof territory.repPatchCount === "number" && territory.repPatchCount > 0 && (
+                  <Badge variant="outline">{territory.repPatchCount} áreas de representante</Badge>
                 )}
-                {!territory.isActive && <Badge variant="destructive">inactive</Badge>}
+                {!territory.isActive && <Badge variant="destructive">inativo</Badge>}
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
               {canManage && (
                 <Button size="sm" onClick={() => setAssignOpen(true)}>
-                  Assign user
+                  Atribuir usuário
                 </Button>
               )}
-              {canUpdate && (
+              {canUpdate && territory.territoryType.participatesInGroupingHierarchy && (
                 <Button size="sm" variant="outline" onClick={onReparent}>
-                  Reparent
+                  Alterar pai
                 </Button>
               )}
               {canUpdate && territory.isActive && (
@@ -195,7 +194,7 @@ export function TerritoryDetailPanel({
                   onClick={handleDeactivate}
                   disabled={deactivating}
                 >
-                  {deactivating ? "Deactivating..." : "Deactivate"}
+                  {deactivating ? "Desativando..." : "Desativar"}
                 </Button>
               )}
             </div>
@@ -205,26 +204,32 @@ export function TerritoryDetailPanel({
           <div className="grid gap-3 text-sm md:grid-cols-2">
             {!territory.isCountryLevel && (
               <div>
-                <span className="text-gray-500">Identifier:</span> {territory.slug}
+                <span className="text-gray-500">Identificador:</span> {territory.slug}
               </div>
             )}
             <div>
-              <span className="text-gray-500">Market:</span>{" "}
+              <span className="text-gray-500">Mercado:</span>{" "}
               {territory.countryCode ?? "—"}
             </div>
             <div>
-              <span className="text-gray-500">Clinics:</span> {territory.clinicCount}
+              <span className="text-gray-500">Clínicas:</span> {territory.clinicCount}
             </div>
             <div>
-              <span className="text-gray-500">Assigned users:</span>{" "}
+              <span className="text-gray-500">Usuários atribuídos:</span>{" "}
               {territory.assignedUserCount}
             </div>
+            {territory.managerTerritoryId && (
+              <div>
+                <span className="text-gray-500">Zona de gestor:</span>{" "}
+                {territory.managerTerritoryId}
+              </div>
+            )}
             <div>
-              <span className="text-gray-500">Created:</span>{" "}
+              <span className="text-gray-500">Criado:</span>{" "}
               {formatDateTime(territory.createdAt)}
             </div>
             <div>
-              <span className="text-gray-500">Updated:</span>{" "}
+              <span className="text-gray-500">Atualizado:</span>{" "}
               {formatDateTime(territory.updatedAt)}
             </div>
           </div>
@@ -232,7 +237,7 @@ export function TerritoryDetailPanel({
           {canUpdate && (
             <div className="flex items-end gap-2">
               <div className="flex-1">
-                <Label htmlFor="territory-edit-name">Name</Label>
+                <Label htmlFor="territory-edit-name">Nome</Label>
                 <Input
                   id="territory-edit-name"
                   value={editName}
@@ -243,13 +248,13 @@ export function TerritoryDetailPanel({
                 onClick={handleSaveName}
                 disabled={savingName || editName.trim() === territory.name}
               >
-                {savingName ? "Saving..." : "Save name"}
+                {savingName ? "Salvando..." : "Salvar nome"}
               </Button>
             </div>
           )}
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-900">Boundary</h3>
+            <h3 className="mb-2 text-sm font-semibold text-gray-900">Limite</h3>
             <TerritoryBoundarySection
               territory={territory}
               canEdit={canUpdate}
@@ -258,25 +263,18 @@ export function TerritoryDetailPanel({
           </div>
 
           <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-900">Descendants</h3>
+            <h3 className="mb-2 text-sm font-semibold text-gray-900">Descendentes</h3>
             {loadingDescendants ? (
               <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading...
+                Carregando...
               </div>
             ) : descendantIds.length === 0 ? (
-              <p className="text-sm text-gray-500">No descendants.</p>
+              <p className="text-sm text-gray-500">Nenhum descendente.</p>
             ) : (
-              <p className="text-sm text-gray-700">{descendantIds.length} descendant(s)</p>
+              <p className="text-sm text-gray-700">{descendantIds.length} descendente(s)</p>
             )}
           </div>
-
-          {territory.territoryType && !territory.territoryType.isCountryLevel && (
-            <TerritoryRollupLinksSection
-              territoryId={territory.id}
-              canManage={canManage}
-            />
-          )}
         </CardContent>
       </Card>
 

@@ -1,5 +1,7 @@
 import { Role } from "@atlasmed/access";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { db } from "../../../../infrastructure/database/db";
+import { userTerritoryAssignments, users, roles } from "@atlasmed/database";
+import { and, ne, inArray, eq } from "drizzle-orm";
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
@@ -34,17 +36,17 @@ export class TerritoryAssignmentPolicyService {
       throw new OperationNotAllowedError("assign_territory", "Territory type not found");
     }
 
-    if (params.targetRole !== Role.USER && params.targetRole !== Role.MANAGER) {
+    if (params.targetRole !== Role.REP && params.targetRole !== Role.MANAGER) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "Territory assignments are only supported for USER and MANAGER accounts"
+        "Territory assignments are only supported for REP and MANAGER accounts"
       );
     }
 
-    if (params.targetRole === Role.USER && !type.assignableToUsers) {
+    if (params.targetRole === Role.REP && !type.assignableToUsers) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "This territory type cannot be assigned to field users"
+        "This territory type cannot be assigned to field reps"
       );
     }
 
@@ -56,17 +58,22 @@ export class TerritoryAssignmentPolicyService {
     }
 
     const exclusionRoles =
-      params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.USER];
+      params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.REP];
 
-    const conflictingAssignments = await prisma.userTerritoryAssignment.findMany({
-      where: {
-        userId: { not: params.targetUserId },
-        user: {
-          role: { name: { in: exclusionRoles } },
-        },
-      },
-      select: { territoryId: true, userId: true },
-    });
+    const conflictingAssignments = await db
+      .select({
+        territoryId: userTerritoryAssignments.territoryId,
+        userId: userTerritoryAssignments.userId,
+      })
+      .from(userTerritoryAssignments)
+      .innerJoin(users, eq(userTerritoryAssignments.userId, users.id))
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(
+        and(
+          ne(userTerritoryAssignments.userId, params.targetUserId),
+          inArray(roles.name, exclusionRoles)
+        )
+      );
 
     for (const assignment of conflictingAssignments) {
       const overlaps = await this.deps.closureRepository.hasAncestorDescendantRelation(

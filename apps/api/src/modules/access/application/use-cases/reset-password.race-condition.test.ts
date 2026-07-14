@@ -1,9 +1,11 @@
 import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:test";
 import { hash } from "argon2";
-import { prisma } from "../../../../infrastructure/database/prisma.client";
+import { eq, and } from "drizzle-orm";
+import { roles, users, sessions, passwordResets } from "@atlasmed/database";
+import { db } from "../../../../infrastructure/database/db";
 import { ResetPasswordUseCase } from "./reset-password.use-case";
-import { PrismaUserRepository } from "../../infrastructure/repositories/prisma/prisma-user.repository";
-import { PrismaPasswordResetRepository } from "../../infrastructure/repositories/prisma/prisma-password-reset.repository";
+import { DrizzleUserRepository } from "../../infrastructure/repositories/drizzle/drizzle-user.repository";
+import { DrizzlePasswordResetRepository } from "../../infrastructure/repositories/drizzle/drizzle-password-reset.repository";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
 import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
 import { PasswordService } from "../services/password.service";
@@ -25,18 +27,18 @@ import { ResetTokenUsedError } from "../../../../shared/errors";
  */
 describe("Reset Password Race Condition Integration Tests", () => {
   let dbReady = false;
-  let userRepository: PrismaUserRepository;
-  let passwordResetRepository: PrismaPasswordResetRepository;
+  let userRepository: DrizzleUserRepository;
+  let passwordResetRepository: DrizzlePasswordResetRepository;
   let resetPasswordUseCase: ResetPasswordUseCase;
   let testUser: any;
   let resetToken: string;
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    userRepository = new PrismaUserRepository();
-    passwordResetRepository = new PrismaPasswordResetRepository({ prisma });
+    userRepository = new DrizzleUserRepository();
+    passwordResetRepository = new DrizzlePasswordResetRepository();
 
     resetPasswordUseCase = new ResetPasswordUseCase({
       userRepository,
@@ -49,9 +51,12 @@ describe("Reset Password Race Condition Integration Tests", () => {
       metrics: createMockMetricsService(),
     });
 
-    const userRole = await prisma.role.findUnique({
-      where: { name: "USER" },
-    });
+    const userRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "REP"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     if (!userRole) {
       throw new Error("USER role not found in database");
@@ -60,8 +65,9 @@ describe("Reset Password Race Condition Integration Tests", () => {
     const uniqueId = getUniqueTestId();
     const passwordHash = await hash("OriginalPass1!");
 
-    testUser = await prisma.user.create({
-      data: {
+    testUser = await db
+      .insert(users)
+      .values({
         email: `reset_race_${uniqueId}@example.com`,
         username: `reset_race_${uniqueId}`,
         passwordHash,
@@ -70,40 +76,35 @@ describe("Reset Password Race Condition Integration Tests", () => {
         roleId: userRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-      include: { role: true },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
   });
 
   beforeEach(async () => {
     if (!dbReady || !testUser) return;
 
-    await prisma.passwordReset.deleteMany({ where: { userId: testUser.id } });
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
+    await db.delete(passwordResets).where(eq(passwordResets.userId, testUser.id));
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
 
     resetToken = generateRandomToken();
-    await prisma.passwordReset.create({
-      data: {
-        userId: testUser.id,
-        tokenHash: hashToken(resetToken),
-        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      },
+    await db.insert(passwordResets).values({
+      userId: testUser.id,
+      tokenHash: hashToken(resetToken),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     });
   });
 
   afterAll(async () => {
-    if (!dbReady) {
-      await prisma.$disconnect().catch(() => {});
-      return;
-    }
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    await prisma.passwordReset.deleteMany({ where: { userId: testUser.id } });
-    await prisma.session.deleteMany({ where: { userId: testUser.id } });
-    await prisma.user.delete({ where: { id: testUser.id } });
+    await db.delete(passwordResets).where(eq(passwordResets.userId, testUser.id));
+    await db.delete(sessions).where(eq(sessions.userId, testUser.id));
+    await db.delete(users).where(eq(users.id, testUser.id));
   });
 
   test("concurrent confirms with same token — exactly one succeeds", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const newPassword = "ConcurrentPass1!";
 
@@ -121,9 +122,17 @@ describe("Reset Password Race Condition Integration Tests", () => {
     const failedResult = failures[0] as PromiseRejectedResult;
     expect(failedResult.reason).toBeInstanceOf(ResetTokenUsedError);
 
-    const resetRecord = await prisma.passwordReset.findFirst({
-      where: { userId: testUser.id, tokenHash: hashToken(resetToken) },
-    });
+    const resetRecord = await db
+      .select()
+      .from(passwordResets)
+      .where(
+        and(
+          eq(passwordResets.userId, testUser.id),
+          eq(passwordResets.tokenHash, hashToken(resetToken)),
+        ),
+      )
+      .limit(1)
+      .then((r) => r[0] ?? null);
     expect(resetRecord?.usedAt).toBeInstanceOf(Date);
   });
 });

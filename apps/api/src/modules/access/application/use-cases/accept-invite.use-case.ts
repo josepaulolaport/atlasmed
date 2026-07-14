@@ -46,7 +46,7 @@ export class AcceptInviteUseCase {
     await this.deps.auditLog.logUserRegister({
       userId: result.user.id,
       username: result.user.username,
-      email: result.user.email,
+      email: result.user.email!,
     });
 
     await this.deps.auditLog.logAcceptInvite({

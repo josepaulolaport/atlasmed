@@ -84,7 +84,7 @@ export class RegistrySyncService {
         facility.externalSourceId
       );
 
-      if (existing?.deletedAt) {
+      if (existing?.deactivatedAt) {
         await this.createSuggestionIfNew({
           type: "FACILITY_REGISTRY_REACTIVATED",
           ingestionRunId,
@@ -100,7 +100,6 @@ export class RegistrySyncService {
         sourceProvider: snapshot.provider,
         externalSourceId: facility.externalSourceId,
         name: facility.name,
-        address: facility.address,
         lat: facility.lat,
         lng: facility.lng,
         sourceContentHash: facility.contentHash,
@@ -117,7 +116,7 @@ export class RegistrySyncService {
         stats.facilitiesUnchanged += 1;
       }
 
-      if (!existing?.deletedAt) {
+      if (!existing?.deactivatedAt) {
         await this.deps.registryDiffService.diffFacilityFromSource({
           facilityId: result.facility.id,
           source: facility,
@@ -140,7 +139,7 @@ export class RegistrySyncService {
     );
 
     for (const facility of trackedFacilities) {
-      if (!facility.externalSourceId || facility.deletedAt) {
+      if (!facility.externalSourceId || facility.deactivatedAt) {
         continue;
       }
 

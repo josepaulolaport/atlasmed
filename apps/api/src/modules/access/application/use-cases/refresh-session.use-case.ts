@@ -16,6 +16,7 @@ import {
   RefreshTokenReuseDetectedError,
   SessionSecurityViolationError,
 } from "../../../../shared/errors";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 interface Dependencies {
   sessionRepository: SessionRepository;
@@ -38,6 +39,14 @@ export class RefreshSessionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: RefreshSessionParams) {
+    return tracer.with(
+      "session.refresh",
+      async () => this.executeRefresh(params),
+      { "app.module": "access" }
+    );
+  }
+
+  private async executeRefresh(params: RefreshSessionParams) {
     const tokenHash = hashToken(params.refreshToken);
 
     let oldSession = await this.deps.sessionCache.getByTokenHash(tokenHash);
@@ -50,7 +59,7 @@ export class RefreshSessionUseCase {
         await this.deps.sessionRepository.findActiveByTokenHash(tokenHash);
 
       if (!dbSessionRecord) {
-        await this.handleSupersededRefreshToken({
+        return await this.handleSupersededRefreshToken({
           tokenHash,
           ipAddress: params.ipAddress,
           userAgent: params.userAgent,
@@ -65,11 +74,11 @@ export class RefreshSessionUseCase {
         revokedAt: dbSessionRecord.revokedAt?.toISOString() || null,
         ipAddress: dbSessionRecord.ipAddress,
         userAgent: dbSessionRecord.userAgent,
-        lastSeenAt: dbSessionRecord.lastSeenAt.toISOString(),
+        lastSeenAt: (dbSessionRecord.lastSeenAt ?? new Date()).toISOString(),
         createdAt: dbSessionRecord.createdAt.toISOString(),
         user: {
           id: dbSessionRecord.user.id,
-          email: dbSessionRecord.user.email,
+          email: dbSessionRecord.user.email!,
           username: dbSessionRecord.user.username,
           status: dbSessionRecord.user.status,
           tokenVersion: dbSessionRecord.user.tokenVersion,
@@ -80,7 +89,7 @@ export class RefreshSessionUseCase {
         },
       };
 
-      await this.deps.sessionCache.set(oldSession);
+      await this.deps.sessionCache.set(oldSession!);
     }
 
     if (!oldSession?.user) {
@@ -154,11 +163,11 @@ export class RefreshSessionUseCase {
       revokedAt: null,
       ipAddress: updatedSession.ipAddress,
       userAgent: updatedSession.userAgent,
-      lastSeenAt: updatedSession.lastSeenAt.toISOString(),
+      lastSeenAt: (updatedSession.lastSeenAt ?? new Date()).toISOString(),
       createdAt: updatedSession.createdAt.toISOString(),
       user: {
         id: updatedSession.user.id,
-        email: updatedSession.user.email,
+        email: updatedSession.user.email!,
         username: updatedSession.user.username,
         status: updatedSession.user.status,
         tokenVersion: updatedSession.user.tokenVersion,
@@ -174,7 +183,7 @@ export class RefreshSessionUseCase {
     const accessToken = await this.deps.tokenService.signAccessToken({
       sub: updatedSession.userId,
       sid: updatedSession.id,
-      role: updatedSession.user.role.name,
+      role: updatedSession.user.role.name as any,
       tokenVersion: updatedSession.user.tokenVersion,
       iat: Math.floor(Date.now() / 1000),
     });

@@ -14,6 +14,7 @@ import {
 } from "../../../../shared/errors";
 import { environment } from "../../../../app/config/environment";
 import { DUMMY_PASSWORD_HASH } from "../constants/password.constants";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 interface Dependencies {
   userRepository: UserRepository;
@@ -40,6 +41,14 @@ export class LoginUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: LoginParams) {
+    return tracer.with(
+      "user.login",
+      async () => this.executeLogin(params),
+      { "app.module": "access" }
+    );
+  }
+
+  private async executeLogin(params: LoginParams) {
     try {
       await this.deps.rateLimiterService.checkLoginAttempts(params.identifier);
     } catch (error) {
@@ -153,7 +162,7 @@ export class LoginUseCase {
     const session = await this.deps.sessionService.create({
       userId: user.id,
 
-      userRole: user.role.name,
+      userRole: user.role.name as any,
 
       ipAddress: params.ipAddress || undefined,
 
@@ -171,11 +180,11 @@ export class LoginUseCase {
       revokedAt: session.revokedAt?.toISOString() || null,
       ipAddress: session.ipAddress,
       userAgent: session.userAgent,
-      lastSeenAt: session.lastSeenAt.toISOString(),
+      lastSeenAt: (session.lastSeenAt ?? new Date()).toISOString(),
       createdAt: session.createdAt.toISOString(),
       user: {
         id: user.id,
-        email: user.email,
+        email: user.email!,
         username: user.username,
         status: user.status,
         tokenVersion: user.tokenVersion,
@@ -191,7 +200,7 @@ export class LoginUseCase {
 
       sid: session.id,
 
-      role: user.role.name,
+      role: user.role.name as any,
 
       tokenVersion: user.tokenVersion,
 

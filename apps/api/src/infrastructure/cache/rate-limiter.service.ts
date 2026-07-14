@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { logger } from "../logging/logger";
 import { redis } from "./redis.client";
 
 export interface RateLimitConfig {
@@ -97,7 +98,7 @@ export class RateLimiterService {
         resetAt,
       };
     } catch (error) {
-      console.error("Rate limit check failed:", error);
+      logger.error("Rate limit check failed", error);
 
       if (config.failClosed) {
         return {
@@ -123,7 +124,7 @@ export class RateLimiterService {
 
       await Promise.all([this.redis.del(key), this.redis.del(blockKey)]);
     } catch (error) {
-      console.error("Failed to reset rate limit:", error);
+      logger.error("Failed to reset rate limit", error);
     }
   }
 
@@ -138,7 +139,7 @@ export class RateLimiterService {
 
       return Math.max(0, maxAttempts - currentCount);
     } catch (error) {
-      console.error("Failed to get remaining attempts:", error);
+      logger.error("Failed to get remaining attempts", error);
       return maxAttempts;
     }
   }

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
+import "iconify-icon";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
 const geistMono = Geist_Mono({
@@ -15,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AtlasMed - Healthcare Management System",
-  description: "Secure healthcare management platform",
+  title: "AtlasMed — Operações Comerciais em Saúde",
+  description: "Plataforma de operações comerciais em saúde",
 };
 
 export default function RootLayout({
@@ -26,11 +28,14 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="pt-BR"
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-gray-50" suppressHydrationWarning>
+      <body
+        className="min-h-full bg-zinc-50 text-zinc-900 antialiased selection:bg-blue-100 selection:text-blue-900"
+        suppressHydrationWarning
+      >
         <AuthProvider>
           {children}
           <Toaster />

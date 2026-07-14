@@ -1,12 +1,15 @@
 export interface FacilityRecord {
   id: string;
   name: string;
-  address: string | null;
+  city: string | null;
+  state: string | null;
+  cnpj: string | null;
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
   territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
   territoryAssignmentSource: "geo" | "manual";
+  purchaseStatus: "NON_BUYER" | "LOW_BUYER" | "REGULAR_BUYER" | "HIGH_BUYER" | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -15,9 +18,14 @@ export interface FacilityRecord {
   sourcePresent: boolean;
   sourceTracked: boolean;
   manuallyEditedAt: Date | null;
+  deactivatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
-  deletedAt: Date | null;
+}
+
+export interface FacilityListRecord extends FacilityRecord {
+  professionalCount: number;
+  consultantName: string | null;
 }
 
 export interface FacilityListScopeFilter {
@@ -29,7 +37,6 @@ export interface FacilitySourceUpsertInput {
   sourceProvider: string;
   externalSourceId: string;
   name: string;
-  address: string | null;
   lat?: number | null;
   lng?: number | null;
   sourceContentHash: string;
@@ -42,7 +49,7 @@ export interface FacilityRepository {
     limit: number;
     search?: string;
     scope: FacilityListScopeFilter;
-  }): Promise<{ facilities: FacilityRecord[]; total: number }>;
+  }): Promise<{ facilities: FacilityListRecord[]; total: number }>;
 
   findById(id: string): Promise<FacilityRecord | null>;
 
@@ -55,7 +62,6 @@ export interface FacilityRepository {
 
   create(data: {
     name: string;
-    address?: string | null;
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord>;
@@ -64,7 +70,6 @@ export interface FacilityRepository {
     id: string,
     data: {
       name?: string;
-      address?: string | null;
       lat?: number | null;
       lng?: number | null;
       manuallyEditedAt?: Date;
@@ -89,7 +94,6 @@ export interface FacilityRepository {
     id: string,
     updates: {
       name?: string;
-      address?: string | null;
       lat?: number | null;
       lng?: number | null;
     }

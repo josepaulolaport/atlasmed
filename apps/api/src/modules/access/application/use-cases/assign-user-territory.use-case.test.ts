@@ -18,7 +18,7 @@ import {
 } from "../../../../shared/errors";
 
 describe("AssignUserTerritoryUseCase", () => {
-  const fieldUser = { id: "user-field", role: { name: Role.USER } };
+  const fieldUser = { id: "user-field", role: { name: Role.REP } };
   const managerUser = { id: "user-manager", role: { name: Role.MANAGER } };
 
   let useCase: AssignUserTerritoryUseCase;
@@ -33,7 +33,7 @@ describe("AssignUserTerritoryUseCase", () => {
         if (id === fieldUser.id) return fieldUser;
         if (id === managerUser.id) return managerUser;
         return null;
-      }),
+      }) as any,
     });
     scopeRepository = createMockScopeRepository();
     scopeService = createMockScopeService();

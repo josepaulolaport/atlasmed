@@ -1,30 +1,72 @@
+import type {
+  CreateProfessionalInput,
+  FacilityProfessionalRole,
+  ProfessionalFacilityContext,
+  ProfessionalFacilitySummary,
+  ProfessionalProfile,
+  UpdateFacilityProfessionalInput,
+  UpdateProfessionalInput,
+} from "@atlasmed/access";
+
 export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
+
+export type PurchaseStatus = "NAO_COMPRA" | "COMPRA" | "COMPRA_POUCO" | "COMPRA_MUITO";
 
 export interface Facility {
   id: string;
   name: string;
   address?: string;
+  city?: string;
+  stateCode?: string;
   lat?: number;
   lng?: number;
+  cnpj?: string;
   territoryId?: string;
   territoryAssignmentStatus?: TerritoryAssignmentStatus;
+  purchaseStatus?: PurchaseStatus;
+  professionalCount?: number;
+  consultantName?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
+export type {
+  ProfessionalProfile,
+  ProfessionalFacilityContext,
+  FacilityProfessionalRole,
+  ProfessionalFacilitySummary,
+  CreateProfessionalInput,
+  UpdateProfessionalInput,
+  UpdateFacilityProfessionalInput,
+};
+
+/** List item shape returned by GET /professionals */
 export interface Professional {
   id: string;
   firstName: string;
   lastName: string;
+  fullName?: string;
   specialty?: string;
+  primarySpecialtyLabel?: string;
+  crmNumber?: string;
+  crmState?: string;
   facilityIds: string[];
   createdAt: string;
   updatedAt: string;
 }
 
+/** @deprecated Use CreateProfessionalInput */
+export type CreateDoctorRequest = CreateProfessionalInput;
+
+/** @deprecated Use UpdateProfessionalInput */
+export type UpdateDoctorRequest = UpdateProfessionalInput;
+
 export interface CreateClinicRequest {
   name: string;
   address?: string;
+  city?: string;
+  stateCode?: string;
+  cnpj?: string;
   lat?: number;
   lng?: number;
 }
@@ -32,27 +74,16 @@ export interface CreateClinicRequest {
 export interface UpdateClinicRequest {
   name?: string;
   address?: string | null;
+  city?: string | null;
+  stateCode?: string | null;
+  cnpj?: string | null;
   lat?: number | null;
   lng?: number | null;
 }
 
-export interface CreateDoctorRequest {
-  firstName: string;
-  lastName: string;
-  specialty?: string;
-  facilityIds?: string[];
-}
-
-export interface UpdateDoctorRequest {
-  firstName?: string;
-  lastName?: string;
-  specialty?: string | null;
-  facilityIds?: string[];
-}
-
 export type FacilityProfessionalView = "source" | "confirmed" | "pending" | "all";
 
-export interface FacilityProfessionalAssociationView {
+export interface FacilityProfessionalAssociationView extends FacilityProfessionalRole {
   sourceActive: boolean;
   sourceFirstSeenAt?: string;
   sourceLastSeenAt?: string;
@@ -63,7 +94,17 @@ export interface FacilityProfessionalAssociationView {
 
 export interface FacilityProfessionalListItem {
   facilityProfessionalId: string;
-  doctor: Doctor;
+  professional: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    fullName?: string;
+    specialty?: string;
+    crmNumber?: string;
+    crmState?: string;
+    createdAt: string;
+    updatedAt: string;
+  };
   association: FacilityProfessionalAssociationView;
 }
 

@@ -42,13 +42,13 @@ describe("ResendInviteUseCase", () => {
     mockLogResendInvite.mockClear();
 
     mockInviteRepository = createMockInviteRepository({
-      findById: mock(async () => ({ ...baseInvite })),
+      findById: mock(async () => ({ ...baseInvite })) as any,
       regenerateToken: mock(async () => ({
         ...baseInvite,
         tokenHash: "new-hash",
         resendCount: 1,
         lastResendAt: new Date(),
-      })),
+      })) as any,
     });
 
     const inviteService = new InviteService({ inviteRepository: mockInviteRepository });
@@ -121,7 +121,7 @@ describe("ResendInviteUseCase", () => {
     mockInviteRepository.findById = mock(async () => ({
       ...baseInvite,
       status: "ACCEPTED",
-    }));
+    })) as any;
 
     await expect(
       useCase.execute({
@@ -137,7 +137,7 @@ describe("ResendInviteUseCase", () => {
     mockInviteRepository.findById = mock(async () => ({
       ...baseInvite,
       resendCount: 5,
-    }));
+    })) as any;
 
     await expect(
       useCase.execute({

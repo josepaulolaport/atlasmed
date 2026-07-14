@@ -48,8 +48,8 @@ export default function TerritoryTypesPage() {
       setTypes(response.data);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load territory types",
+        title: "Erro",
+        description: "Falha ao carregar tipos de território",
         variant: "destructive",
       });
     } finally {
@@ -88,11 +88,11 @@ export default function TerritoryTypesPage() {
       });
       resetCreateForm();
       await loadTypes();
-      toast({ title: "Success", description: "Territory type created", variant: "success" });
+      toast({ title: "Sucesso", description: "Tipo de território criado", variant: "success" });
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to create territory type"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao criar tipo de território"),
         variant: "destructive",
       });
     } finally {
@@ -130,11 +130,11 @@ export default function TerritoryTypesPage() {
       });
       setEditingId(null);
       await loadTypes();
-      toast({ title: "Success", description: "Territory type updated", variant: "success" });
+      toast({ title: "Sucesso", description: "Tipo de território atualizado", variant: "success" });
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to update territory type"),
+        title: "Erro",
+        description: getApiErrorMessage(err, "Falha ao atualizar tipo de território"),
         variant: "destructive",
       });
     } finally {
@@ -149,10 +149,10 @@ export default function TerritoryTypesPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Territory types</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Tipos de território</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Types characterize polygons and control assignment behavior. Hierarchy comes from
-          geo-linking, not type rules.
+          Os tipos caracterizam polígonos e controlam o comportamento de atribuição. A hierarquia
+          vem da vinculação geográfica, não de regras de tipo.
         </p>
       </div>
 
@@ -161,7 +161,7 @@ export default function TerritoryTypesPage() {
       {userIsAdmin && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Create type</CardTitle>
+            <CardTitle>Criar tipo</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
@@ -170,11 +170,11 @@ export default function TerritoryTypesPage() {
                 <Input id="type-slug" value={slug} onChange={(e) => setSlug(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="type-name">Name</Label>
+                <Label htmlFor="type-name">Nome</Label>
                 <Input id="type-name" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <Label htmlFor="type-description">Description</Label>
+                <Label htmlFor="type-description">Descrição</Label>
                 <Input
                   id="type-description"
                   value={description}
@@ -188,7 +188,7 @@ export default function TerritoryTypesPage() {
               idPrefix="create"
             />
             <Button onClick={handleCreate} disabled={saving}>
-              {saving ? "Creating..." : "Create type"}
+              {saving ? "Criando..." : "Criar tipo"}
             </Button>
           </CardContent>
         </Card>
@@ -196,7 +196,7 @@ export default function TerritoryTypesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Configured types</CardTitle>
+          <CardTitle>Tipos configurados</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -214,7 +214,7 @@ export default function TerritoryTypesPage() {
                       <div className="space-y-4">
                         <div className="grid gap-4 md:grid-cols-2">
                           <div>
-                            <Label htmlFor={`edit-name-${type.id}`}>Name</Label>
+                            <Label htmlFor={`edit-name-${type.id}`}>Nome</Label>
                             <Input
                               id={`edit-name-${type.id}`}
                               value={editName}
@@ -222,7 +222,7 @@ export default function TerritoryTypesPage() {
                             />
                           </div>
                           <div>
-                            <Label htmlFor={`edit-description-${type.id}`}>Description</Label>
+                            <Label htmlFor={`edit-description-${type.id}`}>Descrição</Label>
                             <Input
                               id={`edit-description-${type.id}`}
                               value={editDescription}
@@ -241,7 +241,7 @@ export default function TerritoryTypesPage() {
                             checked={editActive}
                             onChange={(e) => setEditActive(e.target.checked)}
                           />
-                          Active
+                          Ativo
                         </label>
                         <div className="flex gap-2">
                           <Button
@@ -249,10 +249,10 @@ export default function TerritoryTypesPage() {
                             onClick={() => void handleUpdate(type.id)}
                             disabled={updatingId === type.id}
                           >
-                            {updatingId === type.id ? "Saving..." : "Save changes"}
+                            {updatingId === type.id ? "Salvando..." : "Salvar alterações"}
                           </Button>
                           <Button size="sm" variant="outline" onClick={cancelEditing}>
-                            Cancel
+                            Cancelar
                           </Button>
                         </div>
                       </div>
@@ -264,7 +264,7 @@ export default function TerritoryTypesPage() {
                             <span className="text-gray-500">({type.slug})</span>
                             {!type.isActive && (
                               <Badge variant="destructive" className="ml-2">
-                                inactive
+                                inativo
                               </Badge>
                             )}
                           </p>
@@ -273,29 +273,29 @@ export default function TerritoryTypesPage() {
                           ) : null}
                           <div className="mt-2 flex flex-wrap gap-1">
                             {type.isCountryLevel && (
-                              <Badge variant="outline">country level</Badge>
+                              <Badge variant="outline">nível de país</Badge>
                             )}
                             {type.canHaveBoundary && (
-                              <Badge variant="outline">has boundary</Badge>
+                              <Badge variant="outline">com limite</Badge>
                             )}
                             {type.assignsClinics && (
-                              <Badge variant="outline">assigns clinics</Badge>
+                              <Badge variant="outline">atribui clínicas</Badge>
                             )}
                             {type.assignableToManagers && (
-                              <Badge variant="outline">manager assignable</Badge>
+                              <Badge variant="outline">atribuível a gerente</Badge>
                             )}
                             {type.assignableToUsers && (
-                              <Badge variant="outline">user assignable</Badge>
+                              <Badge variant="outline">atribuível a usuário</Badge>
                             )}
                             {type.blockSiblingOverlap && (
-                              <Badge variant="outline">blocks sibling overlap</Badge>
+                              <Badge variant="outline">bloqueia sobreposição de irmãos</Badge>
                             )}
                           </div>
                         </div>
                         {userIsAdmin && (
                           <Button size="sm" variant="outline" onClick={() => startEditing(type)}>
                             <Pencil className="mr-1 h-4 w-4" />
-                            Edit
+                            Editar
                           </Button>
                         )}
                       </div>

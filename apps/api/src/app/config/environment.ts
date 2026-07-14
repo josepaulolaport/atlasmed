@@ -196,6 +196,70 @@ const EnvironmentSchema = Type.Object({
       description: 'OpenTelemetry logs endpoint (optional)'
     })
   ),
+
+  OTEL_RESOURCE_ATTRIBUTES: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'OpenTelemetry resource attributes (comma-separated key=value pairs)',
+    })
+  ),
+
+  // ============================================================================
+  // Object Storage (S3 / MinIO)
+  // ============================================================================
+  STORAGE_ENDPOINT: Type.Optional(
+    Type.String({
+      minLength: 1,
+      pattern: URL_PATTERN,
+      description: 'S3-compatible endpoint (MinIO in dev; omit for AWS S3 in prod)',
+    })
+  ),
+
+  STORAGE_ACCESS_KEY_ID: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Object storage access key ID',
+    })
+  ),
+
+  STORAGE_SECRET_ACCESS_KEY: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Object storage secret access key',
+    })
+  ),
+
+  STORAGE_BUCKET: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Default object storage bucket name',
+    })
+  ),
+
+  STORAGE_REGION: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Object storage region (defaults to us-east-1)',
+    })
+  ),
+
+  // ============================================================================
+  // Search (Meilisearch)
+  // ============================================================================
+  MEILISEARCH_URL: Type.Optional(
+    Type.String({
+      minLength: 1,
+      pattern: URL_PATTERN,
+      description: 'Meilisearch server URL',
+    })
+  ),
+
+  MEILISEARCH_API_KEY: Type.Optional(
+    Type.String({
+      minLength: 1,
+      description: 'Meilisearch API key',
+    })
+  ),
   
   LOG_LEVEL: Type.Union([
     Type.Literal('debug'),
@@ -304,14 +368,29 @@ const EnvironmentSchema = Type.Object({
     description: 'Days to retain INFO audit logs before cleanup',
   }),
 
-  REGISTRY_SOURCE: Type.String({
-    default: 'mock',
-    description: 'Registry ingestion source adapter (mock only for now)',
+  REGISTRY_SOURCE: Type.Union([Type.Literal("mock"), Type.Literal("temporal")], {
+    default: "temporal",
+    description: "Registry ingestion source: temporal workflow or mock fixture adapter",
   }),
 
   REGISTRY_MOCK_FIXTURE: Type.String({
     default: 'snapshot-v1.json',
     description: 'Mock registry fixture filename under registry-ingestion/fixtures',
+  }),
+
+  TEMPORAL_ADDRESS: Type.String({
+    default: 'localhost:7233',
+    description: 'Temporal gRPC address',
+  }),
+
+  TEMPORAL_NAMESPACE: Type.String({
+    default: 'default',
+    description: 'Temporal namespace',
+  }),
+
+  TEMPORAL_TASK_QUEUE: Type.String({
+    default: 'cnes-ingestion',
+    description: 'Temporal task queue for CNES ingestion worker',
   }),
 });
 
@@ -352,12 +431,21 @@ const processEnv = {
   
   // Observability
   OTEL_SERVICE_NAME: process.env.OTEL_SERVICE_NAME ?? 'atlasmed-api',
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+  OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT,
+  OTEL_RESOURCE_ATTRIBUTES: process.env.OTEL_RESOURCE_ATTRIBUTES,
   LOG_LEVEL: process.env.LOG_LEVEL ?? 'info',
-  
-  // QuestDB
-  QUESTDB_ENABLED: process.env.QUESTDB_ENABLED === 'true',
-  QUESTDB_HOST: process.env.QUESTDB_HOST ?? 'localhost',
-  QUESTDB_PORT: parseInt(process.env.QUESTDB_PORT ?? '9009', 10),
+
+  // Object storage
+  STORAGE_ENDPOINT: process.env.STORAGE_ENDPOINT,
+  STORAGE_ACCESS_KEY_ID: process.env.STORAGE_ACCESS_KEY_ID,
+  STORAGE_SECRET_ACCESS_KEY: process.env.STORAGE_SECRET_ACCESS_KEY,
+  STORAGE_BUCKET: process.env.STORAGE_BUCKET,
+  STORAGE_REGION: process.env.STORAGE_REGION ?? 'us-east-1',
+
+  // Search
+  MEILISEARCH_URL: process.env.MEILISEARCH_URL,
+  MEILISEARCH_API_KEY: process.env.MEILISEARCH_API_KEY,
   
   // Feature Flags
   ENABLE_SWAGGER: process.env.ENABLE_SWAGGER !== 'false',
@@ -380,8 +468,13 @@ const processEnv = {
   SIEM_WEBHOOK_URL: process.env.SIEM_WEBHOOK_URL,
   SIEM_WEBHOOK_SECRET: process.env.SIEM_WEBHOOK_SECRET,
   AUDIT_LOG_RETENTION_DAYS: Number(process.env.AUDIT_LOG_RETENTION_DAYS ?? 90),
-  REGISTRY_SOURCE: process.env.REGISTRY_SOURCE ?? 'mock',
+  REGISTRY_SOURCE: (process.env.REGISTRY_SOURCE === 'temporal'
+    ? 'temporal'
+    : 'mock') as 'mock' | 'temporal',
   REGISTRY_MOCK_FIXTURE: process.env.REGISTRY_MOCK_FIXTURE ?? 'snapshot-v1.json',
+  TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS ?? 'localhost:7233',
+  TEMPORAL_NAMESPACE: process.env.TEMPORAL_NAMESPACE ?? 'default',
+  TEMPORAL_TASK_QUEUE: process.env.TEMPORAL_TASK_QUEUE ?? 'cnes-ingestion',
   MAPBOX_SECRET_TOKEN: process.env.MAPBOX_SECRET_TOKEN,
   MAPBOX_PUBLIC_TOKEN: process.env.MAPBOX_PUBLIC_TOKEN,
   MAPBOX_USERNAME: process.env.MAPBOX_USERNAME ?? 'mapbox',

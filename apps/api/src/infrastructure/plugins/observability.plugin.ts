@@ -12,7 +12,6 @@ import { Elysia } from 'elysia';
 import { opentelemetry } from '@elysiajs/opentelemetry';
 import { trace } from '@opentelemetry/api';
 import { logger } from '../logging/logger';
-import { questdbLogger } from '../logging/questdb.logger';
 import { environment } from '../../app/config/environment';
 
 type RequestNamespace = 'api' | 'health' | 'internal';
@@ -174,53 +173,16 @@ function logRequestOutcome(params: {
 
   if (params.statusCode >= 500) {
     const errorMessage = params.error instanceof Error ? params.error.message : 'Request failed';
-    logger.error(context, errorMessage);
-    if (params.error instanceof Error && environment.NODE_ENV === 'development') {
-      logger.error({ stack: params.error.stack }, 'Error stack trace');
-    }
-    // Persist to QuestDB (async, non-blocking)
-    questdbLogger.log({
-      level: 'error',
-      message: errorMessage,
-      requestId: params.observation.requestId,
-      userId: params.userId,
-      method: params.observation.method,
-      route: params.observation.path,
-      statusCode: params.statusCode,
-      durationMs: params.durationMs,
-      error: params.error instanceof Error ? params.error.stack : String(params.error),
-    }).catch(() => {}); // Silently fail
+    logger.error(errorMessage, params.error instanceof Error ? params.error : undefined, context);
     return;
   }
 
   if (params.statusCode >= 400) {
     logger.warn(context, 'Request rejected');
-    // Persist to QuestDB (async, non-blocking)
-    questdbLogger.log({
-      level: 'warn',
-      message: 'Request rejected',
-      requestId: params.observation.requestId,
-      userId: params.userId,
-      method: params.observation.method,
-      route: params.observation.path,
-      statusCode: params.statusCode,
-      durationMs: params.durationMs,
-    }).catch(() => {}); // Silently fail
     return;
   }
 
   logger.info(context, 'Request completed');
-  // Persist to QuestDB (async, non-blocking)
-  questdbLogger.log({
-    level: 'info',
-    message: 'Request completed',
-    requestId: params.observation.requestId,
-    userId: params.userId,
-    method: params.observation.method,
-    route: params.observation.path,
-    statusCode: params.statusCode,
-    durationMs: params.durationMs,
-  }).catch(() => {}); // Silently fail
 }
 
 /**

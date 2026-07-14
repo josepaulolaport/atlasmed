@@ -3,27 +3,16 @@
 import { useState, useEffect } from "react";
 import { authApi } from "@/lib/api/auth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import {
-  Monitor,
-  Smartphone,
-  Tablet,
-  HelpCircle,
-  MapPin,
-  Clock,
-  AlertTriangle,
-  Trash2,
-} from "lucide-react";
 import type { Session } from "@/types/auth";
 import { formatDateTime } from "@/lib/utils";
 
-const deviceIcons = {
-  DESKTOP: Monitor,
-  MOBILE: Smartphone,
-  TABLET: Tablet,
-  UNKNOWN: HelpCircle,
+const deviceIcons: Record<Session["deviceType"], string> = {
+  DESKTOP: "solar:monitor-linear",
+  MOBILE: "solar:smartphone-linear",
+  TABLET: "solar:tablet-linear",
+  UNKNOWN: "solar:question-circle-linear",
 };
 
 export default function SessionsPage() {
@@ -38,20 +27,20 @@ export default function SessionsPage() {
         setSessions(data);
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load sessions",
+          title: "Erro",
+          description: "Falha ao carregar sessões",
           variant: "destructive",
         });
       } finally {
         setLoading(false);
       }
     };
-    
+
     loadSessions();
   }, []);
 
   const handleRevokeSession = async (sessionId: string) => {
-    if (!confirm("Are you sure you want to revoke this session?")) {
+    if (!confirm("Tem certeza de que deseja revogar esta sessão?")) {
       return;
     }
 
@@ -60,17 +49,17 @@ export default function SessionsPage() {
     try {
       await authApi.revokeSession(sessionId);
       toast({
-        title: "Success",
-        description: "Session revoked successfully",
+        title: "Sucesso",
+        description: "Sessão revogada com sucesso",
         variant: "success",
       });
-      
+
       const data = await authApi.getSessions();
       setSessions(data);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to revoke session",
+        title: "Erro",
+        description: "Falha ao revogar sessão",
         variant: "destructive",
       });
     } finally {
@@ -78,167 +67,198 @@ export default function SessionsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Active Sessions</h1>
-          <p className="mt-2 text-gray-600">
-            Manage your active sessions and security
-          </p>
-        </div>
-        {sessions.some((session) => !session.isCurrent) && (
-          <Button
-            variant="outline"
-            onClick={async () => {
-              if (!confirm("Sign out of all other devices?")) {
-                return;
-              }
+    <>
+      <div className="px-6 py-8 border-b border-zinc-100">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+              Sessões ativas
+            </h1>
+            <p className="text-sm text-zinc-500 mt-1">
+              Gerencie suas sessões ativas e a segurança
+            </p>
+          </div>
+          {sessions.some((session) => !session.isCurrent) && (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (!confirm("Sair de todos os outros dispositivos?")) {
+                  return;
+                }
 
-              try {
-                const result = await authApi.revokeOtherSessions();
-                toast({
-                  title: "Success",
-                  description:
-                    result.revokedCount > 0
-                      ? `Signed out of ${result.revokedCount} other device(s)`
-                      : "No other active sessions found",
-                  variant: "success",
-                });
-                const data = await authApi.getSessions();
-                setSessions(data);
-              } catch {
-                toast({
-                  title: "Error",
-                  description: "Failed to sign out other devices",
-                  variant: "destructive",
-                });
-              }
-            }}
-          >
-            Sign out other devices
-          </Button>
-        )}
+                try {
+                  const result = await authApi.revokeOtherSessions();
+                  toast({
+                    title: "Sucesso",
+                    description:
+                      result.revokedCount > 0
+                        ? `Sessões encerradas em ${result.revokedCount} outro(s) dispositivo(s)`
+                        : "Nenhuma outra sessão ativa encontrada",
+                    variant: "success",
+                  });
+                  const data = await authApi.getSessions();
+                  setSessions(data);
+                } catch {
+                  toast({
+                    title: "Erro",
+                    description: "Falha ao encerrar sessões em outros dispositivos",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Sair dos outros dispositivos
+            </Button>
+          )}
+        </div>
       </div>
 
-      {sessions.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <HelpCircle className="h-12 w-12 text-gray-400" />
-            <p className="mt-4 text-center text-gray-600">
-              No active sessions found
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {sessions.map((session) => {
-            const DeviceIcon = deviceIcons[session.deviceType];
-            return (
-              <Card
-                key={session.id}
-                className={session.isCurrent ? "border-blue-600 border-2" : ""}
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="rounded-full bg-blue-100 p-3">
-                        <DeviceIcon className="h-6 w-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {session.browserName || "Unknown Browser"}
-                          {session.isCurrent && (
-                            <Badge variant="success">Current</Badge>
-                          )}
-                          {session.suspiciousActivity && (
-                            <Badge variant="destructive">
-                              <AlertTriangle className="mr-1 h-3 w-3" />
-                              Suspicious
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        <div className="mt-2 space-y-1 text-sm text-gray-600">
-                          {session.browserVersion && (
-                            <p>Version: {session.browserVersion}</p>
-                          )}
-                          {session.osName && <p>OS: {session.osName}</p>}
-                          <p className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {session.ipAddress || "Unknown location"}
-                          </p>
-                          <p className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            Last active: {formatDateTime(session.lastSeenAt)}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Created: {formatDateTime(session.createdAt)}
-                          </p>
+      <div className="p-6 max-w-6xl mx-auto w-full space-y-6">
+        {loading ? (
+          <div className="py-10 text-center text-sm text-zinc-500">
+            Carregando…
+          </div>
+        ) : sessions.length === 0 ? (
+          <div className="rounded-xl border border-zinc-200 bg-white shadow-sm p-10 text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 text-zinc-400">
+              <iconify-icon
+                icon="solar:question-circle-linear"
+                stroke-width="1.5"
+                className="text-2xl"
+              />
+            </div>
+            <p className="text-sm text-zinc-500">Nenhuma sessão ativa encontrada</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {sessions.map((session) => {
+              const deviceIcon = deviceIcons[session.deviceType];
+              return (
+                <div
+                  key={session.id}
+                  className={`rounded-xl border bg-white shadow-sm overflow-hidden ${
+                    session.isCurrent
+                      ? "border-blue-500 ring-1 ring-blue-500"
+                      : "border-zinc-200"
+                  }`}
+                >
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-lg bg-blue-50 p-2.5 text-blue-600">
+                          <iconify-icon
+                            icon={deviceIcon}
+                            stroke-width="1.5"
+                            className="text-xl"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-zinc-900 tracking-tight">
+                              {session.browserName || "Navegador desconhecido"}
+                            </span>
+                            {session.isCurrent && (
+                              <Badge variant="success">Atual</Badge>
+                            )}
+                            {session.suspiciousActivity && (
+                              <Badge variant="destructive">
+                                <iconify-icon
+                                  icon="solar:danger-triangle-linear"
+                                  stroke-width="1.5"
+                                  className="text-xs mr-1"
+                                />
+                                Suspeita
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-2 space-y-1 text-sm text-zinc-500">
+                            {session.browserVersion && (
+                              <p>Versão: {session.browserVersion}</p>
+                            )}
+                            {session.osName && <p>SO: {session.osName}</p>}
+                            <p className="flex items-center gap-1">
+                              <iconify-icon
+                                icon="solar:map-point-linear"
+                                stroke-width="1.5"
+                                className="text-sm"
+                              />
+                              {session.ipAddress || "Local desconhecido"}
+                            </p>
+                            <p className="flex items-center gap-1">
+                              <iconify-icon
+                                icon="solar:clock-circle-linear"
+                                stroke-width="1.5"
+                                className="text-sm"
+                              />
+                              Última atividade: {formatDateTime(session.lastSeenAt)}
+                            </p>
+                            <p className="text-xs text-zinc-400">
+                              Criada em: {formatDateTime(session.createdAt)}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
 
-                    {!session.isCurrent && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleRevokeSession(session.id)}
-                        disabled={revokingId === session.id}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        {revokingId === session.id ? "Revoking..." : "Revoke"}
-                      </Button>
+                      {!session.isCurrent && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRevokeSession(session.id)}
+                          disabled={revokingId === session.id}
+                        >
+                          <iconify-icon
+                            icon="solar:trash-bin-trash-linear"
+                            stroke-width="1.5"
+                            className="text-base"
+                          />
+                          {revokingId === session.id ? "Revogando..." : "Revogar"}
+                        </Button>
+                      )}
+                    </div>
+                    {session.suspiciousActivity && (
+                      <div className="mt-4 rounded-md bg-red-50 border border-red-100 p-3 text-sm text-red-600">
+                        <p className="flex items-center gap-2">
+                          <iconify-icon
+                            icon="solar:danger-triangle-linear"
+                            stroke-width="1.5"
+                            className="text-base"
+                          />
+                          Esta sessão foi sinalizada por atividade suspeita.
+                          Se não foi você, revogue-a imediatamente e altere
+                          sua senha.
+                        </p>
+                      </div>
                     )}
                   </div>
-                </CardHeader>
-                {session.suspiciousActivity && (
-                  <CardContent>
-                    <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">
-                      <p className="flex items-center gap-2">
-                        <AlertTriangle className="h-4 w-4" />
-                        This session has been flagged for suspicious activity.
-                        If this was not you, revoke it immediately and change
-                        your password.
-                      </p>
-                    </div>
-                  </CardContent>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Security Tips</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc space-y-2 pl-5 text-sm text-gray-600">
-            <li>
-              Always log out when using public or shared computers
-            </li>
-            <li>
-              Regularly review your active sessions for any unrecognized devices
-            </li>
-            <li>
-              If you see suspicious activity, revoke the session and change your
-              password immediately
-            </li>
-            <li>
-              Enable email and phone verification for enhanced security
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+            <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
+              Dicas de segurança
+            </h3>
+          </div>
+          <div className="p-5">
+            <ul className="list-disc space-y-2 pl-5 text-sm text-zinc-600">
+              <li>Sempre saia ao usar computadores públicos ou compartilhados</li>
+              <li>
+                Revise regularmente suas sessões ativas em busca de dispositivos
+                não reconhecidos
+              </li>
+              <li>
+                Se notar atividade suspeita, revogue a sessão e altere sua senha
+                imediatamente
+              </li>
+              <li>Ative a verificação de email e telefone para mais segurança</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

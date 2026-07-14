@@ -15,6 +15,7 @@ import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
 import { observabilityPlugin } from "../infrastructure/plugins/observability.plugin";
 import { securityHeadersPlugin } from "../infrastructure/middleware/security-headers.middleware";
+import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 
@@ -24,25 +25,7 @@ const app = new Elysia()
   .use(securityHeadersPlugin)
   
   // Apply global error handler
-  .onError(({ code, error, set, request }) => {
-    const path = new URL(request.url).pathname;
-    const method = request.method;
-    
-    // Log error with context
-    console.error("[ErrorHandler]", {
-      code,
-      error: error instanceof Error ? error.message : String(error),
-      errorType: error?.constructor?.name,
-      path,
-      method,
-      timestamp: new Date().toISOString(),
-      ...(error instanceof AppError && { errorCode: error.code }),
-      ...(error instanceof HttpError && {
-        errorCode: error.code,
-        statusCode: error.statusCode,
-      }),
-    });
-
+  .onError(({ code, error, set }) => {
     // Handle custom AppError instances
     if (error instanceof AppError) {
       set.status = error.statusCode;
@@ -71,14 +54,8 @@ const app = new Elysia()
       };
     }
 
-    // Handle unknown errors with proper logging
+    // Unhandled — observability plugin logs this as a 500
     set.status = 500;
-    
-    // Log full error details in development
-    if (environment.NODE_ENV === 'development') {
-      console.error("[ErrorHandler] Full error:", error);
-    }
-    
     return {
       error: {
         code: 'INTERNAL_SERVER_ERROR',
@@ -111,8 +88,18 @@ const app = new Elysia()
   .use(healthRoute)
 
   // Versioned API routes
+  // auditMiddleware is applied first in the group so its onAfterHandle runs
+  // for all authenticated routes within this group.
   .group('/api/v1', (app) =>
-    app.use(access).use(facility).use(catalog).use(professional).use(registryIngestion).use(territory).use(maps)
+    app
+      .use(auditMiddleware)
+      .use(access)
+      .use(facility)
+      .use(catalog)
+      .use(professional)
+      .use(registryIngestion)
+      .use(territory)
+      .use(maps)
   );
 
 export default app;

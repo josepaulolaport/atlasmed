@@ -73,7 +73,7 @@ export class ResetPasswordUseCase {
     await this.deps.sessionCache.invalidateByUserId(result.user.id);
 
     await this.deps.notificationService.sendPasswordChangedNotification({
-      email: result.user.email,
+      email: result.user.email ?? undefined,
       phoneNumber: result.user.phoneNumber || undefined,
       timestamp: new Date(),
       ipAddress: params.ipAddress,

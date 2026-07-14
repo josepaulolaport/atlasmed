@@ -1,3 +1,8 @@
+import {
+  createProfessionalSchema,
+  updateFacilityProfessionalSchema,
+  updateProfessionalSchema,
+} from "@atlasmed/access";
 import { z } from "zod";
 
 export const inviteTokenSchema = z.object({
@@ -44,6 +49,11 @@ export const inviteUserSchema = z.object({
   email: z.string().email("Invalid email address").optional(),
   phoneNumber: z.string().optional(),
   roleId: z.string().min(1, "Role is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  managerId: z.string().optional(),
+  managerTerritoryId: z.string().optional(),
+  repTerritoryId: z.string().optional(),
 }).refine((data) => data.email || data.phoneNumber, {
   message: "Either email or phone number is required",
   path: ["email"],
@@ -113,10 +123,9 @@ export const disable2FASchema = z.object({
 
 export const grantPermissionSchema = z.object({
   resource: z.enum([
-    "USER",
+    "REP",
     "FACILITY",
     "PROFESSIONAL",
-    "VISIT",
     "TERRITORY",
     "INVITATION",
   ]),
@@ -128,3 +137,7 @@ export const grantPermissionSchema = z.object({
 export const changeUserRoleSchema = z.object({
   roleId: z.string().min(1, "Role is required"),
 });
+
+export const createProfessionalFormSchema = createProfessionalSchema;
+export const updateProfessionalFormSchema = updateProfessionalSchema;
+export const updateFacilityProfessionalFormSchema = updateFacilityProfessionalSchema;

@@ -1,7 +1,5 @@
 import type {
   TerritoryNodeType,
-  TerritoryParentAssignmentSource,
-  TerritoryParentAssignmentStatus,
 } from "@atlasmed/database";
 import type { TerritoryTypeRecord } from "./territory-type.repository.interface";
 
@@ -17,16 +15,16 @@ export interface TerritoryRecord {
   regionSlug: string | null;
   stateCode: string | null;
   parentId: string | null;
+  managerTerritoryId: string | null;
   isActive: boolean;
-  parentAssignmentStatus: TerritoryParentAssignmentStatus;
-  parentAssignmentSource: TerritoryParentAssignmentSource | null;
-  organizationId: string | null;
+  sectorId: string | null;
   createdAt: Date;
   updatedAt: Date;
   activeChildCount?: number;
   clinicCount?: number;
   assignedUserCount?: number;
   hasBoundary?: boolean;
+  repPatchCount?: number;
 }
 
 export interface CreateTerritoryInput {
@@ -39,9 +37,8 @@ export interface CreateTerritoryInput {
   regionSlug?: string | null;
   stateCode?: string | null;
   parentId?: string | null;
-  parentAssignmentStatus?: TerritoryParentAssignmentStatus;
-  parentAssignmentSource?: TerritoryParentAssignmentSource | null;
-  organizationId?: string | null;
+  managerTerritoryId?: string | null;
+  sectorId?: string | null;
 }
 
 export interface TerritoryRepository {
@@ -53,9 +50,13 @@ export interface TerritoryRepository {
 
   findAllActive(): Promise<TerritoryRecord[]>;
 
+  findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]>;
+
   findChildren(parentId: string, activeOnly?: boolean): Promise<TerritoryRecord[]>;
 
   countActiveChildren(parentId: string): Promise<number>;
+
+  countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number>;
 
   countClinics(territoryId: string): Promise<number>;
 
@@ -68,15 +69,15 @@ export interface TerritoryRepository {
     data: {
       name?: string;
       parentId?: string | null;
+      managerTerritoryId?: string | null;
       isActive?: boolean;
       countryCode?: string | null;
-      parentAssignmentStatus?: TerritoryParentAssignmentStatus;
-      parentAssignmentSource?: TerritoryParentAssignmentSource | null;
-      geoMembershipStatus?: "pending" | "ready" | "failed" | null;
     }
   ): Promise<TerritoryRecord>;
 
   findActiveCountryByCode(countryCode: string): Promise<TerritoryRecord | null>;
 
-  findAmbiguousParentAssignments(): Promise<TerritoryRecord[]>;
+  findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]>;
+
+  findByIds(ids: string[]): Promise<TerritoryRecord[]>;
 }

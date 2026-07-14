@@ -2,13 +2,39 @@ import { type Span, SpanStatusCode, trace } from '@opentelemetry/api'
 import { logs } from '@opentelemetry/api-logs'
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http'
-import { Resource } from '@opentelemetry/resources'
+import { resourceFromAttributes } from '@opentelemetry/resources'
 import { BatchLogRecordProcessor, LoggerProvider } from '@opentelemetry/sdk-logs'
 import { NodeSDK } from '@opentelemetry/sdk-node'
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 
 let sdk: NodeSDK | null = null
 let loggerProvider: LoggerProvider | null = null
+
+/** True after `initOpenTelemetry` configured an OTLP logs exporter. */
+export function isOpenTelemetryLogsEnabled(): boolean {
+  return loggerProvider !== null
+}
+
+/** True after `initOpenTelemetry` configured an OTLP traces exporter. */
+export function isOpenTelemetryTracesEnabled(): boolean {
+  return sdk !== null
+}
+
+export function parseResourceAttributes(raw?: string): Record<string, string> {
+  if (!raw) return {}
+
+  const attributes: Record<string, string> = {}
+  for (const pair of raw.split(',')) {
+    const trimmed = pair.trim()
+    if (!trimmed) continue
+    const separator = trimmed.indexOf('=')
+    if (separator <= 0) continue
+    const key = trimmed.slice(0, separator).trim()
+    const value = trimmed.slice(separator + 1).trim()
+    if (key) attributes[key] = value
+  }
+  return attributes
+}
 
 export function resolveLogsEndpoint(params: {
   endpoint?: string
@@ -34,12 +60,14 @@ export function initOpenTelemetry(params: {
   serviceName: string
   endpoint?: string
   logsEndpoint?: string
+  resourceAttributes?: string
   initializeTraces?: boolean
 }): void {
   if (sdk || loggerProvider) return
 
-  const resource = new Resource({
-    [SemanticResourceAttributes.SERVICE_NAME]: params.serviceName
+  const resource = resourceFromAttributes({
+    [SemanticResourceAttributes.SERVICE_NAME]: params.serviceName,
+    ...parseResourceAttributes(params.resourceAttributes),
   })
 
   if (params.initializeTraces !== false && params.endpoint) {
@@ -61,9 +89,9 @@ export function initOpenTelemetry(params: {
     const logExporter = new OTLPLogExporter({ url: logsUrl })
 
     loggerProvider = new LoggerProvider({
-      resource
+      resource,
+      processors: [new BatchLogRecordProcessor(logExporter)],
     })
-    loggerProvider.addLogRecordProcessor(new BatchLogRecordProcessor(logExporter))
     logs.setGlobalLoggerProvider(loggerProvider)
   }
 }
@@ -77,6 +105,7 @@ export async function shutdownOpenTelemetry(): Promise<void> {
   if (loggerProvider) {
     await loggerProvider.shutdown()
     loggerProvider = null
+    logs.disable()
   }
 }
 
@@ -86,7 +115,7 @@ export function withSpan<T>(
   fn: (span: Span) => Promise<T> | T,
   attrs?: Record<string, string | number | boolean | undefined | null>
 ): Promise<T> | T {
-  const tracer = trace.getTracer('real-trend')
+  const tracer = trace.getTracer('atlasmed')
   return tracer.startActiveSpan(name, async (span) => {
     try {
       if (attrs) {
@@ -117,7 +146,7 @@ export function withSpanSync<T>(
   fn: () => T,
   attrs?: Record<string, string | number | boolean | undefined | null>
 ): T {
-  const tracer = trace.getTracer('real-trend')
+  const tracer = trace.getTracer('atlasmed')
   return tracer.startActiveSpan(name, (span) => {
     try {
       if (attrs) {

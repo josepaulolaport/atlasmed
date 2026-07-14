@@ -20,8 +20,8 @@ export function projectRegistryFacility(row: {
   websiteUrl: string | null;
   latitude: number | null;
   longitude: number | null;
-  taxIdCnpj: string | null;
-  taxIdCpf: string | null;
+  cnpj: string | null;
+  cpf: string | null;
   facilityTypeCode: string | null;
   deactivationReasonCode: string | null;
   lastUpdatedDate: string | null;
@@ -45,8 +45,8 @@ export function projectRegistryFacility(row: {
     websiteUrl: row.websiteUrl,
     latitude: row.latitude,
     longitude: row.longitude,
-    taxIdCnpj: row.taxIdCnpj,
-    taxIdCpf: row.taxIdCpf,
+    cnpj: row.cnpj,
+    cpf: row.cpf,
     facilityTypeCode: row.facilityTypeCode,
     deactivationReasonCode: row.deactivationReasonCode,
     lastUpdatedDate: row.lastUpdatedDate,
@@ -57,23 +57,76 @@ export function projectRegistryProfessional(row: {
   professionalId: string;
   fullName: string;
   socialName: string | null;
+  taxId?: string | null;
   occupationCode: string;
   municipalityId: string | null;
   employmentTypeCode: string | null;
   startDate: string | null;
   terminationDate: string | null;
   lastUpdatedDate: string | null;
+  crmCouncil?: string | null;
+  crmNumber?: string | null;
+  crmState?: string | null;
 }): RegistryProfessionalProjection {
   return {
     professionalId: row.professionalId,
     fullName: row.fullName,
     socialName: row.socialName,
+    taxId: row.taxId ?? null,
     occupationCode: row.occupationCode,
     municipalityId: row.municipalityId,
     employmentTypeCode: row.employmentTypeCode,
     startDate: row.startDate,
     terminationDate: row.terminationDate,
     lastUpdatedDate: row.lastUpdatedDate,
+    crmCouncil: row.crmCouncil ?? null,
+    crmNumber: row.crmNumber ?? null,
+    crmState: row.crmState ?? null,
+  };
+}
+
+function splitRegistryFullName(fullName: string): { firstName: string; lastName: string } {
+  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+
+  if (parts.length === 0) {
+    return { firstName: "Unknown", lastName: "Professional" };
+  }
+
+  if (parts.length === 1) {
+    return { firstName: parts[0]!, lastName: parts[0]! };
+  }
+
+  return {
+    firstName: parts[0]!,
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+export function buildProfessionalSourceUpsertFromRegistry(
+  projection: RegistryProfessionalProjection,
+  params: {
+    sourceProvider: string;
+    sourceContentHash: string;
+    sourceLastSeenAt: Date;
+    specialty?: string | null;
+  }
+) {
+  const { firstName, lastName } = splitRegistryFullName(projection.fullName);
+
+  return {
+    sourceProvider: params.sourceProvider,
+    externalSourceId: projection.professionalId,
+    firstName,
+    lastName,
+    fullName: projection.fullName,
+    socialName: projection.socialName,
+    taxId: projection.taxId,
+    specialty: params.specialty ?? null,
+    crmCouncil: projection.crmCouncil,
+    crmNumber: projection.crmNumber,
+    crmState: projection.crmState,
+    sourceContentHash: params.sourceContentHash,
+    sourceLastSeenAt: params.sourceLastSeenAt,
   };
 }
 

@@ -4,7 +4,8 @@ import { Role } from "@atlasmed/access";
 export const ROLE_PRIORITY_BY_NAME = {
   [Role.ADMIN]: 100,
   [Role.MANAGER]: 50,
-  [Role.USER]: 10,
+  [Role.OPS]: 20,
+  [Role.REP]: 10,
 } as const satisfies Record<Role, number>;
 
 export function resolveRolePriority(role: {

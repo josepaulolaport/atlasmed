@@ -1,11 +1,14 @@
-import { prisma } from "../database/prisma.client";
+import { db } from "../database/db";
+import { auditLogs } from "@atlasmed/database";
+import { eq, and, gte, lte } from "drizzle-orm";
 import { metricsService } from "../monitoring/metrics.service";
+import { logger } from "../logging/logger";
 import { environment } from "../../app/config/environment";
-import type { AuditEventType, AuditEventSeverity } from "@atlasmed/database";
+import type { AuditEventSeverity } from "@atlasmed/database";
 
 export interface AuditLogEntry {
   userId?: string | undefined;
-  eventType: AuditEventType;
+  eventType: string;
   severity?: AuditEventSeverity | undefined;
   actor?: string | undefined;
   actorId?: string | undefined;
@@ -21,28 +24,35 @@ export interface AuditLogEntry {
   metadata?: Record<string, unknown> | undefined;
 }
 
+/**
+ * The typed helper methods on this class (`logUserLogin`, `logInviteUser`, etc.)
+ * are @deprecated. New routes must NOT call them — the `auditMiddleware` plugin
+ * records audit entries automatically from HTTP method + path.
+ *
+ * The helpers remain only for flows that run outside the normal request/response
+ * lifecycle (e.g. failed login attempts that never reach onAfterHandle).
+ * They will be removed in Phase 2.
+ */
 export class AuditLogService {
   private async writeLog(entry: AuditLogEntry): Promise<void> {
     const severity = entry.severity || "INFO";
 
-    await prisma.auditLog.create({
-      data: {
-        userId: entry.userId,
-        eventType: entry.eventType,
-        severity,
-        actor: entry.actor,
-        actorId: entry.actorId,
-        resource: entry.resource,
-        resourceId: entry.resourceId,
-        action: entry.action,
-        details: entry.details ? (entry.details as any) : undefined,
-        ipAddress: entry.ipAddress,
-        userAgent: entry.userAgent,
-        sessionId: entry.sessionId,
-        outcome: entry.outcome || "SUCCESS",
-        errorMessage: entry.errorMessage,
-        metadata: entry.metadata ? (entry.metadata as any) : undefined,
-      },
+    await db.insert(auditLogs).values({
+      userId: entry.userId,
+      eventType: entry.eventType,
+      severity,
+      actor: entry.actor,
+      actorId: entry.actorId,
+      resource: entry.resource,
+      resourceId: entry.resourceId,
+      action: entry.action,
+      details: entry.details ?? null,
+      ipAddress: entry.ipAddress,
+      userAgent: entry.userAgent,
+      sessionId: entry.sessionId,
+      outcome: entry.outcome ?? "SUCCESS",
+      errorMessage: entry.errorMessage,
+      metadata: entry.metadata ?? null,
     });
 
     metricsService.recordAuditLog(entry.eventType, severity);
@@ -56,18 +66,24 @@ export class AuditLogService {
     try {
       await this.writeLog(entry);
     } catch (error) {
-      console.error("Failed to write audit log, retrying once:", error);
+      logger.error("Failed to write audit log, retrying once", error);
       metricsService.recordAuditLogFailure(entry.eventType);
 
       try {
         await this.writeLog(entry);
       } catch (retryError) {
-        console.error("Audit log retry failed:", retryError);
+        logger.error("Audit log retry failed", retryError);
         metricsService.recordAuditLogFailure(entry.eventType);
       }
     }
   }
 
+  /**
+   * @deprecated Use the automatic audit middleware instead.
+   * These typed helpers remain only for login/logout flows that run outside
+   * the normal HTTP handler lifecycle (e.g. failed logins that never reach
+   * onAfterHandle). Remove in Phase 2 once those flows are covered.
+   */
   async logFailedLoginAttempt(params: {
     identifier: string;
     reason: string;
@@ -92,6 +108,7 @@ export class AuditLogService {
     });
   }
 
+  /** @deprecated Use the automatic audit middleware instead. */
   async logUserLogin(params: {
     userId: string;
     sessionId: string;
@@ -483,7 +500,7 @@ export class AuditLogService {
   private resolveStatusChangeEventType(
     oldStatus: string,
     newStatus: string
-  ): AuditEventType {
+  ): string {
     if (newStatus === "SUSPENDED") return "USER_SUSPEND";
     if (newStatus === "INACTIVE") return "USER_DEACTIVATE";
     if (newStatus === "ACTIVE" && oldStatus === "SUSPENDED") return "USER_UNSUSPEND";
@@ -493,43 +510,35 @@ export class AuditLogService {
 
   async getAuditLogs(params: {
     userId?: string;
-    eventType?: AuditEventType;
+    eventType?: string;
     severity?: AuditEventSeverity;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
     offset?: number;
   }) {
-    const where: any = {};
+    const conditions = [];
+    if (params.userId) conditions.push(eq(auditLogs.userId, params.userId));
+    if (params.eventType) conditions.push(eq(auditLogs.eventType, params.eventType));
+    if (params.severity) conditions.push(eq(auditLogs.severity, params.severity));
+    if (params.startDate) conditions.push(gte(auditLogs.createdAt, params.startDate));
+    if (params.endDate) conditions.push(lte(auditLogs.createdAt, params.endDate));
 
-    if (params.userId) where.userId = params.userId;
-    if (params.eventType) where.eventType = params.eventType;
-    if (params.severity) where.severity = params.severity;
-    if (params.startDate || params.endDate) {
-      where.createdAt = {};
-      if (params.startDate) where.createdAt.gte = params.startDate;
-      if (params.endDate) where.createdAt.lte = params.endDate;
-    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const limit = params.limit ?? 50;
+    const offset = params.offset ?? 0;
 
-    const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: params.limit || 50,
-        skip: params.offset || 0,
-        include: {
-          user: {
-            select: {
-              username: true,
-              email: true,
-            },
-          },
-        },
-      }),
-      prisma.auditLog.count({ where }),
+    const { sql: sqlTag, count } = await import("drizzle-orm").then((m) => ({
+      sql: m.sql,
+      count: m.count,
+    }));
+
+    const [logs, countResult] = await Promise.all([
+      db.select().from(auditLogs).where(where).orderBy(auditLogs.createdAt).limit(limit).offset(offset),
+      db.select({ total: count() }).from(auditLogs).where(where),
     ]);
 
-    return { logs, total };
+    return { logs, total: Number(countResult[0]?.total ?? 0) };
   }
 }
 

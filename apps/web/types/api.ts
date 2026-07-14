@@ -51,11 +51,6 @@ export interface HealthStatus {
   };
 }
 
-export interface VerificationRequest {
-  email?: string;
-  phoneNumber?: string;
-}
-
 export interface VerificationConfirm {
   token: string;
 }

@@ -2,24 +2,27 @@
 
 ## Overview
 
-Atlasmed currently uses a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, a Flutter mobile starter, and shared packages for access control, database, config, observability, and UI.
+Atlasmed is a TypeScript monorepo with a Bun/Elysia backend, a Next.js web app, a Flutter mobile starter, and shared packages for access control, database, config, observability, and UI.
 
 ## Backend Runtime
 
 - Runtime: Bun.
 - Framework: ElysiaJS.
 - API docs: OpenAPI/Swagger.
-- Database: PostgreSQL through Prisma.
+- Database: PostgreSQL + PostGIS through Drizzle ORM.
 - Cache/ephemeral state: Redis.
 - Jobs: BullMQ.
-- Logging/observability: Pino, OpenTelemetry utilities, Prometheus metrics, optional QuestDB logging.
+- Background workflows: Temporal.
+- Logging/observability: Pino, OpenTelemetry utilities, Prometheus metrics.
 
 ## Backend Module Boundaries
 
 - `access`: identity, users, roles, sessions, invitations, verification, 2FA, permissions, scopes.
-- `clinic`: clinics and facility-professional associations.
-- `doctor`: doctors.
-- `registry-ingestion`: external registry ingestion and suggestion workflows.
+- `facility`: facilities, professionals, facility-professional associations, conformity requirements and records.
+- `territory`: territory types, territory hierarchy, spatial assignment, approval workflows.
+- `catalog`: products.
+- `ingestion`: ingestion runs, diffs, suggestions.
+- `registry-ingestion`: external CNES registry ingestion and suggestion workflows.
 
 ## Web Architecture
 
@@ -31,14 +34,31 @@ Atlasmed currently uses a TypeScript monorepo with a Bun/Elysia backend, a Next.
 
 ## Data Architecture
 
-The current data model is centered on access/security plus early healthcare relationship data. Tenant isolation is not yet represented by an `Organization` or equivalent top-level tenant model.
+### Schemas
+
+The PostgreSQL database uses two named schemas:
+
+- `public` — CRM and operational data (users, sessions, facilities, territories, catalog, ingestion).
+- `registry` — CNES registry warehouse (raw external registry records).
+
+### Geometry
+
+PostGIS is enabled. All geographic data uses PostGIS geometry columns — no separate lat/lng float fields:
+
+- `facilities.location` — `geometry(Point, 4326)`.
+- `territories.boundary` — `geometry(MultiPolygon, 4326)`.
+- `territories.centroid` — `geometry(Point, 4326)`.
+- `registry_facilities.location` — `geometry(Point, 4326)`.
+
+Spatial queries use raw `sql` tagged templates via Drizzle's `db.execute()`.
+
+### ORM
+
+Drizzle ORM with Drizzle Kit for migrations. Schema files live in `packages/database/src/schema/`. Generated migrations live in `packages/database/drizzle/`.
 
 ## Current Gaps
 
 - No explicit multi-tenant organization model.
-- Roles are currently `ADMIN`, `MANAGER`, and `USER`; doctor and clinic actors are not yet first-class roles.
-- Territory records are not modeled beyond assignment IDs and scope logic.
-- No task/follow-up/reminder domain yet.
 - No visit/activity domain yet.
 - No AI assistant domain yet.
-- No production mobile architecture decision yet.
+- No production mobile architecture decision yet (Flutter starter present; React Native/Expo preferred per ADR 0002).

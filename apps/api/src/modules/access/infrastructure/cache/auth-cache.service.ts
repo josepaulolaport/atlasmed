@@ -1,4 +1,5 @@
 import type { Redis } from "ioredis";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 import {
   AUTH_STATUS_REVALIDATION_SECONDS,
@@ -36,7 +37,7 @@ export class AuthCacheService implements IAuthCache {
 
       return JSON.parse(data) as CachedAuthContext;
     } catch (error) {
-      console.error("Failed to get auth context from cache:", error);
+      logger.error("Failed to get auth context from cache", error);
       return null;
     }
   }
@@ -49,7 +50,7 @@ export class AuthCacheService implements IAuthCache {
         JSON.stringify(context)
       );
     } catch (error) {
-      console.error("Failed to set auth context in cache:", error);
+      logger.error("Failed to set auth context in cache", error);
     }
   }
 
@@ -86,7 +87,7 @@ export class AuthCacheService implements IAuthCache {
       const result = await this.redis.exists(this.getKey(userId));
       return result === 1;
     } catch (error) {
-      console.error("Failed to check auth context existence:", error);
+      logger.error("Failed to check auth context existence", error);
       return false;
     }
   }
@@ -96,7 +97,7 @@ export class AuthCacheService implements IAuthCache {
       const result = await this.redis.exists(this.getValidatedKey(userId));
       return result === 1;
     } catch (error) {
-      console.error("Failed to check auth validation stamp:", error);
+      logger.error("Failed to check auth validation stamp", error);
       return false;
     }
   }
@@ -109,7 +110,7 @@ export class AuthCacheService implements IAuthCache {
         "1"
       );
     } catch (error) {
-      console.error("Failed to mark auth context as validated:", error);
+      logger.error("Failed to mark auth context as validated", error);
     }
   }
 }

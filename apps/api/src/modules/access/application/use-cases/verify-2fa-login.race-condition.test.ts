@@ -82,7 +82,7 @@ describe("Verify2FALoginUseCase race handling", () => {
 
     useCase = new Verify2FALoginUseCase({
       userRepository: createMockUserRepository({
-        findById: mock(async () => mockUser),
+        findById: mock(async () => mockUser) as any,
         updateLastLogin: mock(async () => {}),
       }),
       sessionCache: createMockSessionCache(),

@@ -15,8 +15,8 @@ export interface RegistryFacilityProjection {
   websiteUrl: string | null;
   latitude: number | null;
   longitude: number | null;
-  taxIdCnpj: string | null;
-  taxIdCpf: string | null;
+  cnpj: string | null;
+  cpf: string | null;
   facilityTypeCode: string | null;
   deactivationReasonCode: string | null;
   lastUpdatedDate: string | null;
@@ -26,12 +26,16 @@ export interface RegistryProfessionalProjection {
   professionalId: string;
   fullName: string;
   socialName: string | null;
+  taxId: string | null;
   occupationCode: string;
   municipalityId: string | null;
   employmentTypeCode: string | null;
   startDate: string | null;
   terminationDate: string | null;
   lastUpdatedDate: string | null;
+  crmCouncil: string | null;
+  crmNumber: string | null;
+  crmState: string | null;
 }
 
 export interface RegistryRepresentativeProjection {

@@ -1,187 +1,100 @@
 # Testing Guide
 
-This guide explains how to run tests and set up your test environment for the AtlasMed API.
-
 ## Prerequisites
+- PostgreSQL running on `localhost:5432`.
+- Redis running on `localhost:6379`.
+- Separate `atlasmed_test` database (created below).
 
-1. **PostgreSQL** - Running on localhost:5432
-2. **Redis** - Running on localhost:6379
-3. **Test Database** - Create a separate database for tests
+## Setup
 
-## Initial Setup
-
-### Quick Setup (Recommended)
-
-Run the automated setup script:
+### Automated (recommended)
 
 ```bash
 cd apps/api
 ./scripts/setup-test-db.sh
 ```
 
-This script will:
-- Check PostgreSQL and Redis connections
-- Create the test database (or recreate if exists)
-- Run all migrations from `packages/database`
-- Seed test data
-- Verify everything is ready
+Script performs: connection checks → creates/recreates `atlasmed_test` → runs migrations from `packages/database` → seeds test data → verifies.
 
-### Manual Setup
-
-If you prefer to set up manually:
-
-#### 1. Create Test Database
+### Manual
 
 ```bash
-# Connect to PostgreSQL
+# 1. Create test database
 psql -U postgres
-
-# Create test database
 CREATE DATABASE atlasmed_test;
-
-# Exit psql
 \q
-```
 
-#### 2. Run Test Migrations
-
-**Important:** Migrations must be run from the `packages/database` directory:
-
-```bash
-cd apps/api
-
-# Run migrations on test database
-bun run db:migrate:test
-```
-
-Or manually:
-
-```bash
+# 2. Migrations
+cd apps/api && bun run db:migrate:test
+# or explicit:
 cd packages/database
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test prisma migrate deploy
+
+# 3. Seed
+cd apps/api && bun run db:seed:test
 ```
 
-#### 3. Seed Test Database
+## Running
+
+| Command | Purpose |
+|---|---|
+| `cd apps/api && bun run test` | All tests |
+| `bun run test:unit` | Unit only (no DB) |
+| `bun run test:integration` | Integration only (with DB) |
+| `bun run test:watch` | Re-run on file change |
+| `bun test <file>` | Specific file |
+| `bun test --test-name-pattern="LoginUseCase"` | Pattern match |
+
+## Test database management
 
 ```bash
-cd apps/api
-
-# Seed with test data (creates test user and roles)
-bun run db:seed:test
-```
-
-## Running Tests
-
-### Run All Tests
-
-```bash
-cd apps/api
-bun run test
-```
-
-### Run Only Unit Tests
-
-```bash
-# Excludes integration tests that need database
-bun run test:unit
-```
-
-### Run Only Integration Tests
-
-```bash
-# Runs tests that interact with database/redis
-bun run test:integration
-```
-
-### Watch Mode
-
-```bash
-# Re-run tests on file changes
-bun run test:watch
-```
-
-### Run Specific Test File
-
-```bash
-bun test src/modules/access/application/services/session.service.test.ts
-```
-
-### Run Tests Matching Pattern
-
-```bash
-bun test --test-name-pattern="LoginUseCase"
-```
-
-## Test Database Management
-
-### Reset Test Database
-
-```bash
-# Warning: This will delete all data and re-run migrations
+# Reset (deletes data, re-runs migrations)
 bun run db:reset:test
-
-# Then re-seed
 bun run db:seed:test
-```
 
-### View Test Database
-
-```bash
-# Connect to test database
+# View
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun run db:studio
 ```
 
-## Test Environment Variables
+## Test environment (`.env.test`)
 
-Tests use `.env.test` file which contains:
+- `DATABASE_URL` → `atlasmed_test`.
+- `REDIS_URL` → Redis DB 1 (dev uses DB 0).
+- Mock credentials for Resend / Twilio.
 
-- `DATABASE_URL` - Points to `atlasmed_test` database
-- `REDIS_URL` - Uses Redis DB 1 (separate from dev DB 0)
-- Mock credentials for external services (Resend, Twilio)
+## Seed data
 
-## Test Data
+Test seed creates:
+- Roles: `ADMIN`, `MANAGER`, `USER`.
+- Test user: `test@example.com` / `testuser` / `Password123!` / role USER / status ACTIVE.
 
-The test seed creates:
+Use this user for integration tests needing auth.
 
-- **3 Roles**: ADMIN, MANAGER, USER
-- **1 Test User**:
-  - Email: `test@example.com`
-  - Username: `testuser`
-  - Password: `Password123!`
-  - Role: USER
-  - Status: ACTIVE
-
-Use this test user for integration tests that need authentication.
-
-## Test Structure
+## Test structure
 
 ```
 apps/api/src/
-├── modules/
-│   └── access/
-│       ├── application/
-│       │   ├── services/          # Service tests
-│       │   └── use-cases/         # Use case tests
-│       ├── infrastructure/
-│       │   ├── repositories/      # Repository tests
-│       │   └── middleware/        # Middleware tests
-│       └── test-helpers/          # Mock factories
-├── infrastructure/
-│   └── database/
-│       ├── seed.ts               # Production seed
-│       └── test-seed.ts          # Test seed
-├── test-setup.ts                 # Global test setup
-└── test-utils/                   # Test utilities
-    └── mock-reset.ts             # Mock cleanup helpers
+├── modules/<domain>/
+│   ├── application/
+│   │   ├── services/     # service tests
+│   │   └── use-cases/    # use-case tests
+│   ├── infrastructure/
+│   │   ├── repositories/ # repo tests
+│   │   └── middleware/   # middleware tests
+│   └── test-helpers/     # mock factories
+├── infrastructure/database/
+│   ├── seed.ts           # production seed
+│   └── test-seed.ts      # test seed
+├── test-setup.ts         # global test setup
+└── test-utils/
+    └── mock-reset.ts     # mock cleanup helpers
 ```
 
-## Writing Tests
+## Writing unit tests
 
-### Unit Tests
+Use mock factories from `test-helpers/fixtures.ts`. Always reset mocks in `afterEach`:
 
-Use mock factories from `test-helpers/fixtures.ts`:
-
-```typescript
+```ts
 import { createMockUserRepository, createMockSessionRepository } from "../../test-helpers/fixtures";
 import { resetAllMocks } from "../../../../test-utils/mock-reset";
 
@@ -195,25 +108,19 @@ describe("MyService", () => {
   });
 
   afterEach(() => {
-    // Always clean up mocks to prevent test interference
     resetAllMocks(mockUserRepo, mockSessionRepo);
-  });
-
-  it("should do something", async () => {
-    // Your test here
   });
 });
 ```
 
-### Integration Tests
+## Writing integration tests
 
-Integration tests use the actual database and are marked with "Integration Tests" in the name:
+Live database. Filename convention: `<module>-http.integration.test.ts` (colocated with the module).
 
-```typescript
+```ts
 import { prisma } from "../../../../infrastructure/database/prisma.client";
 
 describe("My Integration Tests", () => {
-  // This test will use the real test database
   it("should work with database", async () => {
     const user = await prisma.user.findFirst();
     expect(user).toBeDefined();
@@ -223,67 +130,19 @@ describe("My Integration Tests", () => {
 
 ## Troubleshooting
 
-### Tests Fail with Database Errors
+| Symptom | Fix |
+|---|---|
+| `Cannot find table "User"` | `bun run db:migrate:test` then `bun run db:seed:test` |
+| "User not found" in integration test | `bun run db:seed:test` |
+| Tests pass alone, fail together | Missing `afterEach` mock cleanup; remove global state/singletons; use fresh `createMock*` per test |
+| `Redis connection refused` | Ensure Redis running (`redis-cli ping`); check `.env.test`; tests use DB 1 |
+| Slow suite | Use `bun run test:unit` during dev; integration is slower |
 
-**Problem**: `Cannot find table "User"` or similar
+## CI
 
-**Solution**: Run migrations on test database:
-```bash
-bun run db:migrate:test
-bun run db:seed:test
-```
-
-### Tests Fail with "User not found"
-
-**Problem**: Integration tests can't find test user
-
-**Solution**: Re-seed test database:
-```bash
-bun run db:seed:test
-```
-
-### Test Interference Issues
-
-**Problem**: Tests pass individually but fail when run together
-
-**Solutions**:
-1. Ensure you're using `afterEach` to clean up mocks
-2. Don't use global state or singletons in tests
-3. Use `createMock*` factories for fresh mocks in each test
-
-### Redis Connection Errors
-
-**Problem**: `Redis connection refused`
-
-**Solution**: 
-1. Ensure Redis is running: `redis-cli ping`
-2. Check Redis URL in `.env.test`
-3. Tests use Redis DB 1, dev uses DB 0
-
-### Slow Tests
-
-**Problem**: Tests take a long time
-
-**Solution**:
-- Run only unit tests: `bun run test:unit`
-- Unit tests are fast (no DB), integration tests are slower
-
-## CI/CD
-
-For CI environments, ensure:
-
-1. PostgreSQL and Redis are available
-2. Create test database in CI setup
-3. Run migrations from packages/database and seed before tests:
+Ensure PostgreSQL + Redis available, create test DB, migrate, seed, then test. Sketch:
 
 ```yaml
-# Example GitHub Actions
-- name: Setup PostgreSQL
-  uses: ikalnytskyi/action-setup-postgres@v4
-  
-- name: Setup Redis
-  uses: shogo82148/actions-setup-redis@v1
-  
 - name: Setup Test Database
   run: |
     createdb atlasmed_test
@@ -291,35 +150,21 @@ For CI environments, ensure:
     DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun prisma migrate deploy
     cd ../../apps/api
     DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun src/infrastructure/database/test-seed.ts
-    
 - name: Run Tests
   run: cd apps/api && bun run test
 ```
 
-### Alternative: Use Setup Script in CI
-
+Or reuse the script:
 ```yaml
-- name: Setup Test Environment
-  run: cd apps/api && ./scripts/setup-test-db.sh <<< "n"
-  
-- name: Run Tests
-  run: cd apps/api && bun run test
+- run: cd apps/api && ./scripts/setup-test-db.sh <<< "n"
+- run: cd apps/api && bun run test
 ```
 
-## Best Practices
+## Rules
 
-1. **Isolate Tests**: Each test should be independent
-2. **Clean Up**: Use `afterEach` to reset mocks
-3. **Mock External Services**: Don't call real APIs in tests
-4. **Meaningful Names**: Use descriptive test names
-5. **Test One Thing**: Each test should verify one behavior
-6. **Arrange-Act-Assert**: Structure tests clearly
-7. **Fast Tests**: Unit tests should be < 50ms
-8. **Reliable**: Tests shouldn't be flaky
-
-## Performance Tips
-
-- Use `test:unit` for quick feedback during development
-- Run integration tests before committing
-- Mock external dependencies (Redis, Email, SMS) in unit tests
-- Keep integration tests focused and minimal
+- Every test isolated. No cross-test global state.
+- `afterEach` resets mocks.
+- No real external APIs in tests — Resend/Twilio always mocked.
+- Unit tests <50ms; integration slower but focused.
+- Arrange-Act-Assert structure.
+- Descriptive names; one behavior per test.

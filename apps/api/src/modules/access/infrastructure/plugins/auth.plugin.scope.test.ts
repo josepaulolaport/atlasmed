@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { UserStatus, AuthSessionDeviceType, AuthSessionType } from "@atlasmed/database";
 import type { Role } from "@atlasmed/access";
 import { withTerritoryScopeAliases } from "@atlasmed/access";
 import { TokenService } from "../../application/services/token.service";
@@ -38,7 +37,7 @@ describe("Auth Plugin Scope", () => {
     firstName: "Test",
     lastName: "User",
     avatarUrl: null,
-    status: UserStatus.ACTIVE,
+    status: "ACTIVE",
     tokenVersion: 1,
     emailVerified: true,
     phoneVerified: false,
@@ -52,7 +51,7 @@ describe("Auth Plugin Scope", () => {
     updatedAt: new Date(),
     role: {
       id: "role-123",
-      name: "USER",
+      name: "REP",
       description: null,
       priority: 100,
       createdAt: new Date(),
@@ -69,8 +68,8 @@ describe("Auth Plugin Scope", () => {
     browserName: "Chrome",
     browserVersion: "120.0",
     osName: "macOS",
-    deviceType: AuthSessionDeviceType.DESKTOP,
-    sessionType: AuthSessionType.WEB,
+    deviceType: "DESKTOP",
+    sessionType: "WEB",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -93,10 +92,10 @@ describe("Auth Plugin Scope", () => {
     mockUserRepository = {
       findById: mock(async () => mockUser),
       findUserAuthStatus: mock(async () => ({
-        status: UserStatus.ACTIVE,
+        status: "ACTIVE",
         tokenVersion: 1,
         roleId: "role-123",
-        roleName: "USER",
+        roleName: "REP",
       })),
     } as unknown as UserRepository;
 
@@ -130,7 +129,7 @@ describe("Auth Plugin Scope", () => {
     } as unknown as AccessGrantService;
   });
 
-  async function signToken(role: Role = "USER") {
+  async function signToken(role: Role = "REP") {
     return tokenService.signAccessToken({
       sub: "user-123",
       sid: "session-123",
@@ -159,7 +158,7 @@ describe("Auth Plugin Scope", () => {
   }
 
   it("calls scopeService.resolve with user id and role from token", async () => {
-    const accessToken = await signToken("USER");
+    const accessToken = await signToken("REP");
     const app = buildAuthApp();
 
     await app.handle(
@@ -168,7 +167,7 @@ describe("Auth Plugin Scope", () => {
       })
     );
 
-    expect(mockScopeService.resolve).toHaveBeenCalledWith("user-123", "USER");
+    expect(mockScopeService.resolve).toHaveBeenCalledWith("user-123", "REP");
   });
 
   it("returns isOperationallyActive false for USER without territories", async () => {
@@ -187,7 +186,7 @@ describe("Auth Plugin Scope", () => {
       )
     );
 
-    const accessToken = await signToken("USER");
+    const accessToken = await signToken("REP");
     const app = buildAuthApp();
     const response = await app.handle(
       new Request("http://localhost/scope", {
@@ -219,7 +218,7 @@ describe("Auth Plugin Scope", () => {
       )
     );
 
-    const accessToken = await signToken("USER");
+    const accessToken = await signToken("REP");
     const app = buildAuthApp();
     const response = await app.handle(
       new Request("http://localhost/scope", {
@@ -243,7 +242,7 @@ describe("Auth Plugin Scope", () => {
         id: "role-manager",
         name: "MANAGER",
       },
-    }));
+    })) as any;
 
     mockScopeService.resolve = mock(() =>
       Promise.resolve(

@@ -1,37 +1,57 @@
-// Export Prisma types and client - client can be instantiated in apps/api/infrastructure
-export type {
-  User,
-  Role,
-  Session,
-  Invitation,
-  PasswordReset,
-  AuditLog,
-  Prisma,
-} from "./generated/prisma";
+export { createDatabase, type Database, type AnyDatabase, type DatabaseTransaction } from "./client";
 
-// Export PrismaClient as both type and value
-export { PrismaClient } from "./generated/prisma";
+export * from "./schema/public/index";
+export * from "./schema/audit/index";
+export * from "./schema/registry/index";
+export * from "./schema/ingestion/index";
+export * from "./types/geometry";
 
-// Export enums that frontend/mobile might need
-export { 
-  UserStatus, 
-  InvitationStatus, 
-  AuthSessionDeviceType, 
-  AuthSessionType,
-  AuditEventType,
-  AuditEventSeverity,
-  VerificationTokenType,
-  IngestionRunStatus,
-  IngestionSuggestionType,
-  IngestionSuggestionStatus,
-  TerritoryNodeType,
-  TerritoryAssignmentStatus,
-  TerritoryAssignmentSource,
-  TerritoryApprovalType,
-  TerritoryApprovalStatus,
-  TerritoryRollupRelationshipType,
-  TerritoryRollupLinkSource,
-  TerritoryParentAssignmentStatus,
-  TerritoryParentAssignmentSource,
-} from "./generated/prisma";
+// Explicit enum value types for backward-compat
+import {
+  auditEventSeverityEnum,
+} from "./schema/audit/index";
+import {
+  userStatusEnum,
+  invitationStatusEnum,
+  territoryNodeTypeEnum,
+  territoryAssignmentStatusEnum,
+  territoryAssignmentSourceEnum,
+  territoryApprovalTypeEnum,
+  territoryApprovalStatusEnum,
+  RELATIONSHIP_LEVEL_MIN,
+  RELATIONSHIP_LEVEL_MAX,
+  conformityStatusEnum,
+  conformityRecordStatusEnum,
+  purchaseStatusEnum,
+  authSessionDeviceTypeEnum,
+  authSessionTypeEnum,
+  verificationTokenTypeEnum,
+} from "./schema/public/enums";
+import {
+  cnesRunStatusEnum,
+  cnesRunPhaseEnum,
+  cnesSuggestionTypeEnum,
+  cnesSuggestionStatusEnum,
+} from "./schema/ingestion/index";
 
+export type AuditEventSeverity = (typeof auditEventSeverityEnum.enumValues)[number];
+export type UserStatus = (typeof userStatusEnum.enumValues)[number];
+export type InvitationStatus = (typeof invitationStatusEnum.enumValues)[number];
+export type CnesRunStatus = (typeof cnesRunStatusEnum.enumValues)[number];
+export type CnesRunPhase = (typeof cnesRunPhaseEnum.enumValues)[number];
+export type CnesSuggestionType = (typeof cnesSuggestionTypeEnum.enumValues)[number];
+export type CnesSuggestionStatus = (typeof cnesSuggestionStatusEnum.enumValues)[number];
+export type TerritoryNodeType = (typeof territoryNodeTypeEnum.enumValues)[number];
+export type TerritoryAssignmentStatus = (typeof territoryAssignmentStatusEnum.enumValues)[number];
+export type TerritoryAssignmentSource = (typeof territoryAssignmentSourceEnum.enumValues)[number];
+export type TerritoryApprovalType = (typeof territoryApprovalTypeEnum.enumValues)[number];
+export type TerritoryApprovalStatus = (typeof territoryApprovalStatusEnum.enumValues)[number];
+/** Integer 1–10 relationship strength between rep and facility contact. */
+export type RelationshipLevel = number;
+export { RELATIONSHIP_LEVEL_MIN, RELATIONSHIP_LEVEL_MAX };
+export type ConformityStatus = (typeof conformityStatusEnum.enumValues)[number];
+export type ConformityRecordStatus = (typeof conformityRecordStatusEnum.enumValues)[number];
+export type PurchaseStatus = (typeof purchaseStatusEnum.enumValues)[number];
+export type AuthSessionDeviceType = (typeof authSessionDeviceTypeEnum.enumValues)[number];
+export type AuthSessionType = (typeof authSessionTypeEnum.enumValues)[number];
+export type VerificationTokenType = (typeof verificationTokenTypeEnum.enumValues)[number];

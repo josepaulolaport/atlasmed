@@ -9,7 +9,8 @@
  */
 
 import { Elysia } from "elysia";
-import { prisma } from "../database/prisma.client";
+import { db } from "../database/db";
+import { sql } from "drizzle-orm";
 import { redis } from "../cache/redis.client";
 import { metricsService } from "../monitoring/metrics.service";
 import { environment } from "../../app/config/environment";
@@ -39,7 +40,7 @@ interface HealthCheck {
 async function checkDatabase(): Promise<ComponentHealth> {
   try {
     const start = Date.now();
-    await prisma.$queryRaw`SELECT 1`;
+    await db.execute(sql`SELECT 1`);
     const latency = Date.now() - start;
     
     return { 

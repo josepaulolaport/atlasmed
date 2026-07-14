@@ -1,7 +1,3 @@
-export type TerritoryParentAssignmentStatus = "resolved" | "ambiguous" | "manual";
-export type TerritoryParentAssignmentSource = "geo" | "inferred" | "manual";
-export type TerritoryRollupLinkSource = "geo" | "manual";
-
 export interface TerritoryType {
   id: string;
   slug: string;
@@ -13,6 +9,7 @@ export interface TerritoryType {
   assignableToManagers: boolean;
   isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
+  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
 }
@@ -26,11 +23,11 @@ export interface Territory {
   territoryType: TerritoryType;
   countryCode?: string;
   parentId?: string;
+  managerTerritoryId?: string;
   isActive: boolean;
-  parentAssignmentStatus?: TerritoryParentAssignmentStatus;
-  parentAssignmentSource?: TerritoryParentAssignmentSource;
   clinicCount: number;
   assignedUserCount: number;
+  repPatchCount?: number;
   hasBoundary: boolean;
   isLeaf: boolean;
   isCountryLevel?: boolean;
@@ -54,7 +51,8 @@ export interface TerritoryDescendantsResponse {
 
 export interface CreateTerritoryRequest {
   name: string;
-  slug: string;
+  code?: string;
+  slug?: string;
   territoryTypeId?: string;
   typeSlug?: string;
   countryCode?: string;
@@ -74,6 +72,7 @@ export interface TerritoryTypeFlags {
   assignableToManagers?: boolean;
   isCountryLevel?: boolean;
   blockSiblingOverlap?: boolean;
+  participatesInGroupingHierarchy?: boolean;
 }
 
 export interface CreateTerritoryTypeRequest extends TerritoryTypeFlags {
@@ -156,63 +155,48 @@ export interface ClinicTerritoryOverrideRequest {
   reason?: string;
 }
 
-export interface TerritoryRollupAncestor {
-  id: string;
-  name: string;
-  code: string;
-  slug: string;
-  territoryType: Pick<TerritoryType, "slug" | "name">;
-}
-
-export interface TerritoryRollupLink {
-  id: string;
-  territoryId: string;
-  ancestorId: string;
-  relationshipType: "reporting";
-  source: TerritoryRollupLinkSource;
-  createdAt: string;
-  ancestor?: TerritoryRollupAncestor;
-}
-
-export interface AddTerritoryRollupLinkRequest {
-  ancestorId: string;
-  relationshipType?: "reporting";
-}
-
-export interface SaveBoundaryReferenceResponse {
+export interface SaveBoundaryRepPatchResponse {
   success: boolean;
-  mode: "reference";
-  parentAssignmentStatus: TerritoryParentAssignmentStatus;
-  parentAssignmentSource: TerritoryParentAssignmentSource;
-  primaryParentId: string | null;
-  rollupAncestorIds: string[];
-  candidates: Array<{ id: string; code: string; overlapRatio: number }>;
+  mode: "rep_patch";
+  managerTerritoryId: string;
+  managerZoneCandidates: Array<{ id: string; code: string; name: string }>;
+  clinicRecomputeEnqueued: boolean;
 }
 
-export interface SaveBoundaryOperationalResponse {
+export interface SaveBoundaryManagerZoneResponse {
   success: boolean;
-  mode: "operational";
-  geoMembershipStatus: "ready";
-  membershipCount: number;
-  referenceTerritoryIds: string[];
+  mode: "manager_zone";
+  repPatchCount: number;
+}
+
+export interface SaveBoundaryGroupingResponse {
+  success: boolean;
+  mode: "grouping";
 }
 
 export type SaveBoundaryResponse =
-  | SaveBoundaryReferenceResponse
-  | SaveBoundaryOperationalResponse;
+  | SaveBoundaryRepPatchResponse
+  | SaveBoundaryManagerZoneResponse
+  | SaveBoundaryGroupingResponse;
 
-export interface TerritoryGeoMembership {
-  id: string;
-  operationalTerritoryId: string;
-  referenceTerritoryId: string;
-  referenceTypeSlug: string;
-  overlapRatio: number;
-  intersectionAreaSqKm: number;
-  computedAt: string;
-  operationalTerritory?: Pick<Territory, "id" | "name" | "slug" | "code"> & {
-    territoryType: Pick<TerritoryType, "slug" | "name">;
+export interface AnalyticsViewResponse {
+  grouping: {
+    id: string;
+    name: string;
+    slug: string;
+    code: string;
+    boundary: GeoJsonPolygon | null;
   };
-  referenceTerritory?: Pick<Territory, "id" | "name" | "slug" | "code"> & {
-    territoryType: Pick<TerritoryType, "slug" | "name">;
-  };
+  patches: Array<{
+    repPatchId: string;
+    repPatch: {
+      id: string;
+      name: string;
+      code: string;
+      slug: string;
+    } | null;
+    facilities: Array<{ id: string; name: string; lat: number; lng: number }>;
+  }>;
+  clinicCount: number;
+  patchCount: number;
 }

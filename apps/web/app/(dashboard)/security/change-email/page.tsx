@@ -58,8 +58,8 @@ export default function ChangeEmailPage() {
     try {
       await verificationApi.confirmEmailChange(data);
       toast({
-        title: "Success",
-        description: "Email address updated",
+        title: "Sucesso",
+        description: "Endereço de e-mail atualizado",
         variant: "success",
       });
     } catch (err) {
@@ -74,11 +74,11 @@ export default function ChangeEmailPage() {
     <div className="mx-auto max-w-md px-4 py-8">
       <Card>
         <CardHeader>
-          <CardTitle>Change email</CardTitle>
+          <CardTitle>Alterar email</CardTitle>
           <CardDescription>
             {step === "request"
-              ? "Request a change to your account email address."
-              : "Enter the confirmation token from your new email."}
+              ? "Solicite a alteração do email da sua conta."
+              : "Insira o token de confirmação enviado ao seu novo email."}
           </CardDescription>
         </CardHeader>
 
@@ -87,16 +87,16 @@ export default function ChangeEmailPage() {
             <CardContent className="space-y-4">
               {error && <ErrorBox message={error} />}
               <div className="space-y-2">
-                <Label htmlFor="newEmail">New email</Label>
+                <Label htmlFor="newEmail">Novo email</Label>
                 <Input id="newEmail" type="email" {...requestForm.register("newEmail")} disabled={loading} />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending..." : "Send confirmation"}
+                {loading ? "Enviando..." : "Enviar confirmação"}
               </Button>
               <Link href="/security" className="text-sm text-blue-600 hover:underline">
-                Back to security settings
+                Voltar para configurações de segurança
               </Link>
             </CardFooter>
           </form>
@@ -105,20 +105,20 @@ export default function ChangeEmailPage() {
             <CardContent className="space-y-4">
               {error && <ErrorBox message={error} />}
               <div className="space-y-2">
-                <Label htmlFor="confirmEmail">New email</Label>
+                <Label htmlFor="confirmEmail">Novo email</Label>
                 <Input id="confirmEmail" type="email" {...confirmForm.register("newEmail")} disabled={loading} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="confirmToken">Confirmation token</Label>
+                <Label htmlFor="confirmToken">Token de confirmação</Label>
                 <Input id="confirmToken" {...confirmForm.register("token")} disabled={loading} />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Confirming..." : "Confirm new email"}
+                {loading ? "Confirmando..." : "Confirmar novo email"}
               </Button>
               <Button type="button" variant="ghost" onClick={() => setStep("request")} disabled={loading}>
-                Start over
+                Recomeçar
               </Button>
             </CardFooter>
           </form>

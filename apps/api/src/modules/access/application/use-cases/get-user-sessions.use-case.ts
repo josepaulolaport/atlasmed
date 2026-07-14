@@ -8,12 +8,12 @@ interface GetUserSessionsInput {
 
 interface SessionOutput {
   id: string;
-  deviceType: string;
+  deviceType: string | null;
   browserName: string | null;
   browserVersion: string | null;
   osName: string | null;
-  ipAddress: string;
-  lastSeenAt: Date;
+  ipAddress: string | null;
+  lastSeenAt: Date | null;
   createdAt: Date;
   isCurrent: boolean;
 }

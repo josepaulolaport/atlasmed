@@ -3,7 +3,7 @@ import type {
   IngestionSuggestionRepository,
 } from "../interfaces/ingestion.repository.interface";
 import type { SanitizedFacilityRecord } from "../interfaces/registry-source.port";
-import type { IngestionSuggestionType } from "@atlasmed/database";
+import type { CnesSuggestionType as IngestionSuggestionType } from "@atlasmed/database";
 
 export interface DiffStats {
   fieldUpdateSuggestions: number;
@@ -24,7 +24,6 @@ function valuesDiffer(current: unknown, proposed: unknown): boolean {
 function detectFacilityFieldChanges(
   facility: {
     name: string;
-    address: string | null;
     lat: number | null;
     lng: number | null;
   },
@@ -34,9 +33,6 @@ function detectFacilityFieldChanges(
 
   if (valuesDiffer(facility.name, source.name)) {
     changes.push({ field: "displayName", current: facility.name, proposed: source.name });
-  }
-  if (valuesDiffer(facility.address, source.address)) {
-    changes.push({ field: "address", current: facility.address, proposed: source.address });
   }
   if (valuesDiffer(facility.lat, source.lat)) {
     changes.push({ field: "lat", current: facility.lat, proposed: source.lat });

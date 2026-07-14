@@ -72,7 +72,7 @@ export function TerritoryBoundarySection({
   if (!canHaveBoundary) {
     return (
       <p className="text-sm text-gray-500">
-        This territory type cannot have a boundary.
+        Este tipo de território não pode ter limite.
       </p>
     );
   }
@@ -97,23 +97,16 @@ export function TerritoryBoundarySection({
       setBoundary(payload);
       setDraft(payload);
 
-      if (result.mode === "operational") {
+      if (result.mode === "rep_patch") {
         toast({
           title: "Boundary saved",
-          description: `Indexed across ${result.membershipCount} reference region(s).`,
+          description: `Linked to manager zone ${result.managerTerritoryId}.`,
           variant: "success",
         });
-      } else if (result.parentAssignmentStatus === "ambiguous") {
-        toast({
-          title: "Boundary saved — review parent",
-          description:
-            "This territory overlaps multiple parents. Primary parent was not changed automatically.",
-          variant: "destructive",
-        });
-      } else if (result.rollupAncestorIds.length > 0) {
+      } else if (result.mode === "manager_zone") {
         toast({
           title: "Boundary saved",
-          description: `Linked to parent and ${result.rollupAncestorIds.length} secondary rollup region(s).`,
+          description: `Manager zone contains ${result.repPatchCount} rep patch(es).`,
           variant: "success",
         });
       } else {
@@ -140,7 +133,7 @@ export function TerritoryBoundarySection({
     return (
       <div className="flex items-center gap-2 text-sm text-gray-500">
         <Loader2 className="h-4 w-4 animate-spin" />
-        Loading boundary...
+        Carregando limite...
       </div>
     );
   }
@@ -148,9 +141,10 @@ export function TerritoryBoundarySection({
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500">
-        A territory can include multiple polygons. Update them to adjust geo-linked parents and
-        clinic assignment. Boundaries cannot be removed for this territory type.
-        {boundary ? ` Currently ${polygonCount(boundary)} polygon(s).` : ""}
+        Um território pode incluir vários polígonos. Atualize-os para ajustar os pais
+        geovinculados e a atribuição de clínicas. Os limites não podem ser removidos para este
+        tipo de território.
+        {boundary ? ` Atualmente ${polygonCount(boundary)} polígono(s).` : ""}
       </p>
 
       <div className="flex gap-2">
@@ -160,7 +154,7 @@ export function TerritoryBoundarySection({
           variant={mode === "map" ? "default" : "outline"}
           onClick={() => setMode("map")}
         >
-          Map
+          Mapa
         </Button>
         <Button
           type="button"
@@ -194,7 +188,7 @@ export function TerritoryBoundarySection({
       {canEdit && (
         <div className="flex gap-2">
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Saving..." : "Save boundary"}
+            {saving ? "Salvando..." : "Salvar limite"}
           </Button>
         </div>
       )}

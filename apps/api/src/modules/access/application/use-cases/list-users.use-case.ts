@@ -15,7 +15,7 @@ interface ListUsersDependencies {
 
 function serializeUser(user: {
   id: string;
-  email: string;
+  email: string | null;
   username: string;
   phoneNumber?: string | null;
   firstName?: string | null;
@@ -36,7 +36,7 @@ function serializeUser(user: {
 }) {
   return {
     id: user.id,
-    email: user.email,
+    email: user.email!,
     username: user.username,
     phoneNumber: user.phoneNumber ?? undefined,
     firstName: user.firstName ?? undefined,

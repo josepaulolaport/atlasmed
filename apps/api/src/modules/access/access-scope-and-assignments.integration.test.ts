@@ -8,7 +8,9 @@ import {
 import { Elysia } from "elysia";
 import { access } from "./index";
 import { AppError } from "../../shared/errors";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { users } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -47,7 +49,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -89,7 +91,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   }
 
   it("ADMIN lists all scope fixture users", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -108,7 +110,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER list is scoped to managed field user with territory", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -125,7 +127,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER cannot read assignments", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -137,16 +139,12 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER can suspend managed field user", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    await prisma.user.update({
-      where: { id: fixtures.fieldUser.id },
-      data: {
-        status: "ACTIVE",
-        suspendedAt: null,
-        managerId: fixtures.manager.id,
-      },
-    });
+    await db
+      .update(users)
+      .set({ status: "ACTIVE", suspendedAt: null, managerId: fixtures.manager.id, updatedAt: new Date() })
+      .where(eq(users.id, fixtures.fieldUser.id));
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -163,12 +161,12 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("MANAGER cannot suspend user outside their management scope", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    await prisma.user.update({
-      where: { id: fixtures.otherUser.id },
-      data: { status: "ACTIVE", suspendedAt: null },
-    });
+    await db
+      .update(users)
+      .set({ status: "ACTIVE", suspendedAt: null, updatedAt: new Date() })
+      .where(eq(users.id, fixtures.otherUser.id));
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -185,7 +183,7 @@ describe("Access Scope and Assignments Integration Tests", () => {
   });
 
   it("ADMIN reads assignments and performs manager/territory CRUD", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const newTerritory = fixtures.extraTerritoryId;

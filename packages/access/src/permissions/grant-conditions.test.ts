@@ -7,15 +7,16 @@ import {
 } from "./grant-conditions";
 import { defineAbilitiesForUser } from "./grant.permissions";
 import { canOnResource } from "./casl-scoped.helpers";
+import { Role } from "../enums/role.enum";
 
 describe("grant conditions", () => {
   it("applies scoped CASL conditions for subjects outside role permissions", () => {
-    const withoutGrant = defineAbilitiesForUser("USER", []);
+    const withoutGrant = defineAbilitiesForUser(Role.REP, []);
     expect(
       canOnResource(withoutGrant, "read", "REGISTRY_SUGGESTION", "sug-1")
     ).toBe(false);
 
-    const ability = defineAbilitiesForUser("USER", [
+    const ability = defineAbilitiesForUser(Role.REP, [
       {
         id: "grant-1",
         resource: "REGISTRY_SUGGESTION",
@@ -33,7 +34,7 @@ describe("grant conditions", () => {
   });
 
   it("supports scoped id provided only via conditions", () => {
-    const ability = defineAbilitiesForUser("USER", [
+    const ability = defineAbilitiesForUser(Role.REP, [
       {
         id: "grant-2",
         resource: "REGISTRY_SUGGESTION",

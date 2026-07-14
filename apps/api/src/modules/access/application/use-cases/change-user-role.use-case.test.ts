@@ -46,8 +46,8 @@ describe("ChangeUserRoleUseCase", () => {
     user: { id: "user-123", roleId: "role-user" },
     role: {
       id: "role-user",
-      name: "USER",
-      priority: ROLE_PRIORITY_BY_NAME.USER,
+      name: "REP",
+      priority: ROLE_PRIORITY_BY_NAME.REP,
     },
   });
 
@@ -81,8 +81,8 @@ describe("ChangeUserRoleUseCase", () => {
         if (roleId === "role-user") {
           return {
             id: "role-user",
-            name: "USER",
-            priority: ROLE_PRIORITY_BY_NAME.USER,
+            name: "REP",
+            priority: ROLE_PRIORITY_BY_NAME.REP,
           };
         }
         return null;
@@ -244,8 +244,8 @@ describe("ChangeUserRoleUseCase", () => {
 
       mockRoleRepository.findById = mock(async () => ({
         id: "role-user",
-        name: "USER",
-        priority: ROLE_PRIORITY_BY_NAME.USER,
+        name: "REP",
+        priority: ROLE_PRIORITY_BY_NAME.REP,
       }));
 
       await expect(

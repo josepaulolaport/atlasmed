@@ -4,7 +4,9 @@ import { hash } from "argon2";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
 import { access } from "./index";
 import { AppError } from "../../shared/errors";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { roles, users, sessions } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -38,7 +40,7 @@ describe("Access Auth HTTP Integration Tests", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     app = createAuthIntegrationApp();
     await redis.flushdb();
@@ -46,29 +48,36 @@ describe("Access Auth HTTP Integration Tests", () => {
     const uniqueId = getUniqueTestId();
     userEmail = `auth.http.${uniqueId}@test.example.com`;
 
-    const userRole = await prisma.role.findUnique({ where: { name: "USER" } });
+    const userRole = await db
+      .select()
+      .from(roles)
+      .where(eq(roles.name, "REP"))
+      .limit(1)
+      .then((r) => r[0] ?? null);
     if (!userRole) {
       throw new Error("USER role not found in seeded database");
     }
 
-    const user = await prisma.user.create({
-      data: {
+    const user = await db
+      .insert(users)
+      .values({
         email: userEmail,
         username: `auth_http_${uniqueId}`,
         passwordHash: await hash(TEST_PASSWORD),
         roleId: userRole.id,
         status: "ACTIVE",
         emailVerified: true,
-      },
-    });
+      })
+      .returning()
+      .then((r) => r[0]!);
 
     userId = user.id;
   });
 
   afterAll(async () => {
-    if (!dbReady) return;
-    await prisma.session.deleteMany({ where: { userId } });
-    await prisma.user.delete({ where: { id: userId } }).catch(() => {});
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await db.delete(users).where(eq(users.id, userId)).catch(() => {});
   });
 
   async function loginViaHttp() {
@@ -101,7 +110,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   }
 
   it("logs in and returns access token with refresh cookie", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken, refreshToken } = await loginViaHttp();
     expect(accessToken.split(".")).toHaveLength(3);
@@ -109,7 +118,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("returns profile for authenticated user", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken } = await loginViaHttp();
 
@@ -125,7 +134,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("rejects profile without auth", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await app.handle(
       new Request("http://localhost/access/profile")
@@ -135,7 +144,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("refreshes session with refresh token in body (non-production)", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { refreshToken } = await loginViaHttp();
     expect(refreshToken).toBeTruthy();
@@ -154,7 +163,7 @@ describe("Access Auth HTTP Integration Tests", () => {
   });
 
   it("logs out and invalidates session for subsequent profile access", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const { accessToken } = await loginViaHttp();
 

@@ -1,5 +1,11 @@
-import type { Role, User, Session, Invitation } from "@atlasmed/database";
+import type { InferSelectModel } from "drizzle-orm";
+import { roles, users, sessions, invitations } from "@atlasmed/database";
 import { ROLE_PRIORITY_BY_NAME } from "../application/constants/role-priority.constants";
+
+type Role = InferSelectModel<typeof roles>;
+type User = InferSelectModel<typeof users>;
+type Session = InferSelectModel<typeof sessions>;
+type Invitation = InferSelectModel<typeof invitations>;
 
 // Re-export repository and cache mocks for convenience
 export * from "./repository-mocks";
@@ -106,6 +112,11 @@ export function createMockInvitation(overrides?: Partial<Invitation>): Invitatio
     invitedByUserId: "admin-456",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "PENDING",
+    firstName: null,
+    lastName: null,
+    managerId: null,
+    managerTerritoryId: null,
+    repTerritoryId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     acceptedAt: null,

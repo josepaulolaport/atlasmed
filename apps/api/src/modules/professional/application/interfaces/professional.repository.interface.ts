@@ -1,8 +1,31 @@
+import type { RelationshipLevel } from "@atlasmed/database";
+
+export interface ProfessionalFacilitySummary {
+  id: string;
+  name: string;
+}
+
 export interface ProfessionalRecord {
   id: string;
   firstName: string;
   lastName: string;
+  fullName: string | null;
+  socialName: string | null;
+  taxId: string | null;
+  birthDate: Date | null;
+  mobilePhone: string | null;
+  landlinePhone: string | null;
+  email: string | null;
+  websiteUrl: string | null;
+  imageUrl: string | null;
+  favoriteTeam: string | null;
+  favoriteSport: string | null;
+  hobbies: string | null;
+  notes: string | null;
   specialty: string | null;
+  crmCouncil: string | null;
+  crmNumber: string | null;
+  crmState: string | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -17,20 +40,78 @@ export interface ProfessionalRecord {
   deletedAt: Date | null;
 }
 
-export interface DoctorListScopeFilter {
+export interface ProfessionalListScopeFilter {
   isGlobal: boolean;
   facilityIds?: string[];
 }
 
-export interface DoctorSourceUpsertInput {
+export interface ProfessionalSourceUpsertInput {
   sourceProvider: string;
   externalSourceId: string;
   firstName: string;
   lastName: string;
+  fullName?: string | null;
+  socialName?: string | null;
+  taxId?: string | null;
   specialty: string | null;
+  crmCouncil?: string | null;
+  crmNumber?: string | null;
+  crmState?: string | null;
   sourceContentHash: string;
   sourceLastSeenAt: Date;
 }
+
+export interface ProfessionalCreateInput {
+  firstName: string;
+  lastName: string;
+  fullName?: string | null;
+  socialName?: string | null;
+  taxId?: string | null;
+  birthDate?: Date | null;
+  mobilePhone?: string | null;
+  landlinePhone?: string | null;
+  email?: string | null;
+  websiteUrl?: string | null;
+  imageUrl?: string | null;
+  favoriteTeam?: string | null;
+  favoriteSport?: string | null;
+  hobbies?: string | null;
+  notes?: string | null;
+  specialty?: string | null;
+  crmCouncil?: string | null;
+  crmNumber?: string | null;
+  crmState?: string | null;
+  facilityIds: string[];
+  confirmedByUserId?: string;
+}
+
+export interface ProfessionalUpdateInput {
+  firstName?: string;
+  lastName?: string;
+  fullName?: string | null;
+  socialName?: string | null;
+  taxId?: string | null;
+  birthDate?: Date | null;
+  mobilePhone?: string | null;
+  landlinePhone?: string | null;
+  email?: string | null;
+  websiteUrl?: string | null;
+  imageUrl?: string | null;
+  favoriteTeam?: string | null;
+  favoriteSport?: string | null;
+  hobbies?: string | null;
+  notes?: string | null;
+  specialty?: string | null;
+  crmCouncil?: string | null;
+  crmNumber?: string | null;
+  crmState?: string | null;
+  manuallyEditedAt?: Date;
+}
+
+/** @deprecated Use ProfessionalListScopeFilter */
+export type DoctorListScopeFilter = ProfessionalListScopeFilter;
+/** @deprecated Use ProfessionalSourceUpsertInput */
+export type DoctorSourceUpsertInput = ProfessionalSourceUpsertInput;
 
 export interface ProfessionalRepository {
   findAll(params: {
@@ -38,7 +119,7 @@ export interface ProfessionalRepository {
     limit: number;
     search?: string;
     facilityId?: string;
-    scope: DoctorListScopeFilter;
+    scope: ProfessionalListScopeFilter;
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;
 
   findById(id: string): Promise<ProfessionalRecord | null>;
@@ -50,33 +131,21 @@ export interface ProfessionalRepository {
 
   findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]>;
 
-  create(data: {
-    firstName: string;
-    lastName: string;
-    specialty?: string | null;
-    facilityIds: string[];
-    confirmedByUserId?: string;
-  }): Promise<ProfessionalRecord>;
+  findActiveFacilities(professionalId: string): Promise<ProfessionalFacilitySummary[]>;
 
-  update(
-    id: string,
-    data: {
-      firstName?: string;
-      lastName?: string;
-      specialty?: string | null;
-      manuallyEditedAt?: Date;
-    }
-  ): Promise<ProfessionalRecord>;
+  create(data: ProfessionalCreateInput): Promise<ProfessionalRecord>;
+
+  update(id: string, data: ProfessionalUpdateInput): Promise<ProfessionalRecord>;
 
   softDelete(id: string): Promise<void>;
 
   markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void>;
 
-  upsertFromSource(input: DoctorSourceUpsertInput): Promise<{
-    doctor: ProfessionalRecord;
+  upsertFromSource(input: ProfessionalSourceUpsertInput): Promise<{
+    professional: ProfessionalRecord;
     created: boolean;
     updated: boolean;
   }>;
 
-  findExistingClinicIds(facilityIds: string[]): Promise<string[]>;
+  findExistingFacilityIds(facilityIds: string[]): Promise<string[]>;
 }

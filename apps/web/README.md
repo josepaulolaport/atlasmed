@@ -12,7 +12,7 @@ A production-ready Next.js frontend application for the AtlasMed healthcare mana
 - JWT token management with automatic refresh
 - Session management and device tracking
 - Email and phone verification
-- Role-based access control (ADMIN, MANAGER, USER)
+- Role-based access control (ADMIN, MANAGER, REP, OPS)
 
 ### User Management (Admin/Manager)
 
@@ -44,46 +44,48 @@ A production-ready Next.js frontend application for the AtlasMed healthcare mana
 - **Forms**: React Hook Form + Zod
 - **HTTP Client**: Axios with interceptors
 - **State Management**: React Context API
-- **Icons**: Lucide React
+- **Icons**: `iconify-icon` web component (Solar linear set)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Bun runtime installed
-- Backend API running on `http://localhost:3000`
+- Bun runtime installed.
+- Backend API running (default `http://localhost:3000` — start API on another port if running both locally).
 
 ### Installation
 
 ```bash
-# Install dependencies
-cd apps/web
-bun install
+cd apps/web && bun install
 ```
 
-### Environment Variables
+### Environment
 
-Create a `.env.local` file:
+Create `apps/web/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:3000
 NEXT_PUBLIC_APP_NAME=AtlasMed
 ```
 
-### Development
+Additional variables — see `apps/web/.env.local.example` for the current full list; only the ones above are required for local dev.
 
-```bash
-# Start development server
-bun dev
+### Commands
 
-# Build for production
-bun build
+| Command | Purpose |
+|---|---|
+| `bun dev` | Dev server |
+| `bun run build` | Production build |
+| `bun start` | Serve production build |
+| `bun run lint` | ESLint |
 
-# Start production server
-bun start
-```
+If running the API on `3000`, start web on a different port: `PORT=3001 bun dev`.
 
-The application will be available at `http://localhost:3000`.
+### Rules
+
+- Do NOT commit `.env.local`.
+- Do NOT hardcode the API URL in code — always go through `NEXT_PUBLIC_API_URL`.
+- Do NOT default `NEXT_PUBLIC_API_URL` in production builds — CI must inject it explicitly.
 
 ## Project Structure
 
@@ -95,7 +97,7 @@ apps/web/
 │   └── page.tsx           # Landing page
 ├── components/            # React components
 │   ├── auth/              # Auth-related components
-│   ├── layout/            # Layout components (navbar)
+│   ├── layout/            # Layout components (sidebar, top-header)
 │   └── ui/                # Reusable UI components
 ├── contexts/              # React contexts
 │   └── auth-context.tsx   # Authentication state
@@ -171,7 +173,7 @@ The application connects to the backend API at the configured `NEXT_PUBLIC_API_U
 3. **API Calls**: Use the API client functions in `lib/api/`
 4. **State**: Use the AuthContext for auth state
 5. **Styling**: Use TailwindCSS utility classes
-6. **Icons**: Use Lucide React icons
+6. **Icons**: Use `iconify-icon` with Solar linear icon set (`solar:xxx-linear`, `stroke-width="1.5"`)
 
 ## Production Deployment
 

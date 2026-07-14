@@ -1,8 +1,10 @@
 import "dotenv/config";
-import { prisma } from "../infrastructure/database/prisma.client";
-import { PrismaTerritoryRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory.repository";
-import { PrismaTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory-closure.repository";
-import { PrismaTerritorySpatialRepository } from "../modules/territory/infrastructure/repositories/prisma/prisma-territory-spatial.repository";
+import { db } from "../infrastructure/database/db";
+import { territories, territoryTypes } from "@atlasmed/database";
+import { eq, and, ne, inArray } from "drizzle-orm";
+import { DrizzleTerritoryRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory.repository";
+import { DrizzleTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
+import { DrizzleTerritorySpatialRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
 import { TerritoryClosureService } from "../modules/territory/application/services/territory-closure.service";
 import type { GeoJsonGeometry } from "../modules/territory/application/interfaces/territory-spatial.repository.interface";
 import type { TerritoryRecord } from "../modules/territory/application/interfaces/territory.repository.interface";
@@ -17,9 +19,9 @@ import {
   type BrazilStateSigla,
 } from "./brazil-geography.constants";
 
-const territoryRepository = new PrismaTerritoryRepository();
-const closureRepository = new PrismaTerritoryClosureRepository();
-const spatialRepository = new PrismaTerritorySpatialRepository();
+const territoryRepository = new DrizzleTerritoryRepository();
+const closureRepository = new DrizzleTerritoryClosureRepository();
+const spatialRepository = new DrizzleTerritorySpatialRepository();
 
 type GeoJsonFeature = {
   type: "Feature";
@@ -103,10 +105,10 @@ async function fetchMalha(path: string, intrarregiao?: string): Promise<GeoJsonF
 }
 
 async function loadTerritoryTypeIds(): Promise<IngestContext["typeIds"]> {
-  const types = await prisma.territoryType.findMany({
-    where: { slug: { in: ["country", "region", "state", "intermediate"] } },
-    select: { id: true, slug: true },
-  });
+  const types = await db
+    .select({ id: territoryTypes.id, slug: territoryTypes.slug })
+    .from(territoryTypes)
+    .where(inArray(territoryTypes.slug, ["country", "region", "state", "intermediate"]));
 
   const bySlug = Object.fromEntries(types.map((type) => [type.slug, type.id]));
 
@@ -157,23 +159,22 @@ async function ensureTerritory(
         existing.stateCode !== (input.stateCode ?? null);
 
       if (needsUpdate) {
-        await prisma.territory.update({
-          where: { id: existing.id },
-          data: {
+        await db
+          .update(territories)
+          .set({
             name: input.name,
             parentId: input.parentId,
             regionSlug: input.regionSlug ?? null,
             stateCode: input.stateCode ?? null,
-            parentAssignmentStatus: "resolved",
-            parentAssignmentSource: "manual",
             isActive: true,
-          },
-        });
+            updatedAt: new Date(),
+          })
+          .where(eq(territories.id, existing.id));
       } else if (!existing.isActive) {
-        await prisma.territory.update({
-          where: { id: existing.id },
-          data: { isActive: true },
-        });
+        await db
+          .update(territories)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(territories.id, existing.id));
       }
 
       if (!(await spatialRepository.hasBoundary(existing.id))) {
@@ -203,8 +204,6 @@ async function ensureTerritory(
     regionSlug: input.regionSlug ?? null,
     stateCode: input.stateCode ?? null,
     parentId: input.parentId,
-    parentAssignmentStatus: "resolved",
-    parentAssignmentSource: "manual",
   });
 
   await spatialRepository.saveBoundary(territory.id, input.geometry, { repairInvalid: true });
@@ -217,15 +216,23 @@ async function ingestCountry(ctx: IngestContext): Promise<string> {
   console.log("\n🇧🇷 Ingesting country boundary...");
 
   if (!ctx.dryRun) {
-    await prisma.territory.updateMany({
-      where: {
-        isActive: true,
-        countryCode: BRAZIL_COUNTRY_CODE,
-        territoryType: { isCountryLevel: true },
-        slug: { not: "br" },
-      },
-      data: { isActive: false },
-    });
+    await db
+      .update(territories)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(
+        and(
+          eq(territories.isActive, true),
+          eq(territories.countryCode, BRAZIL_COUNTRY_CODE),
+          ne(territories.slug, "br"),
+          inArray(
+            territories.territoryTypeId,
+            db
+              .select({ id: territoryTypes.id })
+              .from(territoryTypes)
+              .where(eq(territoryTypes.isCountryLevel, true))
+          )
+        )
+      );
   }
 
   const collection = await fetchMalha("paises/BR");
@@ -468,5 +475,5 @@ main()
     process.exitCode = 1;
   })
   .finally(async () => {
-    await prisma.$disconnect();
+    await db.$client.end();
   });

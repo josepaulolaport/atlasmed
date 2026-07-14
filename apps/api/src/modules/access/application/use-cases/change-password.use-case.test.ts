@@ -38,8 +38,8 @@ describe("ChangePasswordUseCase", () => {
     currentPasswordHash = await hash("CurrentPassword1!");
     mockAuditLog = createMockAuditLogService();
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => mockUser),
-      changePasswordTransaction: mock(async () => ({ user: { id: "user-123" } })),
+      findById: mock(async () => mockUser) as any,
+      changePasswordTransaction: mock(async () => ({ user: { id: "user-123" } })) as any,
     });
     mockAuthCache = createMockAuthCache();
     mockSessionCache = createMockSessionCache();

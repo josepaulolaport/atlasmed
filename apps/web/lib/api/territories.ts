@@ -1,7 +1,7 @@
 import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
 import type {
-  AddTerritoryRollupLinkRequest,
+  AnalyticsViewResponse,
   ClinicTerritoryOverrideRequest,
   CreateTerritoryRequest,
   CreateTerritoryResult,
@@ -14,9 +14,7 @@ import type {
   TerritoryType,
   UpdateTerritoryTypeRequest,
   TerritoryDescendantsResponse,
-  TerritoryGeoMembership,
   SaveBoundaryResponse,
-  TerritoryRollupLink,
   TerritoryTreeNode,
   UnassignedFacility,
   UpdateTerritoryRequest,
@@ -24,18 +22,39 @@ import type {
 
 export const territoriesApi = {
   listTerritories: async (
-    format: "tree" | "flat" = "flat"
+    format: "tree" | "flat" = "flat",
+    typeSlug?: string
   ): Promise<{ data: Territory[] | TerritoryTreeNode[] }> => {
     const response = await apiClient.get<{ data: Territory[] | TerritoryTreeNode[] }>(
       "/territory/territories",
-      { params: { format } }
+      { params: { format, type: typeSlug } }
     );
     return response.data;
   },
 
-  listAmbiguousParents: async (): Promise<{ data: Territory[] }> => {
+  listManagerZones: async (): Promise<{ data: Territory[] }> => {
     const response = await apiClient.get<{ data: Territory[] }>(
-      "/territory/territories/ambiguous-parents"
+      "/territory/territories",
+      { params: { format: "flat", type: "manager_zone" } }
+    );
+    return response.data;
+  },
+
+  listRepPatches: async (managerTerritoryId?: string): Promise<{ data: Territory[] }> => {
+    const params: Record<string, string> = { format: "flat", type: "patch" };
+    if (managerTerritoryId) {
+      params.managerTerritoryId = managerTerritoryId;
+    }
+    const response = await apiClient.get<{ data: Territory[] }>(
+      "/territory/territories",
+      { params }
+    );
+    return response.data;
+  },
+
+  listGroupingTree: async (): Promise<{ data: TerritoryTreeNode[] }> => {
+    const response = await apiClient.get<{ data: TerritoryTreeNode[] }>(
+      "/territory/territories/grouping-tree"
     );
     return response.data;
   },
@@ -125,6 +144,13 @@ export const territoriesApi = {
     return response.data;
   },
 
+  getAnalyticsView: async (groupingTerritoryId: string): Promise<AnalyticsViewResponse> => {
+    const response = await apiClient.get<AnalyticsViewResponse>(
+      `/territory/territories/${groupingTerritoryId}/analytics-view`
+    );
+    return response.data;
+  },
+
   recomputeMembership: async (): Promise<RecomputeMembershipResponse> => {
     const response = await apiClient.post<RecomputeMembershipResponse>(
       "/territory/territories/recompute-membership"
@@ -201,64 +227,6 @@ export const territoriesApi = {
     const response = await apiClient.post<TerritoryApprovalRequest>(
       `/territory/territories/approval-requests/${id}/reject`,
       { note }
-    );
-    return response.data;
-  },
-
-  listRollupLinks: async (
-    territoryId: string
-  ): Promise<{ data: TerritoryRollupLink[] }> => {
-    const response = await apiClient.get<{ data: TerritoryRollupLink[] }>(
-      `/territory/territories/${territoryId}/rollup-links`
-    );
-    return response.data;
-  },
-
-  addRollupLink: async (
-    territoryId: string,
-    data: AddTerritoryRollupLinkRequest
-  ): Promise<TerritoryRollupLink> => {
-    const response = await apiClient.post<TerritoryRollupLink>(
-      `/territory/territories/${territoryId}/rollup-links`,
-      data
-    );
-    return response.data;
-  },
-
-  removeRollupLink: async (
-    territoryId: string,
-    linkId: string
-  ): Promise<{ success: boolean }> => {
-    const response = await apiClient.delete<{ success: boolean }>(
-      `/territory/territories/${territoryId}/rollup-links/${linkId}`
-    );
-    return response.data;
-  },
-
-  listOperationalMembers: async (
-    referenceTerritoryId: string
-  ): Promise<{ data: TerritoryGeoMembership[] }> => {
-    const response = await apiClient.get<{ data: TerritoryGeoMembership[] }>(
-      `/territory/territories/${referenceTerritoryId}/operational-members`
-    );
-    return response.data;
-  },
-
-  listGeoMemberships: async (
-    operationalTerritoryId: string
-  ): Promise<{ data: TerritoryGeoMembership[] }> => {
-    const response = await apiClient.get<{ data: TerritoryGeoMembership[] }>(
-      `/territory/territories/${operationalTerritoryId}/geo-memberships`
-    );
-    return response.data;
-  },
-
-  getClippedBoundary: async (
-    operationalTerritoryId: string,
-    referenceTerritoryId: string
-  ): Promise<GeoJsonPolygon | null> => {
-    const response = await apiClient.get<GeoJsonPolygon | null>(
-      `/territory/territories/${operationalTerritoryId}/clipped-boundary/${referenceTerritoryId}`
     );
     return response.data;
   },

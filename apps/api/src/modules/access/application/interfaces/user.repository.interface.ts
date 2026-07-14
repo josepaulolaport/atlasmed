@@ -1,3 +1,29 @@
+export interface UserRecord {
+  id: string;
+  email: string | null;
+  username: string;
+  firstName: string | null;
+  lastName: string | null;
+  status: string;
+  passwordHash: string;
+  emailVerified: boolean;
+  phoneVerified: boolean;
+  phoneNumber: string | null;
+  twoFactorEnabled: boolean;
+  twoFactorSecret: string | null;
+  tokenVersion: number;
+  managerId: string | null;
+  passwordHistory: string[];
+  roleId: string;
+  role: {
+    id: string;
+    name: string;
+    priority?: number | null;
+  };
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface FindUserByIdentifierParams {
   identifier: string;
 }
@@ -35,8 +61,8 @@ export interface ResetPasswordTransactionParams {
 }
 
 export interface ResetPasswordTransactionResult {
-  user: any;
-  passwordReset: any;
+  user: UserRecord;
+  passwordReset: { id: string; usedAt: Date | null };
 }
 
 export interface UserAuthStatus {
@@ -95,7 +121,7 @@ export interface ChangePasswordTransactionParams {
 }
 
 export interface ChangePasswordTransactionResult {
-  user: any;
+  user: UserRecord;
 }
 
 export interface EnableTwoFactorParams {
@@ -104,13 +130,13 @@ export interface EnableTwoFactorParams {
 }
 
 export interface UserRepository {
-  findByIdentifier(params: FindUserByIdentifierParams): Promise<any>;
+  findByIdentifier(params: FindUserByIdentifierParams): Promise<UserRecord | null>;
 
-  findById(id: string): Promise<any>;
+  findById(id: string): Promise<UserRecord | null>;
 
   findUserAuthStatus(userId: string): Promise<UserAuthStatus | null>;
 
-  create(params: CreateUserParams): Promise<any>;
+  create(params: CreateUserParams): Promise<UserRecord>;
 
   updateLastLogin(userId: string): Promise<void>;
 
@@ -156,9 +182,9 @@ export interface UserRepository {
 
   updatePhone(userId: string, newPhone: string): Promise<void>;
 
-  findAll(params: FindAllUsersParams): Promise<{ users: any[]; total: number }>;
+  findAll(params: FindAllUsersParams): Promise<{ users: UserRecord[]; total: number }>;
 
-  updateProfile(userId: string, data: UpdateProfileParams): Promise<any>;
+  updateProfile(userId: string, data: UpdateProfileParams): Promise<UserRecord>;
 
-  updateManagerId(userId: string, managerId: string | null): Promise<any>;
+  updateManagerId(userId: string, managerId: string | null): Promise<UserRecord>;
 }

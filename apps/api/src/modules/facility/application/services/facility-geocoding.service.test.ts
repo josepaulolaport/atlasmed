@@ -24,7 +24,7 @@ describe("FacilityGeocodingService", () => {
       manuallyEditedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      deletedAt: null,
+      deactivatedAt: null,
     })),
     update: mock(async () => ({
       id: "clinic-1",
@@ -45,7 +45,7 @@ describe("FacilityGeocodingService", () => {
       manuallyEditedAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
-      deletedAt: null,
+      deactivatedAt: null,
     })),
   } as unknown as FacilityRepository;
 
@@ -64,21 +64,18 @@ describe("FacilityGeocodingService", () => {
     (geocodingPort.forwardGeocode as ReturnType<typeof mock>).mockClear();
   });
 
-  it("persists geocoded coordinates for clinics missing lat/lng", async () => {
+  it("returns null coordinates without geocoding when lat/lng are missing", async () => {
     const service = new FacilityGeocodingService({ facilityRepository, geocodingPort });
 
     const result = await service.ensureCoordinatesPersisted("clinic-1");
 
     expect(result).toEqual({
-      lat: -23.5505,
-      lng: -46.6333,
-      geocoded: true,
+      lat: null,
+      lng: null,
+      geocoded: false,
     });
-    expect(facilityRepository.update).toHaveBeenCalledWith("clinic-1", {
-      lat: -23.5505,
-      lng: -46.6333,
-    });
-    expect(geocodingPort.forwardGeocode).toHaveBeenCalledTimes(1);
+    expect(facilityRepository.update).not.toHaveBeenCalled();
+    expect(geocodingPort.forwardGeocode).not.toHaveBeenCalled();
   });
 
   it("does not geocode again when coordinates already exist", async () => {

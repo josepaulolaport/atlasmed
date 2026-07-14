@@ -7,8 +7,8 @@ import { canOnResource } from "./casl-scoped.helpers";
 
 describe("defineAbilitiesForUser", () => {
   it("should match base role abilities when no grants", () => {
-    const base = defineAbilitiesFor(Role.USER);
-    const merged = defineAbilitiesForUser(Role.USER, []);
+    const base = defineAbilitiesFor(Role.REP);
+    const merged = defineAbilitiesForUser(Role.REP, []);
 
     expect(merged.can("read", "FACILITY")).toBe(base.can("read", "FACILITY"));
     expect(merged.can("update", "FACILITY")).toBe(base.can("update", "FACILITY"));
@@ -25,14 +25,14 @@ describe("defineAbilitiesForUser", () => {
       },
     ];
 
-    expect(canAccessRoute(Role.USER, grants, "update", "FACILITY")).toBe(true);
+    expect(canAccessRoute(Role.REP, grants, "update", "FACILITY")).toBe(true);
     expect(
-      canAccessResource(Role.USER, grants, "update", "FACILITY", "facility-1")
+      canAccessResource(Role.REP, grants, "update", "FACILITY", "facility-1")
     ).toBe(true);
   });
 
   it("should allow role-wide facility update for any facility id", () => {
-    const merged = defineAbilitiesForUser(Role.USER, [
+    const merged = defineAbilitiesForUser(Role.REP, [
       {
         id: "grant-1",
         resource: "FACILITY",
@@ -46,12 +46,12 @@ describe("defineAbilitiesForUser", () => {
   });
 
   it("maps legacy CLINIC grants to FACILITY subject", () => {
-    const withoutGrant = defineAbilitiesForUser(Role.USER, []);
+    const withoutGrant = defineAbilitiesForUser(Role.REP, []);
     expect(canOnResource(withoutGrant, "delete", "FACILITY", "facility-1")).toBe(
       false
     );
 
-    const merged = defineAbilitiesForUser(Role.USER, [
+    const merged = defineAbilitiesForUser(Role.REP, [
       {
         id: "grant-legacy",
         resource: "CLINIC",
@@ -70,7 +70,7 @@ describe("role catalog permissions", () => {
     expect(defineAbilitiesFor(Role.ADMIN).can("read", "CATALOG")).toBe(true);
     expect(defineAbilitiesFor(Role.ADMIN).can("manage", "CATALOG")).toBe(true);
     expect(defineAbilitiesFor(Role.MANAGER).can("read", "CATALOG")).toBe(false);
-    expect(defineAbilitiesFor(Role.USER).can("read", "CATALOG")).toBe(false);
+    expect(defineAbilitiesFor(Role.REP).can("read", "CATALOG")).toBe(false);
   });
 });
 
@@ -85,7 +85,7 @@ describe("route permission helpers", () => {
       },
     ];
 
-    expect(canAccessRoute(Role.USER, grants, "update", "FACILITY")).toBe(true);
+    expect(canAccessRoute(Role.REP, grants, "update", "FACILITY")).toBe(true);
   });
 
   it("canAccessResource allows USER facility update for matching and other ids", () => {
@@ -99,10 +99,10 @@ describe("route permission helpers", () => {
     ];
 
     expect(
-      canAccessResource(Role.USER, grants, "update", "FACILITY", "facility-1")
+      canAccessResource(Role.REP, grants, "update", "FACILITY", "facility-1")
     ).toBe(true);
     expect(
-      canAccessResource(Role.USER, grants, "update", "FACILITY", "facility-2")
+      canAccessResource(Role.REP, grants, "update", "FACILITY", "facility-2")
     ).toBe(true);
   });
 });

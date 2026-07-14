@@ -1,21 +1,19 @@
-import { prisma } from "../infrastructure/database/prisma.client";
+import { db } from "../infrastructure/database/db";
+import { users } from "@atlasmed/database";
 
 export async function isIntegrationDatabaseReady(): Promise<boolean> {
   try {
-    await prisma.user.findFirst({
-      select: { managerId: true },
-      take: 1,
-    });
+    await db.select({ managerId: users.managerId }).from(users).limit(1);
     return true;
   } catch (error) {
-    console.warn(
-      "Skipping integration tests: database schema is unavailable or not migrated.",
-      error instanceof Error ? error.message : error
-    );
     return false;
   }
 }
 
-export function skipIntegrationTest(dbReady: boolean): boolean {
-  return !dbReady;
+export function assertIntegrationDatabaseReady(dbReady: boolean): void {
+  if (!dbReady) {
+    throw new Error(
+      "Test DB not ready — cannot run integration tests. Ensure DATABASE_URL points to a migrated PostgreSQL instance."
+    );
+  }
 }

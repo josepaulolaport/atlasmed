@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import type { IngestionSuggestionType } from "@atlasmed/database";
+import type { CnesSuggestionType as IngestionSuggestionType } from "@atlasmed/database";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { registryIngestionUseCases } from "../../composition";
@@ -70,6 +70,31 @@ const listRunsRoute = new Elysia()
         limit: t.Optional(t.String()),
         sourceProvider: t.Optional(t.String()),
       }),
+    }
+  );
+
+const getRunStatusRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("manage", "REGISTRY_INGESTION"))
+  .get(
+    "/registry-ingestion/runs/:id/status",
+    async ({ params }) => {
+      const result = await registryIngestionUseCases.getRunStatus().execute({
+        runId: params.id,
+      });
+
+      if (!result) {
+        throw new ResourceNotFoundError("IngestionRun", params.id);
+      }
+
+      return result;
+    },
+    {
+      detail: {
+        summary: "Get registry ingestion run status",
+        tags: ["Registry Ingestion"],
+        security: [{ bearerAuth: [] }],
+      },
     }
   );
 
@@ -179,6 +204,7 @@ export const registryIngestionRoutes = new Elysia()
   .use(runIngestionRoute)
   .use(runDemoRoute)
   .use(listRunsRoute)
+  .use(getRunStatusRoute)
   .use(listSuggestionsRoute)
   .use(approveSuggestionRoute)
   .use(rejectSuggestionRoute);

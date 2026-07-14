@@ -41,11 +41,11 @@ const statusVariant: Record<
 };
 
 const statusFilters: Array<{ label: string; value?: InviteStatus }> = [
-  { label: "All", value: undefined },
-  { label: "Pending", value: "PENDING" },
-  { label: "Accepted", value: "ACCEPTED" },
-  { label: "Expired", value: "EXPIRED" },
-  { label: "Revoked", value: "REVOKED" },
+  { label: "Todos", value: undefined },
+  { label: "Pendente", value: "PENDING" },
+  { label: "Aceito", value: "ACCEPTED" },
+  { label: "Expirado", value: "EXPIRED" },
+  { label: "Revogado", value: "REVOKED" },
 ];
 
 export default function InvitationsPage() {
@@ -78,8 +78,8 @@ export default function InvitationsPage() {
         setTotalPages(response.pagination.totalPages);
       } catch {
         toast({
-          title: "Error",
-          description: "Failed to load invitations",
+          title: "Erro",
+          description: "Falha ao carregar convites",
           variant: "destructive",
         });
       } finally {
@@ -93,7 +93,7 @@ export default function InvitationsPage() {
   }, [currentUser, page, statusFilter]);
 
   const handleRevoke = async (inviteId: string) => {
-    if (!confirm("Are you sure you want to revoke this invitation?")) {
+    if (!confirm("Tem certeza de que deseja revogar este convite?")) {
       return;
     }
 
@@ -102,8 +102,8 @@ export default function InvitationsPage() {
     try {
       await usersApi.revokeInvite(inviteId);
       toast({
-        title: "Success",
-        description: "Invitation revoked successfully",
+        title: "Sucesso",
+        description: "Convite revogado com sucesso",
         variant: "success",
       });
 
@@ -116,8 +116,8 @@ export default function InvitationsPage() {
       setTotalPages(response.pagination.totalPages);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to revoke invitation",
+        title: "Erro",
+        description: "Falha ao revogar convite",
         variant: "destructive",
       });
     } finally {
@@ -131,8 +131,8 @@ export default function InvitationsPage() {
     try {
       await usersApi.resendInvite(inviteId);
       toast({
-        title: "Success",
-        description: "Invitation resent successfully",
+        title: "Sucesso",
+        description: "Convite reenviado com sucesso",
         variant: "success",
       });
 
@@ -145,8 +145,8 @@ export default function InvitationsPage() {
       setTotalPages(response.pagination.totalPages);
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to resend invitation",
+        title: "Erro",
+        description: "Falha ao reenviar convite",
         variant: "destructive",
       });
     } finally {
@@ -165,25 +165,25 @@ export default function InvitationsPage() {
           <Link href="/users">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Users
+              Voltar para Usuários
             </Button>
           </Link>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">Invitations</h1>
+          <h1 className="mt-4 text-3xl font-bold text-gray-900">Convites</h1>
           <p className="mt-2 text-gray-600">
-            View and manage pending and historical user invitations
+            Visualize e gerencie os convites de usuários pendentes e históricos
           </p>
         </div>
         <div className="flex gap-2">
           <Link href="/users">
             <Button variant="outline">
               <Users className="mr-2 h-4 w-4" />
-              Users
+              Usuários
             </Button>
           </Link>
           <Link href="/users/invite">
             <Button>
               <UserPlus className="mr-2 h-4 w-4" />
-              Invite User
+              Convidar usuário
             </Button>
           </Link>
         </div>
@@ -214,20 +214,20 @@ export default function InvitationsPage() {
             </div>
           ) : invitations.length === 0 ? (
             <div className="py-12 text-center text-gray-500">
-              No invitations found
+              Nenhum convite encontrado
             </div>
           ) : (
             <>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Recipient</TableHead>
-                    <TableHead>Role</TableHead>
+                    <TableHead>Destinatário</TableHead>
+                    <TableHead>Função</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Invited By</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>Convidado por</TableHead>
+                    <TableHead>Criado</TableHead>
+                    <TableHead>Expira</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -293,7 +293,7 @@ export default function InvitationsPage() {
                               disabled={resendingId === invitation.id}
                             >
                               <RefreshCw className="mr-2 h-4 w-4" />
-                              {resendingId === invitation.id ? "Sending..." : "Resend"}
+                              {resendingId === invitation.id ? "Enviando..." : "Reenviar"}
                             </Button>
                             <Button
                               variant="destructive"
@@ -302,7 +302,7 @@ export default function InvitationsPage() {
                               disabled={revokingId === invitation.id}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              {revokingId === invitation.id ? "Revoking..." : "Revoke"}
+                              {revokingId === invitation.id ? "Revogando..." : "Revogar"}
                             </Button>
                           </div>
                         )}
@@ -319,17 +319,17 @@ export default function InvitationsPage() {
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
                   >
-                    Previous
+                    Anterior
                   </Button>
                   <span className="text-sm text-gray-600">
-                    Page {page} of {totalPages}
+                    Página {page} de {totalPages}
                   </span>
                   <Button
                     variant="outline"
                     onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                     disabled={page === totalPages}
                   >
-                    Next
+                    Próximo
                   </Button>
                 </div>
               )}

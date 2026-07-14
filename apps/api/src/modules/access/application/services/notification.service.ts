@@ -1,4 +1,5 @@
 import { apiEnv } from "@atlasmed/config";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
 import { sendPasswordResetWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
 
@@ -35,11 +36,11 @@ export class NotificationService {
           })
           .then(() => undefined)
           .catch((error) => {
-            console.error("Failed to send password changed email:", error);
+            logger.error("Failed to send password changed email", error);
           })
       );
     } else if (params.email) {
-      console.warn("Password changed email skipped — Resend not configured", {
+      logger.warn("Password changed email skipped — Resend not configured", {
         email: params.email,
       });
     }
@@ -51,7 +52,7 @@ export class NotificationService {
 
       notifications.push(
         sendPasswordResetWhatsApp(params.phoneNumber, message).catch((error) => {
-          console.error("Failed to send password changed WhatsApp:", error);
+          logger.error("Failed to send password changed WhatsApp", error);
         })
       );
     }

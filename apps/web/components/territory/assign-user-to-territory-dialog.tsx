@@ -40,9 +40,9 @@ export function AssignUserToTerritoryDialog({
 
   const assignmentHint = useMemo(() => {
     if (territory.territoryType.assignableToUsers) {
-      return "Assign field reps to clinic-assignment territory types.";
+      return "Atribua representantes de campo a tipos de território de atribuição de clínicas.";
     }
-    return "Assign managers to territory types configured for manager oversight.";
+    return "Atribua gestores a tipos de território configurados para supervisão de gestor.";
   }, [territory.territoryType]);
 
   const loadUsers = useCallback(async () => {
@@ -52,9 +52,9 @@ export function AssignUserToTerritoryDialog({
       setUsers(
         response.data.filter(
           (u) =>
-            (u.role.name === "USER" || u.role.name === "MANAGER") &&
+            (u.role.name === "REP" || u.role.name === "MANAGER") &&
             canAssignUserToTerritoryNode({
-              userRole: u.role.name as "USER" | "MANAGER",
+              userRole: u.role.name as "REP" | "MANAGER",
               territory,
             })
         )
@@ -84,7 +84,7 @@ export function AssignUserToTerritoryDialog({
     if (
       selectedUser &&
       !canAssignUserToTerritoryNode({
-        userRole: selectedUser.role.name as "USER" | "MANAGER",
+        userRole: selectedUser.role.name as "REP" | "MANAGER",
         territory,
       })
     ) {
@@ -117,17 +117,17 @@ export function AssignUserToTerritoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Assign user to {territory.slug}</DialogTitle>
+          <DialogTitle>Atribuir usuário a {territory.slug}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-gray-500">{assignmentHint}</p>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="assign-user-search">Search users</Label>
+            <Label htmlFor="assign-user-search">Buscar usuários</Label>
             <Input
               id="assign-user-search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Name or email"
+              placeholder="Nome ou email"
             />
           </div>
           {loading ? (
@@ -154,17 +154,17 @@ export function AssignUserToTerritoryDialog({
                 </label>
               ))}
               {users.length === 0 && (
-                <p className="text-sm text-gray-500">No eligible users found.</p>
+                <p className="text-sm text-gray-500">Nenhum usuário elegível encontrado.</p>
               )}
             </div>
           )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            Cancelar
           </Button>
           <Button onClick={handleAssign} disabled={saving || !selectedUserId}>
-            {saving ? "Assigning..." : "Assign"}
+            {saving ? "Atribuindo..." : "Atribuir"}
           </Button>
         </DialogFooter>
       </DialogContent>

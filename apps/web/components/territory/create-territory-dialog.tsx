@@ -211,23 +211,10 @@ export function CreateTerritoryDialog({
         });
       } else {
         const resolution = result.boundaryResolution;
-        if (resolution?.mode === "operational") {
+        if (resolution?.mode === "rep_patch") {
           toast({
             title: "Territory created",
-            description: `Boundary indexed across ${resolution.membershipCount} reference region(s).`,
-            variant: "success",
-          });
-        } else if (resolution?.mode === "reference" && resolution.parentAssignmentStatus === "ambiguous") {
-          toast({
-            title: "Territory created — review parent",
-            description:
-              "The boundary overlaps multiple parents. Resolve it from the ambiguous parents queue.",
-            variant: "destructive",
-          });
-        } else if (resolution?.mode === "reference" && resolution.rollupAncestorIds.length > 0) {
-          toast({
-            title: "Territory created",
-            description: `Geo-linked to parent with ${resolution.rollupAncestorIds.length} secondary rollup link(s).`,
+            description: `Rep patch linked to manager zone ${resolution.managerTerritoryId}.`,
             variant: "success",
           });
         } else {
@@ -256,21 +243,21 @@ export function CreateTerritoryDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Create territory</DialogTitle>
+          <DialogTitle>Criar território</DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <p className="text-sm text-gray-500">
-            A <strong>market</strong> is the country this territory belongs to. An{" "}
-            <strong>identifier</strong> is its unique ID in the system. Parent hierarchy comes
-            from the boundary overlap.
+            Um <strong>mercado</strong> é o país ao qual este território pertence. Um{" "}
+            <strong>identificador</strong> é seu ID único no sistema. A hierarquia de pai vem
+            da sobreposição de limites.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="md:col-span-2">
-              <Label htmlFor="territory-type">Type</Label>
+              <Label htmlFor="territory-type">Tipo</Label>
               <Select value={territoryTypeId} onValueChange={setTerritoryTypeId}>
                 <SelectTrigger id="territory-type">
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder="Selecionar tipo" />
                 </SelectTrigger>
                 <SelectContent>
                   {types.map((type) => (
@@ -287,7 +274,7 @@ export function CreateTerritoryDialog({
 
             {isCountryType ? (
               <div className="md:col-span-2">
-                <Label htmlFor="country-iso">Country (ISO code)</Label>
+                <Label htmlFor="country-iso">País (código ISO)</Label>
                 <Input
                   id="country-iso"
                   value={marketCountryCode}
@@ -296,18 +283,18 @@ export function CreateTerritoryDialog({
                   placeholder="BR"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Creates the top-level country territory. Its identifier will be{" "}
+                  Cria o território de país de nível superior. Seu identificador será{" "}
                   <code>{formatCountryCode(marketCountryCode).toLowerCase() || "br"}</code>.
                 </p>
               </div>
             ) : (
               <>
                 <div>
-                  <Label htmlFor="market-country">Market (country)</Label>
+                  <Label htmlFor="market-country">Mercado (país)</Label>
                   {selectedParent ? (
                     <p className="mt-2 rounded-md border bg-gray-50 px-3 py-2 text-sm">
-                      {selectedParent.countryCode ?? effectiveMarketCountryCode} — inherited from
-                      parent <span className="font-medium">{selectedParent.name}</span>
+                      {selectedParent.countryCode ?? effectiveMarketCountryCode} — herdado do
+                      pai <span className="font-medium">{selectedParent.name}</span>
                     </p>
                   ) : countryMarkets.length > 0 ? (
                     <Select
@@ -315,7 +302,7 @@ export function CreateTerritoryDialog({
                       onValueChange={setMarketCountryCode}
                     >
                       <SelectTrigger id="market-country">
-                        <SelectValue placeholder="Select country market" />
+                        <SelectValue placeholder="Selecionar mercado (país)" />
                       </SelectTrigger>
                       <SelectContent>
                         {countryMarkets.map((country) => (
@@ -338,11 +325,11 @@ export function CreateTerritoryDialog({
                     />
                   )}
                   <p className="mt-1 text-xs text-gray-500">
-                    Geo-linking only considers territories in the same market.
+                    O geovínculo considera apenas territórios do mesmo mercado.
                   </p>
                 </div>
                 <div>
-                  <Label htmlFor="territory-identifier">Identifier</Label>
+                  <Label htmlFor="territory-identifier">Identificador</Label>
                   <Input
                     id="territory-identifier"
                     value={identifier}
@@ -353,30 +340,30 @@ export function CreateTerritoryDialog({
                     placeholder="sudeste"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Unique ID for this territory (lowercase, e.g. <code>sudeste</code>).
+                    ID único para este território (minúsculas, ex.: <code>sudeste</code>).
                   </p>
                 </div>
               </>
             )}
 
             <div className={isCountryType ? "md:col-span-2" : "md:col-span-2"}>
-              <Label htmlFor="territory-name">Display name</Label>
+              <Label htmlFor="territory-name">Nome de exibição</Label>
               <Input
                 id="territory-name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder={isCountryType ? "Brazil" : "Sudeste"}
+                placeholder={isCountryType ? "Brasil" : "Sudeste"}
               />
             </div>
           </div>
 
           {!isCountryType && (
             <div>
-              <Label>Parent territory (optional)</Label>
+              <Label>Território pai (opcional)</Label>
               <TerritoryPicker
                 value={selectedParentId}
                 onChange={setSelectedParentId}
-                placeholder="Geo-linking will set the parent from the boundary"
+                placeholder="O geovínculo definirá o pai a partir do limite"
               />
             </div>
           )}
@@ -384,9 +371,9 @@ export function CreateTerritoryDialog({
           {requiresBoundary ? (
             <div className="space-y-3">
               <div>
-                <Label>Boundary</Label>
+                <Label>Limite</Label>
                 <p className="text-xs text-gray-500">
-                  Required. Draw one or more polygons on the map, or paste GeoJSON Polygon /
+                  Obrigatório. Desenhe um ou mais polígonos no mapa ou cole um GeoJSON Polygon /
                   MultiPolygon.
                 </p>
               </div>
@@ -397,7 +384,7 @@ export function CreateTerritoryDialog({
                   variant={boundaryMode === "map" ? "default" : "outline"}
                   onClick={() => setBoundaryMode("map")}
                 >
-                  Map
+                  Mapa
                 </Button>
                 <Button
                   type="button"
@@ -421,13 +408,13 @@ export function CreateTerritoryDialog({
             </div>
           ) : (
             <p className="text-sm text-gray-500">
-              This territory type does not use geographic boundaries.
+              Este tipo de território não usa limites geográficos.
             </p>
           )}
 
           {!isAdmin && (
             <div>
-              <Label htmlFor="create-reason">Reason (optional)</Label>
+              <Label htmlFor="create-reason">Motivo (opcional)</Label>
               <Input
                 id="create-reason"
                 value={reason}
@@ -438,10 +425,10 @@ export function CreateTerritoryDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)}>
-            Cancel
+            Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Creating..." : isAdmin ? "Create territory" : "Submit for approval"}
+            {saving ? "Criando..." : isAdmin ? "Criar território" : "Enviar para aprovação"}
           </Button>
         </DialogFooter>
       </DialogContent>

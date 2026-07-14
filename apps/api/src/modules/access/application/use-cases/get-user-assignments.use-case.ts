@@ -55,7 +55,7 @@ export class GetUserAssignmentsUseCase {
         manager = {
           id: managerUser.id,
           username: managerUser.username,
-          email: managerUser.email,
+          email: managerUser.email!,
           ...(managerUser.firstName ? { firstName: managerUser.firstName } : {}),
           ...(managerUser.lastName ? { lastName: managerUser.lastName } : {}),
         };
@@ -65,9 +65,9 @@ export class GetUserAssignmentsUseCase {
     const territoryAssignments =
       await this.deps.scopeRepository.findTerritoryAssignmentsByUserId(params.targetUserId);
 
-    const roleName = user.role?.name ?? Role.USER;
+    const roleName = user.role?.name ?? Role.REP;
     const isOperationallyActive =
-      roleName === Role.USER && territoryAssignments.length > 0;
+      roleName === Role.REP && territoryAssignments.length > 0;
 
     return {
       userId: params.targetUserId,

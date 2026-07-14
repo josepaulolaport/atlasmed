@@ -18,6 +18,8 @@ const scopedManager: ScopeContext = {
   territoryIds: ["patch-in-scope"],
   facilityIds: ["facility-1"],
   analyticsFacilityIds: ["facility-1"],
+  clinicIds: ["facility-1"],
+  analyticsClinicIds: ["facility-1"],
   managedUserIds: ["user-1"],
   isOperationallyActive: true,
 };
@@ -39,10 +41,9 @@ function createTerritoryRepository(
             regionSlug: null,
             stateCode: null,
             parentId: "region-1",
+            managerTerritoryId: "manager-zone-1",
             isActive: true,
-            parentAssignmentStatus: "resolved",
-            parentAssignmentSource: "manual",
-            organizationId: null,
+            sectorId: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           }
@@ -133,7 +134,7 @@ describe("TerritoryScopePolicyService", () => {
         scope: scopedManager,
         territoryRepository: createTerritoryRepository(),
         closureRepository: { findAncestorIds: mock(async () => []) } as unknown as TerritoryClosureRepository,
-        type: "facility_territory_change",
+        type: "clinic_territory_change",
         facilityId: "facility-out",
         toTerritoryId: "patch-in-scope",
       })

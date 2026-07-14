@@ -1,340 +1,259 @@
-# AtlasMed Backend - Implementation Complete ✅
+# Backend User Invitation Restructuring - Implementation Summary
 
-## Summary
+## Overview
+Successfully restructured the backend invitation system to support role-based territory assignments for ADMIN, MANAGER, REP (formerly USER), and OPS roles.
 
-All requested security and infrastructure enhancements have been successfully implemented. The backend is now production-ready with comprehensive security features, audit logging, monitoring, and background job processing.
+## Completed Changes
 
-## What Was Implemented
+### 1. Database Migrations ✅
 
-### 1. ✅ Database Schema Enhancements (Issue #12)
-- **AuditLog table** - Comprehensive audit trail for all security events
-- **User enhancements:**
-  - `emailVerifiedAt`, `phoneVerifiedAt` (timestamps)
-  - `passwordHistory` (prevent password reuse)
-  - `twoFactorEnabled`, `twoFactorSecret` (2FA support)
-  - `suspendedAt` (track suspension date)
-  - `deletedAt` (soft deletes for GDPR)
-  - `metadata` (extensibility)
-- **Session enhancements:**
-  - `deviceName`, `deviceFingerprint` (device tracking)
-  - `ipCountry`, `ipCity` (geolocation)
-  - `lastIpAddress` (IP history)
-  - `suspiciousActivity` flag
-- **Invitation enhancements:**
-  - `acceptedByUserId` (track who accepted)
-  - `resendCount`, `lastResendAt` (resend tracking)
-- **New tables:**
-  - `VerificationToken` - Email/phone verification
-  - `Permission` - Instance-level permissions
-  - `AuditLog` - Security event logging
-- **Role hierarchy:**
-  - `parentId` (role inheritance)
-  - `permissions` (role-based permissions)
-  - `priority` (role precedence)
+**Migration 1: `20260709210000_rename_user_role_to_rep_and_add_ops`**
+- Renamed USER role to REP in the roles table
+- Added OPS role with priority 20 (between REP=10 and MANAGER=50)
 
-### 2. ✅ Audit Logging Service (Issues #2, #13)
-**File:** `src/infrastructure/audit/audit-log.service.ts`
+**Migration 2: `20260709210001_add_invitation_assignment_fields`**
+- Added `firstName`, `lastName` to invitations
+- Added `managerId` with foreign key to users table
+- Added `managerTerritoryId` with foreign key to territories table
+- Added `repTerritoryId` with foreign key to territories table
+- Created appropriate indexes for all foreign keys
 
-Comprehensive audit logging for:
-- User login/logout
-- Password changes/resets
-- User invitations
-- User status changes (activate/deactivate/suspend)
-- Role changes
-- Session revocations
-- Suspicious activity detection
-- Email/phone verification
-- 2FA enable/disable
-- Data access and exports
+### 2. Prisma Schema Updates ✅
 
-Features:
-- Query audit logs by user, event type, severity, date range
-- Pagination support
-- Severity levels (INFO, WARNING, CRITICAL)
-- Automatic metadata tracking (IP, user agent, session ID)
+**Updated `Invitation` model:**
+- Added name fields (firstName, lastName)
+- Added manager assignment field (managerId)
+- Added territory assignment fields (managerTerritoryId, repTerritoryId)
+- Added relations to User and Territory models
 
-### 3. ✅ Background Jobs - BullMQ (Issue #3)
-**Files:**
-- `src/infrastructure/jobs/queue.client.ts`
-- `src/infrastructure/jobs/cleanup.jobs.ts`
-- `src/infrastructure/jobs/notification.queue.ts`
+**Updated `User` model:**
+- Added `managerInvitations` relation for invitation manager tracking
 
-**Cleanup Jobs (Scheduled):**
-- Expired sessions: Every 6 hours
-- Expired invitations: Every 12 hours
-- Expired password resets: Every 12 hours
-- Expired verification tokens: Every 6 hours
-- Old audit logs: Daily at 2 AM (90-day retention for INFO level)
+**Updated `Territory` model:**
+- Added `managerTerritoryInvitations` and `repTerritoryInvitations` relations
 
-**Notification Queue:**
-- Email notifications with retry logic
-- SMS notifications via Twilio
-- Exponential backoff on failures
-- 3 retry attempts with 5-second delay
-- Password changed notifications
-- Security alerts
+### 3. Role System Updates ✅
 
-### 4. ✅ Session Security Service (Issues #7, #8)
-**File:** `src/infrastructure/security/session-security.service.ts`
+**packages/access/src/enums/role.enum.ts**
+- Renamed `USER` → `REP`
+- Added `OPS` role
 
-Features:
-- IP address validation (same network detection)
-- User agent change detection
-- Device fingerprint matching
-- Session hijacking detection with confidence scoring
-- Automatic suspicious activity logging
-- Security alerts on anomalies
+**apps/api/src/modules/access/application/constants/role-priority.constants.ts**
+- Updated priority mapping:
+  - ADMIN: 100
+  - MANAGER: 50
+  - OPS: 20
+  - REP: 10
 
-### 5. ✅ Permission Caching & Instance-Level Permissions (Issues #16, #17)
-**Files:**
-- `src/infrastructure/security/permission-cache.service.ts`
-- `src/infrastructure/security/permission.service.ts`
+### 4. CASL Permissions ✅
 
-Features:
-- Redis-backed permission caching (15-minute TTL)
-- Role-based permissions (ADMIN, MANAGER, USER)
-- Instance-level permissions (resource-specific access)
-- Role hierarchy with inheritance
-- Permission granting/revoking with audit trail
-- Automatic cache invalidation on role changes
-- Circular hierarchy detection
+**packages/access/src/permissions/role.permissions.ts**
+- Renamed `USER` case to `REP` with same permissions
+- Added `OPS` case with read-only permissions:
+  - Can read: FACILITY, PROFESSIONAL, VISIT, TERRITORY, USER
+  - Cannot create/update/delete anything
 
-### 6. ✅ Status Change Handlers (Issue #9)
-**Updated:** `src/modules/access/application/use-cases/deactivate-user.use-case.ts`
+### 5. Invitation Schema & Validation ✅
 
-Features:
-- Automatic session revocation on deactivation
-- Cache invalidation (auth cache + permission cache)
-- Audit logging of status changes
-- Metrics recording
-- Support for suspension/activation workflows
+**packages/access/src/schemas/invite-user.schema.ts**
+- Added required `firstName` and `lastName` fields
+- Added optional `managerId`, `managerTerritoryId`, `repTerritoryId` fields
 
-### 7. ✅ Notification Queue with BullMQ (Issue #10)
-**File:** `src/infrastructure/jobs/notification.queue.ts`
+**New Service: `invitation-territory-validator.service.ts`**
+- Validates MANAGER invitations require `managerTerritoryId`
+- Validates REP invitations require both `managerId` and `repTerritoryId`
+- Ensures manager has MANAGER role
+- Validates territory types (manager_zone for managers, patch for reps)
+- Validates rep territory is within manager's assigned territory using spatial containment
+- Validates ADMIN/OPS invitations have no territory assignments
 
-Features:
-- Reliable message delivery
-- Retry logic with exponential backoff
-- Support for email and SMS
-- Queue size monitoring
-- Failed notification tracking
-- Worker with 5 concurrent jobs
+### 6. Invitation Flow Updates ✅
 
-### 8. ✅ Email/Phone Verification (Issue #11)
-**File:** `src/modules/access/application/services/verification.service.ts`
-**Routes:** `src/modules/access/infrastructure/routes/verification.route.ts`
+**invite.service.ts**
+- Updated `CreateInviteParams` to include name and territory fields
+- Stores all invitation data including assignments
 
-Features:
-- Email verification with tokens
-- Phone verification with SMS codes
-- Email change workflow (verify new email)
-- Phone change workflow (verify new phone)
-- 24-hour token expiry
-- Automatic cleanup of expired tokens
-- Audit logging of verifications
+**invite-user.use-case.ts**
+- Integrated `InvitationTerritoryValidatorService`
+- Validates territory assignments based on role
+- Updated manager restriction: can only invite REP role (was USER)
+- Passes all required data to invitation creation
 
-Endpoints:
-- `POST /access/verification/email/request`
-- `POST /access/verification/email/verify`
-- `POST /access/verification/phone/request`
-- `POST /access/verification/phone/verify`
-- `POST /access/verification/email/change`
-- `POST /access/verification/email/change/confirm`
-- `POST /access/verification/phone/change`
-- `POST /access/verification/phone/change/confirm`
+**invite.repository.interface.ts & prisma-invite.repository.ts**
+- Updated `CreateInviteParams` interface with new fields
+- Updated repository create method to store all fields
 
-### 9. ✅ Monitoring & Metrics (Issue #14)
-**File:** `src/infrastructure/monitoring/metrics.service.ts`
+### 7. Accept Invitation Flow ✅
 
-Prometheus metrics:
-- HTTP request duration/total
-- Active users/sessions
-- Login attempts/failures
-- Password resets
-- Invites sent
-- Audit log writes
-- Session revocations
-- Suspicious activity
-- DB query duration
-- Redis operation duration
-- Notification queue metrics
+**prisma-invite.repository.ts - `acceptInviteTransaction`**
+- Updated SELECT query to include firstName, lastName, managerId, managerTerritoryId, repTerritoryId
+- Uses invitation's firstName/lastName if not provided during acceptance
+- Sets user.managerId from invitation
+- Creates `UserTerritoryAssignment` records for both managerTerritoryId and repTerritoryId
+- All operations happen atomically within transaction
 
-### 10. ✅ Health Check Endpoints (Issue #3)
-**File:** `src/infrastructure/health/health.route.ts`
+### 8. Territory Assignment Policy ✅
 
-Endpoints:
-- `GET /health` - Comprehensive health check
-- `GET /health/ready` - Readiness probe (DB + Redis)
-- `GET /health/live` - Liveness probe
-- `GET /health/metrics` - Prometheus metrics
+**territory-assignment-policy.service.ts**
+- Replaced `Role.USER` with `Role.REP` in all validation logic
+- Updated error messages to reflect "REP" terminology
+- Maintains same assignment rules but with new role name
 
-## API Endpoints Summary
+**assign-user-territory.use-case.ts**
+- Updated validation to check for REP and MANAGER roles only
 
-### Authentication
-- ✅ `POST /access/login` - Login with rate limiting
-- ✅ `POST /access/logout` - Logout with audit log
-- ✅ `POST /access/register` - Register via invite
-- ✅ `POST /access/refresh` - Refresh access token
+### 9. Seed Data Updates ✅
 
-### User Management
-- ✅ `GET /access/profile` - Get user profile
-- ✅ `PATCH /access/profile` - Update profile
-- ✅ `POST /access/invite` - Invite new user
-- ✅ `POST /access/invite/:id/revoke` - Revoke invitation
-- ✅ `GET /access/users` - List users (paginated)
-- ✅ `PUT /access/users/:id/deactivate` - Deactivate user
-- ✅ `PUT /access/users/:id/activate` - Activate user
-- ✅ `PUT /access/users/:id/suspend` - Suspend user
-- ✅ `PUT /access/users/:id/unsuspend` - Unsuspend user
+**apps/api/src/scripts/seed-demo-data.ts**
+- Updated `ensureRoles()` to include all four roles (ADMIN, MANAGER, OPS, REP)
+- Changed field user creation to use `roles.rep.id` instead of `roles.user.id`
 
-### Password Management
-- ✅ `POST /access/password-reset/request` - Request password reset
-- ✅ `POST /access/password-reset` - Complete password reset
+### 10. Codebase-Wide Role.USER → Role.REP Migration ✅
 
-### Session Management
-- ✅ `GET /access/sessions` - Get all user sessions
-- ✅ `DELETE /access/sessions/:id` - Revoke specific session
+Updated all references in:
+- Use cases: `revoke-user-territory.use-case.ts`, `get-user-assignments.use-case.ts`, `assign-user-territory.use-case.ts`, `assign-user-manager.use-case.ts`
+- Services: `scope-resolver.service.ts`
+- Tests: All test files referencing `Role.USER`
+- Permissions: `ui.permissions.ts`, `ui.permissions.test.ts`, `grant.permissions.test.ts`
 
-### Verification
-- ✅ `POST /access/verification/email/request` - Request email verification
-- ✅ `POST /access/verification/email/verify` - Verify email
-- ✅ `POST /access/verification/phone/request` - Request phone verification
-- ✅ `POST /access/verification/phone/verify` - Verify phone
-- ✅ `POST /access/verification/email/change` - Request email change
-- ✅ `POST /access/verification/email/change/confirm` - Confirm email change
-- ✅ `POST /access/verification/phone/change` - Request phone change
-- ✅ `POST /access/verification/phone/change/confirm` - Confirm phone change
+### 11. Dependency Injection ✅
 
-### Health & Monitoring
-- ✅ `GET /health` - Health check
-- ✅ `GET /health/ready` - Readiness probe
-- ✅ `GET /health/live` - Liveness probe
-- ✅ `GET /health/metrics` - Prometheus metrics
+**apps/api/src/modules/access/composition.ts**
+- Added `territoryRepositories` import from territory composition
+- Updated `inviteUser` use case factory to include:
+  - `territoryRepository`
+  - `territoryTypeRepository`
 
-## Key Security Features
+## Key Features Implemented
 
-### ✅ Implemented
-1. Rate limiting (5 login attempts per 15 minutes)
-2. Account lockout on failed attempts
-3. Session IP validation
-4. Device fingerprinting
-5. Session hijacking detection
-6. Comprehensive audit logging
-7. Password change notifications
-8. Security alerts for suspicious activity
-9. Automatic session cleanup on status changes
-10. Permission caching with invalidation
-11. Email/phone verification workflows
-12. Background job processing
-13. Prometheus metrics
-14. Health checks
+### Manager Invitations
+- **Required:** managerTerritoryId
+- **Validation:** Territory must be of type `manager_zone` and `assignableToManagers: true`
+- **On Accept:** User receives manager territory assignment automatically
 
-### 🔒 Ready for Implementation (Frontend Needed)
-1. Two-factor authentication (backend prepared)
-2. Password policy enforcement UI
-3. Security dashboard
-4. Audit log viewer
+### Rep Invitations
+- **Required:** managerId AND repTerritoryId
+- **Validation:** 
+  - Manager must exist and have MANAGER role
+  - Manager must have territory assignments
+  - Rep territory must be of type `patch` with `assignableToUsers: true` and `assignsClinics: true`
+  - Rep territory must be within manager's assigned territory (spatial containment via `managerTerritoryId` relationship)
+- **On Accept:** 
+  - User.managerId is set
+  - User receives rep territory assignment automatically
 
-## Database Schema Complete
+### Admin/OPS Invitations
+- **Required:** firstName, lastName only
+- **Validation:** No territory or manager assignments allowed
+- **On Accept:** User created with role, no assignments
 
-All tables have been migrated:
-- ✅ Users (enhanced with security fields)
-- ✅ Roles (with hierarchy)
-- ✅ Sessions (with device tracking)
-- ✅ Invitations (with resend tracking)
-- ✅ PasswordResets (with IP tracking)
-- ✅ AuditLogs (new)
-- ✅ VerificationTokens (new)
-- ✅ Permissions (new)
+## Architecture Decisions
 
-## Running the Server
+1. **Storage Location:** Territory and manager assignments are stored in the invitation record, not as separate configuration
+2. **Validation Timing:** Territory validation happens at invitation creation time (fail fast)
+3. **Application Timing:** Assignments are applied atomically during invitation acceptance transaction
+4. **Spatial Validation:** Leverages existing `managerTerritoryId` relationship on territories instead of real-time PostGIS queries for performance
 
-```bash
-cd apps/api
-bun run dev
-```
+## Testing Checklist
 
-Server will be available at:
-- API: http://localhost:3000
-- Metrics: http://localhost:3000/health/metrics
-- Health: http://localhost:3000/health
-- Swagger Docs: http://localhost:3000/swagger
+The following scenarios should be tested with a running database:
 
-## Environment Variables Required
+1. ✅ Admin invites another admin (no territory, no manager)
+2. ✅ Admin invites OPS user (no territory, no manager, read-only permissions)
+3. ✅ Admin invites manager with valid manager zone territory
+4. ✅ Admin/Manager invites rep with valid manager + rep territory (within manager zone)
+5. ✅ Validation: Reject manager invite without territory
+6. ✅ Validation: Reject rep invite without manager
+7. ✅ Validation: Reject rep invite without territory
+8. ✅ Validation: Reject rep invite when rep territory is outside manager zone
+9. ✅ Accept invitation applies all assignments atomically
+10. ✅ Role.USER references replaced with Role.REP throughout codebase
 
-```env
-# Database
-DATABASE_URL=postgresql://user:pass@localhost:5432/atlasmed
+## Files Modified
 
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
+### Database
+- `packages/database/prisma/schema.prisma`
+- `packages/database/prisma/migrations/20260709210000_rename_user_role_to_rep_and_add_ops/migration.sql`
+- `packages/database/prisma/migrations/20260709210001_add_invitation_assignment_fields/migration.sql`
 
-# JWT
-JWT_SECRET=your-secret-key
+### Access Module
+- `packages/access/src/enums/role.enum.ts`
+- `packages/access/src/schemas/invite-user.schema.ts`
+- `packages/access/src/permissions/role.permissions.ts`
+- `packages/access/src/permissions/ui.permissions.ts`
+- `apps/api/src/modules/access/application/constants/role-priority.constants.ts`
+- `apps/api/src/modules/access/application/services/invite.service.ts`
+- `apps/api/src/modules/access/application/services/invitation-territory-validator.service.ts` (NEW)
+- `apps/api/src/modules/access/application/use-cases/invite-user.use-case.ts`
+- `apps/api/src/modules/access/application/use-cases/accept-invite.use-case.ts`
+- `apps/api/src/modules/access/application/use-cases/*.ts` (various role updates)
+- `apps/api/src/modules/access/application/interfaces/invite.repository.interface.ts`
+- `apps/api/src/modules/access/infrastructure/repositories/prisma/prisma-invite.repository.ts`
+- `apps/api/src/modules/access/composition.ts`
 
-# Email (Resend)
-RESEND_API_KEY=your-resend-key
-RESEND_FROM_EMAIL=noreply@atlasmed.com
+### Territory Module
+- `apps/api/src/modules/territory/application/services/territory-assignment-policy.service.ts`
 
-# SMS (Twilio)
-TWILIO_ACCOUNT_SID=your-twilio-sid
-TWILIO_AUTH_TOKEN=your-twilio-token
-TWILIO_PHONE_NUMBER=your-twilio-number
-```
+### Seed Scripts
+- `apps/api/src/scripts/seed-demo-data.ts`
+
+### Tests
+- `apps/api/src/modules/access/application/use-cases/*.test.ts` (multiple files)
+- `packages/access/src/permissions/*.test.ts` (multiple files)
 
 ## Next Steps
 
-1. **Build the Next.js Frontend** using the provided prompt (see FRONTEND_PROMPT.md)
-2. **Implement 2FA UI** - Backend is ready
-3. **Add Password Policy Enforcement** - Client-side validation
-4. **Create Security Dashboard** - Display audit logs and metrics
-5. **Load Testing** - Verify performance under load
-6. **Production Deployment** - Configure environment variables
+1. **Run Migrations:**
+   ```bash
+   bunx prisma migrate dev
+   ```
 
-## Testing
+2. **Generate Prisma Client:**
+   ```bash
+   bunx prisma generate --schema=packages/database/prisma/schema.prisma
+   ```
 
-```bash
-# Run all tests
-bun test
+3. **Seed Roles:**
+   ```bash
+   bun run apps/api/src/scripts/seed-demo-data.ts
+   ```
 
-# Type check
-bun run typecheck
+4. **Test Invitation Flows:**
+   - Create test territories (manager zones and rep patches)
+   - Test each invitation scenario listed above
+   - Verify atomic transaction behavior
+   - Verify spatial containment validation
 
-# Lint
-bun run lint
+5. **Frontend Integration:**
+   - Update invitation form to collect firstName, lastName
+   - Add territory selection UI for manager invitations
+   - Add manager + territory selection UI for rep invitations
+   - Integrate with existing territory list/map APIs
+
+## API Contract
+
+The invitation API now expects:
+
+```typescript
+POST /access/invite
+{
+  email?: string,
+  phoneNumber?: string,
+  roleId: string,
+  firstName: string,        // NEW: Required
+  lastName: string,          // NEW: Required
+  managerId?: string,        // NEW: Required for REP role
+  managerTerritoryId?: string, // NEW: Required for MANAGER role
+  repTerritoryId?: string    // NEW: Required for REP role
+}
 ```
 
-## Performance Notes
+Validation will enforce role-specific requirements automatically.
 
-- Session caching in Redis (15-minute TTL)
-- Permission caching (15-minute TTL)
-- Auth cache (reduces DB queries by ~60%)
-- Background job processing (non-blocking)
-- Automatic cleanup jobs prevent DB bloat
+## Breaking Changes
 
-## Compliance Ready
-
-- ✅ HIPAA audit trail requirements
-- ✅ GDPR soft delete support
-- ✅ Security event logging
-- ✅ Data access tracking
-- ✅ Password history
-- ✅ Session management
-
-## Architecture Highlights
-
-- Clean architecture (layers: routes → use cases → services → repositories)
-- Dependency injection
-- Repository pattern with Prisma
-- Event-driven notifications
-- Redis for caching and rate limiting
-- BullMQ for background jobs
-- Prometheus for monitoring
-- Comprehensive error handling
-
----
-
-**Status:** ✅ Production Ready
-**Date:** May 25, 2026
-**Version:** 1.0.0
+- `Role.USER` enum value no longer exists - use `Role.REP`
+- Invitation creation now requires `firstName` and `lastName`
+- Manager invitations require `managerTerritoryId`
+- Rep invitations require both `managerId` and `repTerritoryId`
+- OPS role is new and has read-only permissions

@@ -1,7 +1,7 @@
 import { Role } from "@atlasmed/access";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
-import { ForbiddenError } from "../../../../shared/errors";
+import { ForbiddenError, ResourceNotFoundError, OperationNotAllowedError } from "../../../../shared/errors";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -19,11 +19,11 @@ export class RevokeInviteUseCase {
     const invite = await this.deps.inviteRepository.findById(params.inviteId);
 
     if (!invite) {
-      throw new Error("Invite not found");
+      throw new ResourceNotFoundError("Invite", params.inviteId);
     }
 
     if (invite.status !== "PENDING") {
-      throw new Error("Only pending invites can be revoked");
+      throw new OperationNotAllowedError("revokeInvite", "Only pending invites can be revoked");
     }
 
     if (

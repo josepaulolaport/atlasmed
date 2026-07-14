@@ -7,6 +7,7 @@ export const LEGACY_NODE_TYPE_BY_TYPE_SLUG: Record<string, TerritoryNodeType> = 
   state: "state",
   intermediate: "intermediate",
   patch: "patch",
+  manager_zone: "region",
 };
 
 export function legacyNodeTypeForTypeSlug(typeSlug: string): TerritoryNodeType {

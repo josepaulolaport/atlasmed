@@ -53,7 +53,7 @@ describe("Catalog HTTP auth integration", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -62,7 +62,7 @@ describe("Catalog HTTP auth integration", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
       fixtures.manager.id,
@@ -106,14 +106,14 @@ describe("Catalog HTTP auth integration", () => {
   }
 
   it("returns 401 for unauthenticated catalog list", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest("http://localhost/api/v1/sectors", null);
     expect(response.status).toBe(401);
   });
 
   it("returns 403 when MANAGER lists sectors", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -125,7 +125,7 @@ describe("Catalog HTTP auth integration", () => {
   });
 
   it("returns 403 when USER lists sectors", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -137,7 +137,7 @@ describe("Catalog HTTP auth integration", () => {
   });
 
   it("allows ADMIN to list sectors", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
@@ -151,7 +151,7 @@ describe("Catalog HTTP auth integration", () => {
   });
 
   it("returns 403 when MANAGER creates a sector", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.manager.email);
     const response = await authRequest(

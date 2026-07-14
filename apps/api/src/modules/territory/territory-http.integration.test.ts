@@ -11,7 +11,9 @@ import { HttpError } from "@atlasmed/access";
 import { access } from "../access/index";
 import { territory } from "../territory/index";
 import { AppError } from "../../shared/errors";
-import { prisma } from "../../infrastructure/database/prisma.client";
+import { eq } from "drizzle-orm";
+import { territories } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -54,7 +56,7 @@ describe("Territory HTTP scope integration", () => {
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
@@ -63,7 +65,7 @@ describe("Territory HTTP scope integration", () => {
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
       fixtures.manager.id,
@@ -109,7 +111,7 @@ describe("Territory HTTP scope integration", () => {
   }
 
   it("manager territory list excludes out-of-scope patches", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const managerToken = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -126,7 +128,7 @@ describe("Territory HTTP scope integration", () => {
   });
 
   it("manager cannot read out-of-scope territory detail", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const managerToken = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -138,12 +140,14 @@ describe("Territory HTTP scope integration", () => {
   });
 
   it("manager cannot deactivate a non-leaf territory in jurisdiction", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
-    const region = await prisma.territory.findUnique({
-      where: { id: fixtures.territoryId },
-      select: { parentId: true },
-    });
+    const region = await db
+      .select({ parentId: territories.parentId })
+      .from(territories)
+      .where(eq(territories.id, fixtures.territoryId))
+      .limit(1)
+      .then((r) => r[0] ?? null);
 
     expect(region?.parentId).toBeTruthy();
 
@@ -162,7 +166,7 @@ describe("Territory HTTP scope integration", () => {
   });
 
   it("manager can submit deactivate approval for in-scope leaf patch", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const managerToken = await loginToken(fixtures.manager.email);
     const response = await authRequest(
@@ -182,7 +186,7 @@ describe("Territory HTTP scope integration", () => {
   });
 
   it("admin territory list includes all fixture territories", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const adminToken = await loginToken(fixtures.admin.email);
     const response = await authRequest(

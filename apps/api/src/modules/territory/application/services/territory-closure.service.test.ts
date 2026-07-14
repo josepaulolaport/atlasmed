@@ -18,10 +18,9 @@ describe("TerritoryClosureService", () => {
           regionSlug: "BR",
           stateCode: null,
           parentId: null,
+          managerTerritoryId: null,
           isActive: true,
-          parentAssignmentStatus: "resolved" as const,
-          parentAssignmentSource: "inferred" as const,
-          organizationId: null,
+          sectorId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -39,10 +38,9 @@ describe("TerritoryClosureService", () => {
           regionSlug: "SE",
           stateCode: null,
           parentId: "br",
+          managerTerritoryId: null,
           isActive: true,
-          parentAssignmentStatus: "resolved" as const,
-          parentAssignmentSource: "geo" as const,
-          organizationId: null,
+          sectorId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -60,10 +58,9 @@ describe("TerritoryClosureService", () => {
           regionSlug: "SE",
           stateCode: null,
           parentId: "region",
+          managerTerritoryId: null,
           isActive: true,
-          parentAssignmentStatus: "resolved" as const,
-          parentAssignmentSource: "geo" as const,
-          organizationId: null,
+          sectorId: null,
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -75,10 +72,13 @@ describe("TerritoryClosureService", () => {
       findBySlug: mock(async () => null),
       findByCode: mock(async () => null),
       findAllActive: mock(async () => [...territories.values()]),
+      findActiveByTypeSlug: mock(async () => []),
+      findByIds: mock(async () => []),
       findChildren: mock(async (parentId: string) =>
         [...territories.values()].filter((t) => t.parentId === parentId)
       ),
       countActiveChildren: mock(async () => 0),
+      countRepPatchesByManagerZone: mock(async () => 0),
       countClinics: mock(async () => 0),
       countAssignedUsers: mock(async () => 0),
       create: mock(async () => {
@@ -88,7 +88,7 @@ describe("TerritoryClosureService", () => {
         throw new Error("not implemented");
       }),
       findActiveCountryByCode: mock(async () => territories.get("br") ?? null),
-      findAmbiguousParentAssignments: mock(async () => []),
+      findRepPatchIdsByManagerTerritoryIds: mock(async () => []),
     };
 
     const insertedRows: Array<{

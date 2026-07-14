@@ -3,8 +3,10 @@ import type { ReactElement } from "react";
 import { apiEnv } from "@atlasmed/config";
 
 import { resend } from "./resend.client";
+import { logger } from "../../logging/logger";
 import { InviteEmail } from "./templates/invite.email";
 import { PasswordResetEmail } from "./templates/password-reset.email";
+import { ExternalServiceError } from "../../../shared/errors";
 
 export async function sendInviteEmail(
   to: string,
@@ -16,7 +18,7 @@ export async function sendInviteEmail(
   }
 ): Promise<void> {
   if (!resend) {
-    console.warn("Resend client not initialized. Skipping email send.");
+    logger.warn("Resend client not initialized — skipping email send");
     return;
   }
 
@@ -33,8 +35,7 @@ export async function sendInviteEmail(
       }) as ReactElement,
     });
   } catch (error) {
-    console.error("Failed to send invite email:", error);
-    throw new Error("Failed to send invite email");
+    throw new ExternalServiceError("Resend (invite email)", error instanceof Error ? error : undefined);
   }
 }
 
@@ -46,7 +47,7 @@ export async function sendPasswordResetEmail(
   }
 ): Promise<void> {
   if (!resend) {
-    console.warn("Resend client not initialized. Skipping email send.");
+    logger.warn("Resend client not initialized — skipping email send");
     return;
   }
 
@@ -61,7 +62,6 @@ export async function sendPasswordResetEmail(
       }) as ReactElement,
     });
   } catch (error) {
-    console.error("Failed to send password reset email:", error);
-    throw new Error("Failed to send password reset email");
+    throw new ExternalServiceError("Resend (password reset email)", error instanceof Error ? error : undefined);
   }
 }

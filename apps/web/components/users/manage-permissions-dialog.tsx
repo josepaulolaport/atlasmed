@@ -37,10 +37,9 @@ interface ManagePermissionsDialogProps {
 }
 
 const RESOURCES = [
-  "USER",
+  "REP",
   "FACILITY",
   "PROFESSIONAL",
-  "VISIT",
   "TERRITORY",
   "INVITATION",
 ] as const;
@@ -58,7 +57,7 @@ export function ManagePermissionsDialog({
   const form = useForm<GrantForm>({
     resolver: zodResolver(grantPermissionSchema),
     defaultValues: {
-      resource: "USER",
+      resource: "REP",
       action: "read",
     },
   });
@@ -145,9 +144,9 @@ export function ManagePermissionsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Manage permissions</DialogTitle>
+          <DialogTitle>Gerenciar permissões</DialogTitle>
           <DialogDescription>
-            Grant or revoke exceptional access for {user?.username}
+            Conceda ou revogue acesso excepcional para {user?.username}
           </DialogDescription>
         </DialogHeader>
 
@@ -158,9 +157,9 @@ export function ManagePermissionsDialog({
         ) : (
           <div className="space-y-6">
             <div className="space-y-2">
-              <Label>Current grants</Label>
+              <Label>Concessões atuais</Label>
               {grants.length === 0 ? (
-                <p className="text-sm text-gray-500">No additional grants beyond role defaults.</p>
+                <p className="text-sm text-gray-500">Nenhuma concessão adicional além dos padrões da função.</p>
               ) : (
                 <ul className="max-h-48 space-y-2 overflow-y-auto">
                   {grants.map((grant) => (
@@ -192,10 +191,10 @@ export function ManagePermissionsDialog({
             </div>
 
             <form onSubmit={form.handleSubmit(handleGrant)} className="space-y-4 border-t pt-4">
-              <Label>Grant new permission</Label>
+              <Label>Conceder nova permissão</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs">Resource</Label>
+                  <Label className="text-xs">Recurso</Label>
                   <Select
                     value={form.watch("resource")}
                     onValueChange={(value) =>
@@ -215,7 +214,7 @@ export function ManagePermissionsDialog({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs">Action</Label>
+                  <Label className="text-xs">Ação</Label>
                   <Select
                     value={form.watch("action")}
                     onValueChange={(value) =>
@@ -236,11 +235,11 @@ export function ManagePermissionsDialog({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Resource ID (optional, for scoped grants)</Label>
-                <Input placeholder="Leave empty for global grant" {...form.register("resourceId")} />
+                <Label className="text-xs">ID do recurso (opcional, para concessões restritas)</Label>
+                <Input placeholder="Deixe vazio para concessão global" {...form.register("resourceId")} />
               </div>
               <Button type="submit" className="w-full">
-                Grant permission
+                Conceder permissão
               </Button>
             </form>
           </div>

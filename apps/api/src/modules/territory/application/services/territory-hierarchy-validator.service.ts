@@ -3,6 +3,11 @@ import type { TerritoryRecord } from "../interfaces/territory.repository.interfa
 import { OperationNotAllowedError } from "../../../../shared/errors";
 import { validateCountryCode } from "../constants/territory-geo.constants";
 import { validateTerritorySlug } from "../constants/territory-slug.constants";
+import {
+  isGroupingHierarchyType,
+  isManagerZoneType,
+  isRepPatchType,
+} from "../constants/territory-roles.constants";
 
 export class TerritoryHierarchyValidator {
   validateCreate(params: {
@@ -43,6 +48,23 @@ export class TerritoryHierarchyValidator {
         );
       }
       return;
+    }
+
+    if (isManagerZoneType(type) || isRepPatchType(type)) {
+      if (parentId || parent) {
+        throw new OperationNotAllowedError(
+          "create_territory",
+          "Manager zones and rep patches cannot have a tree parent"
+        );
+      }
+      return;
+    }
+
+    if (isGroupingHierarchyType(type) && !parentId) {
+      throw new OperationNotAllowedError(
+        "create_territory",
+        "Grouping hierarchy territories require a parent"
+      );
     }
 
     if (parent) {

@@ -1,4 +1,5 @@
 import { Counter, Histogram, Gauge, register } from "prom-client";
+import { logger } from "../logging/logger";
 
 export class MetricsService {
   private static instance: MetricsService;
@@ -241,26 +242,22 @@ export class MetricsService {
 
   public async updateActiveMetrics(): Promise<void> {
     try {
+      const { db } = await import("../database/db");
+      const { users, sessions } = await import("@atlasmed/database");
+      const { eq, isNull, gt, and, count } = await import("drizzle-orm");
+
       const [activeUserCount, activeSessionCount] = await Promise.all([
-        (async () => {
-          const { prisma } = await import("../database/prisma.client");
-          return prisma.user.count({ where: { status: "ACTIVE" } });
-        })(),
-        (async () => {
-          const { prisma } = await import("../database/prisma.client");
-          return prisma.session.count({
-            where: {
-              revokedAt: null,
-              expiresAt: { gt: new Date() },
-            },
-          });
-        })(),
+        db.select({ count: count() }).from(users).where(eq(users.status, "ACTIVE"))
+          .then(([r]) => Number(r?.count ?? 0)),
+        db.select({ count: count() }).from(sessions).where(
+          and(isNull(sessions.revokedAt), gt(sessions.expiresAt, new Date()))
+        ).then(([r]) => Number(r?.count ?? 0)),
       ]);
 
       this.activeUsers.set(activeUserCount);
       this.activeSessions.set(activeSessionCount);
     } catch (error) {
-      console.error("Failed to update active metrics:", error);
+      logger.error("Failed to update active metrics", error);
     }
   }
 }
@@ -268,5 +265,7 @@ export class MetricsService {
 export const metricsService = MetricsService.getInstance();
 
 setInterval(() => {
-  metricsService.updateActiveMetrics().catch(console.error);
+  metricsService.updateActiveMetrics().catch((error) => {
+    logger.error("Failed to update active metrics on interval", error);
+  });
 }, 60000);

@@ -5,6 +5,7 @@ import type {
   TerritoryHierarchyPort,
   TerritoryScopePort,
 } from "../interfaces/scope.repository.interface";
+import { tracer } from "../../../../infrastructure/tracing/tracer";
 
 export interface ScopeResolverDependencies {
   scopeRepository: ScopeRepository;
@@ -16,15 +17,23 @@ export class ScopeResolver {
   constructor(private readonly deps: ScopeResolverDependencies) {}
 
   async resolve(userId: string, roleName: string): Promise<ScopeContext> {
+    return tracer.with(
+      "scope.resolve",
+      async () => this.resolveScope(userId, roleName),
+      { "user.id": userId, "app.module": "access" }
+    );
+  }
+
+  private async resolveScope(userId: string, roleName: string): Promise<ScopeContext> {
     if (roleName === Role.ADMIN) {
       return createGlobalScopeContext();
     }
 
-    if (roleName === Role.USER) {
+    if (roleName === Role.REP) {
       const assignedTerritoryIds =
         await this.deps.scopeRepository.findTerritoryIdsByUserId(userId);
       const effectiveTerritoryIds =
-        await this.deps.territoryHierarchyPort.resolveDescendantIds(
+        await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
           assignedTerritoryIds,
           true
         );
@@ -56,12 +65,12 @@ export class ScopeResolver {
 
       const oversightTerritoryIds =
         ownAssignments.length > 0
-          ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+          ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
               ownAssignments,
               true
             )
           : reportAssignments.length > 0
-            ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+            ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
                 reportAssignments,
                 true
               )
@@ -69,7 +78,7 @@ export class ScopeResolver {
 
       const analyticsEffectiveTerritoryIds =
         reportAssignments.length > 0
-          ? await this.deps.territoryHierarchyPort.resolveDescendantIds(
+          ? await this.deps.territoryHierarchyPort.resolveEffectiveTerritoryIds(
               reportAssignments,
               true
             )
@@ -102,6 +111,10 @@ export class ScopeResolver {
           managedUserIds.length > 0 &&
           (oversightTerritoryIds.length > 0 || analyticsEffectiveTerritoryIds.length > 0),
       });
+    }
+
+    if (roleName === Role.OPS) {
+      return createGlobalScopeContext();
     }
 
     return createEmptyScopeContext();

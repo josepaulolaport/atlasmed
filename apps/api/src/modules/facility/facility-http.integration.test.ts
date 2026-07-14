@@ -8,6 +8,10 @@ import {
 } from "bun:test";
 import { access } from "../access/index";
 import { facility } from "../facility/index";
+import { professional } from "../professional/index";
+import { like, inArray } from "drizzle-orm";
+import { professionals, facilityProfessionals } from "@atlasmed/database";
+import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
 import { isIntegrationDatabaseReady } from "../../test-utils/integration-database";
@@ -28,19 +32,37 @@ describe("Facility HTTP auth integration", () => {
   let dbReady = false;
   let fixtures: ScopeIntegrationFixtures;
   let app: HttpIntegrationApp;
+  let contextProfessionalId: string;
 
   beforeAll(async () => {
     dbReady = await isIntegrationDatabaseReady();
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const uniqueId = getUniqueTestId();
     fixtures = await seedScopeIntegrationFixtures(uniqueId);
-    app = createHttpIntegrationApp(access, facility);
+    app = createHttpIntegrationApp(access, facility, professional);
     await redis.flushdb();
+
+    const professionalRecord = await db
+      .insert(professionals)
+      .values({
+        firstName: "Facility",
+        lastName: `Context ${uniqueId}`,
+        taxId: "52998224725",
+      })
+      .returning()
+      .then((r) => r[0]!);
+    await db.insert(facilityProfessionals).values({
+      facilityId: fixtures.inScopeFacilityId,
+      professionalId: professionalRecord.id,
+      confirmedAt: new Date(),
+      isPartner: false,
+    });
+    contextProfessionalId = professionalRecord.id;
   });
 
   beforeEach(async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
     await scopeCacheService.invalidateMany([
       fixtures.admin.id,
       fixtures.manager.id,
@@ -50,6 +72,20 @@ describe("Facility HTTP auth integration", () => {
 
   afterAll(async () => {
     if (!dbReady || !fixtures) return;
+
+    const profIds = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(like(professionals.lastName, `%${fixtures.uniqueId}%`))
+      .then((r) => r.map((p) => p.id));
+    if (profIds.length > 0) {
+      await db
+        .delete(facilityProfessionals)
+        .where(inArray(facilityProfessionals.professionalId, profIds));
+    }
+    await db
+      .delete(professionals)
+      .where(like(professionals.lastName, `%${fixtures.uniqueId}%`));
     await cleanupScopeIntegrationFixtures(fixtures.uniqueId);
   });
 
@@ -67,7 +103,7 @@ describe("Facility HTTP auth integration", () => {
   }
 
   it("returns 401 for unauthenticated facility list", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await authRequest(
       app,
@@ -79,7 +115,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("returns 403 when USER tries to create a facility", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -99,12 +135,12 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("allows ADMIN to list facilities", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.admin.email);
     const response = await authRequest(
       app,
-      "http://localhost/api/v1/facilities",
+      `http://localhost/api/v1/facilities?search=${encodeURIComponent(`Scope Facility In ${fixtures.uniqueId}`)}`,
       token
     );
 
@@ -117,7 +153,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("scoped field USER can read in-territory facility", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -132,7 +168,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("scoped field USER gets 403 for out-of-territory facility", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -145,7 +181,7 @@ describe("Facility HTTP auth integration", () => {
   });
 
   it("field USER facility list excludes out-of-scope facilities", async () => {
-    if (!dbReady) return;
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const token = await loginToken(fixtures.fieldUser.email);
     const response = await authRequest(
@@ -159,5 +195,75 @@ describe("Facility HTTP auth integration", () => {
     const ids = body.data.map((row) => row.id);
     expect(ids).toContain(fixtures.inScopeFacilityId);
     expect(ids).not.toContain(fixtures.outOfScopeFacilityId);
+  });
+
+  it("scoped field USER can read facility professional context", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.fieldUser.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`,
+      token
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      professional: { id: string; taxId?: string };
+      association: { facilityId: string };
+    };
+    expect(body.professional.id).toBe(contextProfessionalId);
+    expect(body.professional.taxId).toBe("52998224725");
+    expect(body.association.facilityId).toBe(fixtures.inScopeFacilityId);
+  });
+
+  it("allows ADMIN to patch facility professional role flags", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          isPartner: true,
+          relationshipLevel: 8,
+          notes: "Primary partner",
+        }),
+      }
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      isPartner: boolean;
+      relationshipLevel?: number;
+      notes?: string;
+    };
+    expect(body.isPartner).toBe(true);
+    expect(body.relationshipLevel).toBe(8);
+    expect(body.notes).toBe("Primary partner");
+  });
+
+  it("rejects invalid relationship level on facility professional patch", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.admin.email);
+    const response = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${fixtures.inScopeFacilityId}/professionals/${contextProfessionalId}`,
+      token,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          relationshipLevel: 99,
+        }),
+      }
+    );
+
+    expect(response.status).toBe(400);
   });
 });

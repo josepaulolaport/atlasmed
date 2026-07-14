@@ -13,15 +13,14 @@
  */
 
 import { redis } from "../../infrastructure/cache/redis.client";
-import { prisma } from "../../infrastructure/database/prisma.client";
 
 // Repositories
-import { PrismaUserRepository } from "./infrastructure/repositories/prisma/prisma-user.repository";
-import { PrismaInviteRepository } from "./infrastructure/repositories/prisma/prisma-invite.repository";
-import { PrismaSessionRepository } from "./infrastructure/repositories/prisma/prisma-session.repository";
-import { PrismaPasswordResetRepository } from "./infrastructure/repositories/prisma/prisma-password-reset.repository";
-import { PrismaRoleRepository } from "./infrastructure/repositories/prisma/prisma-role.repository";
-import { PrismaVerificationTokenRepository } from "./infrastructure/repositories/prisma/prisma-verification-token.repository";
+import { DrizzleUserRepository } from "./infrastructure/repositories/drizzle/drizzle-user.repository";
+import { DrizzleInviteRepository } from "./infrastructure/repositories/drizzle/drizzle-invite.repository";
+import { DrizzleSessionRepository } from "./infrastructure/repositories/drizzle/drizzle-session.repository";
+import { DrizzlePasswordResetRepository } from "./infrastructure/repositories/drizzle/drizzle-password-reset.repository";
+import { DrizzleRoleRepository } from "./infrastructure/repositories/drizzle/drizzle-role.repository";
+import { DrizzleVerificationTokenRepository } from "./infrastructure/repositories/drizzle/drizzle-verification-token.repository";
 
 // Cache Services
 import { AuthCacheService } from "./infrastructure/cache/auth-cache.service";
@@ -74,10 +73,10 @@ import { VerificationService } from "./application/services/verification.service
 import { TwoFactorService } from "./application/services/two-factor.service";
 import { Pending2FALoginService } from "./application/services/pending-2fa-login.service";
 
-import { PrismaScopeRepository } from "./infrastructure/repositories/prisma/prisma-scope.repository";
-import { PrismaAccessGrantRepository } from "./infrastructure/repositories/prisma/prisma-access-grant.repository";
+import { DrizzleScopeRepository } from "./infrastructure/repositories/drizzle/drizzle-scope.repository";
+import { DrizzleAccessGrantRepository } from "./infrastructure/repositories/drizzle/drizzle-access-grant.repository";
 import { facilityTerritoryScopePort } from "../facility/composition";
-import { territoryHierarchyPort, territoryAssignmentPolicy } from "../territory/composition";
+import { territoryHierarchyPort, territoryAssignmentPolicy, territoryRepositories } from "../territory/composition";
 import { ScopeService } from "./application/services/scope.service";
 import { AccessGrantService } from "./application/services/access-grant.service";
 import { AccessGrantCacheService } from "./infrastructure/cache/access-grant-cache.service";
@@ -96,14 +95,14 @@ export const accessInfrastructure = {
 
 // Singletons - Infrastructure
 export const accessRepositories = {
-  user: new PrismaUserRepository(),
-  invite: new PrismaInviteRepository(),
-  session: new PrismaSessionRepository(),
-  passwordReset: new PrismaPasswordResetRepository({ prisma }),
-  role: new PrismaRoleRepository(),
-  verificationToken: new PrismaVerificationTokenRepository({ prisma }),
-  scope: new PrismaScopeRepository(),
-  accessGrant: new PrismaAccessGrantRepository(),
+  user: new DrizzleUserRepository(),
+  invite: new DrizzleInviteRepository(),
+  session: new DrizzleSessionRepository(),
+  passwordReset: new DrizzlePasswordResetRepository(),
+  role: new DrizzleRoleRepository(),
+  verificationToken: new DrizzleVerificationTokenRepository(),
+  scope: new DrizzleScopeRepository(),
+  accessGrant: new DrizzleAccessGrantRepository(),
 };
 
 const territoryScopePort = facilityTerritoryScopePort;
@@ -192,6 +191,8 @@ export const accessUseCases = {
     userRepository: accessRepositories.user,
     inviteRepository: accessRepositories.invite,
     roleRepository: accessRepositories.role,
+    territoryRepository: territoryRepositories.territory,
+    territoryTypeRepository: territoryRepositories.territoryType,
     auditLog: accessInfrastructure.auditLog,
     metrics: accessInfrastructure.metrics,
   }),

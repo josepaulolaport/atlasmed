@@ -1,4 +1,5 @@
 import type { ScopeContext } from "@atlasmed/access";
+import { logger } from "../../../../infrastructure/logging/logger";
 import { redis } from "../../../../infrastructure/cache/redis.client";
 
 const CACHE_TTL_SECONDS = 900;
@@ -19,7 +20,7 @@ export class ScopeCacheService {
 
       return JSON.parse(cached) as ScopeContext;
     } catch (error) {
-      console.error("Failed to get scope from cache:", error);
+      logger.error("Failed to get scope from cache", error);
       return null;
     }
   }
@@ -28,7 +29,7 @@ export class ScopeCacheService {
     try {
       await redis.setex(this.getCacheKey(userId), CACHE_TTL_SECONDS, JSON.stringify(scope));
     } catch (error) {
-      console.error("Failed to cache scope:", error);
+      logger.error("Failed to cache scope", error);
     }
   }
 
@@ -36,7 +37,7 @@ export class ScopeCacheService {
     try {
       await redis.del(this.getCacheKey(userId));
     } catch (error) {
-      console.error("Failed to invalidate scope cache:", error);
+      logger.error("Failed to invalidate scope cache", error);
     }
   }
 
@@ -54,7 +55,7 @@ export class ScopeCacheService {
 
       await pipeline.exec();
     } catch (error) {
-      console.error("Failed to invalidate scope cache for multiple users:", error);
+      logger.error("Failed to invalidate scope cache for multiple users", error);
     }
   }
 }

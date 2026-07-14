@@ -228,27 +228,9 @@
 
 ---
 
-### B.3 Implement real `TerritoryScopePort` (when clinic schema exists)
+### B.3 Implement real `TerritoryScopePort` ✅ Done
 
-**Priority:** Critical for clinic launch  
-**Issue:** `StubTerritoryScopePort` returns `[]` for all `facilityIds`.
-
-**Files:**
-- `apps/api/src/modules/access/infrastructure/scope/stub-territory-scope.port.ts`
-- New: `prisma-territory-scope.port.ts` (or clinic module adapter)
-- `apps/api/src/modules/access/composition.ts`
-- `apps/api/src/modules/access/application/services/scope-resolver.service.ts`
-
-**Tasks:**
-- [ ] Implement `getFacilityIdsForTerritories(territoryIds)` against clinic/territory tables.
-- [ ] Wire in composition; remove stub from production path.
-- [ ] Integration test: USER with territory assignment gets non-empty `facilityIds`.
-- [ ] Remove `console.warn` from stub; use structured logger only in stub until replaced.
-
-**Acceptance criteria:**
-- `getScope()` returns accurate `facilityIds` for USER and MANAGER roles.
-
-**Dependency:** Facility module schema (`Territory`, `Clinic` or equivalent).
+**Status:** Implemented. `DrizzleTerritoryScopePort` is wired in composition. `StubTerritoryScopePort` has been deleted.
 
 ---
 

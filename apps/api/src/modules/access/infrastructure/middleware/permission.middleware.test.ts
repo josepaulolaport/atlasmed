@@ -38,7 +38,7 @@ describe("PermissionMiddleware", () => {
     username: "user",
     role: {
       id: "role-user",
-      name: "USER" as const,
+      name: "REP" as const,
       description: null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -56,12 +56,6 @@ describe("PermissionMiddleware", () => {
       const ability = defineAbilitiesFor("ADMIN");
 
       expect(ability.can("manage", "FACILITY")).toBe(true);
-    });
-
-    it("should allow ADMIN to manage VISIT", () => {
-      const ability = defineAbilitiesFor("ADMIN");
-
-      expect(ability.can("manage", "VISIT")).toBe(true);
     });
 
     it("should allow ADMIN to manage TERRITORY", () => {
@@ -83,13 +77,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("manage", "FACILITY")).toBe(false);
     });
 
-    it("should allow MANAGER to read VISIT", () => {
-      const ability = defineAbilitiesFor("MANAGER");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("manage", "VISIT")).toBe(false);
-    });
-
     it("should allow MANAGER to read TERRITORY", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
@@ -97,33 +84,28 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should allow USER to read CLINIC", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "FACILITY")).toBe(true);
     });
 
-    it("should allow USER to read VISIT", () => {
-      const ability = defineAbilitiesFor("USER");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-    });
   });
 
   describe("missing permission", () => {
     it("should deny USER from creating USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
     });
 
     it("should deny USER from updating USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("update", "USER")).toBe(false);
     });
 
     it("should deny USER from deleting USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("delete", "USER")).toBe(false);
     });
@@ -141,15 +123,9 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should deny USER from managing CLINIC", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("manage", "FACILITY")).toBe(false);
-    });
-
-    it("should deny USER from managing VISIT", () => {
-      const ability = defineAbilitiesFor("USER");
-
-      expect(ability.can("manage", "VISIT")).toBe(false);
     });
   });
 
@@ -169,7 +145,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("read", "USER")).toBe(true);
       expect(ability.can("create", "USER")).toBe(true);
       expect(ability.can("read", "FACILITY")).toBe(true);
-      expect(ability.can("read", "VISIT")).toBe(true);
       expect(ability.can("update", "FACILITY")).toBe(true);
       expect(ability.can("create", "TERRITORY")).toBe(true);
       expect(ability.can("update", "TERRITORY")).toBe(true);
@@ -177,7 +152,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should check multiple denied permissions for USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
       expect(ability.can("update", "USER")).toBe(false);
@@ -223,15 +198,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "FACILITY")).toBe(true);
     });
 
-    it("should have full CRUD on VISIT", () => {
-      const ability = defineAbilitiesFor("ADMIN");
-
-      expect(ability.can("create", "VISIT")).toBe(true);
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("update", "VISIT")).toBe(true);
-      expect(ability.can("delete", "VISIT")).toBe(true);
-    });
-
     it("should have full CRUD on TERRITORY", () => {
       const ability = defineAbilitiesFor("ADMIN");
 
@@ -261,15 +227,6 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "FACILITY")).toBe(false);
     });
 
-    it("should have read-only on VISIT", () => {
-      const ability = defineAbilitiesFor("MANAGER");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("create", "VISIT")).toBe(false);
-      expect(ability.can("update", "VISIT")).toBe(false);
-      expect(ability.can("delete", "VISIT")).toBe(false);
-    });
-
     it("should have read, create, and update on TERRITORY", () => {
       const ability = defineAbilitiesFor("MANAGER");
 
@@ -283,7 +240,7 @@ describe("PermissionMiddleware", () => {
 
   describe("USER permissions", () => {
     it("should have read and update on CLINIC", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("read", "FACILITY")).toBe(true);
       expect(ability.can("create", "FACILITY")).toBe(false);
@@ -291,17 +248,8 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("delete", "FACILITY")).toBe(false);
     });
 
-    it("should have read-only on VISIT", () => {
-      const ability = defineAbilitiesFor("USER");
-
-      expect(ability.can("read", "VISIT")).toBe(true);
-      expect(ability.can("create", "VISIT")).toBe(false);
-      expect(ability.can("update", "VISIT")).toBe(false);
-      expect(ability.can("delete", "VISIT")).toBe(false);
-    });
-
     it("should have no permissions on USER", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "USER")).toBe(false);
       expect(ability.can("read", "USER")).toBe(false);
@@ -310,7 +258,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("should have no permissions on TERRITORY", () => {
-      const ability = defineAbilitiesFor("USER");
+      const ability = defineAbilitiesFor("REP");
 
       expect(ability.can("create", "TERRITORY")).toBe(false);
       expect(ability.can("read", "TERRITORY")).toBe(false);
@@ -320,7 +268,7 @@ describe("PermissionMiddleware", () => {
   });
 
   describe("Elysia scoped hook wiring", () => {
-    function createTestApp(role: "ADMIN" | "MANAGER" | "USER") {
+    function createTestApp(role: "ADMIN" | "MANAGER" | "REP") {
       const auth = new Elysia({ name: "auth-test" }).derive({ as: "scoped" }, async () => ({
         getUser: async () => ({
           id: "user-test",
@@ -356,7 +304,7 @@ describe("PermissionMiddleware", () => {
     });
 
     it("blocks USER on manage USER routes", async () => {
-      const app = createTestApp("USER");
+      const app = createTestApp("REP");
       const response = await app.handle(new Request("http://localhost/protected"));
 
       expect(response.status).toBe(403);

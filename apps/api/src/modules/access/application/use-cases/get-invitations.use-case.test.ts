@@ -28,7 +28,7 @@ describe("GetInvitationsUseCase", () => {
     await expect(
       useCase.execute({
         actorId: "user-1",
-        actorRole: Role.USER,
+        actorRole: Role.REP,
         scope: createGlobalScopeContext(),
       })
     ).rejects.toThrow(InsufficientPermissionsError);
@@ -37,7 +37,7 @@ describe("GetInvitationsUseCase", () => {
   it("should list all invitations for global admin scope", async () => {
     const findAll = mock(() =>
       Promise.resolve({ invitations: [mockInvite], total: 1 })
-    );
+    ) as any;
     const inviteRepository = createMockInviteRepository({ findAll });
     const userRepository = createMockUserRepository({
       findById: mock(() =>
@@ -48,7 +48,7 @@ describe("GetInvitationsUseCase", () => {
           firstName: "M",
           lastName: "G",
         })
-      ),
+      ) as any,
     });
 
     const useCase = new GetInvitationsUseCase({ inviteRepository, userRepository });
