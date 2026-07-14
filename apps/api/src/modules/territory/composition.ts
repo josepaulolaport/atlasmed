@@ -80,20 +80,22 @@ async function invalidateScopeForTerritories(territoryIds: string[]): Promise<vo
   await scopeCacheService.invalidateMany(userIds);
 }
 
-territoryMembershipQueue.registerHandler(async (job) => {
-  if (job.facilityIds?.length) {
-    for (const facilityId of job.facilityIds) {
-      await territoryMembershipService.assignFacilityById(facilityId);
+export function registerTerritoryMembershipWorker(): void {
+  territoryMembershipQueue.registerHandler(async (job) => {
+    if (job.facilityIds?.length) {
+      for (const facilityId of job.facilityIds) {
+        await territoryMembershipService.assignFacilityById(facilityId);
+      }
+      return;
     }
-    return;
-  }
 
-  if (job.territoryId) {
-    await territoryMembershipService.recomputeForTerritoryBoundary(job.territoryId);
-  } else {
-    await territoryMembershipService.recomputeAll();
-  }
-});
+    if (job.territoryId) {
+      await territoryMembershipService.recomputeForTerritoryBoundary(job.territoryId);
+    } else {
+      await territoryMembershipService.recomputeAll();
+    }
+  });
+}
 
 const territoryCrud = new TerritoryCrudUseCases({
   territoryRepository: territoryRepositories.territory,

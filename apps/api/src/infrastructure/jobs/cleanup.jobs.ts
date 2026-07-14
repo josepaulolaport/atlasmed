@@ -138,15 +138,16 @@ export class CleanupJobs {
   }
 }
 
-const cleanupWorker = createWorker<any>(
-  "cleanup",
-  async (job) => {
-    const { data, name } = job as { data: any; name?: string };
+export function startCleanupWorker(): void {
+  const cleanupWorker = createWorker<any>(
+    "cleanup",
+    async (job) => {
+      const { data, name } = job as { data: any; name?: string };
 
-    logger.info("Running cleanup job", { jobName: name });
+      logger.info("Running cleanup job", { jobName: name });
 
-    try {
-      switch (name) {
+      try {
+        switch (name) {
         case "cleanup-expired-sessions": {
           const deleted = await db.delete(sessions).where(
             or(
@@ -263,23 +264,26 @@ const cleanupWorker = createWorker<any>(
           break;
         }
 
-        default:
-          logger.warn("Unknown cleanup job", { jobName: name });
+          default:
+            logger.warn("Unknown cleanup job", { jobName: name });
+        }
+      } catch (error) {
+        logger.error("Cleanup job failed", error, { jobName: name });
+        throw error;
       }
-    } catch (error) {
-      logger.error("Cleanup job failed", error, { jobName: name });
-      throw error;
-    }
-  },
-  { concurrency: 1 }
-);
+    },
+    { concurrency: 1 }
+  );
 
-cleanupWorker.on("completed", (job) => {
-  logger.info("Cleanup job completed", { jobName: job.name });
-});
+  cleanupWorker.on("completed", (job) => {
+    logger.info("Cleanup job completed", { jobName: job.name });
+  });
 
-cleanupWorker.on("failed", (job, error) => {
-  logger.error("Cleanup job failed", error, { jobName: job?.name });
-});
+  cleanupWorker.on("failed", (job, error) => {
+    logger.error("Cleanup job failed", error, { jobName: job?.name });
+  });
+
+  logger.info("Cleanup worker started");
+}
 
 export const cleanupJobs = new CleanupJobs();

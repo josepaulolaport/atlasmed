@@ -1,0 +1,68 @@
+name: Validate Backend Production Environment
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-env:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    env:
+      UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+      UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
+      TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+      MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+      STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+      STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+      CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
+      CNES_FTP_MODE: ${{ vars.CNES_FTP_MODE || 'mock' }}
+      CNES_LOAD_MODE: ${{ vars.CNES_LOAD_MODE || 'dev' }}
+      CNES_LOAD_CONCURRENCY: ${{ vars.CNES_LOAD_CONCURRENCY || '4' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            UNCLOUD_CONNECT \
+            UNCLOUD_SSH_PRIVATE_KEY \
+            DATABASE_URL \
+            JWT_ACCESS_SECRET \
+            TOKEN_HASH_PEPPER \
+            CORS_ORIGINS \
+            FRONTEND_URL \
+            RESEND_API_KEY \
+            RESEND_FROM_EMAIL \
+            TEMPORAL_DB_PASSWORD \
+            MEILISEARCH_API_KEY \
+            MINIO_ROOT_USER \
+            MINIO_ROOT_PASSWORD
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required production value: $name" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Validate compose file
+        run: docker compose -f deploy/uncloud.compose.yml config --quiet

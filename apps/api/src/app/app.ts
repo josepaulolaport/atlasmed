@@ -19,6 +19,12 @@ import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 
+const configuredCorsOrigins = environment.CORS_ORIGINS.split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const firebaseHostingOrigins = /^https:\/\/atlasmed-app(?:--[a-z0-9-]+)?\.web\.app$/;
+
 const app = new Elysia()
   // Observability MUST come first to track all requests
   .use(observabilityPlugin)
@@ -68,7 +74,7 @@ const app = new Elysia()
   // Configure CORS for frontend access
   .use(
     cors({
-      origin: environment.CORS_ORIGINS.split(',').map(o => o.trim()),
+      origin: [...configuredCorsOrigins, firebaseHostingOrigins],
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization"],

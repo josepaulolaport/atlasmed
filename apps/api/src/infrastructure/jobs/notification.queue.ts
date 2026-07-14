@@ -123,51 +123,55 @@ export class NotificationQueue {
   }
 }
 
-const notificationWorker = createWorker<NotificationJob>(
-  "notifications",
-  async (job) => {
-    const { data } = job;
+export function startNotificationWorker(): void {
+  const notificationWorker = createWorker<NotificationJob>(
+    "notifications",
+    async (job) => {
+      const { data } = job;
 
-    try {
-      if (data.type === "email") {
-        switch (data.template) {
-          case "invite":
-            await sendInviteEmail(data.to, data.data.token, data.data.invitedBy);
-            break;
-          case "password-reset":
-            await sendPasswordResetEmail(data.to, data.data.token);
-            break;
-          case "password-changed":
-          case "email-verification":
-          case "security-alert":
-            logger.info("Sending template email", {
-              template: data.template,
-              to: data.to,
-            });
-            break;
+      try {
+        if (data.type === "email") {
+          switch (data.template) {
+            case "invite":
+              await sendInviteEmail(data.to, data.data.token, data.data.invitedBy);
+              break;
+            case "password-reset":
+              await sendPasswordResetEmail(data.to, data.data.token);
+              break;
+            case "password-changed":
+            case "email-verification":
+            case "security-alert":
+              logger.info("Sending template email", {
+                template: data.template,
+                to: data.to,
+              });
+              break;
+          }
+        } else if (data.type === "sms") {
+          await sendPasswordResetWhatsApp(data.to, data.message);
         }
-      } else if (data.type === "sms") {
-        await sendPasswordResetWhatsApp(data.to, data.message);
+
+        logger.info("Notification sent", {
+          type: data.type,
+          to: data.to,
+        });
+      } catch (error) {
+        logger.error("Failed to send notification", error);
+        throw error;
       }
+    },
+    { concurrency: 5 }
+  );
 
-      logger.info("Notification sent", {
-        type: data.type,
-        to: data.to,
-      });
-    } catch (error) {
-      logger.error("Failed to send notification", error);
-      throw error;
-    }
-  },
-  { concurrency: 5 }
-);
+  notificationWorker.on("completed", (job) => {
+    logger.info("Notification job completed", { jobId: job.id });
+  });
 
-notificationWorker.on("completed", (job) => {
-  logger.info("Notification job completed", { jobId: job.id });
-});
+  notificationWorker.on("failed", (job, error) => {
+    logger.error("Notification job failed", error, { jobId: job?.id });
+  });
 
-notificationWorker.on("failed", (job, error) => {
-  logger.error("Notification job failed", error, { jobId: job?.id });
-});
+  logger.info("Notification worker started");
+}
 
 export const notificationQueue = new NotificationQueue();
