@@ -17,7 +17,6 @@ const TEST_ENV_DEFAULTS: Record<string, string> = {
   DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/atlasmed_test",
   REDIS_URL: "redis://localhost:6379/1",
   JWT_ACCESS_SECRET: "test-access-secret-minimum-32-characters-long",
-  JWT_REFRESH_SECRET: "test-refresh-secret-minimum-32-characters-long",
   JWT_SECRET: "test-access-secret-minimum-32-characters-long",
   JWT_EXPIRATION: "15m",
   JWT_EXPIRES_IN: "15m",
@@ -41,9 +40,6 @@ if (result.error && (result.error as NodeJS.ErrnoException).code !== "ENOENT") {
 if (!process.env.JWT_ACCESS_SECRET && process.env.JWT_SECRET) {
   process.env.JWT_ACCESS_SECRET = process.env.JWT_SECRET;
 }
-if (!process.env.JWT_REFRESH_SECRET && process.env.JWT_SECRET) {
-  process.env.JWT_REFRESH_SECRET = process.env.JWT_SECRET;
-}
 if (!process.env.JWT_SECRET && process.env.JWT_ACCESS_SECRET) {
   process.env.JWT_SECRET = process.env.JWT_ACCESS_SECRET;
 }
@@ -60,11 +56,8 @@ for (const [key, value] of Object.entries(TEST_ENV_DEFAULTS)) {
   }
 }
 
-for (const key of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"] as const) {
-  const value = process.env[key];
-  if (!value || value.length < 32) {
-    process.env[key] = TEST_ENV_DEFAULTS[key]!;
-  }
+if (!process.env.JWT_ACCESS_SECRET || process.env.JWT_ACCESS_SECRET.length < 32) {
+  process.env.JWT_ACCESS_SECRET = TEST_ENV_DEFAULTS.JWT_ACCESS_SECRET;
 }
 
 console.log("✅ Loaded test environment from .env.test");

@@ -17,7 +17,6 @@ jobs:
       UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
-      JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }}
       TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
       CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
       FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
