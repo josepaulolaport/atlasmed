@@ -1,9 +1,16 @@
+export interface FacilityService {
+  serviceCode: string;
+  classificationCode: string | null;
+}
+
 export interface FacilityRecord {
   id: string;
   name: string;
   city: string | null;
   state: string | null;
+  taxIdType: "PJ" | "PF" | null;
   cnpj: string | null;
+  cpf: string | null;
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
@@ -21,6 +28,8 @@ export interface FacilityRecord {
   deactivatedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  /** Populated only on findById, empty array on list queries. */
+  services: FacilityService[];
 }
 
 export interface FacilityListRecord extends FacilityRecord {

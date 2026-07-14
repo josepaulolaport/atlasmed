@@ -73,6 +73,10 @@ export async function cnesMonthlyIngestionWorkflow(
     ingestionRunId: input.ingestionRunId,
   });
 
+  const facilityServicesSync = await activities.syncFacilityServicesActivity({
+    ingestionRunId: input.ingestionRunId,
+  });
+
   const stats = {
     reference,
     download,
@@ -84,6 +88,7 @@ export async function cnesMonthlyIngestionWorkflow(
     crmDiff,
     warehouseDiff,
     metadataSync,
+    facilityServicesSync,
   };
 
   await activities.finalizeIngestionRunActivity({

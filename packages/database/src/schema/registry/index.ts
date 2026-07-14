@@ -217,3 +217,16 @@ export const registryProfessionalCouncils = registrySchema.table("professional_c
   createdAt: timestamp("created_at"),
   updatedAt: timestamp("updated_at"),
 });
+
+/** CNES rlEstabServClass — healthcare services offered by a facility. */
+export const registryFacilityServices = registrySchema.table(
+  "facility_services",
+  {
+    facilityId: text("facility_id").notNull(),
+    serviceCode: text("service_code").notNull(),
+    classificationCode: text("classification_code"),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at"),
+  },
+  (t) => [primaryKey({ columns: [t.facilityId, t.serviceCode, t.classificationCode] })]
+);
