@@ -111,6 +111,7 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
           SHA: ${{ github.sha }}
@@ -128,10 +129,10 @@ jobs:
           expires_offset="+${expires_raw%d} days"
           expires_date=$(date -u -d "$expires_offset" +"%a, %d %b %Y %H:%M:%S GMT")
           body="Visit the preview URL for this PR (updated for commit $short_sha):"$'\n\n'"[$url]($url)"$'\n\n'"<sub>(expires $expires_date)</sub>"$'\n\n'"<sub>🔥 via Firebase Hosting</sub>"
-          existing=$(gh api "/repos/${{ github.repository }}/issues/$pr_number/comments" \
+          existing=$(gh api "/repos/$REPOSITORY/issues/$pr_number/comments" \
             --jq '.[] | select(.body | startswith("Visit the preview URL for this PR")) | .id' | head -1)
           if [[ -n "$existing" ]]; then
-            gh api "/repos/${{ github.repository }}/issues/comments/$existing" \
+            gh api "/repos/$REPOSITORY/issues/comments/$existing" \
               --method PATCH --field body="$body" --silent
           else
             gh pr comment "$pr_number" --body "$body"
@@ -157,8 +158,11 @@ jobs:
       - name: Deletar canal de preview
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          CHANNEL_ID: pr-${{ github.event.pull_request.number }}
         run: |
-          firebase hosting:channel:delete \
-            "pr-${{ github.event.pull_request.number }}" \
-            --project atlasmed-app --force || true
+          if firebase hosting:channel:list --project atlasmed-app | grep -q " $CHANNEL_ID "; then
+            firebase hosting:channel:delete "$CHANNEL_ID" --project atlasmed-app --force
+          else
+            echo "Preview channel $CHANNEL_ID was not found; skipping cleanup."
+          fi
         working-directory: ./apps/mobile
