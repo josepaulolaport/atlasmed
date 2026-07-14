@@ -24,6 +24,7 @@ import { changePasswordRoute } from "./infrastructure/routes/change-password.rou
 import { twoFactorRoute } from "./infrastructure/routes/two-factor.route";
 import { verify2FALoginRoute } from "./infrastructure/routes/verify-2fa-login.route";
 import { capabilitiesRoute } from "./infrastructure/routes/capabilities.route";
+import { sectorsRoute } from "./infrastructure/routes/sectors.route";
 
 export const access = new Elysia({
   name: "access",
@@ -53,4 +54,5 @@ export const access = new Elysia({
   .use(resetPasswordRoute)
   .use(verificationRoute)
   .use(rolesRoute)
-  .use(userPermissionsRoute);
+  .use(userPermissionsRoute)
+  .use(sectorsRoute);

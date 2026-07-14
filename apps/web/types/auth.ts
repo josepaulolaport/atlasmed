@@ -155,10 +155,16 @@ export interface UserTerritoryAssignment {
   assignedAt: string;
 }
 
+export interface UserSectorAssignment {
+  sectorId: string;
+  assignedAt: string;
+}
+
 export interface UserAssignments {
   userId: string;
   managerId: string | null;
   manager?: UserAssignmentManager | null;
   territories: UserTerritoryAssignment[];
+  sectors: UserSectorAssignment[];
   isOperationallyActive: boolean;
 }

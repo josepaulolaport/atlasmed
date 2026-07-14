@@ -4,6 +4,8 @@ export interface ScopeContext {
   isGlobal: boolean;
   /** Direct territory assignments for this user (not expanded). */
   assignedTerritoryIds: string[];
+  /** Healthcare sectors this user is assigned to. Empty means no sector filter applied. */
+  assignedSectorIds?: string[];
   /**
    * Oversight territories (expanded): manager's own assignments, or all assignments for USER.
    * Used for facility/professional list visibility and territory read scope.

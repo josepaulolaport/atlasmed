@@ -1,5 +1,5 @@
 import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
-import { users, userTerritoryAssignments } from "@atlasmed/database";
+import { users, userTerritoryAssignments, sectors, userSectorAssignments, territories } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type { ScopeRepository } from "../../../application/interfaces/scope.repository.interface";
 
@@ -96,5 +96,77 @@ export class DrizzleScopeRepository implements ScopeRepository {
       .limit(1);
 
     return row?.managerId ?? null;
+  }
+
+  async findSectorIdsByUserId(userId: string): Promise<string[]> {
+    const rows = await db
+      .select({ sectorId: userSectorAssignments.sectorId })
+      .from(userSectorAssignments)
+      .where(eq(userSectorAssignments.userId, userId));
+
+    return rows.map((r) => r.sectorId);
+  }
+
+  async findTerritoryIdsBySectorIds(sectorIds: string[]): Promise<string[]> {
+    if (sectorIds.length === 0) return [];
+
+    const rows = await db
+      .select({ id: territories.id })
+      .from(territories)
+      .where(and(eq(territories.isActive, true), inArray(territories.sectorId as any, sectorIds)));
+
+    return rows.map((r) => r.id);
+  }
+
+  async assignSector(params: {
+    userId: string;
+    sectorId: string;
+    assignedByUserId: string;
+  }): Promise<void> {
+    await db
+      .insert(userSectorAssignments)
+      .values({
+        userId: params.userId,
+        sectorId: params.sectorId,
+        assignedByUserId: params.assignedByUserId,
+      })
+      .onConflictDoUpdate({
+        target: [userSectorAssignments.userId, userSectorAssignments.sectorId],
+        set: { assignedByUserId: params.assignedByUserId, updatedAt: new Date() },
+      });
+  }
+
+  async revokeSector(params: { userId: string; sectorId: string }): Promise<void> {
+    await db
+      .delete(userSectorAssignments)
+      .where(
+        and(
+          eq(userSectorAssignments.userId, params.userId),
+          eq(userSectorAssignments.sectorId, params.sectorId)
+        )
+      );
+  }
+
+  async findSectorAssignmentsByUserId(userId: string): Promise<Array<{ sectorId: string; assignedAt: Date }>> {
+    const rows = await db
+      .select({
+        sectorId: userSectorAssignments.sectorId,
+        createdAt: userSectorAssignments.createdAt,
+      })
+      .from(userSectorAssignments)
+      .where(eq(userSectorAssignments.userId, userId))
+      .orderBy(desc(userSectorAssignments.createdAt));
+
+    return rows.map((r) => ({ sectorId: r.sectorId, assignedAt: r.createdAt }));
+  }
+
+  async listActiveSectors(): Promise<Array<{ id: string; slug: string; name: string }>> {
+    const rows = await db
+      .select({ id: sectors.id, slug: sectors.slug, name: sectors.name })
+      .from(sectors)
+      .where(eq(sectors.isActive, true))
+      .orderBy(sectors.name);
+
+    return rows;
   }
 }

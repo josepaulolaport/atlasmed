@@ -90,6 +90,7 @@ export interface FindAllUsersParams {
   page: number;
   limit: number;
   status?: string;
+  role?: string;
   search?: string;
   scope?: UserListScopeFilter;
 }

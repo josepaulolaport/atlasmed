@@ -3,7 +3,7 @@ import {
   assignUserManagerSchema,
   assignUserTerritorySchema,
 } from "@atlasmed/access";
-import { accessUseCases, auth } from "../../composition";
+import { accessUseCases, accessRepositories, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
 export const userAssignmentsRoute = new Elysia({
@@ -85,4 +85,33 @@ export const userAssignmentsRoute = new Elysia({
     return {
       message: "User territory revoked successfully",
     };
+  })
+  .post(
+    "/users/:id/sectors",
+    async ({ params, body, getUserId }: any) => {
+      const assignedByUserId = await getUserId();
+
+      await accessRepositories.scope.assignSector({
+        userId: params.id,
+        sectorId: (body as any).sectorId,
+        assignedByUserId,
+      });
+
+      return { message: "Sector assigned successfully" };
+    },
+    {
+      body: t.Object({
+        sectorId: t.String({ description: "Sector ID to assign to the user" }),
+      }),
+    }
+  )
+  .delete("/users/:id/sectors/:sectorId", async ({ params, getUserId }: any) => {
+    await getUserId();
+
+    await accessRepositories.scope.revokeSector({
+      userId: params.id,
+      sectorId: params.sectorId,
+    });
+
+    return { message: "Sector revoked successfully" };
   });

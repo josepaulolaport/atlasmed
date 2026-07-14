@@ -22,6 +22,7 @@ export interface GetUserAssignmentsOutput {
     lastName?: string;
   } | null;
   territories: Array<{ territoryId: string; assignedAt: string }>;
+  sectors: Array<{ sectorId: string; assignedAt: string }>;
   isOperationallyActive: boolean;
 }
 
@@ -62,8 +63,10 @@ export class GetUserAssignmentsUseCase {
       }
     }
 
-    const territoryAssignments =
-      await this.deps.scopeRepository.findTerritoryAssignmentsByUserId(params.targetUserId);
+    const [territoryAssignments, sectorAssignments] = await Promise.all([
+      this.deps.scopeRepository.findTerritoryAssignmentsByUserId(params.targetUserId),
+      this.deps.scopeRepository.findSectorAssignmentsByUserId(params.targetUserId),
+    ]);
 
     const roleName = user.role?.name ?? Role.REP;
     const isOperationallyActive =
@@ -75,6 +78,10 @@ export class GetUserAssignmentsUseCase {
       manager,
       territories: territoryAssignments.map((assignment) => ({
         territoryId: assignment.territoryId,
+        assignedAt: assignment.assignedAt.toISOString(),
+      })),
+      sectors: sectorAssignments.map((assignment) => ({
+        sectorId: assignment.sectorId,
         assignedAt: assignment.assignedAt.toISOString(),
       })),
       isOperationallyActive,

@@ -131,6 +131,28 @@ export const usersApi = {
     return response.data;
   },
 
+  getSectors: async (): Promise<Array<{ id: string; slug: string; name: string }>> => {
+    const response = await apiClient.get<{ sectors: Array<{ id: string; slug: string; name: string }> }>(
+      "/access/sectors"
+    );
+    return response.data.sectors;
+  },
+
+  assignSector: async (userId: string, sectorId: string): Promise<{ message: string }> => {
+    const response = await apiClient.post<{ message: string }>(
+      `/access/users/${userId}/sectors`,
+      { sectorId }
+    );
+    return response.data;
+  },
+
+  revokeSector: async (userId: string, sectorId: string): Promise<{ message: string }> => {
+    const response = await apiClient.delete<{ message: string }>(
+      `/access/users/${userId}/sectors/${encodeURIComponent(sectorId)}`
+    );
+    return response.data;
+  },
+
   getUserCapabilities: async (userId: string): Promise<{
     role: string;
     grants: import("@/types/auth").AccessGrant[];
