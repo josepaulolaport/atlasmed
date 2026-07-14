@@ -18,11 +18,6 @@ on:
         description: Nome do canal de preview
         required: true
         type: string
-      expires:
-        description: "Tempo de vida do canal (ex: 7d)"
-        required: false
-        default: "7d"
-        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -51,10 +46,8 @@ jobs:
           set -euo pipefail
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             echo "channel_id=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-            echo "expires=7d" >> "$GITHUB_OUTPUT"
           else
             echo "channel_id=${{ inputs.channel_id }}" >> "$GITHUB_OUTPUT"
-            echo "expires=${{ inputs.expires }}" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Configurar Flutter
@@ -79,7 +72,6 @@ jobs:
           projectId: atlasmed-app
           entryPoint: ./apps/mobile
           channelId: ${{ steps.preview.outputs.channel_id }}
-          expires: ${{ steps.preview.outputs.expires }}
 
   cleanup_web_preview:
     if: |
