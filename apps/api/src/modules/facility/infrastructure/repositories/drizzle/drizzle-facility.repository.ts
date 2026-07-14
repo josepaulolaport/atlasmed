@@ -19,7 +19,7 @@ type FacilityRow = typeof facilities.$inferSelect;
 
 function mapFacility(
   facility: FacilityRow,
-  services: Array<{ serviceCode: string; classificationCode: string | null }> = []
+  services: Array<{ serviceCode: string; classificationCode: string }> = []
 ): FacilityRecord {
   return {
     id: facility.id,
