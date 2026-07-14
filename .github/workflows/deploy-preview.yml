@@ -12,6 +12,17 @@ on:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/deploy-preview.yml'
+  workflow_dispatch:
+    inputs:
+      channel_id:
+        description: Nome do canal de preview
+        required: true
+        type: string
+      expires:
+        description: "Tempo de vida do canal (ex: 7d)"
+        required: false
+        default: "7d"
+        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -20,18 +31,29 @@ concurrency:
 jobs:
   deploy_web_preview:
     if: |
-      github.event_name == 'pull_request' &&
-      github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (github.event_name == 'pull_request' &&
+        github.event.action != 'closed' &&
+        github.event.pull_request.head.repo.full_name == github.repository) ||
+      github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     environment: production
     permissions:
-      checks: write
       contents: read
       pull-requests: write
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Resolver canal de preview
+        id: preview
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "channel_id=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "expires=30d" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel_id=${{ inputs.channel_id }}" >> "$GITHUB_OUTPUT"
+            echo "expires=${{ inputs.expires }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
@@ -52,14 +74,42 @@ jobs:
         run: npm install --global firebase-tools
 
       - name: Deploy para Firebase Hosting (Preview)
+        id: deploy
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
-          firebase hosting:channel:deploy \
-            "pr-${{ github.event.pull_request.number }}" \
+          set -euo pipefail
+          output=$(firebase hosting:channel:deploy \
+            "${{ steps.preview.outputs.channel_id }}" \
             --project atlasmed-app \
-            --expires 30d
+            --expires "${{ steps.preview.outputs.expires }}" \
+            2>&1)
+          echo "$output"
+          url=$(echo "$output" | grep -oE 'https://[^ ]+' | head -1)
+          echo "preview_url=$url" >> "$GITHUB_OUTPUT"
         working-directory: ./apps/mobile
+
+      - name: Comentar URL de preview no PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          pr_number="${{ github.event.pull_request.number }}"
+          url="${{ steps.deploy.outputs.preview_url }}"
+          if [[ -z "$url" ]]; then
+            echo "Não foi possível extrair a URL de preview."
+            exit 1
+          fi
+          body="## 🚀 Preview disponível!\n\nURL: $url\n\n_Commit: ${{ github.sha }}_"
+          existing=$(gh api "/repos/${{ github.repository }}/issues/$pr_number/comments" \
+            --jq '.[] | select(.body | startswith("## 🚀 Preview disponível!")) | .id' | head -1)
+          if [[ -n "$existing" ]]; then
+            gh api "/repos/${{ github.repository }}/issues/comments/$existing" \
+              --method PATCH --field body="$body" --silent
+          else
+            gh pr comment "$pr_number" --body "$body"
+          fi
 
   cleanup_web_preview:
     if: |
