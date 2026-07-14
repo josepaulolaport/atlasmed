@@ -36,6 +36,7 @@ jobs:
         github.event.pull_request.head.repo.full_name == github.repository) ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: read
@@ -45,15 +46,30 @@ jobs:
 
       - name: Resolver canal de preview
         id: preview
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          INPUT_CHANNEL_ID: ${{ inputs.channel_id }}
+          INPUT_EXPIRES: ${{ inputs.expires }}
         run: |
           set -euo pipefail
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "channel_id=pr-${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
-            echo "expires=30d" >> "$GITHUB_OUTPUT"
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            channel_id="pr-$PR_NUMBER"
+            expires="30d"
           else
-            echo "channel_id=${{ inputs.channel_id }}" >> "$GITHUB_OUTPUT"
-            echo "expires=${{ inputs.expires }}" >> "$GITHUB_OUTPUT"
+            channel_id="$INPUT_CHANNEL_ID"
+            expires="${INPUT_EXPIRES:-7d}"
           fi
+          if ! [[ "$channel_id" =~ ^[a-z0-9-]{1,40}$ ]]; then
+            echo "Invalid Firebase Hosting preview channel ID: $channel_id" >&2
+            exit 1
+          fi
+          if ! [[ "$expires" =~ ^[1-9][0-9]*d$ ]]; then
+            echo "Invalid preview channel expiration: $expires" >&2
+            exit 1
+          fi
+          echo "channel_id=$channel_id" >> "$GITHUB_OUTPUT"
+          echo "expires=$expires" >> "$GITHUB_OUTPUT"
 
       - name: Configurar Flutter
         uses: subosito/flutter-action@v2
@@ -71,18 +87,20 @@ jobs:
         working-directory: ./apps/mobile
 
       - name: Instalar Firebase CLI
-        run: npm install --global firebase-tools
+        run: npm install --global firebase-tools@15.23.0
 
       - name: Deploy para Firebase Hosting (Preview)
         id: deploy
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          CHANNEL_ID: ${{ steps.preview.outputs.channel_id }}
+          EXPIRES: ${{ steps.preview.outputs.expires }}
         run: |
           set -euo pipefail
           output=$(firebase hosting:channel:deploy \
-            "${{ steps.preview.outputs.channel_id }}" \
+            "$CHANNEL_ID" \
             --project atlasmed-app \
-            --expires "${{ steps.preview.outputs.expires }}" \
+            --expires "$EXPIRES" \
             2>&1)
           echo "$output"
           url=$(echo "$output" | grep -oE 'https://[a-z0-9.-]+--[a-z0-9-]+\.web\.app' | head -1)
@@ -93,16 +111,20 @@ jobs:
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PREVIEW_URL: ${{ steps.deploy.outputs.preview_url }}
+          SHA: ${{ github.sha }}
+          EXPIRES: ${{ steps.preview.outputs.expires }}
         run: |
           set -euo pipefail
-          pr_number="${{ github.event.pull_request.number }}"
-          url="${{ steps.deploy.outputs.preview_url }}"
+          pr_number="$PR_NUMBER"
+          url="$PREVIEW_URL"
           if [[ -z "$url" ]]; then
             echo "Failed to extract preview URL."
             exit 1
           fi
-          short_sha="$(printf '%.7s' "${{ github.sha }}")"
-          expires_raw="${{ steps.preview.outputs.expires }}"
+          short_sha="$(printf '%.7s' "$SHA")"
+          expires_raw="$EXPIRES"
           expires_offset="+${expires_raw%d} days"
           expires_date=$(date -u -d "$expires_offset" +"%a, %d %b %Y %H:%M:%S GMT")
           body="Visit the preview URL for this PR (updated for commit $short_sha):"$'\n\n'"[$url]($url)"$'\n\n'"<sub>(expires $expires_date)</sub>"$'\n\n'"<sub>🔥 via Firebase Hosting</sub>"
@@ -122,6 +144,7 @@ jobs:
       github.event.action == 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment: production
     permissions:
       contents: read
@@ -129,7 +152,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Instalar Firebase CLI
-        run: npm install --global firebase-tools
+        run: npm install --global firebase-tools@15.23.0
 
       - name: Deletar canal de preview
         env:
@@ -137,5 +160,5 @@ jobs:
         run: |
           firebase hosting:channel:delete \
             "pr-${{ github.event.pull_request.number }}" \
-            --project atlasmed-app --force
+            --project atlasmed-app --force || true
         working-directory: ./apps/mobile
