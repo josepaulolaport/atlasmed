@@ -1,0 +1,39 @@
+name: Open Code Review
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+concurrency:
+  group: open-code-review-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  code-review:
+    name: AI Code Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Validate API key
+        env:
+          OCR_API_KEY: ${{ secrets.OPEN_CODE_REVIEW_API_KEY }}
+        run: |
+          if [ -z "$OCR_API_KEY" ]; then
+            echo "::error title=Secret not configured::OPEN_CODE_REVIEW_API_KEY is not set. Go to repository Settings → Secrets and variables → Actions → New repository secret and add the API key for the Open Code Review LLM endpoint."
+            exit 1
+          fi
+
+      - uses: alibaba/open-code-review@a32f85272bac1d21e80762d40470b975ec1d84d9
+        with:
+          llm_url: https://opencode.ai/zen/go/v1/
+          llm_auth_token: ${{ secrets.OPEN_CODE_REVIEW_API_KEY }}
+          llm_model: deepseek-v4-flash
+          llm_use_anthropic: 'false'
+          base_ref: ${{ github.base_ref }}
+          head_sha: ${{ github.event.pull_request.head.sha }}
