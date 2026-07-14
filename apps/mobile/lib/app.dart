@@ -14,7 +14,13 @@ import 'features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'features/explore/presentation/screens/explore_screen.dart';
 import 'features/map/presentation/screens/map_screen.dart';
-import 'features/orders/presentation/screens/orders_screen.dart';
+import 'features/orders/presentation/screens/meus_orders_screen.dart';
+import 'features/orders/presentation/screens/order_detail_screen.dart';
+import 'features/orders/presentation/screens/order_tracking_screen.dart';
+import 'features/orders/presentation/screens/new_order_products_screen.dart';
+import 'features/orders/presentation/screens/cart_screen.dart';
+import 'features/orders/presentation/screens/checkout_screen.dart';
+import 'features/orders/presentation/screens/order_success_screen.dart';
 import 'features/presentations/presentation/screens/presentations_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
@@ -198,7 +204,32 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
             // Pedidos
             GoRoute(
               path: '/pedidos',
-              builder: (_, _) => const OrdersScreen(),
+              builder: (_, _) => const MeusOrdersScreen(),
+              routes: [
+                GoRoute(
+                  path: 'novo',
+                  builder: (_, _) => const NewOrderProductsScreen(),
+                  routes: [
+                    GoRoute(path: 'carrinho', builder: (_, _) => const CartScreen()),
+                    GoRoute(path: 'checkout', builder: (_, _) => const CheckoutScreen()),
+                    GoRoute(path: 'sucesso', builder: (_, _) => const OrderSuccessScreen()),
+                  ],
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => OrderDetailScreen(
+                    orderId: state.pathParameters['id']!,
+                  ),
+                  routes: [
+                    GoRoute(
+                      path: 'rastreio',
+                      builder: (_, state) => OrderTrackingScreen(
+                        orderId: state.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
             // Apresentações
             GoRoute(
