@@ -85,7 +85,7 @@ jobs:
             --expires "${{ steps.preview.outputs.expires }}" \
             2>&1)
           echo "$output"
-          url=$(echo "$output" | grep -oE 'https://[a-z0-9.-]+\.web\.app' | head -1)
+          url=$(echo "$output" | grep -oE 'https://[a-z0-9.-]+--[a-z0-9-]+\.web\.app' | head -1)
           echo "preview_url=$url" >> "$GITHUB_OUTPUT"
         working-directory: ./apps/mobile
 
