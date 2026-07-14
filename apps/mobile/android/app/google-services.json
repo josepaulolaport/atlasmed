@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "213092006493",
+    "project_id": "atlasmed-app",
+    "storage_bucket": "atlasmed-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:213092006493:android:8f2a3db45910dea2c36bb4",
+        "android_client_info": {
+          "package_name": "br.com.atlasmed.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjzGOceiwDTHOoz5yvvlxTrhWlKNl0AGY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:213092006493:android:b6b811eda322aa98c36bb4",
+        "android_client_info": {
+          "package_name": "com.example.atlasmed_mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBjzGOceiwDTHOoz5yvvlxTrhWlKNl0AGY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

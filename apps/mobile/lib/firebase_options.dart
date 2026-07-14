@@ -38,32 +38,29 @@ class DefaultFirebaseOptions {
   // ═══════════════════════════════════════════════════════════════════
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'PENDENTE',
-    appId: 'PENDENTE',
-    messagingSenderId: 'PENDENTE',
+    apiKey: 'AIzaSyCqG2IoR2MVkP6n6P6UuEjTF_EI8u2v8jo',
+    appId: '1:213092006493:web:d9f92e66973ff862c36bb4',
+    messagingSenderId: '213092006493',
     projectId: 'atlasmed-app',
     authDomain: 'atlasmed-app.firebaseapp.com',
     storageBucket: 'atlasmed-app.firebasestorage.app',
-    measurementId: 'PENDENTE', // Opcional
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'PENDENTE',
-    appId: 'PENDENTE',
-    messagingSenderId: 'PENDENTE',
+    apiKey: 'AIzaSyBjzGOceiwDTHOoz5yvvlxTrhWlKNl0AGY',
+    appId: '1:213092006493:android:8f2a3db45910dea2c36bb4',
+    messagingSenderId: '213092006493',
     projectId: 'atlasmed-app',
     storageBucket: 'atlasmed-app.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'PENDENTE',
-    appId: 'PENDENTE',
-    messagingSenderId: 'PENDENTE',
+    apiKey: 'AIzaSyB7ksJEhprh0Pm4xsZuoKqo1iTbxpK1wYU',
+    appId: '1:213092006493:ios:b836b99e0104d2e4c36bb4',
+    messagingSenderId: '213092006493',
     projectId: 'atlasmed-app',
     storageBucket: 'atlasmed-app.firebasestorage.app',
-    iosBundleId: 'com.atlasmed.app',
+    iosBundleId: 'br.com.atlasmed.app',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'PENDENTE',
     appId: 'PENDENTE',
