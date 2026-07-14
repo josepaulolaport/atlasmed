@@ -85,11 +85,11 @@ jobs:
             --expires "${{ steps.preview.outputs.expires }}" \
             2>&1)
           echo "$output"
-          url=$(echo "$output" | grep -oE 'https://[^ ]+' | head -1)
+          url=$(echo "$output" | grep -oE 'https://[a-z0-9.-]+\.web\.app' | head -1)
           echo "preview_url=$url" >> "$GITHUB_OUTPUT"
         working-directory: ./apps/mobile
 
-      - name: Comentar URL de preview no PR
+      - name: Post preview URL comment
         if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -98,18 +98,23 @@ jobs:
           pr_number="${{ github.event.pull_request.number }}"
           url="${{ steps.deploy.outputs.preview_url }}"
           if [[ -z "$url" ]]; then
-            echo "Não foi possível extrair a URL de preview."
+            echo "Failed to extract preview URL."
             exit 1
           fi
-          body="## 🚀 Preview disponível!\n\nURL: $url\n\n_Commit: ${{ github.sha }}_"
+          short_sha="$(printf '%.7s' "${{ github.sha }}")"
+          expires_raw="${{ steps.preview.outputs.expires }}"
+          expires_offset="+${expires_raw%d} days"
+          expires_date=$(date -u -d "$expires_offset" +"%a, %d %b %Y %H:%M:%S GMT")
+          body="Visit the preview URL for this PR (updated for commit $short_sha):"$'\n\n'"[$url]($url)"$'\n\n'"<sub>(expires $expires_date)</sub>"$'\n\n'"<sub>🔥 via Firebase Hosting</sub>"
           existing=$(gh api "/repos/${{ github.repository }}/issues/$pr_number/comments" \
-            --jq '.[] | select(.body | startswith("## 🚀 Preview disponível!")) | .id' | head -1)
+            --jq '.[] | select(.body | startswith("Visit the preview URL for this PR")) | .id' | head -1)
           if [[ -n "$existing" ]]; then
             gh api "/repos/${{ github.repository }}/issues/comments/$existing" \
               --method PATCH --field body="$body" --silent
           else
             gh pr comment "$pr_number" --body "$body"
           fi
+
 
   cleanup_web_preview:
     if: |
