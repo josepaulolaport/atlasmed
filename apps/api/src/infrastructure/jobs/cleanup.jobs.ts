@@ -264,8 +264,8 @@ export function startCleanupWorker(): void {
           break;
         }
 
-          default:
-            logger.warn("Unknown cleanup job", { jobName: name });
+        default:
+          logger.warn("Unknown cleanup job", { jobName: name });
         }
       } catch (error) {
         logger.error("Cleanup job failed", error, { jobName: name });

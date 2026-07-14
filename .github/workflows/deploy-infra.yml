@@ -13,7 +13,20 @@ concurrency:
 jobs:
   validate-production-env:
     uses: ./.github/workflows/validate-production-env.yml
-    secrets: inherit
+    secrets:
+      UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+      UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+      MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
 
   deploy-infra:
     needs: validate-production-env
@@ -45,6 +58,7 @@ jobs:
 
       - name: Install Uncloud CLI
         run: |
+          set -euo pipefail
           curl -fsS https://get.uncloud.run/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
@@ -52,17 +66,10 @@ jobs:
         env:
           UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          printf '%s' "$UNCLOUD_SSH_PRIVATE_KEY" \
-            | sed -e '1s/^"//' -e '$s/"$//' \
-            | tr -d '\r' > ~/.ssh/id_ed25519.raw
-          if grep -q '\n' ~/.ssh/id_ed25519.raw; then
-            perl -pe 's/\\n/\n/g' ~/.ssh/id_ed25519.raw > ~/.ssh/id_ed25519
-            rm -f ~/.ssh/id_ed25519.raw
-          else
-            mv ~/.ssh/id_ed25519.raw ~/.ssh/id_ed25519
-          fi
+          printf '%s' "$UNCLOUD_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keygen -y -f ~/.ssh/id_ed25519 >/dev/null
           eval "$(ssh-agent -s)"
@@ -95,7 +102,7 @@ jobs:
       - name: Deploy AtlasMed infrastructure services
         run: |
           for attempt in 1 2; do
-            if uc deploy --connect "$UNCLOUD_CONNECT" -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then

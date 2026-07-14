@@ -2,6 +2,33 @@ name: Validate Backend Production Environment
 
 on:
   workflow_call:
+    secrets:
+      UNCLOUD_CONNECT:
+        required: true
+      UNCLOUD_SSH_PRIVATE_KEY:
+        required: true
+      DATABASE_URL:
+        required: true
+      JWT_ACCESS_SECRET:
+        required: true
+      TOKEN_HASH_PEPPER:
+        required: true
+      CORS_ORIGINS:
+        required: true
+      FRONTEND_URL:
+        required: true
+      RESEND_API_KEY:
+        required: true
+      RESEND_FROM_EMAIL:
+        required: true
+      TEMPORAL_DB_PASSWORD:
+        required: true
+      MEILISEARCH_API_KEY:
+        required: true
+      MINIO_ROOT_USER:
+        required: true
+      MINIO_ROOT_PASSWORD:
+        required: true
 
 permissions:
   contents: read

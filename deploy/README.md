@@ -100,11 +100,11 @@ All production services are pinned to the Uncloud machine named `atlasmed` via `
 4. Ensure the shared cluster Authelia config still exposes the Caddy snippet `internal_guard`; `atlasmed-temporal-ui` imports it.
 5. Deploy infrastructure manually:
    ```bash
-   uc deploy --connect "$UNCLOUD_CONNECT" -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes
    ```
 6. Deploy app services:
    ```bash
-   uc deploy --connect "$UNCLOUD_CONNECT" -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --yes
    ```
 
 ## Runtime health checks
