@@ -18,12 +18,18 @@ export const territoriesRoute = new Elysia()
       const scope = await getScope();
       return territoryUseCases.listTerritories().listTerritories(
         query.format === "tree" ? "tree" : "flat",
-        scope
+        scope,
+        {
+          typeSlug: query.type,
+          managerTerritoryId: query.managerTerritoryId,
+        }
       );
     },
     {
       query: t.Object({
         format: t.Optional(t.Union([t.Literal("tree"), t.Literal("flat")])),
+        type: t.Optional(t.String({ description: "Filter by territory type slug (e.g. manager_zone, patch)" })),
+        managerTerritoryId: t.Optional(t.String({ description: "Filter patches by manager zone territory ID" })),
       }),
     }
   )

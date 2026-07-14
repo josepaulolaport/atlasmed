@@ -12,6 +12,14 @@ interface SeedConfig {
   adminLastName?: string;
 }
 
+interface OpsUserConfig {
+  email: string;
+  username: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 async function createRoles() {
   const roleDefs = [
     {
@@ -96,6 +104,50 @@ async function createInitialAdmin(config: SeedConfig) {
   console.log(`      Status: ${admin!.status}`);
 }
 
+async function createOpsUser(config: OpsUserConfig) {
+  console.log("\n👤 Creating OPS seed user...");
+
+  const existingOps = await db.query.users.findFirst({
+    where: or(eq(users.email, config.email), eq(users.username, config.username)),
+  });
+
+  if (existingOps) {
+    console.log(`   ⚠️  OPS user already exists`);
+    console.log(`      Email: ${existingOps.email}`);
+    console.log(`      Username: ${existingOps.username}`);
+    return;
+  }
+
+  const opsRole = await db.query.roles.findFirst({
+    where: eq(roles.name, "OPS"),
+  });
+
+  if (!opsRole) {
+    throw new Error("OPS role not found. Run createRoles first.");
+  }
+
+  const passwordHash = await hash(config.password);
+
+  const [ops] = await db
+    .insert(users)
+    .values({
+      email: config.email,
+      username: config.username,
+      passwordHash,
+      firstName: config.firstName ?? null,
+      lastName: config.lastName ?? null,
+      roleId: opsRole.id,
+      status: "ACTIVE",
+      emailVerified: true,
+    })
+    .returning();
+
+  console.log("   ✓ Created OPS seed user:");
+  console.log(`      Email: ${ops!.email}`);
+  console.log(`      Username: ${ops!.username}`);
+  console.log(`      Role: ${opsRole.name}`);
+}
+
 async function seed() {
   try {
     console.log("\n🌱 Starting database seed...\n");
@@ -130,6 +182,18 @@ async function seed() {
     }
 
     await createInitialAdmin(adminConfig);
+
+    if (process.env.NODE_ENV !== "production") {
+      const opsConfig: OpsUserConfig = {
+        email: process.env.SEED_OPS_EMAIL || "ops@atlasmed.com",
+        username: process.env.SEED_OPS_USERNAME || "ops",
+        password: process.env.SEED_OPS_PASSWORD || "ops123456",
+        firstName: process.env.SEED_OPS_FIRST_NAME || "Ops",
+        lastName: process.env.SEED_OPS_LAST_NAME || "User",
+      };
+
+      await createOpsUser(opsConfig);
+    }
 
     console.log("\n✅ Database seed completed successfully!\n");
     console.log("📝 Next steps:");
