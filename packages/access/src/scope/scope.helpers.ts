@@ -11,6 +11,7 @@ export function createGlobalScopeContext(): ScopeContext {
     facilityIds: [],
     analyticsFacilityIds: [],
     managedUserIds: [],
+    assignedSectorIds: [],
     isOperationallyActive: true,
   });
 }
@@ -24,6 +25,7 @@ export function createEmptyScopeContext(): ScopeContext {
     facilityIds: [],
     analyticsFacilityIds: [],
     managedUserIds: [],
+    assignedSectorIds: [],
     isOperationallyActive: false,
   });
 }

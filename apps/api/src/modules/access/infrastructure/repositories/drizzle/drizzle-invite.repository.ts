@@ -1,5 +1,5 @@
-import { eq, and, or, isNull, gt, desc, lt, sql } from "drizzle-orm";
-import { users, roles, invitations, userTerritoryAssignments } from "@atlasmed/database";
+import { eq, and, or, isNull, isNotNull, inArray, gt, desc, lt, sql } from "drizzle-orm";
+import { users, roles, invitations, userTerritoryAssignments, territories, userSectorAssignments } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
 
@@ -279,13 +279,16 @@ export class DrizzleInviteRepository implements InviteRepository {
 
       const user = { ...userRow!.users, role: userRow!.roles! };
 
-      // Create territory assignments if specified in invitation
+      // Create territory assignments and derive sector assignments if specified in invitation
+      const assignedTerritoryIds: string[] = [];
+
       if (inviteLock.managerTerritoryId) {
         await tx.insert(userTerritoryAssignments).values({
           userId: user.id,
           territoryId: inviteLock.managerTerritoryId,
           assignedBy: inviteLock.id,
         });
+        assignedTerritoryIds.push(inviteLock.managerTerritoryId);
       }
 
       if (inviteLock.repTerritoryId) {
@@ -294,6 +297,31 @@ export class DrizzleInviteRepository implements InviteRepository {
           territoryId: inviteLock.repTerritoryId,
           assignedBy: inviteLock.id,
         });
+        assignedTerritoryIds.push(inviteLock.repTerritoryId);
+      }
+
+      // Derive sector assignments from the assigned territories' sector_id
+      if (assignedTerritoryIds.length > 0) {
+        const territoryRows = await tx
+          .select({ sectorId: territories.sectorId })
+          .from(territories)
+          .where(
+            and(
+              inArray(territories.id, assignedTerritoryIds),
+              isNotNull(territories.sectorId)
+            )
+          );
+
+        const uniqueSectorIds = [
+          ...new Set(territoryRows.map((r) => r.sectorId as string)),
+        ];
+
+        for (const sectorId of uniqueSectorIds) {
+          await tx
+            .insert(userSectorAssignments)
+            .values({ userId: user.id, sectorId })
+            .onConflictDoNothing();
+        }
       }
 
       // Mark invite as accepted

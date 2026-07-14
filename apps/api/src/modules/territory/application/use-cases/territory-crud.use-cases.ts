@@ -255,7 +255,7 @@ export class TerritoryCrudUseCases {
   async listTerritories(
     format: "tree" | "flat" = "flat",
     scope?: ScopeContext,
-    filters?: { typeSlug?: string; managerTerritoryId?: string }
+    filters?: { typeSlug?: string; managerTerritoryId?: string; sectorId?: string }
   ) {
     const territories = await this.deps.territoryRepository.findAllActive();
 
@@ -281,6 +281,10 @@ export class TerritoryCrudUseCases {
       filtered = filtered.filter(
         (t) => t.managerTerritoryId === filters.managerTerritoryId
       );
+    }
+
+    if (filters?.sectorId) {
+      filtered = filtered.filter((t) => t.sectorId === filters.sectorId);
     }
 
     const enriched = await Promise.all(
