@@ -253,7 +253,9 @@ describe("Suggestion use cases", () => {
       name: "Clinic",
       city: null,
       state: null,
+      taxIdType: null,
       cnpj: null,
+      cpf: null,
       lat: null,
       lng: null,
       territoryId: null,
@@ -271,6 +273,7 @@ describe("Suggestion use cases", () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       deactivatedAt: null,
+      services: [],
     }));
 
     const useCase = new ApproveSuggestionUseCase({

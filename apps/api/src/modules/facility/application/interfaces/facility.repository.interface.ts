@@ -1,6 +1,6 @@
 export interface FacilityService {
   serviceCode: string;
-  classificationCode: string | null;
+  classificationCode: string;
 }
 
 export interface FacilityRecord {

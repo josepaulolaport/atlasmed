@@ -17,7 +17,7 @@ function serializeClinic(clinic: {
   updatedAt: Date;
   professionalCount?: number;
   consultantName?: string | null;
-  services?: Array<{ serviceCode: string; classificationCode: string | null }>;
+  services?: Array<{ serviceCode: string; classificationCode: string }>;
 }) {
   return {
     id: clinic.id,

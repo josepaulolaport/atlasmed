@@ -135,7 +135,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     if (!facility) return null;
 
     const services = await db
-      .select({ serviceCode: facilityServices.serviceCode, classificationCode: facilityServices.classificationCode })
+      .select({
+        serviceCode: facilityServices.serviceCode,
+        classificationCode: facilityServices.classificationCode,
+      })
       .from(facilityServices)
       .where(eq(facilityServices.facilityId, id));
 
@@ -171,7 +174,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         )
       );
 
-    return rows.map(mapFacility);
+    return rows.map((row) => mapFacility(row));
   }
 
   async create(data: {

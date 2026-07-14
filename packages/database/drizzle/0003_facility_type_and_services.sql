@@ -4,15 +4,16 @@ CREATE TYPE "public"."facility_tax_id_type" AS ENUM('PJ', 'PF');--> statement-br
 
 ALTER TABLE "facilities" ADD COLUMN "tax_id_type" "facility_tax_id_type";--> statement-breakpoint
 
--- Backfill from existing tax identifier columns
-UPDATE "facilities" SET "tax_id_type" = 'PJ' WHERE "cnpj" IS NOT NULL AND "cpf" IS NULL;--> statement-breakpoint
+-- Backfill from existing tax identifier columns.
+-- When both are present, CNPJ (company) takes precedence.
+UPDATE "facilities" SET "tax_id_type" = 'PJ' WHERE "cnpj" IS NOT NULL;--> statement-breakpoint
 UPDATE "facilities" SET "tax_id_type" = 'PF' WHERE "cpf" IS NOT NULL AND "cnpj" IS NULL;--> statement-breakpoint
 
 CREATE TABLE "facility_services" (
 	"id" text PRIMARY KEY NOT NULL,
 	"facility_id" text NOT NULL,
 	"service_code" text NOT NULL,
-	"classification_code" text,
+	"classification_code" text NOT NULL,
 	"source_provider" text DEFAULT 'cnes' NOT NULL,
 	"source_first_seen_at" timestamp,
 	"source_last_seen_at" timestamp,

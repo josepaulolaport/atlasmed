@@ -352,7 +352,7 @@ export const facilityServices = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
     serviceCode: text("service_code").notNull(),
-    classificationCode: text("classification_code"),
+    classificationCode: text("classification_code").notNull(),
     sourceProvider: text("source_provider").notNull().default("cnes"),
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
     sourceLastSeenAt: timestamp("source_last_seen_at"),

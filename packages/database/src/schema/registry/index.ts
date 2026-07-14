@@ -224,7 +224,7 @@ export const registryFacilityServices = registrySchema.table(
   {
     facilityId: text("facility_id").notNull(),
     serviceCode: text("service_code").notNull(),
-    classificationCode: text("classification_code"),
+    classificationCode: text("classification_code").notNull(),
     createdAt: timestamp("created_at"),
     updatedAt: timestamp("updated_at"),
   },
