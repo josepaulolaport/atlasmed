@@ -22,14 +22,21 @@ export const products = pgTable(
     code: text("code").notNull().unique(),
     name: text("name").notNull(),
     // Enrichment columns (from legacy system)
-    legacyId: text("legacy_id"),
+    legacyId: integer("legacy_id"),
+    legacySupplierId: integer("legacy_supplier_id"),
+    legacyCreatedAt: timestamp("legacy_created_at"),
     description: text("description"),
     barcode: text("barcode"),
     commercialCode: text("commercial_code"),
     productGroup: text("product_group"),
     productClassification: text("product_classification"),
+    internalClassification: text("internal_classification"),
     brand: text("brand"),
     unit: text("unit"),
+    requiresSterilization: boolean("requires_sterilization").notNull().default(false),
+    anvisaRegistration: text("anvisa_registration"),
+    ncm: text("ncm"),
+    imageUrl: text("image_url"),
     pictureUrl: text("picture_url"),
     // Pricing and coding columns
     simproCode: text("simpro_code").notNull(),
@@ -48,10 +55,11 @@ export const products = pgTable(
   },
   (t) => [
     index("products_is_active_idx").on(t.isActive),
-    index("products_legacy_id_idx").on(t.legacyId),
-    unique("products_simpro_code_unique").on(t.simproCode),
-    unique("products_brasindice_code_unique").on(t.brasindiceCode),
-    unique("products_tiss_code_unique").on(t.tissCode),
+    index("products_product_group_idx").on(t.productGroup),
+    uniqueIndex("products_simpro_code_unique").on(t.simproCode),
+    uniqueIndex("products_brasindice_code_unique").on(t.brasindiceCode),
+    uniqueIndex("products_tiss_code_unique").on(t.tissCode),
+    unique("products_legacy_id_key").on(t.legacyId),
   ]
 );
 
@@ -64,8 +72,9 @@ export const productSectors = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("product_sectors_product_sector_uidx").on(t.productId, t.sectorId),
+    index("product_sectors_product_id_idx").on(t.productId),
     index("product_sectors_sector_id_idx").on(t.sectorId),
+    unique("product_sectors_unique").on(t.productId, t.sectorId),
   ]
 );
 
@@ -89,6 +98,8 @@ export const competitorProducts = pgTable(
   },
   (t) => [
     index("competitor_products_is_active_idx").on(t.isActive),
+    index("competitor_products_manufacturer_idx").on(t.manufacturer),
+    unique("competitor_products_legacy_id_key").on(t.legacyId),
   ]
 );
 
@@ -101,8 +112,9 @@ export const competitorProductSectors = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("competitor_product_sectors_competitor_product_id_sector_id_uidx").on(t.competitorProductId, t.sectorId),
+    index("competitor_product_sectors_cp_id_idx").on(t.competitorProductId),
     index("competitor_product_sectors_sector_id_idx").on(t.sectorId),
+    unique("competitor_product_sectors_unique").on(t.competitorProductId, t.sectorId),
   ]
 );
 
@@ -116,8 +128,9 @@ export const productEquivalences = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("product_equivalences_product_id_competitor_product_id_uidx").on(t.productId, t.competitorProductId),
-    index("product_equivalences_competitor_product_idx").on(t.competitorProductId),
+    index("product_equivalences_cp_id_idx").on(t.competitorProductId),
+    index("product_equivalences_product_id_idx").on(t.productId),
+    unique("product_equivalences_unique").on(t.competitorProductId, t.productId),
   ]
 );
 
