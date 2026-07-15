@@ -1,9 +1,7 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
-import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
-import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final currentLocationServiceProvider = Provider<CurrentLocationService>((ref) {
@@ -14,17 +12,8 @@ final currentLocationServiceProvider = Provider<CurrentLocationService>((ref) {
 
 final mapRepositoryProvider = Provider<MapRepository>((ref) {
   final assignmentsRepo = ref.watch(userAssignmentsProvider);
-  final client = createPlatformHttpClient(tokenBuilder: () async {
-    try {
-      final session = await SessionEnvironment.instance.currentValueOrResolve();
-      return session?.token;
-    } catch (_) {
-      return null;
-    }
-  });
-  return ApiMapRepository(
+  return MapRepository(
     assignmentsRepo: assignmentsRepo,
-    client: client,
     baseUrl: AppConfig.apiBaseUrl,
   );
 });

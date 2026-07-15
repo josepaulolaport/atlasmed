@@ -3,12 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
-// ======================================================================
-// ClinicDetailScreen — 15+ sections of clinic information
-// ======================================================================
-
+// ===============================================================// ClinicDetailScreen — 15+ sections of clinic information
+// ===============================================================
 class ClinicDetailScreen extends ConsumerWidget {
   final String clinicId;
 
@@ -99,10 +98,8 @@ class ClinicDetailScreen extends ConsumerWidget {
   }
 }
 
-// ======================================================================
-// Main content body
-// ======================================================================
-
+// ===============================================================// Main content body
+// ===============================================================
 class _ClinicDetailContent extends StatelessWidget {
   final ClinicDetail detail;
 
@@ -154,10 +151,8 @@ class _ClinicDetailContent extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// Section header
-// ======================================================================
-
+// ===============================================================// Section header
+// ===============================================================
 class _SectionHeader extends StatelessWidget {
   final String title;
   const _SectionHeader({required this.title});
@@ -179,10 +174,8 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 1. ClinicHeader — gradient hero with avatar, name, status, address
-// ======================================================================
-
+// ===============================================================// 1. ClinicHeader — gradient hero with avatar, name, status, address
+// ===============================================================
 class _ClinicHeader extends StatelessWidget {
   final ClinicDetail detail;
   const _ClinicHeader({required this.detail});
@@ -426,10 +419,8 @@ class _InteractionRibbon extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 2. QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
-// ======================================================================
-
+// ===============================================================// 2. QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
+// ===============================================================
 class _QuickActions extends StatelessWidget {
   final ClinicDetail detail;
   const _QuickActions({required this.detail});
@@ -530,10 +521,8 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 3. SuggestEditBanner
-// ======================================================================
-
+// ===============================================================// 3. SuggestEditBanner
+// ===============================================================
 class _SuggestEditBanner extends StatelessWidget {
   const _SuggestEditBanner();
 
@@ -578,10 +567,8 @@ class _SuggestEditBanner extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 4. ClinicContextCard — consultant, client type, region
-// ======================================================================
-
+// ===============================================================// 4. ClinicContextCard — consultant, client type, region
+// ===============================================================
 class _ClinicContextCard extends StatelessWidget {
   final ClinicDetail detail;
   const _ClinicContextCard({required this.detail});
@@ -672,10 +659,8 @@ class _ContextRow extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 5. AddToRouteButton
-// ======================================================================
-
+// ===============================================================// 5. AddToRouteButton
+// ===============================================================
 class _AddToRouteButton extends StatelessWidget {
   const _AddToRouteButton();
 
@@ -734,10 +719,8 @@ class _AddToRouteButton extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 7. ClinicSignals
-// ======================================================================
-
+// ===============================================================// 7. ClinicSignals
+// ===============================================================
 class _ClinicSignals extends StatelessWidget {
   final List<ClinicSignal> signals;
   const _ClinicSignals({required this.signals});
@@ -810,10 +793,8 @@ class _SignalCard extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 8. ClinicHealth — LTV, Avg Ticket, Frequency
-// ======================================================================
-
+// ===============================================================// 8. ClinicHealth — LTV, Avg Ticket, Frequency
+// ===============================================================
 class _ClinicHealth extends StatelessWidget {
   final ClinicDetail detail;
   const _ClinicHealth({required this.detail});
@@ -921,10 +902,8 @@ class _HealthCard extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 9. ClinicProducts — product performance with trend bars
-// ======================================================================
-
+// ===============================================================// 9. ClinicProducts — product performance with trend bars
+// ===============================================================
 class _ClinicProducts extends StatelessWidget {
   final List<ProductPerformance> items;
   const _ClinicProducts({required this.items});
@@ -1039,10 +1018,8 @@ class _ProductRow extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 10. ClinicPayers — payer breakdown (simplified list)
-// ======================================================================
-
+// ===============================================================// 10. ClinicPayers — payer breakdown (simplified list)
+// ===============================================================
 class _ClinicPayers extends StatelessWidget {
   final List<PayerInfo> items;
   const _ClinicPayers({required this.items});
@@ -1157,10 +1134,8 @@ class _PayerRow extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 11. NearbyClinics — list of nearby clinics
-// ======================================================================
-
+// ===============================================================// 11. NearbyClinics — list of nearby clinics
+// ===============================================================
 class _NearbyClinics extends StatelessWidget {
   final List<NearbyClinic> items;
   const _NearbyClinics({required this.items});
@@ -1223,10 +1198,8 @@ class _NearbyClinics extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 12. ClinicVisits — visit history with filter pills
-// ======================================================================
-
+// ===============================================================// 12. ClinicVisits — visit history with filter pills
+// ===============================================================
 class _ClinicVisits extends StatefulWidget {
   final List<ClinicVisit> visits;
   const _ClinicVisits({required this.visits});
@@ -1508,10 +1481,8 @@ class _VisitItem extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 13. ClinicDoctors — doctor mini-cards
-// ======================================================================
-
+// ===============================================================// 13. ClinicDoctors — doctor mini-cards
+// ===============================================================
 class _ClinicDoctors extends StatelessWidget {
   final List<DoctorInfo> doctors;
   const _ClinicDoctors({required this.doctors});
@@ -1625,10 +1596,8 @@ class _DoctorMiniCard extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 14. ClinicNotes — field notes
-// ======================================================================
-
+// ===============================================================// 14. ClinicNotes — field notes
+// ===============================================================
 class _ClinicNotes extends StatelessWidget {
   final String notes;
   const _ClinicNotes({required this.notes});
@@ -1681,10 +1650,8 @@ class _ClinicNotes extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// 15. ClinicAdmin — administrative data
-// ======================================================================
-
+// ===============================================================// 15. ClinicAdmin — administrative data
+// ===============================================================
 class _ClinicAdmin extends StatelessWidget {
   final ClinicDetail detail;
   const _ClinicAdmin({required this.detail});
@@ -1795,10 +1762,8 @@ class _AdminRow extends StatelessWidget {
   }
 }
 
-// ======================================================================
-// Shimmer block for loading skeleton
-// ======================================================================
-
+// ===============================================================// Shimmer block for loading skeleton
+// ===============================================================
 class _ShimmerBlock extends StatelessWidget {
   final double height;
   const _ShimmerBlock({required this.height});

@@ -1,7 +1,10 @@
 import 'dart:convert';
 
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_assignments_repository.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import '../models/models.dart';
 
@@ -13,16 +16,6 @@ abstract interface class CurrentLocationService {
 
 /// Map-specific API seam. Facility responses must already be scope-filtered by
 /// the backend; the mobile client never attempts to widen a territory scope.
-abstract interface class MapRepository {
-  Future<List<MapFacility>> getNearbyFacilities(
-    double latitude,
-    double longitude,
-    double radiusKm,
-  );
-
-  Future<TerritoryGeometry?> getAssignedTerritory();
-}
-
 class MapData {
   final MapCoordinate userLocation;
   final TerritoryGeometry? territory;
@@ -43,6 +36,7 @@ class DeviceCurrentLocationService implements CurrentLocationService {
 
   DeviceCurrentLocationService(this._locationService);
 
+
   @override
   Future<MapCoordinate> getCurrentLocation() async {
     final result = await _locationService.requestCurrentLocation();
@@ -61,22 +55,31 @@ class DeviceCurrentLocationService implements CurrentLocationService {
 }
 
 /// Fetches territory boundaries and nearby facilities from the REST API.
-class ApiMapRepository implements MapRepository {
+class MapRepository extends Repository<MapData>
+    with SessionEnvironmentMixin<MapData> {
   final UserAssignmentsRepository _assignmentsRepo;
-  final RepositoryHttpClient _client;
   final String _baseUrl;
 
-  ApiMapRepository({
+  MapRepository({
     required UserAssignmentsRepository assignmentsRepo,
-    required RepositoryHttpClient client,
-    required String baseUrl,
+    String? baseUrl,
   }) : _assignmentsRepo = assignmentsRepo,
-       _client = client,
-       _baseUrl = baseUrl;
+       _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
+       super(
+         endpoint: Uri.parse('${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/user/assignments'),
+         resolveOnCreate: false,
+       );
+
+  @override
+  MapData fromJson(String json) => MapData(
+    userLocation: const MapCoordinate(latitude: 0, longitude: 0),
+    territory: null,
+    facilities: const [],
+  );
 
   // ── Territory ─────────────────────────────────────────────────
 
-  @override
+
   Future<TerritoryGeometry?> getAssignedTerritory() async {
     final assignments = await _assignmentsRepo.currentValueOrResolve();
     if (assignments == null || assignments.territories.isEmpty) return null;
@@ -98,7 +101,7 @@ class ApiMapRepository implements MapRepository {
       '$_baseUrl/api/v1/territories/$territoryId/boundary',
     );
     final request = RepositoryHttpRequest(url: url);
-    final response = await _client.call(request: request);
+    final response = await client.call(request: request);
     if (response.statusCode != 200) return null;
 
     final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -177,7 +180,7 @@ class ApiMapRepository implements MapRepository {
 
   // ── Facilities ────────────────────────────────────────────────
 
-  @override
+
   Future<List<MapFacility>> getNearbyFacilities(
     double latitude,
     double longitude,
@@ -199,7 +202,7 @@ class ApiMapRepository implements MapRepository {
     );
 
     final request = RepositoryHttpRequest(url: url);
-    final response = await _client.call(request: request);
+    final response = await client.call(request: request);
     if (response.statusCode != 200) return const [];
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;

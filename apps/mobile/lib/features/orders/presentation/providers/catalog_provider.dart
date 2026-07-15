@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/repositories/catalog_re
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
-  return ApiCatalogRepository();
+  return CatalogRepository();
 });
 
 class CatalogProductsState {

@@ -48,7 +48,7 @@ void main() {
             '{"data":[],"pagination":{"page":2,"limit":10,"total":0,"totalPages":1}}',
       ),
     );
-    final repository = ApiOrdersRepository(
+    final repository = OrdersRepository(
       baseUrl: 'https://api.atlasmed.test',
       client: client,
     );
@@ -92,7 +92,7 @@ void main() {
         }),
       ),
     );
-    final list = await ApiOrdersRepository(
+    final list = await OrdersRepository(
       baseUrl: 'https://api.atlasmed.test',
       client: listClient,
     ).listOrders();
@@ -135,7 +135,7 @@ void main() {
         }),
       ),
     );
-    final detail = await ApiOrdersRepository(
+    final detail = await OrdersRepository(
       baseUrl: 'https://api.atlasmed.test',
       client: detailClient,
     ).getOrder('order-1');

@@ -164,8 +164,8 @@ class ApiOrderDetail extends ApiOrderListItem {
   );
 }
 
-class ApiOrdersPage {
-  const ApiOrdersPage({
+class OrdersPage {
+  const OrdersPage({
     required this.data,
     required this.page,
     required this.limit,
@@ -178,9 +178,9 @@ class ApiOrdersPage {
   final int total;
   final int totalPages;
 
-  factory ApiOrdersPage.fromJson(Map<String, dynamic> json) {
+  factory OrdersPage.fromJson(Map<String, dynamic> json) {
     final pagination = json['pagination'] as Map<String, dynamic>;
-    return ApiOrdersPage(
+    return OrdersPage(
       data: (json['data'] as List<dynamic>)
           .map(
             (order) => ApiOrderListItem.fromJson(order as Map<String, dynamic>),
@@ -194,15 +194,15 @@ class ApiOrdersPage {
   }
 }
 
-class ApiOrdersRepository extends Repository<ApiOrdersPage>
-    with SessionEnvironmentMixin<ApiOrdersPage> {
-  ApiOrdersRepository({required String baseUrl, RepositoryHttpClient? client})
+class OrdersRepository extends Repository<OrdersPage>
+    with SessionEnvironmentMixin<OrdersPage> {
+  OrdersRepository({required String baseUrl, RepositoryHttpClient? client})
     : _baseUri = Uri.parse(baseUrl),
       _injectedClient = client,
       super(
         endpoint: Uri.parse('$baseUrl/api/v1/orders'),
         resolveOnCreate: false,
-        name: 'ApiOrdersRepository',
+        name: 'OrdersRepository',
       );
 
   final Uri _baseUri;
@@ -212,10 +212,10 @@ class ApiOrdersRepository extends Repository<ApiOrdersPage>
   RepositoryHttpClient get client => _injectedClient ?? super.client;
 
   @override
-  ApiOrdersPage fromJson(String json) =>
-      ApiOrdersPage.fromJson(jsonDecode(json) as Map<String, dynamic>);
+  OrdersPage fromJson(String json) =>
+      OrdersPage.fromJson(jsonDecode(json) as Map<String, dynamic>);
 
-  Future<ApiOrdersPage> listOrders({
+  Future<OrdersPage> listOrders({
     int page = 1,
     int limit = 20,
     List<String>? statuses,
@@ -232,7 +232,7 @@ class ApiOrdersRepository extends Repository<ApiOrdersPage>
     if (response.statusCode != 200) {
       throw StateError('Não foi possível carregar os pedidos.');
     }
-    return ApiOrdersPage.fromJson(
+    return OrdersPage.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
   }

@@ -6,27 +6,17 @@ import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
-abstract class CatalogRepository {
-  Future<CatalogProductPage> getProducts({
-    required int page,
-    required int limit,
-    String? search,
-  });
-
-  Future<CatalogProduct> getProduct(String id);
-}
-
-class ApiCatalogRepository extends Repository<String>
+class CatalogRepository extends Repository<String>
     with SessionEnvironmentMixin<String>
-    implements CatalogRepository {
-  ApiCatalogRepository({String? baseUrl, RepositoryHttpClient? client})
+ {
+  CatalogRepository({String? baseUrl, RepositoryHttpClient? client})
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
       _client = client,
       super(
         endpoint: Uri.parse(
           '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/products',
         ),
-        name: 'ApiCatalogRepository',
+        name: 'CatalogRepository',
         resolveOnCreate: false,
       );
 
@@ -36,7 +26,7 @@ class ApiCatalogRepository extends Repository<String>
   @override
   RepositoryHttpClient get client => _client ?? super.client;
 
-  @override
+
   Future<CatalogProductPage> getProducts({
     required int page,
     required int limit,
@@ -66,7 +56,7 @@ class ApiCatalogRepository extends Repository<String>
     );
   }
 
-  @override
+
   Future<CatalogProduct> getProduct(String id) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
