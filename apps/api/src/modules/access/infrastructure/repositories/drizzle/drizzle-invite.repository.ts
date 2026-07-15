@@ -191,31 +191,28 @@ export class DrizzleInviteRepository implements InviteRepository {
   ): Promise<AcceptInviteTransactionResult> {
     return await db.transaction(async (tx) => {
       // Pessimistic locking: Lock the invite row to prevent race conditions
-      const lockedInvite = await tx.execute<{
-        id: string;
-        status: string;
-        expiresAt: Date;
-        email: string | null;
-        phoneNumber: string | null;
-        roleId: string;
-        firstName: string | null;
-        lastName: string | null;
-        managerId: string | null;
-        managerTerritoryId: string | null;
-        repTerritoryId: string | null;
-      }>(sql`
-        SELECT id, status, "expiresAt", email, "phoneNumber", "roleId",
-               "firstName", "lastName", "managerId", "managerTerritoryId", "repTerritoryId"
-        FROM invitations
-        WHERE "tokenHash" = ${params.tokenHash}
-        FOR UPDATE
-      `);
+      const [inviteLock] = await tx
+        .select({
+          id: invitations.id,
+          status: invitations.status,
+          expiresAt: invitations.expiresAt,
+          email: invitations.email,
+          phoneNumber: invitations.phoneNumber,
+          roleId: invitations.roleId,
+          firstName: invitations.firstName,
+          lastName: invitations.lastName,
+          managerId: invitations.managerId,
+          managerTerritoryId: invitations.managerTerritoryId,
+          repTerritoryId: invitations.repTerritoryId,
+        })
+        .from(invitations)
+        .where(eq(invitations.tokenHash, params.tokenHash))
+        .for("update")
+        .limit(1);
 
-      if (!lockedInvite || lockedInvite.length === 0) {
+      if (!inviteLock) {
         throw new InvalidInviteError();
       }
-
-      const inviteLock = lockedInvite[0]!;
 
       if (inviteLock.status !== "PENDING") {
         throw new InvalidInviteError("Invite has already been used");

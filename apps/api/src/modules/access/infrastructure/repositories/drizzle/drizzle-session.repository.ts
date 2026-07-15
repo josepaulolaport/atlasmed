@@ -319,23 +319,28 @@ export class DrizzleSessionRepository implements SessionRepository {
       const now = new Date();
 
       // Serialize per-user login session creation when no session rows exist yet
-      await tx.execute(sql`
-        SELECT id FROM users WHERE id = ${params.userId} FOR UPDATE
-      `);
+      await tx
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.id, params.userId))
+        .for("update");
 
-      const lockedSessions = await tx.execute<{
-        id: string;
-        deviceFingerprint: string | null;
-        userAgent: string | null;
-        deviceType: string;
-      }>(sql`
-        SELECT id, "deviceFingerprint", "userAgent", "deviceType"
-        FROM sessions
-        WHERE "userId" = ${params.userId}
-          AND "revokedAt" IS NULL
-          AND "expiresAt" > ${now}
-        FOR UPDATE
-      `);
+      const lockedSessions = await tx
+        .select({
+          id: sessions.id,
+          deviceFingerprint: sessions.deviceFingerprint,
+          userAgent: sessions.userAgent,
+          deviceType: sessions.deviceType,
+        })
+        .from(sessions)
+        .where(
+          and(
+            eq(sessions.userId, params.userId),
+            isNull(sessions.revokedAt),
+            gt(sessions.expiresAt, now),
+          ),
+        )
+        .for("update");
 
       const targetSession = {
         id: params.id,
@@ -344,7 +349,7 @@ export class DrizzleSessionRepository implements SessionRepository {
         deviceType: params.deviceMatch.deviceType,
       };
 
-      const sessionsToRevoke = Array.from(lockedSessions).filter((session) =>
+      const sessionsToRevoke = lockedSessions.filter((session) =>
         sessionsMatchSameDevice(targetSession, session),
       );
 
@@ -362,7 +367,7 @@ export class DrizzleSessionRepository implements SessionRepository {
       }
 
       const maxActiveSessions = params.maxActiveSessions ?? Number.MAX_SAFE_INTEGER;
-      const remainingAfterSameDeviceRevoke = Array.from(lockedSessions).filter(
+      const remainingAfterSameDeviceRevoke = lockedSessions.filter(
         (session) => !revokedSessionIds.includes(session.id),
       );
 
@@ -421,26 +426,23 @@ export class DrizzleSessionRepository implements SessionRepository {
 
   async rotateRefreshTokenTransaction(params: RotateRefreshTokenParams) {
     const result = await db.transaction(async (tx) => {
-      const lockedSession = await tx.execute<{
-        id: string;
-        userId: string;
-        refreshTokenHash: string;
-        previousRefreshTokenHash: string | null;
-        revokedAt: Date | null;
-        expiresAt: Date;
-        updatedAt: Date;
-      }>(sql`
-        SELECT id, "userId", "refreshTokenHash", "previousRefreshTokenHash", "revokedAt", "expiresAt", "updatedAt"
-        FROM sessions
-        WHERE id = ${params.sessionId}
-        FOR UPDATE
-      `);
+      const [sessionLock] = await tx
+        .select({
+          id: sessions.id,
+          userId: sessions.userId,
+          refreshTokenHash: sessions.refreshTokenHash,
+          previousRefreshTokenHash: sessions.previousRefreshTokenHash,
+          revokedAt: sessions.revokedAt,
+          expiresAt: sessions.expiresAt,
+          updatedAt: sessions.updatedAt,
+        })
+        .from(sessions)
+        .where(eq(sessions.id, params.sessionId))
+        .for("update");
 
-      if (!lockedSession || lockedSession.length === 0) {
+      if (!sessionLock) {
         throw new UnauthorizedError("Session not found");
       }
-
-      const sessionLock = lockedSession[0]!;
 
       if (sessionLock.revokedAt) {
         throw new UnauthorizedError("Session has been revoked");
