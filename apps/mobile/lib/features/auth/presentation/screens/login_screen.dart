@@ -1,4 +1,3 @@
-import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -86,27 +85,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
-  Future<void> _showErrorFlushbar(AuthErrorKind errorKind) async {
-    if (!mounted) return;
-
-    await Flushbar<void>(
-      icon: const Icon(Icons.error_outline, color: Colors.white, size: 20),
-      shouldIconPulse: false,
-      messageText: Text(
-        _errorMessage(errorKind),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      backgroundColor: const Color(0xFFDC2626),
-      flushbarStyle: FlushbarStyle.GROUNDED,
-      flushbarPosition: FlushbarPosition.TOP,
-      duration: const Duration(seconds: 3),
-    ).show(context);
-  }
-
   void _clearError() {
     if (_errorKind != null) {
       setState(() => _errorKind = null);
@@ -135,7 +113,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           _errorKind = errorKind;
         });
         _triggerShake();
-        _showErrorFlushbar(errorKind);
       },
       (_) {
         setState(() => _isLoading = false);
@@ -237,6 +214,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     error: hasWrongCredentials,
                                     enabled: !isLocked && !_isLoading,
                                   ),
+                                  if (_errorKind != null) ...[
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      _errorMessage(_errorKind!),
+                                      style: const TextStyle(
+                                        color: Color(0xFFFECACA),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                   const SizedBox(height: 32),
                                   Align(
                                     alignment: Alignment.centerRight,
