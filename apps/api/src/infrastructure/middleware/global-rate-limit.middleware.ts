@@ -22,8 +22,10 @@ export { getClientIp }
  * (allows the request through when Redis is unavailable).
  */
 export function createRateLimitMiddleware(namespace: string, options: RateLimitOptions) {
-  return async (// biome-ignore lint/suspicious/noExplicitAny: Elysia context type is complex
-  context: any) => {
+  return async (
+    // biome-ignore lint/suspicious/noExplicitAny: Elysia context type is complex
+    context: any
+  ) => {
     const identifier = options.keyGenerator
       ? await options.keyGenerator(context)
       : getClientIp(context)

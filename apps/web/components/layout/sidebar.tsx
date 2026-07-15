@@ -166,7 +166,10 @@ export function Sidebar() {
       <div className="border-zinc-200 border-t p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button type="button" className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-zinc-100">
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors hover:bg-zinc-100"
+            >
               <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-zinc-200 font-medium text-sm text-zinc-600">
                 {getInitials(user.firstName, user.lastName) ||
                   user.username?.slice(0, 2).toUpperCase()}
