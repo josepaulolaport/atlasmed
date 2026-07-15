@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -36,7 +38,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   late Animation<double> _shakeAnimation;
   int _shakeCount = 0;
   bool _isLoading = false;
-  AuthErrorKind? _errorKind;
+  CreateSessionError? _errorKind;
+  int? _retryAfterSeconds;
+  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -59,7 +63,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _shakeController.dispose();
+    _countdownTimer?.cancel();
     super.dispose();
+  }
+
+  void _startCountdown(int seconds) {
+    _retryAfterSeconds = seconds;
+    _countdownTimer?.cancel();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) {
+        _countdownTimer?.cancel();
+        return;
+      }
+      setState(() {
+        if (_retryAfterSeconds != null && _retryAfterSeconds! > 1) {
+          _retryAfterSeconds = _retryAfterSeconds! - 1;
+        } else {
+          _retryAfterSeconds = null;
+          _countdownTimer?.cancel();
+          _errorKind = null;
+        }
+      });
+    });
   }
 
   void _triggerShake() {
@@ -67,21 +92,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _shakeController.forward(from: 0);
   }
 
-  String _errorMessage(AuthErrorKind errorKind) {
+  String _errorMessage(CreateSessionError errorKind) {
     switch (errorKind) {
-      case AuthErrorKind.wrongCredentials:
+      case CreateSessionError.wrongCredentials:
         return 'E-mail ou senha incorretos.';
-      case AuthErrorKind.accountLocked:
+      case CreateSessionError.accountLocked:
         return 'Muitas tentativas. Recupere sua senha para continuar.';
-      case AuthErrorKind.networkError:
+      case CreateSessionError.tooManyAttempts:
+        return 'Muitas tentativas. Aguarde e tente novamente.';
+      case CreateSessionError.networkError:
         return 'Sem conexão. Verifique sua internet.';
-      case AuthErrorKind.invalidCode:
+      case CreateSessionError.invalidCode:
         return 'Código inválido. Confira e tente novamente.';
-      case AuthErrorKind.expiredCode:
+      case CreateSessionError.expiredCode:
         return 'Código expirado. Solicite um novo código.';
-      case AuthErrorKind.emailNotFound:
+      case CreateSessionError.emailNotFound:
         return 'E-mail não encontrado.';
-      case AuthErrorKind.unknown:
+      case CreateSessionError.unknown:
         return 'Erro ao fazer login. Tente novamente.';
     }
   }
@@ -89,9 +116,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Future<void> _login(SessionEnvironment repository) async {
     if (_isLoading) return;
 
+    _countdownTimer?.cancel();
+
     setState(() {
       _isLoading = true;
       _errorKind = null;
+      _retryAfterSeconds = null;
     });
 
     final result = await repository.login(
@@ -102,10 +132,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!mounted) return;
 
     result.fold(
-      (errorKind) {
+      (exception) {
         setState(() {
           _isLoading = false;
-          _errorKind = errorKind;
+          _errorKind = exception.kind;
+          if (exception.kind == CreateSessionError.tooManyAttempts &&
+              exception.retryAfterSeconds != null) {
+            _startCountdown(exception.retryAfterSeconds!);
+          }
         });
         _triggerShake();
       },
@@ -122,8 +156,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return RepositoryBuilder<SessionEnvironment, Session?>(
       repository: sessionEnvironment,
       builder: (context, Session? session, repository) {
-        final isLocked = _errorKind == AuthErrorKind.accountLocked;
-        final hasInputError = _errorKind != null && !isLocked;
+        final isBlocked = _errorKind == CreateSessionError.accountLocked ||
+            _errorKind == CreateSessionError.tooManyAttempts;
+        final hasInputError = _errorKind != null && !isBlocked;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: const SystemUiOverlayStyle(
@@ -193,7 +228,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
                                       error: hasInputError,
-                                      enabled: !isLocked && !_isLoading,
+                                      enabled: !isBlocked && !_isLoading,
                                     ),
                                     const SizedBox(height: 12),
                                     GlassInput(
@@ -216,12 +251,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       obscureText: true,
                                       textInputAction: TextInputAction.done,
                                       error: hasInputError,
-                                      enabled: !isLocked && !_isLoading,
+                                      enabled: !isBlocked && !_isLoading,
                                     ),
                                     if (_errorKind != null) ...[
                                       const SizedBox(height: 12),
                                       Text(
-                                        _errorMessage(_errorKind!),
+                                        _errorKind ==
+                                                    CreateSessionError
+                                                        .tooManyAttempts &&
+                                                _retryAfterSeconds != null
+                                            ? 'Muitas tentativas. Aguarde ${_retryAfterSeconds}s.'
+                                            : _errorMessage(_errorKind!),
                                         style: const TextStyle(
                                           color: Color(0xFFFECACA),
                                           fontSize: 14,
@@ -258,7 +298,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       disabled:
                                           _emailController.text.isEmpty ||
                                           _passwordController.text.isEmpty ||
-                                          isLocked,
+                                          isBlocked,
                                       trailingIcon: Icons.arrow_forward,
                                       onPressed: () => _login(repository),
                                     ),

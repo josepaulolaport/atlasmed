@@ -60,12 +60,11 @@ class SessionEnvironment extends Repository<Session?>
   /// Exposes a simplified auth state stream for consumers.
   late final Stream<AuthenticationState> authState = stream.map((state) {
     return state.map(
-          ready: (ready) => ready.data != null
-              ? AuthenticationState.authenticated
-              : AuthenticationState.unauthenticated,
-          empty: (_) => AuthenticationState.unauthenticated,
+          ready: (ready) =>
+              ready.data != null ? .authenticated : .unauthenticated,
+          empty: (_) => .unauthenticated,
         ) ??
-        AuthenticationState.unauthenticated;
+        .unauthenticated;
   });
 
   /// Returns a future that completes when the repository hydrates
@@ -130,8 +129,8 @@ class SessionEnvironment extends Repository<Session?>
   /// Calls `POST /auth/login` with the credentials, stores the
   /// returned [Session], and makes it available to the stream.
   ///
-  /// Returns `Right(session)` on success or `Left(AuthErrorKind)` on error.
-  Future<Either<AuthErrorKind, Session>> login({
+  /// Returns `Right(session)` on success or `Left(AuthException)` on error.
+  Future<Either<AuthException, Session>> login({
     required String email,
     required String password,
   }) async {
@@ -148,7 +147,9 @@ class SessionEnvironment extends Repository<Session?>
       if (response.statusCode == 200) {
         final session = fromJson(response.body);
         if (session == null) {
-          return const Left(AuthErrorKind.unknown);
+          return Left(
+            AuthException(kind: CreateSessionError.unknown, message: ''),
+          );
         }
 
         await update((_) => session);
@@ -156,16 +157,38 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 401) {
-        return const Left(AuthErrorKind.wrongCredentials);
+        return Left(
+          AuthException(kind: CreateSessionError.wrongCredentials, message: ''),
+        );
       }
 
       if (response.statusCode == 423) {
-        return const Left(AuthErrorKind.accountLocked);
+        return Left(
+          AuthException(kind: CreateSessionError.accountLocked, message: ''),
+        );
       }
 
-      return const Left(AuthErrorKind.unknown);
+      if (response.statusCode == 429) {
+        final body = jsonDecode(response.body) as Map<String, dynamic>?;
+        final error = body?['error'] as Map<String, dynamic>?;
+        final retryAfterSeconds = error?['retryAfterSeconds'] as int?;
+
+        return Left(
+          AuthException(
+            kind: CreateSessionError.tooManyAttempts,
+            message:
+                error?['message'] as String? ??
+                'Too many attempts. Try again later.',
+            retryAfterSeconds: retryAfterSeconds,
+          ),
+        );
+      }
+
+      return Left(AuthException(kind: CreateSessionError.unknown, message: ''));
     } catch (e) {
-      return const Left(AuthErrorKind.networkError);
+      return Left(
+        AuthException(kind: CreateSessionError.networkError, message: ''),
+      );
     }
   }
 
@@ -187,7 +210,7 @@ class SessionEnvironment extends Repository<Session?>
       if (response.statusCode == 404) {
         return Left(
           AuthException(
-            kind: AuthErrorKind.emailNotFound,
+            kind: CreateSessionError.emailNotFound,
             message: 'E-mail não encontrado.',
           ),
         );
@@ -195,14 +218,14 @@ class SessionEnvironment extends Repository<Session?>
 
       return Left(
         AuthException(
-          kind: AuthErrorKind.unknown,
+          kind: CreateSessionError.unknown,
           message: 'Erro ao solicitar redefinição de senha.',
         ),
       );
     } catch (e) {
       return Left(
         AuthException(
-          kind: AuthErrorKind.networkError,
+          kind: CreateSessionError.networkError,
           message: 'Erro de rede. Verifique sua conexão.',
         ),
       );
@@ -233,14 +256,14 @@ class SessionEnvironment extends Repository<Session?>
 
       return Left(
         AuthException(
-          kind: AuthErrorKind.unknown,
+          kind: CreateSessionError.unknown,
           message: 'Erro ao verificar código.',
         ),
       );
     } catch (e) {
       return Left(
         AuthException(
-          kind: AuthErrorKind.networkError,
+          kind: CreateSessionError.networkError,
           message: 'Erro de rede. Verifique sua conexão.',
         ),
       );
@@ -268,14 +291,14 @@ class SessionEnvironment extends Repository<Session?>
 
       return Left(
         AuthException(
-          kind: AuthErrorKind.unknown,
+          kind: CreateSessionError.unknown,
           message: 'Erro ao redefinir senha.',
         ),
       );
     } catch (e) {
       return Left(
         AuthException(
-          kind: AuthErrorKind.networkError,
+          kind: CreateSessionError.networkError,
           message: 'Erro de rede. Verifique sua conexão.',
         ),
       );

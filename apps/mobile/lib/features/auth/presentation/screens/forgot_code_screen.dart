@@ -30,7 +30,7 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
   Timer? _timer;
 
   bool _isLoading = false;
-  AuthErrorKind? _errorKind;
+  CreateSessionError? _errorKind;
 
   @override
   void initState() {
@@ -77,7 +77,7 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
       (isValid) {
         setState(() {
           _isLoading = false;
-          _errorKind = isValid ? null : AuthErrorKind.invalidCode;
+          _errorKind = isValid ? null : CreateSessionError.invalidCode;
         });
 
         if (isValid) {
@@ -92,7 +92,7 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
   Widget build(BuildContext context) {
     final forgotPassword = ref.watch(forgotPasswordProvider);
     final isLoading = _isLoading;
-    final codeError = _errorKind == AuthErrorKind.invalidCode;
+    final codeError = _errorKind == CreateSessionError.invalidCode;
 
     return Scaffold(
       body: Stack(
