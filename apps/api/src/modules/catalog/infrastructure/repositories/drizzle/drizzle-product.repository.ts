@@ -47,34 +47,33 @@ export class DrizzleProductRepository implements ProductRepository {
     sectorId?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }> {
-    const conditions = [
-      ...(params.isActive !== undefined ? [eq(products.isActive, params.isActive)] : []),
-    ];
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
     const skip = (params.page - 1) * params.limit;
 
-    let baseQuery = db.select({
+    const conditions = [];
+    if (params.isActive !== undefined) conditions.push(eq(products.isActive, params.isActive));
+    if (params.sectorId) {
+      conditions.push(
+        inArray(
+          products.id,
+          db.select({ productId: productSectors.productId })
+            .from(productSectors)
+            .where(eq(productSectors.sectorId, params.sectorId))
+        )
+      );
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const selectedCols = {
       id: products.id,
       code: products.code,
       name: products.name,
       isActive: products.isActive,
       createdAt: products.createdAt,
       updatedAt: products.updatedAt,
-    }).from(products);
-
-    if (params.sectorId) {
-      baseQuery = baseQuery.innerJoin(productSectors, and(
-        eq(productSectors.productId, products.id),
-        eq(productSectors.sectorId, params.sectorId)
-      )) as typeof baseQuery;
-    }
+    };
 
     const [rows, countRows] = await Promise.all([
-      baseQuery
-        .where(where)
-        .orderBy(asc(products.name))
-        .offset(skip)
-        .limit(params.limit),
+      db.select(selectedCols).from(products).where(where).orderBy(asc(products.name)).offset(skip).limit(params.limit),
       db.select({ count: sql<number>`count(*)` }).from(products).where(where),
     ]);
 
