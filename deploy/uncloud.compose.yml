@@ -1,0 +1,222 @@
+name: atlasmed
+
+services:
+  atlasmed-web:
+    platform: linux/amd64
+    x-machines: atlasmed
+    image: atlasmed/web:prod
+    build:
+      context: ..
+      dockerfile: deploy/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=https://atlasmed-api.b1ixob.uncld.dev/api/v1
+    depends_on:
+      - atlasmed-api
+    x-caddy: |
+      atlasmed-web.b1ixob.uncld.dev {
+        reverse_proxy {{upstreams 3000}}
+      }
+
+  atlasmed-api:
+    platform: linux/amd64
+    x-machines: atlasmed
+    image: atlasmed/api:prod
+    build:
+      context: ..
+      dockerfile: deploy/docker/api.Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_POOL_MIN=${DATABASE_POOL_MIN:-2}
+      - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
+      - REDIS_URL=redis://atlasmed-redis:6379
+      - "REDIS_KEY_PREFIX=atlasmed:"
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - TRUST_PROXY=true
+      - SESSION_SECURITY_MODE=strict
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
+      - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
+      - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}
+      - STORAGE_ENDPOINT=http://atlasmed-minio:9000
+      - STORAGE_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - REGISTRY_SOURCE=temporal
+      - TEMPORAL_ADDRESS=atlasmed-temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=cnes-ingestion
+      - OTEL_SERVICE_NAME=atlasmed-api
+    depends_on:
+      - atlasmed-redis
+      - atlasmed-meilisearch
+      - atlasmed-minio
+      - atlasmed-temporal
+    x-caddy: |
+      atlasmed-api.b1ixob.uncld.dev {
+        reverse_proxy {{upstreams 3000}}
+      }
+
+  atlasmed-api-worker:
+    platform: linux/amd64
+    x-machines: atlasmed
+    image: atlasmed/api-worker:prod
+    build:
+      context: ..
+      dockerfile: deploy/docker/api-worker.Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_POOL_MIN=${DATABASE_POOL_MIN:-2}
+      - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
+      - REDIS_URL=redis://atlasmed-redis:6379
+      - "REDIS_KEY_PREFIX=atlasmed:"
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - TRUST_PROXY=true
+      - SESSION_SECURITY_MODE=strict
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
+      - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
+      - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}
+      - STORAGE_ENDPOINT=http://atlasmed-minio:9000
+      - STORAGE_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - STORAGE_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - REGISTRY_SOURCE=temporal
+      - TEMPORAL_ADDRESS=atlasmed-temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=cnes-ingestion
+      - OTEL_SERVICE_NAME=atlasmed-api-worker
+    depends_on:
+      - atlasmed-redis
+      - atlasmed-meilisearch
+      - atlasmed-minio
+      - atlasmed-temporal
+
+  atlasmed-cnes-worker:
+    platform: linux/amd64
+    x-machines: atlasmed
+    image: atlasmed/cnes-worker:prod
+    build:
+      context: ..
+      dockerfile: deploy/docker/cnes-worker.Dockerfile
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - TEMPORAL_ADDRESS=atlasmed-temporal:7233
+      - TEMPORAL_NAMESPACE=default
+      - TEMPORAL_TASK_QUEUE=cnes-ingestion
+      - CNES_FTP_MODE=${CNES_FTP_MODE:-mock}
+      - CNES_LOAD_MODE=${CNES_LOAD_MODE:-dev}
+      - CNES_ARCHIVE_BACKEND=s3
+      - CNES_ARCHIVE_S3_BUCKET=${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}
+      - CNES_ARCHIVE_S3_REGION=${STORAGE_REGION:-us-east-1}
+      - CNES_ARCHIVE_S3_ENDPOINT=http://atlasmed-minio:9000
+      - CNES_ARCHIVE_S3_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - CNES_ARCHIVE_S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - CNES_EXTRACT_DIR=/tmp/cnes-extract
+      - CNES_LOAD_CONCURRENCY=${CNES_LOAD_CONCURRENCY:-4}
+    depends_on:
+      - atlasmed-temporal
+      - atlasmed-minio
+
+  atlasmed-temporal-db:
+    x-machines: atlasmed
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=temporal
+      - POSTGRES_PASSWORD=${TEMPORAL_DB_PASSWORD}
+      - POSTGRES_DB=temporal
+    volumes:
+      - atlasmed_temporal_postgres_data:/var/lib/postgresql/data
+
+  atlasmed-temporal:
+    x-machines: atlasmed
+    image: temporalio/auto-setup:1.24.2
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=${TEMPORAL_DB_PASSWORD}
+      - POSTGRES_SEEDS=atlasmed-temporal-db
+    depends_on:
+      - atlasmed-temporal-db
+
+  atlasmed-temporal-ui:
+    x-machines: atlasmed
+    image: temporalio/ui:2.34.0
+    environment:
+      - TEMPORAL_ADDRESS=atlasmed-temporal:7233
+      - TEMPORAL_CORS_ORIGINS=https://atlasmed-temporal-ui.b1ixob.uncld.dev
+    depends_on:
+      - atlasmed-temporal
+    x-caddy: |
+      atlasmed-temporal-ui.b1ixob.uncld.dev {
+        import internal_guard
+        reverse_proxy {{upstreams 8080}}
+      }
+
+  atlasmed-redis:
+    x-machines: atlasmed
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - atlasmed_redis_data:/data
+
+  atlasmed-meilisearch:
+    x-machines: atlasmed
+    image: getmeili/meilisearch:v1.13
+    environment:
+      - MEILI_ENV=production
+      - MEILI_MASTER_KEY=${MEILISEARCH_API_KEY}
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - atlasmed_meilisearch_data:/meili_data
+
+  atlasmed-minio:
+    x-machines: atlasmed
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+    volumes:
+      - atlasmed_minio_data:/data
+
+  atlasmed-minio-init:
+    x-machines: atlasmed
+    image: minio/mc:latest
+    depends_on:
+      - atlasmed-minio
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - |
+        mc alias set local http://atlasmed-minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
+        mc mb --ignore-existing "local/${STORAGE_BUCKET:-atlasmed-production}"
+        mc mb --ignore-existing "local/${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
+      - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
+      - CNES_ARCHIVE_S3_BUCKET=${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}
+    restart: "no"
+
+volumes:
+  atlasmed_temporal_postgres_data:
+  atlasmed_redis_data:
+  atlasmed_meilisearch_data:
+  atlasmed_minio_data:

@@ -1,0 +1,83 @@
+name: 🚀 Flutter Web — Produção
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/deploy-production.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Testar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+        working-directory: ./apps/mobile
+
+      - name: Analisar código
+        run: flutter analyze
+        working-directory: ./apps/mobile
+
+      - name: Executar testes
+        run: flutter test
+        working-directory: ./apps/mobile
+
+  deploy_web_production:
+    name: Deploy Web (Produção)
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: 'stable'
+          cache: true
+
+      - name: Instalar dependências
+        run: flutter pub get
+        working-directory: ./apps/mobile
+
+      - name: Build Flutter Web (Release)
+        run: flutter build web --release
+        working-directory: ./apps/mobile
+
+      - name: Instalar Firebase CLI
+        run: npm install --global firebase-tools@15.23.0
+
+      - name: Deploy para Firebase Hosting (Produção)
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          firebase deploy --only hosting --project atlasmed-app
+        working-directory: ./apps/mobile

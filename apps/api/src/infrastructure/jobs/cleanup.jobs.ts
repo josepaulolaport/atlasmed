@@ -10,10 +10,13 @@ import {
 } from "../audit/siem-export.helper";
 import { metricsService } from "../monitoring/metrics.service";
 import { logger } from "../logging/logger";
+import type { Worker } from "bullmq";
 
 const SIEM_CURSOR_KEY = "siem:lastExportAt";
 
 const cleanupQueue = createQueue("cleanup");
+type CleanupJobData = { retentionDays?: number };
+let cleanupWorker: Worker<CleanupJobData> | undefined;
 
 const defaultJobOptions: JobOptions = {
   attempts: 2,
@@ -138,15 +141,21 @@ export class CleanupJobs {
   }
 }
 
-const cleanupWorker = createWorker<any>(
-  "cleanup",
-  async (job) => {
-    const { data, name } = job as { data: any; name?: string };
+export function startCleanupWorker(): void {
+  if (cleanupWorker) {
+    logger.info("Cleanup worker already started");
+    return;
+  }
 
-    logger.info("Running cleanup job", { jobName: name });
+  cleanupWorker = createWorker<CleanupJobData>(
+    "cleanup",
+    async (job) => {
+      const { data, name } = job as { data: CleanupJobData; name?: string };
 
-    try {
-      switch (name) {
+      logger.info("Running cleanup job", { jobName: name });
+
+      try {
+        switch (name) {
         case "cleanup-expired-sessions": {
           const deleted = await db.delete(sessions).where(
             or(
@@ -265,21 +274,24 @@ const cleanupWorker = createWorker<any>(
 
         default:
           logger.warn("Unknown cleanup job", { jobName: name });
+        }
+      } catch (error) {
+        logger.error("Cleanup job failed", error, { jobName: name });
+        throw error;
       }
-    } catch (error) {
-      logger.error("Cleanup job failed", error, { jobName: name });
-      throw error;
-    }
-  },
-  { concurrency: 1 }
-);
+    },
+    { concurrency: 1 }
+  );
 
-cleanupWorker.on("completed", (job) => {
-  logger.info("Cleanup job completed", { jobName: job.name });
-});
+  cleanupWorker.on("completed", (job) => {
+    logger.info("Cleanup job completed", { jobName: job.name });
+  });
 
-cleanupWorker.on("failed", (job, error) => {
-  logger.error("Cleanup job failed", error, { jobName: job?.name });
-});
+  cleanupWorker.on("failed", (job, error) => {
+    logger.error("Cleanup job failed", error, { jobName: job?.name });
+  });
+
+  logger.info("Cleanup worker started");
+}
 
 export const cleanupJobs = new CleanupJobs();

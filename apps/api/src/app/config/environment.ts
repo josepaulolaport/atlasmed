@@ -71,14 +71,6 @@ const EnvironmentSchema = Type.Object({
     description: 'Secret for signing access tokens (minimum 32 characters)'
   }),
   
-  JWT_REFRESH_SECRET: Type.Optional(
-    Type.String({
-      minLength: 32,
-      description:
-        'Legacy/unused: refresh tokens are opaque random bytes, not JWTs. Kept for backward-compatible env files.',
-    })
-  ),
-  
   JWT_EXPIRATION: Type.String({ 
     default: '15m', 
     minLength: 1,

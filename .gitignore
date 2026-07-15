@@ -137,7 +137,7 @@ Thumbs.db
 .cache/
 
 # Downloaded geography artifacts (br-atlas clones, IBGE caches)
-data/
+/data/
 
 node_modules
 .turbo

@@ -15,6 +15,13 @@
       "when": 1783679000000,
       "tag": "0002_phase1_schema_decisions",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1752530400000,
+      "tag": "0003_facility_type_and_services",
+      "breakpoints": true
     }
   ]
 }

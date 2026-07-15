@@ -1,0 +1,193 @@
+name: Deploy Backend Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'apps/workers/**'
+      - 'packages/**'
+      - 'deploy/**'
+      - '.dockerignore'
+      - '.github/workflows/deploy-backend-production.yml'
+      - '.github/workflows/deploy-infra.yml'
+      - '.github/workflows/validate-production-env.yml'
+      - 'bun.lock'
+      - 'package.json'
+      - 'turbo.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlasmed-backend-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate-production-env:
+    uses: ./.github/workflows/validate-production-env.yml
+    secrets:
+      UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+      UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+      MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+
+  deploy:
+    needs: validate-production-env
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+
+    env:
+      UC_BUILD_ID: ${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+
+      - name: Restore Bun cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck API
+        run: bun run --filter @atlasmed/api typecheck
+
+      - name: Typecheck CNES worker
+        run: bun run --filter @atlasmed/cnes-ingestion-worker typecheck
+
+      - name: Build web
+        env:
+          NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
+        run: bun run --filter atlasmed_web_app build
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: bun run db:migrate
+
+      - name: Install Uncloud CLI
+        env:
+          UNCLOUD_INSTALL_SHA256: 4df443521dba10eb7b8c497caabe1093aa7414ade8943de48bfec59e159602ef
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/uncloud-install.sh https://get.uncloud.run/install.sh
+          echo "$UNCLOUD_INSTALL_SHA256  /tmp/uncloud-install.sh" | sha256sum -c -
+          sh /tmp/uncloud-install.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Setup SSH key
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+          UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          scripts/prepare-uncloud-ssh-key.sh ~/.ssh/id_ed25519
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          UNCLOUD_HOST="$(echo "$UNCLOUD_CONNECT" | sed -E 's#ssh://[^@]+@([^:/]+).*#\1#')"
+          ssh-keyscan -H "$UNCLOUD_HOST" >> ~/.ssh/known_hosts
+
+      - name: Resolve Uncloud SSH target
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+        run: |
+          UNCLOUD_TARGET="${UNCLOUD_CONNECT#ssh://}"
+          UNCLOUD_TARGET="${UNCLOUD_TARGET#ssh+cli://}"
+          UNCLOUD_TARGET="${UNCLOUD_TARGET%%/*}"
+          UNCLOUD_USER="${UNCLOUD_TARGET%%@*}"
+          HOST_PORT="${UNCLOUD_TARGET#*@}"
+          UNCLOUD_HOST="${HOST_PORT%%:*}"
+          UNCLOUD_PORT="${HOST_PORT##*:}"
+          if [ "$UNCLOUD_PORT" = "$UNCLOUD_HOST" ]; then UNCLOUD_PORT=22; fi
+          echo "UNCLOUD_SSH_CMD=ssh -p $UNCLOUD_PORT $UNCLOUD_USER@$UNCLOUD_HOST" >> "$GITHUB_ENV"
+
+      - name: Check remote Docker storage
+        run: $UNCLOUD_SSH_CMD 'df -h / && docker system df'
+
+      - name: Prune unused Docker data
+        run: |
+          $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+          $UNCLOUD_SSH_CMD 'docker system df'
+
+      - name: Deploy AtlasMed backend services
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_PHONE_NUMBER: ${{ secrets.TWILIO_PHONE_NUMBER }}
+          TWILIO_WHATSAPP_NUMBER: ${{ secrets.TWILIO_WHATSAPP_NUMBER }}
+          MAPBOX_SECRET_TOKEN: ${{ secrets.MAPBOX_SECRET_TOKEN }}
+          MAPBOX_PUBLIC_TOKEN: ${{ secrets.MAPBOX_PUBLIC_TOKEN }}
+          TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+          MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
+          CNES_FTP_MODE: ${{ vars.CNES_FTP_MODE || 'mock' }}
+          CNES_LOAD_MODE: ${{ vars.CNES_LOAD_MODE || 'dev' }}
+          CNES_LOAD_CONCURRENCY: ${{ vars.CNES_LOAD_CONCURRENCY || '4' }}
+        run: |
+          for attempt in 1 2; do
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --yes; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 2 ]; then
+              $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+              sleep 5
+            fi
+          done
+          exit 1
+
+      - name: Health check API
+        run: |
+          for i in {1..20}; do
+            if curl -fsS https://atlasmed-api.b1ixob.uncld.dev/health >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1
+
+      - name: Health check web
+        run: |
+          for i in {1..20}; do
+            if curl -fsS https://atlasmed-web.b1ixob.uncld.dev >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          exit 1

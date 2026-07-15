@@ -1,0 +1,117 @@
+name: Deploy Backend Infrastructure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: atlasmed-backend-infra-deploy
+  cancel-in-progress: false
+
+jobs:
+  validate-production-env:
+    uses: ./.github/workflows/validate-production-env.yml
+    secrets:
+      UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+      UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+      MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+
+  deploy-infra:
+    needs: validate-production-env
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+
+    env:
+      UC_BUILD_ID: infra-${{ github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Uncloud CLI
+        env:
+          UNCLOUD_INSTALL_SHA256: 4df443521dba10eb7b8c497caabe1093aa7414ade8943de48bfec59e159602ef
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/uncloud-install.sh https://get.uncloud.run/install.sh
+          echo "$UNCLOUD_INSTALL_SHA256  /tmp/uncloud-install.sh" | sha256sum -c -
+          sh /tmp/uncloud-install.sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Setup SSH key
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+          UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          scripts/prepare-uncloud-ssh-key.sh ~/.ssh/id_ed25519
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+          UNCLOUD_HOST="$(echo "$UNCLOUD_CONNECT" | sed -E 's#ssh://[^@]+@([^:/]+).*#\1#')"
+          ssh-keyscan -H "$UNCLOUD_HOST" >> ~/.ssh/known_hosts
+
+      - name: Resolve Uncloud SSH target
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+        run: |
+          UNCLOUD_TARGET="${UNCLOUD_CONNECT#ssh://}"
+          UNCLOUD_TARGET="${UNCLOUD_TARGET#ssh+cli://}"
+          UNCLOUD_TARGET="${UNCLOUD_TARGET%%/*}"
+          UNCLOUD_USER="${UNCLOUD_TARGET%%@*}"
+          HOST_PORT="${UNCLOUD_TARGET#*@}"
+          UNCLOUD_HOST="${HOST_PORT%%:*}"
+          UNCLOUD_PORT="${HOST_PORT##*:}"
+          if [ "$UNCLOUD_PORT" = "$UNCLOUD_HOST" ]; then UNCLOUD_PORT=22; fi
+          echo "UNCLOUD_SSH_CMD=ssh -p $UNCLOUD_PORT $UNCLOUD_USER@$UNCLOUD_HOST" >> "$GITHUB_ENV"
+
+      - name: Check remote Docker storage
+        run: $UNCLOUD_SSH_CMD 'df -h / && docker system df'
+
+      - name: Prune unused Docker data
+        run: |
+          $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+          $UNCLOUD_SSH_CMD 'docker system df'
+
+      - name: Deploy AtlasMed infrastructure services
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+          TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+          CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+          TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+          MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+          STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+          CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
+        run: |
+          for attempt in 1 2; do
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 2 ]; then
+              $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+              sleep 5
+            fi
+          done
+          exit 1
