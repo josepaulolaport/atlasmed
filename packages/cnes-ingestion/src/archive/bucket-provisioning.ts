@@ -33,7 +33,18 @@ function errorStatusCode(error: unknown): number | undefined {
     return undefined;
   }
 
-  return (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+interface S3ServiceError {
+  name?: string;
+  $metadata?: { httpStatusCode?: number };
+}
+
+function errorStatusCode(error: unknown): number | undefined {
+  if (!error || typeof error !== "object" || !("$metadata" in error)) {
+    return undefined;
+  }
+
+  return (error as S3ServiceError).$metadata?.httpStatusCode;
+}
 }
 
 function isNotFoundError(error: unknown): boolean {
