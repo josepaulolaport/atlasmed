@@ -26,6 +26,11 @@
       "outputs": []
     },
 
+    "env:check": {
+      "cache": false,
+      "outputs": []
+    },
+
     "dev": {
       "cache": false,
       "persistent": true

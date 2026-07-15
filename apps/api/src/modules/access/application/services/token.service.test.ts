@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { jwtVerify } from "jose";
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../../app/config/environment";
 import { TokenService } from "./token.service";
 import type { AccessTokenPayload } from "@atlasmed/access";
 
@@ -80,7 +80,7 @@ describe("TokenService", () => {
       expect(verified.sid).toBe("session-456");
     });
 
-    it("should set expiration from configured JWT_EXPIRES_IN", async () => {
+    it("should set expiration from configured JWT_EXPIRATION", async () => {
       const payload: AccessTokenPayload = {
         sub: "user-123",
         sid: "session-456",
@@ -91,7 +91,7 @@ describe("TokenService", () => {
 
       const token = await tokenService.signAccessToken(payload);
       const verified = await tokenService.verifyAccessToken(token);
-      const expectedSeconds = parseDurationToSeconds(apiEnv.JWT_EXPIRES_IN);
+      const expectedSeconds = parseDurationToSeconds(environment.JWT_EXPIRATION);
 
       expect(verified.exp).toBeDefined();
       const expiresIn = verified.exp! - Math.floor(Date.now() / 1000);

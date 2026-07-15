@@ -1,4 +1,4 @@
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../app/config/environment";
 import { logger } from "../../logging/logger";
 
 import { twilioClient } from "./twilio.client";
@@ -22,7 +22,7 @@ export async function sendInviteWhatsApp(
     
     logger.info("Sending invite WhatsApp message", { to });
     const result = await twilioClient.messages.create({
-      from: apiEnv.TWILIO_WHATSAPP_FROM!,
+      from: environment.TWILIO_WHATSAPP_NUMBER!,
       to: `whatsapp:${to}`,
       body: message,
     });
@@ -44,7 +44,7 @@ export async function sendPasswordResetWhatsApp(to: string, token: string): Prom
     
     logger.info("Sending password reset WhatsApp message", { to });
     const result = await twilioClient.messages.create({
-      from: apiEnv.TWILIO_WHATSAPP_FROM!,
+      from: environment.TWILIO_WHATSAPP_NUMBER!,
       to: `whatsapp:${to}`,
       body: message,
     });

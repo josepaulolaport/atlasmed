@@ -438,11 +438,12 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                         onChanged: (v) {
                           final cleaned = v.replaceAll(',', '.');
                           final n = double.tryParse(cleaned);
-                          if (n != null)
+                          if (n != null) {
                             setState(() {
                               _customUnit = n;
                               _mode = 'custom';
                             });
+                          }
                         },
                         onTap: () => setState(() => _mode = 'custom'),
                       ),
