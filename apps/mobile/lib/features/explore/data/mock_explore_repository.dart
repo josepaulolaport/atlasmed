@@ -1,7 +1,10 @@
 import 'clinic_detail.dart';
 import 'doctor_detail.dart';
 import 'explore_repository.dart';
-import 'models.dart';
+import 'models/clinic.dart';
+import 'models/filter_data.dart';
+
+import 'models/doctor.dart';
 
 class MockExploreRepository implements ExploreRepository {
   @override

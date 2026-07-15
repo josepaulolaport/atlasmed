@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
-import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/auth_repository.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
+import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
+import 'package:atlasmed_mobile_app/core/session/models/session.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_logo.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/glass_input.dart';

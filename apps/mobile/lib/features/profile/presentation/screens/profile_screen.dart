@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/models.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/activity.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/support.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
-import 'package:atlasmed_mobile_app/features/profile/presentation/providers/avatar_controller.dart';
+import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview

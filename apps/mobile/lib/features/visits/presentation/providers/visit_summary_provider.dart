@@ -1,5 +1,5 @@
-import 'package:atlasmed_mobile_app/features/visits/data/api_visit_repository.dart';
-import 'package:atlasmed_mobile_app/features/visits/data/visit_repository.dart';
+import 'package:atlasmed_mobile_app/features/visits/data/repositories/api_visit_repository.dart';
+import 'package:atlasmed_mobile_app/features/visits/data/repositories/visit_repository.dart';
 import 'package:atlasmed_mobile_app/features/visits/data/weekly_visit_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

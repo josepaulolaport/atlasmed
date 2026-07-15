@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
 import 'models.dart';
 
 /// Abstract repository for authentication.
@@ -26,25 +27,4 @@ abstract class AuthRepository {
 
   /// Clear stored session (logout).
   Future<void> clearSession();
-}
-
-/// Exception thrown by [AuthRepository] methods.
-class AuthException implements Exception {
-  final AuthErrorKind kind;
-  final String message;
-
-  const AuthException({required this.kind, required this.message});
-
-  @override
-  String toString() => 'AuthException($kind): $message';
-}
-
-enum AuthErrorKind {
-  wrongCredentials,
-  accountLocked,
-  networkError,
-  invalidCode,
-  expiredCode,
-  emailNotFound,
-  unknown,
 }

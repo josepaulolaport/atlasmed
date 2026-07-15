@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+
+import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';

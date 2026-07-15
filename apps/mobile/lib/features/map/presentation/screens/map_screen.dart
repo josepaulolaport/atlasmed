@@ -1,8 +1,8 @@
 import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/features/map/data/map_models.dart';
-import 'package:atlasmed_mobile_app/features/map/data/map_repository.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/providers/map_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';

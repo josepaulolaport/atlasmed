@@ -1,4 +1,7 @@
-import 'models.dart';
+import 'models/clinic.dart';
+import 'models/filter_data.dart';
+
+import 'models/doctor.dart';
 
 // ── Clinic detail model ───────────────────────────────────────
 

@@ -1,6 +1,7 @@
 import 'clinic_detail.dart';
 import 'doctor_detail.dart';
-import 'models.dart';
+import 'models/clinic.dart';
+import 'models/doctor.dart';
 
 /// Abstract repository for explore (clinic/doctor list + detail) data.
 ///

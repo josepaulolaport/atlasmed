@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/professional_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';

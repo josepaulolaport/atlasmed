@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/avatar_repository.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:atlasmed_mobile_app/core/user/repositories/avatar_repository.dart';
 
 void main() {
   final user = User(

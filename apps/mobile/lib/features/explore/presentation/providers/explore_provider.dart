@@ -3,8 +3,9 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/explore_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/professional_notes_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/mock_explore_repository.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 

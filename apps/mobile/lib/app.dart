@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'core/providers/session_provider.dart';
-import 'features/profile/presentation/providers/avatar_controller.dart';
+import 'core/session/providers/session_provider.dart';
+import 'core/user/controllers/avatar_controller.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/auth/presentation/screens/forgot_email_screen.dart';
@@ -25,7 +25,7 @@ import 'features/presentations/presentation/screens/presentations_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
 import 'shared/widgets/app_shell.dart';
-import 'core/repositories/session_listenable.dart';
+import 'core/session/session_listenable.dart';
 
 class AtlasMedApp extends ConsumerStatefulWidget {
   const AtlasMedApp({super.key});

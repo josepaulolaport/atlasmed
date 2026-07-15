@@ -1,4 +1,8 @@
-import 'models.dart';
+import 'models/user_profile.dart';
+import 'models/territory.dart';
+import 'models/activity.dart';
+import 'models/preferences.dart';
+import 'models/support.dart';
 import 'profile_repository.dart';
 
 class MockProfileRepository implements ProfileRepository {

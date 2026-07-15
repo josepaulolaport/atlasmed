@@ -1,6 +1,10 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/models.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/activity.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/support.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/profile_repository.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 

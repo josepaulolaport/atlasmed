@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
 import 'models.dart';
 import 'auth_repository.dart';
 

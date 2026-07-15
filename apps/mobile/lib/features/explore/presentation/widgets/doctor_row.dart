@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 
 class DoctorRow extends StatelessWidget {
   final Doctor doctor;

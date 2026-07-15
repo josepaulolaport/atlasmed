@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/catalog_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/catalog_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {

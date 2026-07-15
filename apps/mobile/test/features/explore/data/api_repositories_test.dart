@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_repositories.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 
 void main() {
   group('ClinicsRepository', () {
     test('builds a paginated search endpoint for clinics', () {
-      final endpoint = ClinicsRepository.buildEndpoint(
+      final endpoint = ClinicsRepository.makeEndpoint(
         baseUrl: 'https://api.example.test',
         page: 2,
         limit: 15,
@@ -47,7 +49,7 @@ void main() {
     test(
       'builds a paginated search endpoint for doctors scoped to a facility',
       () {
-        final endpoint = DoctorsRepository.buildEndpoint(
+        final endpoint = DoctorsRepository.makeEndpoint(
           baseUrl: 'https://api.example.test',
           page: 1,
           limit: 20,

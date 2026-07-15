@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/map/data/map_repository.dart';
+import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final currentLocationServiceProvider = Provider<CurrentLocationService>((ref) {

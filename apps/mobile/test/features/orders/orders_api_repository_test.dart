@@ -1,7 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/api_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 
 class RecordingClient extends RepositoryHttpClient {
@@ -19,7 +21,24 @@ class RecordingClient extends RepositoryHttpClient {
   }
 }
 
+class _MemoryCacheStorage extends RepositoryCacheStorage {
+  const _MemoryCacheStorage();
+
+  @override
+  Future<void> clear() async {}
+
+  @override
+  Future<void> delete({required String key}) async {}
+
+  @override
+  Future<String?> read({required String key}) async => null;
+
+  @override
+  Future<void> write({required String key, required String value}) async {}
+}
+
 void main() {
+  BaseRepository.storage = const _MemoryCacheStorage();
   test('builds paginated orders URL with comma-separated status filter', () async {
     final client = RecordingClient(
       const RepositoryHttpResponse(

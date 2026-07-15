@@ -1,10 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/models.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/activity.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/support.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/mock_profile_repository.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/profile_repository.dart';
 
-import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 
 // ── Repository provider ─────────────────────────────────────
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {

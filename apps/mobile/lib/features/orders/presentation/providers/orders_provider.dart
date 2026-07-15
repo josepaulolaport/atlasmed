@@ -1,7 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/api_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/legacy_orders_mock.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 
 final ordersRepositoryProvider = Provider<ApiOrdersRepository>((ref) {

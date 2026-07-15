@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/auth_repository.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/providers/auth_provider.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/code_input.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
