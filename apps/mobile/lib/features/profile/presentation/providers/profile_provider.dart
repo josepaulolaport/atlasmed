@@ -51,9 +51,12 @@ final quickSummaryProvider = FutureProvider<List<QuickSummaryItem>>((ref) {
   return repo.getQuickSummary();
 });
 
-final preferencesProvider = FutureProvider<List<PreferenceItem>>((ref) {
+final preferencesProvider = FutureProvider<List<PreferenceItem>>((ref) async {
   final repo = ref.watch(profileRepositoryProvider);
-  return repo.getPreferences();
+  final preferences = await repo.getPreferences();
+  return preferences
+      .where((item) => item.label.toLowerCase() != 'idioma')
+      .toList(growable: false);
 });
 
 final recentActivityProvider = FutureProvider<List<RecentActivity>>((ref) {

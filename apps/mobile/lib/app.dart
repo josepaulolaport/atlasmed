@@ -144,11 +144,16 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
           builder: (_, _, child) => AppShellScreen(child: child),
           routes: [
             // Desempenho
-            GoRoute(path: '/bi', builder: (_, _) => const DashboardScreen()),
+            GoRoute(
+              path: '/bi',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: DashboardScreen()),
+            ),
             // Explorar (with clinic/doctor detail sub-routes)
             GoRoute(
               path: '/workspace',
-              builder: (_, _) => const ExploreScreen(),
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: ExploreScreen()),
               routes: [
                 GoRoute(
                   path: 'clinic/:id',
@@ -163,11 +168,15 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               ],
             ),
             // Mapa
-            GoRoute(path: '/mapa', builder: (_, _) => const MapScreen()),
+            GoRoute(
+              path: '/mapa',
+              pageBuilder: (_, _) => const NoTransitionPage(child: MapScreen()),
+            ),
             // Pedidos
             GoRoute(
               path: '/pedidos',
-              builder: (_, _) => const MeusOrdersScreen(),
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: MeusOrdersScreen()),
               routes: [
                 GoRoute(
                   path: 'novo',
@@ -205,10 +214,15 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
             // Apresentações
             GoRoute(
               path: '/apresentacoes',
-              builder: (_, _) => const PresentationsScreen(),
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: PresentationsScreen()),
             ),
             // Perfil
-            GoRoute(path: '/perfil', builder: (_, _) => const ProfileScreen()),
+            GoRoute(
+              path: '/perfil',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: ProfileScreen()),
+            ),
           ],
         ),
       ],

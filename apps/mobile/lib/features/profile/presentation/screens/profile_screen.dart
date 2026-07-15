@@ -67,7 +67,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     final sessionProfile = ref.watch(sessionProfileProvider);
     final profileAsync = ref.watch(profileProvider);
@@ -75,7 +74,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final summaryAsync = ref.watch(quickSummaryProvider);
     final prefsAsync = ref.watch(preferencesProvider);
     final activityAsync = ref.watch(recentActivityProvider);
-    final supportAsync = ref.watch(supportItemsProvider);
     ref.listen<AsyncValue<void>>(avatarControllerProvider, (_, next) {
       if (next.hasError) _showAvatarError(next.error.toString());
     });
@@ -92,7 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Top bar ──────────────────────────────────
-                  _buildTopBar(),
+                  const AtlasTopBar(page: 'Perfil'),
 
                   // ── Header · identity ────────────────────────
                   if (sessionProfile != null)
@@ -148,14 +146,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Suporte & conta
-                        supportAsync.when(
-                          loading: () => _buildSectionShimmer(height: 160),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildSupportSection(items),
-                        ),
-                        const SizedBox(height: 12),
-
                         // Logout
                         _buildLogoutButton(),
 
@@ -171,58 +161,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
           // ── Logout confirmation sheet ────────────────────────
           if (_logoutConfirm) _buildLogoutSheet(),
-        ],
-      ),
-    );
-  }
-
-  // ── Top bar ─────────────────────────────────────────────────
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _GlassButton(
-            child: const Icon(
-              Icons.menu_rounded,
-              color: Color(0xFF0a2f7f),
-              size: 18,
-            ),
-            onTap: () => openAppDrawer(context),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFeef0f3)),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0a2f7f),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Perfil',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                    color: Color(0xFF0a2f7f),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 38), // balance menu on left
         ],
       ),
     );
@@ -678,6 +616,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   // ── Suporte & conta ─────────────────────────────────────────
+  // ignore: unused_element, preserved for when support/account links return
   Widget _buildSupportSection(List<SupportItem> items) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -286,6 +286,7 @@ class AtlasDrawer extends ConsumerWidget {
         return SizedBox(
           width: MediaQuery.of(context).size.width * 0.78,
           child: Drawer(
+            shape: const RoundedRectangleBorder(),
             child: Column(
               children: [
                 _DrawerHeader(
@@ -557,7 +558,7 @@ class _DrawerFooter extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Atlasmed · v2.4.1',
+            'Atlasmed · v0.1.0',
             style: TextStyle(
               fontSize: 10.5,
               color: Color(0xFF9ca3af),
