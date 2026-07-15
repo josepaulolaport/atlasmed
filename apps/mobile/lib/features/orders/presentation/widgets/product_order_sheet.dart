@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/repositories/legacy_orders_mock.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
@@ -35,13 +34,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   late String _mode; // 'suggested', 'catalog', 'custom'
   late double _customUnit;
 
-  PriceSuggestion? get _suggestion => widget.clinicId != null
-      ? getSuggestedPrice(
-          widget.clinicId!,
-          widget.product.id,
-          widget.product.price,
-        )
-      : null;
+  PriceSuggestion? get _suggestion => null; // TODO: wire via PriceSuggestionRepository when available
 
   double get _activeUnit {
     switch (_mode) {
@@ -57,20 +50,9 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   @override
   void initState() {
     super.initState();
-    final suggestion = widget.clinicId != null
-        ? getSuggestedPrice(
-            widget.clinicId!,
-            widget.product.id,
-            widget.product.price,
-          )
-        : null;
-    final startMode =
-        widget.initialMode ?? (suggestion != null ? 'suggested' : 'catalog');
-    final startUnit =
-        widget.initialUnit ??
-        (startMode == 'suggested' && suggestion != null
-            ? suggestion.unit
-            : widget.product.price);
+    // No price suggestion API yet — default to catalog price
+    final startMode = widget.initialMode ?? 'catalog';
+    final startUnit = widget.initialUnit ?? widget.product.price;
     _qty = widget.initialQty > 0 ? widget.initialQty : 1;
     _mode = startMode;
     _customUnit = startUnit;

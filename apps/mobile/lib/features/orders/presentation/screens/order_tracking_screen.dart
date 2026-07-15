@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:atlasmed_mobile_app/features/orders/data/repositories/legacy_orders_mock.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
@@ -76,14 +77,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     return '${dt.day.toString().padLeft(2, '0')}/${_monthsShort[dt.month - 1]} · ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  TrackingOrderDetail get _order {
-    return kTrackingOrders[widget.orderId] ?? kTrackingOrders['ORD-2841']!;
-  }
-
   Future<void> _refresh() async {
     if (_refreshing) return;
     setState(() => _refreshing = true);
     await _refreshController.forward(from: 0);
+    // Invalidate provider to refetch order detail
+    ref.invalidate(orderDetailProvider(widget.orderId));
     await Future<void>.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _refreshing = false);
@@ -146,68 +145,131 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     }
   }
 
+  /// Maps [ApiOrderDetail] from the API to the [TrackingOrderDetail] used by UI.
+  TrackingOrderDetail _mapToTrackingOrder(ApiOrderDetail detail) {
+    final status = _parseStatus(detail.status, TrackingStatus.pending);
+    final ts = detail.createdAt.toIso8601String();
+    final updatedTs = detail.updatedAt.toIso8601String();
+    return TrackingOrderDetail(
+      id: detail.displayId,
+      status: status,
+      createdAt: ts,
+      estimatedDelivery: '',
+      paymentMethod: detail.notes ?? '',
+      total: 'R\$ ${detail.total.toStringAsFixed(2).replaceAll('.', ',')}',
+      clinic: TrackingClinic(
+        id: detail.facility.id,
+        name: detail.facility.name,
+        address: '',
+      ),
+      items: detail.items
+          .map(
+            (item) => TrackingOrderItem(
+              id: item.id,
+              productName: item.product?.name ?? 'Produto',
+              code: item.product?.code ?? '',
+              quantity: item.quantity.round(),
+              unit: '',
+              subtotal:
+                  'R\$ ${item.lineTotal.toStringAsFixed(2).replaceAll('.', ',')}',
+            ),
+          )
+          .toList(growable: false),
+      timeline: [
+        TrackingEvent(
+          status: TrackingStatus.confirmed,
+          timestamp: ts,
+          description: 'Pedido confirmado',
+        ),
+        TrackingEvent(
+          status: status,
+          timestamp: updatedTs,
+          description: 'Última atualização: $status',
+        ),
+      ],
+      driver: null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final order = _order;
-    final status = _parseStatus(widget.orderStatus, order.status);
-    final canCancel = ![
-      TrackingStatus.shipped,
-      TrackingStatus.delivered,
-      TrackingStatus.cancelled,
-    ].contains(status);
-    final steps = const ['confirmed', 'processing', 'shipped', 'delivered'];
-    final stepMeta = <String, ({String label, TrackingStatus status})>{
-      'confirmed': (label: 'Confirmado', status: TrackingStatus.confirmed),
-      'processing': (label: 'Em preparação', status: TrackingStatus.processing),
-      'shipped': (label: 'Saiu para entrega', status: TrackingStatus.shipped),
-      'delivered': (label: 'Entregue', status: TrackingStatus.delivered),
-    };
-    final currentIndex = steps.indexWhere((s) => stepMeta[s]!.status == status);
-    final statusColor = status.color;
-    final gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [statusColor, Color.lerp(statusColor, Colors.black, 0.18)!],
-    );
+    final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
+    return orderAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: const Color(0xFFf7f8fb),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, stack) => Scaffold(
+        backgroundColor: const Color(0xFFf7f8fb),
+        body: Center(
+          child: Text(
+            'Não foi possível carregar o pedido.\n$err',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF6b7280)),
+          ),
+        ),
+      ),
+      data: (apiOrder) {
+        final order = _mapToTrackingOrder(apiOrder);
+        final status = _parseStatus(widget.orderStatus, order.status);
+        final canCancel = ![
+          TrackingStatus.shipped,
+          TrackingStatus.delivered,
+          TrackingStatus.cancelled,
+        ].contains(status);
+        final steps = const ['confirmed', 'processing', 'shipped', 'delivered'];
+        final stepMeta = <String, ({String label, TrackingStatus status})>{
+          'confirmed': (label: 'Confirmado', status: TrackingStatus.confirmed),
+          'processing': (label: 'Em preparação', status: TrackingStatus.processing),
+          'shipped': (label: 'Saiu para entrega', status: TrackingStatus.shipped),
+          'delivered': (label: 'Entregue', status: TrackingStatus.delivered),
+        };
+        final currentIndex = steps.indexWhere((s) => stepMeta[s]!.status == status);
+        final statusColor = status.color;
+        final gradient = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [statusColor, Color.lerp(statusColor, Colors.black, 0.18)!],
+        );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
-              ),
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Row(
-                children: [
-                  const BackChevron(),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ACOMPANHAR PEDIDO',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.2,
-                            color: Color(0xFF8a94a6),
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '#ORD-2841',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0f1729),
-                          ),
-                        ),
+        return Scaffold(
+          backgroundColor: const Color(0xFFf7f8fb),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                  child: Row(
+                    children: [
+                      const BackChevron(),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'ACOMPANHAR PEDIDO',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                                color: Color(0xFF8a94a6),
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              '#ORD-2841',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0f1729),
+                              ),
+                            ),
                       ],
                     ),
                   ),
@@ -499,6 +561,8 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
         ),
       ),
     );
+    },
+  );
   }
 
   Widget _infoLine(String label, String value, {bool strong = false}) {

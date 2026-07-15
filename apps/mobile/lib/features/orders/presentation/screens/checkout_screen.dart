@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/repositories/legacy_orders_mock.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
@@ -42,19 +42,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
-          ...kSelectorClinics.map(
-            (clinic) => ListTile(
-              leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
-              title: Text(clinic.name),
-              trailing: cart.clinic?.id == clinic.id
-                  ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
-                  : null,
-              onTap: () {
-                ref.read(cartProvider.notifier).setClinic(clinic);
-                Navigator.pop(context);
-              },
-            ),
-          ),
+          // TODO: fetch real clinic list via FacilitiesRepository
+          ...<SelectableClinic>[]
+              .map(
+                (clinic) => ListTile(
+                  leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
+                  title: Text(clinic.name),
+                  trailing: cart.clinic?.id == clinic.id
+                      ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
+                      : null,
+                  onTap: () {
+                    ref.read(cartProvider.notifier).setClinic(clinic);
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
           const SizedBox(height: 16),
         ],
       ),
@@ -63,10 +65,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _showDoctorSheet(BuildContext context, WidgetRef ref) {
     final cart = ref.read(cartProvider);
-    final clinicId = cart.clinic?.id;
-    final doctors = kSelectorDoctors
-        .where((d) => d.clinicId == clinicId)
-        .toList();
+    // TODO: fetch real doctor list via ProfessionalsRepository filtered by clinicId
+    final doctors = <SelectableDoctor>[];
 
     showModalBottomSheet(
       context: context,
@@ -374,7 +374,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: canConfirm
-                      ? () => context.push('/pedidos/novo/sucesso')
+                      ? () {
+                          // TODO: submit order via OrdersRepository.createOrder()
+                          // when POST /api/v1/orders endpoint exists
+                          context.push('/pedidos/novo/sucesso');
+                        }
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0a2f7f),
