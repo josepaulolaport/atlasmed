@@ -9,14 +9,17 @@ services:
       context: ..
       dockerfile: deploy/docker/web.Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
+        NEXT_PUBLIC_API_URL: https://api.tdomains.uk/api/v1
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://atlasmed-api.b1ixob.uncld.dev/api/v1
+      - NEXT_PUBLIC_API_URL=https://api.tdomains.uk/api/v1
     depends_on:
       - atlasmed-api
     x-caddy: |
       atlasmed-web.b1ixob.uncld.dev {
+        reverse_proxy {{upstreams 3000}}
+      }
+      app.tdomains.uk {
         reverse_proxy {{upstreams 3000}}
       }
 
@@ -37,8 +40,8 @@ services:
       - "REDIS_KEY_PREFIX=atlasmed:"
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
-      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev,https://app.tdomains.uk}
+      - FRONTEND_URL=${FRONTEND_URL:-https://app.tdomains.uk}
       - TRUST_PROXY=true
       - SESSION_SECURITY_MODE=strict
       - RESEND_API_KEY=${RESEND_API_KEY}
@@ -62,6 +65,9 @@ services:
       - atlasmed-temporal
     x-caddy: |
       atlasmed-api.b1ixob.uncld.dev {
+        reverse_proxy {{upstreams 3000}}
+      }
+      api.tdomains.uk {
         reverse_proxy {{upstreams 3000}}
       }
 
@@ -159,12 +165,16 @@ services:
     image: temporalio/ui:2.34.0
     environment:
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
-      - TEMPORAL_CORS_ORIGINS=https://atlasmed-temporal-ui.b1ixob.uncld.dev
+      - TEMPORAL_CORS_ORIGINS=https://atlasmed-temporal-ui.b1ixob.uncld.dev,https://temporal-ui.tdomains.uk
     depends_on:
       - atlasmed-temporal
     x-caddy: |
       atlasmed-temporal-ui.b1ixob.uncld.dev {
-        import internal_guard
+        import atlasmed_internal_guard
+        reverse_proxy {{upstreams 8080}}
+      }
+      temporal-ui.tdomains.uk {
+        import atlasmed_internal_guard
         reverse_proxy {{upstreams 8080}}
       }
 
