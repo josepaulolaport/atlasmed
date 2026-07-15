@@ -7,6 +7,7 @@ import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { doctorUseCases } from "../../composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { parseListProfessionalsQuery } from "../../application/list-professionals-query";
 import type { z } from "zod";
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -52,17 +53,19 @@ const listProfessionalsRoute = new Elysia()
     "/professionals",
     async ({ query, getScope }) => {
       const scope = await getScope();
+      const filters = parseListProfessionalsQuery(query);
       return doctorUseCases.listProfessionals().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
         facilityId: query.facilityId,
+        ...filters,
         scope,
       });
     },
     {
       detail: {
-        summary: "List professionals",
+        summary: "List professionals (coordinates use nearest visible linked facility and exclude professionals without one)",
         tags: ["Professionals"],
         security: [{ bearerAuth: [] }],
       },
@@ -71,6 +74,10 @@ const listProfessionalsRoute = new Elysia()
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
         facilityId: t.Optional(t.String()),
+        latitude: t.Optional(t.String()),
+        longitude: t.Optional(t.String()),
+        radiusKm: t.Optional(t.String()),
+        specialty: t.Optional(t.String()),
       }),
     }
   );

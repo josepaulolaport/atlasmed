@@ -63,6 +63,7 @@ function serializeProfessionalSummary(professional: ProfessionalRecord) {
     crmNumber: professional.crmNumber ?? undefined,
     crmState: professional.crmState ?? undefined,
     facilityIds: professional.facilityIds,
+    distanceKm: professional.distanceKm ?? undefined,
     createdAt: professional.createdAt.toISOString(),
     updatedAt: professional.updatedAt.toISOString(),
   };
@@ -212,6 +213,10 @@ export class ListProfessionalsUseCase {
     limit?: number;
     search?: string;
     facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
@@ -226,6 +231,10 @@ export class ListProfessionalsUseCase {
       limit,
       search: input.search,
       facilityId: input.facilityId,
+      specialty: input.specialty,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      radiusKm: input.radiusKm,
       scope: input.scope.isGlobal
         ? { isGlobal: true }
         : { isGlobal: false, facilityIds: input.scope.facilityIds },

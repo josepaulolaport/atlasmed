@@ -18,6 +18,7 @@ function serializeClinic(clinic: {
   professionalCount?: number;
   consultantName?: string | null;
   services?: Array<{ serviceCode: string; classificationCode: string }>;
+  distanceKm?: number | null;
 }) {
   return {
     id: clinic.id,
@@ -31,6 +32,7 @@ function serializeClinic(clinic: {
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
     professionalCount: clinic.professionalCount ?? 0,
     consultantName: clinic.consultantName ?? null,
+    distanceKm: clinic.distanceKm ?? undefined,
     services: clinic.services ?? [],
     createdAt: clinic.createdAt.toISOString(),
     updatedAt: clinic.updatedAt.toISOString(),
@@ -50,6 +52,11 @@ export class ListFacilitiesUseCase {
     page?: number;
     limit?: number;
     search?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    productIds?: string[];
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
@@ -59,6 +66,11 @@ export class ListFacilitiesUseCase {
       page,
       limit,
       search: input.search,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      radiusKm: input.radiusKm,
+      commercialStatus: input.commercialStatus,
+      productIds: input.productIds,
       scope: input.scope.isGlobal
         ? { isGlobal: true }
         : { isGlobal: false, facilityIds: input.scope.facilityIds },

@@ -38,6 +38,8 @@ export interface ProfessionalRecord {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  /** Present only when a coordinate query was supplied. */
+  distanceKm?: number | null;
 }
 
 export interface ProfessionalListScopeFilter {
@@ -119,6 +121,10 @@ export interface ProfessionalRepository {
     limit: number;
     search?: string;
     facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
     scope: ProfessionalListScopeFilter;
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;
 

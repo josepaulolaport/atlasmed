@@ -5,6 +5,7 @@ import { requirePermission } from "../../../access/infrastructure/middleware/per
 import { facilityUseCases } from "../../composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import type { z } from "zod";
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -29,16 +30,18 @@ const listFacilitiesRoute = new Elysia()
     "/facilities",
     async ({ query, getScope }) => {
       const scope = await getScope();
+      const filters = parseListFacilitiesQuery(query);
       return facilityUseCases.listFacilities().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
+        ...filters,
         scope,
       });
     },
     {
       detail: {
-        summary: "List clinics",
+        summary: "List clinics (coordinates exclude facilities without location; results are ordered by distance)",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -46,6 +49,11 @@ const listFacilitiesRoute = new Elysia()
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
+        latitude: t.Optional(t.String()),
+        longitude: t.Optional(t.String()),
+        radiusKm: t.Optional(t.String()),
+        commercialStatus: t.Optional(t.String()),
+        productIds: t.Optional(t.String()),
       }),
     }
   );
