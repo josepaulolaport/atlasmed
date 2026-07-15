@@ -1,26 +1,5 @@
-import 'dart:async';
-
-import 'package:dartz/dartz.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/auth_repository.dart';
-import '../../data/models/session.dart';
-import '../../../core/repositories/session_environment.dart';
 
-// ── SessionEnvironment provider ──────────────────────────────
-final sessionEnvironmentProvider = Provider<SessionEnvironment>((ref) {
-  return SessionEnvironment.instance;
-});
-
-// ── Session reactive stream provider ─────────────────────────
-/// Emits the current session (or null) reactively.
-/// Use this in screens that need to react to auth state changes.
-final sessionStateProvider = StreamProvider<Session?>((ref) {
-  return SessionEnvironment.instance.dataStream;
-});
-
-// ── Forgot password flow state ───────────────────────────────
-/// Tracks the forgot password multi-step state.
-/// Kept minimal — API calls go through [SessionEnvironment].
 class ForgotPasswordState {
   final String email;
   final String code;
@@ -56,5 +35,5 @@ class ForgotPasswordNotifier extends StateNotifier<ForgotPasswordState> {
 
 final forgotPasswordProvider =
     StateNotifierProvider<ForgotPasswordNotifier, ForgotPasswordState>((ref) {
-  return ForgotPasswordNotifier();
-});
+      return ForgotPasswordNotifier();
+    });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/providers/session_provider.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/glass_input.dart';
 import '../widgets/primary_button.dart';
@@ -19,8 +20,8 @@ class ForgotEmailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(authProvider);
-    final email = TextEditingController(text: state.forgotEmail);
+    final forgotPassword = ref.watch(forgotPasswordProvider);
+    final email = TextEditingController(text: forgotPassword.email);
 
     return Scaffold(
       body: Stack(
@@ -102,16 +103,19 @@ class ForgotEmailScreen extends ConsumerWidget {
                           label: 'Enviar código',
                           loading: false,
                           disabled: !email.text.contains('@'),
-                          onPressed: () {
-                            ref
-                                .read(authProvider.notifier)
-                                .submitForgotEmail(email.text)
-                                .then((_) {
-                                  final st = ref.read(authProvider);
-                                  if (st.error == null) {
-                                    onCodeSent();
-                                  }
-                                });
+                          onPressed: () async {
+                            final result = await ref
+                                .read(sessionProvider)
+                                .requestPasswordReset(email.text);
+
+                            if (!context.mounted) return;
+
+                            result.fold((_) {}, (_) {
+                              ref
+                                  .read(forgotPasswordProvider.notifier)
+                                  .setEmail(email.text);
+                              onCodeSent();
+                            });
                           },
                         ),
                         const SizedBox(height: 20),

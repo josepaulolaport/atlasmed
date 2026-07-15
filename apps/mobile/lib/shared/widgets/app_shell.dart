@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import '../../core/providers/session_provider.dart';
+import '../../core/repositories/session_environment.dart';
+import '../../features/auth/data/models/session.dart';
+import '../../repository/repository_flutter.dart';
 
 // ======================================================================
 // AppShellScreen — Scaffold wrapper with shared navigation drawer.
@@ -265,33 +268,42 @@ class AtlasDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final session = authState.session;
-    final displayName = session?.userDisplayName ?? 'Rafael Melo';
-    final email = _inferEmail(displayName);
-    final initials = _initials(displayName);
+    final sessionEnvironment = ref.watch(sessionProvider);
 
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.78,
-      child: Drawer(
-        child: Column(
-          children: [
-            _DrawerHeader(
-              initials: initials,
-              displayName: displayName,
-              email: email,
+    return RepositoryBuilder<SessionEnvironment, Session?>(
+      repository: sessionEnvironment,
+      builder: (context, session, repository) {
+        if (session == null) {
+          return const SizedBox.shrink();
+        }
+
+        final user = ref.watch(userProvider).valueOrNull ?? session.user;
+        final displayName = user.displayName;
+        final email = user.email;
+        final initials = _initials(displayName);
+
+        return SizedBox(
+          width: MediaQuery.of(context).size.width * 0.78,
+          child: Drawer(
+            child: Column(
+              children: [
+                _DrawerHeader(
+                  initials: initials,
+                  displayName: displayName,
+                  email: email,
+                ),
+                Expanded(child: _NavItems(activeSection: activeSection)),
+                _DrawerFooter(
+                  onLogout: () {
+                    Navigator.of(context).pop();
+                    repository.delete();
+                  },
+                ),
+              ],
             ),
-            Expanded(child: _NavItems(activeSection: activeSection)),
-            _DrawerFooter(
-              onLogout: () {
-                Navigator.of(context).pop(); // close drawer
-                ref.read(authProvider.notifier).logout();
-                context.go('/splash');
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -300,13 +312,7 @@ class AtlasDrawer extends ConsumerWidget {
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return 'RM';
-  }
-
-  String _inferEmail(String displayName) {
-    final slug = displayName.toLowerCase().replaceAll(RegExp(r'\s+'), '.');
-    return '$slug@atlasmed.com';
+    return parts.first[0].toUpperCase();
   }
 }
 

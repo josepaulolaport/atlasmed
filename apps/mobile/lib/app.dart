@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'features/auth/presentation/providers/auth_provider.dart';
+import 'core/providers/session_provider.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/auth/presentation/screens/forgot_email_screen.dart';
@@ -24,7 +24,6 @@ import 'features/presentations/presentation/screens/presentations_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
 import 'shared/widgets/app_shell.dart';
-import 'core/repositories/session_environment.dart';
 import 'core/repositories/session_listenable.dart';
 
 class AtlasMedApp extends ConsumerStatefulWidget {
@@ -41,7 +40,8 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
   @override
   void initState() {
     super.initState();
-    _sessionListenable = SessionListenable();
+    final sessionEnvironment = ref.read(sessionProvider);
+    _sessionListenable = SessionListenable(sessionEnvironment);
     _router = _buildRouter();
   }
 

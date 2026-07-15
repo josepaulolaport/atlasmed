@@ -1,16 +1,17 @@
 import 'package:equatable/equatable.dart';
 
+import 'user.dart';
+
 class Session extends Equatable {
   const Session({
     required this.token,
     required this.refreshToken,
+    required this.user,
   });
 
-  /// JWT access token used as `Authorization: Bearer <token>`.
   final String token;
-
-  /// Refresh token used by `PUT /api/v1/session/`.
   final String refreshToken;
+  final User user;
 
   factory Session.fromJson(Map<String, dynamic> json) {
     final sessionJson = json.containsKey('session')
@@ -20,17 +21,15 @@ class Session extends Equatable {
     return Session(
       token: sessionJson['token'] as String,
       refreshToken: sessionJson['refreshToken'] as String,
+      user: User.fromJson(json),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'session': {
-          'token': token,
-          'refreshToken': refreshToken,
-        },
-      };
+    'session': {'token': token, 'refreshToken': refreshToken},
+    'user': user.toJson(),
+  };
 
-  /// All valid sessions are equal — only null vs non-null matters for auth state.
   @override
   List<Object?> get props => [true];
 }

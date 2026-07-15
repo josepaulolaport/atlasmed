@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../shared/widgets/app_shell.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/providers/session_provider.dart';
 import '../../data/models.dart';
 import '../providers/profile_provider.dart';
 
@@ -752,8 +751,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: double.infinity,
                       child: FilledButton(
                         onPressed: () {
-                          ref.read(authProvider.notifier).logout();
-                          context.go('/splash');
+                          ref.read(sessionProvider).delete();
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFb84545),
@@ -809,7 +807,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.only(top: 18),
       child: Center(
         child: Text(
-          'Atlasmed · v2.6.1 · $since',
+          'Atlasmed · v0.1.0 · $since',
           style: const TextStyle(
             fontSize: 10.5,
             color: Color(0xFFc4c9d2),

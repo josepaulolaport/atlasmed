@@ -2,13 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import 'package:flutter/foundation.dart';
-
 import '../config/app_config.dart';
 import '../../features/auth/data/auth_repository.dart';
 import '../../repository/base_repository.dart';
 import '../../repository/domain/entities/data_source.dart';
-import '../../repository/external/platform_http_client.dart';
 import '../../repository/infra/repository_http_client.dart';
 import '../../repository/repositories/http_repository.dart';
 import '../../features/auth/data/models/session.dart';
@@ -63,11 +60,12 @@ class SessionEnvironment extends Repository<Session?>
   /// Exposes a simplified auth state stream for consumers.
   late final Stream<AuthenticationState> authState = stream.map((state) {
     return state.map(
-      ready: (ready) => ready.data != null
-          ? AuthenticationState.authenticated
-          : AuthenticationState.unauthenticated,
-      empty: (_) => AuthenticationState.unauthenticated,
-    );
+          ready: (ready) => ready.data != null
+              ? AuthenticationState.authenticated
+              : AuthenticationState.unauthenticated,
+          empty: (_) => AuthenticationState.unauthenticated,
+        ) ??
+        AuthenticationState.unauthenticated;
   });
 
   /// Returns a future that completes when the repository hydrates
@@ -86,6 +84,7 @@ class SessionEnvironment extends Repository<Session?>
       request: RepositoryHttpRequest(
         url: endpoint,
         method: RepositoryHttpMethod.put,
+        headers: {'Content-Type': 'application/json'},
         body: {'refreshToken': session.refreshToken},
       ),
     );
@@ -141,6 +140,7 @@ class SessionEnvironment extends Repository<Session?>
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/api/v1/session/'),
           method: RepositoryHttpMethod.post,
+          headers: {'Content-Type': 'application/json'},
           body: {'identifier': email, 'password': password},
         ),
       );
@@ -185,21 +185,27 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 404) {
-        return Left(AuthException(
-          kind: AuthErrorKind.emailNotFound,
-          message: 'E-mail não encontrado.',
-        ));
+        return Left(
+          AuthException(
+            kind: AuthErrorKind.emailNotFound,
+            message: 'E-mail não encontrado.',
+          ),
+        );
       }
 
-      return Left(AuthException(
-        kind: AuthErrorKind.unknown,
-        message: 'Erro ao solicitar redefinição de senha.',
-      ));
+      return Left(
+        AuthException(
+          kind: AuthErrorKind.unknown,
+          message: 'Erro ao solicitar redefinição de senha.',
+        ),
+      );
     } catch (e) {
-      return Left(AuthException(
-        kind: AuthErrorKind.networkError,
-        message: 'Erro de rede. Verifique sua conexão.',
-      ));
+      return Left(
+        AuthException(
+          kind: AuthErrorKind.networkError,
+          message: 'Erro de rede. Verifique sua conexão.',
+        ),
+      );
     }
   }
 
@@ -225,15 +231,19 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(false);
       }
 
-      return Left(AuthException(
-        kind: AuthErrorKind.unknown,
-        message: 'Erro ao verificar código.',
-      ));
+      return Left(
+        AuthException(
+          kind: AuthErrorKind.unknown,
+          message: 'Erro ao verificar código.',
+        ),
+      );
     } catch (e) {
-      return Left(AuthException(
-        kind: AuthErrorKind.networkError,
-        message: 'Erro de rede. Verifique sua conexão.',
-      ));
+      return Left(
+        AuthException(
+          kind: AuthErrorKind.networkError,
+          message: 'Erro de rede. Verifique sua conexão.',
+        ),
+      );
     }
   }
 
@@ -248,11 +258,7 @@ class SessionEnvironment extends Repository<Session?>
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/reset-password'),
           method: RepositoryHttpMethod.post,
-          body: {
-            'email': email,
-            'code': code,
-            'password': newPassword,
-          },
+          body: {'email': email, 'code': code, 'password': newPassword},
         ),
       );
 
@@ -260,15 +266,19 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(null);
       }
 
-      return Left(AuthException(
-        kind: AuthErrorKind.unknown,
-        message: 'Erro ao redefinir senha.',
-      ));
+      return Left(
+        AuthException(
+          kind: AuthErrorKind.unknown,
+          message: 'Erro ao redefinir senha.',
+        ),
+      );
     } catch (e) {
-      return Left(AuthException(
-        kind: AuthErrorKind.networkError,
-        message: 'Erro de rede. Verifique sua conexão.',
-      ));
+      return Left(
+        AuthException(
+          kind: AuthErrorKind.networkError,
+          message: 'Erro de rede. Verifique sua conexão.',
+        ),
+      );
     }
   }
 
@@ -296,5 +306,3 @@ class SessionEnvironment extends Repository<Session?>
     }
   }
 }
-
-

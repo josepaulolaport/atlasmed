@@ -1,27 +1,23 @@
 import 'package:equatable/equatable.dart';
 
 class UserRole extends Equatable {
-  const UserRole({
-    required this.id,
-    required this.name,
-    this.description,
-  });
+  const UserRole({required this.id, required this.name, this.description});
 
   final String id;
   final String name;
   final String? description;
 
   factory UserRole.fromJson(Map<String, dynamic> json) => UserRole(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        description: json['description'] as String?,
-      );
+    id: json['id'] as String,
+    name: json['name'] as String,
+    description: json['description'] as String?,
+  );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        if (description != null) 'description': description,
-      };
+    'id': id,
+    'name': name,
+    if (description != null) 'description': description,
+  };
 
   @override
   List<Object?> get props => [id, name, description];
@@ -51,10 +47,10 @@ class User extends Equatable {
   final UserRole role;
 
   String get displayName {
-    final parts = [firstName, lastName]
-        .whereType<String>()
-        .where((part) => part.trim().isNotEmpty)
-        .join(' ');
+    final parts = [
+      firstName,
+      lastName,
+    ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' ');
 
     if (parts.isNotEmpty) return parts;
     if (username.isNotEmpty) return username;
@@ -80,27 +76,27 @@ class User extends Equatable {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'email': email,
-        'username': username,
-        if (firstName != null) 'firstName': firstName,
-        if (lastName != null) 'lastName': lastName,
-        'status': status,
-        'emailVerified': emailVerified,
-        'phoneVerified': phoneVerified,
-        'role': role.toJson(),
-      };
+    'id': id,
+    'email': email,
+    'username': username,
+    if (firstName != null) 'firstName': firstName,
+    if (lastName != null) 'lastName': lastName,
+    'status': status,
+    'emailVerified': emailVerified,
+    'phoneVerified': phoneVerified,
+    'role': role.toJson(),
+  };
 
   @override
   List<Object?> get props => [
-        id,
-        email,
-        username,
-        firstName,
-        lastName,
-        status,
-        emailVerified,
-        phoneVerified,
-        role,
-      ];
+    id,
+    email,
+    username,
+    firstName,
+    lastName,
+    status,
+    emailVerified,
+    phoneVerified,
+    role,
+  ];
 }

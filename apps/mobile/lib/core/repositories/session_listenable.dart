@@ -1,41 +1,21 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+
+import '../../features/auth/data/models/session.dart';
 import 'session_environment.dart';
 
-/// A [ChangeNotifier] that bridges [SessionEnvironment]'s reactive stream
-/// to GoRouter's [refreshListenable].
-///
-/// Usage in [GoRouter]:
-/// ```dart
-/// final routerRefreshNotifier = SessionListenable();
-///
-/// GoRouter(
-///   refreshListenable: routerRefreshNotifier,
-///   redirect: (context, state) {
-///     final session = routerRefreshNotifier.currentSession;
-///     // redirect logic...
-///   },
-/// )
-/// ```
 class SessionListenable extends ChangeNotifier {
-  StreamSubscription<AuthenticationState>? _subscription;
-  AuthenticationState _state = AuthenticationState.unauthenticated;
-
-  SessionListenable() {
-    _subscription =
-        SessionEnvironment.instance.authState.listen((authState) {
-      _state = authState;
+  SessionListenable(this.sessionEnvironment) {
+    _subscription = sessionEnvironment.dataStream.listen((_) {
       notifyListeners();
     });
   }
 
-  /// Whether the user is currently authenticated.
-  bool get isAuthenticated =>
-      _state == AuthenticationState.authenticated;
+  final SessionEnvironment sessionEnvironment;
+  StreamSubscription<Session?>? _subscription;
 
-  /// The current auth state.
-  AuthenticationState get currentState => _state;
+  bool get isAuthenticated => sessionEnvironment.currentValue != null;
 
   @override
   void dispose() {
