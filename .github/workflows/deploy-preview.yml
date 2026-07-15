@@ -42,7 +42,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Resolver canal de preview
         id: preview
@@ -150,7 +150,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Instalar Firebase CLI
         run: npm install --global firebase-tools@15.23.0
