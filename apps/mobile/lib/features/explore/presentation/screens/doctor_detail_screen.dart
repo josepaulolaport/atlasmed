@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
@@ -23,7 +24,8 @@ class DoctorDetailScreen extends ConsumerWidget {
       body: detailAsync.when(
         loading: () => _loadingSkeleton(context),
         error: (err, _) => _errorView(context, err.toString()),
-        data: (detail) => _DoctorDetailContent(detail: detail),
+        data: (detail) =>
+            _DoctorDetailContent(detail: detail, doctorId: doctorId),
       ),
     );
   }
@@ -112,12 +114,15 @@ class DoctorDetailScreen extends ConsumerWidget {
 // Content — full doctor profile
 // ======================================================================
 
-class _DoctorDetailContent extends StatelessWidget {
+class _DoctorDetailContent extends ConsumerWidget {
   final DoctorDetail detail;
-  const _DoctorDetailContent({required this.detail});
+  final String doctorId;
+  const _DoctorDetailContent({required this.detail, required this.doctorId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(professionalNotesProvider(doctorId));
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -144,15 +149,143 @@ class _DoctorDetailContent extends StatelessWidget {
               _DoctorVisits(visits: detail.visits),
               const SizedBox(height: 16),
             ],
-            if (detail.notes.isNotEmpty) ...[
-              _DoctorNotes(notes: detail.notes),
-              const SizedBox(height: 24),
-            ],
+            _DoctorNotes(
+              notes: notesAsync.valueOrNull ?? const [],
+              isLoading: notesAsync.isLoading,
+              onAddNote: () => _showAddNoteSheet(context, ref, doctorId),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
+}
+
+Future<void> _showAddNoteSheet(
+  BuildContext context,
+  WidgetRef ref,
+  String professionalId,
+) async {
+  final controller = TextEditingController();
+  final formKey = GlobalKey<FormState>();
+  var isSaving = false;
+  String? errorMessage;
+
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => StatefulBuilder(
+      builder: (context, setState) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+        ),
+        child: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Adicionar nota',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Esta nota ficará visível somente para você.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: controller,
+                autofocus: true,
+                minLines: 4,
+                maxLines: 8,
+                maxLength: 2000,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Nota',
+                  alignLabelWithHint: true,
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Digite uma nota para salvar.';
+                  }
+                  return null;
+                },
+              ),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  errorMessage!,
+                  style: const TextStyle(
+                    color: Color(0xFFb84545),
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: isSaving
+                        ? null
+                        : () => Navigator.pop(sheetContext),
+                    child: const Text('Cancelar'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
+                            setState(() {
+                              isSaving = true;
+                              errorMessage = null;
+                            });
+                            try {
+                              await ref
+                                  .read(
+                                    professionalNotesRepositoryProvider(
+                                      professionalId,
+                                    ),
+                                  )
+                                  .createNote(controller.text.trim());
+                              ref.invalidate(
+                                professionalNotesProvider(professionalId),
+                              );
+                              if (sheetContext.mounted)
+                                Navigator.pop(sheetContext);
+                            } catch (_) {
+                              setState(() {
+                                isSaving = false;
+                                errorMessage =
+                                    'Não foi possível salvar a nota. Tente novamente.';
+                              });
+                            }
+                          },
+                    child: isSaving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Salvar'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+  controller.dispose();
 }
 
 // ======================================================================
@@ -1374,8 +1507,15 @@ class _DoctorVisits extends StatelessWidget {
 // ======================================================================
 
 class _DoctorNotes extends StatelessWidget {
-  final List<String> notes;
-  const _DoctorNotes({required this.notes});
+  final List<ProfessionalNote> notes;
+  final bool isLoading;
+  final VoidCallback onAddNote;
+
+  const _DoctorNotes({
+    required this.notes,
+    required this.isLoading,
+    required this.onAddNote,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1402,55 +1542,72 @@ class _DoctorNotes extends StatelessWidget {
             ),
             child: Column(
               children: [
-                ...List.generate(notes.length, (i) {
-                  return Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      border: i < notes.length - 1
-                          ? const Border(
-                              bottom: BorderSide(color: Color(0xFFeef0f3)),
-                            )
-                          : null,
+                if (isLoading)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (notes.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Nenhuma nota adicionada ainda.',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Color(0xFF6b7280),
+                      ),
                     ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFeef2ff),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Center(
-                            child: Text(
-                              '${i + 1}',
-                              style: const TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF1e40af),
+                  )
+                else
+                  ...List.generate(notes.length, (i) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        border: i < notes.length - 1
+                            ? const Border(
+                                bottom: BorderSide(color: Color(0xFFeef0f3)),
+                              )
+                            : null,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 18,
+                            height: 18,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFeef2ff),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${i + 1}',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1e40af),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            notes[i],
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              color: Color(0xFF374151),
-                              height: 1.45,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              notes[i].note,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF374151),
+                                height: 1.45,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                        ],
+                      ),
+                    );
+                  }),
                 const SizedBox(height: 4),
                 InkWell(
-                  onTap: () {},
+                  onTap: onAddNote,
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 10),

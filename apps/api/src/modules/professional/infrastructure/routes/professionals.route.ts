@@ -8,7 +8,7 @@ import { requirePermission } from "../../../access/infrastructure/middleware/per
 import { doctorUseCases } from "../../composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListProfessionalsQuery } from "../../application/list-professionals-query";
-import type { z } from "zod";
+import { z } from "zod";
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
   const parsed = schema.safeParse(body);
@@ -172,6 +172,66 @@ const updateDoctorRoute = new Elysia()
     }
   );
 
+const professionalNoteSchema = z.object({
+  note: z.string().trim().min(1, "Note must not be empty").max(2_000),
+});
+
+const MAX_PROFESSIONAL_NOTE_LENGTH = 2_000;
+
+const professionalNoteBody = t.Object({
+  note: t.String({ minLength: 1, maxLength: MAX_PROFESSIONAL_NOTE_LENGTH }),
+});
+
+const listProfessionalNotesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .get(
+    "/professionals/:id/notes",
+    async ({ params, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return doctorUseCases.listProfessionalNotes().execute({
+        professionalId: params.id,
+        userId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "List my notes for a professional",
+        tags: ["Professionals"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const createProfessionalNoteRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .post(
+    "/professionals/:id/notes",
+    async ({ params, body, getScope, getUserId }) => {
+      const parsed = parseSchema(
+        professionalNoteSchema,
+        body
+      );
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return doctorUseCases.createProfessionalNote().execute({
+        professionalId: params.id,
+        userId,
+        note: parsed.note,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Create a private note for a professional",
+        tags: ["Professionals"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: professionalNoteBody,
+    }
+  );
+
 const deleteDoctorRoute = new Elysia()
   .use(auth)
   .use(requirePermission("delete", "PROFESSIONAL", { resourceIdParam: "id" }))
@@ -202,6 +262,8 @@ const deleteDoctorRoute = new Elysia()
 export const professionalsRoute = new Elysia()
   .use(listProfessionalsRoute)
   .use(createDoctorRoute)
+  .use(listProfessionalNotesRoute)
+  .use(createProfessionalNoteRoute)
   .use(getProfessionalRoute)
   .use(updateDoctorRoute)
   .use(deleteDoctorRoute);

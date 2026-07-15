@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/explore_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/professional_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/mock_explore_repository.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
@@ -32,6 +34,23 @@ final doctorDetailProvider = FutureProvider.family<DoctorDetail, String>((
   final repo = ref.watch(exploreRepositoryProvider);
   return repo.getDoctorDetail(id);
 });
+
+// ── Professional notes ──────────────────────────────────────
+final professionalNotesRepositoryProvider =
+    Provider.family<ProfessionalNotesRepository, String>((ref, professionalId) {
+      return ProfessionalNotesRepository(professionalId);
+    });
+
+final professionalNotesProvider =
+    FutureProvider.family<List<ProfessionalNote>, String>((
+      ref,
+      professionalId,
+    ) {
+      return ref
+          .watch(professionalNotesRepositoryProvider(professionalId))
+          .currentValueOrResolve()
+          .then((notes) => notes ?? const []);
+    });
 
 // ── Explore state ───────────────────────────────────────────
 class ExploreState {

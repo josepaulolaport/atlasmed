@@ -1,15 +1,17 @@
 import {
   professionals,
+  professionalNotes,
   facilityProfessionals,
   facilities,
 } from "@atlasmed/database";
-import { eq, and, or, isNull, ilike, inArray, sql, asc, getTableColumns } from "drizzle-orm";
+import { eq, and, or, isNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
   ProfessionalCreateInput,
   ProfessionalFacilitySummary,
   ProfessionalListScopeFilter,
+  ProfessionalNoteRecord,
   ProfessionalRecord,
   ProfessionalRepository,
   ProfessionalSourceUpsertInput,
@@ -352,6 +354,31 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         row.legalName?.trim() ||
         row.id,
     }));
+  }
+
+  async findNotesByProfessionalAndUser(
+    professionalId: string,
+    userId: string
+  ): Promise<ProfessionalNoteRecord[]> {
+    return db
+      .select()
+      .from(professionalNotes)
+      .where(
+        and(
+          eq(professionalNotes.professionalId, professionalId),
+          eq(professionalNotes.userId, userId)
+        )
+      )
+      .orderBy(desc(professionalNotes.createdAt));
+  }
+
+  async createNote(input: {
+    professionalId: string;
+    userId: string;
+    note: string;
+  }): Promise<ProfessionalNoteRecord> {
+    const [note] = await db.insert(professionalNotes).values(input).returning();
+    return note!;
   }
 
   async create(data: ProfessionalCreateInput): Promise<ProfessionalRecord> {

@@ -4,6 +4,7 @@ import { assertResourceInScope } from "@atlasmed/access";
 import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type {
   ProfessionalCreateInput,
+  ProfessionalNoteRecord,
   ProfessionalRecord,
   ProfessionalRepository,
   ProfessionalUpdateInput,
@@ -91,6 +92,30 @@ function assertProfessionalAccessible(scope: ScopeContext, facilityIds: string[]
   if (!hasAccessibleFacility) {
     throw new ForbiddenError("Professional outside scope");
   }
+}
+
+function serializeProfessionalNote(note: ProfessionalNoteRecord) {
+  return {
+    id: note.id,
+    note: note.note,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
+  };
+}
+
+async function getAccessibleProfessional(
+  repository: ProfessionalRepository,
+  professionalId: string,
+  scope: ScopeContext
+): Promise<ProfessionalRecord> {
+  const professional = await repository.findById(professionalId);
+
+  if (!professional) {
+    throw new ResourceNotFoundError("Professional", professionalId);
+  }
+
+  assertProfessionalAccessible(scope, professional.facilityIds);
+  return professional;
 }
 
 function parseBirthDate(value?: string | null): Date | null | undefined {
@@ -265,6 +290,50 @@ export class GetProfessionalUseCase {
     assertProfessionalAccessible(input.scope, professional.facilityIds);
 
     return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+  }
+}
+
+export class ListProfessionalNotesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: { professionalId: string; userId: string; scope: ScopeContext }) {
+    await getAccessibleProfessional(
+      this.deps.doctorRepository,
+      input.professionalId,
+      input.scope
+    );
+
+    const notes = await this.deps.doctorRepository.findNotesByProfessionalAndUser(
+      input.professionalId,
+      input.userId
+    );
+
+    return notes.map(serializeProfessionalNote);
+  }
+}
+
+export class CreateProfessionalNoteUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: {
+    professionalId: string;
+    userId: string;
+    note: string;
+    scope: ScopeContext;
+  }) {
+    await getAccessibleProfessional(
+      this.deps.doctorRepository,
+      input.professionalId,
+      input.scope
+    );
+
+    return serializeProfessionalNote(
+      await this.deps.doctorRepository.createNote({
+        professionalId: input.professionalId,
+        userId: input.userId,
+        note: input.note,
+      })
+    );
   }
 }
 
