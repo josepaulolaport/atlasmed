@@ -1,75 +1,73 @@
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import type { IAuthCache } from "../interfaces/auth-cache.interface";
-import type { ISessionCache } from "../interfaces/session-cache.interface";
-import type { TwoFactorService } from "../services/two-factor.service";
-import type { SessionService } from "../services/session.service";
-import type { IAuditLog } from "../interfaces/audit-log.interface";
 import {
   InvalidCredentialsError,
   OperationNotAllowedError,
   UserNotFoundError,
-  ValidationError,
-} from "../../../../shared/errors";
+  ValidationError
+} from '../../../../shared/errors'
+import type { IAuditLog } from '../interfaces/audit-log.interface'
+import type { IAuthCache } from '../interfaces/auth-cache.interface'
+import type { ISessionCache } from '../interfaces/session-cache.interface'
+import type { UserRepository } from '../interfaces/user.repository.interface'
+import type { SessionService } from '../services/session.service'
+import type { TwoFactorService } from '../services/two-factor.service'
 
 interface Dependencies {
-  userRepository: UserRepository;
-  twoFactorService: TwoFactorService;
-  authCache: IAuthCache;
-  sessionService: SessionService;
-  sessionCache: ISessionCache;
-  auditLog: IAuditLog;
+  userRepository: UserRepository
+  twoFactorService: TwoFactorService
+  authCache: IAuthCache
+  sessionService: SessionService
+  sessionCache: ISessionCache
+  auditLog: IAuditLog
 }
 
 export class Confirm2FASetupUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(params: {
-    userId: string;
-    code: string;
-    sessionId?: string;
-    ipAddress?: string;
-  }) {
-    const user = await this.deps.userRepository.findById(params.userId);
+  async execute(params: { userId: string; code: string; sessionId?: string; ipAddress?: string }) {
+    const user = await this.deps.userRepository.findById(params.userId)
 
     if (!user) {
-      throw new UserNotFoundError(params.userId);
+      throw new UserNotFoundError(params.userId)
     }
 
     if (user.twoFactorEnabled) {
-      throw new OperationNotAllowedError("confirm_2fa_setup", "Two-factor authentication is already enabled");
+      throw new OperationNotAllowedError(
+        'confirm_2fa_setup',
+        'Two-factor authentication is already enabled'
+      )
     }
 
-    const pendingSecret = await this.deps.twoFactorService.getPendingSetup(params.userId);
+    const pendingSecret = await this.deps.twoFactorService.getPendingSetup(params.userId)
 
     if (!pendingSecret) {
       throw new ValidationError([
-        { field: "code", message: "2FA setup has expired. Please start setup again." },
-      ]);
+        { field: 'code', message: '2FA setup has expired. Please start setup again.' }
+      ])
     }
 
-    const valid = await this.deps.twoFactorService.verifyTotp(params.code, pendingSecret);
+    const valid = await this.deps.twoFactorService.verifyTotp(params.code, pendingSecret)
 
     if (!valid) {
-      throw new InvalidCredentialsError();
+      throw new InvalidCredentialsError()
     }
 
-    const encryptedSecret = this.deps.twoFactorService.encryptSecret(pendingSecret);
+    const encryptedSecret = this.deps.twoFactorService.encryptSecret(pendingSecret)
 
     await this.deps.userRepository.enableTwoFactor({
       userId: params.userId,
-      encryptedSecret,
-    });
+      encryptedSecret
+    })
 
-    await this.deps.twoFactorService.clearPendingSetup(params.userId);
-    await this.deps.authCache.invalidate(params.userId);
-    await this.deps.sessionService.revokeAllByUserId(params.userId, params.sessionId);
-    await this.deps.sessionCache.invalidateByUserId(params.userId, params.sessionId);
+    await this.deps.twoFactorService.clearPendingSetup(params.userId)
+    await this.deps.authCache.invalidate(params.userId)
+    await this.deps.sessionService.revokeAllByUserId(params.userId, params.sessionId)
+    await this.deps.sessionCache.invalidateByUserId(params.userId, params.sessionId)
 
     await this.deps.auditLog.log2FAEnable({
       userId: params.userId,
-      ipAddress: params.ipAddress,
-    });
+      ipAddress: params.ipAddress
+    })
 
-    return { success: true };
+    return { success: true }
   }
 }

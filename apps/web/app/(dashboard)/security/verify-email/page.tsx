@@ -1,57 +1,64 @@
-"use client";
+'use client'
 
-import { Suspense, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { verificationApi } from "@/lib/api/verification";
-import { useAuth } from "@/contexts/auth-context";
-import { verifyEmailSchema } from "@/lib/validators";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
-import { z } from "zod";
+import { zodResolver } from '@hookform/resolvers/zod'
+import { AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import type { z } from 'zod'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { verificationApi } from '@/lib/api/verification'
+import { verifyEmailSchema } from '@/lib/validators'
 
-type VerifyEmailForm = z.infer<typeof verifyEmailSchema>;
+type VerifyEmailForm = z.infer<typeof verifyEmailSchema>
 
 function VerifyEmailForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const { refreshUser } = useAuth();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { refreshUser } = useAuth()
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const form = useForm<VerifyEmailForm>({
     resolver: zodResolver(verifyEmailSchema),
     defaultValues: {
-      token: searchParams.get("token") || "",
-    },
-  });
+      token: searchParams.get('token') || ''
+    }
+  })
 
   const onSubmit = async (data: VerifyEmailForm) => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     try {
-      await verificationApi.verifyEmail({ token: data.token });
-      await refreshUser();
+      await verificationApi.verifyEmail({ token: data.token })
+      await refreshUser()
       toast({
-        title: "Sucesso",
-        description: "E-mail verificado com sucesso",
-        variant: "success",
-      });
-      router.push("/security");
+        title: 'Sucesso',
+        description: 'E-mail verificado com sucesso',
+        variant: 'success'
+      })
+      router.push('/security')
     } catch (err) {
-      const apiError = err as { response?: { data?: { error?: { message?: string } } } };
-      setError(apiError.response?.data?.error?.message || "Verification failed");
+      const apiError = err as { response?: { data?: { error?: { message?: string } } } }
+      setError(apiError.response?.data?.error?.message || 'Verification failed')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="mx-auto max-w-md px-4 py-8">
@@ -65,31 +72,31 @@ function VerifyEmailForm() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-sm text-red-600">
+              <div className="flex items-center gap-2 rounded-md bg-red-50 p-3 text-red-600 text-sm">
                 <AlertCircle className="h-4 w-4" />
                 <p>{error}</p>
               </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="token">Token de verificação</Label>
-              <Input id="token" {...form.register("token")} disabled={loading} />
+              <Input id="token" {...form.register('token')} disabled={loading} />
               {form.formState.errors.token && (
-                <p className="text-sm text-red-600">{form.formState.errors.token.message}</p>
+                <p className="text-red-600 text-sm">{form.formState.errors.token.message}</p>
               )}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Verificando..." : "Verificar email"}
+              {loading ? 'Verificando...' : 'Verificar email'}
             </Button>
-            <Link href="/security" className="text-sm text-blue-600 hover:underline">
+            <Link href="/security" className="text-blue-600 text-sm hover:underline">
               Voltar para configurações de segurança
             </Link>
           </CardFooter>
         </form>
       </Card>
     </div>
-  );
+  )
 }
 
 export default function VerifyEmailPage() {
@@ -97,5 +104,5 @@ export default function VerifyEmailPage() {
     <Suspense fallback={<div className="p-8 text-center">Carregando…</div>}>
       <VerifyEmailForm />
     </Suspense>
-  );
+  )
 }

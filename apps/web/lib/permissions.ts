@@ -1,17 +1,17 @@
 export {
+  canCreateTerritories,
+  canManageFacilities,
+  canManageProfessionals,
+  canManageTerritories,
   canManageUsers,
   canReadFacilities,
-  canManageFacilities,
-  canUpdateFacilities,
   canReadProfessionals,
-  canManageProfessionals,
-  canUpdateProfessionals,
   canReadTerritories,
-  canManageTerritories,
-  canCreateTerritories,
+  canUpdateFacilities,
+  canUpdateProfessionals,
   canUpdateTerritories,
   canViewHealth,
   hasMinimumRole,
   hasMinimumRole as hasRole,
-  isAdmin,
-} from "@atlasmed/access";
+  isAdmin
+} from '@atlasmed/access'

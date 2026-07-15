@@ -1,29 +1,32 @@
-import type { AuthSessionType as SessionType, AuthSessionDeviceType as DeviceType } from "@atlasmed/database";
+import type {
+  AuthSessionDeviceType as DeviceType,
+  AuthSessionType as SessionType
+} from '@atlasmed/database'
 
 export interface SessionContract {
-  id: string;
+  id: string
 
-  userId: string;
+  userId: string
 
-  sessionType: SessionType;
+  sessionType: SessionType
 
-  deviceType: DeviceType;
+  deviceType: DeviceType
 
-  ipAddress?: string;
+  ipAddress?: string
 
-  userAgent?: string;
+  userAgent?: string
 
-  browserName?: string;
+  browserName?: string
 
-  browserVersion?: string;
+  browserVersion?: string
 
-  osName?: string;
+  osName?: string
 
-  expiresAt: Date;
+  expiresAt: Date
 
-  revokedAt?: Date;
+  revokedAt?: Date
 
-  createdAt: Date;
+  createdAt: Date
 
-  updatedAt: Date;
+  updatedAt: Date
 }

@@ -1,100 +1,98 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { Role } from "@atlasmed/access";
-import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { Role } from '@atlasmed/access'
+import { createMockAuditLogService } from '../../test-helpers/audit-mocks'
 
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
+mock.module('../../../../infrastructure/audit/audit-log.service', () => ({
+  auditLogService: createMockAuditLogService()
+}))
 
-import { RevokeUserTerritoryUseCase } from "./revoke-user-territory.use-case";
-import {
-  createMockUserRepository,
-  createMockScopeRepository,
-} from "../../test-helpers/repository-mocks";
-import { createMockScopeService } from "../../test-helpers/fixtures";
 import {
   InsufficientPermissionsError,
   OperationNotAllowedError,
-  UserNotFoundError,
-} from "../../../../shared/errors";
+  UserNotFoundError
+} from '../../../../shared/errors'
+import { createMockScopeService } from '../../test-helpers/fixtures'
+import {
+  createMockScopeRepository,
+  createMockUserRepository
+} from '../../test-helpers/repository-mocks'
+import { RevokeUserTerritoryUseCase } from './revoke-user-territory.use-case'
 
-describe("RevokeUserTerritoryUseCase", () => {
-  const fieldUser = { id: "user-field", role: { name: Role.REP } };
-  const managerUser = { id: "user-manager", role: { name: Role.MANAGER } };
+describe('RevokeUserTerritoryUseCase', () => {
+  const fieldUser = { id: 'user-field', role: { name: Role.REP } }
+  const managerUser = { id: 'user-manager', role: { name: Role.MANAGER } }
 
-  let useCase: RevokeUserTerritoryUseCase;
-  let userRepository: ReturnType<typeof createMockUserRepository>;
-  let scopeRepository: ReturnType<typeof createMockScopeRepository>;
-  let scopeService: ReturnType<typeof createMockScopeService>;
+  let useCase: RevokeUserTerritoryUseCase
+  let userRepository: ReturnType<typeof createMockUserRepository>
+  let scopeRepository: ReturnType<typeof createMockScopeRepository>
+  let scopeService: ReturnType<typeof createMockScopeService>
 
   beforeEach(() => {
     userRepository = createMockUserRepository({
       findById: mock(async (id: string) => {
-        if (id === fieldUser.id) return fieldUser;
-        if (id === managerUser.id) return managerUser;
-        return null;
-      }) as any,
-    });
-    scopeRepository = createMockScopeRepository();
-    scopeService = createMockScopeService();
+        if (id === fieldUser.id) return fieldUser
+        if (id === managerUser.id) return managerUser
+        return null
+      }) as any
+    })
+    scopeRepository = createMockScopeRepository()
+    scopeService = createMockScopeService()
 
     useCase = new RevokeUserTerritoryUseCase({
       userRepository,
       scopeRepository,
       scopeService,
-      auditLog: createMockAuditLogService(),
-    });
-  });
+      auditLog: createMockAuditLogService()
+    })
+  })
 
-  it("revokes territory for USER target when actor is ADMIN", async () => {
+  it('revokes territory for USER target when actor is ADMIN', async () => {
     await useCase.execute({
       targetUserId: fieldUser.id,
-      territoryId: "territory-a",
-      revokedBy: "admin-1",
-      actorRole: Role.ADMIN,
-    });
+      territoryId: 'territory-a',
+      revokedBy: 'admin-1',
+      actorRole: Role.ADMIN
+    })
 
     expect(scopeRepository.revokeTerritory).toHaveBeenCalledWith({
       userId: fieldUser.id,
-      territoryId: "territory-a",
-    });
-    expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(
-      fieldUser.id
-    );
-  });
+      territoryId: 'territory-a'
+    })
+    expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(fieldUser.id)
+  })
 
-  it("rejects non-USER target", async () => {
+  it('rejects non-USER target', async () => {
     await expect(
       useCase.execute({
         targetUserId: managerUser.id,
-        territoryId: "territory-a",
-        revokedBy: "admin-1",
-        actorRole: Role.ADMIN,
+        territoryId: 'territory-a',
+        revokedBy: 'admin-1',
+        actorRole: Role.ADMIN
       })
-    ).rejects.toThrow(OperationNotAllowedError);
-  });
+    ).rejects.toThrow(OperationNotAllowedError)
+  })
 
-  it("rejects MANAGER actor", async () => {
+  it('rejects MANAGER actor', async () => {
     await expect(
       useCase.execute({
         targetUserId: fieldUser.id,
-        territoryId: "territory-a",
-        revokedBy: "manager-1",
-        actorRole: Role.MANAGER,
+        territoryId: 'territory-a',
+        revokedBy: 'manager-1',
+        actorRole: Role.MANAGER
       })
-    ).rejects.toThrow(InsufficientPermissionsError);
-  });
+    ).rejects.toThrow(InsufficientPermissionsError)
+  })
 
-  it("throws when target not found", async () => {
-    userRepository.findById = mock(() => Promise.resolve(null));
+  it('throws when target not found', async () => {
+    userRepository.findById = mock(() => Promise.resolve(null))
 
     await expect(
       useCase.execute({
-        targetUserId: "missing",
-        territoryId: "territory-a",
-        revokedBy: "admin-1",
-        actorRole: Role.ADMIN,
+        targetUserId: 'missing',
+        territoryId: 'territory-a',
+        revokedBy: 'admin-1',
+        actorRole: Role.ADMIN
       })
-    ).rejects.toThrow(UserNotFoundError);
-  });
-});
+    ).rejects.toThrow(UserNotFoundError)
+  })
+})

@@ -1,9 +1,9 @@
-import type { Role } from "../enums/role.enum";
+import type { Role } from '../enums/role.enum'
 
 export interface RoleContract {
-  id: string;
+  id: string
 
-  name: Role;
+  name: Role
 
-  description?: string;
+  description?: string
 }

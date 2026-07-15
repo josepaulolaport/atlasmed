@@ -1,14 +1,12 @@
-import { mock } from "bun:test";
+import { mock } from 'bun:test'
 
-const noop = () => mock(async () => {});
+const noop = () => mock(async () => {})
 
 /**
  * Full audit log mock — prevents partial mock.module from breaking other tests.
  * Pass overrides for methods you need to spy on.
  */
-export function createMockAuditLogService(
-  overrides: Record<string, ReturnType<typeof mock>> = {}
-) {
+export function createMockAuditLogService(overrides: Record<string, ReturnType<typeof mock>> = {}) {
   return {
     log: noop(),
     logFailedLoginAttempt: noop(),
@@ -33,6 +31,6 @@ export function createMockAuditLogService(
     log2FARequired: noop(),
     logDataAccess: noop(),
     logDataExport: noop(),
-    ...overrides,
-  };
+    ...overrides
+  }
 }

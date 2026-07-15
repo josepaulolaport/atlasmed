@@ -1,1 +1,1 @@
-export { cnesMonthlyIngestionWorkflow } from "./cnes-monthly-ingestion.workflow";
+export { cnesMonthlyIngestionWorkflow } from './cnes-monthly-ingestion.workflow'

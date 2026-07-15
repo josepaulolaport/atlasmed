@@ -1,48 +1,48 @@
-"use client";
+'use client'
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { Role } from "@/types/auth";
-import { hasRole } from "@/lib/permissions";
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import { useAuth } from '@/contexts/auth-context'
+import { hasRole } from '@/lib/permissions'
+import type { Role } from '@/types/auth'
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requiredRole?: Role;
+  children: React.ReactNode
+  requiredRole?: Role
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, loading, isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { user, loading, isAuthenticated } = useAuth()
+  const router = useRouter()
 
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        router.replace("/login");
-        return;
+        router.replace('/login')
+        return
       }
 
       if (requiredRole && user && !hasRole(user.role.name, requiredRole)) {
-        router.replace("/unauthorized");
+        router.replace('/unauthorized')
       }
     }
-  }, [user, loading, isAuthenticated, requiredRole, router]);
+  }, [user, loading, isAuthenticated, requiredRole, router])
 
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
       </div>
-    );
+    )
   }
 
   if (!isAuthenticated) {
-    return null;
+    return null
   }
 
   if (requiredRole && user && !hasRole(user.role.name, requiredRole)) {
-    return null;
+    return null
   }
 
-  return <>{children}</>;
+  return <>{children}</>
 }

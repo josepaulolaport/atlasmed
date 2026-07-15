@@ -1,5 +1,4 @@
-import apiClient from "./client";
-import type { PaginatedResponse } from "@/types/api";
+import type { PaginatedResponse } from '@/types/api'
 import type {
   AnalyticsViewResponse,
   ClinicTerritoryOverrideRequest,
@@ -8,95 +7,94 @@ import type {
   CreateTerritoryTypeRequest,
   GeoJsonPolygon,
   RecomputeMembershipResponse,
+  SaveBoundaryResponse,
   SubmitApprovalRequest,
   Territory,
   TerritoryApprovalRequest,
-  TerritoryType,
-  UpdateTerritoryTypeRequest,
   TerritoryDescendantsResponse,
-  SaveBoundaryResponse,
   TerritoryTreeNode,
+  TerritoryType,
   UnassignedFacility,
   UpdateTerritoryRequest,
-} from "@/types/territory";
+  UpdateTerritoryTypeRequest
+} from '@/types/territory'
+import apiClient from './client'
 
 export const territoriesApi = {
   listTerritories: async (
-    format: "tree" | "flat" = "flat",
+    format: 'tree' | 'flat' = 'flat',
     typeSlug?: string
   ): Promise<{ data: Territory[] | TerritoryTreeNode[] }> => {
     const response = await apiClient.get<{ data: Territory[] | TerritoryTreeNode[] }>(
-      "/territory/territories",
+      '/territory/territories',
       { params: { format, type: typeSlug } }
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   listManagerZones: async (): Promise<{ data: Territory[] }> => {
-    const response = await apiClient.get<{ data: Territory[] }>(
-      "/territory/territories",
-      { params: { format: "flat", type: "manager_zone" } }
-    );
-    return response.data;
+    const response = await apiClient.get<{ data: Territory[] }>('/territory/territories', {
+      params: { format: 'flat', type: 'manager_zone' }
+    })
+    return response.data
   },
 
   listRepPatches: async (managerTerritoryId?: string): Promise<{ data: Territory[] }> => {
-    const params: Record<string, string> = { format: "flat", type: "patch" };
+    const params: Record<string, string> = { format: 'flat', type: 'patch' }
     if (managerTerritoryId) {
-      params.managerTerritoryId = managerTerritoryId;
+      params.managerTerritoryId = managerTerritoryId
     }
-    const response = await apiClient.get<{ data: Territory[] }>(
-      "/territory/territories",
-      { params }
-    );
-    return response.data;
+    const response = await apiClient.get<{ data: Territory[] }>('/territory/territories', {
+      params
+    })
+    return response.data
   },
 
   listGroupingTree: async (): Promise<{ data: TerritoryTreeNode[] }> => {
     const response = await apiClient.get<{ data: TerritoryTreeNode[] }>(
-      "/territory/territories/grouping-tree"
-    );
-    return response.data;
+      '/territory/territories/grouping-tree'
+    )
+    return response.data
   },
 
   listTerritoryTypes: async (): Promise<{ data: TerritoryType[] }> => {
-    const response = await apiClient.get<{ data: TerritoryType[] }>("/territory/territory-types");
-    return response.data;
+    const response = await apiClient.get<{ data: TerritoryType[] }>('/territory/territory-types')
+    return response.data
   },
 
   createTerritoryType: async (data: CreateTerritoryTypeRequest): Promise<TerritoryType> => {
-    const response = await apiClient.post<TerritoryType>("/territory/territory-types", data);
-    return response.data;
+    const response = await apiClient.post<TerritoryType>('/territory/territory-types', data)
+    return response.data
   },
 
   updateTerritoryType: async (
     id: string,
     data: UpdateTerritoryTypeRequest
   ): Promise<TerritoryType> => {
-    const response = await apiClient.patch<TerritoryType>(`/territory/territory-types/${id}`, data);
-    return response.data;
+    const response = await apiClient.patch<TerritoryType>(`/territory/territory-types/${id}`, data)
+    return response.data
   },
 
   getTerritory: async (id: string): Promise<Territory> => {
-    const response = await apiClient.get<Territory>(`/territory/territories/${id}`);
-    return response.data;
+    const response = await apiClient.get<Territory>(`/territory/territories/${id}`)
+    return response.data
   },
 
   getDescendants: async (id: string): Promise<TerritoryDescendantsResponse> => {
     const response = await apiClient.get<TerritoryDescendantsResponse>(
       `/territory/territories/${id}/descendants`
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   createTerritory: async (
     data: CreateTerritoryRequest
   ): Promise<CreateTerritoryResult | TerritoryApprovalRequest> => {
     const response = await apiClient.post<CreateTerritoryResult | TerritoryApprovalRequest>(
-      "/territory/territories",
+      '/territory/territories',
       data
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   updateTerritory: async (
@@ -106,67 +104,63 @@ export const territoriesApi = {
     const response = await apiClient.patch<Territory | TerritoryApprovalRequest>(
       `/territory/territories/${id}`,
       data
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   deactivateTerritory: async (id: string): Promise<Territory> => {
-    const response = await apiClient.delete<Territory>(`/territory/territories/${id}`);
-    return response.data;
+    const response = await apiClient.delete<Territory>(`/territory/territories/${id}`)
+    return response.data
   },
 
   getBoundary: async (id: string): Promise<GeoJsonPolygon | null> => {
-    const response = await apiClient.get<GeoJsonPolygon>(
-      `/territory/territories/${id}/boundary`,
-      { validateStatus: (status) => status === 200 || status === 204 }
-    );
+    const response = await apiClient.get<GeoJsonPolygon>(`/territory/territories/${id}/boundary`, {
+      validateStatus: (status) => status === 200 || status === 204
+    })
     if (response.status === 204) {
-      return null;
+      return null
     }
-    return response.data;
+    return response.data
   },
 
-  saveBoundary: async (
-    id: string,
-    geoJson: GeoJsonPolygon
-  ): Promise<SaveBoundaryResponse> => {
+  saveBoundary: async (id: string, geoJson: GeoJsonPolygon): Promise<SaveBoundaryResponse> => {
     const response = await apiClient.put<SaveBoundaryResponse>(
       `/territory/territories/${id}/boundary`,
       geoJson
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   deleteBoundary: async (id: string): Promise<{ success: boolean }> => {
     const response = await apiClient.delete<{ success: boolean }>(
       `/territory/territories/${id}/boundary`
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   getAnalyticsView: async (groupingTerritoryId: string): Promise<AnalyticsViewResponse> => {
     const response = await apiClient.get<AnalyticsViewResponse>(
       `/territory/territories/${groupingTerritoryId}/analytics-view`
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   recomputeMembership: async (): Promise<RecomputeMembershipResponse> => {
     const response = await apiClient.post<RecomputeMembershipResponse>(
-      "/territory/territories/recompute-membership"
-    );
-    return response.data;
+      '/territory/territories/recompute-membership'
+    )
+    return response.data
   },
 
   listUnassignedFacilities: async (params?: {
-    page?: number;
-    limit?: number;
+    page?: number
+    limit?: number
   }): Promise<PaginatedResponse<UnassignedFacility>> => {
     const response = await apiClient.get<PaginatedResponse<UnassignedFacility>>(
-      "/territory/territories/unassigned-facilities",
+      '/territory/territories/unassigned-facilities',
       { params }
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   overrideClinicTerritory: async (
@@ -176,58 +170,50 @@ export const territoriesApi = {
     const response = await apiClient.patch<{ success: boolean }>(
       `/territory/facilities/${facilityId}/territory`,
       data
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   unlockClinicGeo: async (facilityId: string): Promise<{ success: boolean }> => {
     const response = await apiClient.post<{ success: boolean }>(
       `/territory/facilities/${facilityId}/territory/unlock-geo`
-    );
-    return response.data;
+    )
+    return response.data
   },
 
   listApprovalRequests: async (params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
+    status?: string
+    page?: number
+    limit?: number
   }): Promise<{ items: TerritoryApprovalRequest[]; total: number }> => {
     const response = await apiClient.get<{
-      items: TerritoryApprovalRequest[];
-      total: number;
-    }>("/territory/territories/approval-requests", { params });
-    return response.data;
+      items: TerritoryApprovalRequest[]
+      total: number
+    }>('/territory/territories/approval-requests', { params })
+    return response.data
   },
 
-  submitApprovalRequest: async (
-    data: SubmitApprovalRequest
-  ): Promise<TerritoryApprovalRequest> => {
+  submitApprovalRequest: async (data: SubmitApprovalRequest): Promise<TerritoryApprovalRequest> => {
     const response = await apiClient.post<TerritoryApprovalRequest>(
-      "/territory/territories/approval-requests",
+      '/territory/territories/approval-requests',
       data
-    );
-    return response.data;
+    )
+    return response.data
   },
 
-  approveRequest: async (
-    id: string,
-    note?: string
-  ): Promise<TerritoryApprovalRequest> => {
+  approveRequest: async (id: string, note?: string): Promise<TerritoryApprovalRequest> => {
     const response = await apiClient.post<TerritoryApprovalRequest>(
       `/territory/territories/approval-requests/${id}/approve`,
       { note }
-    );
-    return response.data;
+    )
+    return response.data
   },
 
-  rejectRequest: async (
-    id: string,
-    note?: string
-  ): Promise<TerritoryApprovalRequest> => {
+  rejectRequest: async (id: string, note?: string): Promise<TerritoryApprovalRequest> => {
     const response = await apiClient.post<TerritoryApprovalRequest>(
       `/territory/territories/approval-requests/${id}/reject`,
       { note }
-    );
-    return response.data;
-  },
-};
+    )
+    return response.data
+  }
+}

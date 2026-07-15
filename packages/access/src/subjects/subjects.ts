@@ -1,21 +1,21 @@
 export const Subjects = {
-  USER: "USER",
+  USER: 'USER',
 
-  FACILITY: "FACILITY",
+  FACILITY: 'FACILITY',
 
-  PROFESSIONAL: "PROFESSIONAL",
+  PROFESSIONAL: 'PROFESSIONAL',
 
-  TERRITORY: "TERRITORY",
+  TERRITORY: 'TERRITORY',
 
-  INVITATION: "INVITATION",
+  INVITATION: 'INVITATION',
 
-  REGISTRY_INGESTION: "REGISTRY_INGESTION",
+  REGISTRY_INGESTION: 'REGISTRY_INGESTION',
 
-  REGISTRY_SUGGESTION: "REGISTRY_SUGGESTION",
+  REGISTRY_SUGGESTION: 'REGISTRY_SUGGESTION',
 
-  CATALOG: "CATALOG",
+  CATALOG: 'CATALOG',
 
-  VISIT: "VISIT",
-} as const;
+  VISIT: 'VISIT'
+} as const
 
-export type Subject = (typeof Subjects)[keyof typeof Subjects];
+export type Subject = (typeof Subjects)[keyof typeof Subjects]

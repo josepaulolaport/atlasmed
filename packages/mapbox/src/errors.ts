@@ -4,14 +4,14 @@ export class MapboxError extends Error {
     readonly statusCode: number,
     readonly body?: unknown
   ) {
-    super(message);
-    this.name = "MapboxError";
+    super(message)
+    this.name = 'MapboxError'
   }
 }
 
 export class MapboxNotConfiguredError extends Error {
   constructor() {
-    super("Mapbox is not configured");
-    this.name = "MapboxNotConfiguredError";
+    super('Mapbox is not configured')
+    this.name = 'MapboxNotConfiguredError'
   }
 }

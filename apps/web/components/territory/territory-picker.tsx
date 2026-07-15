@@ -1,37 +1,37 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { territoriesApi } from "@/lib/api/territories";
-import type { Territory } from "@/types/territory";
-import {
-  formatTerritoryLabel,
-  territoryMatchesPickerFilters,
-  type TerritoryAssignmentPickerConfig,
-} from "@/lib/territory/assignment-picker-config";
-import { Input } from "@/components/ui/input";
+import { Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+  SelectValue
+} from '@/components/ui/select'
+import { territoriesApi } from '@/lib/api/territories'
+import {
+  formatTerritoryLabel,
+  type TerritoryAssignmentPickerConfig,
+  territoryMatchesPickerFilters
+} from '@/lib/territory/assignment-picker-config'
+import type { Territory } from '@/types/territory'
 
 export interface TerritoryPickerProps {
-  value?: string;
-  onChange: (territoryId: string) => void;
-  filterAssignableToUsers?: boolean;
-  filterAssignableToManagers?: boolean;
-  filterAssignsClinics?: boolean;
-  filterCanHaveBoundary?: boolean;
-  pickerConfig?: TerritoryAssignmentPickerConfig;
-  excludeCountry?: boolean;
-  excludeTerritoryIds?: string[];
-  disabled?: boolean;
-  placeholder?: string;
-  id?: string;
+  value?: string
+  onChange: (territoryId: string) => void
+  filterAssignableToUsers?: boolean
+  filterAssignableToManagers?: boolean
+  filterAssignsClinics?: boolean
+  filterCanHaveBoundary?: boolean
+  pickerConfig?: TerritoryAssignmentPickerConfig
+  excludeCountry?: boolean
+  excludeTerritoryIds?: string[]
+  disabled?: boolean
+  placeholder?: string
+  id?: string
 }
 
 export function TerritoryPicker({
@@ -45,57 +45,57 @@ export function TerritoryPicker({
   excludeCountry = false,
   excludeTerritoryIds = [],
   disabled = false,
-  placeholder = "Selecionar território",
-  id,
+  placeholder = 'Selecionar território',
+  id
 }: TerritoryPickerProps) {
-  const [territories, setTerritories] = useState<Territory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [territories, setTerritories] = useState<Territory[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
-  const excludedIds = useMemo(() => new Set(excludeTerritoryIds), [excludeTerritoryIds]);
+  const excludedIds = useMemo(() => new Set(excludeTerritoryIds), [excludeTerritoryIds])
 
   const loadTerritories = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
     try {
-      const response = await territoriesApi.listTerritories("flat");
-      setTerritories(response.data as Territory[]);
+      const response = await territoriesApi.listTerritories('flat')
+      setTerritories(response.data as Territory[])
     } catch {
-      setError("Falha ao carregar territórios");
+      setError('Falha ao carregar territórios')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    loadTerritories();
-  }, [loadTerritories]);
+    loadTerritories()
+  }, [loadTerritories])
 
   const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = search.trim().toLowerCase()
     return territories.filter((t) => {
-      if (excludedIds.has(t.id)) return false;
+      if (excludedIds.has(t.id)) return false
       if (pickerConfig && !territoryMatchesPickerFilters(t, pickerConfig)) {
-        return false;
+        return false
       }
-      if (!t.isActive) return false;
-      if (excludeCountry && t.territoryType.isCountryLevel) return false;
-      if (filterAssignableToUsers && !t.territoryType.assignableToUsers) return false;
+      if (!t.isActive) return false
+      if (excludeCountry && t.territoryType.isCountryLevel) return false
+      if (filterAssignableToUsers && !t.territoryType.assignableToUsers) return false
       if (filterAssignableToManagers && !t.territoryType.assignableToManagers) {
-        return false;
+        return false
       }
-      if (filterAssignsClinics && !t.territoryType.assignsClinics) return false;
-      if (filterCanHaveBoundary && !t.territoryType.canHaveBoundary) return false;
-      if (!query) return true;
+      if (filterAssignsClinics && !t.territoryType.assignsClinics) return false
+      if (filterCanHaveBoundary && !t.territoryType.canHaveBoundary) return false
+      if (!query) return true
       return (
         t.code.toLowerCase().includes(query) ||
         t.slug.toLowerCase().includes(query) ||
         t.name.toLowerCase().includes(query) ||
         t.territoryType.name.toLowerCase().includes(query) ||
         t.id.toLowerCase().includes(query)
-      );
-    });
+      )
+    })
   }, [
     territories,
     search,
@@ -105,20 +105,20 @@ export function TerritoryPicker({
     filterAssignsClinics,
     filterCanHaveBoundary,
     pickerConfig,
-    excludedIds,
-  ]);
+    excludedIds
+  ])
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-gray-500">
+      <div className="flex items-center gap-2 text-gray-500 text-sm">
         <Loader2 className="h-4 w-4 animate-spin" />
         Carregando territórios...
       </div>
-    );
+    )
   }
 
   if (error) {
-    return <p className="text-sm text-red-600">{error}</p>;
+    return <p className="text-red-600 text-sm">{error}</p>
   }
 
   return (
@@ -134,7 +134,7 @@ export function TerritoryPicker({
           Território
         </Label>
         <Select
-          value={value ?? ""}
+          value={value ?? ''}
           onValueChange={onChange}
           disabled={disabled || filtered.length === 0}
         >
@@ -151,44 +151,44 @@ export function TerritoryPicker({
         </Select>
       </div>
       {filtered.length === 0 && (
-        <p className="text-xs text-gray-500">Nenhum território correspondente encontrado.</p>
+        <p className="text-gray-500 text-xs">Nenhum território correspondente encontrado.</p>
       )}
     </div>
-  );
+  )
 }
 
 export function useTerritoryLabels() {
-  const [map, setMap] = useState<Map<string, Territory>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const [map, setMap] = useState<Map<string, Territory>>(new Map())
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    let cancelled = false
+    ;(async () => {
       try {
-        const response = await territoriesApi.listTerritories("flat");
+        const response = await territoriesApi.listTerritories('flat')
         if (!cancelled) {
-          const next = new Map<string, Territory>();
+          const next = new Map<string, Territory>()
           for (const t of response.data as Territory[]) {
-            next.set(t.id, t);
+            next.set(t.id, t)
           }
-          setMap(next);
+          setMap(next)
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoading(false)
       }
-    })();
+    })()
     return () => {
-      cancelled = true;
-    };
-  }, []);
+      cancelled = true
+    }
+  }, [])
 
   const getLabel = useCallback(
     (territoryId: string) => {
-      const t = map.get(territoryId);
-      return t ? formatTerritoryLabel(t) : territoryId;
+      const t = map.get(territoryId)
+      return t ? formatTerritoryLabel(t) : territoryId
     },
     [map]
-  );
+  )
 
-  return { map, loading, getLabel };
+  return { map, loading, getLabel }
 }

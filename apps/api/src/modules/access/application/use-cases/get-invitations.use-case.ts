@@ -1,71 +1,63 @@
-import type { InviteRepository } from "../interfaces/invite.repository.interface";
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import type { Role, ScopeContext } from "@atlasmed/access";
-import { InsufficientPermissionsError } from "../../../../shared/errors";
+import type { Role, ScopeContext } from '@atlasmed/access'
+import { InsufficientPermissionsError } from '../../../../shared/errors'
+import type { InviteRepository } from '../interfaces/invite.repository.interface'
+import type { UserRepository } from '../interfaces/user.repository.interface'
 
 interface GetInvitationsInput {
-  status?: string;
-  page?: number;
-  limit?: number;
-  actorId: string;
-  actorRole: Role;
-  scope: ScopeContext;
+  status?: string
+  page?: number
+  limit?: number
+  actorId: string
+  actorRole: Role
+  scope: ScopeContext
 }
 
 interface GetInvitationsDependencies {
-  inviteRepository: InviteRepository;
-  userRepository: UserRepository;
+  inviteRepository: InviteRepository
+  userRepository: UserRepository
 }
 
 export class GetInvitationsUseCase {
   constructor(private readonly dependencies: GetInvitationsDependencies) {}
 
   async execute(input: GetInvitationsInput) {
-    if (input.actorRole === "REP") {
-      throw new InsufficientPermissionsError(
-        ["invitation:list"],
-        [`role:${input.actorRole}`]
-      );
+    if (input.actorRole === 'REP') {
+      throw new InsufficientPermissionsError(['invitation:list'], [`role:${input.actorRole}`])
     }
 
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 20;
+    const page = input.page ?? 1
+    const limit = input.limit ?? 20
 
     const listParams: {
-      status?: string;
-      page: number;
-      limit: number;
-      invitedByUserId?: string;
+      status?: string
+      page: number
+      limit: number
+      invitedByUserId?: string
     } = {
       status: input.status,
       page,
-      limit,
-    };
-
-    if (!input.scope.isGlobal && input.actorRole === "MANAGER") {
-      listParams.invitedByUserId = input.actorId;
+      limit
     }
 
-    const { invitations, total } =
-      await this.dependencies.inviteRepository.findAll(listParams);
+    if (!input.scope.isGlobal && input.actorRole === 'MANAGER') {
+      listParams.invitedByUserId = input.actorId
+    }
 
-    const inviterIds = [
-      ...new Set(invitations.map((invite) => invite.invitedByUserId)),
-    ];
+    const { invitations, total } = await this.dependencies.inviteRepository.findAll(listParams)
+
+    const inviterIds = [...new Set(invitations.map((invite) => invite.invitedByUserId))]
 
     const inviters = await Promise.all(
       inviterIds.map((id) => this.dependencies.userRepository.findById(id))
-    );
+    )
 
     const inviterMap = new Map(
-      inviters
-        .filter((inviter) => inviter !== null)
-        .map((inviter) => [inviter!.id, inviter!])
-    );
+      inviters.filter((inviter) => inviter !== null).map((inviter) => [inviter!.id, inviter!])
+    )
 
     return {
       invitations: invitations.map((invite) => {
-        const inviter = inviterMap.get(invite.invitedByUserId);
+        const inviter = inviterMap.get(invite.invitedByUserId)
 
         return {
           id: invite.id,
@@ -74,7 +66,7 @@ export class GetInvitationsUseCase {
           status: invite.status,
           role: {
             id: invite.role.id,
-            name: invite.role.name,
+            name: invite.role.name
           },
           expiresAt: invite.expiresAt.toISOString(),
           createdAt: invite.createdAt.toISOString(),
@@ -86,21 +78,21 @@ export class GetInvitationsUseCase {
                 username: inviter.username,
                 email: inviter.email,
                 firstName: inviter.firstName ?? undefined,
-                lastName: inviter.lastName ?? undefined,
+                lastName: inviter.lastName ?? undefined
               }
             : {
                 id: invite.invitedByUserId,
-                username: "Unknown",
-                email: "",
-              },
-        };
+                username: 'Unknown',
+                email: ''
+              }
+        }
       }),
       pagination: {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    }
   }
 }

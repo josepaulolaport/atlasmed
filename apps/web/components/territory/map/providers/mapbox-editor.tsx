@@ -1,171 +1,173 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import "mapbox-gl/dist/mapbox-gl.css";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
-import type { TerritoryMapEditorProps, TerritoryMapProvider } from "../types";
-import { getCachedMapsConfig } from "@/lib/maps/config";
+import MapboxDraw from '@mapbox/mapbox-gl-draw'
+import mapboxgl from 'mapbox-gl'
+import { useEffect, useRef, useState } from 'react'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
+import { getCachedMapsConfig } from '@/lib/maps/config'
 import {
   boundaryToDrawFeatures,
   boundaryToPolygonCoordinates,
   drawFeaturesToBoundary,
-  normalizeTerritoryBoundary,
-} from "@/lib/territory/geojson";
+  normalizeTerritoryBoundary
+} from '@/lib/territory/geojson'
+import type { TerritoryMapEditorProps, TerritoryMapProvider } from '../types'
 
 function MapboxTerritoryEditorInner({
   value,
   onChange,
   readOnly,
-  onValidationError,
+  onValidationError
 }: TerritoryMapEditorProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const drawRef = useRef<MapboxDraw | null>(null);
-  const onChangeRef = useRef(onChange);
-  const onValidationErrorRef = useRef(onValidationError);
-  const [ready, setReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const drawRef = useRef<MapboxDraw | null>(null)
+  const onChangeRef = useRef(onChange)
+  const onValidationErrorRef = useRef(onValidationError)
+  const [ready, setReady] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    onChangeRef.current = onChange;
-    onValidationErrorRef.current = onValidationError;
-  }, [onChange, onValidationError]);
+    onChangeRef.current = onChange
+    onValidationErrorRef.current = onValidationError
+  }, [onChange, onValidationError])
 
   useEffect(() => {
-    let disposed = false;
+    let disposed = false
 
     async function initMap() {
       if (!containerRef.current) {
-        return;
+        return
       }
 
-      const config = await getCachedMapsConfig();
-      const token = config.publicToken;
+      const config = await getCachedMapsConfig()
+      const token = config.publicToken
 
       if (!token) {
-        setError("O token público do Mapbox não está configurado. Defina MAPBOX_PUBLIC_TOKEN na API.");
-        return;
+        setError(
+          'O token público do Mapbox não está configurado. Defina MAPBOX_PUBLIC_TOKEN na API.'
+        )
+        return
       }
 
       if (disposed) {
-        return;
+        return
       }
 
-      mapboxgl.accessToken = token;
+      mapboxgl.accessToken = token
 
       const map = new mapboxgl.Map({
         container: containerRef.current,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: 'mapbox://styles/mapbox/streets-v12',
         center: [-46.6333, -23.5505],
-        zoom: 4,
-      });
+        zoom: 4
+      })
 
       const draw = new MapboxDraw({
         displayControlsDefault: false,
         controls: readOnly
           ? {}
           : {
-            polygon: true,
-            trash: true,
-          },
-        defaultMode: readOnly ? "simple_select" : "draw_polygon",
-      });
+              polygon: true,
+              trash: true
+            },
+        defaultMode: readOnly ? 'simple_select' : 'draw_polygon'
+      })
 
-      map.addControl(draw);
-      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+      map.addControl(draw)
+      map.addControl(new mapboxgl.NavigationControl(), 'top-right')
 
       const sync = () => {
-        const collection = draw.getAll();
-        const geometry = drawFeaturesToBoundary(collection.features);
+        const collection = draw.getAll()
+        const geometry = drawFeaturesToBoundary(collection.features)
         if (!geometry) {
-          onValidationErrorRef.current?.("Draw at least one valid polygon");
-          onChangeRef.current(null);
-          return;
+          onValidationErrorRef.current?.('Draw at least one valid polygon')
+          onChangeRef.current(null)
+          return
         }
-        onChangeRef.current(geometry);
-      };
+        onChangeRef.current(geometry)
+      }
 
-      map.on("draw.create", sync);
-      map.on("draw.update", sync);
-      map.on("draw.delete", sync);
+      map.on('draw.create', sync)
+      map.on('draw.update', sync)
+      map.on('draw.delete', sync)
 
-      mapRef.current = map;
-      drawRef.current = draw;
-      setError(null);
-      setReady(true);
+      mapRef.current = map
+      drawRef.current = draw
+      setError(null)
+      setReady(true)
     }
 
     initMap().catch(() => {
-      onValidationErrorRef.current?.("Failed to initialize Mapbox editor");
-      setError("Falha ao inicializar o editor do Mapbox");
-    });
+      onValidationErrorRef.current?.('Failed to initialize Mapbox editor')
+      setError('Falha ao inicializar o editor do Mapbox')
+    })
 
     return () => {
-      disposed = true;
-      setReady(false);
-      drawRef.current = null;
-      mapRef.current?.remove();
-      mapRef.current = null;
-    };
-  }, [readOnly]);
+      disposed = true
+      setReady(false)
+      drawRef.current = null
+      mapRef.current?.remove()
+      mapRef.current = null
+    }
+  }, [readOnly])
 
   useEffect(() => {
-    const draw = drawRef.current;
-    const map = mapRef.current;
+    const draw = drawRef.current
+    const map = mapRef.current
     if (!ready || !draw || !map) {
-      return;
+      return
     }
 
-    draw.deleteAll();
+    draw.deleteAll()
 
-    const normalized = normalizeTerritoryBoundary(value);
+    const normalized = normalizeTerritoryBoundary(value)
     if (!normalized) {
-      return;
+      return
     }
 
     for (const feature of boundaryToDrawFeatures(normalized)) {
-      draw.add(feature);
+      draw.add(feature)
     }
 
-    const polygons = boundaryToPolygonCoordinates(normalized);
-    const firstRing = polygons[0]?.[0];
+    const polygons = boundaryToPolygonCoordinates(normalized)
+    const firstRing = polygons[0]?.[0]
     if (firstRing?.length) {
       const bounds = polygons
         .flatMap((polygon) => polygon[0] ?? [])
         .reduce(
           (acc, coord) => {
-            const lng = coord[0];
-            const lat = coord[1];
-            if (lng === undefined || lat === undefined) return acc;
-            return acc.extend([lng, lat]);
+            const lng = coord[0]
+            const lat = coord[1]
+            if (lng === undefined || lat === undefined) return acc
+            return acc.extend([lng, lat])
           },
           new mapboxgl.LngLatBounds(
             firstRing[0] as [number, number],
             firstRing[0] as [number, number]
           )
-        );
-      map.fitBounds(bounds, { padding: 40, maxZoom: 12 });
+        )
+      map.fitBounds(bounds, { padding: 40, maxZoom: 12 })
     }
-  }, [ready, value]);
+  }, [ready, value])
 
   if (error) {
-    return <p className="text-sm text-destructive">{error}</p>;
+    return <p className="text-destructive text-sm">{error}</p>
   }
 
   return (
     <div>
       <div ref={containerRef} className="h-105 w-full rounded-md border" />
       {!readOnly ? (
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-gray-500 text-xs">
           Desenhe múltiplos polígonos para definir partes não contíguas do mesmo território.
         </p>
       ) : null}
     </div>
-  );
+  )
 }
 
 export const mapboxTerritoryMapProvider: TerritoryMapProvider = {
-  Editor: MapboxTerritoryEditorInner,
-};
+  Editor: MapboxTerritoryEditorInner
+}

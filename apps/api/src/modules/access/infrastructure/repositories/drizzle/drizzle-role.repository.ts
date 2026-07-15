@@ -1,7 +1,7 @@
-import { eq, asc } from "drizzle-orm";
-import { roles } from "@atlasmed/database";
-import { db } from "../../../../../infrastructure/database/db";
-import type { RoleRepository } from "../../../application/interfaces/role.repository.interface";
+import { roles } from '@atlasmed/database'
+import { asc, eq } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
+import type { RoleRepository } from '../../../application/interfaces/role.repository.interface'
 
 export class DrizzleRoleRepository implements RoleRepository {
   async findById(roleId: string) {
@@ -9,13 +9,13 @@ export class DrizzleRoleRepository implements RoleRepository {
       .select({
         id: roles.id,
         name: roles.name,
-        priority: roles.priority,
+        priority: roles.priority
       })
       .from(roles)
       .where(eq(roles.id, roleId))
-      .limit(1);
+      .limit(1)
 
-    return row ?? null;
+    return row ?? null
   }
 
   async findAll() {
@@ -24,9 +24,9 @@ export class DrizzleRoleRepository implements RoleRepository {
         id: roles.id,
         name: roles.name,
         description: roles.description,
-        priority: roles.priority,
+        priority: roles.priority
       })
       .from(roles)
-      .orderBy(asc(roles.priority));
+      .orderBy(asc(roles.priority))
   }
 }

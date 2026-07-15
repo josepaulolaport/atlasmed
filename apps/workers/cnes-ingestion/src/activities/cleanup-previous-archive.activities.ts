@@ -1,26 +1,26 @@
 import {
   archiveKeyForReference,
   compareReferences,
-  previousReference,
-} from "@atlasmed/cnes-ingestion";
-import { loadWorkerConfig } from "../config";
+  previousReference
+} from '@atlasmed/cnes-ingestion'
+import { loadWorkerConfig } from '../config'
 
 export async function cleanupPreviousArchiveActivity(input: {
-  ano: number;
-  mes: number;
+  ano: number
+  mes: number
 }): Promise<{ deleted: boolean; deletedKey?: string }> {
-  const config = loadWorkerConfig();
-  const current = { ano: input.ano, mes: input.mes };
-  const previous = previousReference(current);
+  const config = loadWorkerConfig()
+  const current = { ano: input.ano, mes: input.mes }
+  const previous = previousReference(current)
   if (!previous) {
-    return { deleted: false };
+    return { deleted: false }
   }
 
   if (compareReferences(current, previous) <= 0) {
-    return { deleted: false };
+    return { deleted: false }
   }
 
-  const { createArchiveAdapter } = await import("@atlasmed/cnes-ingestion");
+  const { createArchiveAdapter } = await import('@atlasmed/cnes-ingestion')
   const archive = createArchiveAdapter({
     backend: config.archiveBackend,
     localPath: config.archiveLocalPath,
@@ -28,19 +28,19 @@ export async function cleanupPreviousArchiveActivity(input: {
     region: config.archiveS3Region,
     endpoint: config.archiveS3Endpoint,
     accessKeyId: config.archiveS3AccessKeyId,
-    secretAccessKey: config.archiveS3SecretAccessKey,
-  });
+    secretAccessKey: config.archiveS3SecretAccessKey
+  })
 
-  const manifest = await archive.getManifest(previous);
+  const manifest = await archive.getManifest(previous)
   if (!manifest) {
-    return { deleted: false };
+    return { deleted: false }
   }
 
-  const deletedKey = archiveKeyForReference(previous);
-  await archive.deleteFile(deletedKey);
+  const deletedKey = archiveKeyForReference(previous)
+  await archive.deleteFile(deletedKey)
 
-  const version = `${previous.ano}${String(previous.mes).padStart(2, "0")}`;
-  await archive.deleteFile(`cnes/${version}/manifest.json`);
+  const version = `${previous.ano}${String(previous.mes).padStart(2, '0')}`
+  await archive.deleteFile(`cnes/${version}/manifest.json`)
 
-  return { deleted: true, deletedKey };
+  return { deleted: true, deletedKey }
 }

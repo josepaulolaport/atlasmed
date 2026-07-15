@@ -1,286 +1,265 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/contexts/auth-context";
-import { authApi } from "@/lib/api/auth";
-import { verificationApi } from "@/lib/api/verification";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
-import {
-  changePasswordSchema,
-  disable2FASchema,
-  totpCodeSchema,
-} from "@/lib/validators";
-import type { AccessGrant } from "@/types/auth";
-import { z } from "zod";
+import { zodResolver } from '@hookform/resolvers/zod'
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { authApi } from '@/lib/api/auth'
+import { verificationApi } from '@/lib/api/verification'
+import { changePasswordSchema, disable2FASchema, totpCodeSchema } from '@/lib/validators'
+import type { AccessGrant } from '@/types/auth'
 
-type ChangePasswordForm = z.infer<typeof changePasswordSchema>;
-type Disable2FAForm = z.infer<typeof disable2FASchema>;
+type ChangePasswordForm = z.infer<typeof changePasswordSchema>
+type Disable2FAForm = z.infer<typeof disable2FASchema>
 
-const confirm2FASchema = z.object({ code: totpCodeSchema });
-type Confirm2FAFormData = z.infer<typeof confirm2FASchema>;
+const confirm2FASchema = z.object({ code: totpCodeSchema })
+type Confirm2FAFormData = z.infer<typeof confirm2FASchema>
 
 function SectionCard({
   title,
   icon,
-  children,
+  children
 }: {
-  title: string;
-  icon: string;
-  children: React.ReactNode;
+  title: string
+  icon: string
+  children: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-      <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50 flex items-center gap-2">
-        <iconify-icon
-          icon={icon}
-          stroke-width="1.5"
-          className="text-base text-zinc-500"
-        />
-        <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
-          {title}
-        </h3>
+    <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2 border-zinc-200 border-b bg-zinc-50/50 px-5 py-4">
+        <iconify-icon icon={icon} stroke-width="1.5" className="text-base text-zinc-500" />
+        <h3 className="font-medium text-sm text-zinc-900 tracking-tight">{title}</h3>
       </div>
       <div className="p-5">{children}</div>
     </div>
-  );
+  )
 }
 
 export default function SecurityPage() {
-  const { user, refreshUser } = useAuth();
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [phoneLoading, setPhoneLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
-  const [setupData, setSetupData] = useState<{ secret: string; otpauthUrl: string } | null>(null);
-  const [showDisable2FA, setShowDisable2FA] = useState(false);
-  const [capabilities, setCapabilities] = useState<{ role: string; grants: AccessGrant[] } | null>(null);
-  const [capabilitiesLoading, setCapabilitiesLoading] = useState(true);
+  const { user, refreshUser } = useAuth()
+  const [emailLoading, setEmailLoading] = useState(false)
+  const [phoneLoading, setPhoneLoading] = useState(false)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false)
+  const [setupData, setSetupData] = useState<{ secret: string; otpauthUrl: string } | null>(null)
+  const [showDisable2FA, setShowDisable2FA] = useState(false)
+  const [capabilities, setCapabilities] = useState<{ role: string; grants: AccessGrant[] } | null>(
+    null
+  )
+  const [capabilitiesLoading, setCapabilitiesLoading] = useState(true)
 
   const changePasswordForm = useForm<ChangePasswordForm>({
     resolver: zodResolver(changePasswordSchema),
-    defaultValues: { revokeOtherSessions: true },
-  });
+    defaultValues: { revokeOtherSessions: true }
+  })
 
   const confirm2FAForm = useForm<Confirm2FAFormData>({
-    resolver: zodResolver(confirm2FASchema),
-  });
+    resolver: zodResolver(confirm2FASchema)
+  })
 
   const disable2FAForm = useForm<Disable2FAForm>({
-    resolver: zodResolver(disable2FASchema),
-  });
+    resolver: zodResolver(disable2FASchema)
+  })
 
   useEffect(() => {
     authApi
       .getCapabilities()
       .then(setCapabilities)
       .catch(() => setCapabilities(null))
-      .finally(() => setCapabilitiesLoading(false));
-  }, []);
+      .finally(() => setCapabilitiesLoading(false))
+  }, [])
 
   const handleRequestEmailVerification = async () => {
-    setEmailLoading(true);
+    setEmailLoading(true)
     try {
-      await verificationApi.requestEmailVerification();
+      await verificationApi.requestEmailVerification()
       toast({
-        title: "Sucesso",
-        description: "E-mail de verificação enviado. Verifique sua caixa de entrada.",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'E-mail de verificação enviado. Verifique sua caixa de entrada.',
+        variant: 'success'
+      })
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
+      const error = err as { response?: { data?: { message?: string } } }
       toast({
-        title: "Erro",
-        description:
-          error.response?.data?.message || "Falha ao enviar e-mail de verificação",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: error.response?.data?.message || 'Falha ao enviar e-mail de verificação',
+        variant: 'destructive'
+      })
     } finally {
-      setEmailLoading(false);
+      setEmailLoading(false)
     }
-  };
+  }
 
   const handleRequestPhoneVerification = async () => {
-    setPhoneLoading(true);
+    setPhoneLoading(true)
     try {
-      await verificationApi.requestPhoneVerification();
+      await verificationApi.requestPhoneVerification()
       toast({
-        title: "Sucesso",
-        description: "Código de verificação enviado para o seu telefone.",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'Código de verificação enviado para o seu telefone.',
+        variant: 'success'
+      })
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
+      const error = err as { response?: { data?: { message?: string } } }
       toast({
-        title: "Erro",
-        description:
-          error.response?.data?.message || "Falha ao enviar código de verificação",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: error.response?.data?.message || 'Falha ao enviar código de verificação',
+        variant: 'destructive'
+      })
     } finally {
-      setPhoneLoading(false);
+      setPhoneLoading(false)
     }
-  };
+  }
 
   const handleChangePassword = async (data: ChangePasswordForm) => {
-    setPasswordLoading(true);
+    setPasswordLoading(true)
     try {
       await authApi.changePassword({
         currentPassword: data.currentPassword,
         newPassword: data.newPassword,
-        revokeOtherSessions: data.revokeOtherSessions,
-      });
-      changePasswordForm.reset({ revokeOtherSessions: true });
+        revokeOtherSessions: data.revokeOtherSessions
+      })
+      changePasswordForm.reset({ revokeOtherSessions: true })
       toast({
-        title: "Sucesso",
-        description: "Senha alterada com sucesso",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'Senha alterada com sucesso',
+        variant: 'success'
+      })
     } catch (err) {
-      const error = err as { response?: { data?: { error?: string } } };
+      const error = err as { response?: { data?: { error?: string } } }
       toast({
-        title: "Erro",
-        description: error.response?.data?.error || "Falha ao alterar senha",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: error.response?.data?.error || 'Falha ao alterar senha',
+        variant: 'destructive'
+      })
     } finally {
-      setPasswordLoading(false);
+      setPasswordLoading(false)
     }
-  };
+  }
 
   const handleStart2FASetup = async () => {
-    setTwoFactorLoading(true);
+    setTwoFactorLoading(true)
     try {
-      const result = await authApi.setup2FA();
-      setSetupData(result);
+      const result = await authApi.setup2FA()
+      setSetupData(result)
       toast({
-        title: "Configuração iniciada",
-        description:
-          "Escaneie o código ou insira o segredo no seu aplicativo autenticador.",
-        variant: "success",
-      });
+        title: 'Configuração iniciada',
+        description: 'Escaneie o código ou insira o segredo no seu aplicativo autenticador.',
+        variant: 'success'
+      })
     } catch (err) {
-      const error = err as { response?: { data?: { error?: string } } };
+      const error = err as { response?: { data?: { error?: string } } }
       toast({
-        title: "Erro",
-        description:
-          error.response?.data?.error ||
-          "Autenticação em dois fatores indisponível",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: error.response?.data?.error || 'Autenticação em dois fatores indisponível',
+        variant: 'destructive'
+      })
     } finally {
-      setTwoFactorLoading(false);
+      setTwoFactorLoading(false)
     }
-  };
+  }
 
   const handleConfirm2FA = async (data: Confirm2FAFormData) => {
-    setTwoFactorLoading(true);
+    setTwoFactorLoading(true)
     try {
-      await authApi.confirm2FA({ code: data.code });
-      setSetupData(null);
-      confirm2FAForm.reset();
-      await refreshUser();
+      await authApi.confirm2FA({ code: data.code })
+      setSetupData(null)
+      confirm2FAForm.reset()
+      await refreshUser()
       toast({
-        title: "Sucesso",
-        description: "Autenticação em dois fatores ativada",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'Autenticação em dois fatores ativada',
+        variant: 'success'
+      })
     } catch (err) {
-      const error = err as { response?: { data?: { error?: string } } };
+      const error = err as { response?: { data?: { error?: string } } }
       toast({
-        title: "Erro",
-        description:
-          error.response?.data?.error || "Código de verificação inválido",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: error.response?.data?.error || 'Código de verificação inválido',
+        variant: 'destructive'
+      })
     } finally {
-      setTwoFactorLoading(false);
+      setTwoFactorLoading(false)
     }
-  };
+  }
 
   const handleDisable2FA = async (data: Disable2FAForm) => {
-    setTwoFactorLoading(true);
+    setTwoFactorLoading(true)
     try {
-      await authApi.disable2FA(data);
-      setShowDisable2FA(false);
-      disable2FAForm.reset();
-      await refreshUser();
+      await authApi.disable2FA(data)
+      setShowDisable2FA(false)
+      disable2FAForm.reset()
+      await refreshUser()
       toast({
-        title: "Sucesso",
-        description: "Autenticação em dois fatores desativada",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'Autenticação em dois fatores desativada',
+        variant: 'success'
+      })
     } catch (err) {
-      const error = err as { response?: { data?: { error?: string } } };
+      const error = err as { response?: { data?: { error?: string } } }
       toast({
-        title: "Erro",
+        title: 'Erro',
         description:
-          error.response?.data?.error ||
-          "Falha ao desativar autenticação em dois fatores",
-        variant: "destructive",
-      });
+          error.response?.data?.error || 'Falha ao desativar autenticação em dois fatores',
+        variant: 'destructive'
+      })
     } finally {
-      setTwoFactorLoading(false);
+      setTwoFactorLoading(false)
     }
-  };
+  }
 
-  if (!user) return null;
+  if (!user) return null
 
   const securityScore =
-    (user.status === "ACTIVE" ? 40 : 0) +
+    (user.status === 'ACTIVE' ? 40 : 0) +
     (user.emailVerified ? 20 : 0) +
     (user.phoneVerified ? 15 : 0) +
-    (user.twoFactorEnabled ? 25 : 0);
+    (user.twoFactorEnabled ? 25 : 0)
 
   return (
     <>
-      <div className="px-6 py-8 border-b border-zinc-100">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div className="border-zinc-100 border-b px-6 py-8">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
           <div>
-            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+            <h1 className="font-medium text-2xl text-zinc-900 tracking-tight">
               Configurações de segurança
             </h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <p className="mt-1 text-sm text-zinc-500">
               Gerencie a segurança e as verificações da sua conta
             </p>
           </div>
         </div>
       </div>
 
-      <div className="p-6 max-w-6xl mx-auto w-full space-y-6">
+      <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
         <SectionCard title="Pontuação de segurança" icon="solar:shield-check-linear">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-3xl font-medium tracking-tight text-zinc-900">
+                <div className="font-medium text-3xl text-zinc-900 tracking-tight">
                   {securityScore}%
                 </div>
-                <p className="text-sm text-zinc-500 mt-1">
-                  {securityScore >= 75
-                    ? "Forte"
-                    : securityScore >= 50
-                    ? "Média"
-                    : "Fraca"}
+                <p className="mt-1 text-sm text-zinc-500">
+                  {securityScore >= 75 ? 'Forte' : securityScore >= 50 ? 'Média' : 'Fraca'}
                 </p>
               </div>
               <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-zinc-100">
                 <iconify-icon
                   icon={
                     securityScore >= 75
-                      ? "solar:check-circle-linear"
-                      : "solar:danger-triangle-linear"
+                      ? 'solar:check-circle-linear'
+                      : 'solar:danger-triangle-linear'
                   }
                   stroke-width="1.5"
                   className={
-                    securityScore >= 75
-                      ? "text-2xl text-emerald-600"
-                      : "text-2xl text-amber-500"
+                    securityScore >= 75 ? 'text-2xl text-emerald-600' : 'text-2xl text-amber-500'
                   }
                 />
               </div>
@@ -290,10 +269,10 @@ export default function SecurityPage() {
               <div
                 className={`h-full transition-all ${
                   securityScore >= 75
-                    ? "bg-emerald-500"
+                    ? 'bg-emerald-500'
                     : securityScore >= 50
-                    ? "bg-amber-500"
-                    : "bg-red-500"
+                      ? 'bg-amber-500'
+                      : 'bg-red-500'
                 }`}
                 style={{ width: `${securityScore}%` }}
               />
@@ -301,26 +280,20 @@ export default function SecurityPage() {
 
             <ul className="space-y-2 text-sm">
               {[
-                { label: "Conta ativa", passed: user.status === "ACTIVE" },
-                { label: "Email verificado", passed: user.emailVerified },
-                { label: "Telefone verificado", passed: user.phoneVerified },
+                { label: 'Conta ativa', passed: user.status === 'ACTIVE' },
+                { label: 'Email verificado', passed: user.emailVerified },
+                { label: 'Telefone verificado', passed: user.phoneVerified },
                 {
-                  label: "Autenticação de dois fatores ativada",
-                  passed: user.twoFactorEnabled,
-                },
+                  label: 'Autenticação de dois fatores ativada',
+                  passed: user.twoFactorEnabled
+                }
               ].map((item) => (
                 <li key={item.label} className="flex items-center gap-2">
                   <iconify-icon
-                    icon={
-                      item.passed
-                        ? "solar:check-circle-linear"
-                        : "solar:close-circle-linear"
-                    }
+                    icon={item.passed ? 'solar:check-circle-linear' : 'solar:close-circle-linear'}
                     stroke-width="1.5"
                     className={
-                      item.passed
-                        ? "text-base text-emerald-600"
-                        : "text-base text-zinc-400"
+                      item.passed ? 'text-base text-emerald-600' : 'text-base text-zinc-400'
                     }
                   />
                   <span className="text-zinc-700">{item.label}</span>
@@ -333,15 +306,14 @@ export default function SecurityPage() {
         <SectionCard title="Verificação de email" icon="solar:letter-linear">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div className="space-y-1">
-              <p className="text-sm font-medium text-zinc-900">{user.email}</p>
+              <p className="font-medium text-sm text-zinc-900">{user.email}</p>
               <div className="flex items-center gap-2">
                 {user.emailVerified ? (
                   <>
                     <Badge variant="success">Verificado</Badge>
                     {user.emailVerifiedAt && (
                       <span className="text-xs text-zinc-500">
-                        Verificado em{" "}
-                        {new Date(user.emailVerifiedAt).toLocaleDateString("pt-BR")}
+                        Verificado em {new Date(user.emailVerifiedAt).toLocaleDateString('pt-BR')}
                       </span>
                     )}
                   </>
@@ -357,7 +329,7 @@ export default function SecurityPage() {
                   onClick={handleRequestEmailVerification}
                   disabled={emailLoading}
                 >
-                  {emailLoading ? "Enviando..." : "Enviar email de verificação"}
+                  {emailLoading ? 'Enviando...' : 'Enviar email de verificação'}
                 </Button>
                 <Link href="/security/verify-email">
                   <Button variant="outline">Inserir token de verificação</Button>
@@ -371,9 +343,7 @@ export default function SecurityPage() {
           {user.phoneNumber ? (
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="space-y-1">
-                <p className="text-sm font-medium text-zinc-900">
-                  {user.phoneNumber}
-                </p>
+                <p className="font-medium text-sm text-zinc-900">{user.phoneNumber}</p>
                 <div className="flex items-center gap-2">
                   {user.phoneVerified ? (
                     <Badge variant="success">Verificado</Badge>
@@ -389,7 +359,7 @@ export default function SecurityPage() {
                     onClick={handleRequestPhoneVerification}
                     disabled={phoneLoading}
                   >
-                    {phoneLoading ? "Enviando..." : "Enviar código de verificação"}
+                    {phoneLoading ? 'Enviando...' : 'Enviar código de verificação'}
                   </Button>
                   <Link href="/security/verify-phone">
                     <Button variant="outline">Inserir código</Button>
@@ -399,9 +369,7 @@ export default function SecurityPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              <p className="text-sm text-zinc-500">
-                Nenhum telefone associado à sua conta.
-              </p>
+              <p className="text-sm text-zinc-500">Nenhum telefone associado à sua conta.</p>
               <Link href="/profile">
                 <Button variant="outline">Adicionar telefone</Button>
               </Link>
@@ -419,11 +387,11 @@ export default function SecurityPage() {
               <Input
                 id="currentPassword"
                 type="password"
-                {...changePasswordForm.register("currentPassword")}
+                {...changePasswordForm.register('currentPassword')}
                 disabled={passwordLoading}
               />
               {changePasswordForm.formState.errors.currentPassword && (
-                <p className="text-xs text-red-600">
+                <p className="text-red-600 text-xs">
                   {changePasswordForm.formState.errors.currentPassword.message}
                 </p>
               )}
@@ -433,11 +401,11 @@ export default function SecurityPage() {
               <Input
                 id="newPassword"
                 type="password"
-                {...changePasswordForm.register("newPassword")}
+                {...changePasswordForm.register('newPassword')}
                 disabled={passwordLoading}
               />
               {changePasswordForm.formState.errors.newPassword && (
-                <p className="text-xs text-red-600">
+                <p className="text-red-600 text-xs">
                   {changePasswordForm.formState.errors.newPassword.message}
                 </p>
               )}
@@ -447,11 +415,11 @@ export default function SecurityPage() {
               <Input
                 id="confirmPassword"
                 type="password"
-                {...changePasswordForm.register("confirmPassword")}
+                {...changePasswordForm.register('confirmPassword')}
                 disabled={passwordLoading}
               />
               {changePasswordForm.formState.errors.confirmPassword && (
-                <p className="text-xs text-red-600">
+                <p className="text-red-600 text-xs">
                   {changePasswordForm.formState.errors.confirmPassword.message}
                 </p>
               )}
@@ -459,32 +427,23 @@ export default function SecurityPage() {
             <label className="flex items-center gap-2 text-sm text-zinc-700">
               <input
                 type="checkbox"
-                {...changePasswordForm.register("revokeOtherSessions")}
+                {...changePasswordForm.register('revokeOtherSessions')}
                 disabled={passwordLoading}
               />
               Sair de todos os outros dispositivos
             </label>
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={passwordLoading}
-            >
-              {passwordLoading ? "Atualizando..." : "Atualizar senha"}
+            <Button type="submit" variant="primary" disabled={passwordLoading}>
+              {passwordLoading ? 'Atualizando...' : 'Atualizar senha'}
             </Button>
           </form>
         </SectionCard>
 
-        <SectionCard
-          title="Autenticação de dois fatores"
-          icon="solar:smartphone-linear"
-        >
+        <SectionCard title="Autenticação de dois fatores" icon="solar:smartphone-linear">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-zinc-900">
-                  Aplicativo autenticador
-                </p>
-                <p className="text-sm text-zinc-500 mt-1">
+                <p className="font-medium text-sm text-zinc-900">Aplicativo autenticador</p>
+                <p className="mt-1 text-sm text-zinc-500">
                   Use um aplicativo TOTP como Google Authenticator ou 1Password.
                 </p>
               </div>
@@ -496,30 +455,21 @@ export default function SecurityPage() {
             </div>
 
             {!user.twoFactorEnabled && !setupData && (
-              <Button
-                variant="primary"
-                onClick={handleStart2FASetup}
-                disabled={twoFactorLoading}
-              >
-                {twoFactorLoading
-                  ? "Iniciando..."
-                  : "Ativar autenticação de dois fatores"}
+              <Button variant="primary" onClick={handleStart2FASetup} disabled={twoFactorLoading}>
+                {twoFactorLoading ? 'Iniciando...' : 'Ativar autenticação de dois fatores'}
               </Button>
             )}
 
             {setupData && (
               <div className="space-y-4 rounded-md border border-zinc-200 bg-zinc-50 p-4">
                 <p className="text-sm text-zinc-600">
-                  Adicione esta conta ao seu aplicativo autenticador usando o
-                  segredo abaixo ou o link de configuração.
+                  Adicione esta conta ao seu aplicativo autenticador usando o segredo abaixo ou o
+                  link de configuração.
                 </p>
-                <div className="rounded bg-white border border-zinc-200 p-3 font-mono text-sm break-all text-zinc-800">
+                <div className="break-all rounded border border-zinc-200 bg-white p-3 font-mono text-sm text-zinc-800">
                   {setupData.secret}
                 </div>
-                <a
-                  href={setupData.otpauthUrl}
-                  className="text-sm text-blue-600 hover:underline"
-                >
+                <a href={setupData.otpauthUrl} className="text-blue-600 text-sm hover:underline">
                   Abrir no aplicativo autenticador
                 </a>
                 <form
@@ -532,22 +482,18 @@ export default function SecurityPage() {
                       id="confirmCode"
                       inputMode="numeric"
                       maxLength={6}
-                      {...confirm2FAForm.register("code")}
+                      {...confirm2FAForm.register('code')}
                       disabled={twoFactorLoading}
                     />
                     {confirm2FAForm.formState.errors.code && (
-                      <p className="text-xs text-red-600">
+                      <p className="text-red-600 text-xs">
                         {confirm2FAForm.formState.errors.code.message}
                       </p>
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      type="submit"
-                      variant="primary"
-                      disabled={twoFactorLoading}
-                    >
-                      {twoFactorLoading ? "Confirmando..." : "Confirmar configuração"}
+                    <Button type="submit" variant="primary" disabled={twoFactorLoading}>
+                      {twoFactorLoading ? 'Confirmando...' : 'Confirmar configuração'}
                     </Button>
                     <Button
                       type="button"
@@ -565,10 +511,7 @@ export default function SecurityPage() {
             {user.twoFactorEnabled && (
               <div className="space-y-3">
                 {!showDisable2FA ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDisable2FA(true)}
-                  >
+                  <Button variant="outline" onClick={() => setShowDisable2FA(true)}>
                     Desativar autenticação de dois fatores
                   </Button>
                 ) : (
@@ -581,7 +524,7 @@ export default function SecurityPage() {
                       <Input
                         id="disablePassword"
                         type="password"
-                        {...disable2FAForm.register("password")}
+                        {...disable2FAForm.register('password')}
                         disabled={twoFactorLoading}
                       />
                     </div>
@@ -591,17 +534,13 @@ export default function SecurityPage() {
                         id="disableCode"
                         inputMode="numeric"
                         maxLength={6}
-                        {...disable2FAForm.register("code")}
+                        {...disable2FAForm.register('code')}
                         disabled={twoFactorLoading}
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button
-                        type="submit"
-                        variant="destructive"
-                        disabled={twoFactorLoading}
-                      >
-                        {twoFactorLoading ? "Desativando..." : "Confirmar desativação"}
+                      <Button type="submit" variant="destructive" disabled={twoFactorLoading}>
+                        {twoFactorLoading ? 'Desativando...' : 'Confirmar desativação'}
                       </Button>
                       <Button
                         type="button"
@@ -625,10 +564,7 @@ export default function SecurityPage() {
           ) : capabilities ? (
             <div className="space-y-3">
               <p className="text-sm text-zinc-700">
-                Função:{" "}
-                <span className="font-medium text-zinc-900">
-                  {capabilities.role}
-                </span>
+                Função: <span className="font-medium text-zinc-900">{capabilities.role}</span>
               </p>
               {capabilities.grants.length === 0 ? (
                 <p className="text-sm text-zinc-500">
@@ -641,18 +577,12 @@ export default function SecurityPage() {
                       key={grant.id}
                       className="rounded-md border border-zinc-200 bg-white px-3 py-2"
                     >
-                      <span className="font-medium text-zinc-900">
-                        {grant.action}
-                      </span>{" "}
-                      em{" "}
-                      <span className="font-medium text-zinc-900">
-                        {grant.resource}
-                      </span>
-                      {grant.resourceId ? ` (${grant.resourceId})` : ""}
+                      <span className="font-medium text-zinc-900">{grant.action}</span> em{' '}
+                      <span className="font-medium text-zinc-900">{grant.resource}</span>
+                      {grant.resourceId ? ` (${grant.resourceId})` : ''}
                       {grant.expiresAt && (
-                        <span className="block text-xs text-zinc-500 mt-0.5">
-                          Expira em{" "}
-                          {new Date(grant.expiresAt).toLocaleDateString("pt-BR")}
+                        <span className="mt-0.5 block text-xs text-zinc-500">
+                          Expira em {new Date(grant.expiresAt).toLocaleDateString('pt-BR')}
                         </span>
                       )}
                     </li>
@@ -661,16 +591,11 @@ export default function SecurityPage() {
               )}
             </div>
           ) : (
-            <p className="text-sm text-zinc-500">
-              Não foi possível carregar as permissões.
-            </p>
+            <p className="text-sm text-zinc-500">Não foi possível carregar as permissões.</p>
           )}
         </SectionCard>
 
-        <SectionCard
-          title="Informações de contato"
-          icon="solar:user-id-linear"
-        >
+        <SectionCard title="Informações de contato" icon="solar:user-id-linear">
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link href="/security/change-email">
               <Button variant="outline">Alterar email</Button>
@@ -681,25 +606,19 @@ export default function SecurityPage() {
           </div>
         </SectionCard>
 
-        <SectionCard
-          title="Recomendações de segurança"
-          icon="solar:lightbulb-linear"
-        >
+        <SectionCard title="Recomendações de segurança" icon="solar:lightbulb-linear">
           <ul className="space-y-3 text-sm">
             {!user.twoFactorEnabled && (
               <li className="flex items-start gap-2">
                 <iconify-icon
                   icon="solar:danger-triangle-linear"
                   stroke-width="1.5"
-                  className="text-base text-amber-500 mt-0.5"
+                  className="mt-0.5 text-amber-500 text-base"
                 />
                 <div>
-                  <p className="font-medium text-zinc-900">
-                    Ative a autenticação de dois fatores
-                  </p>
+                  <p className="font-medium text-zinc-900">Ative a autenticação de dois fatores</p>
                   <p className="text-zinc-500">
-                    Proteja sua conta com uma segunda etapa de verificação no
-                    login.
+                    Proteja sua conta com uma segunda etapa de verificação no login.
                   </p>
                 </div>
               </li>
@@ -708,18 +627,13 @@ export default function SecurityPage() {
               <iconify-icon
                 icon="solar:shield-check-linear"
                 stroke-width="1.5"
-                className="text-base text-blue-600 mt-0.5"
+                className="mt-0.5 text-base text-blue-600"
               />
               <div>
-                <p className="font-medium text-zinc-900">
-                  Revise suas sessões ativas
-                </p>
+                <p className="font-medium text-zinc-900">Revise suas sessões ativas</p>
                 <p className="text-zinc-500">
-                  Verifique regularmente dispositivos e locais não reconhecidos.{" "}
-                  <Link
-                    href="/sessions"
-                    className="text-blue-600 hover:underline"
-                  >
+                  Verifique regularmente dispositivos e locais não reconhecidos.{' '}
+                  <Link href="/sessions" className="text-blue-600 hover:underline">
                     Ver sessões
                   </Link>
                 </p>
@@ -729,5 +643,5 @@ export default function SecurityPage() {
         </SectionCard>
       </div>
     </>
-  );
+  )
 }

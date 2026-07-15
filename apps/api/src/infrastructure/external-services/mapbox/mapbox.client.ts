@@ -1,27 +1,23 @@
-import {
-  createMapboxClient,
-  MapboxNotConfiguredError,
-  type IMapboxClient,
-} from "@atlasmed/mapbox";
-import { environment } from "../../../app/config/environment";
+import { createMapboxClient, type IMapboxClient, MapboxNotConfiguredError } from '@atlasmed/mapbox'
+import { environment } from '../../../app/config/environment'
 
-let mapboxClient: IMapboxClient | null = null;
+let mapboxClient: IMapboxClient | null = null
 
 export function getMapboxClient(): IMapboxClient {
   if (!environment.MAPBOX_SECRET_TOKEN) {
-    throw new MapboxNotConfiguredError();
+    throw new MapboxNotConfiguredError()
   }
 
   if (!mapboxClient) {
     mapboxClient = createMapboxClient({
       accessToken: environment.MAPBOX_SECRET_TOKEN,
-      username: environment.MAPBOX_USERNAME,
-    });
+      username: environment.MAPBOX_USERNAME
+    })
   }
 
-  return mapboxClient;
+  return mapboxClient
 }
 
 export function isMapboxConfigured(): boolean {
-  return Boolean(environment.MAPBOX_SECRET_TOKEN);
+  return Boolean(environment.MAPBOX_SECRET_TOKEN)
 }

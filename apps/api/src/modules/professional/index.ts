@@ -1,9 +1,9 @@
-import { Elysia } from "elysia";
-import { professionalsRoute } from "./infrastructure/routes/professionals.route";
+import { Elysia } from 'elysia'
+import { professionalsRoute } from './infrastructure/routes/professionals.route'
 
 export const professional = new Elysia({
-  name: "professional",
+  name: 'professional',
   detail: {
-    tags: ["Professionals"],
-  },
-}).use(professionalsRoute);
+    tags: ['Professionals']
+  }
+}).use(professionalsRoute)

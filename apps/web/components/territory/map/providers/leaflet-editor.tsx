@@ -1,62 +1,57 @@
-"use client";
+'use client'
 
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import { MapContainer, TileLayer, useMap } from "react-leaflet";
-import "@geoman-io/leaflet-geoman-free";
-import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
-import "leaflet/dist/leaflet.css";
-import type { TerritoryMapEditorProps, TerritoryMapProvider } from "../types";
+import L from 'leaflet'
+import { useEffect, useRef } from 'react'
+import { MapContainer, TileLayer, useMap } from 'react-leaflet'
+import '@geoman-io/leaflet-geoman-free'
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
+import 'leaflet/dist/leaflet.css'
 import {
   boundaryToDrawFeatures,
   drawFeaturesToBoundary,
-  normalizeTerritoryBoundary,
-} from "@/lib/territory/geojson";
+  normalizeTerritoryBoundary
+} from '@/lib/territory/geojson'
+import type { TerritoryMapEditorProps, TerritoryMapProvider } from '../types'
 
-function MapController({
-  value,
-  onChange,
-  readOnly,
-  onValidationError,
-}: TerritoryMapEditorProps) {
-  const map = useMap();
-  const layersRef = useRef<L.Layer[]>([]);
+function MapController({ value, onChange, readOnly, onValidationError }: TerritoryMapEditorProps) {
+  const map = useMap()
+  const layersRef = useRef<L.Layer[]>([])
 
   const clearLayers = () => {
     for (const layer of layersRef.current) {
-      map.removeLayer(layer);
+      map.removeLayer(layer)
     }
-    layersRef.current = [];
-  };
+    layersRef.current = []
+  }
 
   const syncAllLayers = () => {
     const features = layersRef.current
       .map((layer) => {
-        const withGeo = layer as L.Layer & { toGeoJSON?: () => GeoJSON.Feature };
-        return withGeo.toGeoJSON?.();
+        const withGeo = layer as L.Layer & { toGeoJSON?: () => GeoJSON.Feature }
+        return withGeo.toGeoJSON?.()
       })
-      .filter((feature): feature is GeoJSON.Feature => Boolean(feature));
+      .filter((feature): feature is GeoJSON.Feature => Boolean(feature))
 
-    const boundary = drawFeaturesToBoundary(features);
+    const boundary = drawFeaturesToBoundary(features)
     if (!boundary) {
-      onValidationError?.("Draw at least one valid polygon");
-      onChange(null);
-      return;
+      onValidationError?.('Draw at least one valid polygon')
+      onChange(null)
+      return
     }
 
-    onChange(boundary);
-  };
+    onChange(boundary)
+  }
 
   useEffect(() => {
-    if (!map.pm) return;
+    if (!map.pm) return
 
     map.pm.setGlobalOptions({
-      allowSelfIntersection: false,
-    });
+      allowSelfIntersection: false
+    })
 
     if (!readOnly) {
       map.pm.addControls({
-        position: "topleft",
+        position: 'topleft',
         drawPolygon: true,
         drawCircle: false,
         drawCircleMarker: false,
@@ -67,74 +62,69 @@ function MapController({
         editMode: true,
         dragMode: false,
         cutPolygon: false,
-        removalMode: true,
-      });
+        removalMode: true
+      })
     }
 
     const handleCreate = (event: { layer: L.Layer }) => {
-      layersRef.current.push(event.layer);
-      syncAllLayers();
-    };
+      layersRef.current.push(event.layer)
+      syncAllLayers()
+    }
 
     const handleEdit = () => {
-      syncAllLayers();
-    };
+      syncAllLayers()
+    }
 
     const handleRemove = (event: { layer: L.Layer }) => {
-      layersRef.current = layersRef.current.filter((layer) => layer !== event.layer);
-      syncAllLayers();
-    };
+      layersRef.current = layersRef.current.filter((layer) => layer !== event.layer)
+      syncAllLayers()
+    }
 
-    map.on("pm:create", handleCreate);
-    map.on("pm:edit", handleEdit);
-    map.on("pm:remove", handleRemove);
+    map.on('pm:create', handleCreate)
+    map.on('pm:edit', handleEdit)
+    map.on('pm:remove', handleRemove)
 
     return () => {
-      map.off("pm:create", handleCreate);
-      map.off("pm:edit", handleEdit);
-      map.off("pm:remove", handleRemove);
-      clearLayers();
-    };
-  }, [map, onChange, onValidationError, readOnly]);
+      map.off('pm:create', handleCreate)
+      map.off('pm:edit', handleEdit)
+      map.off('pm:remove', handleRemove)
+      clearLayers()
+    }
+  }, [map, onChange, onValidationError, readOnly])
 
   useEffect(() => {
-    clearLayers();
+    clearLayers()
 
-    const normalized = normalizeTerritoryBoundary(value);
+    const normalized = normalizeTerritoryBoundary(value)
     if (!normalized) {
-      return;
+      return
     }
 
     for (const feature of boundaryToDrawFeatures(normalized)) {
-      const layer = L.geoJSON(feature);
+      const layer = L.geoJSON(feature)
       layer.eachLayer((child) => {
-        layersRef.current.push(child);
-        child.addTo(map);
-        if (!readOnly && "pm" in child) {
-          (child as L.Layer & { pm: { enable: () => void } }).pm.enable();
+        layersRef.current.push(child)
+        child.addTo(map)
+        if (!readOnly && 'pm' in child) {
+          ;(child as L.Layer & { pm: { enable: () => void } }).pm.enable()
         }
-      });
+      })
     }
 
-    const group = L.featureGroup(layersRef.current);
-    const bounds = group.getBounds();
+    const group = L.featureGroup(layersRef.current)
+    const bounds = group.getBounds()
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [20, 20] });
+      map.fitBounds(bounds, { padding: [20, 20] })
     }
-  }, [map, value, readOnly]);
+  }, [map, value, readOnly])
 
-  return null;
+  return null
 }
 
 export function LeafletTerritoryEditor(props: TerritoryMapEditorProps) {
   return (
     <div className="h-[400px] overflow-hidden rounded-md border">
-      <MapContainer
-        center={[-14.235, -51.925]}
-        zoom={4}
-        className="h-full w-full"
-        scrollWheelZoom
-      >
+      <MapContainer center={[-14.235, -51.925]} zoom={4} className="h-full w-full" scrollWheelZoom>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -142,14 +132,14 @@ export function LeafletTerritoryEditor(props: TerritoryMapEditorProps) {
         <MapController {...props} />
       </MapContainer>
       {!props.readOnly ? (
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-gray-500 text-xs">
           Desenhe múltiplos polígonos para definir partes não contíguas do mesmo território.
         </p>
       ) : null}
     </div>
-  );
+  )
 }
 
 export const leafletTerritoryMapProvider: TerritoryMapProvider = {
-  Editor: LeafletTerritoryEditor,
-};
+  Editor: LeafletTerritoryEditor
+}

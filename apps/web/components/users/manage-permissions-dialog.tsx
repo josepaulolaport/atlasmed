@@ -1,144 +1,138 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { usersApi } from "@/lib/api/users";
+import { zodResolver } from '@hookform/resolvers/zod'
+import { Loader2, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import type { z } from 'zod'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
-import { Loader2, Trash2 } from "lucide-react";
-import { grantPermissionSchema } from "@/lib/validators";
-import type { AccessGrant, User } from "@/types/auth";
-import { z } from "zod";
+  SelectValue
+} from '@/components/ui/select'
+import { toast } from '@/hooks/use-toast'
+import { usersApi } from '@/lib/api/users'
+import { grantPermissionSchema } from '@/lib/validators'
+import type { AccessGrant, User } from '@/types/auth'
 
-type GrantForm = z.infer<typeof grantPermissionSchema>;
+type GrantForm = z.infer<typeof grantPermissionSchema>
 
 interface ManagePermissionsDialogProps {
-  user: User | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  user: User | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-const RESOURCES = [
-  "REP",
-  "FACILITY",
-  "PROFESSIONAL",
-  "TERRITORY",
-  "INVITATION",
-] as const;
-const ACTIONS = ["create", "read", "update", "delete", "manage"] as const;
+const RESOURCES = ['REP', 'FACILITY', 'PROFESSIONAL', 'TERRITORY', 'INVITATION'] as const
+const ACTIONS = ['create', 'read', 'update', 'delete', 'manage'] as const
 
 export function ManagePermissionsDialog({
   user,
   open,
-  onOpenChange,
+  onOpenChange
 }: ManagePermissionsDialogProps) {
-  const [grants, setGrants] = useState<AccessGrant[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [grants, setGrants] = useState<AccessGrant[]>([])
+  const [loading, setLoading] = useState(false)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
 
   const form = useForm<GrantForm>({
     resolver: zodResolver(grantPermissionSchema),
     defaultValues: {
-      resource: "REP",
-      action: "read",
-    },
-  });
+      resource: 'REP',
+      action: 'read'
+    }
+  })
 
   const loadGrants = useCallback(async () => {
-    if (!user) return;
+    if (!user) return
 
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await usersApi.getUserCapabilities(user.id);
-      setGrants(data.grants);
+      const data = await usersApi.getUserCapabilities(user.id)
+      setGrants(data.grants)
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load permissions",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: 'Failed to load permissions',
+        variant: 'destructive'
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [user]);
+  }, [user])
 
   useEffect(() => {
     if (open && user) {
-      loadGrants();
+      loadGrants()
     }
-  }, [open, user, loadGrants]);
+  }, [open, user, loadGrants])
 
   const handleGrant = async (data: GrantForm) => {
-    if (!user) return;
+    if (!user) return
 
     try {
       await usersApi.grantPermission(user.id, {
         resource: data.resource,
         action: data.action,
         resourceId: data.resourceId || undefined,
-        expiresAt: data.expiresAt || undefined,
-      });
+        expiresAt: data.expiresAt || undefined
+      })
       toast({
-        title: "Success",
-        description: "Permission granted",
-        variant: "success",
-      });
-      form.reset({ resource: data.resource, action: data.action });
-      await loadGrants();
+        title: 'Success',
+        description: 'Permission granted',
+        variant: 'success'
+      })
+      form.reset({ resource: data.resource, action: data.action })
+      await loadGrants()
     } catch (err) {
-      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      const error = err as { response?: { data?: { error?: { message?: string } } } }
       toast({
-        title: "Error",
-        description: error.response?.data?.error?.message || "Failed to grant permission",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: error.response?.data?.error?.message || 'Failed to grant permission',
+        variant: 'destructive'
+      })
     }
-  };
+  }
 
   const handleRevoke = async (grant: AccessGrant) => {
-    if (!user) return;
+    if (!user) return
 
-    setRevokingId(grant.id);
+    setRevokingId(grant.id)
     try {
       await usersApi.revokePermission(user.id, {
         resource: grant.resource,
         action: grant.action,
-        resourceId: grant.resourceId,
-      });
+        resourceId: grant.resourceId
+      })
       toast({
-        title: "Success",
-        description: "Permission revoked",
-        variant: "success",
-      });
-      await loadGrants();
+        title: 'Success',
+        description: 'Permission revoked',
+        variant: 'success'
+      })
+      await loadGrants()
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to revoke permission",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: 'Failed to revoke permission',
+        variant: 'destructive'
+      })
     } finally {
-      setRevokingId(null);
+      setRevokingId(null)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -159,7 +153,9 @@ export function ManagePermissionsDialog({
             <div className="space-y-2">
               <Label>Concessões atuais</Label>
               {grants.length === 0 ? (
-                <p className="text-sm text-gray-500">Nenhuma concessão adicional além dos padrões da função.</p>
+                <p className="text-gray-500 text-sm">
+                  Nenhuma concessão adicional além dos padrões da função.
+                </p>
               ) : (
                 <ul className="max-h-48 space-y-2 overflow-y-auto">
                   {grants.map((grant) => (
@@ -196,9 +192,9 @@ export function ManagePermissionsDialog({
                 <div className="space-y-2">
                   <Label className="text-xs">Recurso</Label>
                   <Select
-                    value={form.watch("resource")}
+                    value={form.watch('resource')}
                     onValueChange={(value) =>
-                      form.setValue("resource", value as GrantForm["resource"])
+                      form.setValue('resource', value as GrantForm['resource'])
                     }
                   >
                     <SelectTrigger>
@@ -216,10 +212,8 @@ export function ManagePermissionsDialog({
                 <div className="space-y-2">
                   <Label className="text-xs">Ação</Label>
                   <Select
-                    value={form.watch("action")}
-                    onValueChange={(value) =>
-                      form.setValue("action", value as GrantForm["action"])
-                    }
+                    value={form.watch('action')}
+                    onValueChange={(value) => form.setValue('action', value as GrantForm['action'])}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -235,8 +229,13 @@ export function ManagePermissionsDialog({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">ID do recurso (opcional, para concessões restritas)</Label>
-                <Input placeholder="Deixe vazio para concessão global" {...form.register("resourceId")} />
+                <Label className="text-xs">
+                  ID do recurso (opcional, para concessões restritas)
+                </Label>
+                <Input
+                  placeholder="Deixe vazio para concessão global"
+                  {...form.register('resourceId')}
+                />
               </div>
               <Button type="submit" className="w-full">
                 Conceder permissão
@@ -246,5 +245,5 @@ export function ManagePermissionsDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
+  )
 }

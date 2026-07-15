@@ -3,32 +3,32 @@ import type {
   FacilityProfessionalView,
   ProfessionalFacilityContext,
   ProfessionalProfile,
-  ScopeContext,
-} from "@atlasmed/access";
-import { assertResourceInScope } from "@atlasmed/access";
-import type { FacilityProfessionalRepository } from "../interfaces/facility-professional.repository.interface";
-import type { ProfessionalRepository } from "../../../professional/application/interfaces/professional.repository.interface";
+  ScopeContext
+} from '@atlasmed/access'
+import { assertResourceInScope } from '@atlasmed/access'
+import type { ProfessionalRepository } from '../../../professional/application/interfaces/professional.repository.interface'
+import type { FacilityProfessionalRepository } from '../interfaces/facility-professional.repository.interface'
 
 function formatDate(value: Date | null): string | undefined {
   if (!value) {
-    return undefined;
+    return undefined
   }
 
-  return value.toISOString().slice(0, 10);
+  return value.toISOString().slice(0, 10)
 }
 
 function serializeAssociationRole(association: {
-  id: string;
-  facilityId: string;
-  professionalId: string;
-  occupationCode: string;
-  isPartner: boolean;
-  isPrescriber: boolean;
-  isBuyer: boolean;
-  isDecisionMaker: boolean;
-  relationshipLevel: number | null;
-  specialtyLabel: string | null;
-  notes: string | null;
+  id: string
+  facilityId: string
+  professionalId: string
+  occupationCode: string
+  isPartner: boolean
+  isPrescriber: boolean
+  isBuyer: boolean
+  isDecisionMaker: boolean
+  relationshipLevel: number | null
+  specialtyLabel: string | null
+  notes: string | null
 }): FacilityProfessionalRole {
   return {
     facilityProfessionalId: association.id,
@@ -41,39 +41,39 @@ function serializeAssociationRole(association: {
     isDecisionMaker: association.isDecisionMaker,
     relationshipLevel: association.relationshipLevel ?? undefined,
     specialtyLabel: association.specialtyLabel ?? undefined,
-    notes: association.notes ?? undefined,
-  };
+    notes: association.notes ?? undefined
+  }
 }
 
 function serializeAssociation(row: {
-  id: string;
-  professionalId: string;
-  facilityId: string;
-  occupationCode: string;
-  isPartner: boolean;
-  isPrescriber: boolean;
-  isBuyer: boolean;
-  isDecisionMaker: boolean;
-  relationshipLevel: number | null;
-  specialtyLabel: string | null;
-  notes: string | null;
-  sourceActive: boolean;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  confirmedAt: Date | null;
-  confirmedByUserId: string | null;
-  endedAt: Date | null;
+  id: string
+  professionalId: string
+  facilityId: string
+  occupationCode: string
+  isPartner: boolean
+  isPrescriber: boolean
+  isBuyer: boolean
+  isDecisionMaker: boolean
+  relationshipLevel: number | null
+  specialtyLabel: string | null
+  notes: string | null
+  sourceActive: boolean
+  sourceFirstSeenAt: Date | null
+  sourceLastSeenAt: Date | null
+  confirmedAt: Date | null
+  confirmedByUserId: string | null
+  endedAt: Date | null
   professional: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    fullName: string | null;
-    specialty: string | null;
-    crmNumber: string | null;
-    crmState: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  };
+    id: string
+    firstName: string
+    lastName: string
+    fullName: string | null
+    specialty: string | null
+    crmNumber: string | null
+    crmState: string | null
+    createdAt: Date
+    updatedAt: Date
+  }
 }) {
   return {
     facilityProfessionalId: row.id,
@@ -86,7 +86,7 @@ function serializeAssociation(row: {
       crmNumber: row.professional.crmNumber ?? undefined,
       crmState: row.professional.crmState ?? undefined,
       createdAt: row.professional.createdAt.toISOString(),
-      updatedAt: row.professional.updatedAt.toISOString(),
+      updatedAt: row.professional.updatedAt.toISOString()
     },
     association: {
       ...serializeAssociationRole(row),
@@ -95,35 +95,35 @@ function serializeAssociation(row: {
       sourceLastSeenAt: row.sourceLastSeenAt?.toISOString(),
       confirmedAt: row.confirmedAt?.toISOString(),
       confirmedByUserId: row.confirmedByUserId ?? undefined,
-      pendingConfirmation: row.sourceActive && !row.confirmedAt && !row.endedAt,
-    },
-  };
+      pendingConfirmation: row.sourceActive && !row.confirmedAt && !row.endedAt
+    }
+  }
 }
 
 function serializeProfessionalFromContext(
   professional: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    fullName: string | null;
-    socialName: string | null;
-    taxId: string | null;
-    birthDate: Date | null;
-    mobilePhone: string | null;
-    landlinePhone: string | null;
-    email: string | null;
-    websiteUrl: string | null;
-    imageUrl: string | null;
-    primarySpecialtyLabel: string | null;
-    crmCouncil: string | null;
-    crmNumber: string | null;
-    crmState: string | null;
-    favoriteTeam: string | null;
-    favoriteSport: string | null;
-    hobbies: string | null;
-    notes: string | null;
-    createdAt: Date;
-    updatedAt: Date;
+    id: string
+    firstName: string
+    lastName: string
+    fullName: string | null
+    socialName: string | null
+    taxId: string | null
+    birthDate: Date | null
+    mobilePhone: string | null
+    landlinePhone: string | null
+    email: string | null
+    websiteUrl: string | null
+    imageUrl: string | null
+    primarySpecialtyLabel: string | null
+    crmCouncil: string | null
+    crmNumber: string | null
+    crmState: string | null
+    favoriteTeam: string | null
+    favoriteSport: string | null
+    hobbies: string | null
+    notes: string | null
+    createdAt: Date
+    updatedAt: Date
   },
   facilityIds: string[],
   facilities: Array<{ id: string; name: string }>
@@ -153,31 +153,31 @@ function serializeProfessionalFromContext(
     facilityIds,
     facilities,
     createdAt: professional.createdAt.toISOString(),
-    updatedAt: professional.updatedAt.toISOString(),
-  };
+    updatedAt: professional.updatedAt.toISOString()
+  }
 }
 
 interface Dependencies {
-  facilityProfessionalRepository: FacilityProfessionalRepository;
-  professionalRepository?: ProfessionalRepository;
+  facilityProfessionalRepository: FacilityProfessionalRepository
+  professionalRepository?: ProfessionalRepository
 }
 
 export class ListFacilityProfessionalsUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    scope: ScopeContext;
-    view?: FacilityProfessionalView;
-    page?: number;
-    limit?: number;
-    search?: string;
+    facilityId: string
+    scope: ScopeContext
+    view?: FacilityProfessionalView
+    page?: number
+    limit?: number
+    search?: string
   }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 20;
-    const view = input.view ?? "all";
+    const page = input.page ?? 1
+    const limit = input.limit ?? 20
+    const view = input.view ?? 'all'
 
     const { associations, total } =
       await this.deps.facilityProfessionalRepository.findActiveByFacilityWithProfessionals({
@@ -185,8 +185,8 @@ export class ListFacilityProfessionalsUseCase {
         view,
         page,
         limit,
-        search: input.search,
-      });
+        search: input.search
+      })
 
     return {
       data: associations.map(serializeAssociation),
@@ -194,9 +194,9 @@ export class ListFacilityProfessionalsUseCase {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    }
   }
 }
 
@@ -204,24 +204,24 @@ export class GetFacilityProfessionalContextUseCase {
   constructor(private readonly deps: Required<Dependencies>) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    scope: ScopeContext;
+    facilityId: string
+    professionalId: string
+    scope: ScopeContext
   }): Promise<ProfessionalFacilityContext | null> {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
     const context = await this.deps.facilityProfessionalRepository.findActiveWithProfessional(
       input.facilityId,
       input.professionalId
-    );
+    )
 
     if (!context) {
-      return null;
+      return null
     }
 
     const facilities = await this.deps.professionalRepository.findActiveFacilities(
       input.professionalId
-    );
+    )
 
     return {
       professional: serializeProfessionalFromContext(
@@ -230,8 +230,8 @@ export class GetFacilityProfessionalContextUseCase {
         facilities
       ),
       association: serializeAssociationRole(context.association),
-      facilities,
-    };
+      facilities
+    }
   }
 }
 
@@ -239,18 +239,18 @@ export class UpdateFacilityProfessionalRoleUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    scope: ScopeContext;
-    isPartner?: boolean;
-    isPrescriber?: boolean;
-    isBuyer?: boolean;
-    isDecisionMaker?: boolean;
-    relationshipLevel?: number | null;
-    specialtyLabel?: string | null;
-    notes?: string | null;
+    facilityId: string
+    professionalId: string
+    scope: ScopeContext
+    isPartner?: boolean
+    isPrescriber?: boolean
+    isBuyer?: boolean
+    isDecisionMaker?: boolean
+    relationshipLevel?: number | null
+    specialtyLabel?: string | null
+    notes?: string | null
   }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
     const association = await this.deps.facilityProfessionalRepository.updateAssociationRoles({
       professionalId: input.professionalId,
@@ -262,15 +262,15 @@ export class UpdateFacilityProfessionalRoleUseCase {
         isDecisionMaker: input.isDecisionMaker,
         relationshipLevel: input.relationshipLevel,
         specialtyLabel: input.specialtyLabel,
-        notes: input.notes,
-      },
-    });
+        notes: input.notes
+      }
+    })
 
     if (!association) {
-      return null;
+      return null
     }
 
-    return serializeAssociationRole(association);
+    return serializeAssociationRole(association)
   }
 }
 
@@ -278,25 +278,25 @@ export class ConfirmProfessionalAtFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
-    scope: ScopeContext;
+    facilityId: string
+    professionalId: string
+    userId: string
+    scope: ScopeContext
   }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
     const association = await this.deps.facilityProfessionalRepository.confirmAssociation({
       professionalId: input.professionalId,
       facilityId: input.facilityId,
-      confirmedByUserId: input.userId,
-    });
+      confirmedByUserId: input.userId
+    })
 
     return {
       facilityProfessionalId: association.id,
       professionalId: association.professionalId,
       facilityId: association.facilityId,
-      confirmedAt: association.confirmedAt?.toISOString(),
-    };
+      confirmedAt: association.confirmedAt?.toISOString()
+    }
   }
 }
 
@@ -304,25 +304,25 @@ export class ManuallyAssociateProfessionalUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
-    scope: ScopeContext;
+    facilityId: string
+    professionalId: string
+    userId: string
+    scope: ScopeContext
   }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
     const association = await this.deps.facilityProfessionalRepository.manuallyAssociate({
       professionalId: input.professionalId,
       facilityId: input.facilityId,
-      confirmedByUserId: input.userId,
-    });
+      confirmedByUserId: input.userId
+    })
 
     return {
       facilityProfessionalId: association.id,
       professionalId: association.professionalId,
       facilityId: association.facilityId,
-      confirmedAt: association.confirmedAt?.toISOString(),
-    };
+      confirmedAt: association.confirmedAt?.toISOString()
+    }
   }
 }
 
@@ -330,27 +330,27 @@ export class EndFacilityProfessionalUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    facilityId: string;
-    professionalId: string;
-    userId: string;
-    scope: ScopeContext;
+    facilityId: string
+    professionalId: string
+    userId: string
+    scope: ScopeContext
   }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
     const association = await this.deps.facilityProfessionalRepository.endAssociation({
       professionalId: input.professionalId,
       facilityId: input.facilityId,
       endedByUserId: input.userId,
-      endReason: "manual",
-    });
+      endReason: 'manual'
+    })
 
     if (!association) {
-      return null;
+      return null
     }
 
     return {
       facilityProfessionalId: association.id,
-      endedAt: association.endedAt?.toISOString(),
-    };
+      endedAt: association.endedAt?.toISOString()
+    }
   }
 }

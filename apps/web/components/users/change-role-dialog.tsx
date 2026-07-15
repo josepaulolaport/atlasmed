@@ -1,92 +1,87 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { usersApi } from "@/lib/api/users";
+import { Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import type { RoleInfo, User } from "@/types/auth";
+  SelectValue
+} from '@/components/ui/select'
+import { toast } from '@/hooks/use-toast'
+import { usersApi } from '@/lib/api/users'
+import type { RoleInfo, User } from '@/types/auth'
 
 interface ChangeRoleDialogProps {
-  user: User | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onUpdated?: () => void;
+  user: User | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onUpdated?: () => void
 }
 
-export function ChangeRoleDialog({
-  user,
-  open,
-  onOpenChange,
-  onUpdated,
-}: ChangeRoleDialogProps) {
-  const [roles, setRoles] = useState<RoleInfo[]>([]);
-  const [selectedRoleId, setSelectedRoleId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+export function ChangeRoleDialog({ user, open, onOpenChange, onUpdated }: ChangeRoleDialogProps) {
+  const [roles, setRoles] = useState<RoleInfo[]>([])
+  const [selectedRoleId, setSelectedRoleId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   const loadRoles = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const data = await usersApi.getRoles();
-      setRoles(data);
+      const data = await usersApi.getRoles()
+      setRoles(data)
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load roles",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: 'Failed to load roles',
+        variant: 'destructive'
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
     if (open && user) {
-      setSelectedRoleId(user.role.id);
-      loadRoles();
+      setSelectedRoleId(user.role.id)
+      loadRoles()
     }
-  }, [open, user, loadRoles]);
+  }, [open, user, loadRoles])
 
   const handleSave = async () => {
-    if (!user || !selectedRoleId) return;
+    if (!user || !selectedRoleId) return
 
-    setSaving(true);
+    setSaving(true)
     try {
-      await usersApi.changeUserRole(user.id, selectedRoleId);
+      await usersApi.changeUserRole(user.id, selectedRoleId)
       toast({
-        title: "Success",
-        description: "User role updated",
-        variant: "success",
-      });
-      onOpenChange(false);
-      onUpdated?.();
+        title: 'Success',
+        description: 'User role updated',
+        variant: 'success'
+      })
+      onOpenChange(false)
+      onUpdated?.()
     } catch (err) {
-      const error = err as { response?: { data?: { error?: { message?: string } } } };
+      const error = err as { response?: { data?: { error?: { message?: string } } } }
       toast({
-        title: "Error",
-        description: error.response?.data?.error?.message || "Failed to change role",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: error.response?.data?.error?.message || 'Failed to change role',
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -114,7 +109,7 @@ export function ChangeRoleDialog({
                   {roles.map((role) => (
                     <SelectItem key={role.id} value={role.id}>
                       {role.name}
-                      {role.description ? ` — ${role.description}` : ""}
+                      {role.description ? ` — ${role.description}` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -126,12 +121,12 @@ export function ChangeRoleDialog({
                 Cancelar
               </Button>
               <Button onClick={handleSave} disabled={saving || !selectedRoleId}>
-                {saving ? "Salvando..." : "Salvar função"}
+                {saving ? 'Salvando...' : 'Salvar função'}
               </Button>
             </div>
           </div>
         )}
       </DialogContent>
     </Dialog>
-  );
+  )
 }

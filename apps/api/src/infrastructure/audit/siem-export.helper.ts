@@ -1,56 +1,50 @@
-import type { InferSelectModel } from "drizzle-orm";
-import { auditLogs } from "@atlasmed/database";
-import { ExternalServiceError } from "../../shared/errors";
+import type { auditLogs } from '@atlasmed/database'
+import type { InferSelectModel } from 'drizzle-orm'
+import { ExternalServiceError } from '../../shared/errors'
 
-type AuditLog = InferSelectModel<typeof auditLogs>;
+type AuditLog = InferSelectModel<typeof auditLogs>
 
-const PII_KEYS = new Set([
-  "email",
-  "phoneNumber",
-  "phone",
-  "identifier",
-  "username",
-]);
+const PII_KEYS = new Set(['email', 'phoneNumber', 'phone', 'identifier', 'username'])
 
 function redactValue(key: string, value: unknown): unknown {
-  if (PII_KEYS.has(key) && typeof value === "string") {
-    return "[REDACTED]";
+  if (PII_KEYS.has(key) && typeof value === 'string') {
+    return '[REDACTED]'
   }
-  if (value && typeof value === "object" && !Array.isArray(value)) {
-    return redactObject(value as Record<string, unknown>);
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return redactObject(value as Record<string, unknown>)
   }
-  return value;
+  return value
 }
 
 function redactObject(obj: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
+  const out: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(obj)) {
-    out[key] = redactValue(key, value);
+    out[key] = redactValue(key, value)
   }
-  return out;
+  return out
 }
 
 export interface SiemAuditEvent {
-  id: string;
-  timestamp: string;
-  eventType: string;
-  severity: string;
-  action: string;
-  actorId: string | null;
-  userId: string | null;
-  resource: string | null;
-  resourceId: string | null;
-  sessionId: string | null;
-  outcome: string | null;
-  ipAddress: string | null;
-  details: Record<string, unknown> | null;
+  id: string
+  timestamp: string
+  eventType: string
+  severity: string
+  action: string
+  actorId: string | null
+  userId: string | null
+  resource: string | null
+  resourceId: string | null
+  sessionId: string | null
+  outcome: string | null
+  ipAddress: string | null
+  details: Record<string, unknown> | null
 }
 
 export function formatAuditLogForSiem(log: AuditLog): SiemAuditEvent {
   const details =
-    log.details && typeof log.details === "object"
+    log.details && typeof log.details === 'object'
       ? redactObject(log.details as Record<string, unknown>)
-      : null;
+      : null
 
   return {
     id: log.id,
@@ -65,8 +59,8 @@ export function formatAuditLogForSiem(log: AuditLog): SiemAuditEvent {
     sessionId: log.sessionId,
     outcome: log.outcome,
     ipAddress: log.ipAddress,
-    details,
-  };
+    details
+  }
 }
 
 export async function postSiemBatch(
@@ -74,24 +68,24 @@ export async function postSiemBatch(
   options: { webhookUrl: string; secret?: string }
 ): Promise<void> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+    'Content-Type': 'application/json'
+  }
 
   if (options.secret) {
-    headers["X-SIEM-Secret"] = options.secret;
+    headers['X-SIEM-Secret'] = options.secret
   }
 
   const response = await fetch(options.webhookUrl, {
-    method: "POST",
+    method: 'POST',
     headers,
     body: JSON.stringify({
       exportedAt: new Date().toISOString(),
       count: events.length,
-      events,
-    }),
-  });
+      events
+    })
+  })
 
   if (!response.ok) {
-    throw new ExternalServiceError(`SIEM webhook (HTTP ${response.status})`);
+    throw new ExternalServiceError(`SIEM webhook (HTTP ${response.status})`)
   }
 }

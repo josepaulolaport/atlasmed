@@ -1,27 +1,27 @@
-import { db } from "../database/db";
-import { auditLogs } from "@atlasmed/database";
-import { eq, and, gte, lte } from "drizzle-orm";
-import { metricsService } from "../monitoring/metrics.service";
-import { logger } from "../logging/logger";
-import { environment } from "../../app/config/environment";
-import type { AuditEventSeverity } from "@atlasmed/database";
+import type { AuditEventSeverity } from '@atlasmed/database'
+import { auditLogs } from '@atlasmed/database'
+import { and, eq, gte, lte } from 'drizzle-orm'
+import { environment } from '../../app/config/environment'
+import { db } from '../database/db'
+import { logger } from '../logging/logger'
+import { metricsService } from '../monitoring/metrics.service'
 
 export interface AuditLogEntry {
-  userId?: string | undefined;
-  eventType: string;
-  severity?: AuditEventSeverity | undefined;
-  actor?: string | undefined;
-  actorId?: string | undefined;
-  resource?: string | undefined;
-  resourceId?: string | undefined;
-  action: string;
-  details?: Record<string, unknown> | undefined;
-  ipAddress?: string | undefined;
-  userAgent?: string | undefined;
-  sessionId?: string | undefined;
-  outcome?: string | undefined;
-  errorMessage?: string | undefined;
-  metadata?: Record<string, unknown> | undefined;
+  userId?: string | undefined
+  eventType: string
+  severity?: AuditEventSeverity | undefined
+  actor?: string | undefined
+  actorId?: string | undefined
+  resource?: string | undefined
+  resourceId?: string | undefined
+  action: string
+  details?: Record<string, unknown> | undefined
+  ipAddress?: string | undefined
+  userAgent?: string | undefined
+  sessionId?: string | undefined
+  outcome?: string | undefined
+  errorMessage?: string | undefined
+  metadata?: Record<string, unknown> | undefined
 }
 
 /**
@@ -35,7 +35,7 @@ export interface AuditLogEntry {
  */
 export class AuditLogService {
   private async writeLog(entry: AuditLogEntry): Promise<void> {
-    const severity = entry.severity || "INFO";
+    const severity = entry.severity || 'INFO'
 
     await db.insert(auditLogs).values({
       userId: entry.userId,
@@ -50,30 +50,30 @@ export class AuditLogService {
       ipAddress: entry.ipAddress,
       userAgent: entry.userAgent,
       sessionId: entry.sessionId,
-      outcome: entry.outcome ?? "SUCCESS",
+      outcome: entry.outcome ?? 'SUCCESS',
       errorMessage: entry.errorMessage,
-      metadata: entry.metadata ?? null,
-    });
+      metadata: entry.metadata ?? null
+    })
 
-    metricsService.recordAuditLog(entry.eventType, severity);
+    metricsService.recordAuditLog(entry.eventType, severity)
   }
 
   async log(entry: AuditLogEntry): Promise<void> {
     if (!environment.ENABLE_AUDIT_LOG) {
-      return;
+      return
     }
 
     try {
-      await this.writeLog(entry);
+      await this.writeLog(entry)
     } catch (error) {
-      logger.error("Failed to write audit log, retrying once", error);
-      metricsService.recordAuditLogFailure(entry.eventType);
+      logger.error('Failed to write audit log, retrying once', error)
+      metricsService.recordAuditLogFailure(entry.eventType)
 
       try {
-        await this.writeLog(entry);
+        await this.writeLog(entry)
       } catch (retryError) {
-        logger.error("Audit log retry failed", retryError);
-        metricsService.recordAuditLogFailure(entry.eventType);
+        logger.error('Audit log retry failed', retryError)
+        metricsService.recordAuditLogFailure(entry.eventType)
       }
     }
   }
@@ -85,461 +85,449 @@ export class AuditLogService {
    * onAfterHandle). Remove in Phase 2 once those flows are covered.
    */
   async logFailedLoginAttempt(params: {
-    identifier: string;
-    reason: string;
-    ipAddress?: string;
-    userAgent?: string;
-    userId?: string;
+    identifier: string
+    reason: string
+    ipAddress?: string
+    userAgent?: string
+    userId?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "USER_LOGIN",
-      severity: "WARNING",
-      action: "login",
-      resource: "user",
+      eventType: 'USER_LOGIN',
+      severity: 'WARNING',
+      action: 'login',
+      resource: 'user',
       resourceId: params.userId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
-      outcome: "FAILURE",
+      outcome: 'FAILURE',
       details: {
         identifier: params.identifier,
-        reason: params.reason,
-      },
-    });
+        reason: params.reason
+      }
+    })
   }
 
   /** @deprecated Use the automatic audit middleware instead. */
   async logUserLogin(params: {
-    userId: string;
-    sessionId: string;
-    ipAddress?: string;
-    userAgent?: string;
-    success: boolean;
-    errorMessage?: string;
+    userId: string
+    sessionId: string
+    ipAddress?: string
+    userAgent?: string
+    success: boolean
+    errorMessage?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "USER_LOGIN",
-      severity: params.success ? "INFO" : "WARNING",
-      action: "login",
-      resource: "user",
+      eventType: 'USER_LOGIN',
+      severity: params.success ? 'INFO' : 'WARNING',
+      action: 'login',
+      resource: 'user',
       resourceId: params.userId,
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
-      outcome: params.success ? "SUCCESS" : "FAILURE",
-      errorMessage: params.errorMessage,
-    });
+      outcome: params.success ? 'SUCCESS' : 'FAILURE',
+      errorMessage: params.errorMessage
+    })
   }
 
   async logUserLogout(params: {
-    userId: string;
-    sessionId: string;
-    ipAddress?: string;
+    userId: string
+    sessionId: string
+    ipAddress?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "USER_LOGOUT",
-      action: "logout",
-      resource: "session",
+      eventType: 'USER_LOGOUT',
+      action: 'logout',
+      resource: 'session',
       resourceId: params.sessionId,
       sessionId: params.sessionId,
-      ipAddress: params.ipAddress,
-    });
+      ipAddress: params.ipAddress
+    })
   }
 
   async logPasswordChange(params: {
-    userId: string;
-    ipAddress?: string;
-    userAgent?: string;
-    method: "reset" | "change";
+    userId: string
+    ipAddress?: string
+    userAgent?: string
+    method: 'reset' | 'change'
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "PASSWORD_CHANGE",
-      severity: "WARNING",
-      action: params.method === "reset" ? "password_reset" : "password_change",
-      resource: "user",
+      eventType: 'PASSWORD_CHANGE',
+      severity: 'WARNING',
+      action: params.method === 'reset' ? 'password_reset' : 'password_change',
+      resource: 'user',
       resourceId: params.userId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
-      metadata: { method: params.method },
-    });
+      metadata: { method: params.method }
+    })
   }
 
   async logPasswordResetRequest(params: {
-    userId: string;
-    ipAddress?: string;
-    userAgent?: string;
+    userId: string
+    ipAddress?: string
+    userAgent?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "PASSWORD_RESET_REQUEST",
-      severity: "WARNING",
-      action: "request_password_reset",
-      resource: "user",
+      eventType: 'PASSWORD_RESET_REQUEST',
+      severity: 'WARNING',
+      action: 'request_password_reset',
+      resource: 'user',
       resourceId: params.userId,
       ipAddress: params.ipAddress,
-      userAgent: params.userAgent,
-    });
+      userAgent: params.userAgent
+    })
   }
 
   async logRevokeInvite(params: {
-    revokedByUserId: string;
-    inviteId: string;
-    email?: string;
-    phoneNumber?: string;
+    revokedByUserId: string
+    inviteId: string
+    email?: string
+    phoneNumber?: string
   }): Promise<void> {
     await this.log({
       userId: params.revokedByUserId,
-      eventType: "USER_INVITE",
-      severity: "WARNING",
-      action: "revoke_invite",
-      resource: "invitation",
+      eventType: 'USER_INVITE',
+      severity: 'WARNING',
+      action: 'revoke_invite',
+      resource: 'invitation',
       resourceId: params.inviteId,
       actorId: params.revokedByUserId,
       details: {
         email: params.email,
-        phoneNumber: params.phoneNumber,
-      },
-    });
+        phoneNumber: params.phoneNumber
+      }
+    })
   }
 
   async logInviteUser(params: {
-    invitedByUserId: string;
-    inviteId: string;
-    email?: string;
-    phoneNumber?: string;
-    roleId: string;
+    invitedByUserId: string
+    inviteId: string
+    email?: string
+    phoneNumber?: string
+    roleId: string
   }): Promise<void> {
     await this.log({
       userId: params.invitedByUserId,
-      eventType: "USER_INVITE",
-      action: "create_invite",
-      resource: "invitation",
+      eventType: 'USER_INVITE',
+      action: 'create_invite',
+      resource: 'invitation',
       resourceId: params.inviteId,
       actorId: params.invitedByUserId,
       details: {
         email: params.email,
         phoneNumber: params.phoneNumber,
-        roleId: params.roleId,
-      },
-    });
+        roleId: params.roleId
+      }
+    })
   }
 
   async logResendInvite(params: {
-    resentByUserId: string;
-    inviteId: string;
-    email?: string;
-    phoneNumber?: string;
-    resendCount: number;
+    resentByUserId: string
+    inviteId: string
+    email?: string
+    phoneNumber?: string
+    resendCount: number
   }): Promise<void> {
     await this.log({
       userId: params.resentByUserId,
-      eventType: "USER_INVITE",
-      action: "resend_invite",
-      resource: "invitation",
+      eventType: 'USER_INVITE',
+      action: 'resend_invite',
+      resource: 'invitation',
       resourceId: params.inviteId,
       actorId: params.resentByUserId,
       details: {
         email: params.email,
         phoneNumber: params.phoneNumber,
-        resendCount: params.resendCount,
-      },
-    });
+        resendCount: params.resendCount
+      }
+    })
   }
 
   async logAcceptInvite(params: {
-    userId: string;
-    inviteId: string;
-    username: string;
+    userId: string
+    inviteId: string
+    username: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "USER_ACCEPT_INVITE",
-      action: "accept_invite",
-      resource: "invitation",
+      eventType: 'USER_ACCEPT_INVITE',
+      action: 'accept_invite',
+      resource: 'invitation',
       resourceId: params.inviteId,
-      details: { username: params.username },
-    });
+      details: { username: params.username }
+    })
   }
 
   async logUserRegister(params: {
-    userId: string;
-    username: string;
-    email: string;
+    userId: string
+    username: string
+    email: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "USER_REGISTER",
-      action: "register",
-      resource: "user",
+      eventType: 'USER_REGISTER',
+      action: 'register',
+      resource: 'user',
       resourceId: params.userId,
-      details: { username: params.username, email: params.email },
-    });
+      details: { username: params.username, email: params.email }
+    })
   }
 
   async logUserStatusChange(params: {
-    userId: string;
-    targetUserId: string;
-    oldStatus: string;
-    newStatus: string;
-    reason?: string;
+    userId: string
+    targetUserId: string
+    oldStatus: string
+    newStatus: string
+    reason?: string
   }): Promise<void> {
-    const eventType = this.resolveStatusChangeEventType(
-      params.oldStatus,
-      params.newStatus
-    );
+    const eventType = this.resolveStatusChangeEventType(params.oldStatus, params.newStatus)
 
     await this.log({
       userId: params.userId,
       eventType,
-      severity: params.newStatus === "SUSPENDED" ? "WARNING" : "INFO",
+      severity: params.newStatus === 'SUSPENDED' ? 'WARNING' : 'INFO',
       action: `change_status_${params.newStatus.toLowerCase()}`,
-      resource: "user",
+      resource: 'user',
       resourceId: params.targetUserId,
       actorId: params.userId,
       details: {
         oldStatus: params.oldStatus,
         newStatus: params.newStatus,
-        reason: params.reason,
-      },
-    });
+        reason: params.reason
+      }
+    })
   }
 
   async logRoleChange(params: {
-    userId: string;
-    targetUserId: string;
-    oldRoleId: string;
-    newRoleId: string;
+    userId: string
+    targetUserId: string
+    oldRoleId: string
+    newRoleId: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "ROLE_CHANGE",
-      severity: "WARNING",
-      action: "change_role",
-      resource: "user",
+      eventType: 'ROLE_CHANGE',
+      severity: 'WARNING',
+      action: 'change_role',
+      resource: 'user',
       resourceId: params.targetUserId,
       actorId: params.userId,
       details: {
         oldRoleId: params.oldRoleId,
-        newRoleId: params.newRoleId,
-      },
-    });
+        newRoleId: params.newRoleId
+      }
+    })
   }
 
   async logSessionRevoke(params: {
-    userId: string;
-    sessionId: string;
-    reason?: string;
-    revokedByUserId?: string;
+    userId: string
+    sessionId: string
+    reason?: string
+    revokedByUserId?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "SESSION_REVOKE",
-      action: "revoke_session",
-      resource: "session",
+      eventType: 'SESSION_REVOKE',
+      action: 'revoke_session',
+      resource: 'session',
       resourceId: params.sessionId,
       actorId: params.revokedByUserId,
-      details: { reason: params.reason },
-    });
+      details: { reason: params.reason }
+    })
   }
 
   async logSuspiciousActivity(params: {
-    userId?: string;
-    sessionId?: string;
-    reason: string;
-    ipAddress?: string;
-    userAgent?: string;
-    details?: Record<string, unknown>;
+    userId?: string
+    sessionId?: string
+    reason: string
+    ipAddress?: string
+    userAgent?: string
+    details?: Record<string, unknown>
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "SUSPICIOUS_ACTIVITY",
-      severity: "CRITICAL",
-      action: "suspicious_activity_detected",
-      resource: "security",
+      eventType: 'SUSPICIOUS_ACTIVITY',
+      severity: 'CRITICAL',
+      action: 'suspicious_activity_detected',
+      resource: 'security',
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
       details: {
         reason: params.reason,
-        ...params.details,
-      },
-    });
+        ...params.details
+      }
+    })
   }
 
-  async logEmailVerification(params: {
-    userId: string;
-    email: string;
-  }): Promise<void> {
+  async logEmailVerification(params: { userId: string; email: string }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "EMAIL_VERIFY",
-      action: "verify_email",
-      resource: "user",
+      eventType: 'EMAIL_VERIFY',
+      action: 'verify_email',
+      resource: 'user',
       resourceId: params.userId,
-      details: { email: params.email },
-    });
+      details: { email: params.email }
+    })
   }
 
-  async logPhoneVerification(params: {
-    userId: string;
-    phoneNumber: string;
-  }): Promise<void> {
+  async logPhoneVerification(params: { userId: string; phoneNumber: string }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "PHONE_VERIFY",
-      action: "verify_phone",
-      resource: "user",
+      eventType: 'PHONE_VERIFY',
+      action: 'verify_phone',
+      resource: 'user',
       resourceId: params.userId,
-      details: { phoneNumber: params.phoneNumber },
-    });
+      details: { phoneNumber: params.phoneNumber }
+    })
   }
 
   async logSessionCreate(params: {
-    userId: string;
-    sessionId: string;
-    ipAddress?: string;
-    userAgent?: string;
+    userId: string
+    sessionId: string
+    ipAddress?: string
+    userAgent?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "SESSION_CREATE",
-      action: "create_session",
-      resource: "session",
+      eventType: 'SESSION_CREATE',
+      action: 'create_session',
+      resource: 'session',
       resourceId: params.sessionId,
       sessionId: params.sessionId,
       ipAddress: params.ipAddress,
-      userAgent: params.userAgent,
-    });
+      userAgent: params.userAgent
+    })
   }
 
   async log2FARequired(params: {
-    userId: string;
-    ipAddress?: string;
-    userAgent?: string;
+    userId: string
+    ipAddress?: string
+    userAgent?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "USER_LOGIN",
-      severity: "INFO",
-      action: "2fa_required",
-      resource: "user",
+      eventType: 'USER_LOGIN',
+      severity: 'INFO',
+      action: '2fa_required',
+      resource: 'user',
       resourceId: params.userId,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
-      outcome: "PENDING",
-    });
+      outcome: 'PENDING'
+    })
   }
 
-  async log2FAEnable(params: {
-    userId: string;
-    ipAddress?: string;
-  }): Promise<void> {
+  async log2FAEnable(params: { userId: string; ipAddress?: string }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "TWO_FACTOR_ENABLE",
-      severity: "WARNING",
-      action: "enable_2fa",
-      resource: "user",
+      eventType: 'TWO_FACTOR_ENABLE',
+      severity: 'WARNING',
+      action: 'enable_2fa',
+      resource: 'user',
       resourceId: params.userId,
-      ipAddress: params.ipAddress,
-    });
+      ipAddress: params.ipAddress
+    })
   }
 
-  async log2FADisable(params: {
-    userId: string;
-    ipAddress?: string;
-  }): Promise<void> {
+  async log2FADisable(params: { userId: string; ipAddress?: string }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "TWO_FACTOR_DISABLE",
-      severity: "WARNING",
-      action: "disable_2fa",
-      resource: "user",
+      eventType: 'TWO_FACTOR_DISABLE',
+      severity: 'WARNING',
+      action: 'disable_2fa',
+      resource: 'user',
       resourceId: params.userId,
-      ipAddress: params.ipAddress,
-    });
+      ipAddress: params.ipAddress
+    })
   }
 
   async logDataAccess(params: {
-    userId: string;
-    resource: string;
-    resourceId: string;
-    action: string;
-    sessionId?: string;
+    userId: string
+    resource: string
+    resourceId: string
+    action: string
+    sessionId?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "DATA_ACCESS",
+      eventType: 'DATA_ACCESS',
       action: params.action,
       resource: params.resource,
       resourceId: params.resourceId,
-      sessionId: params.sessionId,
-    });
+      sessionId: params.sessionId
+    })
   }
 
   async logDataExport(params: {
-    userId: string;
-    resource: string;
-    count: number;
-    sessionId?: string;
+    userId: string
+    resource: string
+    count: number
+    sessionId?: string
   }): Promise<void> {
     await this.log({
       userId: params.userId,
-      eventType: "DATA_EXPORT",
-      severity: "WARNING",
-      action: "export_data",
+      eventType: 'DATA_EXPORT',
+      severity: 'WARNING',
+      action: 'export_data',
       resource: params.resource,
       sessionId: params.sessionId,
-      details: { count: params.count },
-    });
+      details: { count: params.count }
+    })
   }
 
-  private resolveStatusChangeEventType(
-    oldStatus: string,
-    newStatus: string
-  ): string {
-    if (newStatus === "SUSPENDED") return "USER_SUSPEND";
-    if (newStatus === "INACTIVE") return "USER_DEACTIVATE";
-    if (newStatus === "ACTIVE" && oldStatus === "SUSPENDED") return "USER_UNSUSPEND";
-    if (newStatus === "ACTIVE") return "USER_ACTIVATE";
-    return "USER_DEACTIVATE";
+  private resolveStatusChangeEventType(oldStatus: string, newStatus: string): string {
+    if (newStatus === 'SUSPENDED') return 'USER_SUSPEND'
+    if (newStatus === 'INACTIVE') return 'USER_DEACTIVATE'
+    if (newStatus === 'ACTIVE' && oldStatus === 'SUSPENDED') return 'USER_UNSUSPEND'
+    if (newStatus === 'ACTIVE') return 'USER_ACTIVATE'
+    return 'USER_DEACTIVATE'
   }
 
   async getAuditLogs(params: {
-    userId?: string;
-    eventType?: string;
-    severity?: AuditEventSeverity;
-    startDate?: Date;
-    endDate?: Date;
-    limit?: number;
-    offset?: number;
+    userId?: string
+    eventType?: string
+    severity?: AuditEventSeverity
+    startDate?: Date
+    endDate?: Date
+    limit?: number
+    offset?: number
   }) {
-    const conditions = [];
-    if (params.userId) conditions.push(eq(auditLogs.userId, params.userId));
-    if (params.eventType) conditions.push(eq(auditLogs.eventType, params.eventType));
-    if (params.severity) conditions.push(eq(auditLogs.severity, params.severity));
-    if (params.startDate) conditions.push(gte(auditLogs.createdAt, params.startDate));
-    if (params.endDate) conditions.push(lte(auditLogs.createdAt, params.endDate));
+    const conditions = []
+    if (params.userId) conditions.push(eq(auditLogs.userId, params.userId))
+    if (params.eventType) conditions.push(eq(auditLogs.eventType, params.eventType))
+    if (params.severity) conditions.push(eq(auditLogs.severity, params.severity))
+    if (params.startDate) conditions.push(gte(auditLogs.createdAt, params.startDate))
+    if (params.endDate) conditions.push(lte(auditLogs.createdAt, params.endDate))
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
-    const limit = params.limit ?? 50;
-    const offset = params.offset ?? 0;
+    const where = conditions.length > 0 ? and(...conditions) : undefined
+    const limit = params.limit ?? 50
+    const offset = params.offset ?? 0
 
-    const { sql: sqlTag, count } = await import("drizzle-orm").then((m) => ({
+    const { sql: sqlTag, count } = await import('drizzle-orm').then((m) => ({
       sql: m.sql,
-      count: m.count,
-    }));
+      count: m.count
+    }))
 
     const [logs, countResult] = await Promise.all([
-      db.select().from(auditLogs).where(where).orderBy(auditLogs.createdAt).limit(limit).offset(offset),
-      db.select({ total: count() }).from(auditLogs).where(where),
-    ]);
+      db
+        .select()
+        .from(auditLogs)
+        .where(where)
+        .orderBy(auditLogs.createdAt)
+        .limit(limit)
+        .offset(offset),
+      db.select({ total: count() }).from(auditLogs).where(where)
+    ])
 
-    return { logs, total: Number(countResult[0]?.total ?? 0) };
+    return { logs, total: Number(countResult[0]?.total ?? 0) }
   }
 }
 
-export const auditLogService = new AuditLogService();
+export const auditLogService = new AuditLogService()

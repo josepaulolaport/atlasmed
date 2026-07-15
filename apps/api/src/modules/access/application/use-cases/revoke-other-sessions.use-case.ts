@@ -1,16 +1,16 @@
-import type { SessionRepository } from "../interfaces/session.repository.interface";
-import type { ISessionCache } from "../interfaces/session-cache.interface";
-import type { IAuditLog } from "../interfaces/audit-log.interface";
+import type { IAuditLog } from '../interfaces/audit-log.interface'
+import type { SessionRepository } from '../interfaces/session.repository.interface'
+import type { ISessionCache } from '../interfaces/session-cache.interface'
 
 interface RevokeOtherSessionsInput {
-  userId: string;
-  currentSessionId: string;
+  userId: string
+  currentSessionId: string
 }
 
 interface RevokeOtherSessionsDependencies {
-  sessionRepository: SessionRepository;
-  sessionCache: ISessionCache;
-  auditLog: IAuditLog;
+  sessionRepository: SessionRepository
+  sessionCache: ISessionCache
+  auditLog: IAuditLog
 }
 
 export class RevokeOtherSessionsUseCase {
@@ -19,41 +19,38 @@ export class RevokeOtherSessionsUseCase {
   async execute(input: RevokeOtherSessionsInput): Promise<{ revokedCount: number }> {
     const currentSession = await this.dependencies.sessionRepository.findById(
       input.currentSessionId
-    );
+    )
 
     if (!currentSession || currentSession.userId !== input.userId) {
-      return { revokedCount: 0 };
+      return { revokedCount: 0 }
     }
 
-    const revokedSessionIds =
-      await this.dependencies.sessionRepository.revokeAllExceptDevice(
-        input.userId,
-        {
-          id: currentSession.id,
-          deviceFingerprint: currentSession.deviceFingerprint,
-          userAgent: currentSession.userAgent,
-          deviceType: currentSession.deviceType,
-        },
-        { reason: "Logout from other devices" }
-      );
+    const revokedSessionIds = await this.dependencies.sessionRepository.revokeAllExceptDevice(
+      input.userId,
+      {
+        id: currentSession.id,
+        deviceFingerprint: currentSession.deviceFingerprint,
+        userAgent: currentSession.userAgent,
+        deviceType: currentSession.deviceType
+      },
+      { reason: 'Logout from other devices' }
+    )
 
     await Promise.all(
-      revokedSessionIds.map((sessionId) =>
-        this.dependencies.sessionCache.invalidate(sessionId)
-      )
-    );
+      revokedSessionIds.map((sessionId) => this.dependencies.sessionCache.invalidate(sessionId))
+    )
 
     await Promise.all(
       revokedSessionIds.map((sessionId) =>
         this.dependencies.auditLog.logSessionRevoke({
           userId: input.userId,
           sessionId,
-          reason: "Logout from other devices",
-          revokedByUserId: input.userId,
+          reason: 'Logout from other devices',
+          revokedByUserId: input.userId
         })
       )
-    );
+    )
 
-    return { revokedCount: revokedSessionIds.length };
+    return { revokedCount: revokedSessionIds.length }
   }
 }

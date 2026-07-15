@@ -1,41 +1,41 @@
-import { Elysia, t } from "elysia";
-import { MapboxNotConfiguredError, isMapboxProfile } from "@atlasmed/mapbox";
-import { auth } from "../../../access/composition";
-import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
-import { mapboxMapsUseCases } from "../../composition";
-import { ExternalServiceError, ValidationError } from "../../../../shared/errors";
+import { isMapboxProfile, MapboxNotConfiguredError } from '@atlasmed/mapbox'
+import { Elysia, t } from 'elysia'
+import { ExternalServiceError, ValidationError } from '../../../../shared/errors'
+import { auth } from '../../../access/composition'
+import { requirePermission } from '../../../access/infrastructure/middleware/permission.middleware'
+import { mapboxMapsUseCases } from '../../composition'
 
 const mapboxProfileSchema = t.Union([
-  t.Literal("mapbox/driving"),
-  t.Literal("mapbox/driving-traffic"),
-  t.Literal("mapbox/walking"),
-  t.Literal("mapbox/cycling"),
-]);
+  t.Literal('mapbox/driving'),
+  t.Literal('mapbox/driving-traffic'),
+  t.Literal('mapbox/walking'),
+  t.Literal('mapbox/cycling')
+])
 
 function handleMapboxError(error: unknown): never {
   if (error instanceof MapboxNotConfiguredError) {
-    throw new ExternalServiceError("mapbox");
+    throw new ExternalServiceError('mapbox')
   }
 
-  throw error;
+  throw error
 }
 
 export const mapsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "FACILITY"))
-  .get("/config", () => mapboxMapsUseCases.getConfig())
+  .use(requirePermission('read', 'FACILITY'))
+  .get('/config', () => mapboxMapsUseCases.getConfig())
   .get(
-    "/geocode/forward",
+    '/geocode/forward',
     async ({ query }) => {
       try {
         return await mapboxMapsUseCases.forwardGeocode({
           query: query.q,
           country: query.country,
           proximity: query.proximity,
-          limit: query.limit ? Number(query.limit) : undefined,
-        });
+          limit: query.limit ? Number(query.limit) : undefined
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -43,33 +43,33 @@ export const mapsRoute = new Elysia()
         q: t.String({ minLength: 1 }),
         country: t.Optional(t.String()),
         proximity: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-      }),
+        limit: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/geocode/reverse",
+    '/geocode/reverse',
     async ({ query }) => {
       try {
         return await mapboxMapsUseCases.reverseGeocode({
           longitude: Number(query.longitude),
           latitude: Number(query.latitude),
-          limit: query.limit ? Number(query.limit) : undefined,
-        });
+          limit: query.limit ? Number(query.limit) : undefined
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
       query: t.Object({
         longitude: t.String(),
         latitude: t.String(),
-        limit: t.Optional(t.String()),
-      }),
+        limit: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/search/suggest",
+    '/search/suggest',
     async ({ query }) => {
       try {
         return await mapboxMapsUseCases.searchSuggest({
@@ -77,10 +77,10 @@ export const mapsRoute = new Elysia()
           sessionToken: query.session_token,
           country: query.country,
           proximity: query.proximity,
-          limit: query.limit ? Number(query.limit) : undefined,
-        });
+          limit: query.limit ? Number(query.limit) : undefined
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -89,46 +89,46 @@ export const mapsRoute = new Elysia()
         session_token: t.String({ minLength: 1 }),
         country: t.Optional(t.String()),
         proximity: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-      }),
+        limit: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/search/retrieve/:mapboxId",
+    '/search/retrieve/:mapboxId',
     async ({ params, query }) => {
       try {
         return await mapboxMapsUseCases.searchRetrieve({
           mapboxId: params.mapboxId,
-          sessionToken: query.session_token,
-        });
+          sessionToken: query.session_token
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
       query: t.Object({
-        session_token: t.String({ minLength: 1 }),
-      }),
+        session_token: t.String({ minLength: 1 })
+      })
     }
   )
   .get(
-    "/directions",
+    '/directions',
     async ({ query }) => {
       if (!isMapboxProfile(query.profile)) {
-        throw new ValidationError([{ field: "profile", message: "Invalid Mapbox profile" }]);
+        throw new ValidationError([{ field: 'profile', message: 'Invalid Mapbox profile' }])
       }
 
       try {
         return await mapboxMapsUseCases.directions({
           profile: query.profile,
           coordinates: query.coordinates,
-          alternatives: query.alternatives === "true",
+          alternatives: query.alternatives === 'true',
           geometries: query.geometries,
           overview: query.overview,
-          steps: query.steps === "true",
-        });
+          steps: query.steps === 'true'
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -137,20 +137,20 @@ export const mapsRoute = new Elysia()
         coordinates: t.String({ minLength: 3 }),
         alternatives: t.Optional(t.String()),
         geometries: t.Optional(
-          t.Union([t.Literal("geojson"), t.Literal("polyline"), t.Literal("polyline6")])
+          t.Union([t.Literal('geojson'), t.Literal('polyline'), t.Literal('polyline6')])
         ),
         overview: t.Optional(
-          t.Union([t.Literal("full"), t.Literal("simplified"), t.Literal("false")])
+          t.Union([t.Literal('full'), t.Literal('simplified'), t.Literal('false')])
         ),
-        steps: t.Optional(t.String()),
-      }),
+        steps: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/matrix",
+    '/matrix',
     async ({ query }) => {
       if (!isMapboxProfile(query.profile)) {
-        throw new ValidationError([{ field: "profile", message: "Invalid Mapbox profile" }]);
+        throw new ValidationError([{ field: 'profile', message: 'Invalid Mapbox profile' }])
       }
 
       try {
@@ -159,10 +159,10 @@ export const mapsRoute = new Elysia()
           coordinates: query.coordinates,
           sources: query.sources,
           destinations: query.destinations,
-          annotations: query.annotations,
-        });
+          annotations: query.annotations
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -172,20 +172,16 @@ export const mapsRoute = new Elysia()
         sources: t.Optional(t.String()),
         destinations: t.Optional(t.String()),
         annotations: t.Optional(
-          t.Union([
-            t.Literal("duration"),
-            t.Literal("distance"),
-            t.Literal("duration,distance"),
-          ])
-        ),
-      }),
+          t.Union([t.Literal('duration'), t.Literal('distance'), t.Literal('duration,distance')])
+        )
+      })
     }
   )
   .get(
-    "/isochrone",
+    '/isochrone',
     async ({ query }) => {
       if (!isMapboxProfile(query.profile)) {
-        throw new ValidationError([{ field: "profile", message: "Invalid Mapbox profile" }]);
+        throw new ValidationError([{ field: 'profile', message: 'Invalid Mapbox profile' }])
       }
 
       try {
@@ -195,10 +191,10 @@ export const mapsRoute = new Elysia()
           latitude: Number(query.latitude),
           contoursMinutes: query.contours_minutes,
           contoursMeters: query.contours_meters,
-          polygons: query.polygons === "true",
-        });
+          polygons: query.polygons === 'true'
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -208,15 +204,15 @@ export const mapsRoute = new Elysia()
         latitude: t.String(),
         contours_minutes: t.Optional(t.String()),
         contours_meters: t.Optional(t.String()),
-        polygons: t.Optional(t.String()),
-      }),
+        polygons: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/map-matching",
+    '/map-matching',
     async ({ query }) => {
       if (!isMapboxProfile(query.profile)) {
-        throw new ValidationError([{ field: "profile", message: "Invalid Mapbox profile" }]);
+        throw new ValidationError([{ field: 'profile', message: 'Invalid Mapbox profile' }])
       }
 
       try {
@@ -224,11 +220,11 @@ export const mapsRoute = new Elysia()
           profile: query.profile,
           coordinates: query.coordinates,
           geometries: query.geometries,
-          steps: query.steps === "true",
-          tidy: query.tidy === "true",
-        });
+          steps: query.steps === 'true',
+          tidy: query.tidy === 'true'
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -236,32 +232,32 @@ export const mapsRoute = new Elysia()
         profile: mapboxProfileSchema,
         coordinates: t.String({ minLength: 3 }),
         geometries: t.Optional(
-          t.Union([t.Literal("geojson"), t.Literal("polyline"), t.Literal("polyline6")])
+          t.Union([t.Literal('geojson'), t.Literal('polyline'), t.Literal('polyline6')])
         ),
         steps: t.Optional(t.String()),
-        tidy: t.Optional(t.String()),
-      }),
+        tidy: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/optimization",
+    '/optimization',
     async ({ query }) => {
       if (!isMapboxProfile(query.profile)) {
-        throw new ValidationError([{ field: "profile", message: "Invalid Mapbox profile" }]);
+        throw new ValidationError([{ field: 'profile', message: 'Invalid Mapbox profile' }])
       }
 
       try {
         return await mapboxMapsUseCases.optimization({
           profile: query.profile,
           coordinates: query.coordinates,
-          roundtrip: query.roundtrip === "true",
+          roundtrip: query.roundtrip === 'true',
           source: query.source,
           destination: query.destination,
           geometries: query.geometries,
-          steps: query.steps === "true",
-        });
+          steps: query.steps === 'true'
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -269,17 +265,17 @@ export const mapsRoute = new Elysia()
         profile: mapboxProfileSchema,
         coordinates: t.String({ minLength: 3 }),
         roundtrip: t.Optional(t.String()),
-        source: t.Optional(t.Union([t.Literal("first"), t.Literal("any")])),
-        destination: t.Optional(t.Union([t.Literal("last"), t.Literal("any")])),
+        source: t.Optional(t.Union([t.Literal('first'), t.Literal('any')])),
+        destination: t.Optional(t.Union([t.Literal('last'), t.Literal('any')])),
         geometries: t.Optional(
-          t.Union([t.Literal("geojson"), t.Literal("polyline"), t.Literal("polyline6")])
+          t.Union([t.Literal('geojson'), t.Literal('polyline'), t.Literal('polyline6')])
         ),
-        steps: t.Optional(t.String()),
-      }),
+        steps: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/static-image",
+    '/static-image',
     ({ query }) => {
       try {
         return mapboxMapsUseCases.buildStaticImageUrl({
@@ -290,10 +286,10 @@ export const mapsRoute = new Elysia()
           zoom: query.zoom ? Number(query.zoom) : undefined,
           styleId: query.style_id,
           overlay: query.overlay,
-          retina: query.retina === "true",
-        });
+          retina: query.retina === 'true'
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -305,12 +301,12 @@ export const mapsRoute = new Elysia()
         zoom: t.Optional(t.String()),
         style_id: t.Optional(t.String()),
         overlay: t.Optional(t.String()),
-        retina: t.Optional(t.String()),
-      }),
+        retina: t.Optional(t.String())
+      })
     }
   )
   .get(
-    "/tilequery",
+    '/tilequery',
     async ({ query }) => {
       try {
         return await mapboxMapsUseCases.tilequery({
@@ -319,10 +315,10 @@ export const mapsRoute = new Elysia()
           latitude: Number(query.latitude),
           radius: query.radius ? Number(query.radius) : undefined,
           limit: query.limit ? Number(query.limit) : undefined,
-          layers: query.layers,
-        });
+          layers: query.layers
+        })
       } catch (error) {
-        handleMapboxError(error);
+        handleMapboxError(error)
       }
     },
     {
@@ -332,7 +328,7 @@ export const mapsRoute = new Elysia()
         latitude: t.String(),
         radius: t.Optional(t.String()),
         limit: t.Optional(t.String()),
-        layers: t.Optional(t.String()),
-      }),
+        layers: t.Optional(t.String())
+      })
     }
-  );
+  )

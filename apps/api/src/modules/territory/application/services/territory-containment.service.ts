@@ -1,34 +1,33 @@
-import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
-import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
+import { OperationNotAllowedError } from '../../../../shared/errors'
+import { GEO_SIBLING_OVERLAP_BLOCK_RATIO } from '../constants/territory-geo.constants'
+import { isManagerZoneType, isRepPatchType } from '../constants/territory-roles.constants'
+import type {
+  TerritoryRecord,
+  TerritoryRepository
+} from '../interfaces/territory.repository.interface'
 import type {
   GeoJsonGeometry,
-  TerritorySpatialRepository,
-} from "../interfaces/territory-spatial.repository.interface";
-import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
-import { GEO_SIBLING_OVERLAP_BLOCK_RATIO } from "../constants/territory-geo.constants";
-import {
-  isManagerZoneType,
-  isRepPatchType,
-} from "../constants/territory-roles.constants";
-import { OperationNotAllowedError } from "../../../../shared/errors";
+  TerritorySpatialRepository
+} from '../interfaces/territory-spatial.repository.interface'
+import type { TerritoryTypeRepository } from '../interfaces/territory-type.repository.interface'
 
 export interface ManagerZoneCandidate {
-  id: string;
-  code: string;
-  name: string;
+  id: string
+  code: string
+  name: string
 }
 
 export interface RepPatchContainmentResolution {
-  managerTerritoryId: string;
-  candidates: ManagerZoneCandidate[];
+  managerTerritoryId: string
+  candidates: ManagerZoneCandidate[]
 }
 
 export class TerritoryContainmentService {
   constructor(
     private readonly deps: {
-      territoryRepository: TerritoryRepository;
-      territoryTypeRepository: TerritoryTypeRepository;
-      spatialRepository: TerritorySpatialRepository;
+      territoryRepository: TerritoryRepository
+      territoryTypeRepository: TerritoryTypeRepository
+      spatialRepository: TerritorySpatialRepository
     }
   ) {}
 
@@ -38,28 +37,26 @@ export class TerritoryContainmentService {
   ): Promise<void> {
     const type =
       territory.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId))
     if (!type?.blockSiblingOverlap) {
-      return;
+      return
     }
 
     const conflicts = await this.deps.spatialRepository.findOverlappingSiblingTerritories({
       territoryId: territory.id,
       territoryTypeId: territory.territoryTypeId,
-      countryCode: territory.countryCode ?? "BR",
-      geoJson,
-    });
+      countryCode: territory.countryCode ?? 'BR',
+      geoJson
+    })
 
-    const substantial = conflicts.filter(
-      (c) => c.overlapRatio > GEO_SIBLING_OVERLAP_BLOCK_RATIO
-    );
+    const substantial = conflicts.filter((c) => c.overlapRatio > GEO_SIBLING_OVERLAP_BLOCK_RATIO)
     if (substantial.length > 0) {
       throw new OperationNotAllowedError(
-        "save_boundary",
+        'save_boundary',
         `Boundary substantially overlaps sibling territories: ${substantial
           .map((c) => `${c.code} (${Math.round(c.overlapRatio * 100)}%)`)
-          .join(", ")}`
-      );
+          .join(', ')}`
+      )
     }
   }
 
@@ -69,29 +66,29 @@ export class TerritoryContainmentService {
   ): Promise<RepPatchContainmentResolution> {
     const candidates = await this.deps.spatialRepository.findContainingManagerZones({
       geoJson,
-      countryCode,
-    });
+      countryCode
+    })
 
     if (candidates.length === 0) {
       throw new OperationNotAllowedError(
-        "save_boundary",
-        "Rep patch must be fully contained inside exactly one active manager zone"
-      );
+        'save_boundary',
+        'Rep patch must be fully contained inside exactly one active manager zone'
+      )
     }
 
     if (candidates.length > 1) {
       throw new OperationNotAllowedError(
-        "save_boundary",
+        'save_boundary',
         `Rep patch must be inside exactly one manager zone; found ${candidates.length}: ${candidates
           .map((c) => c.code)
-          .join(", ")}`
-      );
+          .join(', ')}`
+      )
     }
 
     return {
       managerTerritoryId: candidates[0]!.id,
-      candidates,
-    };
+      candidates
+    }
   }
 
   async assertManagerZoneContainsChildPatches(
@@ -100,36 +97,32 @@ export class TerritoryContainmentService {
   ): Promise<void> {
     const orphans = await this.deps.spatialRepository.findRepPatchesOutsideManagerZone({
       managerZoneId,
-      managerZoneGeoJson: geoJson,
-    });
+      managerZoneGeoJson: geoJson
+    })
 
     if (orphans.length > 0) {
       throw new OperationNotAllowedError(
-        "save_boundary",
+        'save_boundary',
         `Manager zone boundary no longer contains rep patches: ${orphans
           .map((p) => p.code)
-          .join(", ")}`
-      );
+          .join(', ')}`
+      )
     }
   }
 
   async validateTerritoryRoleForBoundarySave(territory: TerritoryRecord): Promise<void> {
     const type =
       territory.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId))
     if (!type) {
-      throw new OperationNotAllowedError("save_boundary", "Territory type not found");
+      throw new OperationNotAllowedError('save_boundary', 'Territory type not found')
     }
 
-    if (
-      !isRepPatchType(type) &&
-      !isManagerZoneType(type) &&
-      !type.canHaveBoundary
-    ) {
+    if (!isRepPatchType(type) && !isManagerZoneType(type) && !type.canHaveBoundary) {
       throw new OperationNotAllowedError(
-        "save_boundary",
-        "This territory type cannot have a boundary"
-      );
+        'save_boundary',
+        'This territory type cannot have a boundary'
+      )
     }
   }
 }

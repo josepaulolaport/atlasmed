@@ -1,16 +1,13 @@
-import {
-  conformityRecords,
-  conformityRequirements,
-} from "@atlasmed/database";
-import { eq, asc, desc } from "drizzle-orm";
-import { db } from "../../../../../infrastructure/database/db";
+import { conformityRecords, conformityRequirements } from '@atlasmed/database'
+import { asc, desc, eq } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
   ConformityRecordRow,
   ConformityRepository,
-  ConformityRequirementRecord,
-} from "../../../application/interfaces/conformity.repository.interface";
+  ConformityRequirementRecord
+} from '../../../application/interfaces/conformity.repository.interface'
 
-type RequirementRow = typeof conformityRequirements.$inferSelect;
+type RequirementRow = typeof conformityRequirements.$inferSelect
 
 function mapRequirement(row: RequirementRow): ConformityRequirementRecord {
   return {
@@ -21,8 +18,8 @@ function mapRequirement(row: RequirementRow): ConformityRequirementRecord {
     sectorId: row.sectorId,
     isActive: row.isActive,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+    updatedAt: row.updatedAt
+  }
 }
 
 const recordWithRequirementSelect = {
@@ -39,23 +36,23 @@ const recordWithRequirementSelect = {
   requirement: {
     id: conformityRequirements.id,
     slug: conformityRequirements.slug,
-    name: conformityRequirements.name,
-  },
-} as const;
+    name: conformityRequirements.name
+  }
+} as const
 
 type RecordWithRequirement = {
-  id: string;
-  facilityId: string;
-  requirementId: string;
-  status: ConformityRecordRow["status"];
-  submittedAt: Date | null;
-  validatedAt: Date | null;
-  expiresAt: Date | null;
-  validatedByUserId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  requirement: { id: string; slug: string; name: string };
-};
+  id: string
+  facilityId: string
+  requirementId: string
+  status: ConformityRecordRow['status']
+  submittedAt: Date | null
+  validatedAt: Date | null
+  expiresAt: Date | null
+  validatedByUserId: string | null
+  createdAt: Date
+  updatedAt: Date
+  requirement: { id: string; slug: string; name: string }
+}
 
 function mapRecord(row: RecordWithRequirement): ConformityRecordRow {
   return {
@@ -69,8 +66,8 @@ function mapRecord(row: RecordWithRequirement): ConformityRecordRow {
     validatedByUserId: row.validatedByUserId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    requirement: row.requirement,
-  };
+    requirement: row.requirement
+  }
 }
 
 export class DrizzleConformityRepository implements ConformityRepository {
@@ -79,9 +76,9 @@ export class DrizzleConformityRepository implements ConformityRepository {
       .select()
       .from(conformityRequirements)
       .where(eq(conformityRequirements.isActive, true))
-      .orderBy(asc(conformityRequirements.name));
+      .orderBy(asc(conformityRequirements.name))
 
-    return rows.map(mapRequirement);
+    return rows.map(mapRequirement)
   }
 
   async findRecordsByFacility(facilityId: string): Promise<ConformityRecordRow[]> {
@@ -93,24 +90,24 @@ export class DrizzleConformityRepository implements ConformityRepository {
         eq(conformityRecords.requirementId, conformityRequirements.id)
       )
       .where(eq(conformityRecords.facilityId, facilityId))
-      .orderBy(desc(conformityRecords.createdAt));
+      .orderBy(desc(conformityRecords.createdAt))
 
-    return rows.map(mapRecord);
+    return rows.map(mapRecord)
   }
 
   async createRecord(params: {
-    facilityId: string;
-    requirementId: string;
-    status?: ConformityRecordRow["status"];
+    facilityId: string
+    requirementId: string
+    status?: ConformityRecordRow['status']
   }): Promise<ConformityRecordRow> {
     const [inserted] = await db
       .insert(conformityRecords)
       .values({
         facilityId: params.facilityId,
         requirementId: params.requirementId,
-        status: params.status ?? "PENDING",
+        status: params.status ?? 'PENDING'
       })
-      .returning({ id: conformityRecords.id });
+      .returning({ id: conformityRecords.id })
 
     const [record] = await db
       .select(recordWithRequirementSelect)
@@ -119,8 +116,8 @@ export class DrizzleConformityRepository implements ConformityRepository {
         conformityRequirements,
         eq(conformityRecords.requirementId, conformityRequirements.id)
       )
-      .where(eq(conformityRecords.id, inserted!.id));
+      .where(eq(conformityRecords.id, inserted!.id))
 
-    return mapRecord(record!);
+    return mapRecord(record!)
   }
 }

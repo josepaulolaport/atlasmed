@@ -1,31 +1,31 @@
-import type { UserStatus } from "@atlasmed/database";
+import type { UserStatus } from '@atlasmed/database'
 
-import type { RoleContract } from "./role.contract";
+import type { RoleContract } from './role.contract'
 
 export interface UserContract {
-  id: string;
+  id: string
 
-  email?: string;
+  email?: string
 
-  username: string;
+  username: string
 
-  phoneNumber?: string;
+  phoneNumber?: string
 
-  firstName?: string;
+  firstName?: string
 
-  lastName?: string;
+  lastName?: string
 
-  avatarUrl?: string;
+  avatarUrl?: string
 
-  status: UserStatus;
+  status: UserStatus
 
-  role: RoleContract;
+  role: RoleContract
 
-  emailVerified: boolean;
+  emailVerified: boolean
 
-  phoneVerified: boolean;
+  phoneVerified: boolean
 
-  createdAt: Date;
+  createdAt: Date
 
-  updatedAt: Date;
+  updatedAt: Date
 }

@@ -1,163 +1,155 @@
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import type { SessionRepository } from "../interfaces/session.repository.interface";
-import type { ISessionCache } from "../interfaces/session-cache.interface";
-import { PasswordService } from "../services/password.service";
-import { SessionService } from "../services/session.service";
-import { TokenService } from "../services/token.service";
-import { RateLimiterService } from "../services/rate-limiter.service";
-import type { IAuditLog } from "../interfaces/audit-log.interface";
-import type { IMetrics } from "../interfaces/metrics.interface";
-import type { Pending2FALoginService } from "../services/pending-2fa-login.service";
-import {
-  InvalidCredentialsError,
-  TooManyLoginAttemptsError,
-} from "../../../../shared/errors";
-import { environment } from "../../../../app/config/environment";
-import { DUMMY_PASSWORD_HASH } from "../constants/password.constants";
-import { tracer } from "../../../../infrastructure/tracing/tracer";
+import { environment } from '../../../../app/config/environment'
+import { tracer } from '../../../../infrastructure/tracing/tracer'
+import { InvalidCredentialsError, TooManyLoginAttemptsError } from '../../../../shared/errors'
+import { DUMMY_PASSWORD_HASH } from '../constants/password.constants'
+import type { IAuditLog } from '../interfaces/audit-log.interface'
+import type { IMetrics } from '../interfaces/metrics.interface'
+import type { SessionRepository } from '../interfaces/session.repository.interface'
+import type { ISessionCache } from '../interfaces/session-cache.interface'
+import type { UserRepository } from '../interfaces/user.repository.interface'
+import type { PasswordService } from '../services/password.service'
+import type { Pending2FALoginService } from '../services/pending-2fa-login.service'
+import type { RateLimiterService } from '../services/rate-limiter.service'
+import type { SessionService } from '../services/session.service'
+import type { TokenService } from '../services/token.service'
 
 interface Dependencies {
-  userRepository: UserRepository;
-  sessionRepository: SessionRepository;
-  sessionCache: ISessionCache;
-  tokenService: TokenService;
-  passwordService: PasswordService;
-  sessionService: SessionService;
-  rateLimiterService: RateLimiterService;
-  auditLog: IAuditLog;
-  metrics: IMetrics;
-  pending2faLoginService: Pending2FALoginService;
+  userRepository: UserRepository
+  sessionRepository: SessionRepository
+  sessionCache: ISessionCache
+  tokenService: TokenService
+  passwordService: PasswordService
+  sessionService: SessionService
+  rateLimiterService: RateLimiterService
+  auditLog: IAuditLog
+  metrics: IMetrics
+  pending2faLoginService: Pending2FALoginService
 }
 
 interface LoginParams {
-  identifier: string;
-  password: string;
-  ipAddress?: string | undefined;
-  userAgent?: string | undefined;
-  acceptLanguage?: string | undefined;
+  identifier: string
+  password: string
+  ipAddress?: string | undefined
+  userAgent?: string | undefined
+  acceptLanguage?: string | undefined
 }
 
 export class LoginUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: LoginParams) {
-    return tracer.with(
-      "user.login",
-      async () => this.executeLogin(params),
-      { "app.module": "access" }
-    );
+    return tracer.with('user.login', async () => this.executeLogin(params), {
+      'app.module': 'access'
+    })
   }
 
   private async executeLogin(params: LoginParams) {
     try {
-      await this.deps.rateLimiterService.checkLoginAttempts(params.identifier);
+      await this.deps.rateLimiterService.checkLoginAttempts(params.identifier)
     } catch (error) {
       if (error instanceof TooManyLoginAttemptsError) {
         await this.deps.auditLog.logFailedLoginAttempt({
           identifier: params.identifier,
-          reason: "rate_limited",
+          reason: 'rate_limited',
           ipAddress: params.ipAddress,
-          userAgent: params.userAgent,
-        });
+          userAgent: params.userAgent
+        })
       }
-      throw error;
+      throw error
     }
 
     const user = await this.deps.userRepository.findByIdentifier({
-      identifier: params.identifier,
-    });
+      identifier: params.identifier
+    })
 
     if (!user) {
-      await this.deps.passwordService.verify(params.password, DUMMY_PASSWORD_HASH);
-      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
-      this.deps.metrics.recordLoginAttempt(false, "user_not_found");
+      await this.deps.passwordService.verify(params.password, DUMMY_PASSWORD_HASH)
+      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier)
+      this.deps.metrics.recordLoginAttempt(false, 'user_not_found')
       await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
-        reason: "user_not_found",
+        reason: 'user_not_found',
         ipAddress: params.ipAddress,
-        userAgent: params.userAgent,
-      });
-      throw new InvalidCredentialsError();
+        userAgent: params.userAgent
+      })
+      throw new InvalidCredentialsError()
     }
 
-    if (user.status !== "ACTIVE") {
-      await this.deps.passwordService.verify(params.password, user.passwordHash);
-      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
+    if (user.status !== 'ACTIVE') {
+      await this.deps.passwordService.verify(params.password, user.passwordHash)
+      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier)
       const reason =
-        user.status === "SUSPENDED"
-          ? "account_suspended"
-          : user.status === "INACTIVE"
-            ? "account_deactivated"
-            : user.status === "PENDING"
-              ? "account_pending"
-              : "account_inactive";
+        user.status === 'SUSPENDED'
+          ? 'account_suspended'
+          : user.status === 'INACTIVE'
+            ? 'account_deactivated'
+            : user.status === 'PENDING'
+              ? 'account_pending'
+              : 'account_inactive'
 
-      this.deps.metrics.recordLoginAttempt(false, reason);
+      this.deps.metrics.recordLoginAttempt(false, reason)
       await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
         reason,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        userId: user.id,
-      });
-      throw new InvalidCredentialsError();
+        userId: user.id
+      })
+      throw new InvalidCredentialsError()
     }
 
     if (environment.REQUIRE_EMAIL_VERIFIED_FOR_LOGIN && !user.emailVerified) {
-      await this.deps.passwordService.verify(params.password, DUMMY_PASSWORD_HASH);
-      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
-      this.deps.metrics.recordLoginAttempt(false, "email_not_verified");
+      await this.deps.passwordService.verify(params.password, DUMMY_PASSWORD_HASH)
+      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier)
+      this.deps.metrics.recordLoginAttempt(false, 'email_not_verified')
       await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
-        reason: "email_not_verified",
+        reason: 'email_not_verified',
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        userId: user.id,
-      });
-      throw new InvalidCredentialsError();
+        userId: user.id
+      })
+      throw new InvalidCredentialsError()
     }
 
-    const validPassword = await this.deps.passwordService.verify(
-      params.password,
-      user.passwordHash,
-    );
+    const validPassword = await this.deps.passwordService.verify(params.password, user.passwordHash)
 
     if (!validPassword) {
-      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier);
-      this.deps.metrics.recordLoginAttempt(false, "invalid_password");
+      await this.deps.rateLimiterService.recordFailedAttempt(params.identifier)
+      this.deps.metrics.recordLoginAttempt(false, 'invalid_password')
       await this.deps.auditLog.logFailedLoginAttempt({
         identifier: params.identifier,
-        reason: "invalid_password",
+        reason: 'invalid_password',
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        userId: user.id,
-      });
-      throw new InvalidCredentialsError();
+        userId: user.id
+      })
+      throw new InvalidCredentialsError()
     }
 
-    await this.deps.rateLimiterService.clearAttempts(params.identifier);
+    await this.deps.rateLimiterService.clearAttempts(params.identifier)
 
     if (user.twoFactorEnabled && environment.TWO_FACTOR_ENABLED) {
       const pendingToken = await this.deps.pending2faLoginService.store({
         userId: user.id,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        acceptLanguage: params.acceptLanguage,
-      });
+        acceptLanguage: params.acceptLanguage
+      })
 
       await this.deps.auditLog.log2FARequired({
         userId: user.id,
         ipAddress: params.ipAddress,
-        userAgent: params.userAgent,
-      });
+        userAgent: params.userAgent
+      })
 
       return {
         requires2FA: true as const,
-        pendingToken,
-      };
+        pendingToken
+      }
     }
 
-    await this.deps.userRepository.updateLastLogin(user.id);
+    await this.deps.userRepository.updateLastLogin(user.id)
 
     const session = await this.deps.sessionService.create({
       userId: user.id,
@@ -168,8 +160,8 @@ export class LoginUseCase {
 
       userAgent: params.userAgent || undefined,
 
-      acceptLanguage: params.acceptLanguage || undefined,
-    });
+      acceptLanguage: params.acceptLanguage || undefined
+    })
 
     // Update cache with complete session including user data
     await this.deps.sessionCache.set({
@@ -190,10 +182,10 @@ export class LoginUseCase {
         tokenVersion: user.tokenVersion,
         role: {
           id: user.role.id,
-          name: user.role.name,
-        },
-      },
-    });
+          name: user.role.name
+        }
+      }
+    })
 
     const accessToken = await this.deps.tokenService.signAccessToken({
       sub: user.id,
@@ -204,32 +196,32 @@ export class LoginUseCase {
 
       tokenVersion: user.tokenVersion,
 
-      iat: Math.floor(Date.now() / 1000),
-    });
+      iat: Math.floor(Date.now() / 1000)
+    })
 
     await this.deps.auditLog.logSessionCreate({
       userId: user.id,
       sessionId: session.id,
       ipAddress: params.ipAddress,
-      userAgent: params.userAgent,
-    });
+      userAgent: params.userAgent
+    })
 
     await this.deps.auditLog.logUserLogin({
       userId: user.id,
       sessionId: session.id,
       ipAddress: params.ipAddress,
       userAgent: params.userAgent,
-      success: true,
-    });
+      success: true
+    })
 
-    this.deps.metrics.recordLoginAttempt(true);
+    this.deps.metrics.recordLoginAttempt(true)
 
     return {
       accessToken,
 
       refreshToken: session.refreshToken,
 
-      user,
-    };
+      user
+    }
   }
 }

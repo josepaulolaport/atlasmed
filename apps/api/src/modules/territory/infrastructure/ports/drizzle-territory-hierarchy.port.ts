@@ -1,10 +1,10 @@
-import { db } from "../../../../infrastructure/database/db";
-import { userTerritoryAssignments } from "@atlasmed/database";
-import { inArray } from "drizzle-orm";
-import type { TerritoryHierarchyPort } from "../../application/interfaces/territory-hierarchy.port.interface";
-import type { TerritoryClosureRepository } from "../../application/interfaces/territory-closure.repository.interface";
-import type { TerritoryRepository } from "../../application/interfaces/territory.repository.interface";
-import { MANAGER_ZONE_TYPE_SLUG } from "../../application/constants/territory-roles.constants";
+import { userTerritoryAssignments } from '@atlasmed/database'
+import { inArray } from 'drizzle-orm'
+import { db } from '../../../../infrastructure/database/db'
+import { MANAGER_ZONE_TYPE_SLUG } from '../../application/constants/territory-roles.constants'
+import type { TerritoryRepository } from '../../application/interfaces/territory.repository.interface'
+import type { TerritoryClosureRepository } from '../../application/interfaces/territory-closure.repository.interface'
+import type { TerritoryHierarchyPort } from '../../application/interfaces/territory-hierarchy.port.interface'
 
 export class DrizzleTerritoryHierarchyPort implements TerritoryHierarchyPort {
   constructor(
@@ -17,79 +17,71 @@ export class DrizzleTerritoryHierarchyPort implements TerritoryHierarchyPort {
     activeOnly = true
   ): Promise<string[]> {
     if (assignedTerritoryIds.length === 0) {
-      return [];
+      return []
     }
 
-    const assignedTerritories = await this.territoryRepository.findByIds(
-      assignedTerritoryIds
-    );
+    const assignedTerritories = await this.territoryRepository.findByIds(assignedTerritoryIds)
 
-    const effective = new Set<string>();
-    const managerZoneIds: string[] = [];
+    const effective = new Set<string>()
+    const managerZoneIds: string[] = []
 
     for (const territory of assignedTerritories) {
       if (!territory.isActive && activeOnly) {
-        continue;
+        continue
       }
 
-      effective.add(territory.id);
+      effective.add(territory.id)
 
       if (territory.territoryType?.slug === MANAGER_ZONE_TYPE_SLUG) {
-        managerZoneIds.push(territory.id);
+        managerZoneIds.push(territory.id)
       }
     }
 
     if (managerZoneIds.length > 0) {
       const patchIds =
-        await this.territoryRepository.findRepPatchIdsByManagerTerritoryIds(managerZoneIds);
+        await this.territoryRepository.findRepPatchIdsByManagerTerritoryIds(managerZoneIds)
       for (const patchId of patchIds) {
-        effective.add(patchId);
+        effective.add(patchId)
       }
     }
 
-    return [...effective];
+    return [...effective]
   }
 
-  async resolveDescendantIds(
-    ancestorIds: string[],
-    activeOnly = true
-  ): Promise<string[]> {
+  async resolveDescendantIds(ancestorIds: string[], activeOnly = true): Promise<string[]> {
     if (ancestorIds.length === 0) {
-      return [];
+      return []
     }
 
-    const descendants = await this.closureRepository.findDescendantIds(
-      ancestorIds,
-      activeOnly
-    );
+    const descendants = await this.closureRepository.findDescendantIds(ancestorIds, activeOnly)
 
-    return [...new Set([...ancestorIds, ...descendants])];
+    return [...new Set([...ancestorIds, ...descendants])]
   }
 
   async findUsersAssignedToTerritoryAncestors(territoryIds: string[]): Promise<string[]> {
     if (territoryIds.length === 0) {
-      return [];
+      return []
     }
 
-    const territories = await this.territoryRepository.findByIds(territoryIds);
-    const relatedTerritoryIds = new Set<string>(territoryIds);
+    const territories = await this.territoryRepository.findByIds(territoryIds)
+    const relatedTerritoryIds = new Set<string>(territoryIds)
 
     for (const territory of territories) {
       if (territory.managerTerritoryId) {
-        relatedTerritoryIds.add(territory.managerTerritoryId);
+        relatedTerritoryIds.add(territory.managerTerritoryId)
       }
     }
 
-    const ancestorIds = await this.closureRepository.findAncestorIds(territoryIds);
+    const ancestorIds = await this.closureRepository.findAncestorIds(territoryIds)
     for (const ancestorId of ancestorIds) {
-      relatedTerritoryIds.add(ancestorId);
+      relatedTerritoryIds.add(ancestorId)
     }
 
     const assignments = await db
       .select({ userId: userTerritoryAssignments.userId })
       .from(userTerritoryAssignments)
-      .where(inArray(userTerritoryAssignments.territoryId, [...relatedTerritoryIds]));
+      .where(inArray(userTerritoryAssignments.territoryId, [...relatedTerritoryIds]))
 
-    return [...new Set(assignments.map((a) => a.userId))];
+    return [...new Set(assignments.map((a) => a.userId))]
   }
 }

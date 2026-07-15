@@ -71,9 +71,7 @@
         "sectors_slug_unique": {
           "name": "sectors_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -181,12 +179,8 @@
           "name": "user_sector_assignments_user_id_users_id_fk",
           "tableFrom": "user_sector_assignments",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -194,12 +188,8 @@
           "name": "user_sector_assignments_sector_id_sectors_id_fk",
           "tableFrom": "user_sector_assignments",
           "tableTo": "sectors",
-          "columnsFrom": [
-            "sector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sector_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -207,12 +197,8 @@
           "name": "user_sector_assignments_assigned_by_user_id_users_id_fk",
           "tableFrom": "user_sector_assignments",
           "tableTo": "users",
-          "columnsFrom": [
-            "assigned_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assigned_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -495,12 +481,8 @@
           "name": "invitations_role_id_roles_id_fk",
           "tableFrom": "invitations",
           "tableTo": "roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -508,12 +490,8 @@
           "name": "invitations_invited_by_user_id_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "invited_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -521,12 +499,8 @@
           "name": "invitations_manager_id_users_id_fk",
           "tableFrom": "invitations",
           "tableTo": "users",
-          "columnsFrom": [
-            "manager_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["manager_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -536,9 +510,7 @@
         "invitations_token_hash_unique": {
           "name": "invitations_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -658,12 +630,8 @@
           "name": "password_resets_user_id_users_id_fk",
           "tableFrom": "password_resets",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -673,9 +641,7 @@
         "password_resets_token_hash_unique": {
           "name": "password_resets_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -861,12 +827,8 @@
           "name": "permissions_user_id_users_id_fk",
           "tableFrom": "permissions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -874,12 +836,8 @@
           "name": "permissions_granted_by_users_id_fk",
           "tableFrom": "permissions",
           "tableTo": "users",
-          "columnsFrom": [
-            "granted_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["granted_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -957,9 +915,7 @@
         "roles_name_unique": {
           "name": "roles_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         }
       },
       "policies": {},
@@ -1256,12 +1212,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1271,9 +1223,7 @@
         "sessions_refresh_token_hash_unique": {
           "name": "sessions_refresh_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "refresh_token_hash"
-          ]
+          "columns": ["refresh_token_hash"]
         }
       },
       "policies": {},
@@ -1553,12 +1503,8 @@
           "name": "users_role_id_roles_id_fk",
           "tableFrom": "users",
           "tableTo": "roles",
-          "columnsFrom": [
-            "role_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["role_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1568,23 +1514,17 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "users_username_unique": {
           "name": "users_username_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "username"
-          ]
+          "columns": ["username"]
         },
         "users_phone_number_unique": {
           "name": "users_phone_number_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "phone_number"
-          ]
+          "columns": ["phone_number"]
         }
       },
       "policies": {},
@@ -1720,12 +1660,8 @@
           "name": "verification_tokens_user_id_users_id_fk",
           "tableFrom": "verification_tokens",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1735,9 +1671,7 @@
         "verification_tokens_token_hash_unique": {
           "name": "verification_tokens_token_hash_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
+          "columns": ["token_hash"]
         }
       },
       "policies": {},
@@ -2012,12 +1946,8 @@
           "name": "territories_territory_type_id_territory_types_id_fk",
           "tableFrom": "territories",
           "tableTo": "territory_types",
-          "columnsFrom": [
-            "territory_type_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["territory_type_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2025,12 +1955,8 @@
           "name": "territories_sector_id_sectors_id_fk",
           "tableFrom": "territories",
           "tableTo": "sectors",
-          "columnsFrom": [
-            "sector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sector_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -2040,9 +1966,7 @@
         "territories_code_unique": {
           "name": "territories_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         }
       },
       "policies": {},
@@ -2241,12 +2165,8 @@
           "name": "territory_approval_requests_requester_id_users_id_fk",
           "tableFrom": "territory_approval_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "requester_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requester_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2254,12 +2174,8 @@
           "name": "territory_approval_requests_reviewer_id_users_id_fk",
           "tableFrom": "territory_approval_requests",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewer_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2267,12 +2183,8 @@
           "name": "territory_approval_requests_target_territory_id_territories_id_fk",
           "tableFrom": "territory_approval_requests",
           "tableTo": "territories",
-          "columnsFrom": [
-            "target_territory_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_territory_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2280,12 +2192,8 @@
           "name": "territory_approval_requests_to_territory_id_territories_id_fk",
           "tableFrom": "territory_approval_requests",
           "tableTo": "territories",
-          "columnsFrom": [
-            "to_territory_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["to_territory_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2341,12 +2249,8 @@
           "name": "territory_closure_ancestor_id_territories_id_fk",
           "tableFrom": "territory_closure",
           "tableTo": "territories",
-          "columnsFrom": [
-            "ancestor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ancestor_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2354,12 +2258,8 @@
           "name": "territory_closure_descendant_id_territories_id_fk",
           "tableFrom": "territory_closure",
           "tableTo": "territories",
-          "columnsFrom": [
-            "descendant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["descendant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2367,10 +2267,7 @@
       "compositePrimaryKeys": {
         "territory_closure_ancestor_id_descendant_id_pk": {
           "name": "territory_closure_ancestor_id_descendant_id_pk",
-          "columns": [
-            "ancestor_id",
-            "descendant_id"
-          ]
+          "columns": ["ancestor_id", "descendant_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2507,9 +2404,7 @@
         "territory_types_slug_unique": {
           "name": "territory_types_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -2617,12 +2512,8 @@
           "name": "user_territory_assignments_user_id_users_id_fk",
           "tableFrom": "user_territory_assignments",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2630,12 +2521,8 @@
           "name": "user_territory_assignments_territory_id_territories_id_fk",
           "tableFrom": "user_territory_assignments",
           "tableTo": "territories",
-          "columnsFrom": [
-            "territory_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["territory_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2643,12 +2530,8 @@
           "name": "user_territory_assignments_assigned_by_users_id_fk",
           "tableFrom": "user_territory_assignments",
           "tableTo": "users",
-          "columnsFrom": [
-            "assigned_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assigned_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2801,12 +2684,8 @@
           "name": "conformity_records_facility_id_facilities_id_fk",
           "tableFrom": "conformity_records",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2814,12 +2693,8 @@
           "name": "conformity_records_requirement_id_conformity_requirements_id_fk",
           "tableFrom": "conformity_records",
           "tableTo": "conformity_requirements",
-          "columnsFrom": [
-            "requirement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["requirement_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -2827,12 +2702,8 @@
           "name": "conformity_records_validated_by_user_id_users_id_fk",
           "tableFrom": "conformity_records",
           "tableTo": "users",
-          "columnsFrom": [
-            "validated_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["validated_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2936,12 +2807,8 @@
           "name": "conformity_requirements_sector_id_sectors_id_fk",
           "tableFrom": "conformity_requirements",
           "tableTo": "sectors",
-          "columnsFrom": [
-            "sector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sector_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2951,9 +2818,7 @@
         "conformity_requirements_slug_unique": {
           "name": "conformity_requirements_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -3409,12 +3274,8 @@
           "name": "facilities_primary_sector_id_sectors_id_fk",
           "tableFrom": "facilities",
           "tableTo": "sectors",
-          "columnsFrom": [
-            "primary_sector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["primary_sector_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3422,12 +3283,8 @@
           "name": "facilities_territory_id_territories_id_fk",
           "tableFrom": "facilities",
           "tableTo": "territories",
-          "columnsFrom": [
-            "territory_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["territory_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3558,12 +3415,8 @@
           "name": "facility_consultant_assignments_facility_id_facilities_id_fk",
           "tableFrom": "facility_consultant_assignments",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3571,12 +3424,8 @@
           "name": "facility_consultant_assignments_user_id_users_id_fk",
           "tableFrom": "facility_consultant_assignments",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3584,12 +3433,8 @@
           "name": "facility_consultant_assignments_assigned_by_user_id_users_id_fk",
           "tableFrom": "facility_consultant_assignments",
           "tableTo": "users",
-          "columnsFrom": [
-            "assigned_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assigned_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3727,12 +3572,8 @@
           "name": "facility_healthcare_provider_shares_facility_id_facilities_id_fk",
           "tableFrom": "facility_healthcare_provider_shares",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3740,12 +3581,8 @@
           "name": "facility_healthcare_provider_shares_healthcare_provider_id_healthcare_providers_id_fk",
           "tableFrom": "facility_healthcare_provider_shares",
           "tableTo": "healthcare_providers",
-          "columnsFrom": [
-            "healthcare_provider_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["healthcare_provider_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -4025,12 +3862,8 @@
           "name": "facility_professionals_professional_id_professionals_id_fk",
           "tableFrom": "facility_professionals",
           "tableTo": "professionals",
-          "columnsFrom": [
-            "professional_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["professional_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4038,12 +3871,8 @@
           "name": "facility_professionals_facility_id_facilities_id_fk",
           "tableFrom": "facility_professionals",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4051,12 +3880,8 @@
           "name": "facility_professionals_confirmed_by_user_id_users_id_fk",
           "tableFrom": "facility_professionals",
           "tableTo": "users",
-          "columnsFrom": [
-            "confirmed_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["confirmed_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -4064,12 +3889,8 @@
           "name": "facility_professionals_ended_by_user_id_users_id_fk",
           "tableFrom": "facility_professionals",
           "tableTo": "users",
-          "columnsFrom": [
-            "ended_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["ended_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4268,12 +4089,8 @@
           "name": "facility_representatives_facility_id_facilities_id_fk",
           "tableFrom": "facility_representatives",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4281,12 +4098,8 @@
           "name": "facility_representatives_confirmed_by_user_id_users_id_fk",
           "tableFrom": "facility_representatives",
           "tableTo": "users",
-          "columnsFrom": [
-            "confirmed_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["confirmed_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4423,12 +4236,8 @@
           "name": "facility_services_facility_id_facilities_id_fk",
           "tableFrom": "facility_services",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4878,12 +4687,8 @@
           "name": "competitor_product_sectors_competitor_product_id_competitor_products_id_fk",
           "tableFrom": "competitor_product_sectors",
           "tableTo": "competitor_products",
-          "columnsFrom": [
-            "competitor_product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["competitor_product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4891,12 +4696,8 @@
           "name": "competitor_product_sectors_sector_id_sectors_id_fk",
           "tableFrom": "competitor_product_sectors",
           "tableTo": "sectors",
-          "columnsFrom": [
-            "sector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sector_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5143,12 +4944,8 @@
           "name": "facility_competitor_product_standards_facility_id_facilities_id_fk",
           "tableFrom": "facility_competitor_product_standards",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5156,12 +4953,8 @@
           "name": "facility_competitor_product_standards_competitor_product_id_competitor_products_id_fk",
           "tableFrom": "facility_competitor_product_standards",
           "tableTo": "competitor_products",
-          "columnsFrom": [
-            "competitor_product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["competitor_product_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -5251,12 +5044,8 @@
           "name": "product_equivalences_product_id_products_id_fk",
           "tableFrom": "product_equivalences",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5264,12 +5053,8 @@
           "name": "product_equivalences_competitor_product_id_competitor_products_id_fk",
           "tableFrom": "product_equivalences",
           "tableTo": "competitor_products",
-          "columnsFrom": [
-            "competitor_product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["competitor_product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5353,12 +5138,8 @@
           "name": "product_sectors_product_id_products_id_fk",
           "tableFrom": "product_sectors",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5366,12 +5147,8 @@
           "name": "product_sectors_sector_id_sectors_id_fk",
           "tableFrom": "product_sectors",
           "tableTo": "sectors",
-          "columnsFrom": [
-            "sector_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sector_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5578,30 +5355,22 @@
         "products_code_unique": {
           "name": "products_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "code"
-          ]
+          "columns": ["code"]
         },
         "products_simpro_code_unique": {
           "name": "products_simpro_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "simpro_code"
-          ]
+          "columns": ["simpro_code"]
         },
         "products_brasindice_code_unique": {
           "name": "products_brasindice_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "brasindice_code"
-          ]
+          "columns": ["brasindice_code"]
         },
         "products_tiss_code_unique": {
           "name": "products_tiss_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "tiss_code"
-          ]
+          "columns": ["tiss_code"]
         }
       },
       "policies": {},
@@ -5748,12 +5517,8 @@
           "name": "order_items_order_id_orders_id_fk",
           "tableFrom": "order_items",
           "tableTo": "orders",
-          "columnsFrom": [
-            "order_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["order_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5761,12 +5526,8 @@
           "name": "order_items_product_id_products_id_fk",
           "tableFrom": "order_items",
           "tableTo": "products",
-          "columnsFrom": [
-            "product_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["product_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -6006,12 +5767,8 @@
           "name": "orders_facility_id_facilities_id_fk",
           "tableFrom": "orders",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -6244,12 +6001,8 @@
           "name": "audit_logs_user_id_users_id_fk",
           "tableFrom": "audit_logs",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -6670,11 +6423,7 @@
       "compositePrimaryKeys": {
         "facility_agreements_facility_id_care_type_code_agreement_code_pk": {
           "name": "facility_agreements_facility_id_care_type_code_agreement_code_pk",
-          "columns": [
-            "facility_id",
-            "care_type_code",
-            "agreement_code"
-          ]
+          "columns": ["facility_id", "care_type_code", "agreement_code"]
         }
       },
       "uniqueConstraints": {},
@@ -6788,11 +6537,7 @@
       "compositePrimaryKeys": {
         "facility_professionals_facility_id_professional_id_occupation_code_pk": {
           "name": "facility_professionals_facility_id_professional_id_occupation_code_pk",
-          "columns": [
-            "facility_id",
-            "professional_id",
-            "occupation_code"
-          ]
+          "columns": ["facility_id", "professional_id", "occupation_code"]
         }
       },
       "uniqueConstraints": {},
@@ -6913,11 +6658,7 @@
       "compositePrimaryKeys": {
         "facility_services_facility_id_service_code_classification_code_pk": {
           "name": "facility_services_facility_id_service_code_classification_code_pk",
-          "columns": [
-            "facility_id",
-            "service_code",
-            "classification_code"
-          ]
+          "columns": ["facility_id", "service_code", "classification_code"]
         }
       },
       "uniqueConstraints": {},
@@ -7525,12 +7266,8 @@
           "tableFrom": "cnes_diffs",
           "tableTo": "cnes_runs",
           "schemaTo": "ingestion",
-          "columnsFrom": [
-            "cnes_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["cnes_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -7853,12 +7590,8 @@
           "tableFrom": "cnes_suggestions",
           "tableTo": "cnes_runs",
           "schemaTo": "ingestion",
-          "columnsFrom": [
-            "cnes_run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["cnes_run_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -7866,12 +7599,8 @@
           "name": "cnes_suggestions_facility_id_facilities_id_fk",
           "tableFrom": "cnes_suggestions",
           "tableTo": "facilities",
-          "columnsFrom": [
-            "facility_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7879,12 +7608,8 @@
           "name": "cnes_suggestions_professional_id_professionals_id_fk",
           "tableFrom": "cnes_suggestions",
           "tableTo": "professionals",
-          "columnsFrom": [
-            "professional_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["professional_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -7892,12 +7617,8 @@
           "name": "cnes_suggestions_facility_professional_id_facility_professionals_id_fk",
           "tableFrom": "cnes_suggestions",
           "tableTo": "facility_professionals",
-          "columnsFrom": [
-            "facility_professional_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["facility_professional_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -7913,141 +7634,72 @@
     "public.auth_session_device_type": {
       "name": "auth_session_device_type",
       "schema": "public",
-      "values": [
-        "DESKTOP",
-        "MOBILE",
-        "TABLET",
-        "UNKNOWN"
-      ]
+      "values": ["DESKTOP", "MOBILE", "TABLET", "UNKNOWN"]
     },
     "public.auth_session_type": {
       "name": "auth_session_type",
       "schema": "public",
-      "values": [
-        "WEB",
-        "MOBILE",
-        "API"
-      ]
+      "values": ["WEB", "MOBILE", "API"]
     },
     "public.commercial_status": {
       "name": "commercial_status",
       "schema": "public",
-      "values": [
-        "REGISTERED",
-        "ACTIVE",
-        "SUSPENDED",
-        "INACTIVE"
-      ]
+      "values": ["REGISTERED", "ACTIVE", "SUSPENDED", "INACTIVE"]
     },
     "public.conformity_record_status": {
       "name": "conformity_record_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "SUBMITTED",
-        "VALIDATED",
-        "REJECTED",
-        "EXPIRED"
-      ]
+      "values": ["PENDING", "SUBMITTED", "VALIDATED", "REJECTED", "EXPIRED"]
     },
     "public.conformity_status": {
       "name": "conformity_status",
       "schema": "public",
-      "values": [
-        "INCOMPLETE",
-        "COMPLETE",
-        "EXPIRING_SOON",
-        "NON_CONFORMING"
-      ]
+      "values": ["INCOMPLETE", "COMPLETE", "EXPIRING_SOON", "NON_CONFORMING"]
     },
     "public.contact_type": {
       "name": "contact_type",
       "schema": "public",
-      "values": [
-        "PROFESSIONAL",
-        "DECISOR",
-        "COMPRADOR"
-      ]
+      "values": ["PROFESSIONAL", "DECISOR", "COMPRADOR"]
     },
     "public.facility_tax_id_type": {
       "name": "facility_tax_id_type",
       "schema": "public",
-      "values": [
-        "PJ",
-        "PF"
-      ]
+      "values": ["PJ", "PF"]
     },
     "public.healthcare_provider_share_source": {
       "name": "healthcare_provider_share_source",
       "schema": "public",
-      "values": [
-        "MANUAL",
-        "REGISTRY",
-        "IMPORT"
-      ]
+      "values": ["MANUAL", "REGISTRY", "IMPORT"]
     },
     "public.healthcare_provider_type": {
       "name": "healthcare_provider_type",
       "schema": "public",
-      "values": [
-        "PRIVATE",
-        "PUBLIC",
-        "MIXED",
-        "OTHER"
-      ]
+      "values": ["PRIVATE", "PUBLIC", "MIXED", "OTHER"]
     },
     "public.invitation_status": {
       "name": "invitation_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "ACCEPTED",
-        "EXPIRED",
-        "REVOKED"
-      ]
+      "values": ["PENDING", "ACCEPTED", "EXPIRED", "REVOKED"]
     },
     "public.order_status": {
       "name": "order_status",
       "schema": "public",
-      "values": [
-        "DRAFT",
-        "PENDING",
-        "CONFIRMED",
-        "SHIPPED",
-        "DELIVERED",
-        "CANCELLED",
-        "REJECTED"
-      ]
+      "values": ["DRAFT", "PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "REJECTED"]
     },
     "public.order_type": {
       "name": "order_type",
       "schema": "public",
-      "values": [
-        "STANDARD",
-        "URGENT",
-        "RETURN",
-        "SAMPLE"
-      ]
+      "values": ["STANDARD", "URGENT", "RETURN", "SAMPLE"]
     },
     "public.purchase_status": {
       "name": "purchase_status",
       "schema": "public",
-      "values": [
-        "NON_BUYER",
-        "LOW_BUYER",
-        "REGULAR_BUYER",
-        "HIGH_BUYER"
-      ]
+      "values": ["NON_BUYER", "LOW_BUYER", "REGULAR_BUYER", "HIGH_BUYER"]
     },
     "public.territory_approval_status": {
       "name": "territory_approval_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected",
-        "superseded"
-      ]
+      "values": ["pending", "approved", "rejected", "superseded"]
     },
     "public.territory_approval_type": {
       "name": "territory_approval_type",
@@ -8062,67 +7714,37 @@
     "public.territory_assignment_source": {
       "name": "territory_assignment_source",
       "schema": "public",
-      "values": [
-        "geo",
-        "manual"
-      ]
+      "values": ["geo", "manual"]
     },
     "public.territory_assignment_status": {
       "name": "territory_assignment_status",
       "schema": "public",
-      "values": [
-        "assigned",
-        "unassigned",
-        "ambiguous"
-      ]
+      "values": ["assigned", "unassigned", "ambiguous"]
     },
     "public.territory_node_type": {
       "name": "territory_node_type",
       "schema": "public",
-      "values": [
-        "root",
-        "region",
-        "state",
-        "intermediate",
-        "patch"
-      ]
+      "values": ["root", "region", "state", "intermediate", "patch"]
     },
     "public.user_status": {
       "name": "user_status",
       "schema": "public",
-      "values": [
-        "ACTIVE",
-        "INACTIVE",
-        "SUSPENDED",
-        "PENDING"
-      ]
+      "values": ["ACTIVE", "INACTIVE", "SUSPENDED", "PENDING"]
     },
     "public.verification_token_type": {
       "name": "verification_token_type",
       "schema": "public",
-      "values": [
-        "EMAIL_VERIFICATION",
-        "PHONE_VERIFICATION",
-        "EMAIL_CHANGE",
-        "PHONE_CHANGE"
-      ]
+      "values": ["EMAIL_VERIFICATION", "PHONE_VERIFICATION", "EMAIL_CHANGE", "PHONE_CHANGE"]
     },
     "audit.audit_event_severity": {
       "name": "audit_event_severity",
       "schema": "audit",
-      "values": [
-        "INFO",
-        "WARNING",
-        "CRITICAL"
-      ]
+      "values": ["INFO", "WARNING", "CRITICAL"]
     },
     "ingestion.cnes_diff_scope": {
       "name": "cnes_diff_scope",
       "schema": "ingestion",
-      "values": [
-        "WAREHOUSE",
-        "CRM"
-      ]
+      "values": ["WAREHOUSE", "CRM"]
     },
     "ingestion.cnes_run_phase": {
       "name": "cnes_run_phase",
@@ -8144,22 +7766,12 @@
     "ingestion.cnes_run_status": {
       "name": "cnes_run_status",
       "schema": "ingestion",
-      "values": [
-        "RUNNING",
-        "COMPLETED",
-        "FAILED"
-      ]
+      "values": ["RUNNING", "COMPLETED", "FAILED"]
     },
     "ingestion.cnes_suggestion_status": {
       "name": "cnes_suggestion_status",
       "schema": "ingestion",
-      "values": [
-        "PENDING",
-        "APPROVED",
-        "REJECTED",
-        "EXPIRED",
-        "SUPERSEDED"
-      ]
+      "values": ["PENDING", "APPROVED", "REJECTED", "EXPIRED", "SUPERSEDED"]
     },
     "ingestion.cnes_suggestion_type": {
       "name": "cnes_suggestion_type",

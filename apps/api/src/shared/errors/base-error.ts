@@ -7,13 +7,13 @@
 
 /** Context keys safe to expose in client-facing API responses, keyed by error code. */
 const CLIENT_SAFE_CONTEXT_KEYS: Record<string, readonly string[]> = {
-  RATE_LIMIT_EXCEEDED: ["retryAfterSeconds"],
-  TOO_MANY_LOGIN_ATTEMPTS: ["retryAfterSeconds"],
-  ACCOUNT_LOCKED: ["unlockAt"],
-  VALIDATION_ERROR: ["errors"],
-  INVALID_PASSWORD: ["requirements"],
-  INVITE_EXPIRED: ["expiredAt"],
-};
+  RATE_LIMIT_EXCEEDED: ['retryAfterSeconds'],
+  TOO_MANY_LOGIN_ATTEMPTS: ['retryAfterSeconds'],
+  ACCOUNT_LOCKED: ['unlockAt'],
+  VALIDATION_ERROR: ['errors'],
+  INVALID_PASSWORD: ['requirements'],
+  INVITE_EXPIRED: ['expiredAt']
+}
 
 export abstract class AppError extends Error {
   /**
@@ -28,10 +28,10 @@ export abstract class AppError extends Error {
     message: string,
     public readonly context?: Record<string, unknown>
   ) {
-    super(message);
-    this.name = this.constructor.name;
+    super(message)
+    this.name = this.constructor.name
 
-    Error.captureStackTrace(this, this.constructor);
+    Error.captureStackTrace(this, this.constructor)
   }
 
   /**
@@ -40,25 +40,25 @@ export abstract class AppError extends Error {
   toClientJSON(): Record<string, unknown> {
     const payload: Record<string, unknown> = {
       code: this.code,
-      message: this.message,
-    };
-
-    if (!this.context) {
-      return payload;
+      message: this.message
     }
 
-    const safeKeys = CLIENT_SAFE_CONTEXT_KEYS[this.code];
+    if (!this.context) {
+      return payload
+    }
+
+    const safeKeys = CLIENT_SAFE_CONTEXT_KEYS[this.code]
     if (!safeKeys) {
-      return payload;
+      return payload
     }
 
     for (const key of safeKeys) {
       if (key in this.context) {
-        payload[key] = this.context[key];
+        payload[key] = this.context[key]
       }
     }
 
-    return payload;
+    return payload
   }
 
   /**
@@ -69,11 +69,11 @@ export abstract class AppError extends Error {
       code: this.code,
       message: this.message,
       ...(this.context && { context: this.context }),
-      ...(process.env.NODE_ENV === "development" && { stack: this.stack }),
-    };
+      ...(process.env.NODE_ENV === 'development' && { stack: this.stack })
+    }
   }
 
   toString(): string {
-    return `${this.name} [${this.code}]: ${this.message}`;
+    return `${this.name} [${this.code}]: ${this.message}`
   }
 }

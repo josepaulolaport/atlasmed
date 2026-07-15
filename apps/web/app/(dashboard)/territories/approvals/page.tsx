@@ -1,75 +1,75 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { canManageTerritories, canReadTerritories } from "@/lib/permissions";
-import { territoriesApi } from "@/lib/api/territories";
-import { TerritorySubnav } from "@/components/territory/territory-subnav";
-import { ApprovalRequestsTable } from "@/components/territory/approval-requests-table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import type { TerritoryApprovalRequest } from "@/types/territory";
+import { Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { ApprovalRequestsTable } from '@/components/territory/approval-requests-table'
+import { TerritorySubnav } from '@/components/territory/territory-subnav'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { territoriesApi } from '@/lib/api/territories'
+import { canManageTerritories, canReadTerritories } from '@/lib/permissions'
+import type { TerritoryApprovalRequest } from '@/types/territory'
 
 export default function TerritoryApprovalsPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [requests, setRequests] = useState<TerritoryApprovalRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<"pending" | "all">("pending");
+  const { user } = useAuth()
+  const router = useRouter()
+  const [requests, setRequests] = useState<TerritoryApprovalRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'all'>('pending')
 
-  const canRead = user ? canReadTerritories(user.role.name) : false;
-  const canManage = user ? canManageTerritories(user.role.name) : false;
+  const canRead = user ? canReadTerritories(user.role.name) : false
+  const canManage = user ? canManageTerritories(user.role.name) : false
 
   const loadRequests = useCallback(async () => {
-    if (!canManage) return;
+    if (!canManage) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       const response = await territoriesApi.listApprovalRequests({
-        status: statusFilter === "pending" ? "pending" : undefined,
+        status: statusFilter === 'pending' ? 'pending' : undefined,
         page: 1,
-        limit: 50,
-      });
-      setRequests(response.items);
+        limit: 50
+      })
+      setRequests(response.items)
     } catch {
       toast({
-        title: "Erro",
-        description: "Falha ao carregar solicitações de aprovação",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: 'Falha ao carregar solicitações de aprovação',
+        variant: 'destructive'
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [canManage, statusFilter]);
+  }, [canManage, statusFilter])
 
   useEffect(() => {
     if (user && !canRead) {
-      router.replace("/unauthorized");
-      return;
+      router.replace('/unauthorized')
+      return
     }
     if (user && canRead && !canManage) {
-      router.replace("/territories");
+      router.replace('/territories')
     }
-  }, [user, canRead, canManage, router]);
+  }, [user, canRead, canManage, router])
 
   useEffect(() => {
     if (canManage) {
-      void loadRequests();
+      void loadRequests()
     }
-  }, [canManage, loadRequests]);
+  }, [canManage, loadRequests])
 
   if (!user || !canManage) {
-    return null;
+    return null
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Aprovações de território</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="font-bold text-3xl text-gray-900">Aprovações de território</h1>
+        <p className="mt-1 text-gray-500 text-sm">
           Revise e resolva alterações pendentes na estrutura de territórios
         </p>
       </div>
@@ -82,15 +82,15 @@ export default function TerritoryApprovalsPage() {
           <div className="flex gap-2">
             <Button
               size="sm"
-              variant={statusFilter === "pending" ? "default" : "outline"}
-              onClick={() => setStatusFilter("pending")}
+              variant={statusFilter === 'pending' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('pending')}
             >
               Pendentes
             </Button>
             <Button
               size="sm"
-              variant={statusFilter === "all" ? "default" : "outline"}
-              onClick={() => setStatusFilter("all")}
+              variant={statusFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setStatusFilter('all')}
             >
               Todas
             </Button>
@@ -107,5 +107,5 @@ export default function TerritoryApprovalsPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

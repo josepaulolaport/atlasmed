@@ -67,7 +67,7 @@ export function initOpenTelemetry(params: {
 
   const resource = resourceFromAttributes({
     [SemanticResourceAttributes.SERVICE_NAME]: params.serviceName,
-    ...parseResourceAttributes(params.resourceAttributes),
+    ...parseResourceAttributes(params.resourceAttributes)
   })
 
   if (params.initializeTraces !== false && params.endpoint) {
@@ -90,7 +90,7 @@ export function initOpenTelemetry(params: {
 
     loggerProvider = new LoggerProvider({
       resource,
-      processors: [new BatchLogRecordProcessor(logExporter)],
+      processors: [new BatchLogRecordProcessor(logExporter)]
     })
     logs.setGlobalLoggerProvider(loggerProvider)
   }

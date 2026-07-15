@@ -12,96 +12,91 @@
  * domain/ is intentionally empty until domain entities are justified.
  */
 
-import { redis } from "../../infrastructure/cache/redis.client";
-
-// Repositories
-import { DrizzleUserRepository } from "./infrastructure/repositories/drizzle/drizzle-user.repository";
-import { DrizzleInviteRepository } from "./infrastructure/repositories/drizzle/drizzle-invite.repository";
-import { DrizzleSessionRepository } from "./infrastructure/repositories/drizzle/drizzle-session.repository";
-import { DrizzlePasswordResetRepository } from "./infrastructure/repositories/drizzle/drizzle-password-reset.repository";
-import { DrizzleRoleRepository } from "./infrastructure/repositories/drizzle/drizzle-role.repository";
-import { DrizzleVerificationTokenRepository } from "./infrastructure/repositories/drizzle/drizzle-verification-token.repository";
-
-// Cache Services
-import { AuthCacheService } from "./infrastructure/cache/auth-cache.service";
-import { SessionCacheService } from "./infrastructure/cache/session-cache.service";
-
+import { redis } from '../../infrastructure/cache/redis.client'
+import { ResendEmailService } from '../../infrastructure/external-services/resend/resend-email.service'
+import { TwilioMessagingService } from '../../infrastructure/external-services/twilio/twilio-messaging.service'
+import { facilityTerritoryScopePort } from '../facility/composition'
+import {
+  territoryAssignmentPolicy,
+  territoryHierarchyPort,
+  territoryRepositories
+} from '../territory/composition'
+import { AccessGrantService } from './application/services/access-grant.service'
+import { InviteService } from './application/services/invite.service'
+import { NotificationService } from './application/services/notification.service'
+import { PasswordService } from './application/services/password.service'
+import { Pending2FALoginService } from './application/services/pending-2fa-login.service'
+import { RateLimiterService } from './application/services/rate-limiter.service'
+import { ScopeService } from './application/services/scope.service'
+import { SessionService } from './application/services/session.service'
 // Services
-import { TokenService } from "./application/services/token.service";
-import { PasswordService } from "./application/services/password.service";
-import { SessionService } from "./application/services/session.service";
-import { InviteService } from "./application/services/invite.service";
-import { RateLimiterService } from "./application/services/rate-limiter.service";
-import { NotificationService } from "./application/services/notification.service";
-import { ResendEmailService } from "../../infrastructure/external-services/resend/resend-email.service";
-import { TwilioMessagingService } from "../../infrastructure/external-services/twilio/twilio-messaging.service";
-
+import { TokenService } from './application/services/token.service'
+import { TwoFactorService } from './application/services/two-factor.service'
+import { VerificationService } from './application/services/verification.service'
+import { AcceptInviteUseCase } from './application/use-cases/accept-invite.use-case'
+import { ActivateUserUseCase } from './application/use-cases/activate-user.use-case'
+import { AssignUserManagerUseCase } from './application/use-cases/assign-user-manager.use-case'
+import { AssignUserTerritoryUseCase } from './application/use-cases/assign-user-territory.use-case'
+import { ChangePasswordUseCase } from './application/use-cases/change-password.use-case'
+import { ChangeUserRoleUseCase } from './application/use-cases/change-user-role.use-case'
+import { Confirm2FASetupUseCase } from './application/use-cases/confirm-2fa-setup.use-case'
+import { DeactivateUserUseCase } from './application/use-cases/deactivate-user.use-case'
+import { Disable2FAUseCase } from './application/use-cases/disable-2fa.use-case'
+import { GetCapabilitiesUseCase } from './application/use-cases/get-capabilities.use-case'
+import { GetInvitationsUseCase } from './application/use-cases/get-invitations.use-case'
+import { GetUserAssignmentsUseCase } from './application/use-cases/get-user-assignments.use-case'
+import { GetUserSessionsUseCase } from './application/use-cases/get-user-sessions.use-case'
+import { GrantPermissionUseCase } from './application/use-cases/grant-permission.use-case'
+import { InviteUserUseCase } from './application/use-cases/invite-user.use-case'
+import { ListRolesUseCase } from './application/use-cases/list-roles.use-case'
+import { ListUsersUseCase } from './application/use-cases/list-users.use-case'
 // Use Cases
-import { LoginUseCase } from "./application/use-cases/login.use-case";
-import { LogoutUseCase } from "./application/use-cases/logout.use-case";
-import { RefreshSessionUseCase } from "./application/use-cases/refresh-session.use-case";
-import { InviteUserUseCase } from "./application/use-cases/invite-user.use-case";
-import { AcceptInviteUseCase } from "./application/use-cases/accept-invite.use-case";
-import { ValidateInviteUseCase } from "./application/use-cases/validate-invite.use-case";
-import { RevokeInviteUseCase } from "./application/use-cases/revoke-invite.use-case";
-import { ResendInviteUseCase } from "./application/use-cases/resend-invite.use-case";
-import { RequestPasswordResetUseCase } from "./application/use-cases/request-password-reset.use-case";
-import { ResetPasswordUseCase } from "./application/use-cases/reset-password.use-case";
-import { DeactivateUserUseCase } from "./application/use-cases/deactivate-user.use-case";
-import { ActivateUserUseCase } from "./application/use-cases/activate-user.use-case";
-import { SuspendUserUseCase } from "./application/use-cases/suspend-user.use-case";
-import { UnsuspendUserUseCase } from "./application/use-cases/unsuspend-user.use-case";
-import { GetUserSessionsUseCase } from "./application/use-cases/get-user-sessions.use-case";
-import { RevokeSessionUseCase } from "./application/use-cases/revoke-session.use-case";
-import { RevokeOtherSessionsUseCase } from "./application/use-cases/revoke-other-sessions.use-case";
-import { GetInvitationsUseCase } from "./application/use-cases/get-invitations.use-case";
-import { ChangeUserRoleUseCase } from "./application/use-cases/change-user-role.use-case";
-import { ListRolesUseCase } from "./application/use-cases/list-roles.use-case";
-import { ListUsersUseCase } from "./application/use-cases/list-users.use-case";
-import { UpdateProfileUseCase } from "./application/use-cases/update-profile.use-case";
-import { UpdateAvatarUseCase } from "./application/use-cases/update-avatar.use-case";
-import { AvatarStorageAdapter } from "./infrastructure/avatar-storage/avatar-storage.adapter";
-import { AssignUserManagerUseCase } from "./application/use-cases/assign-user-manager.use-case";
-import { AssignUserTerritoryUseCase } from "./application/use-cases/assign-user-territory.use-case";
-import { RevokeUserTerritoryUseCase } from "./application/use-cases/revoke-user-territory.use-case";
-import { GetUserAssignmentsUseCase } from "./application/use-cases/get-user-assignments.use-case";
+import { LoginUseCase } from './application/use-cases/login.use-case'
+import { LogoutUseCase } from './application/use-cases/logout.use-case'
+import { RefreshSessionUseCase } from './application/use-cases/refresh-session.use-case'
+import { RequestPasswordResetUseCase } from './application/use-cases/request-password-reset.use-case'
+import { ResendInviteUseCase } from './application/use-cases/resend-invite.use-case'
+import { ResetPasswordUseCase } from './application/use-cases/reset-password.use-case'
+import { RevokeInviteUseCase } from './application/use-cases/revoke-invite.use-case'
+import { RevokeOtherSessionsUseCase } from './application/use-cases/revoke-other-sessions.use-case'
+import { RevokePermissionUseCase } from './application/use-cases/revoke-permission.use-case'
+import { RevokeSessionUseCase } from './application/use-cases/revoke-session.use-case'
+import { RevokeUserTerritoryUseCase } from './application/use-cases/revoke-user-territory.use-case'
+import { Setup2FAUseCase } from './application/use-cases/setup-2fa.use-case'
+import { SuspendUserUseCase } from './application/use-cases/suspend-user.use-case'
+import { UnsuspendUserUseCase } from './application/use-cases/unsuspend-user.use-case'
+import { UpdateAvatarUseCase } from './application/use-cases/update-avatar.use-case'
+import { UpdateProfileUseCase } from './application/use-cases/update-profile.use-case'
 import {
   GetUserPreferencesUseCase,
-  UpdateUserPreferencesUseCase,
-} from "./application/use-cases/user-preferences.use-case";
-import { ChangePasswordUseCase } from "./application/use-cases/change-password.use-case";
-import { Setup2FAUseCase } from "./application/use-cases/setup-2fa.use-case";
-import { Confirm2FASetupUseCase } from "./application/use-cases/confirm-2fa-setup.use-case";
-import { Verify2FALoginUseCase } from "./application/use-cases/verify-2fa-login.use-case";
-import { Disable2FAUseCase } from "./application/use-cases/disable-2fa.use-case";
-import { GetCapabilitiesUseCase } from "./application/use-cases/get-capabilities.use-case";
-import { VerificationService } from "./application/services/verification.service";
-import { TwoFactorService } from "./application/services/two-factor.service";
-import { Pending2FALoginService } from "./application/services/pending-2fa-login.service";
-
-import { DrizzleScopeRepository } from "./infrastructure/repositories/drizzle/drizzle-scope.repository";
-import { DrizzleAccessGrantRepository } from "./infrastructure/repositories/drizzle/drizzle-access-grant.repository";
-import { facilityTerritoryScopePort } from "../facility/composition";
-import {
-  territoryHierarchyPort,
-  territoryAssignmentPolicy,
-  territoryRepositories,
-} from "../territory/composition";
-import { ScopeService } from "./application/services/scope.service";
-import { AccessGrantService } from "./application/services/access-grant.service";
-import { AccessGrantCacheService } from "./infrastructure/cache/access-grant-cache.service";
-import { GrantPermissionUseCase } from "./application/use-cases/grant-permission.use-case";
-import { RevokePermissionUseCase } from "./application/use-cases/revoke-permission.use-case";
-import { createAuthPlugin } from "./infrastructure/plugins/auth.plugin";
-import { auditLogAdapter } from "./infrastructure/adapters/audit-log.adapter";
-import { metricsAdapter } from "./infrastructure/adapters/metrics.adapter";
-import { sessionSecurityAdapter } from "./infrastructure/adapters/session-security.adapter";
+  UpdateUserPreferencesUseCase
+} from './application/use-cases/user-preferences.use-case'
+import { ValidateInviteUseCase } from './application/use-cases/validate-invite.use-case'
+import { Verify2FALoginUseCase } from './application/use-cases/verify-2fa-login.use-case'
+import { auditLogAdapter } from './infrastructure/adapters/audit-log.adapter'
+import { metricsAdapter } from './infrastructure/adapters/metrics.adapter'
+import { sessionSecurityAdapter } from './infrastructure/adapters/session-security.adapter'
+import { AvatarStorageAdapter } from './infrastructure/avatar-storage/avatar-storage.adapter'
+import { AccessGrantCacheService } from './infrastructure/cache/access-grant-cache.service'
+// Cache Services
+import { AuthCacheService } from './infrastructure/cache/auth-cache.service'
+import { SessionCacheService } from './infrastructure/cache/session-cache.service'
+import { createAuthPlugin } from './infrastructure/plugins/auth.plugin'
+import { DrizzleAccessGrantRepository } from './infrastructure/repositories/drizzle/drizzle-access-grant.repository'
+import { DrizzleInviteRepository } from './infrastructure/repositories/drizzle/drizzle-invite.repository'
+import { DrizzlePasswordResetRepository } from './infrastructure/repositories/drizzle/drizzle-password-reset.repository'
+import { DrizzleRoleRepository } from './infrastructure/repositories/drizzle/drizzle-role.repository'
+import { DrizzleScopeRepository } from './infrastructure/repositories/drizzle/drizzle-scope.repository'
+import { DrizzleSessionRepository } from './infrastructure/repositories/drizzle/drizzle-session.repository'
+// Repositories
+import { DrizzleUserRepository } from './infrastructure/repositories/drizzle/drizzle-user.repository'
+import { DrizzleVerificationTokenRepository } from './infrastructure/repositories/drizzle/drizzle-verification-token.repository'
 
 export const accessInfrastructure = {
   auditLog: auditLogAdapter,
   metrics: metricsAdapter,
-  sessionSecurity: sessionSecurityAdapter,
-};
+  sessionSecurity: sessionSecurityAdapter
+}
 
 // Singletons - Infrastructure
 export const accessRepositories = {
@@ -112,19 +107,19 @@ export const accessRepositories = {
   role: new DrizzleRoleRepository(),
   verificationToken: new DrizzleVerificationTokenRepository(),
   scope: new DrizzleScopeRepository(),
-  accessGrant: new DrizzleAccessGrantRepository(),
-};
+  accessGrant: new DrizzleAccessGrantRepository()
+}
 
-const territoryScopePort = facilityTerritoryScopePort;
-const hierarchyPort = territoryHierarchyPort;
+const territoryScopePort = facilityTerritoryScopePort
+const hierarchyPort = territoryHierarchyPort
 
-export const accessGrantCache = new AccessGrantCacheService();
+export const accessGrantCache = new AccessGrantCacheService()
 
 export const accessGrantService = new AccessGrantService({
   accessGrantRepository: accessRepositories.accessGrant,
   accessGrantCache,
-  auditLog: accessInfrastructure.auditLog,
-});
+  auditLog: accessInfrastructure.auditLog
+})
 
 export const accessScopeServices = {
   territoryScopePort,
@@ -133,15 +128,15 @@ export const accessScopeServices = {
     scopeRepository: accessRepositories.scope,
     territoryScopePort,
     territoryHierarchyPort: hierarchyPort,
-    accessGrantService,
-  }),
-};
+    accessGrantService
+  })
+}
 
 // Singletons - Cache
 export const accessCaches = {
   auth: new AuthCacheService(),
-  session: new SessionCacheService(),
-};
+  session: new SessionCacheService()
+}
 
 // Singletons - Application Services
 export const accessServices = {
@@ -149,7 +144,7 @@ export const accessServices = {
   password: new PasswordService(),
   session: new SessionService({
     sessionRepository: accessRepositories.session,
-    sessionCache: accessCaches.session,
+    sessionCache: accessCaches.session
   }),
   invite: new InviteService({ inviteRepository: accessRepositories.invite }),
   rateLimiter: new RateLimiterService({ redis }),
@@ -159,11 +154,11 @@ export const accessServices = {
   verification: new VerificationService({
     verificationTokenRepository: accessRepositories.verificationToken,
     userRepository: accessRepositories.user,
-    auditLog: accessInfrastructure.auditLog,
+    auditLog: accessInfrastructure.auditLog
   }),
   twoFactor: new TwoFactorService({ redis }),
-  pending2faLogin: new Pending2FALoginService({ redis }),
-};
+  pending2faLogin: new Pending2FALoginService({ redis })
+}
 
 // Use Case Factories
 export const accessUseCases = {
@@ -178,7 +173,7 @@ export const accessUseCases = {
       rateLimiterService: accessServices.rateLimiter,
       auditLog: accessInfrastructure.auditLog,
       metrics: accessInfrastructure.metrics,
-      pending2faLoginService: accessServices.pending2faLogin,
+      pending2faLoginService: accessServices.pending2faLogin
     }),
 
   logout: () =>
@@ -186,7 +181,7 @@ export const accessUseCases = {
       sessionRepository: accessRepositories.session,
       sessionCache: accessCaches.session,
       authCache: accessCaches.auth,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   refreshSession: () =>
@@ -197,7 +192,7 @@ export const accessUseCases = {
       sessionService: accessServices.session,
       auditLog: accessInfrastructure.auditLog,
       metrics: accessInfrastructure.metrics,
-      sessionSecurity: accessInfrastructure.sessionSecurity,
+      sessionSecurity: accessInfrastructure.sessionSecurity
     }),
 
   inviteUser: () =>
@@ -208,25 +203,25 @@ export const accessUseCases = {
       territoryRepository: territoryRepositories.territory,
       territoryTypeRepository: territoryRepositories.territoryType,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   acceptInvite: () =>
     new AcceptInviteUseCase({
       inviteRepository: accessRepositories.invite,
       passwordService: accessServices.password,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   validateInvite: () =>
     new ValidateInviteUseCase({
-      inviteRepository: accessRepositories.invite,
+      inviteRepository: accessRepositories.invite
     }),
 
   revokeInvite: () =>
     new RevokeInviteUseCase({
       inviteRepository: accessRepositories.invite,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   resendInvite: () =>
@@ -234,13 +229,13 @@ export const accessUseCases = {
       inviteRepository: accessRepositories.invite,
       inviteService: accessServices.invite,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   getInvitations: () =>
     new GetInvitationsUseCase({
       inviteRepository: accessRepositories.invite,
-      userRepository: accessRepositories.user,
+      userRepository: accessRepositories.user
     }),
 
   requestPasswordReset: () =>
@@ -250,7 +245,7 @@ export const accessUseCases = {
       emailService: accessServices.email,
       messagingService: accessServices.messaging,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   resetPassword: () =>
@@ -262,7 +257,7 @@ export const accessUseCases = {
       passwordService: accessServices.password,
       notificationService: accessServices.notification,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   changePassword: () =>
@@ -271,13 +266,13 @@ export const accessUseCases = {
       authCache: accessCaches.auth,
       sessionCache: accessCaches.session,
       passwordService: accessServices.password,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   setup2fa: () =>
     new Setup2FAUseCase({
       userRepository: accessRepositories.user,
-      twoFactorService: accessServices.twoFactor,
+      twoFactorService: accessServices.twoFactor
     }),
 
   confirm2faSetup: () =>
@@ -287,7 +282,7 @@ export const accessUseCases = {
       authCache: accessCaches.auth,
       sessionService: accessServices.session,
       sessionCache: accessCaches.session,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   verify2faLogin: () =>
@@ -299,7 +294,7 @@ export const accessUseCases = {
       tokenService: accessServices.token,
       sessionService: accessServices.session,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   disable2fa: () =>
@@ -310,13 +305,13 @@ export const accessUseCases = {
       sessionService: accessServices.session,
       sessionCache: accessCaches.session,
       passwordService: accessServices.password,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   getCapabilities: () =>
     new GetCapabilitiesUseCase({
       userRepository: accessRepositories.user,
-      accessGrantService,
+      accessGrantService
     }),
 
   deactivateUser: () =>
@@ -327,14 +322,14 @@ export const accessUseCases = {
       sessionCache: accessCaches.session,
       scopeService: accessScopeServices.scope,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   activateUser: () =>
     new ActivateUserUseCase({
       userRepository: accessRepositories.user,
       authCache: accessCaches.auth,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   suspendUser: () =>
@@ -345,33 +340,33 @@ export const accessUseCases = {
       sessionCache: accessCaches.session,
       scopeService: accessScopeServices.scope,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   unsuspendUser: () =>
     new UnsuspendUserUseCase({
       userRepository: accessRepositories.user,
       authCache: accessCaches.auth,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   getUserSessions: () =>
     new GetUserSessionsUseCase({
-      sessionRepository: accessRepositories.session,
+      sessionRepository: accessRepositories.session
     }),
 
   revokeSession: () =>
     new RevokeSessionUseCase({
       sessionRepository: accessRepositories.session,
       sessionCache: accessCaches.session,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   revokeOtherSessions: () =>
     new RevokeOtherSessionsUseCase({
       sessionRepository: accessRepositories.session,
       sessionCache: accessCaches.session,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   changeUserRole: () =>
@@ -382,30 +377,30 @@ export const accessUseCases = {
       sessionCache: accessCaches.session,
       scopeService: accessScopeServices.scope,
       auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
+      metrics: accessInfrastructure.metrics
     }),
 
   listRoles: () =>
     new ListRolesUseCase({
-      roleRepository: accessRepositories.role,
+      roleRepository: accessRepositories.role
     }),
 
   listUsers: () =>
     new ListUsersUseCase({
-      userRepository: accessRepositories.user,
+      userRepository: accessRepositories.user
     }),
 
   updateProfile: () =>
     new UpdateProfileUseCase({
       userRepository: accessRepositories.user,
-      authCache: accessCaches.auth,
+      authCache: accessCaches.auth
     }),
 
   updateAvatar: () =>
     new UpdateAvatarUseCase({
       userRepository: accessRepositories.user,
       authCache: accessCaches.auth,
-      storage: new AvatarStorageAdapter(),
+      storage: new AvatarStorageAdapter()
     }),
 
   assignUserManager: () =>
@@ -413,7 +408,7 @@ export const accessUseCases = {
       userRepository: accessRepositories.user,
       scopeRepository: accessRepositories.scope,
       scopeService: accessScopeServices.scope,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   assignUserTerritory: () =>
@@ -422,7 +417,7 @@ export const accessUseCases = {
       scopeRepository: accessRepositories.scope,
       scopeService: accessScopeServices.scope,
       auditLog: accessInfrastructure.auditLog,
-      territoryAssignmentPolicy,
+      territoryAssignmentPolicy
     }),
 
   revokeUserTerritory: () =>
@@ -430,36 +425,36 @@ export const accessUseCases = {
       userRepository: accessRepositories.user,
       scopeRepository: accessRepositories.scope,
       scopeService: accessScopeServices.scope,
-      auditLog: accessInfrastructure.auditLog,
+      auditLog: accessInfrastructure.auditLog
     }),
 
   getUserAssignments: () =>
     new GetUserAssignmentsUseCase({
       userRepository: accessRepositories.user,
-      scopeRepository: accessRepositories.scope,
+      scopeRepository: accessRepositories.scope
     }),
 
   getUserPreferences: () =>
     new GetUserPreferencesUseCase({
-      userRepository: accessRepositories.user,
+      userRepository: accessRepositories.user
     }),
 
   updateUserPreferences: () =>
     new UpdateUserPreferencesUseCase({
-      userRepository: accessRepositories.user,
+      userRepository: accessRepositories.user
     }),
 
   grantPermission: () =>
     new GrantPermissionUseCase({
       accessGrantService,
-      userRepository: accessRepositories.user,
+      userRepository: accessRepositories.user
     }),
 
   revokePermission: () =>
     new RevokePermissionUseCase({
-      accessGrantService,
-    }),
-};
+      accessGrantService
+    })
+}
 
 // Plugins
 export const auth = createAuthPlugin({
@@ -470,8 +465,8 @@ export const auth = createAuthPlugin({
   sessionCacheService: accessCaches.session,
   scopeService: accessScopeServices.scope,
   accessGrantService,
-  redis,
-});
+  redis
+})
 
 /**
  * Example usage in routes:

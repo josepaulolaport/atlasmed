@@ -1,12 +1,10 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes } from 'node:crypto'
+import type { AccessTokenPayload } from '@atlasmed/access'
+import { jwtVerify, SignJWT } from 'jose'
 
-import { jwtVerify, SignJWT } from "jose";
+import { environment } from '../../../../app/config/environment'
 
-import type { AccessTokenPayload } from "@atlasmed/access";
-
-import { environment } from "../../../../app/config/environment";
-
-const secret = new TextEncoder().encode(environment.JWT_ACCESS_SECRET);
+const secret = new TextEncoder().encode(environment.JWT_ACCESS_SECRET)
 
 export class TokenService {
   async signAccessToken(payload: AccessTokenPayload): Promise<string> {
@@ -15,11 +13,11 @@ export class TokenService {
       sid: payload.sid,
       role: payload.role,
       tokenVersion: payload.tokenVersion,
-      iat: Math.floor(Date.now() / 1000),
+      iat: Math.floor(Date.now() / 1000)
     })
 
       .setProtectedHeader({
-        alg: "HS256",
+        alg: 'HS256'
       })
 
       .setSubject(payload.sub)
@@ -30,19 +28,19 @@ export class TokenService {
 
       .setExpirationTime(environment.JWT_EXPIRATION)
 
-      .sign(secret);
+      .sign(secret)
   }
 
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
     const verified = await jwtVerify(token, secret, {
       issuer: environment.JWT_ISSUER,
-      audience: environment.JWT_AUDIENCE,
-    });
+      audience: environment.JWT_AUDIENCE
+    })
 
-    return verified.payload as AccessTokenPayload;
+    return verified.payload as AccessTokenPayload
   }
 
   generateRefreshToken(): string {
-    return randomBytes(32).toString("base64url");
+    return randomBytes(32).toString('base64url')
   }
 }

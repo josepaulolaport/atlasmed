@@ -1,135 +1,139 @@
-import { describe, expect, it, mock } from "bun:test";
-import { ListUsersUseCase } from "./list-users.use-case";
-import { createMockUserRepository } from "../../test-helpers/repository-mocks";
-import { createEmptyScopeContext, createGlobalScopeContext, withTerritoryScopeAliases } from "@atlasmed/access";
+import { describe, expect, it, mock } from 'bun:test'
+import {
+  createEmptyScopeContext,
+  createGlobalScopeContext,
+  withTerritoryScopeAliases
+} from '@atlasmed/access'
+import { createMockUserRepository } from '../../test-helpers/repository-mocks'
+import { ListUsersUseCase } from './list-users.use-case'
 
-describe("ListUsersUseCase", () => {
+describe('ListUsersUseCase', () => {
   const mockUser = {
-    id: "user-123",
-    email: "user@example.com",
-    username: "testuser",
+    id: 'user-123',
+    email: 'user@example.com',
+    username: 'testuser',
     phoneNumber: null,
-    firstName: "Test",
-    lastName: "User",
+    firstName: 'Test',
+    lastName: 'User',
     avatarUrl: null,
-    status: "ACTIVE",
+    status: 'ACTIVE',
     emailVerified: true,
     phoneVerified: false,
-    emailVerifiedAt: new Date("2024-01-01T00:00:00.000Z"),
+    emailVerifiedAt: new Date('2024-01-01T00:00:00.000Z'),
     phoneVerifiedAt: null,
     role: {
-      id: "role-123",
-      name: "USER",
-      description: "Standard user",
+      id: 'role-123',
+      name: 'USER',
+      description: 'Standard user'
     },
-    createdAt: new Date("2024-01-01T00:00:00.000Z"),
-    updatedAt: new Date("2024-01-02T00:00:00.000Z"),
-  };
+    createdAt: new Date('2024-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2024-01-02T00:00:00.000Z')
+  }
 
-  it("should return paginated users with serialized dates", async () => {
+  it('should return paginated users with serialized dates', async () => {
     const userRepository = createMockUserRepository({
       findAll: mock(() =>
         Promise.resolve({
           users: [mockUser],
-          total: 1,
+          total: 1
         })
-      ) as any,
-    });
+      ) as any
+    })
 
-    const useCase = new ListUsersUseCase({ userRepository });
-    const result = await useCase.execute({ page: 1, limit: 10, scope: createGlobalScopeContext() });
+    const useCase = new ListUsersUseCase({ userRepository })
+    const result = await useCase.execute({ page: 1, limit: 10, scope: createGlobalScopeContext() })
 
     expect(userRepository.findAll).toHaveBeenCalledWith({
       page: 1,
       limit: 10,
       status: undefined,
       search: undefined,
-      scope: { isGlobal: true, territoryIds: [] },
-    });
+      scope: { isGlobal: true, territoryIds: [] }
+    })
 
     expect(result).toEqual({
       data: [
         {
-          id: "user-123",
-          email: "user@example.com",
-          username: "testuser",
+          id: 'user-123',
+          email: 'user@example.com',
+          username: 'testuser',
           phoneNumber: undefined,
-          firstName: "Test",
-          lastName: "User",
+          firstName: 'Test',
+          lastName: 'User',
           avatarUrl: undefined,
-          status: "ACTIVE",
+          status: 'ACTIVE',
           emailVerified: true,
           phoneVerified: false,
-          emailVerifiedAt: "2024-01-01T00:00:00.000Z",
+          emailVerifiedAt: '2024-01-01T00:00:00.000Z',
           phoneVerifiedAt: undefined,
           role: {
-            id: "role-123",
-            name: "USER",
-            description: "Standard user",
+            id: 'role-123',
+            name: 'USER',
+            description: 'Standard user'
           },
-          createdAt: "2024-01-01T00:00:00.000Z",
-          updatedAt: "2024-01-02T00:00:00.000Z",
-        },
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z'
+        }
       ],
       pagination: {
         page: 1,
         limit: 10,
         total: 1,
-        totalPages: 1,
-      },
-    });
-  });
+        totalPages: 1
+      }
+    })
+  })
 
-  it("should use default pagination values", async () => {
+  it('should use default pagination values', async () => {
     const userRepository = createMockUserRepository({
-      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
-    });
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 }))
+    })
 
-    const useCase = new ListUsersUseCase({ userRepository });
-    await useCase.execute({ scope: createGlobalScopeContext() });
+    const useCase = new ListUsersUseCase({ userRepository })
+    await useCase.execute({ scope: createGlobalScopeContext() })
 
     expect(userRepository.findAll).toHaveBeenCalledWith({
       page: 1,
       limit: 20,
       status: undefined,
       search: undefined,
-      scope: { isGlobal: true, territoryIds: [] },
-    });
-  });
+      scope: { isGlobal: true, territoryIds: [] }
+    })
+  })
 
-  it("should pass status and search filters", async () => {
+  it('should pass status and search filters', async () => {
     const userRepository = createMockUserRepository({
-      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
-    });
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 }))
+    })
 
-    const useCase = new ListUsersUseCase({ userRepository });
-    await useCase.execute({ status: "ACTIVE", search: "test", scope: createGlobalScopeContext() });
+    const useCase = new ListUsersUseCase({ userRepository })
+    await useCase.execute({ status: 'ACTIVE', search: 'test', scope: createGlobalScopeContext() })
 
     expect(userRepository.findAll).toHaveBeenCalledWith({
       page: 1,
       limit: 20,
-      status: "ACTIVE",
-      search: "test",
-      scope: { isGlobal: true, territoryIds: [] },
-    });
-  });
+      status: 'ACTIVE',
+      search: 'test',
+      scope: { isGlobal: true, territoryIds: [] }
+    })
+  })
 
-  it("should pass managedUserIds and territoryIds for scoped managers", async () => {
+  it('should pass managedUserIds and territoryIds for scoped managers', async () => {
     const userRepository = createMockUserRepository({
-      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
-    });
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 }))
+    })
 
     const scope = withTerritoryScopeAliases({
       isGlobal: false,
-      assignedTerritoryIds: ["territory-1"],
-      effectiveTerritoryIds: ["territory-1"],
+      assignedTerritoryIds: ['territory-1'],
+      effectiveTerritoryIds: ['territory-1'],
       facilityIds: [],
-      managedUserIds: ["report-1", "report-2"],
-      isOperationallyActive: true,
-    });
+      managedUserIds: ['report-1', 'report-2'],
+      isOperationallyActive: true
+    })
 
-    const useCase = new ListUsersUseCase({ userRepository });
-    await useCase.execute({ scope });
+    const useCase = new ListUsersUseCase({ userRepository })
+    await useCase.execute({ scope })
 
     expect(userRepository.findAll).toHaveBeenCalledWith({
       page: 1,
@@ -138,28 +142,28 @@ describe("ListUsersUseCase", () => {
       search: undefined,
       scope: {
         isGlobal: false,
-        territoryIds: ["territory-1"],
-        managedUserIds: ["report-1", "report-2"],
-      },
-    });
-  });
+        territoryIds: ['territory-1'],
+        managedUserIds: ['report-1', 'report-2']
+      }
+    })
+  })
 
-  it("should scope manager listing to managedUserIds only, not territory peers", async () => {
+  it('should scope manager listing to managedUserIds only, not territory peers', async () => {
     const userRepository = createMockUserRepository({
-      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
-    });
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 }))
+    })
 
     const scope = withTerritoryScopeAliases({
       isGlobal: false,
-      assignedTerritoryIds: ["territory-shared"],
-      effectiveTerritoryIds: ["territory-shared"],
+      assignedTerritoryIds: ['territory-shared'],
+      effectiveTerritoryIds: ['territory-shared'],
       facilityIds: [],
-      managedUserIds: ["direct-report-1"],
-      isOperationallyActive: true,
-    });
+      managedUserIds: ['direct-report-1'],
+      isOperationallyActive: true
+    })
 
-    const useCase = new ListUsersUseCase({ userRepository });
-    await useCase.execute({ scope });
+    const useCase = new ListUsersUseCase({ userRepository })
+    await useCase.execute({ scope })
 
     expect(userRepository.findAll).toHaveBeenCalledWith({
       page: 1,
@@ -168,25 +172,25 @@ describe("ListUsersUseCase", () => {
       search: undefined,
       scope: {
         isGlobal: false,
-        territoryIds: ["territory-shared"],
-        managedUserIds: ["direct-report-1"],
-      },
-    });
+        territoryIds: ['territory-shared'],
+        managedUserIds: ['direct-report-1']
+      }
+    })
 
-    const firstCall = (userRepository.findAll as ReturnType<typeof mock>).mock.calls[0];
-    expect(firstCall).toBeDefined();
-    const callScope = firstCall![0].scope;
-    expect(callScope.managedUserIds).toEqual(["direct-report-1"]);
-    expect(callScope.isGlobal).toBe(false);
-  });
+    const firstCall = (userRepository.findAll as ReturnType<typeof mock>).mock.calls[0]
+    expect(firstCall).toBeDefined()
+    const callScope = firstCall![0].scope
+    expect(callScope.managedUserIds).toEqual(['direct-report-1'])
+    expect(callScope.isGlobal).toBe(false)
+  })
 
-  it("should pass empty managedUserIds when scope has none", async () => {
+  it('should pass empty managedUserIds when scope has none', async () => {
     const userRepository = createMockUserRepository({
-      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
-    });
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 }))
+    })
 
-    const useCase = new ListUsersUseCase({ userRepository });
-    await useCase.execute({ scope: createEmptyScopeContext() });
+    const useCase = new ListUsersUseCase({ userRepository })
+    await useCase.execute({ scope: createEmptyScopeContext() })
 
     expect(userRepository.findAll).toHaveBeenCalledWith({
       page: 1,
@@ -196,8 +200,8 @@ describe("ListUsersUseCase", () => {
       scope: {
         isGlobal: false,
         territoryIds: [],
-        managedUserIds: [],
-      },
-    });
-  });
-});
+        managedUserIds: []
+      }
+    })
+  })
+})

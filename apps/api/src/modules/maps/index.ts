@@ -1,10 +1,10 @@
-import { Elysia } from "elysia";
-import { mapsRoute } from "./infrastructure/routes/maps.route";
+import { Elysia } from 'elysia'
+import { mapsRoute } from './infrastructure/routes/maps.route'
 
 export const maps = new Elysia({
-  name: "maps",
-  prefix: "/maps",
+  name: 'maps',
+  prefix: '/maps',
   detail: {
-    tags: ["Maps"],
-  },
-}).use(mapsRoute);
+    tags: ['Maps']
+  }
+}).use(mapsRoute)

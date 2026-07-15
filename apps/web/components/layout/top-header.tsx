@@ -1,65 +1,59 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Fragment, type ReactNode } from "react";
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { Fragment, type ReactNode } from 'react'
 
 type Crumb = {
-  label: string;
-  href?: string;
-};
+  label: string
+  href?: string
+}
 
 const LABEL_MAP: Record<string, string> = {
-  dashboard: "Painel",
-  facilities: "Unidades de saúde",
-  professionals: "Profissionais",
-  territories: "Territórios",
-  users: "Usuários",
-  profile: "Perfil",
-  sessions: "Sessões",
-  security: "Segurança",
-  health: "Saúde do sistema",
-  "registry-suggestions": "Sugestões de cadastro",
-};
+  dashboard: 'Painel',
+  facilities: 'Unidades de saúde',
+  professionals: 'Profissionais',
+  territories: 'Territórios',
+  users: 'Usuários',
+  profile: 'Perfil',
+  sessions: 'Sessões',
+  security: 'Segurança',
+  health: 'Saúde do sistema',
+  'registry-suggestions': 'Sugestões de cadastro'
+}
 
 function humanize(segment: string): string {
-  return (
-    LABEL_MAP[segment] ??
-    segment
-      .replace(/-/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-  );
+  return LABEL_MAP[segment] ?? segment.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function buildCrumbs(pathname: string): Crumb[] {
-  const segments = pathname.split("/").filter(Boolean);
-  const crumbs: Crumb[] = [];
-  let acc = "";
+  const segments = pathname.split('/').filter(Boolean)
+  const crumbs: Crumb[] = []
+  let acc = ''
   segments.forEach((seg, idx) => {
-    acc += "/" + seg;
-    const isLast = idx === segments.length - 1;
-    const isDynamicId =
-      /^[0-9a-f-]{20,}$/i.test(seg) || /^\d+$/.test(seg);
+    acc += '/' + seg
+    const isLast = idx === segments.length - 1
+    const isDynamicId = /^[0-9a-f-]{20,}$/i.test(seg) || /^\d+$/.test(seg)
     crumbs.push({
-      label: isDynamicId ? "Detalhe" : humanize(seg),
-      href: isLast ? undefined : acc,
-    });
-  });
-  return crumbs;
+      label: isDynamicId ? 'Detalhe' : humanize(seg),
+      href: isLast ? undefined : acc
+    })
+  })
+  return crumbs
 }
 
 export interface TopHeaderProps {
-  breadcrumbs?: Crumb[];
-  actions?: ReactNode;
+  breadcrumbs?: Crumb[]
+  actions?: ReactNode
 }
 
 export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
-  const pathname = usePathname() ?? "/";
-  const crumbs = breadcrumbs ?? buildCrumbs(pathname);
+  const pathname = usePathname() ?? '/'
+  const crumbs = breadcrumbs ?? buildCrumbs(pathname)
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-zinc-200 flex-shrink-0 bg-white">
-      <nav className="flex items-center text-sm font-medium text-zinc-500 gap-2">
+    <header className="flex h-14 flex-shrink-0 items-center justify-between border-zinc-200 border-b bg-white px-6">
+      <nav className="flex items-center gap-2 font-medium text-sm text-zinc-500">
         {crumbs.length === 0 ? (
           <span className="text-zinc-900">AtlasMed</span>
         ) : (
@@ -73,10 +67,7 @@ export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
                 />
               )}
               {crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  className="hover:text-zinc-900 transition-colors"
-                >
+                <Link href={crumb.href} className="transition-colors hover:text-zinc-900">
                   {crumb.label}
                 </Link>
               ) : (
@@ -89,5 +80,5 @@ export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
 
       {actions && <div className="flex items-center gap-4">{actions}</div>}
     </header>
-  );
+  )
 }

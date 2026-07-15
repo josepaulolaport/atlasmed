@@ -1,221 +1,208 @@
-import type { Redis } from "ioredis";
-import { logger } from "../../../../infrastructure/logging/logger";
-import { redis } from "../../../../infrastructure/cache/redis.client";
+import type { Redis } from 'ioredis'
+import { redis } from '../../../../infrastructure/cache/redis.client'
+import { logger } from '../../../../infrastructure/logging/logger'
+import { withRedisRetry } from '../../../../shared/utils/redis-retry'
 import {
   REDIS_CACHE_RETRY_ATTEMPTS,
   REDIS_CACHE_RETRY_DELAY_MS,
   SESSION_REVOKED_MARKER_TTL_SECONDS,
-  SESSION_STATUS_REVALIDATION_SECONDS,
-} from "../../application/constants/cache.constants";
+  SESSION_STATUS_REVALIDATION_SECONDS
+} from '../../application/constants/cache.constants'
 import type {
-  ISessionCache,
   CachedSession,
-  SupersededRefreshTokenInfo,
-} from "../../application/interfaces/session-cache.interface";
-import { withRedisRetry } from "../../../../shared/utils/redis-retry";
+  ISessionCache,
+  SupersededRefreshTokenInfo
+} from '../../application/interfaces/session-cache.interface'
 
 export class SessionCacheService implements ISessionCache {
-  private readonly redis: Redis;
-  private readonly sessionKeyPrefix = "session:id:";
-  private readonly tokenKeyPrefix = "session:token:";
-  private readonly userSessionsKeyPrefix = "session:user:";
-  private readonly revokedKeyPrefix = "session:revoked:";
-  private readonly validatedKeyPrefix = "session:validated:";
-  private readonly supersededKeyPrefix = "session:superseded:";
-  private readonly ttl = 86400;
+  private readonly redis: Redis
+  private readonly sessionKeyPrefix = 'session:id:'
+  private readonly tokenKeyPrefix = 'session:token:'
+  private readonly userSessionsKeyPrefix = 'session:user:'
+  private readonly revokedKeyPrefix = 'session:revoked:'
+  private readonly validatedKeyPrefix = 'session:validated:'
+  private readonly supersededKeyPrefix = 'session:superseded:'
+  private readonly ttl = 86400
 
   constructor(redisClient: Redis = redis) {
-    this.redis = redisClient;
+    this.redis = redisClient
   }
 
   private getSessionKey(sessionId: string): string {
-    return `${this.sessionKeyPrefix}${sessionId}`;
+    return `${this.sessionKeyPrefix}${sessionId}`
   }
 
   private getTokenKey(tokenHash: string): string {
-    return `${this.tokenKeyPrefix}${tokenHash}`;
+    return `${this.tokenKeyPrefix}${tokenHash}`
   }
 
   private getUserSessionsKey(userId: string): string {
-    return `${this.userSessionsKeyPrefix}${userId}`;
+    return `${this.userSessionsKeyPrefix}${userId}`
   }
 
   private getRevokedKey(sessionId: string): string {
-    return `${this.revokedKeyPrefix}${sessionId}`;
+    return `${this.revokedKeyPrefix}${sessionId}`
   }
 
   private getValidatedKey(sessionId: string): string {
-    return `${this.validatedKeyPrefix}${sessionId}`;
+    return `${this.validatedKeyPrefix}${sessionId}`
   }
 
   private getSupersededKey(tokenHash: string): string {
-    return `${this.supersededKeyPrefix}${tokenHash}`;
+    return `${this.supersededKeyPrefix}${tokenHash}`
   }
 
   private getRevokedMarkerTtl(expiresAt?: string): number {
     if (!expiresAt) {
-      return SESSION_REVOKED_MARKER_TTL_SECONDS;
+      return SESSION_REVOKED_MARKER_TTL_SECONDS
     }
 
-    const ttl = Math.floor(
-      (new Date(expiresAt).getTime() - Date.now()) / 1000
-    );
+    const ttl = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
 
-    return ttl > 0 ? ttl : SESSION_REVOKED_MARKER_TTL_SECONDS;
+    return ttl > 0 ? ttl : SESSION_REVOKED_MARKER_TTL_SECONDS
   }
 
-  private async markRevoked(
-    sessionId: string,
-    expiresAt?: string
-  ): Promise<void> {
+  private async markRevoked(sessionId: string, expiresAt?: string): Promise<void> {
     await withRedisRetry(
       () =>
-        this.redis.setex(
-          this.getRevokedKey(sessionId),
-          this.getRevokedMarkerTtl(expiresAt),
-          "1"
-        ),
+        this.redis.setex(this.getRevokedKey(sessionId), this.getRevokedMarkerTtl(expiresAt), '1'),
       {
         attempts: REDIS_CACHE_RETRY_ATTEMPTS,
         delayMs: REDIS_CACHE_RETRY_DELAY_MS,
-        operationName: "session cache markRevoked",
+        operationName: 'session cache markRevoked'
       }
-    );
+    )
   }
 
   private async clearValidated(sessionId: string): Promise<void> {
     await withRedisRetry(() => this.redis.del(this.getValidatedKey(sessionId)), {
       attempts: REDIS_CACHE_RETRY_ATTEMPTS,
       delayMs: REDIS_CACHE_RETRY_DELAY_MS,
-      operationName: "session cache clearValidated",
-    });
+      operationName: 'session cache clearValidated'
+    })
   }
 
   async getById(sessionId: string): Promise<CachedSession | null> {
     try {
-      const data = await this.redis.get(this.getSessionKey(sessionId));
+      const data = await this.redis.get(this.getSessionKey(sessionId))
 
       if (!data) {
-        return null;
+        return null
       }
 
-      return JSON.parse(data) as CachedSession;
+      return JSON.parse(data) as CachedSession
     } catch (error) {
-      logger.error("Failed to get session from cache", error);
-      return null;
+      logger.error('Failed to get session from cache', error)
+      return null
     }
   }
 
-  async getSupersededSession(
-    tokenHash: string
-  ): Promise<SupersededRefreshTokenInfo | null> {
+  async getSupersededSession(tokenHash: string): Promise<SupersededRefreshTokenInfo | null> {
     try {
-      const data = await this.redis.get(this.getSupersededKey(tokenHash));
+      const data = await this.redis.get(this.getSupersededKey(tokenHash))
 
       if (!data) {
-        return null;
+        return null
       }
 
-      return JSON.parse(data) as SupersededRefreshTokenInfo;
+      return JSON.parse(data) as SupersededRefreshTokenInfo
     } catch (error) {
-      logger.error("Failed to get superseded refresh token from cache", error);
-      return null;
+      logger.error('Failed to get superseded refresh token from cache', error)
+      return null
     }
   }
 
   async getByTokenHash(tokenHash: string): Promise<CachedSession | null> {
     try {
-      const sessionId = await this.redis.get(this.getTokenKey(tokenHash));
+      const sessionId = await this.redis.get(this.getTokenKey(tokenHash))
 
       if (!sessionId) {
-        return null;
+        return null
       }
 
-      return await this.getById(sessionId);
+      return await this.getById(sessionId)
     } catch (error) {
-      logger.error("Failed to get session by token hash from cache", error);
-      return null;
+      logger.error('Failed to get session by token hash from cache', error)
+      return null
     }
   }
 
   async set(session: CachedSession): Promise<void> {
     try {
-      const sessionKey = this.getSessionKey(session.id);
-      const tokenKey = this.getTokenKey(session.refreshTokenHash);
-      const userSessionsKey = this.getUserSessionsKey(session.userId);
+      const sessionKey = this.getSessionKey(session.id)
+      const tokenKey = this.getTokenKey(session.refreshTokenHash)
+      const userSessionsKey = this.getUserSessionsKey(session.userId)
 
-      const ttl = Math.floor(
-        (new Date(session.expiresAt).getTime() - Date.now()) / 1000
-      );
+      const ttl = Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000)
 
       if (ttl <= 0) {
-        return;
+        return
       }
 
-      const pipeline = this.redis.pipeline();
+      const pipeline = this.redis.pipeline()
 
-      pipeline.setex(sessionKey, ttl, JSON.stringify(session));
-      pipeline.setex(tokenKey, ttl, session.id);
-      pipeline.sadd(userSessionsKey, session.id);
-      pipeline.expire(userSessionsKey, ttl);
+      pipeline.setex(sessionKey, ttl, JSON.stringify(session))
+      pipeline.setex(tokenKey, ttl, session.id)
+      pipeline.sadd(userSessionsKey, session.id)
+      pipeline.expire(userSessionsKey, ttl)
 
-      await pipeline.exec();
+      await pipeline.exec()
     } catch (error) {
-      logger.error("Failed to cache session", error);
+      logger.error('Failed to cache session', error)
     }
   }
 
   async invalidate(sessionId: string): Promise<void> {
-    const session = await this.getById(sessionId);
+    const session = await this.getById(sessionId)
 
-    await this.markRevoked(sessionId, session?.expiresAt);
-    await this.clearValidated(sessionId);
+    await this.markRevoked(sessionId, session?.expiresAt)
+    await this.clearValidated(sessionId)
 
     if (!session) {
-      return;
+      return
     }
 
-    const sessionKey = this.getSessionKey(sessionId);
-    const tokenKey = this.getTokenKey(session.refreshTokenHash);
-    const userSessionsKey = this.getUserSessionsKey(session.userId);
+    const sessionKey = this.getSessionKey(sessionId)
+    const tokenKey = this.getTokenKey(session.refreshTokenHash)
+    const userSessionsKey = this.getUserSessionsKey(session.userId)
 
-    await withRedisRetry(async () => {
-      const pipeline = this.redis.pipeline();
-      pipeline.del(sessionKey);
-      pipeline.del(tokenKey);
-      pipeline.srem(userSessionsKey, sessionId);
-      await pipeline.exec();
-    }, {
-      attempts: REDIS_CACHE_RETRY_ATTEMPTS,
-      delayMs: REDIS_CACHE_RETRY_DELAY_MS,
-      operationName: "session cache invalidate",
-    });
+    await withRedisRetry(
+      async () => {
+        const pipeline = this.redis.pipeline()
+        pipeline.del(sessionKey)
+        pipeline.del(tokenKey)
+        pipeline.srem(userSessionsKey, sessionId)
+        await pipeline.exec()
+      },
+      {
+        attempts: REDIS_CACHE_RETRY_ATTEMPTS,
+        delayMs: REDIS_CACHE_RETRY_DELAY_MS,
+        operationName: 'session cache invalidate'
+      }
+    )
   }
 
-  async invalidateByUserId(
-    userId: string,
-    excludeSessionId?: string
-  ): Promise<void> {
-    const userSessionsKey = this.getUserSessionsKey(userId);
+  async invalidateByUserId(userId: string, excludeSessionId?: string): Promise<void> {
+    const userSessionsKey = this.getUserSessionsKey(userId)
     const sessionIds = await this.redis.smembers(userSessionsKey).catch((error) => {
-      logger.error("Failed to list user sessions from cache", error);
-      return [] as string[];
-    });
+      logger.error('Failed to list user sessions from cache', error)
+      return [] as string[]
+    })
 
     if (sessionIds.length === 0) {
-      return;
+      return
     }
 
     const idsToInvalidate = excludeSessionId
       ? sessionIds.filter((id) => id !== excludeSessionId)
-      : sessionIds;
+      : sessionIds
 
     if (idsToInvalidate.length === 0) {
-      return;
+      return
     }
 
     for (const sessionId of idsToInvalidate) {
-      await this.invalidate(sessionId);
+      await this.invalidate(sessionId)
     }
   }
 
@@ -224,77 +211,71 @@ export class SessionCacheService implements ISessionCache {
     previousRefreshTokenHash: string
   ): Promise<void> {
     try {
-      const sessionKey = this.getSessionKey(session.id);
-      const oldTokenKey = this.getTokenKey(previousRefreshTokenHash);
-      const newTokenKey = this.getTokenKey(session.refreshTokenHash);
-      const userSessionsKey = this.getUserSessionsKey(session.userId);
+      const sessionKey = this.getSessionKey(session.id)
+      const oldTokenKey = this.getTokenKey(previousRefreshTokenHash)
+      const newTokenKey = this.getTokenKey(session.refreshTokenHash)
+      const userSessionsKey = this.getUserSessionsKey(session.userId)
 
-      const ttl = Math.floor(
-        (new Date(session.expiresAt).getTime() - Date.now()) / 1000
-      );
+      const ttl = Math.floor((new Date(session.expiresAt).getTime() - Date.now()) / 1000)
 
       if (ttl <= 0) {
-        await this.invalidate(session.id);
-        return;
+        await this.invalidate(session.id)
+        return
       }
 
       const supersededPayload = JSON.stringify({
         sessionId: session.id,
-        userId: session.userId,
-      });
+        userId: session.userId
+      })
 
-      const pipeline = this.redis.pipeline();
-      pipeline.setex(
-        this.getSupersededKey(previousRefreshTokenHash),
-        ttl,
-        supersededPayload
-      );
-      pipeline.del(oldTokenKey);
-      pipeline.setex(sessionKey, ttl, JSON.stringify(session));
-      pipeline.setex(newTokenKey, ttl, session.id);
-      pipeline.sadd(userSessionsKey, session.id);
-      pipeline.expire(userSessionsKey, ttl);
+      const pipeline = this.redis.pipeline()
+      pipeline.setex(this.getSupersededKey(previousRefreshTokenHash), ttl, supersededPayload)
+      pipeline.del(oldTokenKey)
+      pipeline.setex(sessionKey, ttl, JSON.stringify(session))
+      pipeline.setex(newTokenKey, ttl, session.id)
+      pipeline.sadd(userSessionsKey, session.id)
+      pipeline.expire(userSessionsKey, ttl)
 
-      await pipeline.exec();
+      await pipeline.exec()
     } catch (error) {
-      logger.error("Failed to update session cache after refresh", error);
+      logger.error('Failed to update session cache after refresh', error)
     }
   }
 
   async updateLastSeen(sessionId: string): Promise<void> {
     try {
-      const session = await this.getById(sessionId);
+      const session = await this.getById(sessionId)
 
       if (!session) {
-        return;
+        return
       }
 
-      session.lastSeenAt = new Date().toISOString();
-      await this.set(session);
+      session.lastSeenAt = new Date().toISOString()
+      await this.set(session)
     } catch (error) {
-      logger.error("Failed to update session last seen in cache", error);
+      logger.error('Failed to update session last seen in cache', error)
     }
   }
 
   /** Fail-closed: Redis errors assume revoked so caller revalidates from DB or rejects. */
   async isMarkedRevoked(sessionId: string): Promise<boolean> {
     try {
-      const result = await this.redis.exists(this.getRevokedKey(sessionId));
-      return result === 1;
+      const result = await this.redis.exists(this.getRevokedKey(sessionId))
+      return result === 1
     } catch (error) {
-      logger.error("Failed to check session revoked marker", error);
-      return true;
+      logger.error('Failed to check session revoked marker', error)
+      return true
     }
   }
 
   /** Fail-open to false forces DB revalidation when Redis is unavailable. */
   async isRecentlyValidated(sessionId: string): Promise<boolean> {
     try {
-      const result = await this.redis.exists(this.getValidatedKey(sessionId));
-      return result === 1;
+      const result = await this.redis.exists(this.getValidatedKey(sessionId))
+      return result === 1
     } catch (error) {
-      logger.error("Failed to check session validation stamp", error);
-      return false;
+      logger.error('Failed to check session validation stamp', error)
+      return false
     }
   }
 
@@ -303,12 +284,12 @@ export class SessionCacheService implements ISessionCache {
       await this.redis.setex(
         this.getValidatedKey(sessionId),
         SESSION_STATUS_REVALIDATION_SECONDS,
-        "1"
-      );
+        '1'
+      )
     } catch (error) {
-      logger.error("Failed to mark session as validated", error);
+      logger.error('Failed to mark session as validated', error)
     }
   }
 }
 
-export const sessionCacheService = new SessionCacheService();
+export const sessionCacheService = new SessionCacheService()

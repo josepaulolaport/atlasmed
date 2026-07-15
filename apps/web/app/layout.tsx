@@ -1,30 +1,30 @@
-import type { Metadata } from "next";
-import { Inter, Geist_Mono } from "next/font/google";
-import "iconify-icon";
-import "./globals.css";
-import { AuthProvider } from "@/contexts/auth-context";
-import { Toaster } from "@/components/ui/toaster";
+import type { Metadata } from 'next'
+import { Geist_Mono, Inter } from 'next/font/google'
+import 'iconify-icon'
+import './globals.css'
+import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/contexts/auth-context'
 
 const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-});
+  variable: '--font-inter',
+  subsets: ['latin'],
+  weight: ['400', '500', '600']
+})
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+  variable: '--font-geist-mono',
+  subsets: ['latin']
+})
 
 export const metadata: Metadata = {
-  title: "AtlasMed — Operações Comerciais em Saúde",
-  description: "Plataforma de operações comerciais em saúde",
-};
+  title: 'AtlasMed — Operações Comerciais em Saúde',
+  description: 'Plataforma de operações comerciais em saúde'
+}
 
 export default function RootLayout({
-  children,
+  children
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.ReactNode
 }>) {
   return (
     <html
@@ -42,5 +42,5 @@ export default function RootLayout({
         </AuthProvider>
       </body>
     </html>
-  );
+  )
 }

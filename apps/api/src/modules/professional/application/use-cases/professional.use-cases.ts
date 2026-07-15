@@ -1,28 +1,27 @@
-import type { ScopeContext } from "@atlasmed/access";
-import type { ProfessionalProfile } from "@atlasmed/access";
-import { assertResourceInScope } from "@atlasmed/access";
-import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import type { ProfessionalProfile, ScopeContext } from '@atlasmed/access'
+import { assertResourceInScope } from '@atlasmed/access'
+import { ForbiddenError, ResourceNotFoundError, ValidationError } from '../../../../shared/errors'
 import type {
   ProfessionalCreateInput,
   ProfessionalNoteRecord,
   ProfessionalRecord,
   ProfessionalRepository,
-  ProfessionalUpdateInput,
-} from "../interfaces/professional.repository.interface";
+  ProfessionalUpdateInput
+} from '../interfaces/professional.repository.interface'
 
 function formatDate(value: Date | null): string | undefined {
   if (!value) {
-    return undefined;
+    return undefined
   }
 
-  return value.toISOString().slice(0, 10);
+  return value.toISOString().slice(0, 10)
 }
 
 async function serializeProfessionalProfile(
   professional: ProfessionalRecord,
   repository: ProfessionalRepository
 ): Promise<ProfessionalProfile> {
-  const facilities = await repository.findActiveFacilities(professional.id);
+  const facilities = await repository.findActiveFacilities(professional.id)
 
   return {
     id: professional.id,
@@ -49,8 +48,8 @@ async function serializeProfessionalProfile(
     facilityIds: professional.facilityIds,
     facilities,
     createdAt: professional.createdAt.toISOString(),
-    updatedAt: professional.updatedAt.toISOString(),
-  };
+    updatedAt: professional.updatedAt.toISOString()
+  }
 }
 
 function serializeProfessionalSummary(professional: ProfessionalRecord) {
@@ -66,31 +65,31 @@ function serializeProfessionalSummary(professional: ProfessionalRecord) {
     facilityIds: professional.facilityIds,
     distanceKm: professional.distanceKm ?? undefined,
     createdAt: professional.createdAt.toISOString(),
-    updatedAt: professional.updatedAt.toISOString(),
-  };
+    updatedAt: professional.updatedAt.toISOString()
+  }
 }
 
 function assertFacilityIdsInScope(scope: ScopeContext, facilityIds: string[]): void {
   if (scope.isGlobal) {
-    return;
+    return
   }
 
   for (const facilityId of facilityIds) {
-    assertResourceInScope(scope, "facility", facilityId);
+    assertResourceInScope(scope, 'facility', facilityId)
   }
 }
 
 function assertProfessionalAccessible(scope: ScopeContext, facilityIds: string[]): void {
   if (scope.isGlobal) {
-    return;
+    return
   }
 
   const hasAccessibleFacility = facilityIds.some((facilityId) =>
     scope.facilityIds.includes(facilityId)
-  );
+  )
 
   if (!hasAccessibleFacility) {
-    throw new ForbiddenError("Professional outside scope");
+    throw new ForbiddenError('Professional outside scope')
   }
 }
 
@@ -99,8 +98,8 @@ function serializeProfessionalNote(note: ProfessionalNoteRecord) {
     id: note.id,
     note: note.note,
     createdAt: note.createdAt.toISOString(),
-    updatedAt: note.updatedAt.toISOString(),
-  };
+    updatedAt: note.updatedAt.toISOString()
+  }
 }
 
 async function getAccessibleProfessional(
@@ -108,50 +107,50 @@ async function getAccessibleProfessional(
   professionalId: string,
   scope: ScopeContext
 ): Promise<ProfessionalRecord> {
-  const professional = await repository.findById(professionalId);
+  const professional = await repository.findById(professionalId)
 
   if (!professional) {
-    throw new ResourceNotFoundError("Professional", professionalId);
+    throw new ResourceNotFoundError('Professional', professionalId)
   }
 
-  assertProfessionalAccessible(scope, professional.facilityIds);
-  return professional;
+  assertProfessionalAccessible(scope, professional.facilityIds)
+  return professional
 }
 
 function parseBirthDate(value?: string | null): Date | null | undefined {
   if (value === undefined) {
-    return undefined;
+    return undefined
   }
 
   if (value === null) {
-    return null;
+    return null
   }
 
-  return new Date(`${value}T00:00:00.000Z`);
+  return new Date(`${value}T00:00:00.000Z`)
 }
 
 function buildCreateInput(input: {
-  firstName: string;
-  lastName: string;
-  fullName?: string;
-  socialName?: string;
-  taxId?: string;
-  birthDate?: string;
-  mobilePhone?: string;
-  landlinePhone?: string;
-  email?: string;
-  websiteUrl?: string;
-  imageUrl?: string;
-  primarySpecialtyLabel?: string;
-  specialty?: string;
-  crmCouncil?: string;
-  crmNumber?: string;
-  crmState?: string;
-  favoriteTeam?: string;
-  favoriteSport?: string;
-  hobbies?: string;
-  notes?: string;
-  facilityIds?: string[];
+  firstName: string
+  lastName: string
+  fullName?: string
+  socialName?: string
+  taxId?: string
+  birthDate?: string
+  mobilePhone?: string
+  landlinePhone?: string
+  email?: string
+  websiteUrl?: string
+  imageUrl?: string
+  primarySpecialtyLabel?: string
+  specialty?: string
+  crmCouncil?: string
+  crmNumber?: string
+  crmState?: string
+  favoriteTeam?: string
+  favoriteSport?: string
+  hobbies?: string
+  notes?: string
+  facilityIds?: string[]
 }): ProfessionalCreateInput {
   return {
     firstName: input.firstName,
@@ -173,31 +172,31 @@ function buildCreateInput(input: {
     favoriteSport: input.favoriteSport ?? null,
     hobbies: input.hobbies ?? null,
     notes: input.notes ?? null,
-    facilityIds: input.facilityIds ?? [],
-  };
+    facilityIds: input.facilityIds ?? []
+  }
 }
 
 function buildUpdateInput(input: {
-  firstName?: string;
-  lastName?: string;
-  fullName?: string | null;
-  socialName?: string | null;
-  taxId?: string | null;
-  birthDate?: string | null;
-  mobilePhone?: string | null;
-  landlinePhone?: string | null;
-  email?: string | null;
-  websiteUrl?: string | null;
-  imageUrl?: string | null;
-  primarySpecialtyLabel?: string | null;
-  specialty?: string | null;
-  crmCouncil?: string | null;
-  crmNumber?: string | null;
-  crmState?: string | null;
-  favoriteTeam?: string | null;
-  favoriteSport?: string | null;
-  hobbies?: string | null;
-  notes?: string | null;
+  firstName?: string
+  lastName?: string
+  fullName?: string | null
+  socialName?: string | null
+  taxId?: string | null
+  birthDate?: string | null
+  mobilePhone?: string | null
+  landlinePhone?: string | null
+  email?: string | null
+  websiteUrl?: string | null
+  imageUrl?: string | null
+  primarySpecialtyLabel?: string | null
+  specialty?: string | null
+  crmCouncil?: string | null
+  crmNumber?: string | null
+  crmState?: string | null
+  favoriteTeam?: string | null
+  favoriteSport?: string | null
+  hobbies?: string | null
+  notes?: string | null
 }): ProfessionalUpdateInput {
   return {
     firstName: input.firstName,
@@ -212,9 +211,7 @@ function buildUpdateInput(input: {
     websiteUrl: input.websiteUrl,
     imageUrl: input.imageUrl,
     specialty:
-      input.primarySpecialtyLabel !== undefined
-        ? input.primarySpecialtyLabel
-        : input.specialty,
+      input.primarySpecialtyLabel !== undefined ? input.primarySpecialtyLabel : input.specialty,
     crmCouncil: input.crmCouncil,
     crmNumber: input.crmNumber,
     crmState: input.crmState,
@@ -222,33 +219,33 @@ function buildUpdateInput(input: {
     favoriteSport: input.favoriteSport,
     hobbies: input.hobbies,
     notes: input.notes,
-    manuallyEditedAt: new Date(),
-  };
+    manuallyEditedAt: new Date()
+  }
 }
 
 interface Dependencies {
-  doctorRepository: ProfessionalRepository;
+  doctorRepository: ProfessionalRepository
 }
 
 export class ListProfessionalsUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    facilityId?: string;
-    specialty?: string;
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    scope: ScopeContext;
+    page?: number
+    limit?: number
+    search?: string
+    facilityId?: string
+    specialty?: string
+    latitude?: number
+    longitude?: number
+    radiusKm?: number
+    scope: ScopeContext
   }) {
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 20;
+    const page = input.page ?? 1
+    const limit = input.limit ?? 20
 
     if (input.facilityId) {
-      assertResourceInScope(input.scope, "facility", input.facilityId);
+      assertResourceInScope(input.scope, 'facility', input.facilityId)
     }
 
     const { professionals, total } = await this.deps.doctorRepository.findAll({
@@ -262,8 +259,8 @@ export class ListProfessionalsUseCase {
       radiusKm: input.radiusKm,
       scope: input.scope.isGlobal
         ? { isGlobal: true }
-        : { isGlobal: false, facilityIds: input.scope.facilityIds },
-    });
+        : { isGlobal: false, facilityIds: input.scope.facilityIds }
+    })
 
     return {
       data: professionals.map(serializeProfessionalSummary),
@@ -271,9 +268,9 @@ export class ListProfessionalsUseCase {
         page,
         limit,
         total,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
-    };
+        totalPages: Math.ceil(total / limit) || 1
+      }
+    }
   }
 }
 
@@ -281,15 +278,15 @@ export class GetProfessionalUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: { professionalId: string; scope: ScopeContext }) {
-    const professional = await this.deps.doctorRepository.findById(input.professionalId);
+    const professional = await this.deps.doctorRepository.findById(input.professionalId)
 
     if (!professional) {
-      return null;
+      return null
     }
 
-    assertProfessionalAccessible(input.scope, professional.facilityIds);
+    assertProfessionalAccessible(input.scope, professional.facilityIds)
 
-    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+    return serializeProfessionalProfile(professional, this.deps.doctorRepository)
   }
 }
 
@@ -297,18 +294,14 @@ export class ListProfessionalNotesUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: { professionalId: string; userId: string; scope: ScopeContext }) {
-    await getAccessibleProfessional(
-      this.deps.doctorRepository,
-      input.professionalId,
-      input.scope
-    );
+    await getAccessibleProfessional(this.deps.doctorRepository, input.professionalId, input.scope)
 
     const notes = await this.deps.doctorRepository.findNotesByProfessionalAndUser(
       input.professionalId,
       input.userId
-    );
+    )
 
-    return notes.map(serializeProfessionalNote);
+    return notes.map(serializeProfessionalNote)
   }
 }
 
@@ -316,52 +309,43 @@ export class CreateProfessionalNoteUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: {
-    professionalId: string;
-    userId: string;
-    note: string;
-    scope: ScopeContext;
+    professionalId: string
+    userId: string
+    note: string
+    scope: ScopeContext
   }) {
-    await getAccessibleProfessional(
-      this.deps.doctorRepository,
-      input.professionalId,
-      input.scope
-    );
+    await getAccessibleProfessional(this.deps.doctorRepository, input.professionalId, input.scope)
 
     return serializeProfessionalNote(
       await this.deps.doctorRepository.createNote({
         professionalId: input.professionalId,
         userId: input.userId,
-        note: input.note,
+        note: input.note
       })
-    );
+    )
   }
 }
 
 export class CreateDoctorUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(
-    input: Parameters<typeof buildCreateInput>[0] & { scope: ScopeContext }
-  ) {
-    const facilityIds = input.facilityIds ?? [];
+  async execute(input: Parameters<typeof buildCreateInput>[0] & { scope: ScopeContext }) {
+    const facilityIds = input.facilityIds ?? []
 
     if (facilityIds.length > 0) {
-      assertFacilityIdsInScope(input.scope, facilityIds);
+      assertFacilityIdsInScope(input.scope, facilityIds)
 
-      const existingFacilityIds = await this.deps.doctorRepository.findExistingFacilityIds(
-        facilityIds
-      );
+      const existingFacilityIds =
+        await this.deps.doctorRepository.findExistingFacilityIds(facilityIds)
 
       if (existingFacilityIds.length !== facilityIds.length) {
-        throw new ResourceNotFoundError("Facility", "one or more facilityIds");
+        throw new ResourceNotFoundError('Facility', 'one or more facilityIds')
       }
     }
 
-    const professional = await this.deps.doctorRepository.create(
-      buildCreateInput(input)
-    );
+    const professional = await this.deps.doctorRepository.create(buildCreateInput(input))
 
-    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+    return serializeProfessionalProfile(professional, this.deps.doctorRepository)
   }
 }
 
@@ -370,35 +354,34 @@ export class UpdateDoctorUseCase {
 
   async execute(
     input: {
-      professionalId: string;
-      scope: ScopeContext;
-      facilityIds?: string[];
+      professionalId: string
+      scope: ScopeContext
+      facilityIds?: string[]
     } & Parameters<typeof buildUpdateInput>[0]
   ) {
-    const existing = await this.deps.doctorRepository.findById(input.professionalId);
+    const existing = await this.deps.doctorRepository.findById(input.professionalId)
 
     if (!existing) {
-      return null;
+      return null
     }
 
-    assertProfessionalAccessible(input.scope, existing.facilityIds);
+    assertProfessionalAccessible(input.scope, existing.facilityIds)
 
     if (input.facilityIds) {
       throw new ValidationError([
         {
-          field: "facilityIds",
-          message:
-            "Use facility association endpoints to manage facility-professional links",
-        },
-      ]);
+          field: 'facilityIds',
+          message: 'Use facility association endpoints to manage facility-professional links'
+        }
+      ])
     }
 
     const professional = await this.deps.doctorRepository.update(
       input.professionalId,
       buildUpdateInput(input)
-    );
+    )
 
-    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+    return serializeProfessionalProfile(professional, this.deps.doctorRepository)
   }
 }
 
@@ -406,15 +389,15 @@ export class DeleteDoctorUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: { professionalId: string; scope: ScopeContext }) {
-    const existing = await this.deps.doctorRepository.findById(input.professionalId);
+    const existing = await this.deps.doctorRepository.findById(input.professionalId)
 
     if (!existing) {
-      return false;
+      return false
     }
 
-    assertProfessionalAccessible(input.scope, existing.facilityIds);
+    assertProfessionalAccessible(input.scope, existing.facilityIds)
 
-    await this.deps.doctorRepository.softDelete(input.professionalId);
-    return true;
+    await this.deps.doctorRepository.softDelete(input.professionalId)
+    return true
   }
 }

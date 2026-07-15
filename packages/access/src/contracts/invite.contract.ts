@@ -1,25 +1,25 @@
-import type { InvitationStatus as InviteStatus } from "@atlasmed/database";
+import type { InvitationStatus as InviteStatus } from '@atlasmed/database'
 
-import type { RoleContract } from "./role.contract";
+import type { RoleContract } from './role.contract'
 
 export interface InviteContract {
-  id: string;
+  id: string
 
-  email?: string;
+  email?: string
 
-  phoneNumber?: string;
+  phoneNumber?: string
 
-  status: InviteStatus;
+  status: InviteStatus
 
-  role: RoleContract;
+  role: RoleContract
 
-  expiresAt: Date;
+  expiresAt: Date
 
-  acceptedAt?: Date;
+  acceptedAt?: Date
 
-  revokedAt?: Date;
+  revokedAt?: Date
 
-  createdAt: Date;
+  createdAt: Date
 
-  updatedAt: Date;
+  updatedAt: Date
 }

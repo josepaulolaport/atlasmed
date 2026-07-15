@@ -1,12 +1,12 @@
-import { describe, expect, it } from "bun:test";
-import type { ScopeContext } from "@atlasmed/access";
-import { ListFacilitiesUseCase } from "./facility.use-cases";
+import { describe, expect, it } from 'bun:test'
+import type { ScopeContext } from '@atlasmed/access'
 import type {
   FacilityListRecord,
-  FacilityRepository,
-} from "../interfaces/facility.repository.interface";
+  FacilityRepository
+} from '../interfaces/facility.repository.interface'
+import { ListFacilitiesUseCase } from './facility.use-cases'
 
-const now = new Date("2026-01-01T00:00:00.000Z");
+const now = new Date('2026-01-01T00:00:00.000Z')
 
 function facilityRecord(id: string): FacilityListRecord {
   return {
@@ -19,9 +19,9 @@ function facilityRecord(id: string): FacilityListRecord {
     cpf: null,
     lat: null,
     lng: null,
-    territoryId: "territory-1",
-    territoryAssignmentStatus: "assigned",
-    territoryAssignmentSource: "manual",
+    territoryId: 'territory-1',
+    territoryAssignmentStatus: 'assigned',
+    territoryAssignmentSource: 'manual',
     purchaseStatus: null,
     sourceProvider: null,
     externalSourceId: null,
@@ -36,96 +36,94 @@ function facilityRecord(id: string): FacilityListRecord {
     updatedAt: now,
     services: [],
     professionalCount: 3,
-    consultantName: null,
-  };
+    consultantName: null
+  }
 }
 
-function fakeRepository(
-  findAll: FacilityRepository["findAll"],
-): FacilityRepository {
+function fakeRepository(findAll: FacilityRepository['findAll']): FacilityRepository {
   return {
     findAll,
     findById: async () => null,
     findByExternalId: async () => null,
     findSourceTrackedByProvider: async () => [],
-    create: async () => facilityRecord("created"),
-    update: async () => facilityRecord("updated"),
+    create: async () => facilityRecord('created'),
+    update: async () => facilityRecord('updated'),
     softDelete: async () => {},
-    reactivate: async () => facilityRecord("reactivated"),
+    reactivate: async () => facilityRecord('reactivated'),
     markSourceAbsent: async () => {},
     upsertFromSource: async () => ({
-      facility: facilityRecord("upserted"),
+      facility: facilityRecord('upserted'),
       created: true,
-      updated: false,
+      updated: false
     }),
     findIdsByTerritoryIds: async () => [],
-    applyApprovedFieldUpdates: async () => facilityRecord("approved"),
-  };
+    applyApprovedFieldUpdates: async () => facilityRecord('approved')
+  }
 }
 
-describe("ListFacilitiesUseCase", () => {
-  it("returns pagination totals from the repository", async () => {
+describe('ListFacilitiesUseCase', () => {
+  it('returns pagination totals from the repository', async () => {
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: fakeRepository(async () => ({
-        facilities: [facilityRecord("facility-1")],
-        total: 27,
-      })),
-    });
+        facilities: [facilityRecord('facility-1')],
+        total: 27
+      }))
+    })
 
     const result = await useCase.execute({
       page: 2,
       limit: 10,
       scope: {
-  isGlobal: true,
-  assignedTerritoryIds: [],
-  effectiveTerritoryIds: [],
-  analyticsEffectiveTerritoryIds: [],
-  territoryIds: [],
-  facilityIds: [],
-  analyticsFacilityIds: [],
-  clinicIds: [],
-  analyticsClinicIds: [],
-  managedUserIds: [],
-  isOperationallyActive: true,
-},
-    });
+        isGlobal: true,
+        assignedTerritoryIds: [],
+        effectiveTerritoryIds: [],
+        analyticsEffectiveTerritoryIds: [],
+        territoryIds: [],
+        facilityIds: [],
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true
+      }
+    })
 
-    expect(result.data).toHaveLength(1);
+    expect(result.data).toHaveLength(1)
     expect(result.pagination).toEqual({
       page: 2,
       limit: 10,
       total: 27,
-      totalPages: 3,
-    });
-  });
+      totalPages: 3
+    })
+  })
 
-  it("passes scoped facility ids to the repository", async () => {
-    let receivedScope: unknown;
+  it('passes scoped facility ids to the repository', async () => {
+    let receivedScope: unknown
     const scope: ScopeContext = {
       isGlobal: false,
-      assignedTerritoryIds: ["territory-1"],
-      effectiveTerritoryIds: ["territory-1"],
-      analyticsEffectiveTerritoryIds: ["territory-1"],
-      territoryIds: ["territory-1"],
-      facilityIds: ["facility-1"],
-      analyticsFacilityIds: ["facility-1"],
-      clinicIds: ["facility-1"],
-      analyticsClinicIds: ["facility-1"],
+      assignedTerritoryIds: ['territory-1'],
+      effectiveTerritoryIds: ['territory-1'],
+      analyticsEffectiveTerritoryIds: ['territory-1'],
+      territoryIds: ['territory-1'],
+      facilityIds: ['facility-1'],
+      analyticsFacilityIds: ['facility-1'],
+      clinicIds: ['facility-1'],
+      analyticsClinicIds: ['facility-1'],
       managedUserIds: [],
-      isOperationallyActive: true,
-    };
+      isOperationallyActive: true
+    }
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: fakeRepository(async (params) => {
-        receivedScope = params.scope;
-        return { facilities: [], total: 0 };
-      }),
-    });
+        receivedScope = params.scope
+        return { facilities: [], total: 0 }
+      })
+    })
 
-    await useCase.execute({ scope });
+    await useCase.execute({ scope })
 
     expect(receivedScope).toEqual({
       isGlobal: false,
-      facilityIds: ["facility-1"],
-    });
-  });
-});
+      facilityIds: ['facility-1']
+    })
+  })
+})

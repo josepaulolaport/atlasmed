@@ -1,54 +1,55 @@
-import { z } from "zod";
-import { computeContentHash, normalizeText } from "./content-hash";
-import type { SanitizedFacilityRecord } from "../interfaces/registry-source.port";
+import { z } from 'zod'
+import type { SanitizedFacilityRecord } from '../interfaces/registry-source.port'
+import { computeContentHash, normalizeText } from './content-hash'
 
 const clinicSchema = z.object({
   externalSourceId: z.string().trim().min(1).max(200),
   name: z.string().trim().min(1).max(200),
   lat: z.coerce.number().min(-90).max(90).optional().nullable(),
-  lng: z.coerce.number().min(-180).max(180).optional().nullable(),
-});
+  lng: z.coerce.number().min(-180).max(180).optional().nullable()
+})
 
 export function sanitizeFacilityRecord(raw: unknown): SanitizedFacilityRecord | null {
-  const parsed = clinicSchema.safeParse(raw);
+  const parsed = clinicSchema.safeParse(raw)
   if (!parsed.success) {
-    return null;
+    return null
   }
 
-  const name = normalizeText(parsed.data.name);
-  const lat = parsed.data.lat ?? null;
-  const lng = parsed.data.lng ?? null;
+  const name = normalizeText(parsed.data.name)
+  const lat = parsed.data.lat ?? null
+  const lng = parsed.data.lng ?? null
 
   const contentHash = computeContentHash({
     externalSourceId: parsed.data.externalSourceId,
     name,
     lat,
-    lng,
-  });
+    lng
+  })
 
   return {
     externalSourceId: parsed.data.externalSourceId,
     name,
     lat,
     lng,
-    contentHash,
-  };
+    contentHash
+  }
 }
 
-export function sanitizeFacilityBatch(
-  records: unknown[]
-): { valid: SanitizedFacilityRecord[]; invalidCount: number } {
-  const valid: SanitizedFacilityRecord[] = [];
-  let invalidCount = 0;
+export function sanitizeFacilityBatch(records: unknown[]): {
+  valid: SanitizedFacilityRecord[]
+  invalidCount: number
+} {
+  const valid: SanitizedFacilityRecord[] = []
+  let invalidCount = 0
 
   for (const record of records) {
-    const sanitized = sanitizeFacilityRecord(record);
+    const sanitized = sanitizeFacilityRecord(record)
     if (sanitized) {
-      valid.push(sanitized);
+      valid.push(sanitized)
     } else {
-      invalidCount += 1;
+      invalidCount += 1
     }
   }
 
-  return { valid, invalidCount };
+  return { valid, invalidCount }
 }

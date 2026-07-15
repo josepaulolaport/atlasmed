@@ -1,43 +1,47 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { TerritoryMapEditor } from '@/components/territory/map/territory-map-editor'
+import { TerritoryPicker } from '@/components/territory/territory-picker'
+import { isApprovalRequest } from '@/components/territory/territory-utils'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { TerritoryPicker } from "@/components/territory/territory-picker";
-import { TerritoryMapEditor } from "@/components/territory/map/territory-map-editor";
-import { territoriesApi } from "@/lib/api/territories";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import { isValidGeoJsonPolygon, normalizeTerritoryBoundary, parseGeoJsonPolygon } from "@/lib/territory/geojson";
+  SelectValue
+} from '@/components/ui/select'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { territoriesApi } from '@/lib/api/territories'
+import {
+  isValidGeoJsonPolygon,
+  normalizeTerritoryBoundary,
+  parseGeoJsonPolygon
+} from '@/lib/territory/geojson'
 import {
   formatCountryCode,
   isIsoCountryCode,
-  slugifyTerritoryIdentifier,
-} from "@/lib/territory/territory-identifier";
-import { toast } from "@/hooks/use-toast";
-import { isApprovalRequest } from "@/components/territory/territory-utils";
-import type { GeoJsonPolygon, Territory, TerritoryType } from "@/types/territory";
+  slugifyTerritoryIdentifier
+} from '@/lib/territory/territory-identifier'
+import type { GeoJsonPolygon, Territory, TerritoryType } from '@/types/territory'
 
 interface CreateTerritoryDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  parentId?: string;
-  isAdmin: boolean;
-  onSuccess: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  parentId?: string
+  isAdmin: boolean
+  onSuccess: () => void
 }
 
 export function CreateTerritoryDialog({
@@ -45,151 +49,151 @@ export function CreateTerritoryDialog({
   onOpenChange,
   parentId,
   isAdmin,
-  onSuccess,
+  onSuccess
 }: CreateTerritoryDialogProps) {
-  const [name, setName] = useState("");
-  const [identifier, setIdentifier] = useState("");
-  const [identifierTouched, setIdentifierTouched] = useState(false);
-  const [marketCountryCode, setMarketCountryCode] = useState("BR");
-  const [territoryTypeId, setTerritoryTypeId] = useState("");
-  const [selectedParentId, setSelectedParentId] = useState(parentId ?? "");
-  const [reason, setReason] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [types, setTypes] = useState<TerritoryType[]>([]);
-  const [territories, setTerritories] = useState<Territory[]>([]);
-  const [boundaryMode, setBoundaryMode] = useState<"map" | "json">("map");
-  const [boundaryDraft, setBoundaryDraft] = useState<GeoJsonPolygon | null>(null);
-  const [boundaryJson, setBoundaryJson] = useState("");
+  const [name, setName] = useState('')
+  const [identifier, setIdentifier] = useState('')
+  const [identifierTouched, setIdentifierTouched] = useState(false)
+  const [marketCountryCode, setMarketCountryCode] = useState('BR')
+  const [territoryTypeId, setTerritoryTypeId] = useState('')
+  const [selectedParentId, setSelectedParentId] = useState(parentId ?? '')
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [types, setTypes] = useState<TerritoryType[]>([])
+  const [territories, setTerritories] = useState<Territory[]>([])
+  const [boundaryMode, setBoundaryMode] = useState<'map' | 'json'>('map')
+  const [boundaryDraft, setBoundaryDraft] = useState<GeoJsonPolygon | null>(null)
+  const [boundaryJson, setBoundaryJson] = useState('')
 
   const selectedType = useMemo(
     () => types.find((type) => type.id === territoryTypeId),
     [types, territoryTypeId]
-  );
+  )
 
-  const requiresBoundary = selectedType?.canHaveBoundary ?? true;
-  const isCountryType = selectedType?.isCountryLevel ?? false;
+  const requiresBoundary = selectedType?.canHaveBoundary ?? true
+  const isCountryType = selectedType?.isCountryLevel ?? false
 
   const countryMarkets = useMemo(
     () => territories.filter((territory) => territory.territoryType.isCountryLevel),
     [territories]
-  );
+  )
 
   const selectedParent = useMemo(
     () => territories.find((territory) => territory.id === selectedParentId),
     [territories, selectedParentId]
-  );
+  )
 
   const effectiveMarketCountryCode = useMemo(() => {
     if (isCountryType) {
-      return formatCountryCode(marketCountryCode);
+      return formatCountryCode(marketCountryCode)
     }
     if (selectedParent?.countryCode) {
-      return selectedParent.countryCode;
+      return selectedParent.countryCode
     }
-    return formatCountryCode(marketCountryCode);
-  }, [isCountryType, marketCountryCode, selectedParent?.countryCode]);
+    return formatCountryCode(marketCountryCode)
+  }, [isCountryType, marketCountryCode, selectedParent?.countryCode])
 
   const loadFormData = useCallback(async () => {
     const [typesResponse, territoriesResponse] = await Promise.all([
       territoriesApi.listTerritoryTypes(),
-      territoriesApi.listTerritories("flat"),
-    ]);
-    setTypes(typesResponse.data);
-    setTerritories(territoriesResponse.data as Territory[]);
-    setTerritoryTypeId((current) => current || typesResponse.data[0]?.id || "");
+      territoriesApi.listTerritories('flat')
+    ])
+    setTypes(typesResponse.data)
+    setTerritories(territoriesResponse.data as Territory[])
+    setTerritoryTypeId((current) => current || typesResponse.data[0]?.id || '')
 
     const countries = (territoriesResponse.data as Territory[]).filter(
       (territory) => territory.territoryType.isCountryLevel
-    );
+    )
     if (countries[0]?.countryCode) {
-      setMarketCountryCode(countries[0].countryCode);
+      setMarketCountryCode(countries[0].countryCode)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    if (!open) return;
-    void loadFormData();
-  }, [open, loadFormData]);
+    if (!open) return
+    void loadFormData()
+  }, [open, loadFormData])
 
   useEffect(() => {
-    if (!open || !parentId) return;
-    setSelectedParentId(parentId);
-  }, [open, parentId]);
+    if (!open || !parentId) return
+    setSelectedParentId(parentId)
+  }, [open, parentId])
 
   const resetForm = () => {
-    setName("");
-    setIdentifier("");
-    setIdentifierTouched(false);
-    setMarketCountryCode(countryMarkets[0]?.countryCode ?? "BR");
-    setTerritoryTypeId(types[0]?.id ?? "");
-    setSelectedParentId(parentId ?? "");
-    setReason("");
-    setBoundaryMode("map");
-    setBoundaryDraft(null);
-    setBoundaryJson("");
-  };
+    setName('')
+    setIdentifier('')
+    setIdentifierTouched(false)
+    setMarketCountryCode(countryMarkets[0]?.countryCode ?? 'BR')
+    setTerritoryTypeId(types[0]?.id ?? '')
+    setSelectedParentId(parentId ?? '')
+    setReason('')
+    setBoundaryMode('map')
+    setBoundaryDraft(null)
+    setBoundaryJson('')
+  }
 
   const handleOpenChange = (next: boolean) => {
     if (!next) {
-      resetForm();
+      resetForm()
     }
-    onOpenChange(next);
-  };
+    onOpenChange(next)
+  }
 
   const handleNameChange = (value: string) => {
-    setName(value);
+    setName(value)
     if (!isCountryType && !identifierTouched) {
-      setIdentifier(slugifyTerritoryIdentifier(value));
+      setIdentifier(slugifyTerritoryIdentifier(value))
     }
-  };
+  }
 
   const resolveBoundary = (): GeoJsonPolygon | null => {
-    if (!requiresBoundary) return null;
-    if (boundaryMode === "json") {
-      return parseGeoJsonPolygon(boundaryJson);
+    if (!requiresBoundary) return null
+    if (boundaryMode === 'json') {
+      return parseGeoJsonPolygon(boundaryJson)
     }
-    return normalizeTerritoryBoundary(boundaryDraft);
-  };
+    return normalizeTerritoryBoundary(boundaryDraft)
+  }
 
   const handleSave = async () => {
     if (!name.trim() || !territoryTypeId) {
       toast({
-        title: "Validation",
-        description: "Name and type are required",
-        variant: "destructive",
-      });
-      return;
+        title: 'Validation',
+        description: 'Name and type are required',
+        variant: 'destructive'
+      })
+      return
     }
 
     if (isCountryType) {
       if (!isIsoCountryCode(marketCountryCode)) {
         toast({
-          title: "Validation",
-          description: "Enter a valid two-letter ISO country code (e.g. BR)",
-          variant: "destructive",
-        });
-        return;
+          title: 'Validation',
+          description: 'Enter a valid two-letter ISO country code (e.g. BR)',
+          variant: 'destructive'
+        })
+        return
       }
     } else if (!identifier.trim()) {
       toast({
-        title: "Validation",
-        description: "Territory identifier is required",
-        variant: "destructive",
-      });
-      return;
+        title: 'Validation',
+        description: 'Territory identifier is required',
+        variant: 'destructive'
+      })
+      return
     }
 
-    const boundary = resolveBoundary();
+    const boundary = resolveBoundary()
     if (requiresBoundary && !isValidGeoJsonPolygon(boundary)) {
       toast({
-        title: "Validation",
-        description: "Draw or paste a valid GeoJSON polygon before creating the territory",
-        variant: "destructive",
-      });
-      return;
+        title: 'Validation',
+        description: 'Draw or paste a valid GeoJSON polygon before creating the territory',
+        variant: 'destructive'
+      })
+      return
     }
 
-    setSaving(true);
+    setSaving(true)
     try {
       const result = await territoriesApi.createTerritory({
         name: name.trim(),
@@ -200,44 +204,44 @@ export function CreateTerritoryDialog({
         countryCode: effectiveMarketCountryCode,
         parentId: isCountryType ? undefined : selectedParentId || undefined,
         reason: reason.trim() || undefined,
-        boundary: boundary ?? undefined,
-      });
+        boundary: boundary ?? undefined
+      })
 
       if (isApprovalRequest(result)) {
         toast({
-          title: "Submitted for approval",
-          description: "Your territory creation request is pending admin review.",
-          variant: "success",
-        });
+          title: 'Submitted for approval',
+          description: 'Your territory creation request is pending admin review.',
+          variant: 'success'
+        })
       } else {
-        const resolution = result.boundaryResolution;
-        if (resolution?.mode === "rep_patch") {
+        const resolution = result.boundaryResolution
+        if (resolution?.mode === 'rep_patch') {
           toast({
-            title: "Territory created",
+            title: 'Territory created',
             description: `Rep patch linked to manager zone ${resolution.managerTerritoryId}.`,
-            variant: "success",
-          });
+            variant: 'success'
+          })
         } else {
           toast({
-            title: "Success",
+            title: 'Success',
             description: `Territory ${result.slug} created with boundary.`,
-            variant: "success",
-          });
+            variant: 'success'
+          })
         }
       }
 
-      handleOpenChange(false);
-      onSuccess();
+      handleOpenChange(false)
+      onSuccess()
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to create territory"),
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: getApiErrorMessage(err, 'Failed to create territory'),
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -246,10 +250,10 @@ export function CreateTerritoryDialog({
           <DialogTitle>Criar território</DialogTitle>
         </DialogHeader>
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
-          <p className="text-sm text-gray-500">
-            Um <strong>mercado</strong> é o país ao qual este território pertence. Um{" "}
-            <strong>identificador</strong> é seu ID único no sistema. A hierarquia de pai vem
-            da sobreposição de limites.
+          <p className="text-gray-500 text-sm">
+            Um <strong>mercado</strong> é o país ao qual este território pertence. Um{' '}
+            <strong>identificador</strong> é seu ID único no sistema. A hierarquia de pai vem da
+            sobreposição de limites.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -268,7 +272,7 @@ export function CreateTerritoryDialog({
                 </SelectContent>
               </Select>
               {selectedType?.description ? (
-                <p className="mt-1 text-xs text-gray-500">{selectedType.description}</p>
+                <p className="mt-1 text-gray-500 text-xs">{selectedType.description}</p>
               ) : null}
             </div>
 
@@ -282,9 +286,9 @@ export function CreateTerritoryDialog({
                   maxLength={2}
                   placeholder="BR"
                 />
-                <p className="mt-1 text-xs text-gray-500">
-                  Cria o território de país de nível superior. Seu identificador será{" "}
-                  <code>{formatCountryCode(marketCountryCode).toLowerCase() || "br"}</code>.
+                <p className="mt-1 text-gray-500 text-xs">
+                  Cria o território de país de nível superior. Seu identificador será{' '}
+                  <code>{formatCountryCode(marketCountryCode).toLowerCase() || 'br'}</code>.
                 </p>
               </div>
             ) : (
@@ -293,14 +297,11 @@ export function CreateTerritoryDialog({
                   <Label htmlFor="market-country">Mercado (país)</Label>
                   {selectedParent ? (
                     <p className="mt-2 rounded-md border bg-gray-50 px-3 py-2 text-sm">
-                      {selectedParent.countryCode ?? effectiveMarketCountryCode} — herdado do
-                      pai <span className="font-medium">{selectedParent.name}</span>
+                      {selectedParent.countryCode ?? effectiveMarketCountryCode} — herdado do pai{' '}
+                      <span className="font-medium">{selectedParent.name}</span>
                     </p>
                   ) : countryMarkets.length > 0 ? (
-                    <Select
-                      value={effectiveMarketCountryCode}
-                      onValueChange={setMarketCountryCode}
-                    >
+                    <Select value={effectiveMarketCountryCode} onValueChange={setMarketCountryCode}>
                       <SelectTrigger id="market-country">
                         <SelectValue placeholder="Selecionar mercado (país)" />
                       </SelectTrigger>
@@ -324,7 +325,7 @@ export function CreateTerritoryDialog({
                       placeholder="BR"
                     />
                   )}
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-gray-500 text-xs">
                     O geovínculo considera apenas territórios do mesmo mercado.
                   </p>
                 </div>
@@ -334,25 +335,25 @@ export function CreateTerritoryDialog({
                     id="territory-identifier"
                     value={identifier}
                     onChange={(e) => {
-                      setIdentifierTouched(true);
-                      setIdentifier(e.target.value.toLowerCase());
+                      setIdentifierTouched(true)
+                      setIdentifier(e.target.value.toLowerCase())
                     }}
                     placeholder="sudeste"
                   />
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-gray-500 text-xs">
                     ID único para este território (minúsculas, ex.: <code>sudeste</code>).
                   </p>
                 </div>
               </>
             )}
 
-            <div className={isCountryType ? "md:col-span-2" : "md:col-span-2"}>
+            <div className={isCountryType ? 'md:col-span-2' : 'md:col-span-2'}>
               <Label htmlFor="territory-name">Nome de exibição</Label>
               <Input
                 id="territory-name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder={isCountryType ? "Brasil" : "Sudeste"}
+                placeholder={isCountryType ? 'Brasil' : 'Sudeste'}
               />
             </div>
           </div>
@@ -372,7 +373,7 @@ export function CreateTerritoryDialog({
             <div className="space-y-3">
               <div>
                 <Label>Limite</Label>
-                <p className="text-xs text-gray-500">
+                <p className="text-gray-500 text-xs">
                   Obrigatório. Desenhe um ou mais polígonos no mapa ou cole um GeoJSON Polygon /
                   MultiPolygon.
                 </p>
@@ -381,21 +382,21 @@ export function CreateTerritoryDialog({
                 <Button
                   type="button"
                   size="sm"
-                  variant={boundaryMode === "map" ? "default" : "outline"}
-                  onClick={() => setBoundaryMode("map")}
+                  variant={boundaryMode === 'map' ? 'default' : 'outline'}
+                  onClick={() => setBoundaryMode('map')}
                 >
                   Mapa
                 </Button>
                 <Button
                   type="button"
                   size="sm"
-                  variant={boundaryMode === "json" ? "default" : "outline"}
-                  onClick={() => setBoundaryMode("json")}
+                  variant={boundaryMode === 'json' ? 'default' : 'outline'}
+                  onClick={() => setBoundaryMode('json')}
                 >
                   GeoJSON
                 </Button>
               </div>
-              {boundaryMode === "map" ? (
+              {boundaryMode === 'map' ? (
                 <TerritoryMapEditor value={boundaryDraft} onChange={setBoundaryDraft} />
               ) : (
                 <textarea
@@ -407,7 +408,7 @@ export function CreateTerritoryDialog({
               )}
             </div>
           ) : (
-            <p className="text-sm text-gray-500">
+            <p className="text-gray-500 text-sm">
               Este tipo de território não usa limites geográficos.
             </p>
           )}
@@ -428,10 +429,10 @@ export function CreateTerritoryDialog({
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Criando..." : isAdmin ? "Criar território" : "Enviar para aprovação"}
+            {saving ? 'Criando...' : isAdmin ? 'Criar território' : 'Enviar para aprovação'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

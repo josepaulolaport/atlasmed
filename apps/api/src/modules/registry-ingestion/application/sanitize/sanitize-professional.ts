@@ -1,54 +1,55 @@
-import { z } from "zod";
-import { computeContentHash, normalizeText } from "./content-hash";
-import type { SanitizedProfessionalRecord } from "../interfaces/registry-source.port";
+import { z } from 'zod'
+import type { SanitizedProfessionalRecord } from '../interfaces/registry-source.port'
+import { computeContentHash, normalizeText } from './content-hash'
 
 const doctorSchema = z.object({
   externalSourceId: z.string().trim().min(1).max(200),
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
-  specialty: z.string().trim().max(200).optional().nullable(),
-});
+  specialty: z.string().trim().max(200).optional().nullable()
+})
 
 export function sanitizeProfessionalRecord(raw: unknown): SanitizedProfessionalRecord | null {
-  const parsed = doctorSchema.safeParse(raw);
+  const parsed = doctorSchema.safeParse(raw)
   if (!parsed.success) {
-    return null;
+    return null
   }
 
-  const firstName = normalizeText(parsed.data.firstName);
-  const lastName = normalizeText(parsed.data.lastName);
-  const specialty = parsed.data.specialty ? normalizeText(parsed.data.specialty) : null;
+  const firstName = normalizeText(parsed.data.firstName)
+  const lastName = normalizeText(parsed.data.lastName)
+  const specialty = parsed.data.specialty ? normalizeText(parsed.data.specialty) : null
 
   const contentHash = computeContentHash({
     externalSourceId: parsed.data.externalSourceId,
     firstName,
     lastName,
-    specialty,
-  });
+    specialty
+  })
 
   return {
     externalSourceId: parsed.data.externalSourceId,
     firstName,
     lastName,
     specialty,
-    contentHash,
-  };
+    contentHash
+  }
 }
 
-export function sanitizeProfessionalBatch(
-  records: unknown[]
-): { valid: SanitizedProfessionalRecord[]; invalidCount: number } {
-  const valid: SanitizedProfessionalRecord[] = [];
-  let invalidCount = 0;
+export function sanitizeProfessionalBatch(records: unknown[]): {
+  valid: SanitizedProfessionalRecord[]
+  invalidCount: number
+} {
+  const valid: SanitizedProfessionalRecord[] = []
+  let invalidCount = 0
 
   for (const record of records) {
-    const sanitized = sanitizeProfessionalRecord(record);
+    const sanitized = sanitizeProfessionalRecord(record)
     if (sanitized) {
-      valid.push(sanitized);
+      valid.push(sanitized)
     } else {
-      invalidCount += 1;
+      invalidCount += 1
     }
   }
 
-  return { valid, invalidCount };
+  return { valid, invalidCount }
 }

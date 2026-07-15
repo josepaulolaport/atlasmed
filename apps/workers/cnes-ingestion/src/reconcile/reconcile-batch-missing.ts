@@ -1,15 +1,15 @@
-import { sql } from "drizzle-orm";
-import { db } from "../infrastructure/db";
+import { sql } from 'drizzle-orm'
+import { db } from '../infrastructure/db'
 
 export async function batchFacilityDeactivations(input: {
-  ingestionRunId: string;
-  now: Date;
+  ingestionRunId: string
+  now: Date
 }): Promise<number> {
   const stagingCountResult = await db.execute<{ count: bigint }>(
     sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facilities`
-  );
+  )
   if (Number(stagingCountResult[0]?.count ?? 0) === 0) {
-    return 0;
+    return 0
   }
 
   await db.execute(sql`
@@ -27,7 +27,7 @@ export async function batchFacilityDeactivations(input: {
         SELECT 1 FROM registry_staging.facilities sf
         WHERE sf.facility_id = f.external_source_id
       )
-  `);
+  `)
 
   const rows = await db.execute<{ count: bigint }>(sql`
     WITH missing AS (
@@ -66,20 +66,20 @@ export async function batchFacilityDeactivations(input: {
       ${input.now}
     FROM updated u
     RETURNING 1
-  `);
+  `)
 
-  return rows.length;
+  return rows.length
 }
 
 export async function batchAssociationRemovals(input: {
-  ingestionRunId: string;
-  now: Date;
+  ingestionRunId: string
+  now: Date
 }): Promise<number> {
   const stagingCountResult = await db.execute<{ count: bigint }>(
     sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facility_professionals`
-  );
+  )
   if (Number(stagingCountResult[0]?.count ?? 0) === 0) {
-    return 0;
+    return 0
   }
 
   await db.execute(sql`
@@ -100,7 +100,7 @@ export async function batchAssociationRemovals(input: {
         WHERE sa.facility_id = f.external_source_id
           AND sa.professional_id = p.external_source_id
       )
-  `);
+  `)
 
   const rows = await db.execute<{ count: bigint }>(sql`
     WITH missing AS (
@@ -155,20 +155,20 @@ export async function batchAssociationRemovals(input: {
       ${input.now}
     FROM updated u
     RETURNING 1
-  `);
+  `)
 
-  return rows.length;
+  return rows.length
 }
 
 export async function batchRepresentativeRemovals(input: {
-  ingestionRunId: string;
-  now: Date;
+  ingestionRunId: string
+  now: Date
 }): Promise<number> {
   const stagingCountResult = await db.execute<{ count: bigint }>(
     sql`SELECT COUNT(*)::bigint AS count FROM registry_staging.facility_representatives`
-  );
+  )
   if (Number(stagingCountResult[0]?.count ?? 0) === 0) {
-    return 0;
+    return 0
   }
 
   await db.execute(sql`
@@ -186,7 +186,7 @@ export async function batchRepresentativeRemovals(input: {
         SELECT 1 FROM registry_staging.facility_representatives sr
         WHERE sr.facility_id = f.external_source_id
       )
-  `);
+  `)
 
   const rows = await db.execute<{ count: bigint }>(sql`
     WITH missing AS (
@@ -232,7 +232,7 @@ export async function batchRepresentativeRemovals(input: {
       ${input.now}
     FROM updated u
     RETURNING 1
-  `);
+  `)
 
-  return rows.length;
+  return rows.length
 }

@@ -1,54 +1,51 @@
-import { Elysia, t } from "elysia";
-import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
-import { accessUseCases } from "../../composition";
-import { twoFactorVerifyRateLimit } from "../middleware/rate-limit.middleware";
-import { getRefreshCookieOptions } from "./refresh-cookie";
-import { serializeAuthUser } from "./user.serializer";
-import { getClientIp } from "../../../../shared/utils/client-ip";
+import { REFRESH_TOKEN_COOKIE_NAME } from '@atlasmed/access'
+import { Elysia, t } from 'elysia'
+import { getClientIp } from '../../../../shared/utils/client-ip'
+import { accessUseCases } from '../../composition'
+import { twoFactorVerifyRateLimit } from '../middleware/rate-limit.middleware'
+import { getRefreshCookieOptions } from './refresh-cookie'
+import { serializeAuthUser } from './user.serializer'
 
 export const verify2FALoginRoute = new Elysia({
   detail: {
-    tags: ["Authentication"],
-  },
+    tags: ['Authentication']
+  }
 })
   .use(twoFactorVerifyRateLimit)
   .post(
-    "/login/2fa",
+    '/login/2fa',
     async ({ body, request, cookie }) => {
       const result = await accessUseCases.verify2faLogin().execute({
         pendingToken: body.pendingToken,
         code: body.code,
         ipAddress: getClientIp(request),
-        userAgent: request.headers.get("user-agent") || undefined,
-        acceptLanguage: request.headers.get("accept-language") || undefined,
-      });
+        userAgent: request.headers.get('user-agent') || undefined,
+        acceptLanguage: request.headers.get('accept-language') || undefined
+      })
 
-      cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(
-        getRefreshCookieOptions(result.refreshToken)
-      );
+      cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(getRefreshCookieOptions(result.refreshToken))
 
       return {
         session: {
-          token: result.accessToken,
+          token: result.accessToken
         },
-        user: serializeAuthUser(result.user),
-      };
+        user: serializeAuthUser(result.user)
+      }
     },
     {
       detail: {
-        summary: "Complete login with 2FA",
-        description:
-          "Verify TOTP code to complete login after password authentication.",
-        tags: ["Authentication"],
+        summary: 'Complete login with 2FA',
+        description: 'Verify TOTP code to complete login after password authentication.',
+        tags: ['Authentication']
       },
       body: t.Object({
-        pendingToken: t.String({ description: "Pending login token from initial login" }),
-        code: t.String({ description: "6-digit TOTP code", minLength: 6, maxLength: 6 }),
+        pendingToken: t.String({ description: 'Pending login token from initial login' }),
+        code: t.String({ description: '6-digit TOTP code', minLength: 6, maxLength: 6 })
       }),
       response: {
         200: t.Object({
           session: t.Object({
-            token: t.String({ description: "JWT access token" }),
+            token: t.String({ description: 'JWT access token' })
           }),
           user: t.Object({
             id: t.String(),
@@ -62,10 +59,10 @@ export const verify2FALoginRoute = new Elysia({
             role: t.Object({
               id: t.String(),
               name: t.String(),
-              description: t.Optional(t.String()),
-            }),
-          }),
-        }),
-      },
+              description: t.Optional(t.String())
+            })
+          })
+        })
+      }
     }
-  );
+  )

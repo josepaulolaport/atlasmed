@@ -1,98 +1,98 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
-import { createMockMetricsService } from "../../test-helpers/metrics-mocks";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { createMockAuditLogService } from '../../test-helpers/audit-mocks'
+import { createMockMetricsService } from '../../test-helpers/metrics-mocks'
 
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
+mock.module('../../../../infrastructure/audit/audit-log.service', () => ({
+  auditLogService: createMockAuditLogService()
+}))
 
-mock.module("../../../../infrastructure/monitoring/metrics.service", () => ({
-  metricsService: createMockMetricsService(),
-}));
+mock.module('../../../../infrastructure/monitoring/metrics.service', () => ({
+  metricsService: createMockMetricsService()
+}))
 
-import { ChangeUserRoleUseCase } from "./change-user-role.use-case";
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import type { RoleRepository } from "../interfaces/role.repository.interface";
-import type { SessionRepository } from "../interfaces/session.repository.interface";
-import type { IAuthCache } from "../interfaces/auth-cache.interface";
-import type { ISessionCache } from "../interfaces/session-cache.interface";
-import {
-  createMockUserRepository,
-  createMockRoleRepository,
-  createMockSessionRepository,
-  createMockAuthCache,
-  createMockSessionCache,
-  createMockScopeService,
-  createMockUserWithRole,
-} from "../../test-helpers/fixtures";
-import { ROLE_PRIORITY_BY_NAME } from "../constants/role-priority.constants";
 import {
   InsufficientPermissionsError,
   OperationNotAllowedError,
   RoleNotFoundError,
-  UserNotFoundError,
-} from "../../../../shared/errors";
+  UserNotFoundError
+} from '../../../../shared/errors'
+import {
+  createMockAuthCache,
+  createMockRoleRepository,
+  createMockScopeService,
+  createMockSessionCache,
+  createMockSessionRepository,
+  createMockUserRepository,
+  createMockUserWithRole
+} from '../../test-helpers/fixtures'
+import { ROLE_PRIORITY_BY_NAME } from '../constants/role-priority.constants'
+import type { IAuthCache } from '../interfaces/auth-cache.interface'
+import type { RoleRepository } from '../interfaces/role.repository.interface'
+import type { SessionRepository } from '../interfaces/session.repository.interface'
+import type { ISessionCache } from '../interfaces/session-cache.interface'
+import type { UserRepository } from '../interfaces/user.repository.interface'
+import { ChangeUserRoleUseCase } from './change-user-role.use-case'
 
-describe("ChangeUserRoleUseCase", () => {
-  let changeUserRoleUseCase: ChangeUserRoleUseCase;
-  let mockUserRepository: UserRepository;
-  let mockRoleRepository: RoleRepository;
-  let mockSessionRepository: SessionRepository;
-  let mockAuthCache: IAuthCache;
-  let mockSessionCache: ISessionCache;
-  let mockScopeService: ReturnType<typeof createMockScopeService>;
+describe('ChangeUserRoleUseCase', () => {
+  let changeUserRoleUseCase: ChangeUserRoleUseCase
+  let mockUserRepository: UserRepository
+  let mockRoleRepository: RoleRepository
+  let mockSessionRepository: SessionRepository
+  let mockAuthCache: IAuthCache
+  let mockSessionCache: ISessionCache
+  let mockScopeService: ReturnType<typeof createMockScopeService>
 
   const targetUser = createMockUserWithRole({
-    user: { id: "user-123", roleId: "role-user" },
+    user: { id: 'user-123', roleId: 'role-user' },
     role: {
-      id: "role-user",
-      name: "REP",
-      priority: ROLE_PRIORITY_BY_NAME.REP,
-    },
-  });
+      id: 'role-user',
+      name: 'REP',
+      priority: ROLE_PRIORITY_BY_NAME.REP
+    }
+  })
 
   const adminActor = createMockUserWithRole({
-    user: { id: "admin-456" },
+    user: { id: 'admin-456' },
     role: {
-      id: "role-admin",
-      name: "ADMIN",
-      priority: ROLE_PRIORITY_BY_NAME.ADMIN,
-    },
-  });
+      id: 'role-admin',
+      name: 'ADMIN',
+      priority: ROLE_PRIORITY_BY_NAME.ADMIN
+    }
+  })
 
   const managerRole = {
-    id: "role-manager",
-    name: "MANAGER",
-    priority: ROLE_PRIORITY_BY_NAME.MANAGER,
-  };
+    id: 'role-manager',
+    name: 'MANAGER',
+    priority: ROLE_PRIORITY_BY_NAME.MANAGER
+  }
 
   beforeEach(() => {
     mockUserRepository = createMockUserRepository({
       findById: mock(async (id: string) => {
-        if (id === "user-123") return targetUser;
-        if (id === "admin-456") return adminActor;
-        return null;
-      }),
-    });
+        if (id === 'user-123') return targetUser
+        if (id === 'admin-456') return adminActor
+        return null
+      })
+    })
 
     mockRoleRepository = createMockRoleRepository({
       findById: mock(async (roleId: string) => {
-        if (roleId === "role-manager") return managerRole;
-        if (roleId === "role-user") {
+        if (roleId === 'role-manager') return managerRole
+        if (roleId === 'role-user') {
           return {
-            id: "role-user",
-            name: "REP",
-            priority: ROLE_PRIORITY_BY_NAME.REP,
-          };
+            id: 'role-user',
+            name: 'REP',
+            priority: ROLE_PRIORITY_BY_NAME.REP
+          }
         }
-        return null;
-      }),
-    });
+        return null
+      })
+    })
 
-    mockSessionRepository = createMockSessionRepository();
-    mockAuthCache = createMockAuthCache();
-    mockSessionCache = createMockSessionCache();
-    mockScopeService = createMockScopeService();
+    mockSessionRepository = createMockSessionRepository()
+    mockAuthCache = createMockAuthCache()
+    mockSessionCache = createMockSessionCache()
+    mockScopeService = createMockScopeService()
 
     changeUserRoleUseCase = new ChangeUserRoleUseCase({
       userRepository: mockUserRepository,
@@ -101,188 +101,188 @@ describe("ChangeUserRoleUseCase", () => {
       sessionCache: mockSessionCache,
       scopeService: mockScopeService,
       auditLog: createMockAuditLogService(),
-      metrics: createMockMetricsService(),
-    });
-  });
+      metrics: createMockMetricsService()
+    })
+  })
 
-  describe("successful role change", () => {
-    it("should change role via transaction and invalidate caches", async () => {
+  describe('successful role change', () => {
+    it('should change role via transaction and invalidate caches', async () => {
       await changeUserRoleUseCase.execute({
-        targetUserId: "user-123",
-        newRoleId: "role-manager",
-        changedBy: "admin-456",
-      });
+        targetUserId: 'user-123',
+        newRoleId: 'role-manager',
+        changedBy: 'admin-456'
+      })
 
       expect(mockUserRepository.changeRoleTransaction).toHaveBeenCalledWith({
-        userId: "user-123",
-        newRoleId: "role-manager",
-      });
-      expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith("user-123");
-      expect(mockAuthCache.invalidate).toHaveBeenCalledWith("user-123");
-      expect(mockScopeService.invalidate).toHaveBeenCalledWith("user-123");
-    });
+        userId: 'user-123',
+        newRoleId: 'role-manager'
+      })
+      expect(mockSessionCache.invalidateByUserId).toHaveBeenCalledWith('user-123')
+      expect(mockAuthCache.invalidate).toHaveBeenCalledWith('user-123')
+      expect(mockScopeService.invalidate).toHaveBeenCalledWith('user-123')
+    })
 
-    it("should not call legacy updateRole or session revoke paths", async () => {
+    it('should not call legacy updateRole or session revoke paths', async () => {
       await changeUserRoleUseCase.execute({
-        targetUserId: "user-123",
-        newRoleId: "role-manager",
-        changedBy: "admin-456",
-      });
+        targetUserId: 'user-123',
+        newRoleId: 'role-manager',
+        changedBy: 'admin-456'
+      })
 
-      expect(mockUserRepository.updateRole).not.toHaveBeenCalled();
-      expect(mockUserRepository.incrementTokenVersion).not.toHaveBeenCalled();
-      expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled();
-    });
-  });
+      expect(mockUserRepository.updateRole).not.toHaveBeenCalled()
+      expect(mockUserRepository.incrementTokenVersion).not.toHaveBeenCalled()
+      expect(mockSessionRepository.revokeAllByUserId).not.toHaveBeenCalled()
+    })
+  })
 
-  describe("validation", () => {
-    it("should throw when target user not found", async () => {
+  describe('validation', () => {
+    it('should throw when target user not found', async () => {
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "missing-user",
-          newRoleId: "role-manager",
-          changedBy: "admin-456",
+          targetUserId: 'missing-user',
+          newRoleId: 'role-manager',
+          changedBy: 'admin-456'
         })
-      ).rejects.toThrow(UserNotFoundError);
+      ).rejects.toThrow(UserNotFoundError)
 
-      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
-    });
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled()
+    })
 
-    it("should throw when actor not found", async () => {
+    it('should throw when actor not found', async () => {
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "role-manager",
-          changedBy: "missing-admin",
+          targetUserId: 'user-123',
+          newRoleId: 'role-manager',
+          changedBy: 'missing-admin'
         })
-      ).rejects.toThrow(UserNotFoundError);
+      ).rejects.toThrow(UserNotFoundError)
 
-      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
-    });
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled()
+    })
 
-    it("should throw when role is unchanged", async () => {
+    it('should throw when role is unchanged', async () => {
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "role-user",
-          changedBy: "admin-456",
+          targetUserId: 'user-123',
+          newRoleId: 'role-user',
+          changedBy: 'admin-456'
         })
-      ).rejects.toThrow(OperationNotAllowedError);
+      ).rejects.toThrow(OperationNotAllowedError)
 
-      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
-    });
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled()
+    })
 
-    it("should throw when new role not found", async () => {
+    it('should throw when new role not found', async () => {
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "invalid-role",
-          changedBy: "admin-456",
+          targetUserId: 'user-123',
+          newRoleId: 'invalid-role',
+          changedBy: 'admin-456'
         })
-      ).rejects.toThrow(RoleNotFoundError);
+      ).rejects.toThrow(RoleNotFoundError)
 
-      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
-    });
-  });
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled()
+    })
+  })
 
-  describe("role assignment ceiling", () => {
-    it("should reject assigning a role above the actor", async () => {
+  describe('role assignment ceiling', () => {
+    it('should reject assigning a role above the actor', async () => {
       mockUserRepository.findById = mock(async (id: string) => {
-        if (id === "user-123") return targetUser;
-        if (id === "manager-123") {
+        if (id === 'user-123') return targetUser
+        if (id === 'manager-123') {
           return createMockUserWithRole({
-            user: { id: "manager-123" },
+            user: { id: 'manager-123' },
             role: {
-              name: "MANAGER",
-              priority: ROLE_PRIORITY_BY_NAME.MANAGER,
-            },
-          });
+              name: 'MANAGER',
+              priority: ROLE_PRIORITY_BY_NAME.MANAGER
+            }
+          })
         }
-        return null;
-      });
+        return null
+      })
 
       mockRoleRepository.findById = mock(async () => ({
-        id: "role-admin",
-        name: "ADMIN",
-        priority: ROLE_PRIORITY_BY_NAME.ADMIN,
-      }));
+        id: 'role-admin',
+        name: 'ADMIN',
+        priority: ROLE_PRIORITY_BY_NAME.ADMIN
+      }))
 
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "role-admin",
-          changedBy: "manager-123",
+          targetUserId: 'user-123',
+          newRoleId: 'role-admin',
+          changedBy: 'manager-123'
         })
-      ).rejects.toThrow(InsufficientPermissionsError);
+      ).rejects.toThrow(InsufficientPermissionsError)
 
-      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
-    });
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled()
+    })
 
-    it("should reject changing role of a user above the actor", async () => {
+    it('should reject changing role of a user above the actor', async () => {
       const adminTarget = createMockUserWithRole({
-        user: { id: "admin-target", roleId: "role-admin" },
+        user: { id: 'admin-target', roleId: 'role-admin' },
         role: {
-          id: "role-admin",
-          name: "ADMIN",
-          priority: ROLE_PRIORITY_BY_NAME.ADMIN,
-        },
-      });
+          id: 'role-admin',
+          name: 'ADMIN',
+          priority: ROLE_PRIORITY_BY_NAME.ADMIN
+        }
+      })
 
       mockUserRepository.findById = mock(async (id: string) => {
-        if (id === "admin-target") return adminTarget;
-        if (id === "manager-123") {
+        if (id === 'admin-target') return adminTarget
+        if (id === 'manager-123') {
           return createMockUserWithRole({
-            user: { id: "manager-123" },
+            user: { id: 'manager-123' },
             role: {
-              name: "MANAGER",
-              priority: ROLE_PRIORITY_BY_NAME.MANAGER,
-            },
-          });
+              name: 'MANAGER',
+              priority: ROLE_PRIORITY_BY_NAME.MANAGER
+            }
+          })
         }
-        return null;
-      });
+        return null
+      })
 
       mockRoleRepository.findById = mock(async () => ({
-        id: "role-user",
-        name: "REP",
-        priority: ROLE_PRIORITY_BY_NAME.REP,
-      }));
+        id: 'role-user',
+        name: 'REP',
+        priority: ROLE_PRIORITY_BY_NAME.REP
+      }))
 
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "admin-target",
-          newRoleId: "role-user",
-          changedBy: "manager-123",
+          targetUserId: 'admin-target',
+          newRoleId: 'role-user',
+          changedBy: 'manager-123'
         })
-      ).rejects.toThrow(InsufficientPermissionsError);
+      ).rejects.toThrow(InsufficientPermissionsError)
 
-      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled();
-    });
+      expect(mockUserRepository.changeRoleTransaction).not.toHaveBeenCalled()
+    })
 
-    it("should allow admin to change user to manager", async () => {
+    it('should allow admin to change user to manager', async () => {
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "role-manager",
-          changedBy: "admin-456",
+          targetUserId: 'user-123',
+          newRoleId: 'role-manager',
+          changedBy: 'admin-456'
         })
-      ).resolves.toBeUndefined();
-    });
-  });
+      ).resolves.toBeUndefined()
+    })
+  })
 
-  describe("repository failures", () => {
-    it("should propagate error when changeRoleTransaction fails", async () => {
+  describe('repository failures', () => {
+    it('should propagate error when changeRoleTransaction fails', async () => {
       mockUserRepository.changeRoleTransaction = mock(async () => {
-        throw new Error("Role change failed");
-      });
+        throw new Error('Role change failed')
+      })
 
       await expect(
         changeUserRoleUseCase.execute({
-          targetUserId: "user-123",
-          newRoleId: "role-manager",
-          changedBy: "admin-456",
+          targetUserId: 'user-123',
+          newRoleId: 'role-manager',
+          changedBy: 'admin-456'
         })
-      ).rejects.toThrow("Role change failed");
-    });
-  });
-});
+      ).rejects.toThrow('Role change failed')
+    })
+  })
+})

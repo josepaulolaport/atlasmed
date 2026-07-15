@@ -1,85 +1,76 @@
-import { wrapActivity } from "../instrumentation/wrap-activity";
-
+import { wrapActivity } from '../instrumentation/wrap-activity'
+import { cleanupPreviousArchiveActivity as cleanupPreviousArchiveActivityImpl } from './cleanup-previous-archive.activities'
 import {
   discoverLatestReferenceActivity as discoverLatestReferenceActivityImpl,
   downloadRawFilesActivity as downloadRawFilesActivityImpl,
-  parseAndNormalizeActivity as parseAndNormalizeActivityImpl,
-} from "./discover-download.activities";
-
-import { extractMonthlyArchiveActivity as extractMonthlyArchiveActivityImpl } from "./extract-archive.activities";
-import { preflightExtractedCsvActivity as preflightExtractedCsvActivityImpl } from "./preflight-csv.activities";
-import { cleanupPreviousArchiveActivity as cleanupPreviousArchiveActivityImpl } from "./cleanup-previous-archive.activities";
-
+  parseAndNormalizeActivity as parseAndNormalizeActivityImpl
+} from './discover-download.activities'
+import { extractMonthlyArchiveActivity as extractMonthlyArchiveActivityImpl } from './extract-archive.activities'
 import {
   loadRegistryStagingActivity as loadRegistryStagingActivityImpl,
-  validateStagingActivity as validateStagingActivityImpl,
   promoteRegistrySwapActivity as promoteRegistrySwapActivityImpl,
-} from "./load-validate-promote.activities";
+  validateStagingActivity as validateStagingActivityImpl
+} from './load-validate-promote.activities'
+import { preflightExtractedCsvActivity as preflightExtractedCsvActivityImpl } from './preflight-csv.activities'
 
 import {
+  finalizeIngestionRunActivity as finalizeIngestionRunActivityImpl,
   reconcileCrmDiffActivity as reconcileCrmDiffActivityImpl,
   reconcileWarehouseDiffActivity as reconcileWarehouseDiffActivityImpl,
   syncCrmMetadataActivity as syncCrmMetadataActivityImpl,
-  syncFacilityServicesActivity as syncFacilityServicesActivityImpl,
-  finalizeIngestionRunActivity as finalizeIngestionRunActivityImpl,
-} from "./reconcile-sync.activities";
+  syncFacilityServicesActivity as syncFacilityServicesActivityImpl
+} from './reconcile-sync.activities'
 
 export const discoverLatestReferenceActivity = wrapActivity(
-  "discoverLatestReference",
+  'discoverLatestReference',
   discoverLatestReferenceActivityImpl
-);
+)
 export const downloadRawFilesActivity = wrapActivity(
-  "downloadRawFiles",
+  'downloadRawFiles',
   downloadRawFilesActivityImpl
-);
+)
 export const parseAndNormalizeActivity = wrapActivity(
-  "parseAndNormalize",
+  'parseAndNormalize',
   parseAndNormalizeActivityImpl
-);
+)
 
 export const extractMonthlyArchiveActivity = wrapActivity(
-  "extractMonthlyArchive",
+  'extractMonthlyArchive',
   extractMonthlyArchiveActivityImpl
-);
+)
 export const preflightExtractedCsvActivity = wrapActivity(
-  "preflightExtractedCsv",
+  'preflightExtractedCsv',
   preflightExtractedCsvActivityImpl
-);
+)
 export const cleanupPreviousArchiveActivity = wrapActivity(
-  "cleanupPreviousArchive",
+  'cleanupPreviousArchive',
   cleanupPreviousArchiveActivityImpl
-);
+)
 
 export const loadRegistryStagingActivity = wrapActivity(
-  "loadRegistryStaging",
+  'loadRegistryStaging',
   loadRegistryStagingActivityImpl
-);
-export const validateStagingActivity = wrapActivity(
-  "validateStaging",
-  validateStagingActivityImpl
-);
+)
+export const validateStagingActivity = wrapActivity('validateStaging', validateStagingActivityImpl)
 export const promoteRegistrySwapActivity = wrapActivity(
-  "promoteRegistrySwap",
+  'promoteRegistrySwap',
   promoteRegistrySwapActivityImpl
-);
+)
 
 export const reconcileCrmDiffActivity = wrapActivity(
-  "reconcileCrmDiff",
+  'reconcileCrmDiff',
   reconcileCrmDiffActivityImpl
-);
+)
 export const reconcileWarehouseDiffActivity = wrapActivity(
-  "reconcileWarehouseDiff",
+  'reconcileWarehouseDiff',
   reconcileWarehouseDiffActivityImpl
-);
-export const syncCrmMetadataActivity = wrapActivity(
-  "syncCrmMetadata",
-  syncCrmMetadataActivityImpl
-);
+)
+export const syncCrmMetadataActivity = wrapActivity('syncCrmMetadata', syncCrmMetadataActivityImpl)
 export const syncFacilityServicesActivity = wrapActivity(
-  "syncFacilityServices",
+  'syncFacilityServices',
   syncFacilityServicesActivityImpl
-);
+)
 export const finalizeIngestionRunActivity = wrapActivity(
-  "finalizeIngestionRun",
+  'finalizeIngestionRun',
   finalizeIngestionRunActivityImpl
-);
+)

@@ -37,7 +37,7 @@ describe('OpenTelemetryLogger', () => {
   beforeAll(() => {
     exporter = new MemoryLogExporter()
     provider = new LoggerProvider({
-      processors: [new SimpleLogRecordProcessor(exporter)],
+      processors: [new SimpleLogRecordProcessor(exporter)]
     })
     logs.setGlobalLoggerProvider(provider)
   })

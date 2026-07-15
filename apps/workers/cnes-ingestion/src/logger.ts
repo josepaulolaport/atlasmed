@@ -1,3 +1,3 @@
-import { createLogger } from "@atlasmed/observability";
+import { createLogger } from '@atlasmed/observability'
 
-export const logger = createLogger("cnes-worker");
+export const logger = createLogger('cnes-worker')

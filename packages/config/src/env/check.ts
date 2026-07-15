@@ -1,4 +1,4 @@
-import { checkEnvironment } from "../environment";
+import { checkEnvironment } from '../environment'
 
-checkEnvironment(process.env);
-console.log("Environment validation passed.");
+checkEnvironment(process.env)
+console.log('Environment validation passed.')

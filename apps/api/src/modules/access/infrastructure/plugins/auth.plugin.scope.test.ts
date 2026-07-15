@@ -1,43 +1,43 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import type { Role } from "@atlasmed/access";
-import { withTerritoryScopeAliases } from "@atlasmed/access";
-import { TokenService } from "../../application/services/token.service";
-import { createAuthPlugin } from "./auth.plugin";
-import type { SessionRepository } from "../../application/interfaces/session.repository.interface";
-import type { UserRepository } from "../../application/interfaces/user.repository.interface";
-import type { AuthCacheService } from "../cache/auth-cache.service";
-import type { SessionCacheService } from "../cache/session-cache.service";
-import type { ScopeService } from "../../application/services/scope.service";
-import type { AccessGrantService } from "../../application/services/access-grant.service";
-import type { Redis } from "ioredis";
-import { createMockScopeService } from "../../test-helpers/fixtures";
-import { createAccessTestApp } from "../../test-helpers/access-test-app";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import type { Role } from '@atlasmed/access'
+import { withTerritoryScopeAliases } from '@atlasmed/access'
+import type { Redis } from 'ioredis'
+import type { SessionRepository } from '../../application/interfaces/session.repository.interface'
+import type { UserRepository } from '../../application/interfaces/user.repository.interface'
+import type { AccessGrantService } from '../../application/services/access-grant.service'
+import type { ScopeService } from '../../application/services/scope.service'
+import { TokenService } from '../../application/services/token.service'
+import { createAccessTestApp } from '../../test-helpers/access-test-app'
+import { createMockScopeService } from '../../test-helpers/fixtures'
+import type { AuthCacheService } from '../cache/auth-cache.service'
+import type { SessionCacheService } from '../cache/session-cache.service'
+import { createAuthPlugin } from './auth.plugin'
 
 function createTestApp() {
-  return createAccessTestApp();
+  return createAccessTestApp()
 }
 
-describe("Auth Plugin Scope", () => {
-  let tokenService: TokenService;
-  let mockSessionRepository: SessionRepository;
-  let mockUserRepository: UserRepository;
-  let mockAuthCacheService: AuthCacheService;
-  let mockSessionCacheService: SessionCacheService;
-  let mockScopeService: ScopeService;
-  let mockAccessGrantService: AccessGrantService;
-  let mockRedis: Redis;
+describe('Auth Plugin Scope', () => {
+  let tokenService: TokenService
+  let mockSessionRepository: SessionRepository
+  let mockUserRepository: UserRepository
+  let mockAuthCacheService: AuthCacheService
+  let mockSessionCacheService: SessionCacheService
+  let mockScopeService: ScopeService
+  let mockAccessGrantService: AccessGrantService
+  let mockRedis: Redis
 
   const mockUser = {
-    id: "user-123",
-    email: "user@example.com",
-    username: "testuser",
+    id: 'user-123',
+    email: 'user@example.com',
+    username: 'testuser',
     phoneNumber: null,
-    passwordHash: "$argon2id$test",
-    roleId: "role-123",
-    firstName: "Test",
-    lastName: "User",
+    passwordHash: '$argon2id$test',
+    roleId: 'role-123',
+    firstName: 'Test',
+    lastName: 'User',
     avatarUrl: null,
-    status: "ACTIVE",
+    status: 'ACTIVE',
     tokenVersion: 1,
     emailVerified: true,
     phoneVerified: false,
@@ -50,26 +50,26 @@ describe("Auth Plugin Scope", () => {
     createdAt: new Date(),
     updatedAt: new Date(),
     role: {
-      id: "role-123",
-      name: "REP",
+      id: 'role-123',
+      name: 'REP',
       description: null,
       priority: 100,
       createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  };
+      updatedAt: new Date()
+    }
+  }
 
   const mockSession = {
-    id: "session-123",
-    userId: "user-123",
-    refreshTokenHash: "hashed-token",
-    ipAddress: "192.168.1.1",
-    userAgent: "Mozilla/5.0",
-    browserName: "Chrome",
-    browserVersion: "120.0",
-    osName: "macOS",
-    deviceType: "DESKTOP",
-    sessionType: "WEB",
+    id: 'session-123',
+    userId: 'user-123',
+    refreshTokenHash: 'hashed-token',
+    ipAddress: '192.168.1.1',
+    userAgent: 'Mozilla/5.0',
+    browserName: 'Chrome',
+    browserVersion: '120.0',
+    osName: 'macOS',
+    deviceType: 'DESKTOP',
+    sessionType: 'WEB',
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -78,34 +78,34 @@ describe("Auth Plugin Scope", () => {
     revokedReason: null,
     revokedByUserId: null,
     replacedBySessionId: null,
-    user: mockUser,
-  };
+    user: mockUser
+  }
 
   beforeEach(() => {
-    tokenService = new TokenService();
+    tokenService = new TokenService()
 
     mockSessionRepository = {
       findById: mock(async () => mockSession),
-      updateLastSeen: mock(async () => {}),
-    } as unknown as SessionRepository;
+      updateLastSeen: mock(async () => {})
+    } as unknown as SessionRepository
 
     mockUserRepository = {
       findById: mock(async () => mockUser),
       findUserAuthStatus: mock(async () => ({
-        status: "ACTIVE",
+        status: 'ACTIVE',
         tokenVersion: 1,
-        roleId: "role-123",
-        roleName: "REP",
-      })),
-    } as unknown as UserRepository;
+        roleId: 'role-123',
+        roleName: 'REP'
+      }))
+    } as unknown as UserRepository
 
     mockAuthCacheService = {
       get: mock(async () => null),
       set: mock(async () => {}),
       invalidate: mock(async () => {}),
       isRecentlyValidated: mock(async () => false),
-      markValidated: mock(async () => {}),
-    } as unknown as AuthCacheService;
+      markValidated: mock(async () => {})
+    } as unknown as AuthCacheService
 
     mockSessionCacheService = {
       getById: mock(async () => null),
@@ -114,29 +114,29 @@ describe("Auth Plugin Scope", () => {
       updateLastSeen: mock(async () => {}),
       isMarkedRevoked: mock(async () => false),
       isRecentlyValidated: mock(async () => false),
-      markValidated: mock(async () => {}),
-    } as unknown as SessionCacheService;
+      markValidated: mock(async () => {})
+    } as unknown as SessionCacheService
 
     mockRedis = {
       get: mock(async () => null),
-      setex: mock(async () => {}),
-    } as unknown as Redis;
+      setex: mock(async () => {})
+    } as unknown as Redis
 
-    mockScopeService = createMockScopeService();
+    mockScopeService = createMockScopeService()
 
     mockAccessGrantService = {
-      getActiveGrants: mock(async () => []),
-    } as unknown as AccessGrantService;
-  });
+      getActiveGrants: mock(async () => [])
+    } as unknown as AccessGrantService
+  })
 
-  async function signToken(role: Role = "REP") {
+  async function signToken(role: Role = 'REP') {
     return tokenService.signAccessToken({
-      sub: "user-123",
-      sid: "session-123",
+      sub: 'user-123',
+      sid: 'session-123',
       role,
       tokenVersion: 1,
-      iat: Math.floor(Date.now() / 1000),
-    });
+      iat: Math.floor(Date.now() / 1000)
+    })
   }
 
   function buildAuthApp() {
@@ -148,29 +148,31 @@ describe("Auth Plugin Scope", () => {
       sessionCacheService: mockSessionCacheService,
       scopeService: mockScopeService,
       accessGrantService: mockAccessGrantService,
-      redis: mockRedis,
-    });
+      redis: mockRedis
+    })
 
-    return createTestApp().use(auth).get("/scope", async ({ getScope }: any) => {
-      const scope = await getScope();
-      return scope;
-    });
+    return createTestApp()
+      .use(auth)
+      .get('/scope', async ({ getScope }: any) => {
+        const scope = await getScope()
+        return scope
+      })
   }
 
-  it("calls scopeService.resolve with user id and role from token", async () => {
-    const accessToken = await signToken("REP");
-    const app = buildAuthApp();
+  it('calls scopeService.resolve with user id and role from token', async () => {
+    const accessToken = await signToken('REP')
+    const app = buildAuthApp()
 
     await app.handle(
-      new Request("http://localhost/scope", {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      new Request('http://localhost/scope', {
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
-    );
+    )
 
-    expect(mockScopeService.resolve).toHaveBeenCalledWith("user-123", "REP");
-  });
+    expect(mockScopeService.resolve).toHaveBeenCalledWith('user-123', 'REP')
+  })
 
-  it("returns isOperationallyActive false for USER without territories", async () => {
+  it('returns isOperationallyActive false for USER without territories', async () => {
     mockScopeService.resolve = mock(() =>
       Promise.resolve(
         withTerritoryScopeAliases({
@@ -181,95 +183,95 @@ describe("Auth Plugin Scope", () => {
           facilityIds: [],
           analyticsFacilityIds: [],
           managedUserIds: [],
-          isOperationallyActive: false,
+          isOperationallyActive: false
         })
       )
-    );
+    )
 
-    const accessToken = await signToken("REP");
-    const app = buildAuthApp();
+    const accessToken = await signToken('REP')
+    const app = buildAuthApp()
     const response = await app.handle(
-      new Request("http://localhost/scope", {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      new Request('http://localhost/scope', {
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
-    );
+    )
 
     const body = (await response.json()) as {
-      isOperationallyActive: boolean;
-      territoryIds: string[];
-    };
-    expect(body.isOperationallyActive).toBe(false);
-    expect(body.territoryIds).toEqual([]);
-  });
+      isOperationallyActive: boolean
+      territoryIds: string[]
+    }
+    expect(body.isOperationallyActive).toBe(false)
+    expect(body.territoryIds).toEqual([])
+  })
 
-  it("returns isOperationallyActive true for USER with territories", async () => {
+  it('returns isOperationallyActive true for USER with territories', async () => {
     mockScopeService.resolve = mock(() =>
       Promise.resolve(
         withTerritoryScopeAliases({
           isGlobal: false,
-          assignedTerritoryIds: ["territory-a"],
-          effectiveTerritoryIds: ["territory-a"],
-          analyticsEffectiveTerritoryIds: ["territory-a"],
-          facilityIds: ["clinic-for-territory-a"],
-          analyticsFacilityIds: ["clinic-for-territory-a"],
+          assignedTerritoryIds: ['territory-a'],
+          effectiveTerritoryIds: ['territory-a'],
+          analyticsEffectiveTerritoryIds: ['territory-a'],
+          facilityIds: ['clinic-for-territory-a'],
+          analyticsFacilityIds: ['clinic-for-territory-a'],
           managedUserIds: [],
-          isOperationallyActive: true,
+          isOperationallyActive: true
         })
       )
-    );
+    )
 
-    const accessToken = await signToken("REP");
-    const app = buildAuthApp();
+    const accessToken = await signToken('REP')
+    const app = buildAuthApp()
     const response = await app.handle(
-      new Request("http://localhost/scope", {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      new Request('http://localhost/scope', {
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
-    );
+    )
 
     const body = (await response.json()) as {
-      isOperationallyActive: boolean;
-      territoryIds: string[];
-    };
-    expect(body.isOperationallyActive).toBe(true);
-    expect(body.territoryIds).toEqual(["territory-a"]);
-  });
+      isOperationallyActive: boolean
+      territoryIds: string[]
+    }
+    expect(body.isOperationallyActive).toBe(true)
+    expect(body.territoryIds).toEqual(['territory-a'])
+  })
 
-  it("returns managedUserIds for MANAGER scope", async () => {
+  it('returns managedUserIds for MANAGER scope', async () => {
     mockUserRepository.findById = mock(async () => ({
       ...mockUser,
       role: {
         ...mockUser.role,
-        id: "role-manager",
-        name: "MANAGER",
-      },
-    })) as any;
+        id: 'role-manager',
+        name: 'MANAGER'
+      }
+    })) as any
 
     mockScopeService.resolve = mock(() =>
       Promise.resolve(
         withTerritoryScopeAliases({
           isGlobal: false,
-          assignedTerritoryIds: ["territory-a"],
-          effectiveTerritoryIds: ["territory-a"],
-          analyticsEffectiveTerritoryIds: ["patch-1"],
+          assignedTerritoryIds: ['territory-a'],
+          effectiveTerritoryIds: ['territory-a'],
+          analyticsEffectiveTerritoryIds: ['patch-1'],
           facilityIds: [],
-          analyticsFacilityIds: ["clinic-patch-1"],
-          managedUserIds: ["field-user-1", "field-user-2"],
-          reportAssignedTerritoryIds: ["patch-1"],
-          isOperationallyActive: true,
+          analyticsFacilityIds: ['clinic-patch-1'],
+          managedUserIds: ['field-user-1', 'field-user-2'],
+          reportAssignedTerritoryIds: ['patch-1'],
+          isOperationallyActive: true
         })
       )
-    );
+    )
 
-    const accessToken = await signToken("MANAGER");
-    const app = buildAuthApp();
+    const accessToken = await signToken('MANAGER')
+    const app = buildAuthApp()
     const response = await app.handle(
-      new Request("http://localhost/scope", {
-        headers: { Authorization: `Bearer ${accessToken}` },
+      new Request('http://localhost/scope', {
+        headers: { Authorization: `Bearer ${accessToken}` }
       })
-    );
+    )
 
-    expect(mockScopeService.resolve).toHaveBeenCalledWith("user-123", "MANAGER");
-    const body = (await response.json()) as { managedUserIds: string[] };
-    expect(body.managedUserIds).toEqual(["field-user-1", "field-user-2"]);
-  });
-});
+    expect(mockScopeService.resolve).toHaveBeenCalledWith('user-123', 'MANAGER')
+    const body = (await response.json()) as { managedUserIds: string[] }
+    expect(body.managedUserIds).toEqual(['field-user-1', 'field-user-2'])
+  })
+})

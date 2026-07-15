@@ -1,13 +1,19 @@
-import { createDatabase, type Database } from "@atlasmed/database";
-import { sessions, invitations, passwordResets, users } from "@atlasmed/database";
-import { ne } from "drizzle-orm";
+import {
+  createDatabase,
+  type Database,
+  invitations,
+  passwordResets,
+  sessions,
+  users
+} from '@atlasmed/database'
+import { ne } from 'drizzle-orm'
 
 /**
  * Get a unique identifier for test data
  * Uses timestamp + random to avoid collisions
  */
 export function getUniqueTestId(): string {
-  return `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  return `${Date.now()}_${Math.random().toString(36).substring(7)}`
 }
 
 /**
@@ -15,10 +21,10 @@ export function getUniqueTestId(): string {
  * Keeps only the seeded test user
  */
 export async function cleanTestData(db: Database): Promise<void> {
-  await db.delete(sessions);
-  await db.delete(invitations);
-  await db.delete(passwordResets);
-  await db.delete(users).where(ne(users.email, "test@example.com"));
+  await db.delete(sessions)
+  await db.delete(invitations)
+  await db.delete(passwordResets)
+  await db.delete(users).where(ne(users.email, 'test@example.com'))
 }
 
 /**
@@ -26,15 +32,15 @@ export async function cleanTestData(db: Database): Promise<void> {
  * Uses DATABASE_URL from environment
  */
 export function getTestDatabase(): Database {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = process.env.DATABASE_URL
 
   if (!connectionString) {
-    throw new Error("DATABASE_URL not set");
+    throw new Error('DATABASE_URL not set')
   }
 
-  if (!connectionString.includes("test")) {
-    console.warn("⚠️  DATABASE_URL doesn't contain 'test'");
+  if (!connectionString.includes('test')) {
+    console.warn("⚠️  DATABASE_URL doesn't contain 'test'")
   }
 
-  return createDatabase(connectionString);
+  return createDatabase(connectionString)
 }

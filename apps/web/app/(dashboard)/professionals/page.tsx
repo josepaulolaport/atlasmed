@@ -1,194 +1,192 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { professionalsApi } from "@/lib/api/professionals";
-import { facilitiesApi } from "@/lib/api/facilities";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import { canManageProfessionals, canReadProfessionals } from "@/lib/permissions";
-import type { Facility, Professional } from "@/types/facility";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
+  TableRow
+} from '@/components/ui/table'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { facilitiesApi } from '@/lib/api/facilities'
+import { professionalsApi } from '@/lib/api/professionals'
+import { canManageProfessionals, canReadProfessionals } from '@/lib/permissions'
+import type { Facility, Professional } from '@/types/facility'
 
 export default function ProfessionalsPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [professionals, setProfessionals] = useState<Professional[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
-  const [formFirstName, setFormFirstName] = useState("");
-  const [formLastName, setFormLastName] = useState("");
-  const [formSpecialty, setFormSpecialty] = useState("");
-  const [formFacilityIds, setFormFacilityIds] = useState<string[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { user } = useAuth()
+  const router = useRouter()
+  const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [facilities, setFacilities] = useState<Facility[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null)
+  const [formFirstName, setFormFirstName] = useState('')
+  const [formLastName, setFormLastName] = useState('')
+  const [formSpecialty, setFormSpecialty] = useState('')
+  const [formFacilityIds, setFormFacilityIds] = useState<string[]>([])
+  const [saving, setSaving] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const canRead = user ? canReadProfessionals(user.role.name) : false;
-  const canManage = user ? canManageProfessionals(user.role.name) : false;
+  const canRead = user ? canReadProfessionals(user.role.name) : false
+  const canManage = user ? canManageProfessionals(user.role.name) : false
 
   useEffect(() => {
     if (user && !canRead) {
-      router.replace("/unauthorized");
+      router.replace('/unauthorized')
     }
-  }, [user, canRead, router]);
+  }, [user, canRead, router])
 
   useEffect(() => {
-    if (!canRead) return;
+    if (!canRead) return
 
     const loadData = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
         const [professionalsResponse, facilitiesResponse] = await Promise.all([
           professionalsApi.getProfessionals({
             page,
             limit: 10,
-            search: search || undefined,
+            search: search || undefined
           }),
-          facilitiesApi.getFacilities({ limit: 100 }),
-        ]);
+          facilitiesApi.getFacilities({ limit: 100 })
+        ])
 
-        setProfessionals(professionalsResponse.data);
-        setTotalPages(professionalsResponse.pagination.totalPages);
-        setFacilities(facilitiesResponse.data);
+        setProfessionals(professionalsResponse.data)
+        setTotalPages(professionalsResponse.pagination.totalPages)
+        setFacilities(facilitiesResponse.data)
       } catch (error) {
         toast({
-          title: "Erro",
-          description: getApiErrorMessage(error, "Falha ao carregar profissionais"),
-          variant: "destructive",
-        });
+          title: 'Erro',
+          description: getApiErrorMessage(error, 'Falha ao carregar profissionais'),
+          variant: 'destructive'
+        })
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    void loadData();
-  }, [page, search, refreshKey, canRead]);
+    void loadData()
+  }, [page, search, refreshKey, canRead])
 
   const facilityNameById = (facilityId: string) =>
-    facilities.find((facility) => facility.id === facilityId)?.name ?? facilityId;
+    facilities.find((facility) => facility.id === facilityId)?.name ?? facilityId
 
   const openCreateDialog = () => {
-    setEditingProfessional(null);
-    setFormFirstName("");
-    setFormLastName("");
-    setFormSpecialty("");
-    setFormFacilityIds([]);
-    setDialogOpen(true);
-  };
+    setEditingProfessional(null)
+    setFormFirstName('')
+    setFormLastName('')
+    setFormSpecialty('')
+    setFormFacilityIds([])
+    setDialogOpen(true)
+  }
 
   const openEditDialog = (professional: Professional) => {
-    setEditingProfessional(professional);
-    setFormFirstName(professional.firstName);
-    setFormLastName(professional.lastName);
-    setFormSpecialty(professional.specialty ?? professional.primarySpecialtyLabel ?? "");
-    setFormFacilityIds(professional.facilityIds);
-    setDialogOpen(true);
-  };
+    setEditingProfessional(professional)
+    setFormFirstName(professional.firstName)
+    setFormLastName(professional.lastName)
+    setFormSpecialty(professional.specialty ?? professional.primarySpecialtyLabel ?? '')
+    setFormFacilityIds(professional.facilityIds)
+    setDialogOpen(true)
+  }
 
   const toggleFacilitySelection = (facilityId: string) => {
     setFormFacilityIds((current) =>
       current.includes(facilityId)
         ? current.filter((id) => id !== facilityId)
         : [...current, facilityId]
-    );
-  };
+    )
+  }
 
   const handleSave = async () => {
     if (!formFirstName.trim() || !formLastName.trim()) {
       toast({
-        title: "Validation",
-        description: "First and last name are required",
-        variant: "destructive",
-      });
-      return;
+        title: 'Validation',
+        description: 'First and last name are required',
+        variant: 'destructive'
+      })
+      return
     }
 
-    setSaving(true);
+    setSaving(true)
     try {
       if (editingProfessional) {
         await professionalsApi.updateProfessional(editingProfessional.id, {
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
-          primarySpecialtyLabel: formSpecialty.trim() || null,
-        });
-        toast({ title: "Sucesso", description: "Profissional atualizado" });
-        setDialogOpen(false);
-        setRefreshKey((value) => value + 1);
+          primarySpecialtyLabel: formSpecialty.trim() || null
+        })
+        toast({ title: 'Sucesso', description: 'Profissional atualizado' })
+        setDialogOpen(false)
+        setRefreshKey((value) => value + 1)
       } else {
         const created = await professionalsApi.createProfessional({
           firstName: formFirstName.trim(),
           lastName: formLastName.trim(),
           primarySpecialtyLabel: formSpecialty.trim() || undefined,
-          facilityIds: formFacilityIds,
-        });
-        toast({ title: "Sucesso", description: "Profissional criado" });
-        setDialogOpen(false);
-        router.push(`/professionals/${created.id}`);
+          facilityIds: formFacilityIds
+        })
+        toast({ title: 'Sucesso', description: 'Profissional criado' })
+        setDialogOpen(false)
+        router.push(`/professionals/${created.id}`)
       }
     } catch (error) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao salvar profissional"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(error, 'Falha ao salvar profissional'),
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleDelete = async (professional: Professional) => {
-    if (!confirm(`Excluir ${professional.firstName} ${professional.lastName}?`)) return;
+    if (!confirm(`Excluir ${professional.firstName} ${professional.lastName}?`)) return
 
     try {
-      await professionalsApi.deleteProfessional(professional.id);
-      toast({ title: "Sucesso", description: "Profissional excluído" });
-      setRefreshKey((value) => value + 1);
+      await professionalsApi.deleteProfessional(professional.id)
+      toast({ title: 'Sucesso', description: 'Profissional excluído' })
+      setRefreshKey((value) => value + 1)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao excluir profissional"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(error, 'Falha ao excluir profissional'),
+        variant: 'destructive'
+      })
     }
-  };
+  }
 
   if (!canRead) {
-    return null;
+    return null
   }
 
   return (
     <>
-      <div className="px-6 py-8 border-b border-zinc-100">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div className="border-zinc-100 border-b px-6 py-8">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
           <div>
-            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
-              Profissionais
-            </h1>
-            <p className="text-sm text-zinc-500 mt-1">
+            <h1 className="font-medium text-2xl text-zinc-900 tracking-tight">Profissionais</h1>
+            <p className="mt-1 text-sm text-zinc-500">
               Gerenciar profissionais e atribuições de unidades
             </p>
           </div>
@@ -205,21 +203,21 @@ export default function ProfessionalsPage() {
         </div>
       </div>
 
-      <div className="p-6 max-w-6xl mx-auto w-full">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+      <div className="mx-auto w-full max-w-6xl p-6">
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-zinc-200 border-b bg-zinc-50/50 px-5 py-4">
             <div className="relative max-w-sm">
               <iconify-icon
                 icon="solar:magnifer-linear"
                 stroke-width="1.5"
-                className="text-base absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-base text-zinc-400"
               />
               <Input
                 placeholder="Buscar profissionais..."
                 value={search}
                 onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
+                  setSearch(event.target.value)
+                  setPage(1)
                 }}
                 className="pl-9"
               />
@@ -227,9 +225,7 @@ export default function ProfessionalsPage() {
           </div>
           <div className="p-5">
             {loading ? (
-              <div className="py-10 text-center text-sm text-zinc-500">
-                Carregando…
-              </div>
+              <div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>
             ) : (
               <>
                 <Table>
@@ -238,9 +234,7 @@ export default function ProfessionalsPage() {
                       <TableHead>Nome</TableHead>
                       <TableHead>Especialidade</TableHead>
                       <TableHead>Unidades de saúde</TableHead>
-                      {canManage && (
-                        <TableHead className="w-[120px]">Ações</TableHead>
-                      )}
+                      {canManage && <TableHead className="w-[120px]">Ações</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -248,7 +242,7 @@ export default function ProfessionalsPage() {
                       <TableRow>
                         <TableCell
                           colSpan={canManage ? 4 : 3}
-                          className="text-center text-sm text-zinc-500 py-10"
+                          className="py-10 text-center text-sm text-zinc-500"
                         >
                           Nenhum profissional encontrado
                         </TableCell>
@@ -265,14 +259,10 @@ export default function ProfessionalsPage() {
                             </Link>
                           </TableCell>
                           <TableCell>
-                            {professional.specialty ||
-                              professional.primarySpecialtyLabel ||
-                              "—"}
+                            {professional.specialty || professional.primarySpecialtyLabel || '—'}
                           </TableCell>
                           <TableCell>
-                            {professional.facilityIds
-                              .map(facilityNameById)
-                              .join(", ") || "—"}
+                            {professional.facilityIds.map(facilityNameById).join(', ') || '—'}
                           </TableCell>
                           {canManage && (
                             <TableCell>
@@ -337,7 +327,7 @@ export default function ProfessionalsPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingProfessional ? "Editar profissional" : "Criar profissional"}
+              {editingProfessional ? 'Editar profissional' : 'Criar profissional'}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
@@ -369,14 +359,12 @@ export default function ProfessionalsPage() {
               <div className="space-y-2">
                 <Label>Unidades de saúde (opcional)</Label>
                 <p className="text-xs text-zinc-500">
-                  Deixe sem seleção para criar sem vínculos de unidade. Associe
-                  depois na página de uma unidade.
+                  Deixe sem seleção para criar sem vínculos de unidade. Associe depois na página de
+                  uma unidade.
                 </p>
                 <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-zinc-200 bg-white p-3">
                   {facilities.length === 0 ? (
-                    <p className="text-sm text-zinc-500">
-                      Nenhuma unidade disponível
-                    </p>
+                    <p className="text-sm text-zinc-500">Nenhuma unidade disponível</p>
                   ) : (
                     facilities.map((facility) => (
                       <label
@@ -401,11 +389,11 @@ export default function ProfessionalsPage() {
               Cancelar
             </Button>
             <Button variant="primary" onClick={handleSave} disabled={saving}>
-              {saving ? "Salvando..." : "Salvar"}
+              {saving ? 'Salvando...' : 'Salvar'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
-  );
+  )
 }

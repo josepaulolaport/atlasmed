@@ -1,17 +1,17 @@
-import { defineConfig } from "drizzle-kit";
-import { environment } from "@atlasmed/config";
+import { environment } from '@atlasmed/config'
+import { defineConfig } from 'drizzle-kit'
 
 export default defineConfig({
-  dialect: "postgresql",
+  dialect: 'postgresql',
   schema: [
-    "./src/schema/public/index.ts",
-    "./src/schema/audit/index.ts",
-    "./src/schema/registry/index.ts",
-    "./src/schema/ingestion/index.ts",
+    './src/schema/public/index.ts',
+    './src/schema/audit/index.ts',
+    './src/schema/registry/index.ts',
+    './src/schema/ingestion/index.ts'
   ],
-  out: "./drizzle",
+  out: './drizzle',
   dbCredentials: {
-    url: environment.DATABASE_URL,
+    url: environment.DATABASE_URL
   },
-  schemaFilter: ["public", "audit", "registry", "ingestion"],
-});
+  schemaFilter: ['public', 'audit', 'registry', 'ingestion']
+})

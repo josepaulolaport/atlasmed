@@ -1,124 +1,123 @@
-import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
-import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
-import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
-import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
-import type { TerritoryContainmentService } from "./territory-containment.service";
-import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
+import { OperationNotAllowedError } from '../../../../shared/errors'
 import {
   isGroupingHierarchyType,
   isManagerZoneType,
-  isRepPatchType,
-} from "../constants/territory-roles.constants";
-import { normalizeTerritoryBoundary } from "../utils/territory-boundary.utils";
-import { OperationNotAllowedError } from "../../../../shared/errors";
+  isRepPatchType
+} from '../constants/territory-roles.constants'
+import type {
+  TerritoryRecord,
+  TerritoryRepository
+} from '../interfaces/territory.repository.interface'
+import type {
+  GeoJsonGeometry,
+  TerritorySpatialRepository
+} from '../interfaces/territory-spatial.repository.interface'
+import type { TerritoryTypeRepository } from '../interfaces/territory-type.repository.interface'
+import { normalizeTerritoryBoundary } from '../utils/territory-boundary.utils'
+import type { TerritoryContainmentService } from './territory-containment.service'
 
-export type { GeoJsonGeometry };
+export type { GeoJsonGeometry }
 
 export interface ApplyTerritoryBoundaryDeps {
-  territoryRepository: TerritoryRepository;
-  territoryTypeRepository: TerritoryTypeRepository;
-  spatialRepository: TerritorySpatialRepository;
-  containmentService: TerritoryContainmentService;
-  onBoundaryChanged?: (territoryId: string) => Promise<void>;
-  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
+  territoryRepository: TerritoryRepository
+  territoryTypeRepository: TerritoryTypeRepository
+  spatialRepository: TerritorySpatialRepository
+  containmentService: TerritoryContainmentService
+  onBoundaryChanged?: (territoryId: string) => Promise<void>
+  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>
 }
 
 export type TerritoryBoundaryResolution =
   | {
-      mode: "rep_patch";
-      managerTerritoryId: string;
-      managerZoneCandidates: Array<{ id: string; code: string; name: string }>;
-      clinicRecomputeEnqueued: boolean;
+      mode: 'rep_patch'
+      managerTerritoryId: string
+      managerZoneCandidates: Array<{ id: string; code: string; name: string }>
+      clinicRecomputeEnqueued: boolean
     }
   | {
-      mode: "manager_zone";
-      repPatchCount: number;
+      mode: 'manager_zone'
+      repPatchCount: number
     }
   | {
-      mode: "grouping";
-    };
+      mode: 'grouping'
+    }
 
 export async function applyTerritoryBoundary(
   deps: ApplyTerritoryBoundaryDeps,
   territory: TerritoryRecord,
   geoJson: GeoJsonGeometry
 ): Promise<TerritoryBoundaryResolution> {
-  const boundary = normalizeTerritoryBoundary(geoJson);
+  const boundary = normalizeTerritoryBoundary(geoJson)
   const type =
     territory.territoryType ??
-    (await deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    (await deps.territoryTypeRepository.findById(territory.territoryTypeId))
 
   if (!type) {
-    throw new OperationNotAllowedError("save_boundary", "Territory type not found");
+    throw new OperationNotAllowedError('save_boundary', 'Territory type not found')
   }
 
-  await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
+  await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary)
 
   if (isRepPatchType(type)) {
     const resolution = await deps.containmentService.resolveRepPatchManagerZone(
       boundary,
-      territory.countryCode ?? "BR"
-    );
+      territory.countryCode ?? 'BR'
+    )
 
-    await deps.spatialRepository.saveBoundary(territory.id, boundary);
-    await deps.spatialRepository.updateBoundaryMetadata(territory.id);
+    await deps.spatialRepository.saveBoundary(territory.id, boundary)
+    await deps.spatialRepository.updateBoundaryMetadata(territory.id)
 
     await deps.territoryRepository.update(territory.id, {
-      managerTerritoryId: resolution.managerTerritoryId,
-    });
+      managerTerritoryId: resolution.managerTerritoryId
+    })
 
-    await deps.onBoundaryChanged?.(territory.id);
-    await deps.onManagerTerritoryChanged?.(resolution.managerTerritoryId);
+    await deps.onBoundaryChanged?.(territory.id)
+    await deps.onManagerTerritoryChanged?.(resolution.managerTerritoryId)
 
     return {
-      mode: "rep_patch",
+      mode: 'rep_patch',
       managerTerritoryId: resolution.managerTerritoryId,
       managerZoneCandidates: resolution.candidates,
-      clinicRecomputeEnqueued: true,
-    };
+      clinicRecomputeEnqueued: true
+    }
   }
 
   if (isManagerZoneType(type)) {
-    await deps.containmentService.assertManagerZoneContainsChildPatches(
-      territory.id,
-      boundary
-    );
+    await deps.containmentService.assertManagerZoneContainsChildPatches(territory.id, boundary)
 
-    await deps.spatialRepository.saveBoundary(territory.id, boundary);
-    await deps.spatialRepository.updateBoundaryMetadata(territory.id);
+    await deps.spatialRepository.saveBoundary(territory.id, boundary)
+    await deps.spatialRepository.updateBoundaryMetadata(territory.id)
 
-    const repPatchCount = await deps.territoryRepository.countRepPatchesByManagerZone(
-      territory.id
-    );
+    const repPatchCount = await deps.territoryRepository.countRepPatchesByManagerZone(territory.id)
 
-    await deps.onBoundaryChanged?.(territory.id);
+    await deps.onBoundaryChanged?.(territory.id)
 
     return {
-      mode: "manager_zone",
-      repPatchCount,
-    };
+      mode: 'manager_zone',
+      repPatchCount
+    }
   }
 
   if (isGroupingHierarchyType(type)) {
     await deps.spatialRepository.saveBoundary(territory.id, boundary, {
-      repairInvalid: true,
-    });
-    await deps.spatialRepository.updateBoundaryMetadata(territory.id);
+      repairInvalid: true
+    })
+    await deps.spatialRepository.updateBoundaryMetadata(territory.id)
 
-    return { mode: "grouping" };
+    return { mode: 'grouping' }
   }
 
   if (!type.canHaveBoundary) {
     throw new OperationNotAllowedError(
-      "save_boundary",
-      "This territory type cannot have a boundary"
-    );
+      'save_boundary',
+      'This territory type cannot have a boundary'
+    )
   }
 
-  await deps.spatialRepository.saveBoundary(territory.id, boundary);
-  await deps.spatialRepository.updateBoundaryMetadata(territory.id);
+  await deps.spatialRepository.saveBoundary(territory.id, boundary)
+  await deps.spatialRepository.updateBoundaryMetadata(territory.id)
 
-  return { mode: "grouping" };
+  return { mode: 'grouping' }
 }
 
 export function assertBoundaryProvidedForType(
@@ -128,19 +127,19 @@ export function assertBoundaryProvidedForType(
   if (!canHaveBoundary) {
     if (boundary) {
       throw new OperationNotAllowedError(
-        "create_territory",
-        "This territory type cannot have a boundary"
-      );
+        'create_territory',
+        'This territory type cannot have a boundary'
+      )
     }
-    return undefined as never;
+    return undefined as never
   }
 
   if (!boundary) {
     throw new OperationNotAllowedError(
-      "create_territory",
-      "A geographic boundary is required when creating this territory type"
-    );
+      'create_territory',
+      'A geographic boundary is required when creating this territory type'
+    )
   }
 
-  return normalizeTerritoryBoundary(boundary);
+  return normalizeTerritoryBoundary(boundary)
 }

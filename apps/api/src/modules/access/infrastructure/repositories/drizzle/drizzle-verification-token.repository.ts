@@ -1,17 +1,17 @@
-import { eq, and, isNull, gt } from "drizzle-orm";
-import { verificationTokens } from "@atlasmed/database";
-import { db } from "../../../../../infrastructure/database/db";
+import { verificationTokens } from '@atlasmed/database'
+import { and, eq, gt, isNull } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 
 import type {
   CreateVerificationTokenParams,
   FindValidVerificationTokenParams,
-  VerificationTokenRepository,
-} from "../../../application/interfaces/verification-token.repository.interface";
+  VerificationTokenRepository
+} from '../../../application/interfaces/verification-token.repository.interface'
 
 export class DrizzleVerificationTokenRepository implements VerificationTokenRepository {
   async deleteUnusedByUserAndType(
     userId: string,
-    type: CreateVerificationTokenParams["type"],
+    type: CreateVerificationTokenParams['type']
   ): Promise<void> {
     await db
       .delete(verificationTokens)
@@ -19,9 +19,9 @@ export class DrizzleVerificationTokenRepository implements VerificationTokenRepo
         and(
           eq(verificationTokens.userId, userId),
           eq(verificationTokens.type, type),
-          isNull(verificationTokens.verifiedAt),
-        ),
-      );
+          isNull(verificationTokens.verifiedAt)
+        )
+      )
   }
 
   async create(params: CreateVerificationTokenParams): Promise<void> {
@@ -30,15 +30,15 @@ export class DrizzleVerificationTokenRepository implements VerificationTokenRepo
       type: params.type,
       tokenHash: params.tokenHash,
       newValue: params.newValue,
-      expiresAt: params.expiresAt,
-    });
+      expiresAt: params.expiresAt
+    })
   }
 
   async findValidToken(params: FindValidVerificationTokenParams) {
     const [row] = await db
       .select({
         id: verificationTokens.id,
-        newValue: verificationTokens.newValue,
+        newValue: verificationTokens.newValue
       })
       .from(verificationTokens)
       .where(
@@ -47,18 +47,18 @@ export class DrizzleVerificationTokenRepository implements VerificationTokenRepo
           eq(verificationTokens.userId, params.userId),
           eq(verificationTokens.type, params.type),
           isNull(verificationTokens.verifiedAt),
-          gt(verificationTokens.expiresAt, new Date()),
-        ),
+          gt(verificationTokens.expiresAt, new Date())
+        )
       )
-      .limit(1);
+      .limit(1)
 
-    return row ?? null;
+    return row ?? null
   }
 
   async markVerified(id: string): Promise<void> {
     await db
       .update(verificationTokens)
       .set({ verifiedAt: new Date(), updatedAt: new Date() })
-      .where(eq(verificationTokens.id, id));
+      .where(eq(verificationTokens.id, id))
   }
 }

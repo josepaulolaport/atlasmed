@@ -1,16 +1,14 @@
-import { mock } from "bun:test";
-import type { ScopeRepository } from "../application/interfaces/scope.repository.interface";
-import type { InviteRepository } from "../application/interfaces/invite.repository.interface";
-import type { SessionRepository } from "../application/interfaces/session.repository.interface";
-import type { UserRepository } from "../application/interfaces/user.repository.interface";
-import type { PasswordResetRepository } from "../application/interfaces/password-reset.repository.interface";
-import type { RoleRepository } from "../application/interfaces/role.repository.interface";
-import type { VerificationTokenRepository } from "../application/interfaces/verification-token.repository.interface";
-import { ROLE_PRIORITY_BY_NAME } from "../application/constants/role-priority.constants";
+import { mock } from 'bun:test'
+import { ROLE_PRIORITY_BY_NAME } from '../application/constants/role-priority.constants'
+import type { InviteRepository } from '../application/interfaces/invite.repository.interface'
+import type { PasswordResetRepository } from '../application/interfaces/password-reset.repository.interface'
+import type { RoleRepository } from '../application/interfaces/role.repository.interface'
+import type { ScopeRepository } from '../application/interfaces/scope.repository.interface'
+import type { SessionRepository } from '../application/interfaces/session.repository.interface'
+import type { UserRepository } from '../application/interfaces/user.repository.interface'
+import type { VerificationTokenRepository } from '../application/interfaces/verification-token.repository.interface'
 
-export function createMockScopeRepository(
-  overrides?: Partial<ScopeRepository>,
-): ScopeRepository {
+export function createMockScopeRepository(overrides?: Partial<ScopeRepository>): ScopeRepository {
   return {
     findTerritoryIdsByUserId: mock(() => Promise.resolve([])),
     findTerritoryIdsByUserIds: mock(() => Promise.resolve([])),
@@ -25,12 +23,12 @@ export function createMockScopeRepository(
     revokeSector: mock(() => Promise.resolve()),
     findSectorAssignmentsByUserId: mock(() => Promise.resolve([])),
     listActiveSectors: mock(() => Promise.resolve([])),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
 export function createMockInviteRepository(
-  overrides?: Partial<InviteRepository>,
+  overrides?: Partial<InviteRepository>
 ): InviteRepository {
   return {
     create: mock(() => Promise.resolve({} as any)),
@@ -42,15 +40,13 @@ export function createMockInviteRepository(
     revoke: mock(() => Promise.resolve()),
     regenerateToken: mock(() => Promise.resolve({} as any)),
     cleanupExpired: mock(() => Promise.resolve(0)),
-    acceptInviteTransaction: mock(() =>
-      Promise.resolve({ user: {}, invite: {} } as any),
-    ),
-    ...overrides,
-  };
+    acceptInviteTransaction: mock(() => Promise.resolve({ user: {}, invite: {} } as any)),
+    ...overrides
+  }
 }
 
 export function createMockSessionRepository(
-  overrides?: Partial<SessionRepository>,
+  overrides?: Partial<SessionRepository>
 ): SessionRepository {
   return {
     create: mock(() => Promise.resolve({} as any)),
@@ -87,18 +83,16 @@ export function createMockSessionRepository(
             revokedAt: null,
             revokedReason: null,
             createdAt: new Date(),
-            updatedAt: new Date(),
+            updatedAt: new Date()
           },
-          revokedSessionIds: [],
-        }) as any,
+          revokedSessionIds: []
+        }) as any
     ),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
-export function createMockUserRepository(
-  overrides?: Partial<UserRepository>,
-): UserRepository {
+export function createMockUserRepository(overrides?: Partial<UserRepository>): UserRepository {
   return {
     findByIdentifier: mock(() => Promise.resolve(null)),
     findById: mock(() => Promise.resolve(null)),
@@ -116,9 +110,7 @@ export function createMockUserRepository(
     enableTwoFactor: mock(() => Promise.resolve()),
     disableTwoFactor: mock(() => Promise.resolve()),
     incrementTokenVersion: mock(() => Promise.resolve(1)),
-    resetPasswordTransaction: mock(() =>
-      Promise.resolve({ user: {}, passwordReset: {} } as any),
-    ),
+    resetPasswordTransaction: mock(() => Promise.resolve({ user: {}, passwordReset: {} } as any)),
     findEmailVerificationState: mock(() => Promise.resolve(null)),
     findPhoneVerificationState: mock(() => Promise.resolve(null)),
     findByEmail: mock(() => Promise.resolve(null)),
@@ -132,12 +124,12 @@ export function createMockUserRepository(
     getMetadata: mock(() => Promise.resolve(null)),
     updateMetadata: mock(() => Promise.resolve()),
     updateManagerId: mock(() => Promise.resolve({} as any)),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
 export function createMockPasswordResetRepository(
-  overrides?: Partial<PasswordResetRepository>,
+  overrides?: Partial<PasswordResetRepository>
 ): PasswordResetRepository {
   return {
     create: mock(() => Promise.resolve({} as any)),
@@ -145,43 +137,41 @@ export function createMockPasswordResetRepository(
     markAsUsed: mock(() => Promise.resolve()),
     invalidateUnusedForUser: mock(() => Promise.resolve()),
     deleteExpired: mock(() => Promise.resolve()),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
-export function createMockRoleRepository(
-  overrides?: Partial<RoleRepository>,
-): RoleRepository {
+export function createMockRoleRepository(overrides?: Partial<RoleRepository>): RoleRepository {
   return {
     findById: mock(() =>
       Promise.resolve({
-        id: "role-123",
-        name: "REP",
-        priority: ROLE_PRIORITY_BY_NAME.REP,
-      }),
+        id: 'role-123',
+        name: 'REP',
+        priority: ROLE_PRIORITY_BY_NAME.REP
+      })
     ),
     findAll: mock(() =>
       Promise.resolve([
         {
-          id: "role-123",
-          name: "REP",
-          description: "Standard user",
-          priority: ROLE_PRIORITY_BY_NAME.REP,
-        },
-      ]),
+          id: 'role-123',
+          name: 'REP',
+          description: 'Standard user',
+          priority: ROLE_PRIORITY_BY_NAME.REP
+        }
+      ])
     ),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
 export function createMockVerificationTokenRepository(
-  overrides?: Partial<VerificationTokenRepository>,
+  overrides?: Partial<VerificationTokenRepository>
 ): VerificationTokenRepository {
   return {
     deleteUnusedByUserAndType: mock(() => Promise.resolve()),
     create: mock(() => Promise.resolve()),
     findValidToken: mock(() => Promise.resolve(null)),
     markVerified: mock(() => Promise.resolve()),
-    ...overrides,
-  };
+    ...overrides
+  }
 }

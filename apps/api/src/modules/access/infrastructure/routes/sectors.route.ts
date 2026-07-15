@@ -1,26 +1,27 @@
-import { Elysia, t } from "elysia";
-import { accessRepositories, auth } from "../../composition";
-import { requirePermission } from "../middleware/permission.middleware";
+import { Elysia, t } from 'elysia'
+import { accessRepositories, auth } from '../../composition'
+import { requirePermission } from '../middleware/permission.middleware'
 
 export const sectorsRoute = new Elysia({
   detail: {
-    tags: ["Users"],
-  },
+    tags: ['Users']
+  }
 })
   .use(auth)
-  .use(requirePermission("read", "USER"))
+  .use(requirePermission('read', 'USER'))
   .get(
-    "/sectors",
+    '/sectors',
     async () => {
-      const sectors = await accessRepositories.scope.listActiveSectors();
-      return { sectors };
+      const sectors = await accessRepositories.scope.listActiveSectors()
+      return { sectors }
     },
     {
       detail: {
-        summary: "List healthcare sectors",
-        description: "Returns all active healthcare sectors. Used to populate sector selectors in invite and profile forms.",
-        tags: ["Users"],
-        security: [{ bearerAuth: [] }],
+        summary: 'List healthcare sectors',
+        description:
+          'Returns all active healthcare sectors. Used to populate sector selectors in invite and profile forms.',
+        tags: ['Users'],
+        security: [{ bearerAuth: [] }]
       },
       response: {
         200: t.Object({
@@ -28,10 +29,10 @@ export const sectorsRoute = new Elysia({
             t.Object({
               id: t.String(),
               slug: t.String(),
-              name: t.String(),
+              name: t.String()
             })
-          ),
-        }),
-      },
+          )
+        })
+      }
     }
-  );
+  )

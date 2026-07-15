@@ -1,69 +1,69 @@
-import { Role } from "@atlasmed/access";
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import type { ScopeRepository } from "../interfaces/scope.repository.interface";
-import type { ScopeService } from "../services/scope.service";
-import type { IAuditLog } from "../interfaces/audit-log.interface";
+import { Role } from '@atlasmed/access'
 import {
-  UserNotFoundError,
   InsufficientPermissionsError,
   OperationNotAllowedError,
-} from "../../../../shared/errors";
+  UserNotFoundError
+} from '../../../../shared/errors'
+import type { IAuditLog } from '../interfaces/audit-log.interface'
+import type { ScopeRepository } from '../interfaces/scope.repository.interface'
+import type { UserRepository } from '../interfaces/user.repository.interface'
+import type { ScopeService } from '../services/scope.service'
 
 interface Dependencies {
-  userRepository: UserRepository;
-  scopeRepository: ScopeRepository;
-  scopeService: ScopeService;
-  auditLog: IAuditLog;
+  userRepository: UserRepository
+  scopeRepository: ScopeRepository
+  scopeService: ScopeService
+  auditLog: IAuditLog
 }
 
 export class RevokeUserTerritoryUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: {
-    targetUserId: string;
-    territoryId: string;
-    revokedBy: string;
-    actorRole: Role;
+    targetUserId: string
+    territoryId: string
+    revokedBy: string
+    actorRole: Role
   }) {
     if (params.actorRole !== Role.ADMIN) {
       throw new InsufficientPermissionsError(
-        ["user:revoke_territory"],
+        ['user:revoke_territory'],
         [`role:${params.actorRole}`]
-      );
+      )
     }
 
-    const target = await this.deps.userRepository.findById(params.targetUserId);
+    const target = await this.deps.userRepository.findById(params.targetUserId)
 
     if (!target) {
-      throw new UserNotFoundError(params.targetUserId);
+      throw new UserNotFoundError(params.targetUserId)
     }
 
     if (target.role.name !== Role.REP) {
       throw new OperationNotAllowedError(
-        "revoke_territory",
-        "Territory assignments are only supported for USER accounts"
-      );
+        'revoke_territory',
+        'Territory assignments are only supported for USER accounts'
+      )
     }
 
     await this.deps.scopeRepository.revokeTerritory({
       userId: params.targetUserId,
-      territoryId: params.territoryId,
-    });
+      territoryId: params.territoryId
+    })
 
-    await this.deps.scopeService.invalidateForTerritoryAssignmentChange(params.targetUserId);
+    await this.deps.scopeService.invalidateForTerritoryAssignmentChange(params.targetUserId)
 
     await this.deps.auditLog.log({
       userId: params.revokedBy,
-      eventType: "USER_TERRITORY_REVOKED",
-      severity: "INFO",
-      action: "revoke_territory",
-      resource: "user",
+      eventType: 'USER_TERRITORY_REVOKED',
+      severity: 'INFO',
+      action: 'revoke_territory',
+      resource: 'user',
       resourceId: params.targetUserId,
       actorId: params.revokedBy,
       details: {
         targetUserId: params.targetUserId,
-        territoryId: params.territoryId,
-      },
-    });
+        territoryId: params.territoryId
+      }
+    })
   }
 }

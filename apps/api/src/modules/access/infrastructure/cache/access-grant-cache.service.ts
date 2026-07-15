@@ -1,54 +1,50 @@
-import type { Redis } from "ioredis";
-import type { AccessGrantRecord } from "@atlasmed/access";
-import { logger } from "../../../../infrastructure/logging/logger";
-import { redis } from "../../../../infrastructure/cache/redis.client";
+import type { AccessGrantRecord } from '@atlasmed/access'
+import type { Redis } from 'ioredis'
+import { redis } from '../../../../infrastructure/cache/redis.client'
+import { logger } from '../../../../infrastructure/logging/logger'
 
-const CACHE_KEY_PREFIX = "permissions:user:";
-const CACHE_TTL_SECONDS = 300;
+const CACHE_KEY_PREFIX = 'permissions:user:'
+const CACHE_TTL_SECONDS = 300
 
 export class AccessGrantCacheService {
-  private readonly redis: Redis;
+  private readonly redis: Redis
 
   constructor(redisClient: Redis = redis) {
-    this.redis = redisClient;
+    this.redis = redisClient
   }
 
   private getKey(userId: string): string {
-    return `${CACHE_KEY_PREFIX}${userId}`;
+    return `${CACHE_KEY_PREFIX}${userId}`
   }
 
   async get(userId: string): Promise<AccessGrantRecord[] | null> {
     try {
-      const data = await this.redis.get(this.getKey(userId));
+      const data = await this.redis.get(this.getKey(userId))
       if (!data) {
-        return null;
+        return null
       }
-      return JSON.parse(data) as AccessGrantRecord[];
+      return JSON.parse(data) as AccessGrantRecord[]
     } catch (error) {
-      logger.error("Failed to get access grants from cache", error);
-      return null;
+      logger.error('Failed to get access grants from cache', error)
+      return null
     }
   }
 
   async set(userId: string, grants: AccessGrantRecord[]): Promise<void> {
     try {
-      await this.redis.setex(
-        this.getKey(userId),
-        CACHE_TTL_SECONDS,
-        JSON.stringify(grants)
-      );
+      await this.redis.setex(this.getKey(userId), CACHE_TTL_SECONDS, JSON.stringify(grants))
     } catch (error) {
-      logger.error("Failed to set access grants in cache", error);
+      logger.error('Failed to set access grants in cache', error)
     }
   }
 
   async invalidate(userId: string): Promise<void> {
     try {
-      await this.redis.del(this.getKey(userId));
+      await this.redis.del(this.getKey(userId))
     } catch (error) {
-      logger.error("Failed to invalidate access grant cache", error);
+      logger.error('Failed to invalidate access grant cache', error)
     }
   }
 }
 
-export const accessGrantCacheService = new AccessGrantCacheService();
+export const accessGrantCacheService = new AccessGrantCacheService()

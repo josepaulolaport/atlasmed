@@ -2,19 +2,16 @@ import { environment } from '@atlasmed/config'
 import type { LoggerContext, ObservabilityLogger } from './logger'
 
 function usePrettyConsole(): boolean {
-  return (
-    environment.NODE_ENV !== 'production' &&
-    environment.LOG_FORMAT !== 'json'
-  )
+  return environment.NODE_ENV !== 'production' && environment.LOG_FORMAT !== 'json'
 }
 
 const LEVEL_LABELS: Record<string, string> = {
   trace: 'TRACE',
   debug: 'DEBUG',
-  info:  ' INFO',
-  warn:  ' WARN',
+  info: ' INFO',
+  warn: ' WARN',
   error: 'ERROR',
-  fatal: 'FATAL',
+  fatal: 'FATAL'
 }
 
 function formatTimestamp(): string {
@@ -72,14 +69,14 @@ function formatJsonLine(
     service: scope,
     msg: message,
     time: new Date().toISOString(),
-    ...context,
+    ...context
   }
 
   if (error instanceof Error) {
     payload.error = {
       name: error.name,
       message: error.message,
-      stack: error.stack,
+      stack: error.stack
     }
   } else if (error !== undefined && error !== null) {
     payload.error = String(error)

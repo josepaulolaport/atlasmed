@@ -1,190 +1,189 @@
-"use client";
+'use client'
 
-import { useEffect, useReducer, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { canReadTerritories, isAdmin } from "@/lib/permissions";
-import { territoriesApi } from "@/lib/api/territories";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import { TerritorySubnav } from "@/components/territory/territory-subnav";
+import { Loader2, Pencil } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useReducer, useState } from 'react'
+import { TerritorySubnav } from '@/components/territory/territory-subnav'
 import {
   DEFAULT_TERRITORY_TYPE_FLAGS,
-  TerritoryTypeFlagsFields,
-} from "@/components/territory/territory-type-flags-fields";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
-import { Loader2, Pencil } from "lucide-react";
-import type { TerritoryType, TerritoryTypeFlags } from "@/types/territory";
+  TerritoryTypeFlagsFields
+} from '@/components/territory/territory-type-flags-fields'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { territoriesApi } from '@/lib/api/territories'
+import { canReadTerritories, isAdmin } from '@/lib/permissions'
+import type { TerritoryType, TerritoryTypeFlags } from '@/types/territory'
 
 type TypesState = {
-  types: TerritoryType[];
-  loading: boolean;
-};
+  types: TerritoryType[]
+  loading: boolean
+}
 
 type TypesAction =
-  | { type: "FETCH_START" }
-  | { type: "FETCH_SUCCESS"; types: TerritoryType[] }
-  | { type: "FETCH_ERROR" };
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS'; types: TerritoryType[] }
+  | { type: 'FETCH_ERROR' }
 
 function typesReducer(state: TypesState, action: TypesAction): TypesState {
   switch (action.type) {
-    case "FETCH_START":
-      return { ...state, loading: true };
-    case "FETCH_SUCCESS":
-      return { ...state, types: action.types, loading: false };
-    case "FETCH_ERROR":
-      return { ...state, loading: false };
+    case 'FETCH_START':
+      return { ...state, loading: true }
+    case 'FETCH_SUCCESS':
+      return { ...state, types: action.types, loading: false }
+    case 'FETCH_ERROR':
+      return { ...state, loading: false }
     default:
-      return state;
+      return state
   }
 }
 
-const initialTypesState: TypesState = { types: [], loading: true };
-
+const initialTypesState: TypesState = { types: [], loading: true }
 
 export default function TerritoryTypesPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [state, dispatch] = useReducer(typesReducer, initialTypesState);
-  const [slug, setSlug] = useState("");
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [createFlags, setCreateFlags] = useState<TerritoryTypeFlags>(DEFAULT_TERRITORY_TYPE_FLAGS);
-  const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editDescription, setEditDescription] = useState("");
-  const [editFlags, setEditFlags] = useState<TerritoryTypeFlags>(DEFAULT_TERRITORY_TYPE_FLAGS);
-  const [editActive, setEditActive] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const { user } = useAuth()
+  const router = useRouter()
+  const [state, dispatch] = useReducer(typesReducer, initialTypesState)
+  const [slug, setSlug] = useState('')
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [createFlags, setCreateFlags] = useState<TerritoryTypeFlags>(DEFAULT_TERRITORY_TYPE_FLAGS)
+  const [saving, setSaving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editFlags, setEditFlags] = useState<TerritoryTypeFlags>(DEFAULT_TERRITORY_TYPE_FLAGS)
+  const [editActive, setEditActive] = useState(true)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  const canRead = user ? canReadTerritories(user.role.name) : false;
-  const userIsAdmin = user ? isAdmin(user.role.name) : false;
+  const canRead = user ? canReadTerritories(user.role.name) : false
+  const userIsAdmin = user ? isAdmin(user.role.name) : false
 
   useEffect(() => {
     if (user && !canRead) {
-      router.replace("/unauthorized");
-      return;
+      router.replace('/unauthorized')
+      return
     }
 
-    if (!canRead) return;
+    if (!canRead) return
 
     const fetchTypes = async () => {
-      dispatch({ type: "FETCH_START" });
+      dispatch({ type: 'FETCH_START' })
       try {
-        const response = await territoriesApi.listTerritoryTypes();
-        dispatch({ type: "FETCH_SUCCESS", types: response.data });
+        const response = await territoriesApi.listTerritoryTypes()
+        dispatch({ type: 'FETCH_SUCCESS', types: response.data })
       } catch {
         toast({
-          title: "Erro",
-          description: "Falha ao carregar tipos de território",
-          variant: "destructive",
-        });
-        dispatch({ type: "FETCH_ERROR" });
+          title: 'Erro',
+          description: 'Falha ao carregar tipos de território',
+          variant: 'destructive'
+        })
+        dispatch({ type: 'FETCH_ERROR' })
       }
-    };
+    }
 
-    fetchTypes();
-  }, [user, canRead, router]);
+    fetchTypes()
+  }, [user, canRead, router])
 
   const resetCreateForm = () => {
-    setSlug("");
-    setName("");
-    setDescription("");
-    setCreateFlags(DEFAULT_TERRITORY_TYPE_FLAGS);
-  };
+    setSlug('')
+    setName('')
+    setDescription('')
+    setCreateFlags(DEFAULT_TERRITORY_TYPE_FLAGS)
+  }
 
   const handleCreate = async () => {
-    if (!slug.trim() || !name.trim()) return;
-    setSaving(true);
+    if (!slug.trim() || !name.trim()) return
+    setSaving(true)
     try {
       await territoriesApi.createTerritoryType({
         slug: slug.trim().toLowerCase(),
         name: name.trim(),
         description: description.trim() || undefined,
-        ...createFlags,
-      });
-      resetCreateForm();
-      dispatch({ type: "FETCH_START" });
+        ...createFlags
+      })
+      resetCreateForm()
+      dispatch({ type: 'FETCH_START' })
       try {
-        const response = await territoriesApi.listTerritoryTypes();
-        dispatch({ type: "FETCH_SUCCESS", types: response.data });
+        const response = await territoriesApi.listTerritoryTypes()
+        dispatch({ type: 'FETCH_SUCCESS', types: response.data })
       } catch {
-        dispatch({ type: "FETCH_ERROR" });
+        dispatch({ type: 'FETCH_ERROR' })
       }
-      toast({ title: "Sucesso", description: "Tipo de território criado", variant: "success" });
+      toast({ title: 'Sucesso', description: 'Tipo de território criado', variant: 'success' })
     } catch (err) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao criar tipo de território"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(err, 'Falha ao criar tipo de território'),
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const startEditing = (type: TerritoryType) => {
-    setEditingId(type.id);
-    setEditName(type.name);
-    setEditDescription(type.description ?? "");
+    setEditingId(type.id)
+    setEditName(type.name)
+    setEditDescription(type.description ?? '')
     setEditFlags({
       canHaveBoundary: type.canHaveBoundary,
       assignsClinics: type.assignsClinics,
       assignableToUsers: type.assignableToUsers,
       assignableToManagers: type.assignableToManagers,
       isCountryLevel: type.isCountryLevel,
-      blockSiblingOverlap: type.blockSiblingOverlap,
-    });
-    setEditActive(type.isActive);
-  };
+      blockSiblingOverlap: type.blockSiblingOverlap
+    })
+    setEditActive(type.isActive)
+  }
 
   const cancelEditing = () => {
-    setEditingId(null);
-  };
+    setEditingId(null)
+  }
 
   const handleUpdate = async (typeId: string) => {
-    setUpdatingId(typeId);
+    setUpdatingId(typeId)
     try {
       await territoriesApi.updateTerritoryType(typeId, {
         name: editName.trim(),
         description: editDescription.trim() || null,
         isActive: editActive,
-        ...editFlags,
-      });
-      setEditingId(null);
-      dispatch({ type: "FETCH_START" });
+        ...editFlags
+      })
+      setEditingId(null)
+      dispatch({ type: 'FETCH_START' })
       try {
-        const response = await territoriesApi.listTerritoryTypes();
-        dispatch({ type: "FETCH_SUCCESS", types: response.data });
+        const response = await territoriesApi.listTerritoryTypes()
+        dispatch({ type: 'FETCH_SUCCESS', types: response.data })
       } catch {
-        dispatch({ type: "FETCH_ERROR" });
+        dispatch({ type: 'FETCH_ERROR' })
       }
-      toast({ title: "Sucesso", description: "Tipo de território atualizado", variant: "success" });
+      toast({ title: 'Sucesso', description: 'Tipo de território atualizado', variant: 'success' })
     } catch (err) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao atualizar tipo de território"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(err, 'Falha ao atualizar tipo de território'),
+        variant: 'destructive'
+      })
     } finally {
-      setUpdatingId(null);
+      setUpdatingId(null)
     }
-  };
+  }
 
   if (!user || !canRead) {
-    return null;
+    return null
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Tipos de território</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="font-bold text-3xl text-gray-900">Tipos de território</h1>
+        <p className="mt-1 text-gray-500 text-sm">
           Os tipos caracterizam polígonos e controlam o comportamento de atribuição. A hierarquia
           vem da vinculação geográfica, não de regras de tipo.
         </p>
@@ -222,7 +221,7 @@ export default function TerritoryTypesPage() {
               idPrefix="create"
             />
             <Button onClick={handleCreate} disabled={saving}>
-              {saving ? "Criando..." : "Criar tipo"}
+              {saving ? 'Criando...' : 'Criar tipo'}
             </Button>
           </CardContent>
         </Card>
@@ -240,7 +239,7 @@ export default function TerritoryTypesPage() {
           ) : (
             <ul className="divide-y divide-gray-100">
               {state.types.map((type) => {
-                const isEditing = editingId === type.id;
+                const isEditing = editingId === type.id
 
                 return (
                   <li key={type.id} className="py-4">
@@ -283,7 +282,7 @@ export default function TerritoryTypesPage() {
                             onClick={() => void handleUpdate(type.id)}
                             disabled={updatingId === type.id}
                           >
-                            {updatingId === type.id ? "Salvando..." : "Salvar alterações"}
+                            {updatingId === type.id ? 'Salvando...' : 'Salvar alterações'}
                           </Button>
                           <Button size="sm" variant="outline" onClick={cancelEditing}>
                             Cancelar
@@ -294,8 +293,7 @@ export default function TerritoryTypesPage() {
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
                           <p className="font-medium">
-                            {type.name}{" "}
-                            <span className="text-gray-500">({type.slug})</span>
+                            {type.name} <span className="text-gray-500">({type.slug})</span>
                             {!type.isActive && (
                               <Badge variant="destructive" className="ml-2">
                                 inativo
@@ -303,15 +301,11 @@ export default function TerritoryTypesPage() {
                             )}
                           </p>
                           {type.description ? (
-                            <p className="text-sm text-gray-500">{type.description}</p>
+                            <p className="text-gray-500 text-sm">{type.description}</p>
                           ) : null}
                           <div className="mt-2 flex flex-wrap gap-1">
-                            {type.isCountryLevel && (
-                              <Badge variant="outline">nível de país</Badge>
-                            )}
-                            {type.canHaveBoundary && (
-                              <Badge variant="outline">com limite</Badge>
-                            )}
+                            {type.isCountryLevel && <Badge variant="outline">nível de país</Badge>}
+                            {type.canHaveBoundary && <Badge variant="outline">com limite</Badge>}
                             {type.assignsClinics && (
                               <Badge variant="outline">atribui clínicas</Badge>
                             )}
@@ -335,12 +329,12 @@ export default function TerritoryTypesPage() {
                       </div>
                     )}
                   </li>
-                );
+                )
               })}
             </ul>
           )}
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

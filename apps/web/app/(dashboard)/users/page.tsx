@@ -1,143 +1,144 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/auth-context";
-import { usersApi } from "@/lib/api/users";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "@/hooks/use-toast";
-import type { User } from "@/types/auth";
-import { canManageUsers, isAdmin } from "@/lib/permissions";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { ManageAssignmentsDialog } from "@/components/users/manage-assignments-dialog";
-import { ChangeRoleDialog } from "@/components/users/change-role-dialog";
-import { ManagePermissionsDialog } from "@/components/users/manage-permissions-dialog";
+  DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table'
+import { ChangeRoleDialog } from '@/components/users/change-role-dialog'
+import { ManageAssignmentsDialog } from '@/components/users/manage-assignments-dialog'
+import { ManagePermissionsDialog } from '@/components/users/manage-permissions-dialog'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { usersApi } from '@/lib/api/users'
+import { canManageUsers, isAdmin } from '@/lib/permissions'
+import type { User } from '@/types/auth'
 
 export default function UsersPage() {
-  const { user: currentUser } = useAuth();
-  const router = useRouter();
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [assignmentsUser, setAssignmentsUser] = useState<User | null>(null);
-  const [assignmentsOpen, setAssignmentsOpen] = useState(false);
-  const [roleUser, setRoleUser] = useState<User | null>(null);
-  const [roleOpen, setRoleOpen] = useState(false);
-  const [permissionsUser, setPermissionsUser] = useState<User | null>(null);
-  const [permissionsOpen, setPermissionsOpen] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const { user: currentUser } = useAuth()
+  const router = useRouter()
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [assignmentsUser, setAssignmentsUser] = useState<User | null>(null)
+  const [assignmentsOpen, setAssignmentsOpen] = useState(false)
+  const [roleUser, setRoleUser] = useState<User | null>(null)
+  const [roleOpen, setRoleOpen] = useState(false)
+  const [permissionsUser, setPermissionsUser] = useState<User | null>(null)
+  const [permissionsOpen, setPermissionsOpen] = useState(false)
+  const [refreshKey, setRefreshKey] = useState(0)
 
-  const userIsAdmin = currentUser ? isAdmin(currentUser.role.name) : false;
+  const userIsAdmin = currentUser ? isAdmin(currentUser.role.name) : false
 
   useEffect(() => {
     if (currentUser && !canManageUsers(currentUser.role.name)) {
-      router.push("/unauthorized");
-      return;
+      router.push('/unauthorized')
+      return
     }
-  }, [currentUser, router]);
+  }, [currentUser, router])
 
   useEffect(() => {
     const loadUsers = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
         const response = await usersApi.getUsers({
           page,
           limit: 10,
-          search: search || undefined,
-        });
-        setUsers(response.data);
-        setTotalPages(response.pagination.totalPages);
+          search: search || undefined
+        })
+        setUsers(response.data)
+        setTotalPages(response.pagination.totalPages)
       } catch {
         toast({
-          title: "Erro",
-          description: "Falha ao carregar usuários",
-          variant: "destructive",
-        });
+          title: 'Erro',
+          description: 'Falha ao carregar usuários',
+          variant: 'destructive'
+        })
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
-    loadUsers();
-  }, [page, search, refreshKey]);
+    loadUsers()
+  }, [page, search, refreshKey])
 
   const handleUserAction = async (
     userId: string,
-    action: "activate" | "deactivate" | "suspend" | "unsuspend"
+    action: 'activate' | 'deactivate' | 'suspend' | 'unsuspend'
   ) => {
     try {
       switch (action) {
-        case "activate":
-          await usersApi.activateUser(userId);
-          break;
-        case "deactivate":
-          await usersApi.deactivateUser(userId);
-          break;
-        case "suspend":
-          await usersApi.suspendUser(userId);
-          break;
-        case "unsuspend":
-          await usersApi.unsuspendUser(userId);
-          break;
+        case 'activate':
+          await usersApi.activateUser(userId)
+          break
+        case 'deactivate':
+          await usersApi.deactivateUser(userId)
+          break
+        case 'suspend':
+          await usersApi.suspendUser(userId)
+          break
+        case 'unsuspend':
+          await usersApi.unsuspendUser(userId)
+          break
       }
 
       const actionLabels: Record<string, string> = {
-        activate: "ativado",
-        deactivate: "desativado",
-        suspend: "suspenso",
-        unsuspend: "reativado",
-      };
+        activate: 'ativado',
+        deactivate: 'desativado',
+        suspend: 'suspenso',
+        unsuspend: 'reativado'
+      }
       toast({
-        title: "Sucesso",
+        title: 'Sucesso',
         description: `Usuário ${actionLabels[action] ?? action} com sucesso`,
-        variant: "success",
-      });
+        variant: 'success'
+      })
 
       const response = await usersApi.getUsers({
         page,
         limit: 10,
-        search: search || undefined,
-      });
-      setUsers(response.data);
-      setTotalPages(response.pagination.totalPages);
+        search: search || undefined
+      })
+      setUsers(response.data)
+      setTotalPages(response.pagination.totalPages)
     } catch (err) {
-      const error = err as { response?: { data?: { message?: string } } };
+      const error = err as { response?: { data?: { message?: string } } }
       const actionVerbLabels: Record<string, string> = {
-        activate: "ativar",
-        deactivate: "desativar",
-        suspend: "suspender",
-        unsuspend: "reativar",
-      };
+        activate: 'ativar',
+        deactivate: 'desativar',
+        suspend: 'suspender',
+        unsuspend: 'reativar'
+      }
       toast({
-        title: "Erro",
-        description: error.response?.data?.message || `Falha ao ${actionVerbLabels[action] ?? action} usuário`,
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description:
+          error.response?.data?.message || `Falha ao ${actionVerbLabels[action] ?? action} usuário`,
+        variant: 'destructive'
+      })
     }
-  };
+  }
 
   if (!currentUser || !canManageUsers(currentUser.role.name)) {
-    return null;
+    return null
   }
 
   return (
@@ -146,16 +147,16 @@ export default function UsersPage() {
         user={assignmentsUser}
         open={assignmentsOpen}
         onOpenChange={(open) => {
-          setAssignmentsOpen(open);
-          if (!open) setAssignmentsUser(null);
+          setAssignmentsOpen(open)
+          if (!open) setAssignmentsUser(null)
         }}
       />
       <ChangeRoleDialog
         user={roleUser}
         open={roleOpen}
         onOpenChange={(open) => {
-          setRoleOpen(open);
-          if (!open) setRoleUser(null);
+          setRoleOpen(open)
+          if (!open) setRoleUser(null)
         }}
         onUpdated={() => setRefreshKey((k) => k + 1)}
       />
@@ -163,20 +164,18 @@ export default function UsersPage() {
         user={permissionsUser}
         open={permissionsOpen}
         onOpenChange={(open) => {
-          setPermissionsOpen(open);
-          if (!open) setPermissionsUser(null);
+          setPermissionsOpen(open)
+          if (!open) setPermissionsUser(null)
         }}
       />
 
-      <div className="px-6 py-8 border-b border-zinc-100">
-        <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+      <div className="border-zinc-100 border-b px-6 py-8">
+        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
           <div>
-            <h1 className="text-2xl font-medium tracking-tight text-zinc-900">
+            <h1 className="font-medium text-2xl text-zinc-900 tracking-tight">
               Gerenciamento de usuários
             </h1>
-            <p className="text-sm text-zinc-500 mt-1">
-              Gerencie usuários, convites e permissões
-            </p>
+            <p className="mt-1 text-sm text-zinc-500">Gerencie usuários, convites e permissões</p>
           </div>
           <div className="flex gap-2">
             <Link href="/users/invites">
@@ -196,14 +195,14 @@ export default function UsersPage() {
         </div>
       </div>
 
-      <div className="p-6 max-w-6xl mx-auto w-full">
-        <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
+      <div className="mx-auto w-full max-w-6xl p-6">
+        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+          <div className="border-zinc-200 border-b bg-zinc-50/50 px-5 py-4">
             <div className="relative max-w-sm">
               <iconify-icon
                 icon="solar:magnifer-linear"
                 stroke-width="1.5"
-                className="text-base absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+                className="absolute top-1/2 left-3 -translate-y-1/2 text-base text-zinc-400"
               />
               <Input
                 placeholder="Buscar por nome de usuário ou email..."
@@ -215,9 +214,7 @@ export default function UsersPage() {
           </div>
           <div className="p-5">
             {loading ? (
-              <div className="py-10 text-center text-sm text-zinc-500">
-                Carregando…
-              </div>
+              <div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>
             ) : users.length === 0 ? (
               <div className="py-10 text-center text-sm text-zinc-500">
                 Nenhum usuário encontrado
@@ -240,9 +237,7 @@ export default function UsersPage() {
                       <TableRow key={user.id}>
                         <TableCell>
                           <div>
-                            <div className="font-medium text-zinc-900">
-                              {user.username}
-                            </div>
+                            <div className="font-medium text-zinc-900">{user.username}</div>
                             {user.firstName && user.lastName && (
                               <div className="text-xs text-zinc-500">
                                 {user.firstName} {user.lastName}
@@ -250,20 +245,18 @@ export default function UsersPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-zinc-700">
-                          {user.email}
-                        </TableCell>
+                        <TableCell className="text-zinc-700">{user.email}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{user.role.name}</Badge>
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              user.status === "ACTIVE"
-                                ? "success"
-                                : user.status === "SUSPENDED"
-                                ? "destructive"
-                                : "secondary"
+                              user.status === 'ACTIVE'
+                                ? 'success'
+                                : user.status === 'SUSPENDED'
+                                  ? 'destructive'
+                                  : 'secondary'
                             }
                           >
                             {user.status}
@@ -274,27 +267,27 @@ export default function UsersPage() {
                             <iconify-icon
                               icon={
                                 user.emailVerified
-                                  ? "solar:check-circle-linear"
-                                  : "solar:close-circle-linear"
+                                  ? 'solar:check-circle-linear'
+                                  : 'solar:close-circle-linear'
                               }
                               stroke-width="1.5"
                               className={
                                 user.emailVerified
-                                  ? "text-base text-emerald-600"
-                                  : "text-base text-zinc-400"
+                                  ? 'text-base text-emerald-600'
+                                  : 'text-base text-zinc-400'
                               }
                             />
                             <iconify-icon
                               icon={
                                 user.phoneVerified
-                                  ? "solar:check-circle-linear"
-                                  : "solar:close-circle-linear"
+                                  ? 'solar:check-circle-linear'
+                                  : 'solar:close-circle-linear'
                               }
                               stroke-width="1.5"
                               className={
                                 user.phoneVerified
-                                  ? "text-base text-emerald-600"
-                                  : "text-base text-zinc-400"
+                                  ? 'text-base text-emerald-600'
+                                  : 'text-base text-zinc-400'
                               }
                             />
                           </div>
@@ -317,98 +310,90 @@ export default function UsersPage() {
                                 <>
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      setRoleUser(user);
-                                      setRoleOpen(true);
+                                      setRoleUser(user)
+                                      setRoleOpen(true)
                                     }}
                                   >
                                     <iconify-icon
                                       icon="solar:user-linear"
                                       stroke-width="1.5"
-                                      className="text-base mr-2"
+                                      className="mr-2 text-base"
                                     />
                                     Alterar função
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      setPermissionsUser(user);
-                                      setPermissionsOpen(true);
+                                      setPermissionsUser(user)
+                                      setPermissionsOpen(true)
                                     }}
                                   >
                                     <iconify-icon
                                       icon="solar:shield-check-linear"
                                       stroke-width="1.5"
-                                      className="text-base mr-2"
+                                      className="mr-2 text-base"
                                     />
                                     Gerenciar permissões
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      setAssignmentsUser(user);
-                                      setAssignmentsOpen(true);
+                                      setAssignmentsUser(user)
+                                      setAssignmentsOpen(true)
                                     }}
                                   >
                                     <iconify-icon
                                       icon="solar:map-point-linear"
                                       stroke-width="1.5"
-                                      className="text-base mr-2"
+                                      className="mr-2 text-base"
                                     />
                                     Gerenciar atribuições
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              {userIsAdmin && user.status === "INACTIVE" && (
+                              {userIsAdmin && user.status === 'INACTIVE' && (
                                 <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUserAction(user.id, "activate")
-                                  }
+                                  onClick={() => handleUserAction(user.id, 'activate')}
                                 >
                                   <iconify-icon
                                     icon="solar:play-circle-linear"
                                     stroke-width="1.5"
-                                    className="text-base mr-2"
+                                    className="mr-2 text-base"
                                   />
                                   Ativar
                                 </DropdownMenuItem>
                               )}
-                              {user.status === "ACTIVE" && (
+                              {user.status === 'ACTIVE' && (
                                 <>
                                   <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUserAction(user.id, "suspend")
-                                    }
+                                    onClick={() => handleUserAction(user.id, 'suspend')}
                                   >
                                     <iconify-icon
                                       icon="solar:pause-circle-linear"
                                       stroke-width="1.5"
-                                      className="text-base mr-2"
+                                      className="mr-2 text-base"
                                     />
                                     Suspender
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() =>
-                                      handleUserAction(user.id, "deactivate")
-                                    }
+                                    onClick={() => handleUserAction(user.id, 'deactivate')}
                                     className="text-red-600"
                                   >
                                     <iconify-icon
                                       icon="solar:forbidden-circle-linear"
                                       stroke-width="1.5"
-                                      className="text-base mr-2"
+                                      className="mr-2 text-base"
                                     />
                                     Desativar
                                   </DropdownMenuItem>
                                 </>
                               )}
-                              {user.status === "SUSPENDED" && (
+                              {user.status === 'SUSPENDED' && (
                                 <DropdownMenuItem
-                                  onClick={() =>
-                                    handleUserAction(user.id, "unsuspend")
-                                  }
+                                  onClick={() => handleUserAction(user.id, 'unsuspend')}
                                 >
                                   <iconify-icon
                                     icon="solar:play-circle-linear"
                                     stroke-width="1.5"
-                                    className="text-base mr-2"
+                                    className="mr-2 text-base"
                                   />
                                   Cancelar suspensão
                                 </DropdownMenuItem>
@@ -435,9 +420,7 @@ export default function UsersPage() {
                     </span>
                     <Button
                       variant="outline"
-                      onClick={() =>
-                        setPage((p) => Math.min(totalPages, p + 1))
-                      }
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page === totalPages}
                     >
                       Próximo
@@ -450,5 +433,5 @@ export default function UsersPage() {
         </div>
       </div>
     </>
-  );
+  )
 }

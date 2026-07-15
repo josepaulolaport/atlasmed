@@ -1,20 +1,20 @@
-import { db } from "../../../../../infrastructure/database/db";
-import { facilityHealthcareProviderShares, healthcareProviders } from "@atlasmed/database";
-import { eq, sql } from "drizzle-orm";
+import { facilityHealthcareProviderShares, healthcareProviders } from '@atlasmed/database'
+import { eq, sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
   FacilityHealthcareProviderShareRecord,
-  FacilityHealthcareProviderShareRepository,
-} from "../../../application/interfaces/facility-healthcare-provider-share.repository.interface";
+  FacilityHealthcareProviderShareRepository
+} from '../../../application/interfaces/facility-healthcare-provider-share.repository.interface'
 
 function mapShare(row: {
-  id: string;
-  facilityId: string;
-  healthcareProviderId: string;
-  sharePercent: string;
-  source: "MANUAL" | "REGISTRY" | "IMPORT";
-  createdAt: Date;
-  updatedAt: Date;
-  healthcareProvider: { id: string; name: string; type: string };
+  id: string
+  facilityId: string
+  healthcareProviderId: string
+  sharePercent: string
+  source: 'MANUAL' | 'REGISTRY' | 'IMPORT'
+  createdAt: Date
+  updatedAt: Date
+  healthcareProvider: { id: string; name: string; type: string }
 }): FacilityHealthcareProviderShareRecord {
   return {
     id: row.id,
@@ -24,8 +24,8 @@ function mapShare(row: {
     source: row.source,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    healthcareProvider: row.healthcareProvider,
-  };
+    healthcareProvider: row.healthcareProvider
+  }
 }
 
 export class DrizzleFacilityHealthcareProviderShareRepository
@@ -44,8 +44,8 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         healthcareProvider: {
           id: healthcareProviders.id,
           name: healthcareProviders.name,
-          type: healthcareProviders.type,
-        },
+          type: healthcareProviders.type
+        }
       })
       .from(facilityHealthcareProviderShares)
       .innerJoin(
@@ -53,15 +53,15 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         eq(facilityHealthcareProviderShares.healthcareProviderId, healthcareProviders.id)
       )
       .where(eq(facilityHealthcareProviderShares.facilityId, facilityId))
-      .orderBy(sql`${facilityHealthcareProviderShares.sharePercent}::numeric desc`);
+      .orderBy(sql`${facilityHealthcareProviderShares.sharePercent}::numeric desc`)
 
-    return rows.map(mapShare);
+    return rows.map(mapShare)
   }
 
   async create(data: {
-    facilityId: string;
-    healthcareProviderId: string;
-    sharePercent: number;
+    facilityId: string
+    healthcareProviderId: string
+    sharePercent: number
   }): Promise<FacilityHealthcareProviderShareRecord> {
     const [share] = await db
       .insert(facilityHealthcareProviderShares)
@@ -69,9 +69,9 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         facilityId: data.facilityId,
         healthcareProviderId: data.healthcareProviderId,
         sharePercent: String(data.sharePercent),
-        source: "MANUAL",
+        source: 'MANUAL'
       })
-      .returning({ id: facilityHealthcareProviderShares.id });
+      .returning({ id: facilityHealthcareProviderShares.id })
 
     const [row] = await db
       .select({
@@ -85,25 +85,25 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         healthcareProvider: {
           id: healthcareProviders.id,
           name: healthcareProviders.name,
-          type: healthcareProviders.type,
-        },
+          type: healthcareProviders.type
+        }
       })
       .from(facilityHealthcareProviderShares)
       .innerJoin(
         healthcareProviders,
         eq(facilityHealthcareProviderShares.healthcareProviderId, healthcareProviders.id)
       )
-      .where(eq(facilityHealthcareProviderShares.id, share!.id));
+      .where(eq(facilityHealthcareProviderShares.id, share!.id))
 
-    return mapShare(row!);
+    return mapShare(row!)
   }
 
   async sumSharePercentForFacility(facilityId: string): Promise<number> {
     const [result] = await db
       .select({ sum: sql<string>`sum(${facilityHealthcareProviderShares.sharePercent}::numeric)` })
       .from(facilityHealthcareProviderShares)
-      .where(eq(facilityHealthcareProviderShares.facilityId, facilityId));
+      .where(eq(facilityHealthcareProviderShares.facilityId, facilityId))
 
-    return Number(result?.sum ?? 0);
+    return Number(result?.sum ?? 0)
   }
 }

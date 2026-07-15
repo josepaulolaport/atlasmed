@@ -1,139 +1,139 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { Role } from "@atlasmed/access";
-import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { Role } from '@atlasmed/access'
+import { createMockAuditLogService } from '../../test-helpers/audit-mocks'
 
-mock.module("../../../../infrastructure/audit/audit-log.service", () => ({
-  auditLogService: createMockAuditLogService(),
-}));
+mock.module('../../../../infrastructure/audit/audit-log.service', () => ({
+  auditLogService: createMockAuditLogService()
+}))
 
-import { AssignUserManagerUseCase } from "./assign-user-manager.use-case";
-import {
-  createMockUserRepository,
-  createMockScopeRepository,
-} from "../../test-helpers/repository-mocks";
-import { createMockScopeService } from "../../test-helpers/fixtures";
 import {
   InsufficientPermissionsError,
   OperationNotAllowedError,
-  UserNotFoundError,
-} from "../../../../shared/errors";
+  UserNotFoundError
+} from '../../../../shared/errors'
+import { createMockScopeService } from '../../test-helpers/fixtures'
+import {
+  createMockScopeRepository,
+  createMockUserRepository
+} from '../../test-helpers/repository-mocks'
+import { AssignUserManagerUseCase } from './assign-user-manager.use-case'
 
-describe("AssignUserManagerUseCase", () => {
+describe('AssignUserManagerUseCase', () => {
   const targetUser = {
-    id: "user-target",
+    id: 'user-target',
     managerId: null,
-    role: { name: Role.REP },
-  };
+    role: { name: Role.REP }
+  }
 
   const managerUser = {
-    id: "manager-1",
-    role: { name: Role.MANAGER },
-  };
+    id: 'manager-1',
+    role: { name: Role.MANAGER }
+  }
 
-  let useCase: AssignUserManagerUseCase;
-  let userRepository: ReturnType<typeof createMockUserRepository>;
-  let scopeRepository: ReturnType<typeof createMockScopeRepository>;
-  let scopeService: ReturnType<typeof createMockScopeService>;
+  let useCase: AssignUserManagerUseCase
+  let userRepository: ReturnType<typeof createMockUserRepository>
+  let scopeRepository: ReturnType<typeof createMockScopeRepository>
+  let scopeService: ReturnType<typeof createMockScopeService>
 
   beforeEach(() => {
     userRepository = createMockUserRepository({
       findById: mock(async (id: string) => {
-        if (id === targetUser.id) return targetUser;
-        if (id === managerUser.id) return managerUser;
-        return null;
+        if (id === targetUser.id) return targetUser
+        if (id === managerUser.id) return managerUser
+        return null
       }) as any,
-      updateManagerId: mock(() => Promise.resolve({})) as any,
-    });
-    scopeRepository = createMockScopeRepository();
-    scopeService = createMockScopeService();
+      updateManagerId: mock(() => Promise.resolve({})) as any
+    })
+    scopeRepository = createMockScopeRepository()
+    scopeService = createMockScopeService()
 
     useCase = new AssignUserManagerUseCase({
       userRepository,
       scopeRepository,
       scopeService,
-      auditLog: createMockAuditLogService(),
-    });
-  });
+      auditLog: createMockAuditLogService()
+    })
+  })
 
-  it("assigns manager when actor is ADMIN", async () => {
+  it('assigns manager when actor is ADMIN', async () => {
     await useCase.execute({
       targetUserId: targetUser.id,
       managerId: managerUser.id,
-      assignedBy: "admin-1",
-      actorRole: Role.ADMIN,
-    });
+      assignedBy: 'admin-1',
+      actorRole: Role.ADMIN
+    })
 
-    expect(userRepository.updateManagerId).toHaveBeenCalledWith(targetUser.id, managerUser.id);
-    expect(scopeService.invalidateForManagerChange).toHaveBeenCalled();
-  });
+    expect(userRepository.updateManagerId).toHaveBeenCalledWith(targetUser.id, managerUser.id)
+    expect(scopeService.invalidateForManagerChange).toHaveBeenCalled()
+  })
 
-  it("clears manager when managerId is null", async () => {
+  it('clears manager when managerId is null', async () => {
     userRepository.findById = mock(async (id: string) => {
-      if (id === targetUser.id) return { ...targetUser, managerId: managerUser.id };
-      return null;
-    }) as any;
+      if (id === targetUser.id) return { ...targetUser, managerId: managerUser.id }
+      return null
+    }) as any
 
     await useCase.execute({
       targetUserId: targetUser.id,
       managerId: null,
-      assignedBy: "admin-1",
-      actorRole: Role.ADMIN,
-    });
+      assignedBy: 'admin-1',
+      actorRole: Role.ADMIN
+    })
 
-    expect(userRepository.updateManagerId).toHaveBeenCalledWith(targetUser.id, null);
-  });
+    expect(userRepository.updateManagerId).toHaveBeenCalledWith(targetUser.id, null)
+  })
 
-  it("rejects MANAGER actor", async () => {
+  it('rejects MANAGER actor', async () => {
     await expect(
       useCase.execute({
         targetUserId: targetUser.id,
         managerId: managerUser.id,
-        assignedBy: "manager-1",
-        actorRole: Role.MANAGER,
+        assignedBy: 'manager-1',
+        actorRole: Role.MANAGER
       })
-    ).rejects.toThrow(InsufficientPermissionsError);
+    ).rejects.toThrow(InsufficientPermissionsError)
 
-    expect(userRepository.updateManagerId).not.toHaveBeenCalled();
-  });
+    expect(userRepository.updateManagerId).not.toHaveBeenCalled()
+  })
 
-  it("throws when target user not found", async () => {
-    userRepository.findById = mock(() => Promise.resolve(null));
+  it('throws when target user not found', async () => {
+    userRepository.findById = mock(() => Promise.resolve(null))
 
     await expect(
       useCase.execute({
-        targetUserId: "missing",
+        targetUserId: 'missing',
         managerId: managerUser.id,
-        assignedBy: "admin-1",
-        actorRole: Role.ADMIN,
+        assignedBy: 'admin-1',
+        actorRole: Role.ADMIN
       })
-    ).rejects.toThrow(UserNotFoundError);
-  });
+    ).rejects.toThrow(UserNotFoundError)
+  })
 
-  it("rejects self-assignment", async () => {
+  it('rejects self-assignment', async () => {
     await expect(
       useCase.execute({
         targetUserId: targetUser.id,
         managerId: targetUser.id,
-        assignedBy: "admin-1",
-        actorRole: Role.ADMIN,
+        assignedBy: 'admin-1',
+        actorRole: Role.ADMIN
       })
-    ).rejects.toThrow(OperationNotAllowedError);
-  });
+    ).rejects.toThrow(OperationNotAllowedError)
+  })
 
-  it("rejects manager with USER role", async () => {
+  it('rejects manager with USER role', async () => {
     userRepository.findById = mock(async (id: string) => {
-      if (id === targetUser.id) return targetUser;
-      if (id === "bad-manager") return { id: "bad-manager", role: { name: Role.REP } };
-      return null;
-    }) as any;
+      if (id === targetUser.id) return targetUser
+      if (id === 'bad-manager') return { id: 'bad-manager', role: { name: Role.REP } }
+      return null
+    }) as any
 
     await expect(
       useCase.execute({
         targetUserId: targetUser.id,
-        managerId: "bad-manager",
-        assignedBy: "admin-1",
-        actorRole: Role.ADMIN,
+        managerId: 'bad-manager',
+        assignedBy: 'admin-1',
+        actorRole: Role.ADMIN
       })
-    ).rejects.toThrow(OperationNotAllowedError);
-  });
-});
+    ).rejects.toThrow(OperationNotAllowedError)
+  })
+})

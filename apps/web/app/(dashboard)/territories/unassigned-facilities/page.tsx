@@ -1,66 +1,68 @@
-"use client";
+'use client'
 
-import { useEffect, useReducer, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
+import { Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useEffect, useReducer, useState } from 'react'
+import { TerritoryPicker } from '@/components/territory/territory-picker'
+import { TerritorySubnav } from '@/components/territory/territory-subnav'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  canReadTerritories,
-  isAdmin,
-} from "@/lib/permissions";
-import { territoriesApi } from "@/lib/api/territories";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import { TerritorySubnav } from "@/components/territory/territory-subnav";
-import { TerritoryPicker } from "@/components/territory/territory-picker";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import type { UnassignedFacility } from "@/types/territory";
+  TableRow
+} from '@/components/ui/table'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { territoriesApi } from '@/lib/api/territories'
+import { canReadTerritories, isAdmin } from '@/lib/permissions'
+import type { UnassignedFacility } from '@/types/territory'
 
 type FacilitiesState = {
-  facilities: UnassignedFacility[];
-  loading: boolean;
-  page: number;
-  totalPages: number;
-};
+  facilities: UnassignedFacility[]
+  loading: boolean
+  page: number
+  totalPages: number
+}
 
 type FacilitiesAction =
-  | { type: "FETCH_START" }
-  | { type: "FETCH_SUCCESS"; facilities: UnassignedFacility[]; totalPages: number }
-  | { type: "FETCH_ERROR" }
-  | { type: "SET_PAGE"; page: number };
+  | { type: 'FETCH_START' }
+  | { type: 'FETCH_SUCCESS'; facilities: UnassignedFacility[]; totalPages: number }
+  | { type: 'FETCH_ERROR' }
+  | { type: 'SET_PAGE'; page: number }
 
 function facilitiesReducer(state: FacilitiesState, action: FacilitiesAction): FacilitiesState {
   switch (action.type) {
-    case "FETCH_START":
-      return { ...state, loading: true };
-    case "FETCH_SUCCESS":
-      return { ...state, facilities: action.facilities, totalPages: action.totalPages, loading: false };
-    case "FETCH_ERROR":
-      return { ...state, loading: false };
-    case "SET_PAGE":
-      return { ...state, page: action.page };
+    case 'FETCH_START':
+      return { ...state, loading: true }
+    case 'FETCH_SUCCESS':
+      return {
+        ...state,
+        facilities: action.facilities,
+        totalPages: action.totalPages,
+        loading: false
+      }
+    case 'FETCH_ERROR':
+      return { ...state, loading: false }
+    case 'SET_PAGE':
+      return { ...state, page: action.page }
     default:
-      return state;
+      return state
   }
 }
 
@@ -68,141 +70,140 @@ const initialFacilitiesState: FacilitiesState = {
   facilities: [],
   loading: true,
   page: 1,
-  totalPages: 1,
-};
-
+  totalPages: 1
+}
 
 export default function UnassignedFacilitiesPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [state, dispatch] = useReducer(facilitiesReducer, initialFacilitiesState);
-  const [overrideFacility, setOverrideFacility] = useState<UnassignedFacility | null>(null);
-  const [overrideTerritoryId, setOverrideTerritoryId] = useState("");
-  const [overrideReason, setOverrideReason] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [unlockingId, setUnlockingId] = useState<string | null>(null);
+  const { user } = useAuth()
+  const router = useRouter()
+  const [state, dispatch] = useReducer(facilitiesReducer, initialFacilitiesState)
+  const [overrideFacility, setOverrideFacility] = useState<UnassignedFacility | null>(null)
+  const [overrideTerritoryId, setOverrideTerritoryId] = useState('')
+  const [overrideReason, setOverrideReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [unlockingId, setUnlockingId] = useState<string | null>(null)
 
-  const canRead = user ? canReadTerritories(user.role.name) : false;
-  const userIsAdmin = user ? isAdmin(user.role.name) : false;
+  const canRead = user ? canReadTerritories(user.role.name) : false
+  const userIsAdmin = user ? isAdmin(user.role.name) : false
 
   useEffect(() => {
     if (user && !canRead) {
-      router.replace("/unauthorized");
-      return;
+      router.replace('/unauthorized')
+      return
     }
 
-    if (!canRead) return;
+    if (!canRead) return
 
     const fetchFacilities = async () => {
-      dispatch({ type: "FETCH_START" });
+      dispatch({ type: 'FETCH_START' })
       try {
         const response = await territoriesApi.listUnassignedFacilities({
           page: state.page,
-          limit: 20,
-        });
+          limit: 20
+        })
         dispatch({
-          type: "FETCH_SUCCESS",
+          type: 'FETCH_SUCCESS',
           facilities: response.data,
-          totalPages: response.pagination.totalPages,
-        });
+          totalPages: response.pagination.totalPages
+        })
       } catch {
         toast({
-          title: "Erro",
-          description: "Falha ao carregar unidades sem território",
-          variant: "destructive",
-        });
-        dispatch({ type: "FETCH_ERROR" });
+          title: 'Erro',
+          description: 'Falha ao carregar unidades sem território',
+          variant: 'destructive'
+        })
+        dispatch({ type: 'FETCH_ERROR' })
       }
-    };
+    }
 
-    fetchFacilities();
-  }, [user, canRead, state.page, router]);
+    fetchFacilities()
+  }, [user, canRead, state.page, router])
 
   const handleOverride = async () => {
-    if (!overrideFacility || !overrideTerritoryId) return;
+    if (!overrideFacility || !overrideTerritoryId) return
 
-    setSaving(true);
+    setSaving(true)
     try {
       await territoriesApi.overrideClinicTerritory(overrideFacility.id, {
         territoryId: overrideTerritoryId,
-        reason: overrideReason.trim() || undefined,
-      });
+        reason: overrideReason.trim() || undefined
+      })
       toast({
-        title: "Sucesso",
-        description: "Território da unidade sobrescrito",
-        variant: "success",
-      });
-      setOverrideFacility(null);
-      setOverrideTerritoryId("");
-      setOverrideReason("");
-      dispatch({ type: "FETCH_START" });
+        title: 'Sucesso',
+        description: 'Território da unidade sobrescrito',
+        variant: 'success'
+      })
+      setOverrideFacility(null)
+      setOverrideTerritoryId('')
+      setOverrideReason('')
+      dispatch({ type: 'FETCH_START' })
       try {
         const refreshResponse = await territoriesApi.listUnassignedFacilities({
           page: state.page,
-          limit: 20,
-        });
+          limit: 20
+        })
         dispatch({
-          type: "FETCH_SUCCESS",
+          type: 'FETCH_SUCCESS',
           facilities: refreshResponse.data,
-          totalPages: refreshResponse.pagination.totalPages,
-        });
+          totalPages: refreshResponse.pagination.totalPages
+        })
       } catch {
-        dispatch({ type: "FETCH_ERROR" });
+        dispatch({ type: 'FETCH_ERROR' })
       }
     } catch (err) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao sobrescrever território"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(err, 'Falha ao sobrescrever território'),
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleUnlock = async (facilityId: string) => {
-    setUnlockingId(facilityId);
+    setUnlockingId(facilityId)
     try {
-      await territoriesApi.unlockClinicGeo(facilityId);
+      await territoriesApi.unlockClinicGeo(facilityId)
       toast({
-        title: "Sucesso",
-        description: "Bloqueio geográfico da unidade removido",
-        variant: "success",
-      });
-      dispatch({ type: "FETCH_START" });
+        title: 'Sucesso',
+        description: 'Bloqueio geográfico da unidade removido',
+        variant: 'success'
+      })
+      dispatch({ type: 'FETCH_START' })
       try {
         const refreshResponse = await territoriesApi.listUnassignedFacilities({
           page: state.page,
-          limit: 20,
-        });
+          limit: 20
+        })
         dispatch({
-          type: "FETCH_SUCCESS",
+          type: 'FETCH_SUCCESS',
           facilities: refreshResponse.data,
-          totalPages: refreshResponse.pagination.totalPages,
-        });
+          totalPages: refreshResponse.pagination.totalPages
+        })
       } catch {
-        dispatch({ type: "FETCH_ERROR" });
+        dispatch({ type: 'FETCH_ERROR' })
       }
     } catch (err) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao remover bloqueio geográfico"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(err, 'Falha ao remover bloqueio geográfico'),
+        variant: 'destructive'
+      })
     } finally {
-      setUnlockingId(null);
+      setUnlockingId(null)
     }
-  };
+  }
 
   if (!user || !canRead) {
-    return null;
+    return null
   }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Clínicas não atribuídas</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="font-bold text-3xl text-gray-900">Clínicas não atribuídas</h1>
+        <p className="mt-1 text-gray-500 text-sm">
           Clínicas sem atribuição de território resolvida
         </p>
       </div>
@@ -253,14 +254,14 @@ export default function UnassignedFacilitiesPage() {
                         <TableCell className="text-sm">
                           {facility.lat != null && facility.lng != null
                             ? `${facility.lat.toFixed(4)}, ${facility.lng.toFixed(4)}`
-                            : "—"}
+                            : '—'}
                         </TableCell>
                         <TableCell>
                           <Badge
                             variant={
-                              facility.territoryAssignmentStatus === "ambiguous"
-                                ? "secondary"
-                                : "destructive"
+                              facility.territoryAssignmentStatus === 'ambiguous'
+                                ? 'secondary'
+                                : 'destructive'
                             }
                           >
                             {facility.territoryAssignmentStatus}
@@ -273,9 +274,9 @@ export default function UnassignedFacilitiesPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
-                                  setOverrideFacility(facility);
-                                  setOverrideTerritoryId("");
-                                  setOverrideReason("");
+                                  setOverrideFacility(facility)
+                                  setOverrideTerritoryId('')
+                                  setOverrideReason('')
                                 }}
                               >
                                 Substituir
@@ -286,7 +287,7 @@ export default function UnassignedFacilitiesPage() {
                                 onClick={() => handleUnlock(facility.id)}
                                 disabled={unlockingId === facility.id}
                               >
-                                {unlockingId === facility.id ? "..." : "Desbloquear geo"}
+                                {unlockingId === facility.id ? '...' : 'Desbloquear geo'}
                               </Button>
                             </div>
                           </TableCell>
@@ -301,17 +302,17 @@ export default function UnassignedFacilitiesPage() {
                 <Button
                   variant="outline"
                   disabled={state.page <= 1}
-                  onClick={() => dispatch({ type: "SET_PAGE", page: state.page - 1 })}
+                  onClick={() => dispatch({ type: 'SET_PAGE', page: state.page - 1 })}
                 >
                   Anterior
                 </Button>
-                <span className="text-sm text-gray-500">
+                <span className="text-gray-500 text-sm">
                   Página {state.page} de {state.totalPages}
                 </span>
                 <Button
                   variant="outline"
                   disabled={state.page >= state.totalPages}
-                  onClick={() => dispatch({ type: "SET_PAGE", page: state.page + 1 })}
+                  onClick={() => dispatch({ type: 'SET_PAGE', page: state.page + 1 })}
                 >
                   Próxima
                 </Button>
@@ -330,7 +331,7 @@ export default function UnassignedFacilitiesPage() {
             <DialogTitle>Substituir território da clínica</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">Unidade: {overrideFacility?.id}</p>
+            <p className="text-gray-600 text-sm">Unidade: {overrideFacility?.id}</p>
             <div>
               <Label>Território</Label>
               <TerritoryPicker
@@ -352,15 +353,12 @@ export default function UnassignedFacilitiesPage() {
             <Button variant="outline" onClick={() => setOverrideFacility(null)}>
               Cancelar
             </Button>
-            <Button
-              onClick={handleOverride}
-              disabled={saving || !overrideTerritoryId}
-            >
-              {saving ? "Salvando..." : "Substituir"}
+            <Button onClick={handleOverride} disabled={saving || !overrideTerritoryId}>
+              {saving ? 'Salvando...' : 'Substituir'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }

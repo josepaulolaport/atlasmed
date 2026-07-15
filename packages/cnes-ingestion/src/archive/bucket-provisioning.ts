@@ -1,57 +1,57 @@
 import {
-  CreateBucketCommand,
-  HeadBucketCommand,
-  S3Client,
   type BucketLocationConstraint,
+  CreateBucketCommand,
   type CreateBucketCommandInput,
-} from "@aws-sdk/client-s3";
+  HeadBucketCommand,
+  S3Client
+} from '@aws-sdk/client-s3'
 
 export interface EnsureArchiveBucketInput {
-  bucket?: string;
-  region?: string;
-  endpoint?: string;
-  accessKeyId?: string;
-  secretAccessKey?: string;
-  forcePathStyle?: boolean;
+  bucket?: string
+  region?: string
+  endpoint?: string
+  accessKeyId?: string
+  secretAccessKey?: string
+  forcePathStyle?: boolean
 }
 
-type BucketProvisioningCommand = HeadBucketCommand | CreateBucketCommand;
+type BucketProvisioningCommand = HeadBucketCommand | CreateBucketCommand
 
 interface BucketProvisioningClient {
-  send(command: BucketProvisioningCommand): Promise<unknown>;
+  send(command: BucketProvisioningCommand): Promise<unknown>
 }
 
 function errorName(error: unknown): string | undefined {
-  if (!error || typeof error !== "object" || !("name" in error)) {
-    return undefined;
+  if (!error || typeof error !== 'object' || !('name' in error)) {
+    return undefined
   }
 
-  return typeof error.name === "string" ? error.name : undefined;
+  return typeof error.name === 'string' ? error.name : undefined
 }
 
 interface S3ServiceError {
-  name?: string;
-  $metadata?: { httpStatusCode?: number };
+  name?: string
+  $metadata?: { httpStatusCode?: number }
 }
 
 function errorStatusCode(error: unknown): number | undefined {
-  if (!error || typeof error !== "object" || !("$metadata" in error)) {
-    return undefined;
+  if (!error || typeof error !== 'object' || !('$metadata' in error)) {
+    return undefined
   }
 
-  return (error as S3ServiceError).$metadata?.httpStatusCode;
+  return (error as S3ServiceError).$metadata?.httpStatusCode
 }
 
 function isNotFoundError(error: unknown): boolean {
-  return errorName(error) === "NotFound" || errorStatusCode(error) === 404;
+  return errorName(error) === 'NotFound' || errorStatusCode(error) === 404
 }
 
 function isAlreadyExistsError(error: unknown): boolean {
   return (
-    errorName(error) === "BucketAlreadyOwnedByYou" ||
-    errorName(error) === "BucketAlreadyExists" ||
+    errorName(error) === 'BucketAlreadyOwnedByYou' ||
+    errorName(error) === 'BucketAlreadyExists' ||
     errorStatusCode(error) === 409
-  );
+  )
 }
 
 export async function ensureBucketExists(
@@ -60,41 +60,44 @@ export async function ensureBucketExists(
   region?: string
 ): Promise<void> {
   if (!bucket) {
-    throw new Error("Bucket name must be a non-empty string");
+    throw new Error('Bucket name must be a non-empty string')
   }
   try {
-    await client.send(new HeadBucketCommand({ Bucket: bucket }));
-    return;
+    await client.send(new HeadBucketCommand({ Bucket: bucket }))
+    return
   } catch (error) {
     if (!isNotFoundError(error)) {
-      throw error;
+      throw error
     }
   }
 
-  const input: CreateBucketCommandInput = { Bucket: bucket };
+  const input: CreateBucketCommandInput = { Bucket: bucket }
   // AWS S3: us-east-1 is the default region and does not require LocationConstraint.
   // For S3-compatible services, this behavior may differ.
-  if (region && region !== "us-east-1") {
+  if (region && region !== 'us-east-1') {
     input.CreateBucketConfiguration = {
-      LocationConstraint: region as BucketLocationConstraint,
-    };
+      LocationConstraint: region as BucketLocationConstraint
+    }
   }
 
   try {
-    await client.send(new CreateBucketCommand(input));
+    await client.send(new CreateBucketCommand(input))
   } catch (error) {
     if (!isAlreadyExistsError(error)) {
-      throw error;
+      throw error
     }
   }
 }
 
-export async function ensureArchiveBucket(input: EnsureArchiveBucketInput, client?: BucketProvisioningClient): Promise<void> {
+export async function ensureArchiveBucket(
+  input: EnsureArchiveBucketInput,
+  client?: BucketProvisioningClient
+): Promise<void> {
   if (!input.bucket) {
-    return;
+    return
   }
 
-  const region = input.region || "us-east-1";
+  const region = input.region || 'us-east-1'
   const provisioningClient: BucketProvisioningClient =
     client ??
     (() => {
@@ -106,17 +109,17 @@ export async function ensureArchiveBucket(input: EnsureArchiveBucketInput, clien
           input.accessKeyId && input.secretAccessKey
             ? {
                 accessKeyId: input.accessKeyId,
-                secretAccessKey: input.secretAccessKey,
+                secretAccessKey: input.secretAccessKey
               }
-            : undefined,
-      });
+            : undefined
+      })
 
       return {
         send(command: BucketProvisioningCommand) {
-          return s3Client.send(command);
-        },
-      };
-    })();
+          return s3Client.send(command)
+        }
+      }
+    })()
 
-  await ensureBucketExists(provisioningClient, input.bucket, region);
+  await ensureBucketExists(provisioningClient, input.bucket, region)
 }

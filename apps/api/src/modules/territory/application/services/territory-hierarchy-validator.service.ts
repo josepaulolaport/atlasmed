@@ -1,115 +1,109 @@
-import type { TerritoryTypeRecord } from "../interfaces/territory-type.repository.interface";
-import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
-import { OperationNotAllowedError } from "../../../../shared/errors";
-import { validateCountryCode } from "../constants/territory-geo.constants";
-import { validateTerritorySlug } from "../constants/territory-slug.constants";
+import { OperationNotAllowedError } from '../../../../shared/errors'
+import { validateCountryCode } from '../constants/territory-geo.constants'
 import {
   isGroupingHierarchyType,
   isManagerZoneType,
-  isRepPatchType,
-} from "../constants/territory-roles.constants";
+  isRepPatchType
+} from '../constants/territory-roles.constants'
+import { validateTerritorySlug } from '../constants/territory-slug.constants'
+import type { TerritoryRecord } from '../interfaces/territory.repository.interface'
+import type { TerritoryTypeRecord } from '../interfaces/territory-type.repository.interface'
 
 export class TerritoryHierarchyValidator {
   validateCreate(params: {
-    type: TerritoryTypeRecord;
-    slug: string;
-    countryCode: string;
-    parent: TerritoryRecord | null;
-    parentId?: string | null;
-    hasActiveCountryForCode: boolean;
+    type: TerritoryTypeRecord
+    slug: string
+    countryCode: string
+    parent: TerritoryRecord | null
+    parentId?: string | null
+    hasActiveCountryForCode: boolean
   }): void {
-    const { type, slug, countryCode, parent, parentId, hasActiveCountryForCode } = params;
+    const { type, slug, countryCode, parent, parentId, hasActiveCountryForCode } = params
 
     if (!validateTerritorySlug(slug)) {
       throw new OperationNotAllowedError(
-        "create_territory",
-        "slug must be 3-60 lowercase alphanumeric characters with optional hyphens"
-      );
+        'create_territory',
+        'slug must be 3-60 lowercase alphanumeric characters with optional hyphens'
+      )
     }
 
     if (!validateCountryCode(countryCode)) {
       throw new OperationNotAllowedError(
-        "create_territory",
-        "countryCode must be a valid two-letter ISO code"
-      );
+        'create_territory',
+        'countryCode must be a valid two-letter ISO code'
+      )
     }
 
     if (type.isCountryLevel) {
       if (parentId || parent) {
         throw new OperationNotAllowedError(
-          "create_territory",
-          "Country-level territories cannot have a parent"
-        );
+          'create_territory',
+          'Country-level territories cannot have a parent'
+        )
       }
       if (hasActiveCountryForCode) {
         throw new OperationNotAllowedError(
-          "create_territory",
+          'create_territory',
           `An active country already exists for ${countryCode}`
-        );
+        )
       }
-      return;
+      return
     }
 
     if (isManagerZoneType(type) || isRepPatchType(type)) {
       if (parentId || parent) {
         throw new OperationNotAllowedError(
-          "create_territory",
-          "Manager zones and rep patches cannot have a tree parent"
-        );
+          'create_territory',
+          'Manager zones and rep patches cannot have a tree parent'
+        )
       }
-      return;
+      return
     }
 
     if (isGroupingHierarchyType(type) && !parentId) {
       throw new OperationNotAllowedError(
-        "create_territory",
-        "Grouping hierarchy territories require a parent"
-      );
+        'create_territory',
+        'Grouping hierarchy territories require a parent'
+      )
     }
 
     if (parent) {
       if (!parent.isActive) {
-        throw new OperationNotAllowedError(
-          "create_territory",
-          "Parent territory must be active"
-        );
+        throw new OperationNotAllowedError('create_territory', 'Parent territory must be active')
       }
       if (parent.countryCode && parent.countryCode !== countryCode) {
         throw new OperationNotAllowedError(
-          "create_territory",
-          "Parent must belong to the same country"
-        );
+          'create_territory',
+          'Parent must belong to the same country'
+        )
       }
     }
   }
 
   validateReparent(params: {
-    territory: TerritoryRecord;
-    territoryType: TerritoryTypeRecord;
-    newParent: TerritoryRecord;
-    descendantIds: string[];
+    territory: TerritoryRecord
+    territoryType: TerritoryTypeRecord
+    newParent: TerritoryRecord
+    descendantIds: string[]
   }): void {
-    const { territory, territoryType, newParent, descendantIds } = params;
+    const { territory, territoryType, newParent, descendantIds } = params
 
     if (territoryType.isCountryLevel) {
       throw new OperationNotAllowedError(
-        "reparent_territory",
-        "Country-level territories cannot be reparented"
-      );
+        'reparent_territory',
+        'Country-level territories cannot be reparented'
+      )
     }
 
     if (territory.id === newParent.id) {
-      throw new OperationNotAllowedError(
-        "reparent_territory",
-        "Territory cannot be its own parent"
-      );
+      throw new OperationNotAllowedError('reparent_territory', 'Territory cannot be its own parent')
     }
 
     if (descendantIds.includes(newParent.id)) {
       throw new OperationNotAllowedError(
-        "reparent_territory",
-        "Cannot reparent into a descendant (cycle detected)"
-      );
+        'reparent_territory',
+        'Cannot reparent into a descendant (cycle detected)'
+      )
     }
 
     if (
@@ -117,18 +111,15 @@ export class TerritoryHierarchyValidator {
       newParent.countryCode &&
       territory.countryCode !== newParent.countryCode
     ) {
-      throw new OperationNotAllowedError(
-        "reparent_territory",
-        "Cannot reparent across countries"
-      );
+      throw new OperationNotAllowedError('reparent_territory', 'Cannot reparent across countries')
     }
   }
 
   isDynamicLeaf(activeChildCount: number): boolean {
-    return activeChildCount === 0;
+    return activeChildCount === 0
   }
 
   canHaveBoundary(type: TerritoryTypeRecord): boolean {
-    return type.canHaveBoundary;
+    return type.canHaveBoundary
   }
 }

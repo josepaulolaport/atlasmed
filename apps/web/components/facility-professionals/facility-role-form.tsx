@@ -1,31 +1,31 @@
-"use client";
+'use client'
 
-import { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import type { FacilityProfessionalRole, UpdateFacilityProfessionalInput } from "@atlasmed/access";
-import { updateFacilityProfessionalFormSchema } from "@/lib/validators";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import type { FacilityProfessionalRole, UpdateFacilityProfessionalInput } from '@atlasmed/access'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect } from 'react'
+import { Controller, useForm } from 'react-hook-form'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+  SelectValue
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
+import { updateFacilityProfessionalFormSchema } from '@/lib/validators'
 
-type FacilityRoleFormValues = UpdateFacilityProfessionalInput;
+type FacilityRoleFormValues = UpdateFacilityProfessionalInput
 
 interface FacilityRoleFormProps {
-  association: FacilityProfessionalRole;
-  canEdit: boolean;
-  saving?: boolean;
-  onSubmit: (values: FacilityRoleFormValues) => Promise<void>;
+  association: FacilityProfessionalRole
+  canEdit: boolean
+  saving?: boolean
+  onSubmit: (values: FacilityRoleFormValues) => Promise<void>
 }
 
 function toFormValues(association: FacilityProfessionalRole): FacilityRoleFormValues {
@@ -36,13 +36,13 @@ function toFormValues(association: FacilityProfessionalRole): FacilityRoleFormVa
     isDecisionMaker: association.isDecisionMaker,
     relationshipLevel: association.relationshipLevel ?? null,
     specialtyLabel: association.specialtyLabel ?? null,
-    notes: association.notes ?? null,
-  };
+    notes: association.notes ?? null
+  }
 }
 
 function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-sm text-red-600">{message}</p>;
+  if (!message) return null
+  return <p className="mt-1 text-red-600 text-sm">{message}</p>
 }
 
 function RoleSwitch({
@@ -50,42 +50,42 @@ function RoleSwitch({
   label,
   checked,
   disabled,
-  onCheckedChange,
+  onCheckedChange
 }: {
-  id: string;
-  label: string;
-  checked: boolean;
-  disabled?: boolean;
-  onCheckedChange: (value: boolean) => void;
+  id: string
+  label: string
+  checked: boolean
+  disabled?: boolean
+  onCheckedChange: (value: boolean) => void
 }) {
   return (
     <div className="flex items-center justify-between rounded-md border px-4 py-3">
       <Label htmlFor={id}>{label}</Label>
       <Switch id={id} checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} />
     </div>
-  );
+  )
 }
 
 export function FacilityRoleForm({
   association,
   canEdit,
   saving = false,
-  onSubmit,
+  onSubmit
 }: FacilityRoleFormProps) {
   const {
     register,
     handleSubmit,
     reset,
     control,
-    formState: { errors },
+    formState: { errors }
   } = useForm<FacilityRoleFormValues>({
     resolver: zodResolver(updateFacilityProfessionalFormSchema),
-    defaultValues: toFormValues(association),
-  });
+    defaultValues: toFormValues(association)
+  })
 
   useEffect(() => {
-    reset(toFormValues(association));
-  }, [association, reset]);
+    reset(toFormValues(association))
+  }, [association, reset])
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
@@ -155,10 +155,8 @@ export function FacilityRoleForm({
               render={({ field }) => (
                 <Select
                   disabled={!canEdit}
-                  value={field.value != null ? String(field.value) : "none"}
-                  onValueChange={(value) =>
-                    field.onChange(value === "none" ? null : Number(value))
-                  }
+                  value={field.value != null ? String(field.value) : 'none'}
+                  onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
                 >
                   <SelectTrigger id="relationshipLevel">
                     <SelectValue placeholder="Selecione o nível (1–10)" />
@@ -166,12 +164,12 @@ export function FacilityRoleForm({
                   <SelectContent>
                     <SelectItem value="none">Não definido</SelectItem>
                     {Array.from({ length: 10 }, (_, index) => {
-                      const level = index + 1;
+                      const level = index + 1
                       return (
                         <SelectItem key={level} value={String(level)}>
                           {level}
                         </SelectItem>
-                      );
+                      )
                     })}
                   </SelectContent>
                 </Select>
@@ -182,24 +180,24 @@ export function FacilityRoleForm({
 
           <div>
             <Label htmlFor="specialtyLabel">Rótulo de especialidade na unidade</Label>
-            <Input id="specialtyLabel" disabled={!canEdit} {...register("specialtyLabel")} />
+            <Input id="specialtyLabel" disabled={!canEdit} {...register('specialtyLabel')} />
             <FieldError message={errors.specialtyLabel?.message} />
           </div>
 
           <div>
             <Label htmlFor="associationNotes">Observações da associação</Label>
-            <Textarea id="associationNotes" disabled={!canEdit} {...register("notes")} />
+            <Textarea id="associationNotes" disabled={!canEdit} {...register('notes')} />
             <FieldError message={errors.notes?.message} />
           </div>
         </CardContent>
         {canEdit && (
           <CardFooter>
             <Button type="submit" disabled={saving}>
-              {saving ? "Salvando..." : "Salvar funções na unidade"}
+              {saving ? 'Salvando...' : 'Salvar funções na unidade'}
             </Button>
           </CardFooter>
         )}
       </Card>
     </form>
-  );
+  )
 }

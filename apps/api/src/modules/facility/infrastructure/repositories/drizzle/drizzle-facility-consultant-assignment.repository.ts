@@ -1,14 +1,12 @@
-import {
-  facilityConsultantAssignments,
-} from "@atlasmed/database";
-import { eq, and, isNull, desc } from "drizzle-orm";
-import { db } from "../../../../../infrastructure/database/db";
+import { facilityConsultantAssignments } from '@atlasmed/database'
+import { and, desc, eq, isNull } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
   FacilityConsultantAssignmentRecord,
-  FacilityConsultantAssignmentRepository,
-} from "../../../application/interfaces/facility-consultant-assignment.repository.interface";
+  FacilityConsultantAssignmentRepository
+} from '../../../application/interfaces/facility-consultant-assignment.repository.interface'
 
-type AssignmentRow = typeof facilityConsultantAssignments.$inferSelect;
+type AssignmentRow = typeof facilityConsultantAssignments.$inferSelect
 
 function mapAssignment(row: AssignmentRow): FacilityConsultantAssignmentRecord {
   return {
@@ -20,8 +18,8 @@ function mapAssignment(row: AssignmentRow): FacilityConsultantAssignmentRecord {
     assignedByUserId: row.assignedByUserId,
     endReason: row.endReason,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+    updatedAt: row.updatedAt
+  }
 }
 
 export class DrizzleFacilityConsultantAssignmentRepository
@@ -32,9 +30,9 @@ export class DrizzleFacilityConsultantAssignmentRepository
       .select()
       .from(facilityConsultantAssignments)
       .where(eq(facilityConsultantAssignments.facilityId, facilityId))
-      .orderBy(desc(facilityConsultantAssignments.startedAt));
+      .orderBy(desc(facilityConsultantAssignments.startedAt))
 
-    return rows.map(mapAssignment);
+    return rows.map(mapAssignment)
   }
 
   async findCurrentByFacility(
@@ -50,23 +48,23 @@ export class DrizzleFacilityConsultantAssignmentRepository
         )
       )
       .orderBy(desc(facilityConsultantAssignments.startedAt))
-      .limit(1);
+      .limit(1)
 
-    return assignment ? mapAssignment(assignment) : null;
+    return assignment ? mapAssignment(assignment) : null
   }
 
   async assign(params: {
-    facilityId: string;
-    userId: string;
-    assignedByUserId: string;
+    facilityId: string
+    userId: string
+    assignedByUserId: string
   }): Promise<FacilityConsultantAssignmentRecord> {
-    const current = await this.findCurrentByFacility(params.facilityId);
+    const current = await this.findCurrentByFacility(params.facilityId)
 
     if (current) {
       await db
         .update(facilityConsultantAssignments)
-        .set({ endedAt: new Date(), endReason: "reassigned", updatedAt: new Date() })
-        .where(eq(facilityConsultantAssignments.id, current.id));
+        .set({ endedAt: new Date(), endReason: 'reassigned', updatedAt: new Date() })
+        .where(eq(facilityConsultantAssignments.id, current.id))
     }
 
     const [assignment] = await db
@@ -74,10 +72,10 @@ export class DrizzleFacilityConsultantAssignmentRepository
       .values({
         facilityId: params.facilityId,
         userId: params.userId,
-        assignedByUserId: params.assignedByUserId,
+        assignedByUserId: params.assignedByUserId
       })
-      .returning();
+      .returning()
 
-    return mapAssignment(assignment!);
+    return mapAssignment(assignment!)
   }
 }

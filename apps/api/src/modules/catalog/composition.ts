@@ -1,28 +1,28 @@
-import { DrizzleSectorRepository } from "./infrastructure/repositories/drizzle/drizzle-sector.repository";
-import { DrizzleProductRepository } from "./infrastructure/repositories/drizzle/drizzle-product.repository";
-import { DrizzleHealthcareProviderRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-provider.repository";
-import { DrizzleFacilityHealthcareProviderShareRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-healthcare-provider-share.repository";
 import {
-  ListSectorsUseCase,
-  CreateSectorUseCase,
-  UpdateSectorUseCase,
-  ListProductsUseCase,
-  GetProductUseCase,
-  CreateProductUseCase,
-  UpdateProductUseCase,
-  ListHealthcareProvidersUseCase,
-  CreateHealthcareProviderUseCase,
-  UpdateHealthcareProviderUseCase,
-  ListFacilityHealthcareProviderSharesUseCase,
   CreateFacilityHealthcareProviderShareUseCase,
-} from "./application/use-cases/catalog.use-cases";
+  CreateHealthcareProviderUseCase,
+  CreateProductUseCase,
+  CreateSectorUseCase,
+  GetProductUseCase,
+  ListFacilityHealthcareProviderSharesUseCase,
+  ListHealthcareProvidersUseCase,
+  ListProductsUseCase,
+  ListSectorsUseCase,
+  UpdateHealthcareProviderUseCase,
+  UpdateProductUseCase,
+  UpdateSectorUseCase
+} from './application/use-cases/catalog.use-cases'
+import { DrizzleFacilityHealthcareProviderShareRepository } from './infrastructure/repositories/drizzle/drizzle-facility-healthcare-provider-share.repository'
+import { DrizzleHealthcareProviderRepository } from './infrastructure/repositories/drizzle/drizzle-healthcare-provider.repository'
+import { DrizzleProductRepository } from './infrastructure/repositories/drizzle/drizzle-product.repository'
+import { DrizzleSectorRepository } from './infrastructure/repositories/drizzle/drizzle-sector.repository'
 
 export const catalogRepositories = {
   sector: new DrizzleSectorRepository(),
   product: new DrizzleProductRepository(),
   healthcareProvider: new DrizzleHealthcareProviderRepository(),
-  facilityShare: new DrizzleFacilityHealthcareProviderShareRepository(),
-};
+  facilityShare: new DrizzleFacilityHealthcareProviderShareRepository()
+}
 
 export const catalogUseCases = {
   listSectors: () => new ListSectorsUseCase({ sectorRepository: catalogRepositories.sector }),
@@ -34,22 +34,22 @@ export const catalogUseCases = {
   updateProduct: () => new UpdateProductUseCase({ productRepository: catalogRepositories.product }),
   listHealthcareProviders: () =>
     new ListHealthcareProvidersUseCase({
-      healthcareProviderRepository: catalogRepositories.healthcareProvider,
+      healthcareProviderRepository: catalogRepositories.healthcareProvider
     }),
   createHealthcareProvider: () =>
     new CreateHealthcareProviderUseCase({
-      healthcareProviderRepository: catalogRepositories.healthcareProvider,
+      healthcareProviderRepository: catalogRepositories.healthcareProvider
     }),
   updateHealthcareProvider: () =>
     new UpdateHealthcareProviderUseCase({
-      healthcareProviderRepository: catalogRepositories.healthcareProvider,
+      healthcareProviderRepository: catalogRepositories.healthcareProvider
     }),
   listFacilityShares: () =>
     new ListFacilityHealthcareProviderSharesUseCase({
-      shareRepository: catalogRepositories.facilityShare,
+      shareRepository: catalogRepositories.facilityShare
     }),
   createFacilityShare: () =>
     new CreateFacilityHealthcareProviderShareUseCase({
-      shareRepository: catalogRepositories.facilityShare,
-    }),
-};
+      shareRepository: catalogRepositories.facilityShare
+    })
+}

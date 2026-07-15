@@ -1,46 +1,40 @@
-import { describe, expect, it } from "bun:test";
-import { createEmptyScopeContext, createGlobalScopeContext } from "./scope.helpers";
-import {
-  assertScopedFacility,
-  assertScopedTerritory,
-  assertScopedUser,
-} from "./scope-guard";
-import { ForbiddenError } from "../errors/forbidden.error";
+import { describe, expect, it } from 'bun:test'
+import { ForbiddenError } from '../errors/forbidden.error'
+import { createEmptyScopeContext, createGlobalScopeContext } from './scope.helpers'
+import { assertScopedFacility, assertScopedTerritory, assertScopedUser } from './scope-guard'
 
-describe("scope-guard", () => {
-  it("assertScopedFacility allows global scope", () => {
-    expect(() =>
-      assertScopedFacility(createGlobalScopeContext(), "facility-1")
-    ).not.toThrow();
-  });
+describe('scope-guard', () => {
+  it('assertScopedFacility allows global scope', () => {
+    expect(() => assertScopedFacility(createGlobalScopeContext(), 'facility-1')).not.toThrow()
+  })
 
-  it("assertScopedFacility denies out-of-scope facility", () => {
+  it('assertScopedFacility denies out-of-scope facility', () => {
     const scope = {
       ...createEmptyScopeContext(),
-      facilityIds: ["facility-1"],
-      isOperationallyActive: true,
-    };
+      facilityIds: ['facility-1'],
+      isOperationallyActive: true
+    }
 
-    expect(() => assertScopedFacility(scope, "facility-2")).toThrow(ForbiddenError);
-  });
+    expect(() => assertScopedFacility(scope, 'facility-2')).toThrow(ForbiddenError)
+  })
 
-  it("assertScopedTerritory denies out-of-scope territory", () => {
+  it('assertScopedTerritory denies out-of-scope territory', () => {
     const scope = {
       ...createEmptyScopeContext(),
-      effectiveTerritoryIds: ["t-1"],
-      isOperationallyActive: true,
-    };
+      effectiveTerritoryIds: ['t-1'],
+      isOperationallyActive: true
+    }
 
-    expect(() => assertScopedTerritory(scope, "t-2")).toThrow(ForbiddenError);
-  });
+    expect(() => assertScopedTerritory(scope, 't-2')).toThrow(ForbiddenError)
+  })
 
-  it("assertScopedUser denies out-of-scope user", () => {
+  it('assertScopedUser denies out-of-scope user', () => {
     const scope = {
       ...createEmptyScopeContext(),
-      managedUserIds: ["user-1"],
-      isOperationallyActive: true,
-    };
+      managedUserIds: ['user-1'],
+      isOperationallyActive: true
+    }
 
-    expect(() => assertScopedUser(scope, "user-2")).toThrow(ForbiddenError);
-  });
-});
+    expect(() => assertScopedUser(scope, 'user-2')).toThrow(ForbiddenError)
+  })
+})

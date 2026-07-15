@@ -1,117 +1,117 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { usersApi } from "@/lib/api/users";
-import { getApiErrorMessage } from "@/lib/api/errors";
+import { Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
-import type { User } from "@/types/auth";
-import type { Territory } from "@/types/territory";
-import { canAssignUserToTerritoryNode } from "@/lib/territory/assignment-picker-config";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { usersApi } from '@/lib/api/users'
+import { canAssignUserToTerritoryNode } from '@/lib/territory/assignment-picker-config'
+import type { User } from '@/types/auth'
+import type { Territory } from '@/types/territory'
 
 interface AssignUserToTerritoryDialogProps {
-  territory: Territory;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  territory: Territory
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSuccess: () => void
 }
 
 export function AssignUserToTerritoryDialog({
   territory,
   open,
   onOpenChange,
-  onSuccess,
+  onSuccess
 }: AssignUserToTerritoryDialogProps) {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState<User[]>([])
+  const [loading, setLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [selectedUserId, setSelectedUserId] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const assignmentHint = useMemo(() => {
     if (territory.territoryType.assignableToUsers) {
-      return "Atribua representantes de campo a tipos de território de atribuição de clínicas.";
+      return 'Atribua representantes de campo a tipos de território de atribuição de clínicas.'
     }
-    return "Atribua gestores a tipos de território configurados para supervisão de gestor.";
-  }, [territory.territoryType]);
+    return 'Atribua gestores a tipos de território configurados para supervisão de gestor.'
+  }, [territory.territoryType])
 
   const loadUsers = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await usersApi.getUsers({ page: 1, limit: 100, search: search || undefined });
+      const response = await usersApi.getUsers({ page: 1, limit: 100, search: search || undefined })
       setUsers(
         response.data.filter(
           (u) =>
-            (u.role.name === "REP" || u.role.name === "MANAGER") &&
+            (u.role.name === 'REP' || u.role.name === 'MANAGER') &&
             canAssignUserToTerritoryNode({
-              userRole: u.role.name as "REP" | "MANAGER",
-              territory,
+              userRole: u.role.name as 'REP' | 'MANAGER',
+              territory
             })
         )
-      );
+      )
     } catch {
       toast({
-        title: "Error",
-        description: "Failed to load users",
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: 'Failed to load users',
+        variant: 'destructive'
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [search, territory]);
+  }, [search, territory])
 
   useEffect(() => {
     if (open) {
-      setSelectedUserId("");
-      void loadUsers();
+      setSelectedUserId('')
+      void loadUsers()
     }
-  }, [open, loadUsers]);
+  }, [open, loadUsers])
 
   const handleAssign = async () => {
-    if (!selectedUserId) return;
+    if (!selectedUserId) return
 
-    const selectedUser = users.find((u) => u.id === selectedUserId);
+    const selectedUser = users.find((u) => u.id === selectedUserId)
     if (
       selectedUser &&
       !canAssignUserToTerritoryNode({
-        userRole: selectedUser.role.name as "REP" | "MANAGER",
-        territory,
+        userRole: selectedUser.role.name as 'REP' | 'MANAGER',
+        territory
       })
     ) {
       toast({
-        title: "Invalid assignment",
+        title: 'Invalid assignment',
         description: assignmentHint,
-        variant: "destructive",
-      });
-      return;
+        variant: 'destructive'
+      })
+      return
     }
 
-    setSaving(true);
+    setSaving(true)
     try {
-      await usersApi.assignTerritory(selectedUserId, territory.id);
-      toast({ title: "Success", description: "User assigned to territory", variant: "success" });
-      onOpenChange(false);
-      onSuccess();
+      await usersApi.assignTerritory(selectedUserId, territory.id)
+      toast({ title: 'Success', description: 'User assigned to territory', variant: 'success' })
+      onOpenChange(false)
+      onSuccess()
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to assign user"),
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: getApiErrorMessage(err, 'Failed to assign user'),
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -119,7 +119,7 @@ export function AssignUserToTerritoryDialog({
         <DialogHeader>
           <DialogTitle>Atribuir usuário a {territory.slug}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-gray-500">{assignmentHint}</p>
+        <p className="text-gray-500 text-sm">{assignmentHint}</p>
         <div className="space-y-3">
           <div>
             <Label htmlFor="assign-user-search">Buscar usuários</Label>
@@ -154,7 +154,7 @@ export function AssignUserToTerritoryDialog({
                 </label>
               ))}
               {users.length === 0 && (
-                <p className="text-sm text-gray-500">Nenhum usuário elegível encontrado.</p>
+                <p className="text-gray-500 text-sm">Nenhum usuário elegível encontrado.</p>
               )}
             </div>
           )}
@@ -164,10 +164,10 @@ export function AssignUserToTerritoryDialog({
             Cancelar
           </Button>
           <Button onClick={handleAssign} disabled={saving || !selectedUserId}>
-            {saving ? "Atribuindo..." : "Atribuir"}
+            {saving ? 'Atribuindo...' : 'Atribuir'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

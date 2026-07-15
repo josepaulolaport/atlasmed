@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
+import { randomBytes } from 'node:crypto'
 
 export function generateRandomToken(): string {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString('base64url')
 }

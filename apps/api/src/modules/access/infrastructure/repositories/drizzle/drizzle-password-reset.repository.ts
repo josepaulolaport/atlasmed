@@ -1,12 +1,12 @@
-import { eq, and, isNull, lt } from "drizzle-orm";
-import { users, passwordResets, roles } from "@atlasmed/database";
-import { db } from "../../../../../infrastructure/database/db";
+import { passwordResets, roles, users } from '@atlasmed/database'
+import { and, eq, isNull, lt } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 
 import type {
   CreatePasswordResetParams,
   FindPasswordResetByTokenParams,
-  PasswordResetRepository,
-} from "../../../application/interfaces/password-reset.repository.interface";
+  PasswordResetRepository
+} from '../../../application/interfaces/password-reset.repository.interface'
 
 export class DrizzlePasswordResetRepository implements PasswordResetRepository {
   async create(params: CreatePasswordResetParams) {
@@ -15,11 +15,11 @@ export class DrizzlePasswordResetRepository implements PasswordResetRepository {
       .values({
         userId: params.userId,
         tokenHash: params.tokenHash,
-        expiresAt: params.expiresAt,
+        expiresAt: params.expiresAt
       })
-      .returning();
+      .returning()
 
-    return row!;
+    return row!
   }
 
   async findByToken(params: FindPasswordResetByTokenParams) {
@@ -27,9 +27,9 @@ export class DrizzlePasswordResetRepository implements PasswordResetRepository {
       .select()
       .from(passwordResets)
       .where(eq(passwordResets.tokenHash, params.tokenHash))
-      .limit(1);
+      .limit(1)
 
-    if (!pr) return null;
+    if (!pr) return null
 
     const [userWithRole] = await db
       .select({
@@ -40,14 +40,14 @@ export class DrizzlePasswordResetRepository implements PasswordResetRepository {
         passwordHash: users.passwordHash,
         passwordHistory: users.passwordHistory,
         roleId: roles.id,
-        roleName: roles.name,
+        roleName: roles.name
       })
       .from(users)
       .innerJoin(roles, eq(roles.id, users.roleId))
       .where(eq(users.id, pr.userId))
-      .limit(1);
+      .limit(1)
 
-    if (!userWithRole) return null;
+    if (!userWithRole) return null
 
     return {
       id: pr.id,
@@ -65,27 +65,27 @@ export class DrizzlePasswordResetRepository implements PasswordResetRepository {
         passwordHistory: userWithRole.passwordHistory,
         role: {
           id: userWithRole.roleId,
-          name: userWithRole.roleName,
-        },
-      },
-    };
+          name: userWithRole.roleName
+        }
+      }
+    }
   }
 
   async markAsUsed(id: string): Promise<void> {
     await db
       .update(passwordResets)
       .set({ usedAt: new Date(), updatedAt: new Date() })
-      .where(eq(passwordResets.id, id));
+      .where(eq(passwordResets.id, id))
   }
 
   async invalidateUnusedForUser(userId: string): Promise<void> {
     await db
       .update(passwordResets)
       .set({ usedAt: new Date(), updatedAt: new Date() })
-      .where(and(eq(passwordResets.userId, userId), isNull(passwordResets.usedAt)));
+      .where(and(eq(passwordResets.userId, userId), isNull(passwordResets.usedAt)))
   }
 
   async deleteExpired(): Promise<void> {
-    await db.delete(passwordResets).where(lt(passwordResets.expiresAt, new Date()));
+    await db.delete(passwordResets).where(lt(passwordResets.expiresAt, new Date()))
   }
 }

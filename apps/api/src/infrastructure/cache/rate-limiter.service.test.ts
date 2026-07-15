@@ -1,10 +1,10 @@
-import { describe, expect, test, beforeEach, mock } from "bun:test";
-import { RateLimiterService } from "./rate-limiter.service";
-import type { Redis } from "ioredis";
+import { beforeEach, describe, expect, mock, test } from 'bun:test'
+import type { Redis } from 'ioredis'
+import { RateLimiterService } from './rate-limiter.service'
 
-describe("RateLimiterService", () => {
-  let mockRedis: Redis;
-  let rateLimiter: RateLimiterService;
+describe('RateLimiterService', () => {
+  let mockRedis: Redis
+  let rateLimiter: RateLimiterService
 
   beforeEach(() => {
     mockRedis = {
@@ -15,139 +15,125 @@ describe("RateLimiterService", () => {
       zadd: mock(() => Promise.resolve(1)),
       expire: mock(() => Promise.resolve(1)),
       zrange: mock(() => Promise.resolve([])),
-      setex: mock(() => Promise.resolve("OK")),
-      del: mock(() => Promise.resolve(1)),
-    } as unknown as Redis;
+      setex: mock(() => Promise.resolve('OK')),
+      del: mock(() => Promise.resolve(1))
+    } as unknown as Redis
 
-    rateLimiter = new RateLimiterService(mockRedis);
-  });
+    rateLimiter = new RateLimiterService(mockRedis)
+  })
 
-  describe("check", () => {
-    test("should allow request when under limit", async () => {
+  describe('check', () => {
+    test('should allow request when under limit', async () => {
       const config = {
         maxAttempts: 5,
-        windowMs: 60000,
-      };
+        windowMs: 60000
+      }
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check('test', 'user-123', config)
 
-      expect(result.allowed).toBe(true);
-      expect(result.remaining).toBe(4);
-    });
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(4)
+    })
 
-    test("should block request when limit exceeded", async () => {
-      mockRedis.zcard = mock(() => Promise.resolve(5));
-
-      const config = {
-        maxAttempts: 5,
-        windowMs: 60000,
-      };
-
-      const result = await rateLimiter.check("test", "user-123", config);
-
-      expect(result.allowed).toBe(false);
-      expect(result.remaining).toBe(0);
-    });
-
-    test("should block with duration when blockDurationMs is set", async () => {
-      mockRedis.zcard = mock(() => Promise.resolve(5));
+    test('should block request when limit exceeded', async () => {
+      mockRedis.zcard = mock(() => Promise.resolve(5))
 
       const config = {
         maxAttempts: 5,
-        windowMs: 60000,
-        blockDurationMs: 300000,
-      };
+        windowMs: 60000
+      }
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check('test', 'user-123', config)
 
-      expect(result.allowed).toBe(false);
-      expect(result.blockedUntil).toBeDefined();
-      expect(mockRedis.setex).toHaveBeenCalled();
-    });
+      expect(result.allowed).toBe(false)
+      expect(result.remaining).toBe(0)
+    })
 
-    test("should respect existing block", async () => {
-      mockRedis.exists = mock(() => Promise.resolve(1));
-      mockRedis.ttl = mock(() => Promise.resolve(100));
+    test('should block with duration when blockDurationMs is set', async () => {
+      mockRedis.zcard = mock(() => Promise.resolve(5))
 
       const config = {
         maxAttempts: 5,
         windowMs: 60000,
-        blockDurationMs: 300000,
-      };
+        blockDurationMs: 300000
+      }
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check('test', 'user-123', config)
 
-      expect(result.allowed).toBe(false);
-      expect(result.blockedUntil).toBeDefined();
-    });
+      expect(result.allowed).toBe(false)
+      expect(result.blockedUntil).toBeDefined()
+      expect(mockRedis.setex).toHaveBeenCalled()
+    })
 
-    test("should handle Redis errors gracefully", async () => {
-      mockRedis.exists = mock(() => Promise.reject(new Error("Redis error")));
+    test('should respect existing block', async () => {
+      mockRedis.exists = mock(() => Promise.resolve(1))
+      mockRedis.ttl = mock(() => Promise.resolve(100))
 
       const config = {
         maxAttempts: 5,
         windowMs: 60000,
-      };
+        blockDurationMs: 300000
+      }
 
-      const result = await rateLimiter.check("test", "user-123", config);
+      const result = await rateLimiter.check('test', 'user-123', config)
 
-      expect(result.allowed).toBe(true);
-      expect(result.remaining).toBe(5);
-    });
-  });
+      expect(result.allowed).toBe(false)
+      expect(result.blockedUntil).toBeDefined()
+    })
 
-  describe("reset", () => {
-    test("should reset rate limit and block keys", async () => {
-      await rateLimiter.reset("test", "user-123");
+    test('should handle Redis errors gracefully', async () => {
+      mockRedis.exists = mock(() => Promise.reject(new Error('Redis error')))
 
-      expect(mockRedis.del).toHaveBeenCalledTimes(2);
-      expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:test:user-123");
-      expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:block:test:user-123");
-    });
+      const config = {
+        maxAttempts: 5,
+        windowMs: 60000
+      }
 
-    test("should handle Redis errors gracefully", async () => {
-      mockRedis.del = mock(() => Promise.reject(new Error("Redis error")));
-      await expect(
-        rateLimiter.reset("test", "user-123")
-      ).resolves.toBeUndefined();
-    });
-  });
+      const result = await rateLimiter.check('test', 'user-123', config)
 
-  describe("getRemainingAttempts", () => {
-    test("should return remaining attempts", async () => {
-      mockRedis.zcard = mock(() => Promise.resolve(2));
+      expect(result.allowed).toBe(true)
+      expect(result.remaining).toBe(5)
+    })
+  })
 
-      const remaining = await rateLimiter.getRemainingAttempts(
-        "test",
-        "user-123",
-        5
-      );
+  describe('reset', () => {
+    test('should reset rate limit and block keys', async () => {
+      await rateLimiter.reset('test', 'user-123')
 
-      expect(remaining).toBe(3);
-    });
+      expect(mockRedis.del).toHaveBeenCalledTimes(2)
+      expect(mockRedis.del).toHaveBeenCalledWith('ratelimit:test:user-123')
+      expect(mockRedis.del).toHaveBeenCalledWith('ratelimit:block:test:user-123')
+    })
 
-    test("should not return negative values", async () => {
-      mockRedis.zcard = mock(() => Promise.resolve(10));
+    test('should handle Redis errors gracefully', async () => {
+      mockRedis.del = mock(() => Promise.reject(new Error('Redis error')))
+      await expect(rateLimiter.reset('test', 'user-123')).resolves.toBeUndefined()
+    })
+  })
 
-      const remaining = await rateLimiter.getRemainingAttempts(
-        "test",
-        "user-123",
-        5
-      );
+  describe('getRemainingAttempts', () => {
+    test('should return remaining attempts', async () => {
+      mockRedis.zcard = mock(() => Promise.resolve(2))
 
-      expect(remaining).toBe(0);
-    });
+      const remaining = await rateLimiter.getRemainingAttempts('test', 'user-123', 5)
 
-    test("should handle Redis errors gracefully", async () => {
-      mockRedis.zcard = mock(() => Promise.reject(new Error("Redis error")));
+      expect(remaining).toBe(3)
+    })
 
-      const remaining = await rateLimiter.getRemainingAttempts(
-        "test",
-        "user-123",
-        5
-      );
+    test('should not return negative values', async () => {
+      mockRedis.zcard = mock(() => Promise.resolve(10))
 
-      expect(remaining).toBe(5);
-    });
-  });
-});
+      const remaining = await rateLimiter.getRemainingAttempts('test', 'user-123', 5)
+
+      expect(remaining).toBe(0)
+    })
+
+    test('should handle Redis errors gracefully', async () => {
+      mockRedis.zcard = mock(() => Promise.reject(new Error('Redis error')))
+
+      const remaining = await rateLimiter.getRemainingAttempts('test', 'user-123', 5)
+
+      expect(remaining).toBe(5)
+    })
+  })
+})

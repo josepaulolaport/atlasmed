@@ -1,7 +1,7 @@
-import { mock } from "bun:test";
-import type { IAuthCache } from "../application/interfaces/auth-cache.interface";
-import type { ISessionCache } from "../application/interfaces/session-cache.interface";
-import type { ScopeService } from "../application/services/scope.service";
+import { mock } from 'bun:test'
+import type { IAuthCache } from '../application/interfaces/auth-cache.interface'
+import type { ISessionCache } from '../application/interfaces/session-cache.interface'
+import type { ScopeService } from '../application/services/scope.service'
 
 export function createMockAuthCache(overrides?: Partial<IAuthCache>): IAuthCache {
   return {
@@ -12,8 +12,8 @@ export function createMockAuthCache(overrides?: Partial<IAuthCache>): IAuthCache
     exists: mock(() => Promise.resolve(false)),
     isRecentlyValidated: mock(() => Promise.resolve(false)),
     markValidated: mock(() => Promise.resolve()),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
 export function createMockSessionCache(overrides?: Partial<ISessionCache>): ISessionCache {
@@ -29,22 +29,24 @@ export function createMockSessionCache(overrides?: Partial<ISessionCache>): ISes
     isMarkedRevoked: mock(() => Promise.resolve(false)),
     isRecentlyValidated: mock(() => Promise.resolve(false)),
     markValidated: mock(() => Promise.resolve()),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
 
 export function createMockScopeService(overrides?: Partial<ScopeService>): ScopeService {
   return {
-    resolve: mock(() => Promise.resolve({
-      isGlobal: true,
-      territoryIds: [],
-      facilityIds: [],
-      managedUserIds: [],
-      isOperationallyActive: true,
-    })),
+    resolve: mock(() =>
+      Promise.resolve({
+        isGlobal: true,
+        territoryIds: [],
+        facilityIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true
+      })
+    ),
     invalidate: mock(() => Promise.resolve()),
     invalidateForTerritoryAssignmentChange: mock(() => Promise.resolve()),
     invalidateForManagerChange: mock(() => Promise.resolve()),
-    ...overrides,
-  } as ScopeService;
+    ...overrides
+  } as ScopeService
 }

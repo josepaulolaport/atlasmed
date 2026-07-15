@@ -1,16 +1,13 @@
-import Link from "next/link";
-import type { ProfessionalFacilitySummary } from "@atlasmed/access";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { ProfessionalFacilitySummary } from '@atlasmed/access'
+import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 interface LinkedFacilitiesCardProps {
-  facilities: ProfessionalFacilitySummary[];
-  professionalId?: string;
+  facilities: ProfessionalFacilitySummary[]
+  professionalId?: string
 }
 
-export function LinkedFacilitiesCard({
-  facilities,
-  professionalId,
-}: LinkedFacilitiesCardProps) {
+export function LinkedFacilitiesCard({ facilities, professionalId }: LinkedFacilitiesCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -18,7 +15,7 @@ export function LinkedFacilitiesCard({
       </CardHeader>
       <CardContent>
         {facilities.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum vínculo de unidade ativo</p>
+          <p className="text-gray-500 text-sm">Nenhum vínculo de unidade ativo</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {facilities.map((facility) => (
@@ -26,14 +23,14 @@ export function LinkedFacilitiesCard({
                 {professionalId ? (
                   <Link
                     href={`/facilities/${facility.id}/professionals/${professionalId}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
+                    className="font-medium text-blue-600 text-sm hover:underline"
                   >
                     {facility.name}
                   </Link>
                 ) : (
                   <Link
                     href={`/facilities/${facility.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
+                    className="font-medium text-blue-600 text-sm hover:underline"
                   >
                     {facility.name}
                   </Link>
@@ -44,5 +41,5 @@ export function LinkedFacilitiesCard({
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

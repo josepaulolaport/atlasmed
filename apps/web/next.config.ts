@@ -1,10 +1,10 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   // Enable standalone output for Docker deployments
-  output: 'standalone',
-  
-  /* Add other config options here */
-};
+  output: 'standalone'
 
-export default nextConfig;
+  /* Add other config options here */
+}
+
+export default nextConfig

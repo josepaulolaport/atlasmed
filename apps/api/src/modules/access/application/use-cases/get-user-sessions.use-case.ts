@@ -1,29 +1,29 @@
-import type { SessionRepository } from "../interfaces/session.repository.interface";
-import { sessionsMatchSameDevice } from "../../../../shared/utils/device-fingerprint";
+import { sessionsMatchSameDevice } from '../../../../shared/utils/device-fingerprint'
+import type { SessionRepository } from '../interfaces/session.repository.interface'
 
 interface GetUserSessionsInput {
-  userId: string;
-  currentSessionId: string;
+  userId: string
+  currentSessionId: string
 }
 
 interface SessionOutput {
-  id: string;
-  deviceType: string | null;
-  browserName: string | null;
-  browserVersion: string | null;
-  osName: string | null;
-  ipAddress: string | null;
-  lastSeenAt: Date | null;
-  createdAt: Date;
-  isCurrent: boolean;
+  id: string
+  deviceType: string | null
+  browserName: string | null
+  browserVersion: string | null
+  osName: string | null
+  ipAddress: string | null
+  lastSeenAt: Date | null
+  createdAt: Date
+  isCurrent: boolean
 }
 
 interface GetUserSessionsOutput {
-  sessions: SessionOutput[];
+  sessions: SessionOutput[]
 }
 
 interface GetUserSessionsDependencies {
-  sessionRepository: SessionRepository;
+  sessionRepository: SessionRepository
 }
 
 export class GetUserSessionsUseCase {
@@ -32,8 +32,8 @@ export class GetUserSessionsUseCase {
   async execute(input: GetUserSessionsInput): Promise<GetUserSessionsOutput> {
     const [sessions, currentSession] = await Promise.all([
       this.dependencies.sessionRepository.findByUserId(input.userId),
-      this.dependencies.sessionRepository.findById(input.currentSessionId),
-    ]);
+      this.dependencies.sessionRepository.findById(input.currentSessionId)
+    ])
 
     return {
       sessions: sessions.map((session) => ({
@@ -47,8 +47,8 @@ export class GetUserSessionsUseCase {
         createdAt: session.createdAt,
         isCurrent: currentSession
           ? sessionsMatchSameDevice(session, currentSession)
-          : session.id === input.currentSessionId,
-      })),
-    };
+          : session.id === input.currentSessionId
+      }))
+    }
   }
 }

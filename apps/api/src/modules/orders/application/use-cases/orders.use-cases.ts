@@ -1,15 +1,17 @@
-import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
+import { assertResourceInScope, type ScopeContext } from '@atlasmed/access'
 import type {
   OrderDetailRecord,
   OrderRepository,
-  OrderStatus,
-} from "../interfaces/order.repository.interface";
+  OrderStatus
+} from '../interfaces/order.repository.interface'
 
 function iso(date: Date | null): string | null {
-  return date?.toISOString() ?? null;
+  return date?.toISOString() ?? null
 }
 
-function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]>>["orders"][number]) {
+function serializeListOrder(
+  order: Awaited<ReturnType<OrderRepository['findAll']>>['orders'][number]
+) {
   return {
     id: order.id,
     legacyId: order.legacyId,
@@ -23,12 +25,12 @@ function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]
     itemCount: order.itemCount,
     itemsTotal: order.itemsTotal,
     freight: order.freight,
-    total: order.itemsTotal + order.freight,
-  };
+    total: order.itemsTotal + order.freight
+  }
 }
 
 function serializeOrder(order: OrderDetailRecord) {
-  const itemsTotal = order.items.reduce((total, item) => total + item.quantity * item.unitPrice, 0);
+  const itemsTotal = order.items.reduce((total, item) => total + item.quantity * item.unitPrice, 0)
 
   return {
     id: order.id,
@@ -66,35 +68,35 @@ function serializeOrder(order: OrderDetailRecord) {
       lineTotal: item.quantity * item.unitPrice,
       usdPrice: item.usdPrice,
       createdAt: item.createdAt.toISOString(),
-      updatedAt: item.updatedAt.toISOString(),
-    })),
-  };
+      updatedAt: item.updatedAt.toISOString()
+    }))
+  }
 }
 
 export class ListOrdersUseCase {
   constructor(private readonly deps: { orderRepository: OrderRepository }) {}
 
   async execute(input: {
-    page?: number;
-    limit?: number;
-    statuses?: OrderStatus[];
-    scope: ScopeContext;
+    page?: number
+    limit?: number
+    statuses?: OrderStatus[]
+    scope: ScopeContext
   }) {
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 20;
+    const page = input.page ?? 1
+    const limit = input.limit ?? 20
     const { orders, total } = await this.deps.orderRepository.findAll({
       page,
       limit,
       statuses: input.statuses,
       scope: input.scope.isGlobal
         ? { isGlobal: true }
-        : { isGlobal: false, facilityIds: input.scope.facilityIds },
-    });
+        : { isGlobal: false, facilityIds: input.scope.facilityIds }
+    })
 
     return {
       data: orders.map(serializeListOrder),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-    };
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
+    }
   }
 }
 
@@ -102,10 +104,10 @@ export class GetOrderUseCase {
   constructor(private readonly deps: { orderRepository: OrderRepository }) {}
 
   async execute(input: { orderId: string; scope: ScopeContext }) {
-    const order = await this.deps.orderRepository.findById(input.orderId);
-    if (!order) return null;
+    const order = await this.deps.orderRepository.findById(input.orderId)
+    if (!order) return null
 
-    assertResourceInScope(input.scope, "facility", order.facility.id);
-    return serializeOrder(order);
+    assertResourceInScope(input.scope, 'facility', order.facility.id)
+    return serializeOrder(order)
   }
 }

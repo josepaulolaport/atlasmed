@@ -1,22 +1,22 @@
-import { db } from "../../../../../infrastructure/database/db";
 import {
   registryFacilities,
   registryFacilityProfessionals,
   registryFacilityRepresentatives,
-  registryProfessionals,
-} from "@atlasmed/database";
-import { eq, inArray, sql } from "drizzle-orm";
+  registryProfessionals
+} from '@atlasmed/database'
+import { eq, inArray, sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
-  RegistryReadRepository,
   RegistryFacilityProjection,
   RegistryProfessionalProjection,
-  RegistryRepresentativeProjection,
-} from "../../../application/interfaces/registry-read.repository.interface";
+  RegistryReadRepository,
+  RegistryRepresentativeProjection
+} from '../../../application/interfaces/registry-read.repository.interface'
 import {
   projectRegistryFacility,
   projectRegistryProfessional,
-  projectRegistryRepresentative,
-} from "../../../application/services/registry-projection.service";
+  projectRegistryRepresentative
+} from '../../../application/services/registry-projection.service'
 
 export class DrizzleRegistryReadRepository implements RegistryReadRepository {
   async findFacilityByRegistryId(
@@ -43,12 +43,12 @@ export class DrizzleRegistryReadRepository implements RegistryReadRepository {
         cpf: registryFacilities.taxIdCpf,
         facilityTypeCode: registryFacilities.facilityTypeCode,
         deactivationReasonCode: registryFacilities.deactivationReasonCode,
-        lastUpdatedDate: registryFacilities.lastUpdatedDate,
+        lastUpdatedDate: registryFacilities.lastUpdatedDate
       })
       .from(registryFacilities)
-      .where(eq(registryFacilities.facilityId, registryFacilityId));
+      .where(eq(registryFacilities.facilityId, registryFacilityId))
 
-    return rows[0] ? projectRegistryFacility(rows[0]) : null;
+    return rows[0] ? projectRegistryFacility(rows[0]) : null
   }
 
   async findProfessionalsByFacility(
@@ -57,25 +57,25 @@ export class DrizzleRegistryReadRepository implements RegistryReadRepository {
     const associations = await db
       .select()
       .from(registryFacilityProfessionals)
-      .where(eq(registryFacilityProfessionals.facilityId, registryFacilityId));
+      .where(eq(registryFacilityProfessionals.facilityId, registryFacilityId))
 
     if (associations.length === 0) {
-      return [];
+      return []
     }
 
-    const professionalIds = [...new Set(associations.map((a) => a.professionalId))];
+    const professionalIds = [...new Set(associations.map((a) => a.professionalId))]
     const professionals = await db
       .select()
       .from(registryProfessionals)
-      .where(inArray(registryProfessionals.professionalId, professionalIds));
+      .where(inArray(registryProfessionals.professionalId, professionalIds))
 
-    const professionalById = new Map(professionals.map((p) => [p.professionalId, p]));
+    const professionalById = new Map(professionals.map((p) => [p.professionalId, p]))
 
     return associations
       .map((association) => {
-        const professional = professionalById.get(association.professionalId);
+        const professional = professionalById.get(association.professionalId)
         if (!professional) {
-          return null;
+          return null
         }
 
         return projectRegistryProfessional({
@@ -91,10 +91,10 @@ export class DrizzleRegistryReadRepository implements RegistryReadRepository {
           lastUpdatedDate: association.lastUpdatedDate,
           crmCouncil: null,
           crmNumber: null,
-          crmState: null,
-        });
+          crmState: null
+        })
       })
-      .filter((row): row is RegistryProfessionalProjection => row !== null);
+      .filter((row): row is RegistryProfessionalProjection => row !== null)
   }
 
   async findRepresentativesByFacility(
@@ -104,8 +104,8 @@ export class DrizzleRegistryReadRepository implements RegistryReadRepository {
       .select()
       .from(registryFacilityRepresentatives)
       .where(eq(registryFacilityRepresentatives.facilityId, registryFacilityId))
-      .limit(1);
+      .limit(1)
 
-    return rows[0] ? [projectRegistryRepresentative(rows[0])] : [];
+    return rows[0] ? [projectRegistryRepresentative(rows[0])] : []
   }
 }

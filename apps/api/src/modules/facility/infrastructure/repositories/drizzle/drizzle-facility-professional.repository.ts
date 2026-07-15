@@ -1,43 +1,39 @@
-import type { RelationshipLevel } from "@atlasmed/database";
-import {
-  facilityProfessionals,
-  professionals,
-  facilities,
-} from "@atlasmed/database";
-import { eq, and, or, isNull, isNotNull, ilike, sql, asc, type SQL } from "drizzle-orm";
-import { db } from "../../../../../infrastructure/database/db";
+import type { RelationshipLevel } from '@atlasmed/database'
+import { facilities, facilityProfessionals, professionals } from '@atlasmed/database'
+import { and, asc, eq, ilike, isNotNull, isNull, or, type SQL, sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
   FacilityProfessionalRecord,
   FacilityProfessionalRepository,
-  FacilityProfessionalWithProfessionalRecord,
   FacilityProfessionalView,
-} from "../../../application/interfaces/facility-professional.repository.interface";
+  FacilityProfessionalWithProfessionalRecord
+} from '../../../application/interfaces/facility-professional.repository.interface'
 
-const LEGACY_OCCUPATION_CODE = "LEGACY";
+const LEGACY_OCCUPATION_CODE = 'LEGACY'
 
 type AssociationRow = {
-  id: string;
-  professionalId: string;
-  facilityId: string;
-  occupationCode: string;
-  specialtyLabel: string | null;
-  isPartner: boolean;
-  isPrescriber: boolean;
-  isBuyer: boolean;
-  isDecisionMaker: boolean;
-  relationshipLevel: number | null;
-  notes: string | null;
-  sourceActive: boolean;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  confirmedAt: Date | null;
-  confirmedByUserId: string | null;
-  endedAt: Date | null;
-  endedByUserId: string | null;
-  endReason: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-};
+  id: string
+  professionalId: string
+  facilityId: string
+  occupationCode: string
+  specialtyLabel: string | null
+  isPartner: boolean
+  isPrescriber: boolean
+  isBuyer: boolean
+  isDecisionMaker: boolean
+  relationshipLevel: number | null
+  notes: string | null
+  sourceActive: boolean
+  sourceFirstSeenAt: Date | null
+  sourceLastSeenAt: Date | null
+  confirmedAt: Date | null
+  confirmedByUserId: string | null
+  endedAt: Date | null
+  endedByUserId: string | null
+  endReason: string | null
+  createdAt: Date
+  updatedAt: Date
+}
 
 function mapAssociation(association: AssociationRow): FacilityProfessionalRecord {
   return {
@@ -61,35 +57,35 @@ function mapAssociation(association: AssociationRow): FacilityProfessionalRecord
     endedByUserId: association.endedByUserId,
     endReason: association.endReason,
     createdAt: association.createdAt,
-    updatedAt: association.updatedAt,
-  };
+    updatedAt: association.updatedAt
+  }
 }
 
 function buildViewConditions(facilityId: string, view: FacilityProfessionalView): SQL[] {
   const base: SQL[] = [
     eq(facilityProfessionals.facilityId, facilityId),
-    isNull(facilityProfessionals.endedAt),
-  ];
+    isNull(facilityProfessionals.endedAt)
+  ]
 
   switch (view) {
-    case "source":
-      return [...base, eq(facilityProfessionals.sourceActive, true)];
-    case "confirmed":
-      return [...base, isNotNull(facilityProfessionals.confirmedAt)];
-    case "pending":
+    case 'source':
+      return [...base, eq(facilityProfessionals.sourceActive, true)]
+    case 'confirmed':
+      return [...base, isNotNull(facilityProfessionals.confirmedAt)]
+    case 'pending':
       return [
         ...base,
         eq(facilityProfessionals.sourceActive, true),
-        isNull(facilityProfessionals.confirmedAt),
-      ];
-    case "all":
+        isNull(facilityProfessionals.confirmedAt)
+      ]
+    case 'all':
       return [
         ...base,
         or(
           eq(facilityProfessionals.sourceActive, true),
           isNotNull(facilityProfessionals.confirmedAt)
-        ) as SQL,
-      ];
+        ) as SQL
+      ]
   }
 }
 
@@ -114,12 +110,10 @@ const associationColumns = {
   endedByUserId: facilityProfessionals.endedByUserId,
   endReason: facilityProfessionals.endReason,
   createdAt: facilityProfessionals.createdAt,
-  updatedAt: facilityProfessionals.updatedAt,
-} as const;
+  updatedAt: facilityProfessionals.updatedAt
+} as const
 
-export class DrizzleFacilityProfessionalRepository
-  implements FacilityProfessionalRepository
-{
+export class DrizzleFacilityProfessionalRepository implements FacilityProfessionalRepository {
   async findByProfessionalAndFacility(
     professionalId: string,
     facilityId: string,
@@ -135,9 +129,9 @@ export class DrizzleFacilityProfessionalRepository
           eq(facilityProfessionals.occupationCode, occupationCode)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    return association ? mapAssociation(association) : null;
+    return association ? mapAssociation(association) : null
   }
 
   async findActiveWithProfessional(
@@ -170,8 +164,8 @@ export class DrizzleFacilityProfessionalRepository
           hobbies: professionals.hobbies,
           notes: professionals.notes,
           createdAt: professionals.createdAt,
-          updatedAt: professionals.updatedAt,
-        },
+          updatedAt: professionals.updatedAt
+        }
       })
       .from(facilityProfessionals)
       .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
@@ -184,42 +178,42 @@ export class DrizzleFacilityProfessionalRepository
           isNull(professionals.deletedAt)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    if (!row) return null;
+    if (!row) return null
 
     return {
       association: mapAssociation(row),
-      professional: row.professional,
-    };
+      professional: row.professional
+    }
   }
 
   async findActiveByFacilityWithProfessionals(params: {
-    facilityId: string;
-    view: FacilityProfessionalView;
-    page: number;
-    limit: number;
-    search?: string;
+    facilityId: string
+    view: FacilityProfessionalView
+    page: number
+    limit: number
+    search?: string
   }): Promise<{
-    associations: FacilityProfessionalWithProfessionalRecord[];
-    total: number;
+    associations: FacilityProfessionalWithProfessionalRecord[]
+    total: number
   }> {
-    const conditions = buildViewConditions(params.facilityId, params.view);
-    conditions.push(isNull(professionals.deletedAt));
+    const conditions = buildViewConditions(params.facilityId, params.view)
+    conditions.push(isNull(professionals.deletedAt))
 
     if (params.search) {
-      const pattern = `%${params.search}%`;
+      const pattern = `%${params.search}%`
       conditions.push(
         or(
           ilike(professionals.firstName, pattern),
           ilike(professionals.lastName, pattern),
-          ilike(professionals.primarySpecialtyLabel, pattern),
+          ilike(professionals.primarySpecialtyLabel, pattern)
         ) as SQL
-      );
+      )
     }
 
-    const where = and(...conditions);
-    const skip = (params.page - 1) * params.limit;
+    const where = and(...conditions)
+    const skip = (params.page - 1) * params.limit
 
     const [rows, countRows] = await Promise.all([
       db
@@ -234,8 +228,8 @@ export class DrizzleFacilityProfessionalRepository
             crmNumber: professionals.crmNumber,
             crmState: professionals.crmState,
             createdAt: professionals.createdAt,
-            updatedAt: professionals.updatedAt,
-          },
+            updatedAt: professionals.updatedAt
+          }
         })
         .from(facilityProfessionals)
         .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
@@ -247,30 +241,30 @@ export class DrizzleFacilityProfessionalRepository
         .select({ count: sql<number>`count(*)::int` })
         .from(facilityProfessionals)
         .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
-        .where(where),
-    ]);
+        .where(where)
+    ])
 
     return {
       associations: rows.map((row) => ({
         ...mapAssociation(row),
-        professional: row.professional,
+        professional: row.professional
       })),
-      total: countRows[0]?.count ?? 0,
-    };
+      total: countRows[0]?.count ?? 0
+    }
   }
 
   async findActiveSourceAssociationsByProvider(sourceProvider: string): Promise<
     Array<{
-      association: FacilityProfessionalRecord;
-      professionalExternalSourceId: string;
-      facilityExternalSourceId: string;
+      association: FacilityProfessionalRecord
+      professionalExternalSourceId: string
+      facilityExternalSourceId: string
     }>
   > {
     const rows = await db
       .select({
         ...associationColumns,
         professionalExternalSourceId: professionals.externalSourceId,
-        facilityExternalSourceId: facilities.externalSourceId,
+        facilityExternalSourceId: facilities.externalSourceId
       })
       .from(facilityProfessionals)
       .innerJoin(professionals, eq(facilityProfessionals.professionalId, professionals.id))
@@ -284,25 +278,25 @@ export class DrizzleFacilityProfessionalRepository
           eq(facilities.sourceProvider, sourceProvider),
           eq(facilities.sourceTracked, true)
         )
-      );
+      )
 
     return rows
       .filter((row) => row.professionalExternalSourceId && row.facilityExternalSourceId)
       .map((row) => ({
         association: mapAssociation(row),
         professionalExternalSourceId: row.professionalExternalSourceId!,
-        facilityExternalSourceId: row.facilityExternalSourceId!,
-      }));
+        facilityExternalSourceId: row.facilityExternalSourceId!
+      }))
   }
 
   async confirmAssociation(params: {
-    professionalId: string;
-    facilityId: string;
-    occupationCode?: string;
-    confirmedByUserId: string;
+    professionalId: string
+    facilityId: string
+    occupationCode?: string
+    confirmedByUserId: string
   }): Promise<FacilityProfessionalRecord> {
-    const now = new Date();
-    const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE;
+    const now = new Date()
+    const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE
 
     const [association] = await db
       .insert(facilityProfessionals)
@@ -311,13 +305,13 @@ export class DrizzleFacilityProfessionalRepository
         facilityId: params.facilityId,
         occupationCode,
         confirmedAt: now,
-        confirmedByUserId: params.confirmedByUserId,
+        confirmedByUserId: params.confirmedByUserId
       })
       .onConflictDoUpdate({
         target: [
           facilityProfessionals.facilityId,
           facilityProfessionals.professionalId,
-          facilityProfessionals.occupationCode,
+          facilityProfessionals.occupationCode
         ],
         set: {
           confirmedAt: now,
@@ -325,97 +319,99 @@ export class DrizzleFacilityProfessionalRepository
           endedAt: null,
           endedByUserId: null,
           endReason: null,
-          updatedAt: now,
-        },
+          updatedAt: now
+        }
       })
-      .returning();
+      .returning()
 
-    return mapAssociation(association!);
+    return mapAssociation(association!)
   }
 
   async manuallyAssociate(params: {
-    professionalId: string;
-    facilityId: string;
-    occupationCode?: string;
-    confirmedByUserId: string;
+    professionalId: string
+    facilityId: string
+    occupationCode?: string
+    confirmedByUserId: string
   }): Promise<FacilityProfessionalRecord> {
-    return this.confirmAssociation(params);
+    return this.confirmAssociation(params)
   }
 
   async endAssociation(params: {
-    professionalId: string;
-    facilityId: string;
-    occupationCode?: string;
-    endedByUserId: string;
-    endReason: string;
+    professionalId: string
+    facilityId: string
+    occupationCode?: string
+    endedByUserId: string
+    endReason: string
   }): Promise<FacilityProfessionalRecord | null> {
     const existing = await this.findByProfessionalAndFacility(
       params.professionalId,
       params.facilityId,
       params.occupationCode
-    );
+    )
 
-    if (!existing || existing.endedAt) return null;
+    if (!existing || existing.endedAt) return null
 
     return this.endAssociationById({
       facilityProfessionalId: existing.id,
       endedByUserId: params.endedByUserId,
-      endReason: params.endReason,
-    });
+      endReason: params.endReason
+    })
   }
 
   async updateAssociationRoles(params: {
-    professionalId: string;
-    facilityId: string;
-    occupationCode?: string;
+    professionalId: string
+    facilityId: string
+    occupationCode?: string
     data: {
-      isPartner?: boolean;
-      isPrescriber?: boolean;
-      isBuyer?: boolean;
-      isDecisionMaker?: boolean;
-      relationshipLevel?: RelationshipLevel | null;
-      specialtyLabel?: string | null;
-      notes?: string | null;
-    };
+      isPartner?: boolean
+      isPrescriber?: boolean
+      isBuyer?: boolean
+      isDecisionMaker?: boolean
+      relationshipLevel?: RelationshipLevel | null
+      specialtyLabel?: string | null
+      notes?: string | null
+    }
   }): Promise<FacilityProfessionalRecord | null> {
     const existing = await this.findByProfessionalAndFacility(
       params.professionalId,
       params.facilityId,
       params.occupationCode
-    );
+    )
 
-    if (!existing || existing.endedAt) return null;
+    if (!existing || existing.endedAt) return null
 
     const setData: Partial<typeof facilityProfessionals.$inferInsert> & { updatedAt: Date } = {
-      updatedAt: new Date(),
-    };
-
-    if (params.data.isPartner !== undefined) setData.isPartner = params.data.isPartner;
-    if (params.data.isPrescriber !== undefined) setData.isPrescriber = params.data.isPrescriber;
-    if (params.data.isBuyer !== undefined) setData.isBuyer = params.data.isBuyer;
-    if (params.data.isDecisionMaker !== undefined) setData.isDecisionMaker = params.data.isDecisionMaker;
-    if (params.data.relationshipLevel !== undefined) {
-      setData.relationshipLevel = params.data.relationshipLevel;
+      updatedAt: new Date()
     }
-    if (params.data.specialtyLabel !== undefined) setData.specialtyLabel = params.data.specialtyLabel;
-    if (params.data.notes !== undefined) setData.notes = params.data.notes;
+
+    if (params.data.isPartner !== undefined) setData.isPartner = params.data.isPartner
+    if (params.data.isPrescriber !== undefined) setData.isPrescriber = params.data.isPrescriber
+    if (params.data.isBuyer !== undefined) setData.isBuyer = params.data.isBuyer
+    if (params.data.isDecisionMaker !== undefined)
+      setData.isDecisionMaker = params.data.isDecisionMaker
+    if (params.data.relationshipLevel !== undefined) {
+      setData.relationshipLevel = params.data.relationshipLevel
+    }
+    if (params.data.specialtyLabel !== undefined)
+      setData.specialtyLabel = params.data.specialtyLabel
+    if (params.data.notes !== undefined) setData.notes = params.data.notes
 
     const [association] = await db
       .update(facilityProfessionals)
       .set(setData)
       .where(eq(facilityProfessionals.id, existing.id))
-      .returning();
+      .returning()
 
-    return mapAssociation(association!);
+    return mapAssociation(association!)
   }
 
   async upsertSourceAssociation(params: {
-    professionalId: string;
-    facilityId: string;
-    occupationCode?: string;
-    sourceLastSeenAt: Date;
+    professionalId: string
+    facilityId: string
+    occupationCode?: string
+    sourceLastSeenAt: Date
   }): Promise<{ association: FacilityProfessionalRecord; created: boolean }> {
-    const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE;
+    const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE
 
     const [existing] = await db
       .select()
@@ -427,7 +423,7 @@ export class DrizzleFacilityProfessionalRepository
           eq(facilityProfessionals.occupationCode, occupationCode)
         )
       )
-      .limit(1);
+      .limit(1)
 
     if (existing) {
       const [association] = await db
@@ -439,12 +435,12 @@ export class DrizzleFacilityProfessionalRepository
           endedAt: null,
           endedByUserId: null,
           endReason: null,
-          updatedAt: new Date(),
+          updatedAt: new Date()
         })
         .where(eq(facilityProfessionals.id, existing.id))
-        .returning();
+        .returning()
 
-      return { association: mapAssociation(association!), created: false };
+      return { association: mapAssociation(association!), created: false }
     }
 
     const [association] = await db
@@ -455,28 +451,28 @@ export class DrizzleFacilityProfessionalRepository
         occupationCode,
         sourceActive: true,
         sourceFirstSeenAt: params.sourceLastSeenAt,
-        sourceLastSeenAt: params.sourceLastSeenAt,
+        sourceLastSeenAt: params.sourceLastSeenAt
       })
-      .returning();
+      .returning()
 
-    return { association: mapAssociation(association!), created: true };
+    return { association: mapAssociation(association!), created: true }
   }
 
   async markSourceInactive(params: {
-    facilityProfessionalId: string;
-    sourceLastSeenAt: Date;
+    facilityProfessionalId: string
+    sourceLastSeenAt: Date
   }): Promise<FacilityProfessionalRecord> {
     const [association] = await db
       .update(facilityProfessionals)
       .set({
         sourceActive: false,
         sourceLastSeenAt: params.sourceLastSeenAt,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
       .where(eq(facilityProfessionals.id, params.facilityProfessionalId))
-      .returning();
+      .returning()
 
-    return mapAssociation(association!);
+    return mapAssociation(association!)
   }
 
   async restoreSourceActive(facilityProfessionalId: string): Promise<FacilityProfessionalRecord> {
@@ -484,15 +480,15 @@ export class DrizzleFacilityProfessionalRepository
       .update(facilityProfessionals)
       .set({ sourceActive: true, updatedAt: new Date() })
       .where(eq(facilityProfessionals.id, facilityProfessionalId))
-      .returning();
+      .returning()
 
-    return mapAssociation(association!);
+    return mapAssociation(association!)
   }
 
   async endAssociationById(params: {
-    facilityProfessionalId: string;
-    endedByUserId: string;
-    endReason: string;
+    facilityProfessionalId: string
+    endedByUserId: string
+    endReason: string
   }): Promise<FacilityProfessionalRecord> {
     const [association] = await db
       .update(facilityProfessionals)
@@ -501,22 +497,22 @@ export class DrizzleFacilityProfessionalRepository
         endedByUserId: params.endedByUserId,
         endReason: params.endReason,
         sourceActive: false,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
       .where(eq(facilityProfessionals.id, params.facilityProfessionalId))
-      .returning();
+      .returning()
 
-    return mapAssociation(association!);
+    return mapAssociation(association!)
   }
 
   async createConfirmedAssociations(params: {
-    professionalId: string;
-    facilityIds: string[];
-    occupationCode?: string;
-    confirmedByUserId?: string;
+    professionalId: string
+    facilityIds: string[]
+    occupationCode?: string
+    confirmedByUserId?: string
   }): Promise<void> {
-    const now = new Date();
-    const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE;
+    const now = new Date()
+    const occupationCode = params.occupationCode ?? LEGACY_OCCUPATION_CODE
 
     for (const facilityId of params.facilityIds) {
       await db
@@ -526,13 +522,13 @@ export class DrizzleFacilityProfessionalRepository
           facilityId,
           occupationCode,
           confirmedAt: now,
-          confirmedByUserId: params.confirmedByUserId ?? null,
+          confirmedByUserId: params.confirmedByUserId ?? null
         })
         .onConflictDoUpdate({
           target: [
             facilityProfessionals.facilityId,
             facilityProfessionals.professionalId,
-            facilityProfessionals.occupationCode,
+            facilityProfessionals.occupationCode
           ],
           set: {
             confirmedAt: now,
@@ -540,9 +536,9 @@ export class DrizzleFacilityProfessionalRepository
             endedAt: null,
             endedByUserId: null,
             endReason: null,
-            updatedAt: now,
-          },
-        });
+            updatedAt: now
+          }
+        })
     }
   }
 }

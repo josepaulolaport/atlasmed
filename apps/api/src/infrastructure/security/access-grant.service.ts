@@ -3,6 +3,6 @@
  */
 export {
   AccessGrantService,
-  type GrantPermissionParams,
-} from "../../modules/access/application/services/access-grant.service";
-export { accessGrantService } from "../../modules/access/composition";
+  type GrantPermissionParams
+} from '../../modules/access/application/services/access-grant.service'
+export { accessGrantService } from '../../modules/access/composition'

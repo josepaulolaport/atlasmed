@@ -1,8 +1,8 @@
-import type { ObservabilityLogger } from './logger'
+import { isOpenTelemetryLogsEnabled } from '../otel'
 import { CompositeLogger } from './composite-logger'
 import { ConsoleLogger } from './console-logger'
+import type { ObservabilityLogger } from './logger'
 import { OpenTelemetryLogger } from './open-telemetry-logger'
-import { isOpenTelemetryLogsEnabled } from '../otel'
 
 export * from './logger'
 

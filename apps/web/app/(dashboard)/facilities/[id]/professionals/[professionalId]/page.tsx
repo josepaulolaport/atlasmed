@@ -1,141 +1,134 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/auth-context";
-import { facilitiesApi } from "@/lib/api/facilities";
-import { facilityProfessionalsApi } from "@/lib/api/facility-professionals";
-import { professionalsApi } from "@/lib/api/professionals";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import {
-  canReadFacilities,
-  canUpdateFacilities,
-  canUpdateProfessionals,
-} from "@/lib/permissions";
 import type {
   ProfessionalFacilityContext,
   UpdateFacilityProfessionalInput,
-  UpdateProfessionalInput,
-} from "@atlasmed/access";
-import { ProfessionalProfileForm } from "@/components/professionals/professional-profile-form";
-import { FacilityRoleForm } from "@/components/facility-professionals/facility-role-form";
-import { LinkedFacilitiesCard } from "@/components/professionals/linked-facilities-card";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+  UpdateProfessionalInput
+} from '@atlasmed/access'
+import { ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
+import { FacilityRoleForm } from '@/components/facility-professionals/facility-role-form'
+import { LinkedFacilitiesCard } from '@/components/professionals/linked-facilities-card'
+import { ProfessionalProfileForm } from '@/components/professionals/professional-profile-form'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/auth-context'
+import { useToast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { facilitiesApi } from '@/lib/api/facilities'
+import { facilityProfessionalsApi } from '@/lib/api/facility-professionals'
+import { professionalsApi } from '@/lib/api/professionals'
+import { canReadFacilities, canUpdateFacilities, canUpdateProfessionals } from '@/lib/permissions'
 
 export default function FacilityProfessionalRegistrationPage() {
-  const params = useParams<{ id: string; professionalId: string }>();
-  const router = useRouter();
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const params = useParams<{ id: string; professionalId: string }>()
+  const router = useRouter()
+  const { user } = useAuth()
+  const { toast } = useToast()
 
-  const facilityId = params.id;
-  const professionalId = params.professionalId;
+  const facilityId = params.id
+  const professionalId = params.professionalId
 
-  const [facilityName, setFacilityName] = useState("");
-  const [context, setContext] = useState<ProfessionalFacilityContext | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [savingRoles, setSavingRoles] = useState(false);
+  const [facilityName, setFacilityName] = useState('')
+  const [context, setContext] = useState<ProfessionalFacilityContext | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [savingRoles, setSavingRoles] = useState(false)
 
-  const canRead = user ? canReadFacilities(user.role.name) : false;
-  const canEditProfile = user ? canUpdateProfessionals(user.role.name) : false;
-  const canEditRoles = user ? canUpdateFacilities(user.role.name) : false;
+  const canRead = user ? canReadFacilities(user.role.name) : false
+  const canEditProfile = user ? canUpdateProfessionals(user.role.name) : false
+  const canEditRoles = user ? canUpdateFacilities(user.role.name) : false
 
   const loadContext = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const [facility, registrationContext] = await Promise.all([
         facilitiesApi.getFacility(facilityId),
-        facilityProfessionalsApi.getContext(facilityId, professionalId),
-      ]);
-      setFacilityName(facility.name);
-      setContext(registrationContext);
+        facilityProfessionalsApi.getContext(facilityId, professionalId)
+      ])
+      setFacilityName(facility.name)
+      setContext(registrationContext)
     } catch (error) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao carregar contexto de cadastro"),
-        variant: "destructive",
-      });
-      setContext(null);
+        title: 'Erro',
+        description: getApiErrorMessage(error, 'Falha ao carregar contexto de cadastro'),
+        variant: 'destructive'
+      })
+      setContext(null)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [facilityId, professionalId, toast]);
+  }, [facilityId, professionalId, toast])
 
   useEffect(() => {
     if (user && !canRead) {
-      router.replace("/unauthorized");
+      router.replace('/unauthorized')
     }
-  }, [user, canRead, router]);
+  }, [user, canRead, router])
 
   useEffect(() => {
-    if (!canRead) return;
-    void loadContext();
-  }, [canRead, loadContext]);
+    if (!canRead) return
+    void loadContext()
+  }, [canRead, loadContext])
 
   const handleSaveProfile = async (values: UpdateProfessionalInput) => {
-    setSavingProfile(true);
+    setSavingProfile(true)
     try {
-      const updatedProfessional = await professionalsApi.updateProfessional(
-        professionalId,
-        values
-      );
+      const updatedProfessional = await professionalsApi.updateProfessional(professionalId, values)
       setContext((current) =>
         current ? { ...current, professional: updatedProfessional } : current
-      );
-      toast({ title: "Saved", description: "Professional profile updated" });
+      )
+      toast({ title: 'Saved', description: 'Professional profile updated' })
     } catch (error) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao atualizar perfil do profissional"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(error, 'Falha ao atualizar perfil do profissional'),
+        variant: 'destructive'
+      })
     } finally {
-      setSavingProfile(false);
+      setSavingProfile(false)
     }
-  };
+  }
 
   const handleSaveRoles = async (values: UpdateFacilityProfessionalInput) => {
-    setSavingRoles(true);
+    setSavingRoles(true)
     try {
       const updatedAssociation = await facilityProfessionalsApi.updateRoles(
         facilityId,
         professionalId,
         values
-      );
-      setContext((current) =>
-        current ? { ...current, association: updatedAssociation } : current
-      );
-      toast({ title: "Saved", description: "Facility roles updated" });
+      )
+      setContext((current) => (current ? { ...current, association: updatedAssociation } : current))
+      toast({ title: 'Saved', description: 'Facility roles updated' })
     } catch (error) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(error, "Falha ao atualizar funções na unidade"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(error, 'Falha ao atualizar funções na unidade'),
+        variant: 'destructive'
+      })
     } finally {
-      setSavingRoles(false);
+      setSavingRoles(false)
     }
-  };
+  }
 
   if (!canRead) {
-    return null;
+    return null
   }
 
   if (loading) {
-    return <div className="py-8 text-center text-gray-500">Carregando formulário de cadastro...</div>;
+    return (
+      <div className="py-8 text-center text-gray-500">Carregando formulário de cadastro...</div>
+    )
   }
 
   if (!context) {
-    return <div className="py-8 text-center text-gray-500">Contexto de cadastro não encontrado</div>;
+    return <div className="py-8 text-center text-gray-500">Contexto de cadastro não encontrado</div>
   }
 
   const displayName =
     context.professional.fullName?.trim() ||
-    `${context.professional.firstName} ${context.professional.lastName}`.trim();
+    `${context.professional.firstName} ${context.professional.lastName}`.trim()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
@@ -147,17 +140,17 @@ export default function FacilityProfessionalRegistrationPage() {
           </Link>
         </Button>
         <div>
-          <p className="text-sm text-gray-500">
+          <p className="text-gray-500 text-sm">
             <Link href="/facilities" className="hover:underline">
               Unidades de saúde
             </Link>
-            {" / "}
+            {' / '}
             <Link href={`/facilities/${facilityId}`} className="hover:underline">
               {facilityName}
             </Link>
           </p>
-          <h1 className="text-2xl font-bold text-gray-900">{displayName}</h1>
-          <p className="text-sm text-gray-500">Cadastro do profissional</p>
+          <h1 className="font-bold text-2xl text-gray-900">{displayName}</h1>
+          <p className="text-gray-500 text-sm">Cadastro do profissional</p>
         </div>
       </div>
 
@@ -176,11 +169,8 @@ export default function FacilityProfessionalRegistrationPage() {
             onSubmit={handleSaveRoles}
           />
         </div>
-        <LinkedFacilitiesCard
-          facilities={context.facilities}
-          professionalId={professionalId}
-        />
+        <LinkedFacilitiesCard facilities={context.facilities} professionalId={professionalId} />
       </div>
     </div>
-  );
+  )
 }

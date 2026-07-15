@@ -1,86 +1,75 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto'
+import type { Role } from '@atlasmed/access'
+import { environment } from '../../../../app/config/environment'
+import { generateDeviceFingerprint } from '../../../../shared/utils/device-fingerprint'
 
-import type { SessionRepository } from "../interfaces/session.repository.interface";
-import type { ISessionCache } from "../interfaces/session-cache.interface";
+import { generateRandomToken } from '../../../../shared/utils/generate-random-token'
+import { hashToken } from '../../../../shared/utils/hash-token'
 
-import { hashToken } from "../../../../shared/utils/hash-token";
-
-import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
-
-import {
-  getSessionExpiresAt,
-} from "../constants/session.constants";
-
-import { parseUserAgent } from "../../../../shared/utils/parse-user-agent";
-
-import { generateDeviceFingerprint } from "../../../../shared/utils/device-fingerprint";
-
-import type { Role } from "@atlasmed/access";
-import { environment } from "../../../../app/config/environment";
+import { parseUserAgent } from '../../../../shared/utils/parse-user-agent'
+import { getSessionExpiresAt } from '../constants/session.constants'
+import type { SessionRepository } from '../interfaces/session.repository.interface'
+import type { ISessionCache } from '../interfaces/session-cache.interface'
 
 interface Dependencies {
-  sessionRepository: SessionRepository;
-  sessionCache: ISessionCache;
+  sessionRepository: SessionRepository
+  sessionCache: ISessionCache
 }
 
 interface CreateSessionInput {
-  userId: string;
-  userRole: Role;
-  ipAddress?: string | undefined;
-  userAgent?: string | undefined;
-  acceptLanguage?: string | undefined;
+  userId: string
+  userRole: Role
+  ipAddress?: string | undefined
+  userAgent?: string | undefined
+  acceptLanguage?: string | undefined
 }
 
 export interface GeneratedSessionData {
-  id: string;
-  refreshToken: string;
-  refreshTokenHash: string;
-  expiresAt: Date;
+  id: string
+  refreshToken: string
+  refreshTokenHash: string
+  expiresAt: Date
 }
 
 export interface GeneratedRefreshCredentials {
-  refreshToken: string;
-  refreshTokenHash: string;
-  expiresAt: Date;
+  refreshToken: string
+  refreshTokenHash: string
+  expiresAt: Date
 }
 
 export class SessionService {
   constructor(private readonly deps: Dependencies) {}
 
-  buildRefreshCredentials(params: {
-    userRole: Role;
-    from?: Date;
-  }): GeneratedRefreshCredentials {
-    const refreshToken = generateRandomToken();
+  buildRefreshCredentials(params: { userRole: Role; from?: Date }): GeneratedRefreshCredentials {
+    const refreshToken = generateRandomToken()
 
     return {
       refreshToken,
       refreshTokenHash: hashToken(refreshToken),
-      expiresAt: getSessionExpiresAt(params.userRole, params.from),
-    };
+      expiresAt: getSessionExpiresAt(params.userRole, params.from)
+    }
   }
 
   /**
    * Generate session data for a new authentication event (login).
    */
   generateSessionData(params: CreateSessionInput): GeneratedSessionData {
-    const credentials = this.buildRefreshCredentials({ userRole: params.userRole });
+    const credentials = this.buildRefreshCredentials({ userRole: params.userRole })
 
     return {
       id: randomUUID(),
-      ...credentials,
-    };
+      ...credentials
+    }
   }
 
   async create(params: CreateSessionInput) {
-    const parsed = parseUserAgent(params.userAgent);
+    const parsed = parseUserAgent(params.userAgent)
     const deviceFingerprint = generateDeviceFingerprint({
       userAgent: params.userAgent,
-      acceptLanguage: params.acceptLanguage,
-    });
+      acceptLanguage: params.acceptLanguage
+    })
 
-    const { id, refreshToken, refreshTokenHash, expiresAt } =
-      this.generateSessionData(params);
+    const { id, refreshToken, refreshTokenHash, expiresAt } = this.generateSessionData(params)
 
     const { session, revokedSessionIds } =
       await this.deps.sessionRepository.createLoginSessionTransaction({
@@ -109,19 +98,17 @@ export class SessionService {
         deviceMatch: {
           deviceFingerprint,
           userAgent: params.userAgent ?? null,
-          deviceType: parsed.deviceType,
+          deviceType: parsed.deviceType
         },
 
-        revokeReason: "Replaced by new session on same device",
+        revokeReason: 'Replaced by new session on same device',
 
-        maxActiveSessions: environment.MAX_ACTIVE_SESSIONS_PER_USER,
-      });
+        maxActiveSessions: environment.MAX_ACTIVE_SESSIONS_PER_USER
+      })
 
     await Promise.all(
-      revokedSessionIds.map((sessionId) =>
-        this.deps.sessionCache.invalidate(sessionId)
-      )
-    );
+      revokedSessionIds.map((sessionId) => this.deps.sessionCache.invalidate(sessionId))
+    )
 
     await this.deps.sessionCache.set({
       id: session.id,
@@ -132,31 +119,28 @@ export class SessionService {
       ipAddress: session.ipAddress,
       userAgent: session.userAgent,
       lastSeenAt: (session.lastSeenAt ?? new Date()).toISOString(),
-      createdAt: session.createdAt.toISOString(),
-    });
+      createdAt: session.createdAt.toISOString()
+    })
 
     return {
       ...session,
 
-      refreshToken,
-    };
+      refreshToken
+    }
   }
 
   async revoke(sessionId: string) {
-    await this.deps.sessionRepository.revoke(sessionId);
-    await this.deps.sessionCache.invalidate(sessionId);
+    await this.deps.sessionRepository.revoke(sessionId)
+    await this.deps.sessionCache.invalidate(sessionId)
   }
 
   async revokeForSecurityViolation(sessionId: string) {
-    await this.deps.sessionRepository.revokeForSecurityViolation(sessionId);
-    await this.deps.sessionCache.invalidate(sessionId);
+    await this.deps.sessionRepository.revokeForSecurityViolation(sessionId)
+    await this.deps.sessionCache.invalidate(sessionId)
   }
 
   async revokeAllByUserId(userId: string, excludeSessionId?: string) {
-    await this.deps.sessionRepository.revokeAllByUserId(
-      userId,
-      excludeSessionId
-    );
-    await this.deps.sessionCache.invalidateByUserId(userId, excludeSessionId);
+    await this.deps.sessionRepository.revokeAllByUserId(userId, excludeSessionId)
+    await this.deps.sessionCache.invalidateByUserId(userId, excludeSessionId)
   }
 }

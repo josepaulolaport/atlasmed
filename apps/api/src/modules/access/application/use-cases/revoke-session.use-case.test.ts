@@ -1,93 +1,89 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { createMockAuditLogService } from '../../test-helpers/audit-mocks'
+import { createMockSessionCache, createMockSessionRepository } from '../../test-helpers/fixtures'
+import type { SessionRepository } from '../interfaces/session.repository.interface'
+import type { ISessionCache } from '../interfaces/session-cache.interface'
+import { RevokeSessionUseCase } from './revoke-session.use-case'
 
-import { RevokeSessionUseCase } from "./revoke-session.use-case";
-import type { SessionRepository } from "../interfaces/session.repository.interface";
-import type { ISessionCache } from "../interfaces/session-cache.interface";
-import {
-  createMockSessionRepository,
-  createMockSessionCache,
-} from "../../test-helpers/fixtures";
+describe('RevokeSessionUseCase', () => {
+  let useCase: RevokeSessionUseCase
+  let mockSessionRepository: SessionRepository
+  let mockSessionCache: ISessionCache
 
-describe("RevokeSessionUseCase", () => {
-  let useCase: RevokeSessionUseCase;
-  let mockSessionRepository: SessionRepository;
-  let mockSessionCache: ISessionCache;
-
-  let mockAuditLog: ReturnType<typeof createMockAuditLogService>;
+  let mockAuditLog: ReturnType<typeof createMockAuditLogService>
 
   const targetSession = {
-    id: "session-target",
-    userId: "user-123",
-    refreshTokenHash: "hash",
-    ipAddress: "192.168.1.1",
-    userAgent: "Mozilla/5.0 (iPhone)",
-    deviceFingerprint: "fp-target",
-    deviceType: "mobile",
+    id: 'session-target',
+    userId: 'user-123',
+    refreshTokenHash: 'hash',
+    ipAddress: '192.168.1.1',
+    userAgent: 'Mozilla/5.0 (iPhone)',
+    deviceFingerprint: 'fp-target',
+    deviceType: 'mobile',
     expiresAt: new Date(Date.now() + 3600000),
     createdAt: new Date(),
     lastSeenAt: new Date(),
     revokedAt: null,
-    revokedReason: null,
-  };
+    revokedReason: null
+  }
 
   const currentSession = {
-    id: "session-current",
-    userId: "user-123",
-    refreshTokenHash: "hash-current",
-    ipAddress: "192.168.1.2",
-    userAgent: "Mozilla/5.0 (Macintosh)",
-    deviceFingerprint: "fp-current",
-    deviceType: "desktop",
+    id: 'session-current',
+    userId: 'user-123',
+    refreshTokenHash: 'hash-current',
+    ipAddress: '192.168.1.2',
+    userAgent: 'Mozilla/5.0 (Macintosh)',
+    deviceFingerprint: 'fp-current',
+    deviceType: 'desktop',
     expiresAt: new Date(Date.now() + 3600000),
     createdAt: new Date(),
     lastSeenAt: new Date(),
     revokedAt: null,
-    revokedReason: null,
-  };
+    revokedReason: null
+  }
 
   beforeEach(() => {
-    mockAuditLog = createMockAuditLogService();
+    mockAuditLog = createMockAuditLogService()
     mockSessionRepository = createMockSessionRepository({
       findById: mock(async (id: string) => {
-        if (id === "session-target") return targetSession;
-        if (id === "session-current") return currentSession;
-        return null;
+        if (id === 'session-target') return targetSession
+        if (id === 'session-current') return currentSession
+        return null
       }) as any,
-      revokeAllActiveForDevice: mock(async () => ["session-target", "session-target-2"]),
-    });
+      revokeAllActiveForDevice: mock(async () => ['session-target', 'session-target-2'])
+    })
 
     mockSessionCache = createMockSessionCache({
-      invalidate: mock(async () => {}),
-    });
+      invalidate: mock(async () => {})
+    })
 
     useCase = new RevokeSessionUseCase({
       sessionRepository: mockSessionRepository,
       sessionCache: mockSessionCache,
-      auditLog: mockAuditLog,
-    });
-  });
+      auditLog: mockAuditLog
+    })
+  })
 
-  it("should audit each revoked session on success", async () => {
+  it('should audit each revoked session on success', async () => {
     const result = await useCase.execute({
-      sessionId: "session-target",
-      userId: "user-123",
-      currentSessionId: "session-current",
-    });
+      sessionId: 'session-target',
+      userId: 'user-123',
+      currentSessionId: 'session-current'
+    })
 
-    expect(result).toEqual({ success: true });
-    expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledTimes(2);
+    expect(result).toEqual({ success: true })
+    expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledTimes(2)
     expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledWith({
-      userId: "user-123",
-      sessionId: "session-target",
-      reason: "Revoked by user",
-      revokedByUserId: "user-123",
-    });
+      userId: 'user-123',
+      sessionId: 'session-target',
+      reason: 'Revoked by user',
+      revokedByUserId: 'user-123'
+    })
     expect(mockAuditLog.logSessionRevoke).toHaveBeenCalledWith({
-      userId: "user-123",
-      sessionId: "session-target-2",
-      reason: "Revoked by user",
-      revokedByUserId: "user-123",
-    });
-  });
-});
+      userId: 'user-123',
+      sessionId: 'session-target-2',
+      reason: 'Revoked by user',
+      revokedByUserId: 'user-123'
+    })
+  })
+})

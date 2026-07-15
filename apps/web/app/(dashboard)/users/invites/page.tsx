@@ -1,161 +1,150 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { useAuth } from "@/contexts/auth-context";
-import { usersApi } from "@/lib/api/users";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Mail, Phone, RefreshCw, Trash2, UserPlus, Users } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { toast } from "@/hooks/use-toast";
-import {
-  UserPlus,
-  Trash2,
-  Mail,
-  Phone,
-  ArrowLeft,
-  Users,
-  RefreshCw,
-} from "lucide-react";
-import type { Invitation, InviteStatus } from "@/types/auth";
-import { canManageUsers } from "@/lib/permissions";
-import { formatDateTime } from "@/lib/utils";
+  TableRow
+} from '@/components/ui/table'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from '@/hooks/use-toast'
+import { usersApi } from '@/lib/api/users'
+import { canManageUsers } from '@/lib/permissions'
+import { formatDateTime } from '@/lib/utils'
+import type { Invitation, InviteStatus } from '@/types/auth'
 
-const statusVariant: Record<
-  InviteStatus,
-  "success" | "destructive" | "secondary" | "default"
-> = {
-  PENDING: "default",
-  ACCEPTED: "success",
-  EXPIRED: "secondary",
-  REVOKED: "destructive",
-};
+const statusVariant: Record<InviteStatus, 'success' | 'destructive' | 'secondary' | 'default'> = {
+  PENDING: 'default',
+  ACCEPTED: 'success',
+  EXPIRED: 'secondary',
+  REVOKED: 'destructive'
+}
 
 const statusFilters: Array<{ label: string; value?: InviteStatus }> = [
-  { label: "Todos", value: undefined },
-  { label: "Pendente", value: "PENDING" },
-  { label: "Aceito", value: "ACCEPTED" },
-  { label: "Expirado", value: "EXPIRED" },
-  { label: "Revogado", value: "REVOKED" },
-];
+  { label: 'Todos', value: undefined },
+  { label: 'Pendente', value: 'PENDING' },
+  { label: 'Aceito', value: 'ACCEPTED' },
+  { label: 'Expirado', value: 'EXPIRED' },
+  { label: 'Revogado', value: 'REVOKED' }
+]
 
 export default function InvitationsPage() {
-  const router = useRouter();
-  const { user: currentUser } = useAuth();
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<InviteStatus | undefined>();
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [revokingId, setRevokingId] = useState<string | null>(null);
-  const [resendingId, setResendingId] = useState<string | null>(null);
+  const router = useRouter()
+  const { user: currentUser } = useAuth()
+  const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [loading, setLoading] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<InviteStatus | undefined>()
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [revokingId, setRevokingId] = useState<string | null>(null)
+  const [resendingId, setResendingId] = useState<string | null>(null)
 
   useEffect(() => {
     if (currentUser && !canManageUsers(currentUser.role.name)) {
-      router.push("/unauthorized");
+      router.push('/unauthorized')
     }
-  }, [currentUser, router]);
+  }, [currentUser, router])
 
   useEffect(() => {
     const loadInvitations = async () => {
-      setLoading(true);
+      setLoading(true)
       try {
         const response = await usersApi.getInvitations({
           page,
           limit: 10,
-          status: statusFilter,
-        });
-        setInvitations(response.data);
-        setTotalPages(response.pagination.totalPages);
+          status: statusFilter
+        })
+        setInvitations(response.data)
+        setTotalPages(response.pagination.totalPages)
       } catch {
         toast({
-          title: "Erro",
-          description: "Falha ao carregar convites",
-          variant: "destructive",
-        });
+          title: 'Erro',
+          description: 'Falha ao carregar convites',
+          variant: 'destructive'
+        })
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
 
     if (currentUser && canManageUsers(currentUser.role.name)) {
-      loadInvitations();
+      loadInvitations()
     }
-  }, [currentUser, page, statusFilter]);
+  }, [currentUser, page, statusFilter])
 
   const handleRevoke = async (inviteId: string) => {
-    if (!confirm("Tem certeza de que deseja revogar este convite?")) {
-      return;
+    if (!confirm('Tem certeza de que deseja revogar este convite?')) {
+      return
     }
 
-    setRevokingId(inviteId);
+    setRevokingId(inviteId)
 
     try {
-      await usersApi.revokeInvite(inviteId);
+      await usersApi.revokeInvite(inviteId)
       toast({
-        title: "Sucesso",
-        description: "Convite revogado com sucesso",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'Convite revogado com sucesso',
+        variant: 'success'
+      })
 
       const response = await usersApi.getInvitations({
         page,
         limit: 10,
-        status: statusFilter,
-      });
-      setInvitations(response.data);
-      setTotalPages(response.pagination.totalPages);
+        status: statusFilter
+      })
+      setInvitations(response.data)
+      setTotalPages(response.pagination.totalPages)
     } catch {
       toast({
-        title: "Erro",
-        description: "Falha ao revogar convite",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: 'Falha ao revogar convite',
+        variant: 'destructive'
+      })
     } finally {
-      setRevokingId(null);
+      setRevokingId(null)
     }
-  };
+  }
 
   const handleResend = async (inviteId: string) => {
-    setResendingId(inviteId);
+    setResendingId(inviteId)
 
     try {
-      await usersApi.resendInvite(inviteId);
+      await usersApi.resendInvite(inviteId)
       toast({
-        title: "Sucesso",
-        description: "Convite reenviado com sucesso",
-        variant: "success",
-      });
+        title: 'Sucesso',
+        description: 'Convite reenviado com sucesso',
+        variant: 'success'
+      })
 
       const response = await usersApi.getInvitations({
         page,
         limit: 10,
-        status: statusFilter,
-      });
-      setInvitations(response.data);
-      setTotalPages(response.pagination.totalPages);
+        status: statusFilter
+      })
+      setInvitations(response.data)
+      setTotalPages(response.pagination.totalPages)
     } catch {
       toast({
-        title: "Erro",
-        description: "Falha ao reenviar convite",
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: 'Falha ao reenviar convite',
+        variant: 'destructive'
+      })
     } finally {
-      setResendingId(null);
+      setResendingId(null)
     }
-  };
+  }
 
   if (!currentUser || !canManageUsers(currentUser.role.name)) {
-    return null;
+    return null
   }
 
   return (
@@ -168,7 +157,7 @@ export default function InvitationsPage() {
               Voltar para Usuários
             </Button>
           </Link>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">Convites</h1>
+          <h1 className="mt-4 font-bold text-3xl text-gray-900">Convites</h1>
           <p className="mt-2 text-gray-600">
             Visualize e gerencie os convites de usuários pendentes e históricos
           </p>
@@ -195,11 +184,11 @@ export default function InvitationsPage() {
             {statusFilters.map((filter) => (
               <Button
                 key={filter.label}
-                variant={statusFilter === filter.value ? "default" : "outline"}
+                variant={statusFilter === filter.value ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => {
-                  setStatusFilter(filter.value);
-                  setPage(1);
+                  setStatusFilter(filter.value)
+                  setPage(1)
                 }}
               >
                 {filter.label}
@@ -213,9 +202,7 @@ export default function InvitationsPage() {
               <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
             </div>
           ) : invitations.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              Nenhum convite encontrado
-            </div>
+            <div className="py-12 text-center text-gray-500">Nenhum convite encontrado</div>
           ) : (
             <>
               <Table>
@@ -242,13 +229,13 @@ export default function InvitationsPage() {
                             </div>
                           )}
                           {invitation.phoneNumber && (
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-1 text-gray-600 text-sm">
                               <Phone className="h-3 w-3 text-gray-400" />
                               {invitation.phoneNumber}
                             </div>
                           )}
                           {!invitation.email && !invitation.phoneNumber && (
-                            <span className="text-sm text-gray-500">—</span>
+                            <span className="text-gray-500 text-sm">—</span>
                           )}
                         </div>
                       </TableCell>
@@ -264,27 +251,26 @@ export default function InvitationsPage() {
                         {invitation.invitedBy ? (
                           <div>
                             <div className="font-medium">
-                              {invitation.invitedBy.firstName &&
-                              invitation.invitedBy.lastName
+                              {invitation.invitedBy.firstName && invitation.invitedBy.lastName
                                 ? `${invitation.invitedBy.firstName} ${invitation.invitedBy.lastName}`
                                 : invitation.invitedBy.username}
                             </div>
-                            <div className="text-sm text-gray-500">
+                            <div className="text-gray-500 text-sm">
                               {invitation.invitedBy.email}
                             </div>
                           </div>
                         ) : (
-                          "—"
+                          '—'
                         )}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="text-gray-600 text-sm">
                         {formatDateTime(invitation.createdAt)}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="text-gray-600 text-sm">
                         {formatDateTime(invitation.expiresAt)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {invitation.status === "PENDING" && (
+                        {invitation.status === 'PENDING' && (
                           <div className="flex justify-end gap-2">
                             <Button
                               variant="outline"
@@ -293,7 +279,7 @@ export default function InvitationsPage() {
                               disabled={resendingId === invitation.id}
                             >
                               <RefreshCw className="mr-2 h-4 w-4" />
-                              {resendingId === invitation.id ? "Enviando..." : "Reenviar"}
+                              {resendingId === invitation.id ? 'Enviando...' : 'Reenviar'}
                             </Button>
                             <Button
                               variant="destructive"
@@ -302,7 +288,7 @@ export default function InvitationsPage() {
                               disabled={revokingId === invitation.id}
                             >
                               <Trash2 className="mr-2 h-4 w-4" />
-                              {revokingId === invitation.id ? "Revogando..." : "Revogar"}
+                              {revokingId === invitation.id ? 'Revogando...' : 'Revogar'}
                             </Button>
                           </div>
                         )}
@@ -321,7 +307,7 @@ export default function InvitationsPage() {
                   >
                     Anterior
                   </Button>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-gray-600 text-sm">
                     Página {page} de {totalPages}
                   </span>
                   <Button
@@ -338,5 +324,5 @@ export default function InvitationsPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

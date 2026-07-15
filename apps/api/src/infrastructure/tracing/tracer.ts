@@ -1,3 +1,3 @@
-import { createTracer } from "@atlasmed/observability";
+import { createTracer } from '@atlasmed/observability'
 
-export const tracer = createTracer("api");
+export const tracer = createTracer('api')

@@ -9,15 +9,15 @@ export abstract class HttpError extends Error {
     public readonly statusCode: number,
     public readonly code: string
   ) {
-    super(message);
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
+    super(message)
+    this.name = this.constructor.name
+    Error.captureStackTrace(this, this.constructor)
   }
 
   toJSON() {
     return {
       code: this.code,
-      message: this.message,
-    };
+      message: this.message
+    }
   }
 }

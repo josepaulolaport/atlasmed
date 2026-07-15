@@ -1,230 +1,221 @@
-"use client";
+'use client'
 
-import { useCallback, useEffect, useState } from "react";
-import { usersApi } from "@/lib/api/users";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import {
-  TerritoryPicker,
-  useTerritoryLabels,
-} from "@/components/territory/territory-picker";
+import { Loader2, Trash2 } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { TerritoryPicker, useTerritoryLabels } from '@/components/territory/territory-picker'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import { toast } from "@/hooks/use-toast";
-import { Loader2, Trash2 } from "lucide-react";
-import type { User, UserAssignments } from "@/types/auth";
+  SelectValue
+} from '@/components/ui/select'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { usersApi } from '@/lib/api/users'
+import type { User, UserAssignments } from '@/types/auth'
 
 interface Sector {
-  id: string;
-  slug: string;
-  name: string;
+  id: string
+  slug: string
+  name: string
 }
-import { getTerritoryAssignmentPickerConfig } from "@/lib/territory/assignment-picker-config";
+
+import { getTerritoryAssignmentPickerConfig } from '@/lib/territory/assignment-picker-config'
 
 interface ManageAssignmentsDialogProps {
-  user: User | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  user: User | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 export function ManageAssignmentsDialog({
   user,
   open,
-  onOpenChange,
+  onOpenChange
 }: ManageAssignmentsDialogProps) {
-  const [assignments, setAssignments] = useState<UserAssignments | null>(null);
-  const [managers, setManagers] = useState<User[]>([]);
-  const [allSectors, setAllSectors] = useState<Sector[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [savingManager, setSavingManager] = useState(false);
-  const [selectedTerritoryId, setSelectedTerritoryId] = useState("");
-  const [selectedSectorId, setSelectedSectorId] = useState("");
-  const [territoryBusy, setTerritoryBusy] = useState<string | null>(null);
-  const [sectorBusy, setSectorBusy] = useState<string | null>(null);
-  const { getLabel } = useTerritoryLabels();
+  const [assignments, setAssignments] = useState<UserAssignments | null>(null)
+  const [managers, setManagers] = useState<User[]>([])
+  const [allSectors, setAllSectors] = useState<Sector[]>([])
+  const [loading, setLoading] = useState(false)
+  const [savingManager, setSavingManager] = useState(false)
+  const [selectedTerritoryId, setSelectedTerritoryId] = useState('')
+  const [selectedSectorId, setSelectedSectorId] = useState('')
+  const [territoryBusy, setTerritoryBusy] = useState<string | null>(null)
+  const [sectorBusy, setSectorBusy] = useState<string | null>(null)
+  const { getLabel } = useTerritoryLabels()
 
-  const isTargetUser = user?.role.name === "REP";
-  const isTargetManager = user?.role.name === "MANAGER";
-  const canAssignTerritories = isTargetUser || isTargetManager;
+  const isTargetUser = user?.role.name === 'REP'
+  const isTargetManager = user?.role.name === 'MANAGER'
+  const canAssignTerritories = isTargetUser || isTargetManager
   const territoryPickerConfig = user
-    ? getTerritoryAssignmentPickerConfig(
-        isTargetManager ? "MANAGER" : "REP"
-      )
-    : null;
+    ? getTerritoryAssignmentPickerConfig(isTargetManager ? 'MANAGER' : 'REP')
+    : null
 
   const loadData = useCallback(async () => {
-    if (!user) return;
+    if (!user) return
 
-    setLoading(true);
+    setLoading(true)
     try {
       const [assignmentsData, usersResponse, sectorsData] = await Promise.all([
         usersApi.getUserAssignments(user.id),
         usersApi.getUsers({ page: 1, limit: 100 }),
-        usersApi.getSectors(),
-      ]);
+        usersApi.getSectors()
+      ])
 
-      setAssignments(assignmentsData);
-      setAllSectors(sectorsData);
+      setAssignments(assignmentsData)
+      setAllSectors(sectorsData)
       setManagers(
         usersResponse.data.filter(
-          (u) =>
-            (u.role.name === "MANAGER" || u.role.name === "ADMIN") &&
-            u.id !== user.id
+          (u) => (u.role.name === 'MANAGER' || u.role.name === 'ADMIN') && u.id !== user.id
         )
-      );
+      )
     } catch {
       toast({
-        title: "Error",
-        description: "Falha ao carregar atribuições",
-        variant: "destructive",
-      });
-      onOpenChange(false);
+        title: 'Error',
+        description: 'Falha ao carregar atribuições',
+        variant: 'destructive'
+      })
+      onOpenChange(false)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [user, onOpenChange]);
+  }, [user, onOpenChange])
 
   useEffect(() => {
     if (open && user) {
-      setSelectedTerritoryId("");
-      setSelectedSectorId("");
-      loadData();
+      setSelectedTerritoryId('')
+      setSelectedSectorId('')
+      loadData()
     } else {
-      setAssignments(null);
+      setAssignments(null)
     }
-  }, [open, user, loadData]);
+  }, [open, user, loadData])
 
   const handleManagerChange = async (value: string) => {
-    if (!user) return;
+    if (!user) return
 
-    const managerId = value === "none" ? null : value;
-    setSavingManager(true);
+    const managerId = value === 'none' ? null : value
+    setSavingManager(true)
     try {
-      await usersApi.assignManager(user.id, managerId);
-      await loadData();
+      await usersApi.assignManager(user.id, managerId)
+      await loadData()
       toast({
-        title: "Success",
-        description: managerId
-          ? "Manager assigned successfully"
-          : "Manager removed successfully",
-        variant: "success",
-      });
+        title: 'Success',
+        description: managerId ? 'Manager assigned successfully' : 'Manager removed successfully',
+        variant: 'success'
+      })
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to update manager"),
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: getApiErrorMessage(err, 'Failed to update manager'),
+        variant: 'destructive'
+      })
     } finally {
-      setSavingManager(false);
+      setSavingManager(false)
     }
-  };
+  }
 
   const handleAddTerritory = async () => {
-    if (!user || !selectedTerritoryId) return;
+    if (!user || !selectedTerritoryId) return
 
-    setTerritoryBusy("add");
+    setTerritoryBusy('add')
     try {
-      await usersApi.assignTerritory(user.id, selectedTerritoryId);
-      setSelectedTerritoryId("");
-      await loadData();
+      await usersApi.assignTerritory(user.id, selectedTerritoryId)
+      setSelectedTerritoryId('')
+      await loadData()
       toast({
-        title: "Success",
-        description: "Territory assigned successfully",
-        variant: "success",
-      });
+        title: 'Success',
+        description: 'Territory assigned successfully',
+        variant: 'success'
+      })
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to assign territory"),
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: getApiErrorMessage(err, 'Failed to assign territory'),
+        variant: 'destructive'
+      })
     } finally {
-      setTerritoryBusy(null);
+      setTerritoryBusy(null)
     }
-  };
+  }
 
   const handleRevokeTerritory = async (territoryId: string) => {
-    if (!user) return;
+    if (!user) return
 
-    setTerritoryBusy(territoryId);
+    setTerritoryBusy(territoryId)
     try {
-      await usersApi.revokeTerritory(user.id, territoryId);
-      await loadData();
+      await usersApi.revokeTerritory(user.id, territoryId)
+      await loadData()
       toast({
-        title: "Success",
-        description: "Territory revoked successfully",
-        variant: "success",
-      });
+        title: 'Success',
+        description: 'Territory revoked successfully',
+        variant: 'success'
+      })
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to revoke territory"),
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: getApiErrorMessage(err, 'Failed to revoke territory'),
+        variant: 'destructive'
+      })
     } finally {
-      setTerritoryBusy(null);
+      setTerritoryBusy(null)
     }
-  };
+  }
 
   const handleAddSector = async () => {
-    if (!user || !selectedSectorId) return;
+    if (!user || !selectedSectorId) return
 
-    setSectorBusy("add");
+    setSectorBusy('add')
     try {
-      await usersApi.assignSector(user.id, selectedSectorId);
-      setSelectedSectorId("");
-      await loadData();
-      toast({ title: "Setor atribuído com sucesso", variant: "success" });
+      await usersApi.assignSector(user.id, selectedSectorId)
+      setSelectedSectorId('')
+      await loadData()
+      toast({ title: 'Setor atribuído com sucesso', variant: 'success' })
     } catch (err) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao atribuir setor"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(err, 'Falha ao atribuir setor'),
+        variant: 'destructive'
+      })
     } finally {
-      setSectorBusy(null);
+      setSectorBusy(null)
     }
-  };
+  }
 
   const handleRevokeSector = async (sectorId: string) => {
-    if (!user) return;
+    if (!user) return
 
-    setSectorBusy(sectorId);
+    setSectorBusy(sectorId)
     try {
-      await usersApi.revokeSector(user.id, sectorId);
-      await loadData();
-      toast({ title: "Setor removido com sucesso", variant: "success" });
+      await usersApi.revokeSector(user.id, sectorId)
+      await loadData()
+      toast({ title: 'Setor removido com sucesso', variant: 'success' })
     } catch (err) {
       toast({
-        title: "Erro",
-        description: getApiErrorMessage(err, "Falha ao remover setor"),
-        variant: "destructive",
-      });
+        title: 'Erro',
+        description: getApiErrorMessage(err, 'Falha ao remover setor'),
+        variant: 'destructive'
+      })
     } finally {
-      setSectorBusy(null);
+      setSectorBusy(null)
     }
-  };
+  }
 
   const formatManagerLabel = (m: User) => {
-    const name =
-      m.firstName && m.lastName ? `${m.firstName} ${m.lastName}` : m.username;
-    return `${name} (${m.email})`;
-  };
+    const name = m.firstName && m.lastName ? `${m.firstName} ${m.lastName}` : m.username
+    return `${name} (${m.email})`
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -232,9 +223,7 @@ export function ManageAssignmentsDialog({
         <DialogHeader>
           <DialogTitle>Gerenciar atribuições</DialogTitle>
           <DialogDescription>
-            {user
-              ? `Escopo organizacional de ${user.username} (${user.email})`
-              : "Carregando..."}
+            {user ? `Escopo organizacional de ${user.username} (${user.email})` : 'Carregando...'}
           </DialogDescription>
         </DialogHeader>
 
@@ -246,7 +235,7 @@ export function ManageAssignmentsDialog({
           <div className="space-y-6">
             {isTargetUser && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">Status operacional:</span>
+                <span className="text-gray-600 text-sm">Status operacional:</span>
                 {assignments.isOperationallyActive ? (
                   <Badge variant="success">Ativo</Badge>
                 ) : (
@@ -259,7 +248,7 @@ export function ManageAssignmentsDialog({
               <div className="space-y-2">
                 <Label htmlFor="manager-select">Gerente</Label>
                 <Select
-                  value={assignments.managerId ?? "none"}
+                  value={assignments.managerId ?? 'none'}
                   onValueChange={handleManagerChange}
                   disabled={savingManager}
                 >
@@ -276,7 +265,7 @@ export function ManageAssignmentsDialog({
                   </SelectContent>
                 </Select>
                 {assignments.manager && (
-                  <p className="text-xs text-gray-500">
+                  <p className="text-gray-500 text-xs">
                     Atual: {assignments.manager.username} ({assignments.manager.email})
                   </p>
                 )}
@@ -286,9 +275,9 @@ export function ManageAssignmentsDialog({
             {canAssignTerritories && territoryPickerConfig && (
               <div className="space-y-3">
                 <Label>Territórios</Label>
-                <p className="text-xs text-gray-500">{territoryPickerConfig.helperText}</p>
+                <p className="text-gray-500 text-xs">{territoryPickerConfig.helperText}</p>
                 {assignments.territories.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-gray-500 text-sm">
                     Nenhum território atribuído. Selecione um território abaixo.
                   </p>
                 ) : (
@@ -299,11 +288,9 @@ export function ManageAssignmentsDialog({
                         className="flex items-center justify-between gap-2 px-3 py-2"
                       >
                         <div>
-                          <span className="text-sm font-medium">
-                            {getLabel(t.territoryId)}
-                          </span>
-                          <p className="text-xs text-gray-500">
-                            Atribuído {new Date(t.assignedAt).toLocaleString("pt-BR")}
+                          <span className="font-medium text-sm">{getLabel(t.territoryId)}</span>
+                          <p className="text-gray-500 text-xs">
+                            Atribuído {new Date(t.assignedAt).toLocaleString('pt-BR')}
                           </p>
                         </div>
                         <Button
@@ -336,10 +323,10 @@ export function ManageAssignmentsDialog({
                   disabled={territoryBusy !== null || !selectedTerritoryId}
                   className="w-full"
                 >
-                  {territoryBusy === "add" ? (
+                  {territoryBusy === 'add' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    "Adicionar território"
+                    'Adicionar território'
                   )}
                 </Button>
               </div>
@@ -348,29 +335,29 @@ export function ManageAssignmentsDialog({
             {canAssignTerritories && (
               <div className="space-y-3">
                 <Label>Setores</Label>
-                <p className="text-xs text-gray-500">
-                  Setores determinam quais territórios este usuário pode visualizar.
-                  Sem setores atribuídos, todos os territórios são visíveis.
+                <p className="text-gray-500 text-xs">
+                  Setores determinam quais territórios este usuário pode visualizar. Sem setores
+                  atribuídos, todos os territórios são visíveis.
                 </p>
                 {assignments.sectors.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-gray-500 text-sm">
                     Nenhum setor atribuído. Todos os territórios são visíveis.
                   </p>
                 ) : (
                   <ul className="divide-y rounded-md border">
                     {assignments.sectors.map((s) => {
-                      const sector = allSectors.find((sec) => sec.id === s.sectorId);
+                      const sector = allSectors.find((sec) => sec.id === s.sectorId)
                       return (
                         <li
                           key={s.sectorId}
                           className="flex items-center justify-between gap-2 px-3 py-2"
                         >
                           <div>
-                            <span className="text-sm font-medium">
+                            <span className="font-medium text-sm">
                               {sector?.name ?? s.sectorId}
                             </span>
-                            <p className="text-xs text-gray-500">
-                              Atribuído {new Date(s.assignedAt).toLocaleString("pt-BR")}
+                            <p className="text-gray-500 text-xs">
+                              Atribuído {new Date(s.assignedAt).toLocaleString('pt-BR')}
                             </p>
                           </div>
                           <Button
@@ -387,7 +374,7 @@ export function ManageAssignmentsDialog({
                             )}
                           </Button>
                         </li>
-                      );
+                      )
                     })}
                   </ul>
                 )}
@@ -403,10 +390,7 @@ export function ManageAssignmentsDialog({
                       </SelectTrigger>
                       <SelectContent>
                         {allSectors
-                          .filter(
-                            (sec) =>
-                              !assignments.sectors.some((s) => s.sectorId === sec.id)
-                          )
+                          .filter((sec) => !assignments.sectors.some((s) => s.sectorId === sec.id))
                           .map((sec) => (
                             <SelectItem key={sec.id} value={sec.id}>
                               {sec.name}
@@ -419,10 +403,10 @@ export function ManageAssignmentsDialog({
                       disabled={sectorBusy !== null || !selectedSectorId}
                       className="w-full"
                     >
-                      {sectorBusy === "add" ? (
+                      {sectorBusy === 'add' ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        "Adicionar setor"
+                        'Adicionar setor'
                       )}
                     </Button>
                   </>
@@ -433,5 +417,5 @@ export function ManageAssignmentsDialog({
         )}
       </DialogContent>
     </Dialog>
-  );
+  )
 }

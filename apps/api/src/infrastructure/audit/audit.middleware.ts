@@ -1,8 +1,8 @@
-import { Elysia } from "elysia";
-import { auditLogService } from "./audit-log.service";
-import { resolveAuditEvent } from "./event-type-map";
-import { getClientIp } from "../../shared/utils/client-ip";
-import { environment } from "../../app/config/environment";
+import { Elysia } from 'elysia'
+import { environment } from '../../app/config/environment'
+import { getClientIp } from '../../shared/utils/client-ip'
+import { auditLogService } from './audit-log.service'
+import { resolveAuditEvent } from './event-type-map'
 
 /**
  * Elysia plugin that automatically writes an audit log entry after every
@@ -20,61 +20,59 @@ import { environment } from "../../app/config/environment";
  * - Does NOT duplicate anything into Pino logs or OTEL traces — those are
  *   separate concerns with different audiences and retention policies.
  */
-export const auditMiddleware = new Elysia({ name: "audit-middleware" }).onAfterHandle(
-  { as: "scoped" },
+export const auditMiddleware = new Elysia({ name: 'audit-middleware' }).onAfterHandle(
+  { as: 'scoped' },
   (ctx) => {
-    if (!environment.ENABLE_AUDIT_LOG) return;
+    if (!environment.ENABLE_AUDIT_LOG) return
 
-    const { request } = ctx;
-    const path = new URL(request.url).pathname;
-    const method = request.method;
+    const { request } = ctx
+    const path = new URL(request.url).pathname
+    const method = request.method
 
-    const event = resolveAuditEvent(method, path);
-    if (!event) return;
+    const event = resolveAuditEvent(method, path)
+    if (!event) return
 
     const getAuthContext =
-      "getAuthContext" in ctx
+      'getAuthContext' in ctx
         ? (ctx.getAuthContext as () => Promise<{
-            userId: string;
-            sessionId: string;
+            userId: string
+            sessionId: string
           }>)
-        : null;
+        : null
 
-    if (!getAuthContext) return;
+    if (!getAuthContext) return
 
-    const ipAddress = getClientIp(request);
-    const userAgent = request.headers.get("user-agent") ?? undefined;
+    const ipAddress = getClientIp(request)
+    const userAgent = request.headers.get('user-agent') ?? undefined
 
     const params =
-      "params" in ctx && ctx.params != null
-        ? (ctx.params as Record<string, string>)
-        : {};
+      'params' in ctx && ctx.params != null ? (ctx.params as Record<string, string>) : {}
 
     const resourceId =
-      params["id"] ??
-      params["professionalId"] ??
-      params["territoryId"] ??
-      params["permissionId"] ??
-      undefined;
+      params['id'] ??
+      params['professionalId'] ??
+      params['territoryId'] ??
+      params['permissionId'] ??
+      undefined
 
     void getAuthContext()
       .then((authCtx) =>
         auditLogService.log({
           userId: authCtx.userId,
           eventType: event.eventType,
-          severity: event.severity ?? "INFO",
+          severity: event.severity ?? 'INFO',
           actorId: authCtx.userId,
           action: `${method.toLowerCase()} ${path}`,
-          resource: event.eventType.split(".")[0]?.toLowerCase(),
+          resource: event.eventType.split('.')[0]?.toLowerCase(),
           resourceId,
           sessionId: authCtx.sessionId,
           ipAddress,
           userAgent,
-          outcome: "SUCCESS",
+          outcome: 'SUCCESS'
         })
       )
       .catch(() => {
         // Audit failures must never crash the application or leak to the client.
-      });
+      })
   }
-);
+)

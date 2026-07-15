@@ -1,201 +1,197 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { Elysia } from "elysia";
-import { AppError, RateLimitExceededError } from "../../../../shared/errors";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { Elysia } from 'elysia'
+import { AppError, RateLimitExceededError } from '../../../../shared/errors'
 
 const mockCheck = mock(() =>
   Promise.resolve({
     allowed: true,
     remaining: 4,
-    resetAt: new Date(Date.now() + 60_000),
+    resetAt: new Date(Date.now() + 60_000)
   })
-);
+)
 
-mock.module("../../../../infrastructure/cache/rate-limiter.service", () => ({
+mock.module('../../../../infrastructure/cache/rate-limiter.service', () => ({
   rateLimiterService: {
-    check: mockCheck,
-  },
-}));
+    check: mockCheck
+  }
+}))
 
 import {
   createRateLimitMiddleware,
   getLoginRateLimitKey,
-  getPasswordResetRateLimitKey,
   getPasswordResetConfirmRateLimitKey,
-} from "./rate-limit.middleware";
+  getPasswordResetRateLimitKey
+} from './rate-limit.middleware'
 
 function createTestApp(handler: ReturnType<typeof createRateLimitMiddleware>) {
   return new Elysia()
     .onBeforeHandle(handler)
-    .post("/test", () => ({ ok: true }))
+    .post('/test', () => ({ ok: true }))
     .onError(({ error, set }) => {
       if (error instanceof AppError) {
-        set.status = error.statusCode;
-        return { error: error.toClientJSON() };
+        set.status = error.statusCode
+        return { error: error.toClientJSON() }
       }
-      throw error;
-    });
+      throw error
+    })
 }
 
-describe("rate-limit.middleware", () => {
+describe('rate-limit.middleware', () => {
   beforeEach(() => {
-    mockCheck.mockReset();
+    mockCheck.mockReset()
     mockCheck.mockImplementation(() =>
       Promise.resolve({
         allowed: true,
         remaining: 4,
-        resetAt: new Date(Date.now() + 60_000),
+        resetAt: new Date(Date.now() + 60_000)
       })
-    );
-  });
+    )
+  })
 
-  describe("key generators", () => {
-    it("login key uses body.identifier", () => {
+  describe('key generators', () => {
+    it('login key uses body.identifier', () => {
       const key = getLoginRateLimitKey({
-        body: { identifier: "user@example.com" },
-        request: new Request("http://localhost/login"),
-      });
+        body: { identifier: 'user@example.com' },
+        request: new Request('http://localhost/login')
+      })
 
-      expect(key).toBe("user@example.com");
-    });
+      expect(key).toBe('user@example.com')
+    })
 
-    it("login key falls back to client IP when identifier is missing and TRUST_PROXY is false", () => {
+    it('login key falls back to client IP when identifier is missing and TRUST_PROXY is false', () => {
       const key = getLoginRateLimitKey({
         body: {},
-        request: new Request("http://localhost/login", {
-          headers: { "x-forwarded-for": "203.0.113.10" },
-        }),
-      });
+        request: new Request('http://localhost/login', {
+          headers: { 'x-forwarded-for': '203.0.113.10' }
+        })
+      })
 
-      expect(key).toBe("unknown");
-    });
+      expect(key).toBe('unknown')
+    })
 
-    it("login key does not use email or username fields when TRUST_PROXY is false", () => {
+    it('login key does not use email or username fields when TRUST_PROXY is false', () => {
       const key = getLoginRateLimitKey({
-        body: { email: "user@example.com", username: "testuser" } as any,
-        request: new Request("http://localhost/login", {
-          headers: { "x-real-ip": "203.0.113.20" },
-        }),
-      });
+        body: { email: 'user@example.com', username: 'testuser' } as any,
+        request: new Request('http://localhost/login', {
+          headers: { 'x-real-ip': '203.0.113.20' }
+        })
+      })
 
-      expect(key).toBe("unknown");
-    });
+      expect(key).toBe('unknown')
+    })
 
-    it("password reset key uses body.identifier", () => {
+    it('password reset key uses body.identifier', () => {
       const key = getPasswordResetRateLimitKey({
-        body: { identifier: "+15551234567" },
-        request: new Request("http://localhost/password-reset/request"),
-      });
+        body: { identifier: '+15551234567' },
+        request: new Request('http://localhost/password-reset/request')
+      })
 
-      expect(key).toBe("+15551234567");
-    });
+      expect(key).toBe('+15551234567')
+    })
 
-    it("password reset confirm key uses client IP and token prefix when TRUST_PROXY is false", () => {
+    it('password reset confirm key uses client IP and token prefix when TRUST_PROXY is false', () => {
       const key = getPasswordResetConfirmRateLimitKey({
-        body: { token: "abcdefgh1234567890" },
-        request: new Request("http://localhost/password-reset/confirm", {
-          headers: { "x-real-ip": "203.0.113.30" },
-        }),
-      });
+        body: { token: 'abcdefgh1234567890' },
+        request: new Request('http://localhost/password-reset/confirm', {
+          headers: { 'x-real-ip': '203.0.113.30' }
+        })
+      })
 
-      expect(key).toBe("unknown:abcdefgh");
-    });
-  });
+      expect(key).toBe('unknown:abcdefgh')
+    })
+  })
 
-  describe("createRateLimitMiddleware", () => {
-    it("passes identifier from login key generator to rateLimiterService.check", async () => {
-      const middleware = createRateLimitMiddleware("login", {
+  describe('createRateLimitMiddleware', () => {
+    it('passes identifier from login key generator to rateLimiterService.check', async () => {
+      const middleware = createRateLimitMiddleware('login', {
         maxAttempts: 5,
         windowMs: 15 * 60 * 1000,
-        keyGenerator: getLoginRateLimitKey,
-      });
+        keyGenerator: getLoginRateLimitKey
+      })
 
-      const app = createTestApp(middleware);
+      const app = createTestApp(middleware)
       await app.handle(
-        new Request("http://localhost/test", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ identifier: "user@example.com" }),
+        new Request('http://localhost/test', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ identifier: 'user@example.com' })
         })
-      );
+      )
 
       expect(mockCheck).toHaveBeenCalledWith(
-        "login",
-        "user@example.com",
+        'login',
+        'user@example.com',
         expect.objectContaining({ maxAttempts: 5 })
-      );
-    });
+      )
+    })
 
-    it("throws RateLimitExceededError when check returns allowed: false", async () => {
-      const resetAt = new Date(Date.now() + 900_000);
+    it('throws RateLimitExceededError when check returns allowed: false', async () => {
+      const resetAt = new Date(Date.now() + 900_000)
       mockCheck.mockImplementation(() =>
         Promise.resolve({
           allowed: false,
           remaining: 0,
-          resetAt,
+          resetAt
         })
-      );
+      )
 
-      const middleware = createRateLimitMiddleware("password-reset", {
+      const middleware = createRateLimitMiddleware('password-reset', {
         maxAttempts: 3,
         windowMs: 60 * 60 * 1000,
-        keyGenerator: getPasswordResetRateLimitKey,
-      });
+        keyGenerator: getPasswordResetRateLimitKey
+      })
 
       const context = {
-        body: { identifier: "user@example.com" },
-        request: new Request("http://localhost/test"),
-        set: { headers: {} as Record<string, string>, status: 200 },
-      };
+        body: { identifier: 'user@example.com' },
+        request: new Request('http://localhost/test'),
+        set: { headers: {} as Record<string, string>, status: 200 }
+      }
 
-      await expect(middleware(context)).rejects.toThrow(RateLimitExceededError);
-      expect(context.set.headers["retry-after"]).toBeTruthy();
-      expect(context.set.headers["x-ratelimit-limit"]).toBe("3");
-      expect(context.set.headers["x-ratelimit-remaining"]).toBe("0");
-    });
+      await expect(middleware(context)).rejects.toThrow(RateLimitExceededError)
+      expect(context.set.headers['retry-after']).toBeTruthy()
+      expect(context.set.headers['x-ratelimit-limit']).toBe('3')
+      expect(context.set.headers['x-ratelimit-remaining']).toBe('0')
+    })
 
-    it("rejects request when failClosed check simulates Redis unavailability", async () => {
-      (mockCheck as ReturnType<typeof mock>).mockImplementation(
-        (
-          _namespace: string,
-          _identifier: string,
-          config: { failClosed?: boolean }
-        ) => {
+    it('rejects request when failClosed check simulates Redis unavailability', async () => {
+      ;(mockCheck as ReturnType<typeof mock>).mockImplementation(
+        (_namespace: string, _identifier: string, config: { failClosed?: boolean }) => {
           if (config.failClosed) {
             return Promise.resolve({
               allowed: false,
               remaining: 0,
               resetAt: new Date(Date.now() + 60_000),
-              blockedUntil: new Date(Date.now() + 60_000),
-            });
+              blockedUntil: new Date(Date.now() + 60_000)
+            })
           }
 
           return Promise.resolve({
             allowed: true,
             remaining: 4,
-            resetAt: new Date(Date.now() + 60_000),
-          });
+            resetAt: new Date(Date.now() + 60_000)
+          })
         }
-      );
+      )
 
-      const middleware = createRateLimitMiddleware("invite", {
+      const middleware = createRateLimitMiddleware('invite', {
         maxAttempts: 10,
         windowMs: 60 * 60 * 1000,
         failClosed: true,
-        keyGenerator: () => "admin-user",
-      });
+        keyGenerator: () => 'admin-user'
+      })
 
       const context = {
         body: {},
-        request: new Request("http://localhost/test"),
-        set: { headers: {} as Record<string, string>, status: 200 },
-      };
+        request: new Request('http://localhost/test'),
+        set: { headers: {} as Record<string, string>, status: 200 }
+      }
 
-      await expect(middleware(context)).rejects.toThrow(RateLimitExceededError);
+      await expect(middleware(context)).rejects.toThrow(RateLimitExceededError)
       expect(mockCheck).toHaveBeenCalledWith(
-        "invite",
-        "admin-user",
+        'invite',
+        'admin-user',
         expect.objectContaining({ failClosed: true })
-      );
-    });
-  });
-});
+      )
+    })
+  })
+})

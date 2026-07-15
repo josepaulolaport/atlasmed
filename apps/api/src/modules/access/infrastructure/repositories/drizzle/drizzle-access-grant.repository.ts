@@ -1,16 +1,16 @@
-import { eq, and, or, isNull, isNotNull, gt, lt } from "drizzle-orm";
-import { permissions } from "@atlasmed/database";
-import { db } from "../../../../../infrastructure/database/db";
-import type { AccessGrantRecord } from "@atlasmed/access";
-import type { AccessGrantRepository } from "../../../application/interfaces/access-grant.repository.interface";
+import type { AccessGrantRecord } from '@atlasmed/access'
+import { permissions } from '@atlasmed/database'
+import { and, eq, gt, isNotNull, isNull, lt, or } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
+import type { AccessGrantRepository } from '../../../application/interfaces/access-grant.repository.interface'
 
 function mapRow(row: {
-  id: string;
-  resource: string;
-  resourceId: string | null;
-  action: string;
-  conditions: unknown;
-  expiresAt: Date | null;
+  id: string
+  resource: string
+  resourceId: string | null
+  action: string
+  conditions: unknown
+  expiresAt: Date | null
 }): AccessGrantRecord {
   return {
     id: row.id,
@@ -18,8 +18,8 @@ function mapRow(row: {
     resourceId: row.resourceId,
     action: row.action,
     conditions: row.conditions ? (row.conditions as Record<string, unknown>) : undefined,
-    expiresAt: row.expiresAt ?? undefined,
-  };
+    expiresAt: row.expiresAt ?? undefined
+  }
 }
 
 export class DrizzleAccessGrantRepository implements AccessGrantRepository {
@@ -31,27 +31,27 @@ export class DrizzleAccessGrantRepository implements AccessGrantRepository {
         resourceId: permissions.resourceId,
         action: permissions.action,
         conditions: permissions.conditions,
-        expiresAt: permissions.expiresAt,
+        expiresAt: permissions.expiresAt
       })
       .from(permissions)
       .where(
         and(
           eq(permissions.userId, userId),
-          or(isNull(permissions.expiresAt), gt(permissions.expiresAt, new Date())),
-        ),
-      );
+          or(isNull(permissions.expiresAt), gt(permissions.expiresAt, new Date()))
+        )
+      )
 
-    return rows.map(mapRow);
+    return rows.map(mapRow)
   }
 
   async create(params: {
-    userId: string;
-    resource: string;
-    resourceId?: string;
-    action: string;
-    conditions?: Record<string, unknown>;
-    grantedBy: string;
-    expiresAt?: Date;
+    userId: string
+    resource: string
+    resourceId?: string
+    action: string
+    conditions?: Record<string, unknown>
+    grantedBy: string
+    expiresAt?: Date
   }): Promise<AccessGrantRecord> {
     const [row] = await db
       .insert(permissions)
@@ -62,7 +62,7 @@ export class DrizzleAccessGrantRepository implements AccessGrantRepository {
         action: params.action,
         conditions: params.conditions ? (params.conditions as object) : undefined,
         grantedBy: params.grantedBy,
-        expiresAt: params.expiresAt ?? null,
+        expiresAt: params.expiresAt ?? null
       })
       .returning({
         id: permissions.id,
@@ -70,42 +70,42 @@ export class DrizzleAccessGrantRepository implements AccessGrantRepository {
         resourceId: permissions.resourceId,
         action: permissions.action,
         conditions: permissions.conditions,
-        expiresAt: permissions.expiresAt,
-      });
+        expiresAt: permissions.expiresAt
+      })
 
-    return mapRow(row!);
+    return mapRow(row!)
   }
 
   async deleteMany(params: {
-    userId: string;
-    resource: string;
-    resourceId?: string;
-    action: string;
+    userId: string
+    resource: string
+    resourceId?: string
+    action: string
   }): Promise<number> {
     const conditions = [
       eq(permissions.userId, params.userId),
       eq(permissions.resource, params.resource),
-      eq(permissions.action, params.action),
-    ];
+      eq(permissions.action, params.action)
+    ]
 
     if (params.resourceId !== undefined) {
-      conditions.push(eq(permissions.resourceId, params.resourceId) as any);
+      conditions.push(eq(permissions.resourceId, params.resourceId) as any)
     }
 
     const result = await db
       .delete(permissions)
       .where(and(...conditions))
-      .returning({ id: permissions.id });
+      .returning({ id: permissions.id })
 
-    return result.length;
+    return result.length
   }
 
   async deleteExpired(): Promise<number> {
     const result = await db
       .delete(permissions)
       .where(and(isNotNull(permissions.expiresAt), lt(permissions.expiresAt, new Date())))
-      .returning({ id: permissions.id });
+      .returning({ id: permissions.id })
 
-    return result.length;
+    return result.length
   }
 }

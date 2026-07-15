@@ -1,13 +1,13 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react'
 
 export interface SendEmailParams {
-  to: string;
+  to: string
 
-  subject: string;
+  subject: string
 
-  react: ReactNode;
+  react: ReactNode
 }
 
 export interface EmailService {
-  send(params: SendEmailParams): Promise<void>;
+  send(params: SendEmailParams): Promise<void>
 }

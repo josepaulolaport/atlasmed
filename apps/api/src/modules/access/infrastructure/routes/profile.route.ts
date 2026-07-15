@@ -1,24 +1,24 @@
-import { Elysia } from "elysia";
-import { updateProfileSchema } from "@atlasmed/access";
-import { accessUseCases, auth } from "../../composition";
-import { serializeUser } from "./user.serializer";
-import { profileRateLimit } from "../middleware/rate-limit.middleware";
+import { updateProfileSchema } from '@atlasmed/access'
+import { Elysia } from 'elysia'
+import { accessUseCases, auth } from '../../composition'
+import { profileRateLimit } from '../middleware/rate-limit.middleware'
+import { serializeUser } from './user.serializer'
 
 export const profileRoute = new Elysia()
   .use(auth)
   .use(profileRateLimit)
-  .get("/profile", async ({ getUser }) => {
-    const user = await getUser();
-    return serializeUser(user);
+  .get('/profile', async ({ getUser }) => {
+    const user = await getUser()
+    return serializeUser(user)
   })
-  .patch("/profile", async ({ getUserId, body }: any) => {
-    const userId = await getUserId();
-    const parsed = updateProfileSchema.parse(body);
+  .patch('/profile', async ({ getUserId, body }: any) => {
+    const userId = await getUserId()
+    const parsed = updateProfileSchema.parse(body)
 
     const updatedUser = await accessUseCases.updateProfile().execute({
       userId,
-      ...parsed,
-    });
+      ...parsed
+    })
 
-    return serializeUser(updatedUser);
-  });
+    return serializeUser(updatedUser)
+  })

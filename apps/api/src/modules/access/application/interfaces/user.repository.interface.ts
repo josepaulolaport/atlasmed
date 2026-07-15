@@ -1,215 +1,201 @@
 export interface UserRecord {
-  id: string;
-  email: string | null;
-  username: string;
-  firstName: string | null;
-  lastName: string | null;
-  status: string;
-  passwordHash: string;
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  phoneNumber: string | null;
-  emailVerifiedAt?: Date | null;
-  phoneVerifiedAt?: Date | null;
-  twoFactorEnabled: boolean;
-  twoFactorSecret: string | null;
-  avatarUrl: string | null;
-  tokenVersion: number;
-  managerId: string | null;
-  passwordHistory: string[];
-  roleId: string;
+  id: string
+  email: string | null
+  username: string
+  firstName: string | null
+  lastName: string | null
+  status: string
+  passwordHash: string
+  emailVerified: boolean
+  phoneVerified: boolean
+  phoneNumber: string | null
+  emailVerifiedAt?: Date | null
+  phoneVerifiedAt?: Date | null
+  twoFactorEnabled: boolean
+  twoFactorSecret: string | null
+  avatarUrl: string | null
+  tokenVersion: number
+  managerId: string | null
+  passwordHistory: string[]
+  roleId: string
   role: {
-    id: string;
-    name: string;
-    priority?: number | null;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-  metadata?: unknown;
+    id: string
+    name: string
+    priority?: number | null
+  }
+  createdAt: Date
+  updatedAt: Date
+  metadata?: unknown
 }
 
 export interface FindUserByIdentifierParams {
-  identifier: string;
+  identifier: string
 }
 
 export interface CreateUserParams {
-  email: string;
+  email: string
 
-  username: string;
+  username: string
 
-  phoneNumber?: string | undefined;
+  phoneNumber?: string | undefined
 
-  passwordHash: string;
+  passwordHash: string
 
-  roleId: string;
+  roleId: string
 
-  firstName?: string | undefined;
+  firstName?: string | undefined
 
-  lastName?: string | undefined;
+  lastName?: string | undefined
 
-  emailVerified?: boolean | undefined;
+  emailVerified?: boolean | undefined
 
-  phoneVerified?: boolean | undefined;
+  phoneVerified?: boolean | undefined
 
-  status?: string | undefined;
+  status?: string | undefined
 }
 
 export interface UpdatePasswordParams {
-  userId: string;
-  passwordHash: string;
+  userId: string
+  passwordHash: string
 }
 
 export interface ResetPasswordTransactionParams {
-  tokenHash: string;
-  newPasswordHash: string;
+  tokenHash: string
+  newPasswordHash: string
 }
 
 export interface ResetPasswordTransactionResult {
-  user: UserRecord;
-  passwordReset: { id: string; usedAt: Date | null };
+  user: UserRecord
+  passwordReset: { id: string; usedAt: Date | null }
 }
 
 export interface UserAuthStatus {
-  status: string;
-  tokenVersion: number;
-  roleId: string;
-  roleName: string;
+  status: string
+  tokenVersion: number
+  roleId: string
+  roleName: string
 }
 
 export interface EmailVerificationState {
-  email: string;
-  emailVerified: boolean;
+  email: string
+  emailVerified: boolean
 }
 
 export interface PhoneVerificationState {
-  phoneNumber: string | null;
-  phoneVerified: boolean;
+  phoneNumber: string | null
+  phoneVerified: boolean
 }
 
 export interface UserIdentifierMatch {
-  id: string;
+  id: string
 }
 
 export interface FindAllUsersParams {
-  page: number;
-  limit: number;
-  status?: string;
-  role?: string;
-  search?: string;
-  scope?: UserListScopeFilter;
+  page: number
+  limit: number
+  status?: string
+  role?: string
+  search?: string
+  scope?: UserListScopeFilter
 }
 
 export interface UserListScopeFilter {
-  isGlobal: boolean;
-  territoryIds: string[];
-  managedUserIds?: string[];
+  isGlobal: boolean
+  territoryIds: string[]
+  managedUserIds?: string[]
 }
 
 export interface UpdateProfileParams {
-  firstName?: string;
-  lastName?: string;
-  avatarUrl?: string | null;
+  firstName?: string
+  lastName?: string
+  avatarUrl?: string | null
 }
 
 export interface ChangeRoleTransactionParams {
-  userId: string;
-  newRoleId: string;
+  userId: string
+  newRoleId: string
 }
 
 export interface ChangePasswordTransactionParams {
-  userId: string;
-  newPasswordHash: string;
-  previousPasswordHash: string;
-  passwordHistory: string[];
-  revokeOtherSessions: boolean;
-  keepSessionId?: string;
+  userId: string
+  newPasswordHash: string
+  previousPasswordHash: string
+  passwordHistory: string[]
+  revokeOtherSessions: boolean
+  keepSessionId?: string
 }
 
 export interface ChangePasswordTransactionResult {
-  user: UserRecord;
+  user: UserRecord
 }
 
 export interface EnableTwoFactorParams {
-  userId: string;
-  encryptedSecret: string;
+  userId: string
+  encryptedSecret: string
 }
 
 export interface UserRepository {
-  findByIdentifier(
-    params: FindUserByIdentifierParams,
-  ): Promise<UserRecord | null>;
+  findByIdentifier(params: FindUserByIdentifierParams): Promise<UserRecord | null>
 
-  findById(id: string): Promise<UserRecord | null>;
+  findById(id: string): Promise<UserRecord | null>
 
-  findUserAuthStatus(userId: string): Promise<UserAuthStatus | null>;
+  findUserAuthStatus(userId: string): Promise<UserAuthStatus | null>
 
-  create(params: CreateUserParams): Promise<UserRecord>;
+  create(params: CreateUserParams): Promise<UserRecord>
 
-  updateLastLogin(userId: string): Promise<void>;
+  updateLastLogin(userId: string): Promise<void>
 
-  updatePassword(params: UpdatePasswordParams): Promise<void>;
+  updatePassword(params: UpdatePasswordParams): Promise<void>
 
-  deactivate(userId: string): Promise<void>;
+  deactivate(userId: string): Promise<void>
 
-  activate(userId: string): Promise<void>;
+  activate(userId: string): Promise<void>
 
-  suspend(userId: string): Promise<void>;
+  suspend(userId: string): Promise<void>
 
-  unsuspend(userId: string): Promise<void>;
+  unsuspend(userId: string): Promise<void>
 
-  updateRole(userId: string, roleId: string): Promise<void>;
+  updateRole(userId: string, roleId: string): Promise<void>
 
-  changeRoleTransaction(params: ChangeRoleTransactionParams): Promise<void>;
+  changeRoleTransaction(params: ChangeRoleTransactionParams): Promise<void>
 
   changePasswordTransaction(
-    params: ChangePasswordTransactionParams,
-  ): Promise<ChangePasswordTransactionResult>;
+    params: ChangePasswordTransactionParams
+  ): Promise<ChangePasswordTransactionResult>
 
-  enableTwoFactor(params: EnableTwoFactorParams): Promise<void>;
+  enableTwoFactor(params: EnableTwoFactorParams): Promise<void>
 
-  disableTwoFactor(userId: string): Promise<void>;
+  disableTwoFactor(userId: string): Promise<void>
 
-  incrementTokenVersion(userId: string): Promise<number>;
+  incrementTokenVersion(userId: string): Promise<number>
 
   resetPasswordTransaction(
-    params: ResetPasswordTransactionParams,
-  ): Promise<ResetPasswordTransactionResult>;
+    params: ResetPasswordTransactionParams
+  ): Promise<ResetPasswordTransactionResult>
 
-  findEmailVerificationState(
-    userId: string,
-  ): Promise<EmailVerificationState | null>;
+  findEmailVerificationState(userId: string): Promise<EmailVerificationState | null>
 
-  findPhoneVerificationState(
-    userId: string,
-  ): Promise<PhoneVerificationState | null>;
+  findPhoneVerificationState(userId: string): Promise<PhoneVerificationState | null>
 
-  findByEmail(email: string): Promise<UserIdentifierMatch | null>;
+  findByEmail(email: string): Promise<UserIdentifierMatch | null>
 
-  findByPhone(phoneNumber: string): Promise<UserIdentifierMatch | null>;
+  findByPhone(phoneNumber: string): Promise<UserIdentifierMatch | null>
 
-  markEmailVerified(userId: string): Promise<void>;
+  markEmailVerified(userId: string): Promise<void>
 
-  markPhoneVerified(userId: string): Promise<void>;
+  markPhoneVerified(userId: string): Promise<void>
 
-  updateEmail(userId: string, newEmail: string): Promise<void>;
+  updateEmail(userId: string, newEmail: string): Promise<void>
 
-  updatePhone(userId: string, newPhone: string): Promise<void>;
+  updatePhone(userId: string, newPhone: string): Promise<void>
 
-  findAll(
-    params: FindAllUsersParams,
-  ): Promise<{ users: UserRecord[]; total: number }>;
+  findAll(params: FindAllUsersParams): Promise<{ users: UserRecord[]; total: number }>
 
-  updateProfile(userId: string, data: UpdateProfileParams): Promise<UserRecord>;
+  updateProfile(userId: string, data: UpdateProfileParams): Promise<UserRecord>
 
-  getMetadata(userId: string): Promise<unknown>;
+  getMetadata(userId: string): Promise<unknown>
 
-  updateMetadata(
-    userId: string,
-    metadata: Record<string, unknown>,
-  ): Promise<void>;
+  updateMetadata(userId: string, metadata: Record<string, unknown>): Promise<void>
 
-  updateManagerId(
-    userId: string,
-    managerId: string | null,
-  ): Promise<UserRecord>;
+  updateManagerId(userId: string, managerId: string | null): Promise<UserRecord>
 }

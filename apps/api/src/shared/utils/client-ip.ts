@@ -1,9 +1,9 @@
-import { environment } from "../../app/config/environment";
+import { environment } from '../../app/config/environment'
 
-type IpSource = Request | { request: Request };
+type IpSource = Request | { request: Request }
 
 function getRequest(source: IpSource): Request {
-  return source instanceof Request ? source : source.request;
+  return source instanceof Request ? source : source.request
 }
 
 /**
@@ -14,22 +14,22 @@ function getRequest(source: IpSource): Request {
  * Enable TRUST_PROXY only when a trusted reverse proxy strips/forwards headers.
  */
 export function getClientIp(source: IpSource): string {
-  const request = getRequest(source);
+  const request = getRequest(source)
 
   if (environment.TRUST_PROXY) {
-    const forwarded = request.headers.get("x-forwarded-for");
+    const forwarded = request.headers.get('x-forwarded-for')
     if (forwarded) {
-      const first = forwarded.split(",")[0]?.trim();
+      const first = forwarded.split(',')[0]?.trim()
       if (first) {
-        return first;
+        return first
       }
     }
 
-    const realIp = request.headers.get("x-real-ip")?.trim();
+    const realIp = request.headers.get('x-real-ip')?.trim()
     if (realIp) {
-      return realIp;
+      return realIp
     }
   }
 
-  return "unknown";
+  return 'unknown'
 }

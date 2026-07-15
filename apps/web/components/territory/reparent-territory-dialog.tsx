@@ -1,29 +1,29 @@
-"use client";
+'use client'
 
-import { useState } from "react";
+import { useState } from 'react'
+import { TerritoryPicker } from '@/components/territory/territory-picker'
+import { isApprovalRequest } from '@/components/territory/territory-utils'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { TerritoryPicker } from "@/components/territory/territory-picker";
-import { territoriesApi } from "@/lib/api/territories";
-import { getApiErrorMessage } from "@/lib/api/errors";
-import { toast } from "@/hooks/use-toast";
-import { isApprovalRequest } from "@/components/territory/territory-utils";
-import type { Territory } from "@/types/territory";
+  DialogTitle
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { toast } from '@/hooks/use-toast'
+import { getApiErrorMessage } from '@/lib/api/errors'
+import { territoriesApi } from '@/lib/api/territories'
+import type { Territory } from '@/types/territory'
 
 interface ReparentTerritoryDialogProps {
-  territory: Territory | null;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  isAdmin: boolean;
-  onSuccess: () => void;
+  territory: Territory | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  isAdmin: boolean
+  onSuccess: () => void
 }
 
 export function ReparentTerritoryDialog({
@@ -31,59 +31,59 @@ export function ReparentTerritoryDialog({
   open,
   onOpenChange,
   isAdmin,
-  onSuccess,
+  onSuccess
 }: ReparentTerritoryDialogProps) {
-  const [parentId, setParentId] = useState("");
-  const [reason, setReason] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [parentId, setParentId] = useState('')
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
 
   const handleOpenChange = (next: boolean) => {
     if (next && territory) {
-      setParentId(territory.parentId ?? "");
+      setParentId(territory.parentId ?? '')
     }
     if (!next) {
-      setParentId("");
-      setReason("");
+      setParentId('')
+      setReason('')
     }
-    onOpenChange(next);
-  };
+    onOpenChange(next)
+  }
 
   const handleSave = async () => {
-    if (!territory) return;
+    if (!territory) return
 
-    setSaving(true);
+    setSaving(true)
     try {
       const result = await territoriesApi.updateTerritory(territory.id, {
         parentId: parentId || null,
-        reason: reason.trim() || undefined,
-      });
+        reason: reason.trim() || undefined
+      })
 
       if (isApprovalRequest(result)) {
         toast({
-          title: "Submitted for approval",
-          description: "Reparent request is pending admin review.",
-          variant: "success",
-        });
+          title: 'Submitted for approval',
+          description: 'Reparent request is pending admin review.',
+          variant: 'success'
+        })
       } else {
         toast({
-          title: "Success",
-          description: "Territory reparented successfully",
-          variant: "success",
-        });
+          title: 'Success',
+          description: 'Territory reparented successfully',
+          variant: 'success'
+        })
       }
 
-      handleOpenChange(false);
-      onSuccess();
+      handleOpenChange(false)
+      onSuccess()
     } catch (err) {
       toast({
-        title: "Error",
-        description: getApiErrorMessage(err, "Failed to reparent territory"),
-        variant: "destructive",
-      });
+        title: 'Error',
+        description: getApiErrorMessage(err, 'Failed to reparent territory'),
+        variant: 'destructive'
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -92,9 +92,9 @@ export function ReparentTerritoryDialog({
           <DialogTitle>Alterar pai de {territory?.slug}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">
-            A alteração manual de pai sobrepõe o geovínculo. Deixe vazio para remover o pai
-            (apenas nível de país).
+          <p className="text-gray-500 text-sm">
+            A alteração manual de pai sobrepõe o geovínculo. Deixe vazio para remover o pai (apenas
+            nível de país).
           </p>
           <div>
             <Label>Novo pai</Label>
@@ -121,10 +121,10 @@ export function ReparentTerritoryDialog({
             Cancelar
           </Button>
           <Button onClick={handleSave} disabled={saving}>
-            {saving ? "Salvando..." : isAdmin ? "Salvar" : "Enviar para aprovação"}
+            {saving ? 'Salvando...' : isAdmin ? 'Salvar' : 'Enviar para aprovação'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

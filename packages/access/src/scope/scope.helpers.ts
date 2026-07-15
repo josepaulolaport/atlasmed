@@ -1,6 +1,6 @@
-import type { ScopeContext } from "../contracts/scope-context.contract";
-import { withTerritoryScopeAliases } from "../contracts/scope-context.contract";
-import { Role } from "../enums/role.enum";
+import type { ScopeContext } from '../contracts/scope-context.contract'
+import { withTerritoryScopeAliases } from '../contracts/scope-context.contract'
+import { Role } from '../enums/role.enum'
 
 export function createGlobalScopeContext(): ScopeContext {
   return withTerritoryScopeAliases({
@@ -12,8 +12,8 @@ export function createGlobalScopeContext(): ScopeContext {
     analyticsFacilityIds: [],
     managedUserIds: [],
     assignedSectorIds: [],
-    isOperationallyActive: true,
-  });
+    isOperationallyActive: true
+  })
 }
 
 export function createEmptyScopeContext(): ScopeContext {
@@ -26,8 +26,8 @@ export function createEmptyScopeContext(): ScopeContext {
     analyticsFacilityIds: [],
     managedUserIds: [],
     assignedSectorIds: [],
-    isOperationallyActive: false,
-  });
+    isOperationallyActive: false
+  })
 }
 
 export function canMutateUser(
@@ -37,20 +37,20 @@ export function canMutateUser(
   target: { id: string; managerId?: string | null }
 ): boolean {
   if (actorId === target.id) {
-    return false;
+    return false
   }
 
   if (scope.isGlobal || actorRole === Role.ADMIN) {
-    return true;
+    return true
   }
 
   if (actorRole === Role.MANAGER) {
-    return target.managerId === actorId;
+    return target.managerId === actorId
   }
 
-  return false;
+  return false
 }
 
 export function canChangeUserRole(actorRole: Role): boolean {
-  return actorRole === Role.ADMIN;
+  return actorRole === Role.ADMIN
 }

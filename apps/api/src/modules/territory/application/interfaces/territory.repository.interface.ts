@@ -1,83 +1,81 @@
-import type {
-  TerritoryNodeType,
-} from "@atlasmed/database";
-import type { TerritoryTypeRecord } from "./territory-type.repository.interface";
+import type { TerritoryNodeType } from '@atlasmed/database'
+import type { TerritoryTypeRecord } from './territory-type.repository.interface'
 
 export interface TerritoryRecord {
-  id: string;
-  name: string;
-  slug: string;
-  code: string;
-  nodeType: TerritoryNodeType;
-  territoryTypeId: string;
-  territoryType?: TerritoryTypeRecord;
-  countryCode: string | null;
-  regionSlug: string | null;
-  stateCode: string | null;
-  parentId: string | null;
-  managerTerritoryId: string | null;
-  isActive: boolean;
-  sectorId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  activeChildCount?: number;
-  clinicCount?: number;
-  assignedUserCount?: number;
-  hasBoundary?: boolean;
-  repPatchCount?: number;
+  id: string
+  name: string
+  slug: string
+  code: string
+  nodeType: TerritoryNodeType
+  territoryTypeId: string
+  territoryType?: TerritoryTypeRecord
+  countryCode: string | null
+  regionSlug: string | null
+  stateCode: string | null
+  parentId: string | null
+  managerTerritoryId: string | null
+  isActive: boolean
+  sectorId: string | null
+  createdAt: Date
+  updatedAt: Date
+  activeChildCount?: number
+  clinicCount?: number
+  assignedUserCount?: number
+  hasBoundary?: boolean
+  repPatchCount?: number
 }
 
 export interface CreateTerritoryInput {
-  name: string;
-  slug: string;
-  code?: string;
-  nodeType: TerritoryNodeType;
-  territoryTypeId: string;
-  countryCode?: string | null;
-  regionSlug?: string | null;
-  stateCode?: string | null;
-  parentId?: string | null;
-  managerTerritoryId?: string | null;
-  sectorId?: string | null;
+  name: string
+  slug: string
+  code?: string
+  nodeType: TerritoryNodeType
+  territoryTypeId: string
+  countryCode?: string | null
+  regionSlug?: string | null
+  stateCode?: string | null
+  parentId?: string | null
+  managerTerritoryId?: string | null
+  sectorId?: string | null
 }
 
 export interface TerritoryRepository {
-  findById(id: string): Promise<TerritoryRecord | null>;
+  findById(id: string): Promise<TerritoryRecord | null>
 
-  findBySlug(slug: string): Promise<TerritoryRecord | null>;
+  findBySlug(slug: string): Promise<TerritoryRecord | null>
 
-  findByCode(code: string): Promise<TerritoryRecord | null>;
+  findByCode(code: string): Promise<TerritoryRecord | null>
 
-  findAllActive(): Promise<TerritoryRecord[]>;
+  findAllActive(): Promise<TerritoryRecord[]>
 
-  findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]>;
+  findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]>
 
-  findChildren(parentId: string, activeOnly?: boolean): Promise<TerritoryRecord[]>;
+  findChildren(parentId: string, activeOnly?: boolean): Promise<TerritoryRecord[]>
 
-  countActiveChildren(parentId: string): Promise<number>;
+  countActiveChildren(parentId: string): Promise<number>
 
-  countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number>;
+  countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number>
 
-  countClinics(territoryId: string): Promise<number>;
+  countClinics(territoryId: string): Promise<number>
 
-  countAssignedUsers(territoryId: string): Promise<number>;
+  countAssignedUsers(territoryId: string): Promise<number>
 
-  create(input: CreateTerritoryInput): Promise<TerritoryRecord>;
+  create(input: CreateTerritoryInput): Promise<TerritoryRecord>
 
   update(
     id: string,
     data: {
-      name?: string;
-      parentId?: string | null;
-      managerTerritoryId?: string | null;
-      isActive?: boolean;
-      countryCode?: string | null;
+      name?: string
+      parentId?: string | null
+      managerTerritoryId?: string | null
+      isActive?: boolean
+      countryCode?: string | null
     }
-  ): Promise<TerritoryRecord>;
+  ): Promise<TerritoryRecord>
 
-  findActiveCountryByCode(countryCode: string): Promise<TerritoryRecord | null>;
+  findActiveCountryByCode(countryCode: string): Promise<TerritoryRecord | null>
 
-  findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]>;
+  findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]>
 
-  findByIds(ids: string[]): Promise<TerritoryRecord[]>;
+  findByIds(ids: string[]): Promise<TerritoryRecord[]>
 }

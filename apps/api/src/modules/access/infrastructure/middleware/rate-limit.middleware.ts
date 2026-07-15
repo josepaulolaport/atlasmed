@@ -1,9 +1,9 @@
 import {
   asRateLimitPlugin,
   createRateLimitMiddleware,
-  getClientIp,
-} from "../../../../infrastructure/middleware/global-rate-limit.middleware";
-import { TooManyLoginAttemptsError } from "../../../../shared/errors";
+  getClientIp
+} from '../../../../infrastructure/middleware/global-rate-limit.middleware'
+import { TooManyLoginAttemptsError } from '../../../../shared/errors'
 
 /**
  * Business-aware rate limiting for access module routes.
@@ -14,173 +14,170 @@ import { TooManyLoginAttemptsError } from "../../../../shared/errors";
  */
 
 export function getLoginRateLimitKey(context: {
-  body?: { identifier?: string };
-  request: Request;
+  body?: { identifier?: string }
+  request: Request
 }): string {
-  return context.body?.identifier || getClientIp(context);
+  return context.body?.identifier || getClientIp(context)
 }
 
 export function getPasswordResetRateLimitKey(context: {
-  body?: { identifier?: string };
-  request: Request;
+  body?: { identifier?: string }
+  request: Request
 }): string {
-  return context.body?.identifier || getClientIp(context);
+  return context.body?.identifier || getClientIp(context)
 }
 
 export function getPasswordResetConfirmRateLimitKey(context: {
-  body?: { token?: string };
-  request: Request;
+  body?: { token?: string }
+  request: Request
 }): string {
-  const ip = getClientIp(context);
-  const token = context.body?.token;
+  const ip = getClientIp(context)
+  const token = context.body?.token
   if (token && token.length >= 8) {
-    return `${ip}:${token.slice(0, 8)}`;
+    return `${ip}:${token.slice(0, 8)}`
   }
-  return ip;
+  return ip
 }
 
-export const loginRateLimit = asRateLimitPlugin("login", {
+export const loginRateLimit = asRateLimitPlugin('login', {
   maxAttempts: 5,
   windowMs: 15 * 60 * 1000,
   blockDurationMs: 60 * 60 * 1000,
   keyGenerator: getLoginRateLimitKey,
   failClosed: true,
-  createError: (retryAfterMs) => new TooManyLoginAttemptsError(retryAfterMs),
-});
+  createError: (retryAfterMs) => new TooManyLoginAttemptsError(retryAfterMs)
+})
 
 export function getTwoFactorVerifyRateLimitKey(context: {
-  body?: { pendingToken?: string };
-  request: Request;
+  body?: { pendingToken?: string }
+  request: Request
 }): string {
-  const ip = getClientIp(context);
-  const pendingToken = context.body?.pendingToken;
+  const ip = getClientIp(context)
+  const pendingToken = context.body?.pendingToken
   if (pendingToken && pendingToken.length >= 8) {
-    return `${ip}:${pendingToken.slice(0, 16)}`;
+    return `${ip}:${pendingToken.slice(0, 16)}`
   }
-  return ip;
+  return ip
 }
 
-export const twoFactorVerifyRateLimit = asRateLimitPlugin("two-factor-verify", {
+export const twoFactorVerifyRateLimit = asRateLimitPlugin('two-factor-verify', {
   maxAttempts: 10,
   windowMs: 15 * 60 * 1000,
   keyGenerator: getTwoFactorVerifyRateLimitKey,
-  failClosed: true,
-});
+  failClosed: true
+})
 
-export const passwordResetRateLimit = asRateLimitPlugin("password-reset", {
+export const passwordResetRateLimit = asRateLimitPlugin('password-reset', {
   maxAttempts: 3,
   windowMs: 60 * 60 * 1000,
   keyGenerator: getPasswordResetRateLimitKey,
-  failClosed: true,
-});
+  failClosed: true
+})
 
-export const inviteRateLimit = asRateLimitPlugin("invite", {
+export const inviteRateLimit = asRateLimitPlugin('invite', {
   maxAttempts: 10,
   windowMs: 60 * 60 * 1000,
   failClosed: true,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
-  },
-});
+    return getClientIp(context)
+  }
+})
 
-export const inviteResendRateLimit = asRateLimitPlugin("invite-resend", {
+export const inviteResendRateLimit = asRateLimitPlugin('invite-resend', {
   maxAttempts: 5,
   windowMs: 60 * 60 * 1000,
   failClosed: true,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
-  },
-});
+    return getClientIp(context)
+  }
+})
 
-export const refreshRateLimit = asRateLimitPlugin("refresh", {
+export const refreshRateLimit = asRateLimitPlugin('refresh', {
   maxAttempts: 30,
   windowMs: 15 * 60 * 1000,
   keyGenerator: getClientIp,
-  failClosed: true,
-});
+  failClosed: true
+})
 
-export const registerRateLimit = asRateLimitPlugin("register", {
+export const registerRateLimit = asRateLimitPlugin('register', {
   maxAttempts: 10,
   windowMs: 60 * 60 * 1000,
   failClosed: true,
-  keyGenerator: getClientIp,
-});
+  keyGenerator: getClientIp
+})
 
-export const verificationRateLimit = asRateLimitPlugin("verification", {
+export const verificationRateLimit = asRateLimitPlugin('verification', {
   maxAttempts: 10,
   windowMs: 60 * 60 * 1000,
   failClosed: true,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
-  },
-});
+    return getClientIp(context)
+  }
+})
 
-export const profileRateLimit = asRateLimitPlugin("profile", {
+export const profileRateLimit = asRateLimitPlugin('profile', {
   maxAttempts: 30,
   windowMs: 15 * 60 * 1000,
   failClosed: true,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
-  },
-});
+    return getClientIp(context)
+  }
+})
 
-export const sessionRevokeRateLimit = asRateLimitPlugin("session-revoke", {
+export const sessionRevokeRateLimit = asRateLimitPlugin('session-revoke', {
   maxAttempts: 20,
   windowMs: 15 * 60 * 1000,
   failClosed: true,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
-  },
-});
-
-export const passwordResetConfirmRateLimit = asRateLimitPlugin(
-  "password-reset-confirm",
-  {
-    maxAttempts: 5,
-    windowMs: 15 * 60 * 1000,
-    failClosed: true,
-    keyGenerator: getPasswordResetConfirmRateLimitKey,
+    return getClientIp(context)
   }
-);
+})
 
-export const passwordChangeRateLimit = asRateLimitPlugin("password-change", {
+export const passwordResetConfirmRateLimit = asRateLimitPlugin('password-reset-confirm', {
+  maxAttempts: 5,
+  windowMs: 15 * 60 * 1000,
+  failClosed: true,
+  keyGenerator: getPasswordResetConfirmRateLimitKey
+})
+
+export const passwordChangeRateLimit = asRateLimitPlugin('password-change', {
   maxAttempts: 5,
   windowMs: 15 * 60 * 1000,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
+    return getClientIp(context)
   },
-  failClosed: true,
-});
+  failClosed: true
+})
 
-export const twoFactorRateLimit = asRateLimitPlugin("two-factor", {
+export const twoFactorRateLimit = asRateLimitPlugin('two-factor', {
   maxAttempts: 10,
   windowMs: 15 * 60 * 1000,
   keyGenerator: async (context) => {
     if (context.getUserId) {
-      return await context.getUserId();
+      return await context.getUserId()
     }
-    return getClientIp(context);
+    return getClientIp(context)
   },
-  failClosed: true,
-});
+  failClosed: true
+})
 
 /** @internal Exported for unit tests */
-export { createRateLimitMiddleware, getClientIp };
+export { createRateLimitMiddleware, getClientIp }

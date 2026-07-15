@@ -1,40 +1,40 @@
-import type { IngestionRunRepository } from "../interfaces/ingestion.repository.interface";
+import type { IngestionRunRepository } from '../interfaces/ingestion.repository.interface'
 
 interface Dependencies {
-  ingestionRunRepository: IngestionRunRepository;
+  ingestionRunRepository: IngestionRunRepository
   describeWorkflow?: (workflowId: string) => Promise<{
-    status: { name: string };
-    runId: string;
-  }>;
+    status: { name: string }
+    runId: string
+  }>
 }
 
 export class GetIngestionRunStatusUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: { runId: string }) {
-    const run = await this.deps.ingestionRunRepository.findById(input.runId);
+    const run = await this.deps.ingestionRunRepository.findById(input.runId)
     if (!run) {
-      return null;
+      return null
     }
 
     let temporal:
       | {
-          workflowId: string;
-          status: string;
-          runId: string;
+          workflowId: string
+          status: string
+          runId: string
         }
-      | undefined;
+      | undefined
 
     if (run.temporalWorkflowId && this.deps.describeWorkflow) {
       try {
-        const description = await this.deps.describeWorkflow(run.temporalWorkflowId);
+        const description = await this.deps.describeWorkflow(run.temporalWorkflowId)
         temporal = {
           workflowId: run.temporalWorkflowId,
           status: description.status.name,
-          runId: description.runId,
-        };
+          runId: description.runId
+        }
       } catch {
-        temporal = undefined;
+        temporal = undefined
       }
     }
 
@@ -53,9 +53,9 @@ export class GetIngestionRunStatusUseCase {
         stats: run.stats,
         validationReport: run.validationReport,
         archiveManifest: run.archiveManifest,
-        error: run.error,
+        error: run.error
       },
-      temporal,
-    };
+      temporal
+    }
   }
 }

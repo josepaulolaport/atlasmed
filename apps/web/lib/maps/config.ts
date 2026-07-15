@@ -1,24 +1,24 @@
-import { mapsApi, type MapsConfig } from "@/lib/api/maps";
+import { type MapsConfig, mapsApi } from '@/lib/api/maps'
 
-let cachedConfig: MapsConfig | null = null;
-let configPromise: Promise<MapsConfig> | null = null;
+let cachedConfig: MapsConfig | null = null
+let configPromise: Promise<MapsConfig> | null = null
 
 export async function getCachedMapsConfig(): Promise<MapsConfig> {
   if (cachedConfig) {
-    return cachedConfig;
+    return cachedConfig
   }
 
   if (!configPromise) {
     configPromise = mapsApi.getConfig().then((config) => {
-      cachedConfig = config;
-      return config;
-    });
+      cachedConfig = config
+      return config
+    })
   }
 
-  return configPromise;
+  return configPromise
 }
 
 export function clearMapsConfigCache(): void {
-  cachedConfig = null;
-  configPromise = null;
+  cachedConfig = null
+  configPromise = null
 }

@@ -1,7 +1,7 @@
-import type { ScopeContext } from "../contracts/scope-context.contract";
-import { ForbiddenError } from "../errors/forbidden.error";
+import type { ScopeContext } from '../contracts/scope-context.contract'
+import { ForbiddenError } from '../errors/forbidden.error'
 
-export type ScopedResourceType = "territory" | "facility" | "user";
+export type ScopedResourceType = 'territory' | 'facility' | 'user'
 
 /**
  * Cross-module scope guard — use in facility/professional modules before returning row data.
@@ -13,26 +13,26 @@ export function assertResourceInScope(
   resourceId: string
 ): void {
   if (scope.isGlobal) {
-    return;
+    return
   }
 
   switch (resourceType) {
-    case "territory":
+    case 'territory':
       if (!scope.effectiveTerritoryIds.includes(resourceId)) {
-        throw new ForbiddenError("Resource outside scope: territory");
+        throw new ForbiddenError('Resource outside scope: territory')
       }
-      return;
-    case "facility":
+      return
+    case 'facility':
       if (!scope.facilityIds.includes(resourceId)) {
-        throw new ForbiddenError("Resource outside scope: facility");
+        throw new ForbiddenError('Resource outside scope: facility')
       }
-      return;
-    case "user":
+      return
+    case 'user':
       if (!scope.managedUserIds.includes(resourceId)) {
-        throw new ForbiddenError("Resource outside scope: user");
+        throw new ForbiddenError('Resource outside scope: user')
       }
-      return;
+      return
     default:
-      throw new Error("Unknown scoped resource type");
+      throw new Error('Unknown scoped resource type')
   }
 }

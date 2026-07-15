@@ -1,29 +1,29 @@
-import { db } from "../../../../../infrastructure/database/db";
-import { sql } from "drizzle-orm";
+import { sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
+import { OperationNotAllowedError } from '../../../../../shared/errors'
+import { MANAGER_ZONE_TYPE_SLUG } from '../../../application/constants/territory-roles.constants'
 import type {
   GeoJsonGeometry,
   OverlappingTerritory,
   TerritoryBoundingBox,
-  TerritorySpatialRepository,
-} from "../../../application/interfaces/territory-spatial.repository.interface";
-import { OperationNotAllowedError } from "../../../../../shared/errors";
-import { MANAGER_ZONE_TYPE_SLUG } from "../../../application/constants/territory-roles.constants";
+  TerritorySpatialRepository
+} from '../../../application/interfaces/territory-spatial.repository.interface'
 
 export class DrizzleTerritorySpatialRepository implements TerritorySpatialRepository {
   async getBoundaryAsGeoJson(territoryId: string): Promise<GeoJsonGeometry | null> {
-    const rows = await db.execute(sql`
+    const rows = (await db.execute(sql`
       SELECT ST_AsGeoJSON(boundary)::text AS geojson
       FROM territories
       WHERE id = ${territoryId}
         AND boundary IS NOT NULL
-    `) as Array<{ geojson: string | null }>;
+    `)) as Array<{ geojson: string | null }>
 
-    const raw = rows[0]?.geojson;
+    const raw = rows[0]?.geojson
     if (!raw) {
-      return null;
+      return null
     }
 
-    return JSON.parse(raw) as GeoJsonGeometry;
+    return JSON.parse(raw) as GeoJsonGeometry
   }
 
   async saveBoundary(
@@ -31,22 +31,22 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     geoJson: GeoJsonGeometry,
     options?: { repairInvalid?: boolean }
   ): Promise<void> {
-    this.assertValidGeometryType(geoJson);
+    this.assertValidGeometryType(geoJson)
 
-    const geoJsonString = JSON.stringify(geoJson);
+    const geoJsonString = JSON.stringify(geoJson)
 
-    const validation = await db.execute(sql`
+    const validation = (await db.execute(sql`
       SELECT
         ST_IsValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)) AS is_valid,
         ST_IsValidReason(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)) AS reason
-    `) as Array<{ is_valid: boolean; reason: string | null }>;
+    `)) as Array<{ is_valid: boolean; reason: string | null }>
 
     if (!validation[0]?.is_valid) {
       if (!options?.repairInvalid) {
         throw new OperationNotAllowedError(
-          "save_boundary",
-          validation[0]?.reason ?? "Invalid geometry"
-        );
+          'save_boundary',
+          validation[0]?.reason ?? 'Invalid geometry'
+        )
       }
 
       await db.execute(sql`
@@ -54,8 +54,8 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         SET boundary = ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326)),
             updated_at = NOW()
         WHERE id = ${territoryId}
-      `);
-      return;
+      `)
+      return
     }
 
     await db.execute(sql`
@@ -63,7 +63,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       SET boundary = ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326),
           updated_at = NOW()
       WHERE id = ${territoryId}
-    `);
+    `)
   }
 
   async deleteBoundary(territoryId: string): Promise<void> {
@@ -72,20 +72,20 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       SET boundary = NULL,
           updated_at = NOW()
       WHERE id = ${territoryId}
-    `);
+    `)
   }
 
   async hasBoundary(territoryId: string): Promise<boolean> {
-    const rows = await db.execute(sql`
+    const rows = (await db.execute(sql`
       SELECT boundary IS NOT NULL AS has_boundary
       FROM territories
       WHERE id = ${territoryId}
-    `) as Array<{ has_boundary: boolean }>;
-    return rows[0]?.has_boundary ?? false;
+    `)) as Array<{ has_boundary: boolean }>
+    return rows[0]?.has_boundary ?? false
   }
 
   async getBoundaryBoundingBox(territoryId: string): Promise<TerritoryBoundingBox | null> {
-    const rows = await db.execute(sql`
+    const rows = (await db.execute(sql`
       SELECT
         ST_XMin(extent)::float AS min_lng,
         ST_YMin(extent)::float AS min_lat,
@@ -97,36 +97,31 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         WHERE id = ${territoryId}
           AND boundary IS NOT NULL
       ) AS bounded
-    `) as Array<{
-      min_lng: number | null;
-      min_lat: number | null;
-      max_lng: number | null;
-      max_lat: number | null;
-    }>;
+    `)) as Array<{
+      min_lng: number | null
+      min_lat: number | null
+      max_lng: number | null
+      max_lat: number | null
+    }>
 
-    const box = rows[0];
-    if (
-      box?.min_lng == null ||
-      box.min_lat == null ||
-      box.max_lng == null ||
-      box.max_lat == null
-    ) {
-      return null;
+    const box = rows[0]
+    if (box?.min_lng == null || box.min_lat == null || box.max_lng == null || box.max_lat == null) {
+      return null
     }
 
     return {
       minLng: box.min_lng,
       minLat: box.min_lat,
       maxLng: box.max_lng,
-      maxLat: box.max_lat,
-    };
+      maxLat: box.max_lat
+    }
   }
 
   async findOverlappingClinicAssignmentTerritories(
     territoryId: string,
     geoJson: GeoJsonGeometry
   ): Promise<OverlappingTerritory[]> {
-    const geoJsonString = JSON.stringify(geoJson);
+    const geoJsonString = JSON.stringify(geoJson)
 
     return db.execute(sql`
       SELECT t.id, t.code
@@ -138,11 +133,11 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.assigns_clinics = true
         AND ST_Intersects(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
         AND NOT ST_Touches(t.boundary, ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326))
-    `) as Promise<Array<{ id: string; code: string }>>;
+    `) as Promise<Array<{ id: string; code: string }>>
   }
 
   async findContainingClinicAssignmentTerritoryIds(lng: number, lat: number): Promise<string[]> {
-    const rows = await db.execute(sql`
+    const rows = (await db.execute(sql`
       SELECT t.id
       FROM territories t
       INNER JOIN territory_types tt ON tt.id = t.territory_type_id
@@ -154,20 +149,20 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
         )
       ORDER BY ST_Area(t.boundary::geography) ASC
-    `) as Array<{ id: string }>;
+    `)) as Array<{ id: string }>
 
-    return rows.map((row) => row.id);
+    return rows.map((row) => row.id)
   }
 
   async findOverlappingSiblingTerritories(input: {
-    territoryId: string;
-    territoryTypeId: string;
-    countryCode: string;
-    geoJson: GeoJsonGeometry;
+    territoryId: string
+    territoryTypeId: string
+    countryCode: string
+    geoJson: GeoJsonGeometry
   }): Promise<Array<{ id: string; code: string; overlapRatio: number }>> {
-    const geoJsonString = JSON.stringify(input.geoJson);
+    const geoJsonString = JSON.stringify(input.geoJson)
 
-    const rows = await db.execute(sql`
+    const rows = (await db.execute(sql`
       WITH child AS (
         SELECT ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4326) AS geom
       )
@@ -190,20 +185,20 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
         AND NOT ST_Touches(t.boundary, child.geom)
-    `) as Array<{ id: string; code: string; overlap_ratio: number }>;
+    `)) as Array<{ id: string; code: string; overlap_ratio: number }>
 
     return rows.map((row) => ({
       id: row.id,
       code: row.code,
-      overlapRatio: Number(row.overlap_ratio),
-    }));
+      overlapRatio: Number(row.overlap_ratio)
+    }))
   }
 
   async findContainingManagerZones(input: {
-    geoJson: GeoJsonGeometry;
-    countryCode: string;
+    geoJson: GeoJsonGeometry
+    countryCode: string
   }): Promise<Array<{ id: string; code: string; name: string }>> {
-    const geoJsonString = JSON.stringify(input.geoJson);
+    const geoJsonString = JSON.stringify(input.geoJson)
 
     return db.execute(sql`
       WITH patch AS (
@@ -219,14 +214,14 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
         AND ST_CoveredBy(patch.geom, t.boundary)
       ORDER BY ST_Area(t.boundary::geography) ASC
-    `) as Promise<Array<{ id: string; code: string; name: string }>>;
+    `) as Promise<Array<{ id: string; code: string; name: string }>>
   }
 
   async findRepPatchesOutsideManagerZone(input: {
-    managerZoneId: string;
-    managerZoneGeoJson: GeoJsonGeometry;
+    managerZoneId: string
+    managerZoneGeoJson: GeoJsonGeometry
   }): Promise<Array<{ id: string; code: string }>> {
-    const geoJsonString = JSON.stringify(input.managerZoneGeoJson);
+    const geoJsonString = JSON.stringify(input.managerZoneGeoJson)
 
     return db.execute(sql`
       WITH zone AS (
@@ -241,7 +236,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND p.boundary IS NOT NULL
         AND tt.assigns_clinics = true
         AND NOT ST_CoveredBy(p.boundary, zone.geom)
-    `) as Promise<Array<{ id: string; code: string }>>;
+    `) as Promise<Array<{ id: string; code: string }>>
   }
 
   async updateBoundaryMetadata(territoryId: string): Promise<void> {
@@ -269,28 +264,28 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         ) bounded
       ) bbox
       WHERE territories.id = ${territoryId}
-    `);
+    `)
   }
 
   async findAssignedClinicsInGroupingTerritory(input: {
-    groupingTerritoryId: string;
-    scopedPatchIds: string[];
+    groupingTerritoryId: string
+    scopedPatchIds: string[]
   }): Promise<
     Array<{
-      id: string;
-      name: string;
-      lat: number;
-      lng: number;
-      territoryId: string;
-      repPatchCode: string;
-      repPatchName: string;
+      id: string
+      name: string
+      lat: number
+      lng: number
+      territoryId: string
+      repPatchCode: string
+      repPatchName: string
     }>
   > {
     if (input.scopedPatchIds.length === 0) {
-      return [];
+      return []
     }
 
-    const rows = await db.execute(sql`
+    const rows = (await db.execute(sql`
       SELECT
         c.id,
         c.name,
@@ -310,15 +305,15 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         AND ST_X(c.location::geometry) BETWEEN grp.boundary_min_lng AND grp.boundary_max_lng
         AND ST_Y(c.location::geometry) BETWEEN grp.boundary_min_lat AND grp.boundary_max_lat
         AND ST_Covers(grp.boundary, ST_SetSRID(ST_MakePoint(ST_X(c.location::geometry), ST_Y(c.location::geometry)), 4326))
-    `) as Array<{
-      id: string;
-      name: string;
-      lat: number;
-      lng: number;
-      territory_id: string;
-      rep_patch_code: string;
-      rep_patch_name: string;
-    }>;
+    `)) as Array<{
+      id: string
+      name: string
+      lat: number
+      lng: number
+      territory_id: string
+      rep_patch_code: string
+      rep_patch_name: string
+    }>
 
     return rows.map((row) => ({
       id: row.id,
@@ -327,16 +322,16 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       lng: row.lng,
       territoryId: row.territory_id,
       repPatchCode: row.rep_patch_code,
-      repPatchName: row.rep_patch_name,
-    }));
+      repPatchName: row.rep_patch_name
+    }))
   }
 
   private assertValidGeometryType(geoJson: GeoJsonGeometry): void {
-    if (geoJson.type !== "Polygon" && geoJson.type !== "MultiPolygon") {
+    if (geoJson.type !== 'Polygon' && geoJson.type !== 'MultiPolygon') {
       throw new OperationNotAllowedError(
-        "save_boundary",
-        "Boundary must be a GeoJSON Polygon or MultiPolygon"
-      );
+        'save_boundary',
+        'Boundary must be a GeoJSON Polygon or MultiPolygon'
+      )
     }
   }
 }

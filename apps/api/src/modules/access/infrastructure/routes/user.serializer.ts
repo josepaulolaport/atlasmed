@@ -1,17 +1,17 @@
 export function serializeAuthUser(user: {
-  id: string;
-  email: string | null;
-  username: string;
-  firstName?: string | null;
-  lastName?: string | null;
-  status: string;
-  emailVerified?: boolean;
-  phoneVerified?: boolean;
+  id: string
+  email: string | null
+  username: string
+  firstName?: string | null
+  lastName?: string | null
+  status: string
+  emailVerified?: boolean
+  phoneVerified?: boolean
   role: {
-    id: string;
-    name: string;
-    description?: string | null;
-  };
+    id: string
+    name: string
+    description?: string | null
+  }
 }) {
   return {
     id: user.id,
@@ -25,33 +25,33 @@ export function serializeAuthUser(user: {
     role: {
       id: user.role.id,
       name: user.role.name,
-      description: user.role.description ?? undefined,
-    },
-  };
+      description: user.role.description ?? undefined
+    }
+  }
 }
 
 export function serializeUser(user: {
-  id: string;
-  email: string | null;
-  username: string;
-  phoneNumber?: string | null;
-  firstName?: string | null;
-  lastName?: string | null;
-  avatarUrl?: string | null;
-  status: string;
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  twoFactorEnabled?: boolean;
-  emailVerifiedAt?: Date | null;
-  phoneVerifiedAt?: Date | null;
+  id: string
+  email: string | null
+  username: string
+  phoneNumber?: string | null
+  firstName?: string | null
+  lastName?: string | null
+  avatarUrl?: string | null
+  status: string
+  emailVerified: boolean
+  phoneVerified: boolean
+  twoFactorEnabled?: boolean
+  emailVerifiedAt?: Date | null
+  phoneVerifiedAt?: Date | null
   role: {
-    id: string;
-    name: string;
-    description?: string | null;
-  };
-  createdAt: Date;
-  updatedAt: Date;
-  metadata?: unknown;
+    id: string
+    name: string
+    description?: string | null
+  }
+  createdAt: Date
+  updatedAt: Date
+  metadata?: unknown
 }) {
   return {
     id: user.id,
@@ -70,9 +70,9 @@ export function serializeUser(user: {
     role: {
       id: user.role.id,
       name: user.role.name,
-      description: user.role.description ?? undefined,
+      description: user.role.description ?? undefined
     },
     createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-  };
+    updatedAt: user.updatedAt.toISOString()
+  }
 }

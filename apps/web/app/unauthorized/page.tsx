@@ -1,7 +1,7 @@
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert } from 'lucide-react'
+import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function UnauthorizedPage() {
   return (
@@ -15,10 +15,10 @@ export default function UnauthorizedPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-center">
           <p className="text-gray-600">
-            Você não tem permissão para acessar esta página. Se acredita que isto
-            é um erro, entre em contato com o administrador.
+            Você não tem permissão para acessar esta página. Se acredita que isto é um erro, entre
+            em contato com o administrador.
           </p>
-          <div className="flex gap-4 justify-center">
+          <div className="flex justify-center gap-4">
             <Link href="/dashboard">
               <Button>Ir para o painel</Button>
             </Link>
@@ -29,5 +29,5 @@ export default function UnauthorizedPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

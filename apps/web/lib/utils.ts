@@ -1,31 +1,31 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { type ClassValue, clsx } from 'clsx'
+import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
+  return twMerge(clsx(inputs))
 }
 
 export function formatDate(date: string | Date): string {
-  return new Date(date).toLocaleDateString("pt-BR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  return new Date(date).toLocaleDateString('pt-BR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
 }
 
 export function formatDateTime(date: string | Date): string {
-  return new Date(date).toLocaleString("pt-BR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return new Date(date).toLocaleString('pt-BR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 export function getInitials(firstName?: string, lastName?: string): string {
-  if (!firstName && !lastName) return "??";
-  const first = firstName?.charAt(0) || "";
-  const last = lastName?.charAt(0) || "";
-  return `${first}${last}`.toUpperCase();
+  if (!firstName && !lastName) return '??'
+  const first = firstName?.charAt(0) || ''
+  const last = lastName?.charAt(0) || ''
+  return `${first}${last}`.toUpperCase()
 }

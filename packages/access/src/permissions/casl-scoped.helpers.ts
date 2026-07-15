@@ -1,7 +1,7 @@
-import { subject } from "@casl/ability";
-import type { Action, AppAbility, Subject } from "./role.permissions";
+import { subject } from '@casl/ability'
+import type { Action, AppAbility, Subject } from './role.permissions'
 
-type AbilityCheckSubject = Parameters<AppAbility["can"]>[1];
+type AbilityCheckSubject = Parameters<AppAbility['can']>[1]
 
 export function canOnResource(
   ability: AppAbility,
@@ -12,5 +12,5 @@ export function canOnResource(
   return ability.can(
     action,
     subject(subjectType, { id: resourceId }) as unknown as AbilityCheckSubject
-  );
+  )
 }

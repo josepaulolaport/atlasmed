@@ -1,25 +1,25 @@
-import type { MultiPolygon, Polygon } from "geojson";
-import type { MapboxProfile, MapboxRequestOptions } from "./common";
+import type { MultiPolygon, Polygon } from 'geojson'
+import type { MapboxProfile, MapboxRequestOptions } from './common'
 
 export interface IsochroneParams extends MapboxRequestOptions {
-  profile: MapboxProfile;
-  longitude: number;
-  latitude: number;
-  contoursMinutes?: number[];
-  contoursMeters?: number[];
-  polygons?: boolean;
-  denoise?: number;
-  generalize?: number;
+  profile: MapboxProfile
+  longitude: number
+  latitude: number
+  contoursMinutes?: number[]
+  contoursMeters?: number[]
+  polygons?: boolean
+  denoise?: number
+  generalize?: number
 }
 
 export interface IsochroneResponse {
-  type: "FeatureCollection";
+  type: 'FeatureCollection'
   features: Array<{
-    type: "Feature";
-    geometry: Polygon | MultiPolygon;
+    type: 'Feature'
+    geometry: Polygon | MultiPolygon
     properties: {
-      contour: number;
-      metric: "time" | "distance";
-    };
-  }>;
+      contour: number
+      metric: 'time' | 'distance'
+    }
+  }>
 }

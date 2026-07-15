@@ -1,14 +1,12 @@
-import {
-  facilityRepresentatives,
-} from "@atlasmed/database";
-import { eq, and, isNull } from "drizzle-orm";
-import { db } from "../../../../../infrastructure/database/db";
+import { facilityRepresentatives } from '@atlasmed/database'
+import { and, eq, isNull } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
   FacilityRepresentativeRecord,
-  FacilityRepresentativeRepository,
-} from "../../../application/interfaces/facility-representative.repository.interface";
+  FacilityRepresentativeRepository
+} from '../../../application/interfaces/facility-representative.repository.interface'
 
-type RepresentativeRow = typeof facilityRepresentatives.$inferSelect;
+type RepresentativeRow = typeof facilityRepresentatives.$inferSelect
 
 function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord {
   return {
@@ -24,8 +22,8 @@ function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord
     confirmedByUserId: row.confirmedByUserId,
     endedAt: row.endedAt,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+    updatedAt: row.updatedAt
+  }
 }
 
 export class DrizzleFacilityRepresentativeRepository implements FacilityRepresentativeRepository {
@@ -43,18 +41,18 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
           isNull(facilityRepresentatives.endedAt)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    return representative ? mapRepresentative(representative) : null;
+    return representative ? mapRepresentative(representative) : null
   }
 
   async upsertFromRegistry(params: {
-    facilityId: string;
-    externalSourceKey: string;
-    representativeName: string;
-    roleTitle?: string | null;
-    email?: string | null;
-    taxId?: string | null;
+    facilityId: string
+    externalSourceKey: string
+    representativeName: string
+    roleTitle?: string | null
+    email?: string | null
+    taxId?: string | null
   }): Promise<FacilityRepresentativeRecord> {
     const [representative] = await db
       .insert(facilityRepresentatives)
@@ -66,7 +64,7 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
         email: params.email ?? null,
         taxId: params.taxId ?? null,
         sourceActive: true,
-        sourceProvider: "registry",
+        sourceProvider: 'registry'
       })
       .onConflictDoUpdate({
         target: [facilityRepresentatives.facilityId, facilityRepresentatives.externalSourceKey],
@@ -76,25 +74,25 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
           email: params.email ?? null,
           taxId: params.taxId ?? null,
           sourceActive: true,
-          updatedAt: new Date(),
-        },
+          updatedAt: new Date()
+        }
       })
-      .returning();
+      .returning()
 
-    return mapRepresentative(representative!);
+    return mapRepresentative(representative!)
   }
 
   async confirm(params: {
-    facilityId: string;
-    externalSourceKey: string;
-    confirmedByUserId: string;
+    facilityId: string
+    externalSourceKey: string
+    confirmedByUserId: string
   }): Promise<FacilityRepresentativeRecord> {
     const [representative] = await db
       .update(facilityRepresentatives)
       .set({
         confirmedAt: new Date(),
         confirmedByUserId: params.confirmedByUserId,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
       .where(
         and(
@@ -102,16 +100,16 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
           eq(facilityRepresentatives.externalSourceKey, params.externalSourceKey)
         )
       )
-      .returning();
+      .returning()
 
-    return mapRepresentative(representative!);
+    return mapRepresentative(representative!)
   }
 
   async endSourceRepresentative(params: {
-    facilityId: string;
-    externalSourceKey: string;
-    endedByUserId: string;
-    endReason?: string;
+    facilityId: string
+    externalSourceKey: string
+    endedByUserId: string
+    endReason?: string
   }): Promise<FacilityRepresentativeRecord | null> {
     const [existing] = await db
       .select()
@@ -123,20 +121,20 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
           isNull(facilityRepresentatives.endedAt)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    if (!existing) return null;
+    if (!existing) return null
 
     const [representative] = await db
       .update(facilityRepresentatives)
       .set({
         endedAt: new Date(),
         sourceActive: false,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
       .where(eq(facilityRepresentatives.id, existing.id))
-      .returning();
+      .returning()
 
-    return mapRepresentative(representative!);
+    return mapRepresentative(representative!)
   }
 }

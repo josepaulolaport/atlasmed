@@ -1,17 +1,17 @@
-import { Elysia, t } from "elysia";
-import { accessUseCases, auth } from "../../composition";
+import { Elysia, t } from 'elysia'
+import { accessUseCases, auth } from '../../composition'
 
 export const capabilitiesRoute = new Elysia({
   detail: {
-    tags: ["Authentication"],
-  },
+    tags: ['Authentication']
+  }
 })
   .use(auth)
   .get(
-    "/me/capabilities",
+    '/me/capabilities',
     async ({ getUserId }: any) => {
-      const userId = await getUserId();
-      const result = await accessUseCases.getCapabilities().execute({ userId });
+      const userId = await getUserId()
+      const result = await accessUseCases.getCapabilities().execute({ userId })
 
       return {
         role: result.role,
@@ -21,16 +21,15 @@ export const capabilitiesRoute = new Elysia({
           resourceId: grant.resourceId ?? undefined,
           action: grant.action,
           conditions: grant.conditions,
-          expiresAt: grant.expiresAt?.toISOString(),
-        })),
-      };
+          expiresAt: grant.expiresAt?.toISOString()
+        }))
+      }
     },
     {
       detail: {
-        summary: "Get user capabilities",
-        description:
-          "Returns the authenticated user's role and active access grants.",
-        tags: ["Authentication"],
+        summary: 'Get user capabilities',
+        description: "Returns the authenticated user's role and active access grants.",
+        tags: ['Authentication']
       },
       response: {
         200: t.Object({
@@ -42,10 +41,10 @@ export const capabilitiesRoute = new Elysia({
               resourceId: t.Optional(t.String()),
               action: t.String(),
               conditions: t.Optional(t.Record(t.String(), t.Any())),
-              expiresAt: t.Optional(t.String()),
+              expiresAt: t.Optional(t.String())
             })
-          ),
-        }),
-      },
+          )
+        })
+      }
     }
-  );
+  )

@@ -1,126 +1,123 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
-import { GrantPermissionUseCase } from "./grant-permission.use-case";
-import type { AccessGrantService } from "../services/access-grant.service";
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import { createMockUserRepository } from "../../test-helpers/repository-mocks";
-import { Role } from "@atlasmed/access";
-import {
-  InsufficientPermissionsError,
-  UserNotFoundError,
-} from "../../../../shared/errors";
+import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { Role } from '@atlasmed/access'
+import { InsufficientPermissionsError, UserNotFoundError } from '../../../../shared/errors'
+import { createMockUserRepository } from '../../test-helpers/repository-mocks'
+import type { UserRepository } from '../interfaces/user.repository.interface'
+import type { AccessGrantService } from '../services/access-grant.service'
+import { GrantPermissionUseCase } from './grant-permission.use-case'
 
-describe("GrantPermissionUseCase", () => {
-  let useCase: GrantPermissionUseCase;
-  let mockAccessGrantService: AccessGrantService;
-  let mockUserRepository: UserRepository;
+describe('GrantPermissionUseCase', () => {
+  let useCase: GrantPermissionUseCase
+  let mockAccessGrantService: AccessGrantService
+  let mockUserRepository: UserRepository
 
   const mockGrant = {
-    id: "grant-1",
-    resource: "FACILITY",
-    resourceId: "clinic-1",
-    action: "update",
-  };
+    id: 'grant-1',
+    resource: 'FACILITY',
+    resourceId: 'clinic-1',
+    action: 'update'
+  }
 
   beforeEach(() => {
     mockAccessGrantService = {
-      grantPermission: mock(async () => mockGrant),
-    } as unknown as AccessGrantService;
+      grantPermission: mock(async () => mockGrant)
+    } as unknown as AccessGrantService
 
     mockUserRepository = createMockUserRepository({
-      findById: mock(async () => ({ id: "user-123" })) as any,
-    });
+      findById: mock(async () => ({ id: 'user-123' })) as any
+    })
 
     useCase = new GrantPermissionUseCase({
       accessGrantService: mockAccessGrantService,
-      userRepository: mockUserRepository,
-    });
-  });
+      userRepository: mockUserRepository
+    })
+  })
 
-  it("should grant permission when actor is admin and target exists", async () => {
+  it('should grant permission when actor is admin and target exists', async () => {
     const result = await useCase.execute({
-      targetUserId: "user-123",
-      resource: "FACILITY",
-      resourceId: "clinic-1",
-      action: "update",
-      grantedBy: "admin-1",
-      actorRole: Role.ADMIN,
-    });
+      targetUserId: 'user-123',
+      resource: 'FACILITY',
+      resourceId: 'clinic-1',
+      action: 'update',
+      grantedBy: 'admin-1',
+      actorRole: Role.ADMIN
+    })
 
-    expect(result).toEqual(mockGrant);
+    expect(result).toEqual(mockGrant)
     expect(mockAccessGrantService.grantPermission).toHaveBeenCalledWith({
-      userId: "user-123",
-      resource: "FACILITY",
-      resourceId: "clinic-1",
-      action: "update",
+      userId: 'user-123',
+      resource: 'FACILITY',
+      resourceId: 'clinic-1',
+      action: 'update',
       conditions: undefined,
-      grantedBy: "admin-1",
-      expiresAt: undefined,
-    });
-  });
+      grantedBy: 'admin-1',
+      expiresAt: undefined
+    })
+  })
 
-  it("should validate and forward grant conditions", async () => {
+  it('should validate and forward grant conditions', async () => {
     await useCase.execute({
-      targetUserId: "user-123",
-      resource: "FACILITY",
-      resourceId: "clinic-1",
-      action: "read",
-      conditions: { id: "clinic-1" },
-      grantedBy: "admin-1",
-      actorRole: Role.ADMIN,
-    });
+      targetUserId: 'user-123',
+      resource: 'FACILITY',
+      resourceId: 'clinic-1',
+      action: 'read',
+      conditions: { id: 'clinic-1' },
+      grantedBy: 'admin-1',
+      actorRole: Role.ADMIN
+    })
 
     expect(mockAccessGrantService.grantPermission).toHaveBeenCalledWith(
       expect.objectContaining({
-        conditions: { id: "clinic-1" },
+        conditions: { id: 'clinic-1' }
       })
-    );
-  });
+    )
+  })
 
-  it("should normalize legacy CLINIC grant resource to FACILITY", async () => {
+  it('should normalize legacy CLINIC grant resource to FACILITY', async () => {
     await useCase.execute({
-      targetUserId: "user-123",
-      resource: "CLINIC",
-      resourceId: "facility-1",
-      action: "read",
-      grantedBy: "admin-1",
-      actorRole: Role.ADMIN,
-    });
+      targetUserId: 'user-123',
+      resource: 'CLINIC',
+      resourceId: 'facility-1',
+      action: 'read',
+      grantedBy: 'admin-1',
+      actorRole: Role.ADMIN
+    })
 
     expect(mockAccessGrantService.grantPermission).toHaveBeenCalledWith(
       expect.objectContaining({
-        resource: "FACILITY",
-        resourceId: "facility-1",
+        resource: 'FACILITY',
+        resourceId: 'facility-1'
       })
-    );
-  });
+    )
+  })
 
-  it("should throw when actor is not admin", async () => {
+  it('should throw when actor is not admin', async () => {
     await expect(
       useCase.execute({
-        targetUserId: "user-123",
-        resource: "FACILITY",
-        action: "update",
-        grantedBy: "manager-1",
-        actorRole: Role.MANAGER,
+        targetUserId: 'user-123',
+        resource: 'FACILITY',
+        action: 'update',
+        grantedBy: 'manager-1',
+        actorRole: Role.MANAGER
       })
-    ).rejects.toThrow(InsufficientPermissionsError);
+    ).rejects.toThrow(InsufficientPermissionsError)
 
-    expect(mockAccessGrantService.grantPermission).not.toHaveBeenCalled();
-  });
+    expect(mockAccessGrantService.grantPermission).not.toHaveBeenCalled()
+  })
 
-  it("should throw when target user not found", async () => {
-    mockUserRepository.findById = mock(async () => null);
+  it('should throw when target user not found', async () => {
+    mockUserRepository.findById = mock(async () => null)
 
     await expect(
       useCase.execute({
-        targetUserId: "missing",
-        resource: "FACILITY",
-        action: "update",
-        grantedBy: "admin-1",
-        actorRole: Role.ADMIN,
+        targetUserId: 'missing',
+        resource: 'FACILITY',
+        action: 'update',
+        grantedBy: 'admin-1',
+        actorRole: Role.ADMIN
       })
-    ).rejects.toThrow(UserNotFoundError);
+    ).rejects.toThrow(UserNotFoundError)
 
-    expect(mockAccessGrantService.grantPermission).not.toHaveBeenCalled();
-  });
-});
+    expect(mockAccessGrantService.grantPermission).not.toHaveBeenCalled()
+  })
+})

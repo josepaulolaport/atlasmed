@@ -1,41 +1,41 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 const links = [
-  { href: "/territories", label: "Explorador" },
-  { href: "/territories/types", label: "Tipos" },
-  { href: "/territories/approvals", label: "Aprovações" },
-  { href: "/territories/unassigned-facilities", label: "Clínicas não atribuídas" },
-];
+  { href: '/territories', label: 'Explorador' },
+  { href: '/territories/types', label: 'Tipos' },
+  { href: '/territories/approvals', label: 'Aprovações' },
+  { href: '/territories/unassigned-facilities', label: 'Clínicas não atribuídas' }
+]
 
 export function TerritorySubnav() {
-  const pathname = usePathname();
+  const pathname = usePathname()
 
   return (
-    <nav className="mb-6 flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+    <nav className="mb-6 flex flex-wrap gap-2 border-gray-200 border-b pb-3">
       {links.map((link) => {
         const isActive =
-          link.href === "/territories"
-            ? pathname === "/territories"
-            : pathname.startsWith(link.href);
+          link.href === '/territories'
+            ? pathname === '/territories'
+            : pathname.startsWith(link.href)
         return (
           <Link
             key={link.href}
             href={link.href}
             className={cn(
-              "rounded-md px-3 py-1.5 text-sm font-medium",
+              'rounded-md px-3 py-1.5 font-medium text-sm',
               isActive
-                ? "bg-blue-50 text-blue-700"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? 'bg-blue-50 text-blue-700'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             )}
           >
             {link.label}
           </Link>
-        );
+        )
       })}
     </nav>
-  );
+  )
 }

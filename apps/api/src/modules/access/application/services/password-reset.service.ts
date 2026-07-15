@@ -1,61 +1,61 @@
-import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
-import { hashToken } from "../../../../shared/utils/hash-token";
 import {
   ResetTokenExpiredError,
   ResetTokenInvalidError,
-  ResetTokenUsedError,
-} from "../../../../shared/errors";
+  ResetTokenUsedError
+} from '../../../../shared/errors'
+import { generateRandomToken } from '../../../../shared/utils/generate-random-token'
+import { hashToken } from '../../../../shared/utils/hash-token'
 
-import type { PasswordResetRepository } from "../interfaces/password-reset.repository.interface";
+import type { PasswordResetRepository } from '../interfaces/password-reset.repository.interface'
 
 interface Dependencies {
-  passwordResetRepository: PasswordResetRepository;
+  passwordResetRepository: PasswordResetRepository
 }
 
 interface CreatePasswordResetParams {
-  userId: string;
+  userId: string
 }
 
 export class PasswordResetService {
   constructor(private readonly deps: Dependencies) {}
 
   async createPasswordReset(params: CreatePasswordResetParams) {
-    await this.deps.passwordResetRepository.invalidateUnusedForUser(params.userId);
+    await this.deps.passwordResetRepository.invalidateUnusedForUser(params.userId)
 
-    const token = generateRandomToken();
-    const tokenHash = hashToken(token);
+    const token = generateRandomToken()
+    const tokenHash = hashToken(token)
 
     const passwordReset = await this.deps.passwordResetRepository.create({
       userId: params.userId,
       tokenHash,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60),
-    });
+      expiresAt: new Date(Date.now() + 1000 * 60 * 60)
+    })
 
     return {
       passwordReset,
-      token,
-    };
+      token
+    }
   }
 
   async validatePasswordResetToken(token: string) {
-    const tokenHash = hashToken(token);
+    const tokenHash = hashToken(token)
 
     const passwordReset = await this.deps.passwordResetRepository.findByToken({
-      tokenHash,
-    });
+      tokenHash
+    })
 
     if (!passwordReset) {
-      throw new ResetTokenInvalidError();
+      throw new ResetTokenInvalidError()
     }
 
     if (passwordReset.usedAt) {
-      throw new ResetTokenUsedError();
+      throw new ResetTokenUsedError()
     }
 
     if (passwordReset.expiresAt < new Date()) {
-      throw new ResetTokenExpiredError();
+      throw new ResetTokenExpiredError()
     }
 
-    return passwordReset;
+    return passwordReset
   }
 }

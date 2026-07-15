@@ -1,31 +1,31 @@
-"use client";
+'use client'
 
-import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import type { TerritoryTreeNode } from "@/types/territory";
+import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import type { TerritoryTreeNode } from '@/types/territory'
 
 interface TerritoryTreeProps {
-  nodes: TerritoryTreeNode[];
-  selectedId?: string;
-  onSelect: (id: string) => void;
+  nodes: TerritoryTreeNode[]
+  selectedId?: string
+  onSelect: (id: string) => void
 }
 
 function TerritoryTreeNodeRow({
   node,
   depth,
   selectedId,
-  onSelect,
+  onSelect
 }: {
-  node: TerritoryTreeNode;
-  depth: number;
-  selectedId?: string;
-  onSelect: (id: string) => void;
+  node: TerritoryTreeNode
+  depth: number
+  selectedId?: string
+  onSelect: (id: string) => void
 }) {
-  const [expanded, setExpanded] = useState(depth < 2);
-  const hasChildren = node.children.length > 0;
-  const isSelected = selectedId === node.id;
+  const [expanded, setExpanded] = useState(depth < 2)
+  const hasChildren = node.children.length > 0
+  const isSelected = selectedId === node.id
 
   return (
     <div>
@@ -33,8 +33,8 @@ function TerritoryTreeNodeRow({
         type="button"
         onClick={() => onSelect(node.id)}
         className={cn(
-          "flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-sm hover:bg-gray-50",
-          isSelected && "bg-blue-50 text-blue-900"
+          'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-sm hover:bg-gray-50',
+          isSelected && 'bg-blue-50 text-blue-900'
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
@@ -42,8 +42,8 @@ function TerritoryTreeNodeRow({
           <span
             role="presentation"
             onClick={(e) => {
-              e.stopPropagation();
-              setExpanded((v) => !v);
+              e.stopPropagation()
+              setExpanded((v) => !v)
             }}
             className="inline-flex shrink-0"
           >
@@ -101,12 +101,12 @@ function TerritoryTreeNodeRow({
         </div>
       )}
     </div>
-  );
+  )
 }
 
 export function TerritoryTree({ nodes, selectedId, onSelect }: TerritoryTreeProps) {
   if (nodes.length === 0) {
-    return <p className="text-sm text-gray-500">Nenhum território encontrado.</p>;
+    return <p className="text-gray-500 text-sm">Nenhum território encontrado.</p>
   }
 
   return (
@@ -121,5 +121,5 @@ export function TerritoryTree({ nodes, selectedId, onSelect }: TerritoryTreeProp
         />
       ))}
     </div>
-  );
+  )
 }

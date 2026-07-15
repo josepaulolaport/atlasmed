@@ -1,14 +1,25 @@
-import { eq, and, or, isNull, isNotNull, inArray, gt, desc, lt, sql } from "drizzle-orm";
-import { users, roles, invitations, userTerritoryAssignments, territories, userSectorAssignments } from "@atlasmed/database";
-import { db } from "../../../../../infrastructure/database/db";
-import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
+import {
+  invitations,
+  roles,
+  territories,
+  userSectorAssignments,
+  users,
+  userTerritoryAssignments
+} from '@atlasmed/database'
+import { and, desc, eq, gt, inArray, isNotNull, isNull, lt, or, sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
+import {
+  InvalidInviteError,
+  ResourceConflictError,
+  ResourceNotFoundError
+} from '../../../../../shared/errors'
 
 import type {
-  InviteRepository,
-  CreateInviteParams,
   AcceptInviteTransactionParams,
   AcceptInviteTransactionResult,
-} from "../../../application/interfaces/invite.repository.interface";
+  CreateInviteParams,
+  InviteRepository
+} from '../../../application/interfaces/invite.repository.interface'
 
 async function fetchInviteWithRole(inviteId: string) {
   const [row] = await db
@@ -16,15 +27,15 @@ async function fetchInviteWithRole(inviteId: string) {
     .from(invitations)
     .leftJoin(roles, eq(invitations.roleId, roles.id))
     .where(eq(invitations.id, inviteId))
-    .limit(1);
+    .limit(1)
 
-  if (!row) return null;
-  return { ...row.invitations, role: row.roles! };
+  if (!row) return null
+  return { ...row.invitations, role: row.roles! }
 }
 
 export class DrizzleInviteRepository implements InviteRepository {
   async create(params: CreateInviteParams) {
-    await this.cleanupExpired();
+    await this.cleanupExpired()
 
     const [inserted] = await db
       .insert(invitations)
@@ -39,12 +50,12 @@ export class DrizzleInviteRepository implements InviteRepository {
         managerId: params.managerId ?? null,
         managerTerritoryId: params.managerTerritoryId ?? null,
         repTerritoryId: params.repTerritoryId ?? null,
-        expiresAt: params.expiresAt,
+        expiresAt: params.expiresAt
       })
-      .returning();
+      .returning()
 
-    const result = await fetchInviteWithRole(inserted!.id);
-    return result!;
+    const result = await fetchInviteWithRole(inserted!.id)
+    return result!
   }
 
   async findValidByTokenHash(tokenHash: string) {
@@ -55,70 +66,66 @@ export class DrizzleInviteRepository implements InviteRepository {
       .where(
         and(
           eq(invitations.tokenHash, tokenHash),
-          eq(invitations.status, "PENDING"),
+          eq(invitations.status, 'PENDING'),
           isNull(invitations.revokedAt),
-          gt(invitations.expiresAt, new Date()),
-        ),
+          gt(invitations.expiresAt, new Date())
+        )
       )
-      .limit(1);
+      .limit(1)
 
-    if (!row) return null;
-    return { ...row.invitations, role: row.roles! };
+    if (!row) return null
+    return { ...row.invitations, role: row.roles! }
   }
 
   async findById(inviteId: string) {
-    return fetchInviteWithRole(inviteId);
+    return fetchInviteWithRole(inviteId)
   }
 
   async findByEmailOrPhone(email?: string | undefined, phoneNumber?: string | undefined) {
     if (!email && !phoneNumber) {
-      return null;
+      return null
     }
 
-    const orConditions = [];
-    if (email) orConditions.push(eq(invitations.email, email as any));
-    if (phoneNumber) orConditions.push(eq(invitations.phoneNumber, phoneNumber as any));
+    const orConditions = []
+    if (email) orConditions.push(eq(invitations.email, email as any))
+    if (phoneNumber) orConditions.push(eq(invitations.phoneNumber, phoneNumber as any))
 
     const [row] = await db
       .select()
       .from(invitations)
       .leftJoin(roles, eq(invitations.roleId, roles.id))
       .where(
-        and(
-          or(...orConditions),
-          eq(invitations.status, "PENDING"),
-          isNull(invitations.revokedAt),
-        ),
+        and(or(...orConditions), eq(invitations.status, 'PENDING'), isNull(invitations.revokedAt))
       )
-      .limit(1);
+      .limit(1)
 
-    if (!row) return null;
-    return { ...row.invitations, role: row.roles! };
+    if (!row) return null
+    return { ...row.invitations, role: row.roles! }
   }
 
   async findAll(params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-    invitedByUserId?: string;
+    status?: string
+    page?: number
+    limit?: number
+    invitedByUserId?: string
   }) {
-    await this.cleanupExpired();
+    await this.cleanupExpired()
 
-    const page = params?.page ?? 1;
-    const limit = Math.min(params?.limit ?? 20, 100);
-    const skip = (page - 1) * limit;
+    const page = params?.page ?? 1
+    const limit = Math.min(params?.limit ?? 20, 100)
+    const skip = (page - 1) * limit
 
-    const conditions = [];
+    const conditions = []
 
     if (params?.status) {
-      conditions.push(eq(invitations.status, params.status as any));
+      conditions.push(eq(invitations.status, params.status as any))
     }
 
     if (params?.invitedByUserId) {
-      conditions.push(eq(invitations.invitedByUserId, params.invitedByUserId));
+      conditions.push(eq(invitations.invitedByUserId, params.invitedByUserId))
     }
 
-    const where = conditions.length > 0 ? and(...conditions) : undefined;
+    const where = conditions.length > 0 ? and(...conditions) : undefined
 
     const [invitationRows, countRows] = await Promise.all([
       db
@@ -129,35 +136,35 @@ export class DrizzleInviteRepository implements InviteRepository {
         .orderBy(desc(invitations.createdAt))
         .offset(skip)
         .limit(limit),
-      db.select({ count: sql<number>`count(*)::int` }).from(invitations).where(where),
-    ]);
+      db.select({ count: sql<number>`count(*)::int` }).from(invitations).where(where)
+    ])
 
     return {
       invitations: invitationRows.map((row) => ({ ...row.invitations, role: row.roles! })),
-      total: countRows[0]!.count,
-    };
+      total: countRows[0]!.count
+    }
   }
 
   async markAccepted(inviteId: string, _userId: string) {
     await db
       .update(invitations)
       .set({
-        status: "ACCEPTED",
+        status: 'ACCEPTED',
         acceptedAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
-      .where(eq(invitations.id, inviteId));
+      .where(eq(invitations.id, inviteId))
   }
 
   async revoke(inviteId: string) {
     await db
       .update(invitations)
       .set({
-        status: "REVOKED",
+        status: 'REVOKED',
         revokedAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
-      .where(eq(invitations.id, inviteId));
+      .where(eq(invitations.id, inviteId))
   }
 
   async regenerateToken(inviteId: string, params: { tokenHash: string; expiresAt: Date }) {
@@ -168,88 +175,85 @@ export class DrizzleInviteRepository implements InviteRepository {
         expiresAt: params.expiresAt,
         resendCount: sql`${invitations.resendCount} + 1`,
         lastResendAt: new Date(),
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
-      .where(eq(invitations.id, inviteId));
+      .where(eq(invitations.id, inviteId))
 
-    const result = await fetchInviteWithRole(inviteId);
-    return result!;
+    const result = await fetchInviteWithRole(inviteId)
+    return result!
   }
 
   async cleanupExpired(): Promise<number> {
     const result = await db
       .update(invitations)
-      .set({ status: "EXPIRED", updatedAt: new Date() })
-      .where(and(eq(invitations.status, "PENDING"), lt(invitations.expiresAt, new Date())))
-      .returning({ id: invitations.id });
+      .set({ status: 'EXPIRED', updatedAt: new Date() })
+      .where(and(eq(invitations.status, 'PENDING'), lt(invitations.expiresAt, new Date())))
+      .returning({ id: invitations.id })
 
-    return result.length;
+    return result.length
   }
 
   async acceptInviteTransaction(
-    params: AcceptInviteTransactionParams,
+    params: AcceptInviteTransactionParams
   ): Promise<AcceptInviteTransactionResult> {
     return await db.transaction(async (tx) => {
       // Pessimistic locking: Lock the invite row to prevent race conditions
       const lockedInvite = await tx.execute<{
-        id: string;
-        status: string;
-        expiresAt: Date;
-        email: string | null;
-        phoneNumber: string | null;
-        roleId: string;
-        firstName: string | null;
-        lastName: string | null;
-        managerId: string | null;
-        managerTerritoryId: string | null;
-        repTerritoryId: string | null;
+        id: string
+        status: string
+        expiresAt: Date
+        email: string | null
+        phoneNumber: string | null
+        roleId: string
+        firstName: string | null
+        lastName: string | null
+        managerId: string | null
+        managerTerritoryId: string | null
+        repTerritoryId: string | null
       }>(sql`
         SELECT id, status, "expiresAt", email, "phoneNumber", "roleId",
                "firstName", "lastName", "managerId", "managerTerritoryId", "repTerritoryId"
         FROM invitations
         WHERE "tokenHash" = ${params.tokenHash}
         FOR UPDATE
-      `);
+      `)
 
       if (!lockedInvite || lockedInvite.length === 0) {
-        throw new InvalidInviteError();
+        throw new InvalidInviteError()
       }
 
-      const inviteLock = lockedInvite[0]!;
+      const inviteLock = lockedInvite[0]!
 
-      if (inviteLock.status !== "PENDING") {
-        throw new InvalidInviteError("Invite has already been used");
+      if (inviteLock.status !== 'PENDING') {
+        throw new InvalidInviteError('Invite has already been used')
       }
 
       if (inviteLock.expiresAt < new Date()) {
-        throw new InvalidInviteError("Invite has expired");
+        throw new InvalidInviteError('Invite has expired')
       }
 
       if (inviteLock.email && inviteLock.email !== params.email) {
-        throw new InvalidInviteError("Email does not match invitation");
+        throw new InvalidInviteError('Email does not match invitation')
       }
 
       if (inviteLock.phoneNumber && inviteLock.phoneNumber !== params.phoneNumber) {
-        throw new InvalidInviteError("Phone number does not match invitation");
+        throw new InvalidInviteError('Phone number does not match invitation')
       }
 
       // Check for existing user with same credentials
-      const orConditions = [
-        eq(users.email, params.email),
-        eq(users.username, params.username),
-      ];
+      const orConditions = [eq(users.email, params.email), eq(users.username, params.username)]
       if (params.phoneNumber) {
-        orConditions.push(eq(users.phoneNumber, params.phoneNumber as any));
+        orConditions.push(eq(users.phoneNumber, params.phoneNumber as any))
       }
 
       const [existingUser] = await tx
         .select({ id: users.id })
         .from(users)
         .where(or(...orConditions))
-        .limit(1);
+        .limit(1)
 
       if (existingUser) {
-        throw new ResourceConflictError("User", "email or username already taken");
+        throw new ResourceConflictError('User', 'email or username already taken')
       }
 
       // Create the user with invitation data
@@ -266,38 +270,38 @@ export class DrizzleInviteRepository implements InviteRepository {
           managerId: inviteLock.managerId ?? null,
           emailVerified: Boolean(inviteLock.email),
           phoneVerified: Boolean(inviteLock.phoneNumber),
-          status: "ACTIVE",
+          status: 'ACTIVE'
         })
-        .returning();
+        .returning()
 
       const [userRow] = await tx
         .select()
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
         .where(eq(users.id, newUserRow!.id))
-        .limit(1);
+        .limit(1)
 
-      const user = { ...userRow!.users, role: userRow!.roles! };
+      const user = { ...userRow!.users, role: userRow!.roles! }
 
       // Create territory assignments and derive sector assignments if specified in invitation
-      const assignedTerritoryIds: string[] = [];
+      const assignedTerritoryIds: string[] = []
 
       if (inviteLock.managerTerritoryId) {
         await tx.insert(userTerritoryAssignments).values({
           userId: user.id,
           territoryId: inviteLock.managerTerritoryId,
-          assignedBy: inviteLock.id,
-        });
-        assignedTerritoryIds.push(inviteLock.managerTerritoryId);
+          assignedBy: inviteLock.id
+        })
+        assignedTerritoryIds.push(inviteLock.managerTerritoryId)
       }
 
       if (inviteLock.repTerritoryId) {
         await tx.insert(userTerritoryAssignments).values({
           userId: user.id,
           territoryId: inviteLock.repTerritoryId,
-          assignedBy: inviteLock.id,
-        });
-        assignedTerritoryIds.push(inviteLock.repTerritoryId);
+          assignedBy: inviteLock.id
+        })
+        assignedTerritoryIds.push(inviteLock.repTerritoryId)
       }
 
       // Derive sector assignments from the assigned territories' sector_id
@@ -306,21 +310,16 @@ export class DrizzleInviteRepository implements InviteRepository {
           .select({ sectorId: territories.sectorId })
           .from(territories)
           .where(
-            and(
-              inArray(territories.id, assignedTerritoryIds),
-              isNotNull(territories.sectorId)
-            )
-          );
+            and(inArray(territories.id, assignedTerritoryIds), isNotNull(territories.sectorId))
+          )
 
-        const uniqueSectorIds = [
-          ...new Set(territoryRows.map((r) => r.sectorId as string)),
-        ];
+        const uniqueSectorIds = [...new Set(territoryRows.map((r) => r.sectorId as string))]
 
         for (const sectorId of uniqueSectorIds) {
           await tx
             .insert(userSectorAssignments)
             .values({ userId: user.id, sectorId })
-            .onConflictDoNothing();
+            .onConflictDoNothing()
         }
       }
 
@@ -328,12 +327,12 @@ export class DrizzleInviteRepository implements InviteRepository {
       await tx
         .update(invitations)
         .set({
-          status: "ACCEPTED",
+          status: 'ACCEPTED',
           acceptedAt: new Date(),
           acceptedByUserId: user.id,
-          updatedAt: new Date(),
+          updatedAt: new Date()
         })
-        .where(eq(invitations.id, inviteLock.id));
+        .where(eq(invitations.id, inviteLock.id))
 
       // Fetch the complete invite with role for the return value
       const [inviteRow] = await tx
@@ -341,13 +340,13 @@ export class DrizzleInviteRepository implements InviteRepository {
         .from(invitations)
         .leftJoin(roles, eq(invitations.roleId, roles.id))
         .where(eq(invitations.id, inviteLock.id))
-        .limit(1);
+        .limit(1)
 
-      if (!inviteRow) throw new ResourceNotFoundError("Invitation", inviteLock.id);
+      if (!inviteRow) throw new ResourceNotFoundError('Invitation', inviteLock.id)
 
-      const invite = { ...inviteRow.invitations, role: inviteRow.roles! };
+      const invite = { ...inviteRow.invitations, role: inviteRow.roles! }
 
-      return { user, invite };
-    });
+      return { user, invite }
+    })
   }
 }

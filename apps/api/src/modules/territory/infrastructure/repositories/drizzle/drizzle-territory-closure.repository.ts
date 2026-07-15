@@ -1,30 +1,30 @@
-import { db } from "../../../../../infrastructure/database/db";
-import { territories, territoryClosure } from "@atlasmed/database";
-import { eq, and, or, inArray } from "drizzle-orm";
-import type { TerritoryClosureRepository } from "../../../application/interfaces/territory-closure.repository.interface";
+import { territories, territoryClosure } from '@atlasmed/database'
+import { and, eq, inArray, or } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
+import type { TerritoryClosureRepository } from '../../../application/interfaces/territory-closure.repository.interface'
 
 export class DrizzleTerritoryClosureRepository implements TerritoryClosureRepository {
   async deleteForDescendants(descendantIds: string[]): Promise<void> {
     if (descendantIds.length === 0) {
-      return;
+      return
     }
 
-    await db.delete(territoryClosure).where(inArray(territoryClosure.descendantId, descendantIds));
+    await db.delete(territoryClosure).where(inArray(territoryClosure.descendantId, descendantIds))
   }
 
   async insertRows(
     rows: Array<{ ancestorId: string; descendantId: string; depth: number }>
   ): Promise<void> {
     if (rows.length === 0) {
-      return;
+      return
     }
 
-    await db.insert(territoryClosure).values(rows).onConflictDoNothing();
+    await db.insert(territoryClosure).values(rows).onConflictDoNothing()
   }
 
   async findDescendantIds(ancestorIds: string[], activeOnly = true): Promise<string[]> {
     if (ancestorIds.length === 0) {
-      return [];
+      return []
     }
 
     if (activeOnly) {
@@ -33,32 +33,29 @@ export class DrizzleTerritoryClosureRepository implements TerritoryClosureReposi
         .from(territoryClosure)
         .innerJoin(territories, eq(territoryClosure.descendantId, territories.id))
         .where(
-          and(
-            inArray(territoryClosure.ancestorId, ancestorIds),
-            eq(territories.isActive, true)
-          )
-        );
-      return [...new Set(rows.map((row) => row.descendantId))];
+          and(inArray(territoryClosure.ancestorId, ancestorIds), eq(territories.isActive, true))
+        )
+      return [...new Set(rows.map((row) => row.descendantId))]
     }
 
     const rows = await db
       .select({ descendantId: territoryClosure.descendantId })
       .from(territoryClosure)
-      .where(inArray(territoryClosure.ancestorId, ancestorIds));
-    return [...new Set(rows.map((row) => row.descendantId))];
+      .where(inArray(territoryClosure.ancestorId, ancestorIds))
+    return [...new Set(rows.map((row) => row.descendantId))]
   }
 
   async findAncestorIds(descendantIds: string[]): Promise<string[]> {
     if (descendantIds.length === 0) {
-      return [];
+      return []
     }
 
     const rows = await db
       .select({ ancestorId: territoryClosure.ancestorId })
       .from(territoryClosure)
-      .where(inArray(territoryClosure.descendantId, descendantIds));
+      .where(inArray(territoryClosure.descendantId, descendantIds))
 
-    return [...new Set(rows.map((row) => row.ancestorId))];
+    return [...new Set(rows.map((row) => row.ancestorId))]
   }
 
   async hasAncestorDescendantRelation(
@@ -66,7 +63,7 @@ export class DrizzleTerritoryClosureRepository implements TerritoryClosureReposi
     territoryIdB: string
   ): Promise<boolean> {
     if (territoryIdA === territoryIdB) {
-      return true;
+      return true
     }
 
     const rows = await db
@@ -84,8 +81,8 @@ export class DrizzleTerritoryClosureRepository implements TerritoryClosureReposi
           )
         )
       )
-      .limit(1);
+      .limit(1)
 
-    return rows.length > 0;
+    return rows.length > 0
   }
 }

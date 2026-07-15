@@ -1,4 +1,3 @@
-import { DrizzleProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-professional.repository";
 import {
   CreateDoctorUseCase,
   CreateProfessionalNoteUseCase,
@@ -6,12 +5,13 @@ import {
   GetProfessionalUseCase,
   ListProfessionalNotesUseCase,
   ListProfessionalsUseCase,
-  UpdateDoctorUseCase,
-} from "./application/use-cases/professional.use-cases";
+  UpdateDoctorUseCase
+} from './application/use-cases/professional.use-cases'
+import { DrizzleProfessionalRepository } from './infrastructure/repositories/drizzle/drizzle-professional.repository'
 
 export const professionalRepositories = {
-  professional: new DrizzleProfessionalRepository(),
-};
+  professional: new DrizzleProfessionalRepository()
+}
 
 export const professionalUseCases = {
   listProfessionals: () =>
@@ -27,8 +27,8 @@ export const professionalUseCases = {
   updateDoctor: () =>
     new UpdateDoctorUseCase({ doctorRepository: professionalRepositories.professional }),
   deleteDoctor: () =>
-    new DeleteDoctorUseCase({ doctorRepository: professionalRepositories.professional }),
-};
+    new DeleteDoctorUseCase({ doctorRepository: professionalRepositories.professional })
+}
 
 /** @deprecated Use professionalUseCases */
-export const doctorUseCases = professionalUseCases;
+export const doctorUseCases = professionalUseCases

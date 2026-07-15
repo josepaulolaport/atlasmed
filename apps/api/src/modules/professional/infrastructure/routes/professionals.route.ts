@@ -1,28 +1,25 @@
-import { Elysia, t } from "elysia";
-import {
-  createProfessionalSchema,
-  updateProfessionalSchema,
-} from "@atlasmed/access";
-import { auth } from "../../../access/composition";
-import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
-import { doctorUseCases } from "../../composition";
-import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
-import { parseListProfessionalsQuery } from "../../application/list-professionals-query";
-import { z } from "zod";
+import { createProfessionalSchema, updateProfessionalSchema } from '@atlasmed/access'
+import { Elysia, t } from 'elysia'
+import { z } from 'zod'
+import { ResourceNotFoundError, ValidationError } from '../../../../shared/errors'
+import { auth } from '../../../access/composition'
+import { requirePermission } from '../../../access/infrastructure/middleware/permission.middleware'
+import { parseListProfessionalsQuery } from '../../application/list-professionals-query'
+import { doctorUseCases } from '../../composition'
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
-  const parsed = schema.safeParse(body);
+  const parsed = schema.safeParse(body)
 
   if (!parsed.success) {
     throw new ValidationError(
       parsed.error.issues.map((issue) => ({
-        field: issue.path.join(".") || "body",
-        message: issue.message,
+        field: issue.path.join('.') || 'body',
+        message: issue.message
       }))
-    );
+    )
   }
 
-  return parsed.data;
+  return parsed.data
 }
 
 const professionalPersonBody = {
@@ -43,31 +40,32 @@ const professionalPersonBody = {
   favoriteTeam: t.Optional(t.Union([t.String(), t.Null()])),
   favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
   hobbies: t.Optional(t.Union([t.String(), t.Null()])),
-  notes: t.Optional(t.Union([t.String(), t.Null()])),
-};
+  notes: t.Optional(t.Union([t.String(), t.Null()]))
+}
 
 const listProfessionalsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL"))
+  .use(requirePermission('read', 'PROFESSIONAL'))
   .get(
-    "/professionals",
+    '/professionals',
     async ({ query, getScope }) => {
-      const scope = await getScope();
-      const filters = parseListProfessionalsQuery(query);
+      const scope = await getScope()
+      const filters = parseListProfessionalsQuery(query)
       return doctorUseCases.listProfessionals().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
         facilityId: query.facilityId,
         ...filters,
-        scope,
-      });
+        scope
+      })
     },
     {
       detail: {
-        summary: "List professionals (coordinates use nearest visible linked facility and exclude professionals without one)",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
+        summary:
+          'List professionals (coordinates use nearest visible linked facility and exclude professionals without one)',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
       },
       query: t.Object({
         page: t.Optional(t.String()),
@@ -77,187 +75,184 @@ const listProfessionalsRoute = new Elysia()
         latitude: t.Optional(t.String()),
         longitude: t.Optional(t.String()),
         radiusKm: t.Optional(t.String()),
-        specialty: t.Optional(t.String()),
-      }),
+        specialty: t.Optional(t.String())
+      })
     }
-  );
+  )
 
 const createDoctorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("create", "PROFESSIONAL"))
+  .use(requirePermission('create', 'PROFESSIONAL'))
   .post(
-    "/professionals",
+    '/professionals',
     async ({ body, getScope }) => {
-      const scope = await getScope();
-      const parsed = parseSchema(createProfessionalSchema, body);
+      const scope = await getScope()
+      const parsed = parseSchema(createProfessionalSchema, body)
       return doctorUseCases.createDoctor().execute({
         ...parsed,
-        scope,
-      });
+        scope
+      })
     },
     {
       detail: {
-        summary: "Create professional",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
+        summary: 'Create professional',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
       },
       body: t.Object({
         firstName: t.String(),
         lastName: t.String(),
         ...professionalPersonBody,
-        facilityIds: t.Optional(t.Array(t.String())),
-      }),
+        facilityIds: t.Optional(t.Array(t.String()))
+      })
     }
-  );
+  )
 
 const getProfessionalRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission('read', 'PROFESSIONAL', { resourceIdParam: 'id' }))
   .get(
-    "/professionals/:id",
+    '/professionals/:id',
     async ({ params, getScope }) => {
-      const scope = await getScope();
+      const scope = await getScope()
       const professional = await doctorUseCases.getProfessional().execute({
         professionalId: params.id,
-        scope,
-      });
+        scope
+      })
 
       if (!professional) {
-        throw new ResourceNotFoundError("Professional", params.id);
+        throw new ResourceNotFoundError('Professional', params.id)
       }
 
-      return professional;
+      return professional
     },
     {
       detail: {
-        summary: "Get professional by id",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
-      },
+        summary: 'Get professional by id',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
+      }
     }
-  );
+  )
 
 const updateDoctorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission('update', 'PROFESSIONAL', { resourceIdParam: 'id' }))
   .patch(
-    "/professionals/:id",
+    '/professionals/:id',
     async ({ params, body, getScope }) => {
-      const scope = await getScope();
-      const parsed = parseSchema(updateProfessionalSchema, body);
+      const scope = await getScope()
+      const parsed = parseSchema(updateProfessionalSchema, body)
       const professional = await doctorUseCases.updateDoctor().execute({
         professionalId: params.id,
         scope,
-        ...parsed,
-      });
+        ...parsed
+      })
 
       if (!professional) {
-        throw new ResourceNotFoundError("Professional", params.id);
+        throw new ResourceNotFoundError('Professional', params.id)
       }
 
-      return professional;
+      return professional
     },
     {
       detail: {
-        summary: "Update professional",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
+        summary: 'Update professional',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
       },
       body: t.Object({
         firstName: t.Optional(t.String()),
         lastName: t.Optional(t.String()),
         ...professionalPersonBody,
-        facilityIds: t.Optional(t.Array(t.String(), { minItems: 1 })),
-      }),
+        facilityIds: t.Optional(t.Array(t.String(), { minItems: 1 }))
+      })
     }
-  );
+  )
 
 const professionalNoteSchema = z.object({
-  note: z.string().trim().min(1, "Note must not be empty").max(2_000),
-});
+  note: z.string().trim().min(1, 'Note must not be empty').max(2_000)
+})
 
-const MAX_PROFESSIONAL_NOTE_LENGTH = 2_000;
+const MAX_PROFESSIONAL_NOTE_LENGTH = 2_000
 
 const professionalNoteBody = t.Object({
-  note: t.String({ minLength: 1, maxLength: MAX_PROFESSIONAL_NOTE_LENGTH }),
-});
+  note: t.String({ minLength: 1, maxLength: MAX_PROFESSIONAL_NOTE_LENGTH })
+})
 
 const listProfessionalNotesRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission('read', 'PROFESSIONAL', { resourceIdParam: 'id' }))
   .get(
-    "/professionals/:id/notes",
+    '/professionals/:id/notes',
     async ({ params, getScope, getUserId }) => {
-      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      const [scope, userId] = await Promise.all([getScope(), getUserId()])
       return doctorUseCases.listProfessionalNotes().execute({
         professionalId: params.id,
         userId,
-        scope,
-      });
+        scope
+      })
     },
     {
       detail: {
-        summary: "List my notes for a professional",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
-      },
+        summary: 'List my notes for a professional',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
+      }
     }
-  );
+  )
 
 const createProfessionalNoteRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission('update', 'PROFESSIONAL', { resourceIdParam: 'id' }))
   .post(
-    "/professionals/:id/notes",
+    '/professionals/:id/notes',
     async ({ params, body, getScope, getUserId }) => {
-      const parsed = parseSchema(
-        professionalNoteSchema,
-        body
-      );
-      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      const parsed = parseSchema(professionalNoteSchema, body)
+      const [scope, userId] = await Promise.all([getScope(), getUserId()])
       return doctorUseCases.createProfessionalNote().execute({
         professionalId: params.id,
         userId,
         note: parsed.note,
-        scope,
-      });
+        scope
+      })
     },
     {
       detail: {
-        summary: "Create a private note for a professional",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
+        summary: 'Create a private note for a professional',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
       },
-      body: professionalNoteBody,
+      body: professionalNoteBody
     }
-  );
+  )
 
 const deleteDoctorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("delete", "PROFESSIONAL", { resourceIdParam: "id" }))
+  .use(requirePermission('delete', 'PROFESSIONAL', { resourceIdParam: 'id' }))
   .delete(
-    "/professionals/:id",
+    '/professionals/:id',
     async ({ params, getScope }) => {
-      const scope = await getScope();
+      const scope = await getScope()
       const deleted = await doctorUseCases.deleteDoctor().execute({
         professionalId: params.id,
-        scope,
-      });
+        scope
+      })
 
       if (!deleted) {
-        throw new ResourceNotFoundError("Professional", params.id);
+        throw new ResourceNotFoundError('Professional', params.id)
       }
 
-      return { message: "Professional deleted successfully" };
+      return { message: 'Professional deleted successfully' }
     },
     {
       detail: {
-        summary: "Delete professional",
-        tags: ["Professionals"],
-        security: [{ bearerAuth: [] }],
-      },
+        summary: 'Delete professional',
+        tags: ['Professionals'],
+        security: [{ bearerAuth: [] }]
+      }
     }
-  );
+  )
 
 export const professionalsRoute = new Elysia()
   .use(listProfessionalsRoute)
@@ -266,4 +261,4 @@ export const professionalsRoute = new Elysia()
   .use(createProfessionalNoteRoute)
   .use(getProfessionalRoute)
   .use(updateDoctorRoute)
-  .use(deleteDoctorRoute);
+  .use(deleteDoctorRoute)

@@ -1,27 +1,27 @@
-import { Elysia } from "elysia";
 import {
+  type AccessGrantRecord,
+  type Action,
   canAccessResource,
   canAccessRoute,
-  type Action,
   type Role,
-  type Subject,
-  type AccessGrantRecord,
-} from "@atlasmed/access";
-import { ForbiddenError } from "../../../../shared/errors";
+  type Subject
+} from '@atlasmed/access'
+import { Elysia } from 'elysia'
+import { ForbiddenError } from '../../../../shared/errors'
 
-let permissionPluginSeq = 0;
+let permissionPluginSeq = 0
 
 type PermissionContextUser = {
-  role: { name: Role };
-};
+  role: { name: Role }
+}
 
-type GetUserFn = () => Promise<PermissionContextUser>;
-type GetAccessGrantsFn = () => Promise<AccessGrantRecord[]>;
+type GetUserFn = () => Promise<PermissionContextUser>
+type GetAccessGrantsFn = () => Promise<AccessGrantRecord[]>
 
 type PermissionOptions = {
   /** Elysia param name containing the resource id (e.g. "id"). */
-  resourceIdParam?: string;
-};
+  resourceIdParam?: string
+}
 
 async function assertPermission(
   context: Record<string, unknown>,
@@ -29,22 +29,22 @@ async function assertPermission(
   subject: Subject,
   options?: PermissionOptions
 ): Promise<void> {
-  const getUser = context.getUser;
+  const getUser = context.getUser
 
-  if (typeof getUser !== "function") {
-    throw new ForbiddenError();
+  if (typeof getUser !== 'function') {
+    throw new ForbiddenError()
   }
 
-  const user = await (getUser as GetUserFn)();
+  const user = await (getUser as GetUserFn)()
 
-  let grants: AccessGrantRecord[] = [];
-  const getAccessGrants = context.getAccessGrants;
-  if (typeof getAccessGrants === "function") {
-    grants = await (getAccessGrants as GetAccessGrantsFn)();
+  let grants: AccessGrantRecord[] = []
+  const getAccessGrants = context.getAccessGrants
+  if (typeof getAccessGrants === 'function') {
+    grants = await (getAccessGrants as GetAccessGrantsFn)()
   }
 
-  const resourceIdParam = options?.resourceIdParam;
-  const params = context.params as Record<string, string> | undefined;
+  const resourceIdParam = options?.resourceIdParam
+  const params = context.params as Record<string, string> | undefined
 
   if (resourceIdParam && params?.[resourceIdParam]) {
     const allowed = canAccessResource(
@@ -53,17 +53,17 @@ async function assertPermission(
       action,
       subject,
       params[resourceIdParam]
-    );
+    )
 
     if (!allowed) {
-      throw new ForbiddenError();
+      throw new ForbiddenError()
     }
 
-    return;
+    return
   }
 
   if (!canAccessRoute(user.role.name, grants, action, subject)) {
-    throw new ForbiddenError();
+    throw new ForbiddenError()
   }
 }
 
@@ -82,14 +82,12 @@ export const requirePermission = (
   subject: Subject,
   options?: PermissionOptions
 ) => {
-  const pluginId = ++permissionPluginSeq;
-  const resourceSuffix = options?.resourceIdParam
-    ? `:res:${options.resourceIdParam}`
-    : "";
+  const pluginId = ++permissionPluginSeq
+  const resourceSuffix = options?.resourceIdParam ? `:res:${options.resourceIdParam}` : ''
 
   return new Elysia({
-    name: `permission:${action}:${subject}${resourceSuffix}:${pluginId}`,
-  }).onBeforeHandle({ as: "scoped" }, async (context) => {
-    await assertPermission(context, action, subject, options);
-  });
-};
+    name: `permission:${action}:${subject}${resourceSuffix}:${pluginId}`
+  }).onBeforeHandle({ as: 'scoped' }, async (context) => {
+    await assertPermission(context, action, subject, options)
+  })
+}

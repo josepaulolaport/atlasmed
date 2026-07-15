@@ -1,49 +1,45 @@
-import type { UserRepository } from "../interfaces/user.repository.interface";
-import type { IAuthCache } from "../interfaces/auth-cache.interface";
-import { UserNotFoundError, ValidationError } from "../../../../shared/errors";
+import { UserNotFoundError, ValidationError } from '../../../../shared/errors'
+import type { IAuthCache } from '../interfaces/auth-cache.interface'
+import type { UserRepository } from '../interfaces/user.repository.interface'
 
 interface UpdateProfileInput {
-  userId: string;
-  firstName?: string;
-  lastName?: string;
-  avatarUrl?: string | null;
+  userId: string
+  firstName?: string
+  lastName?: string
+  avatarUrl?: string | null
 }
 
 interface UpdateProfileDependencies {
-  userRepository: UserRepository;
-  authCache: IAuthCache;
+  userRepository: UserRepository
+  authCache: IAuthCache
 }
 
 export class UpdateProfileUseCase {
   constructor(private readonly dependencies: UpdateProfileDependencies) {}
 
   async execute(input: UpdateProfileInput) {
-    const { userId, firstName, lastName, avatarUrl } = input;
+    const { userId, firstName, lastName, avatarUrl } = input
 
-    const hasUpdates =
-      firstName !== undefined ||
-      lastName !== undefined ||
-      avatarUrl !== undefined;
+    const hasUpdates = firstName !== undefined || lastName !== undefined || avatarUrl !== undefined
 
     if (!hasUpdates) {
-      throw new ValidationError([
-        { field: "body", message: "At least one field must be provided" },
-      ]);
+      throw new ValidationError([{ field: 'body', message: 'At least one field must be provided' }])
     }
 
-    const user = await this.dependencies.userRepository.findById(userId);
+    const user = await this.dependencies.userRepository.findById(userId)
 
     if (!user) {
-      throw new UserNotFoundError(userId);
+      throw new UserNotFoundError(userId)
     }
 
-    const updatedUser = await this.dependencies.userRepository.updateProfile(
-      userId,
-      { firstName, lastName, avatarUrl }
-    );
+    const updatedUser = await this.dependencies.userRepository.updateProfile(userId, {
+      firstName,
+      lastName,
+      avatarUrl
+    })
 
-    await this.dependencies.authCache.invalidate(userId);
+    await this.dependencies.authCache.invalidate(userId)
 
-    return updatedUser;
+    return updatedUser
   }
 }

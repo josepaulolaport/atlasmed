@@ -1,50 +1,48 @@
-import { Role } from "@atlasmed/access";
-import type { ScopeContext } from "@atlasmed/access";
-import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
-import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
-import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
-import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
-import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
-import { TerritoryHierarchyValidator } from "../services/territory-hierarchy-validator.service";
-import { TerritoryClosureService } from "../services/territory-closure.service";
-import type { TerritoryContainmentService } from "../services/territory-containment.service";
-import {
-  isGroupingHierarchyType,
-  isManagerZoneType,
-} from "../constants/territory-roles.constants";
-import {
-  applyTerritoryBoundary,
-  assertBoundaryProvidedForType,
-} from "../services/territory-boundary.application";
-import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
-import { normalizeCountryCode } from "../constants/territory-geo.constants";
+import type { ScopeContext } from '@atlasmed/access'
+import { Role } from '@atlasmed/access'
+import { OperationNotAllowedError, ResourceNotFoundError } from '../../../../shared/errors'
+import { normalizeCountryCode } from '../constants/territory-geo.constants'
+import { isGroupingHierarchyType, isManagerZoneType } from '../constants/territory-roles.constants'
 import {
   legacyNodeTypeForTypeSlug,
-  normalizeTerritorySlug,
-} from "../constants/territory-slug.constants";
+  normalizeTerritorySlug
+} from '../constants/territory-slug.constants'
+import type { TerritoryRepository } from '../interfaces/territory.repository.interface'
+import type { TerritoryClosureRepository } from '../interfaces/territory-closure.repository.interface'
+import type {
+  GeoJsonGeometry,
+  TerritorySpatialRepository
+} from '../interfaces/territory-spatial.repository.interface'
+import type { TerritoryTypeRepository } from '../interfaces/territory-type.repository.interface'
 import {
-  OperationNotAllowedError,
-  ResourceNotFoundError,
-} from "../../../../shared/errors";
+  applyTerritoryBoundary,
+  assertBoundaryProvidedForType
+} from '../services/territory-boundary.application'
+import { TerritoryClosureService } from '../services/territory-closure.service'
+import type { TerritoryContainmentService } from '../services/territory-containment.service'
+import { TerritoryHierarchyValidator } from '../services/territory-hierarchy-validator.service'
 import {
   assertTerritoryReadable,
-  resolveReadableTerritoryIds,
-} from "../services/territory-scope-policy.service";
+  resolveReadableTerritoryIds
+} from '../services/territory-scope-policy.service'
+import { serializeBoundaryResolution } from '../utils/territory-boundary-resolution.utils'
 
 interface TerritoryCrudDependencies {
-  territoryRepository: TerritoryRepository;
-  territoryTypeRepository: TerritoryTypeRepository;
-  closureRepository: TerritoryClosureRepository;
-  spatialRepository: TerritorySpatialRepository;
-  containmentService: TerritoryContainmentService;
-  hierarchyValidator?: TerritoryHierarchyValidator;
-  closureService?: TerritoryClosureService;
-  onTerritoryDeactivated?: (territoryId: string) => Promise<void>;
-  onBoundaryChanged?: (territoryId: string) => Promise<void>;
-  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
+  territoryRepository: TerritoryRepository
+  territoryTypeRepository: TerritoryTypeRepository
+  closureRepository: TerritoryClosureRepository
+  spatialRepository: TerritorySpatialRepository
+  containmentService: TerritoryContainmentService
+  hierarchyValidator?: TerritoryHierarchyValidator
+  closureService?: TerritoryClosureService
+  onTerritoryDeactivated?: (territoryId: string) => Promise<void>
+  onBoundaryChanged?: (territoryId: string) => Promise<void>
+  onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>
 }
 
-function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>) {
+function serializeTerritoryType(
+  type: NonNullable<Awaited<ReturnType<TerritoryTypeRepository['findById']>>>
+) {
   return {
     id: type.id,
     slug: type.slug,
@@ -58,31 +56,34 @@ function serializeTerritoryType(type: NonNullable<Awaited<ReturnType<TerritoryTy
     blockSiblingOverlap: type.blockSiblingOverlap,
     participatesInGroupingHierarchy: type.participatesInGroupingHierarchy,
     sortOrder: type.sortOrder,
-    isActive: type.isActive,
-  };
+    isActive: type.isActive
+  }
 }
 
 function serializeTerritory(territory: {
-  id: string;
-  name: string;
-  slug: string;
-  code: string;
-  territoryTypeId: string;
-  territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>;
-  countryCode: string | null;
-  parentId: string | null;
-  managerTerritoryId: string | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  activeChildCount?: number;
-  clinicCount?: number;
-  assignedUserCount?: number;
-  repPatchCount?: number;
-  hasBoundary?: boolean;
+  id: string
+  name: string
+  slug: string
+  code: string
+  territoryTypeId: string
+  territoryType?: NonNullable<Awaited<ReturnType<TerritoryTypeRepository['findById']>>>
+  countryCode: string | null
+  parentId: string | null
+  managerTerritoryId: string | null
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+  activeChildCount?: number
+  clinicCount?: number
+  assignedUserCount?: number
+  repPatchCount?: number
+  hasBoundary?: boolean
 }) {
   if (!territory.territoryType) {
-    throw new OperationNotAllowedError("serializeTerritory", `Territory ${territory.id} is missing territoryType`);
+    throw new OperationNotAllowedError(
+      'serializeTerritory',
+      `Territory ${territory.id} is missing territoryType`
+    )
   }
 
   return {
@@ -103,52 +104,51 @@ function serializeTerritory(territory: {
     isLeaf: (territory.activeChildCount ?? 0) === 0,
     isCountryLevel: territory.territoryType.isCountryLevel,
     createdAt: territory.createdAt.toISOString(),
-    updatedAt: territory.updatedAt.toISOString(),
-  };
+    updatedAt: territory.updatedAt.toISOString()
+  }
 }
 
 export class TerritoryCrudUseCases {
-  private readonly hierarchyValidator: TerritoryHierarchyValidator;
-  private readonly closureService: TerritoryClosureService;
+  private readonly hierarchyValidator: TerritoryHierarchyValidator
+  private readonly closureService: TerritoryClosureService
 
   constructor(private readonly deps: TerritoryCrudDependencies) {
-    this.hierarchyValidator =
-      deps.hierarchyValidator ?? new TerritoryHierarchyValidator();
+    this.hierarchyValidator = deps.hierarchyValidator ?? new TerritoryHierarchyValidator()
     this.closureService =
       deps.closureService ??
       new TerritoryClosureService({
         territoryRepository: deps.territoryRepository,
-        closureRepository: deps.closureRepository,
-      });
+        closureRepository: deps.closureRepository
+      })
   }
 
   async createTerritory(input: {
-    name: string;
-    slug: string;
-    territoryTypeId?: string;
-    typeSlug?: string;
-    countryCode?: string;
-    parentId?: string;
-    boundary?: GeoJsonGeometry;
+    name: string
+    slug: string
+    territoryTypeId?: string
+    typeSlug?: string
+    countryCode?: string
+    parentId?: string
+    boundary?: GeoJsonGeometry
   }) {
     const type = input.territoryTypeId
       ? await this.deps.territoryTypeRepository.findById(input.territoryTypeId)
       : input.typeSlug
         ? await this.deps.territoryTypeRepository.findBySlug(input.typeSlug)
-        : null;
+        : null
 
     if (!type || !type.isActive) {
       throw new ResourceNotFoundError(
-        "TerritoryType",
-        input.territoryTypeId ?? input.typeSlug ?? "unknown"
-      );
+        'TerritoryType',
+        input.territoryTypeId ?? input.typeSlug ?? 'unknown'
+      )
     }
 
-    let parent = null;
+    let parent = null
     if (input.parentId) {
-      parent = await this.deps.territoryRepository.findById(input.parentId);
+      parent = await this.deps.territoryRepository.findById(input.parentId)
       if (!parent) {
-        throw new ResourceNotFoundError("Territory", input.parentId);
+        throw new ResourceNotFoundError('Territory', input.parentId)
       }
     }
 
@@ -156,25 +156,24 @@ export class TerritoryCrudUseCases {
       countryCode: input.countryCode,
       slug: input.slug,
       type,
-      parent,
-    });
+      parent
+    })
 
     const slug = resolveTerritorySlug({
       slug: input.slug,
       type,
-      countryCode,
-    });
-
-    const hasActiveCountryForCode = !!(await this.deps.territoryRepository.findActiveCountryByCode(
       countryCode
-    ));
+    })
 
-    const existingSlug = await this.deps.territoryRepository.findBySlug(slug);
+    const hasActiveCountryForCode =
+      !!(await this.deps.territoryRepository.findActiveCountryByCode(countryCode))
+
+    const existingSlug = await this.deps.territoryRepository.findBySlug(slug)
     if (existingSlug) {
       throw new OperationNotAllowedError(
-        "create_territory",
+        'create_territory',
         `Territory identifier '${slug}' is already in use`
-      );
+      )
     }
 
     this.hierarchyValidator.validateCreate({
@@ -183,19 +182,19 @@ export class TerritoryCrudUseCases {
       countryCode,
       parent,
       parentId: input.parentId ?? null,
-      hasActiveCountryForCode,
-    });
+      hasActiveCountryForCode
+    })
 
-    const boundary = assertBoundaryProvidedForType(type.canHaveBoundary, input.boundary);
+    const boundary = assertBoundaryProvidedForType(type.canHaveBoundary, input.boundary)
 
-    let resolvedParentId: string | null = null;
+    let resolvedParentId: string | null = null
     if (isGroupingHierarchyType(type) && !type.isCountryLevel) {
-      resolvedParentId = input.parentId ?? null;
+      resolvedParentId = input.parentId ?? null
       if (!resolvedParentId) {
         throw new OperationNotAllowedError(
-          "create_territory",
-          "Grouping hierarchy territories require a parent"
-        );
+          'create_territory',
+          'Grouping hierarchy territories require a parent'
+        )
       }
     }
 
@@ -206,16 +205,14 @@ export class TerritoryCrudUseCases {
       nodeType: legacyNodeTypeForTypeSlug(type.slug),
       territoryTypeId: type.id,
       countryCode,
-      parentId: resolvedParentId,
-    });
+      parentId: resolvedParentId
+    })
 
     if (isGroupingHierarchyType(type)) {
-      await this.closureService.rebuildSubtree(territory.id);
+      await this.closureService.rebuildSubtree(territory.id)
     }
 
-    let boundaryResolution:
-      | Awaited<ReturnType<typeof applyTerritoryBoundary>>
-      | undefined;
+    let boundaryResolution: Awaited<ReturnType<typeof applyTerritoryBoundary>> | undefined
 
     if (type.canHaveBoundary) {
       boundaryResolution = await applyTerritoryBoundary(
@@ -225,270 +222,239 @@ export class TerritoryCrudUseCases {
           spatialRepository: this.deps.spatialRepository,
           containmentService: this.deps.containmentService,
           onBoundaryChanged: this.deps.onBoundaryChanged,
-          onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged,
+          onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged
         },
         { ...territory, territoryType: type },
         boundary
-      );
+      )
     }
 
-    const serialized = serializeTerritory(await this.enrichTerritory(territory.id));
+    const serialized = serializeTerritory(await this.enrichTerritory(territory.id))
 
     if (!boundaryResolution) {
-      return serialized;
+      return serialized
     }
 
     return {
       ...serialized,
-      boundaryResolution: serializeBoundaryResolution(boundaryResolution),
-    };
+      boundaryResolution: serializeBoundaryResolution(boundaryResolution)
+    }
   }
 
   async getTerritory(id: string) {
-    const territory = await this.deps.territoryRepository.findById(id);
+    const territory = await this.deps.territoryRepository.findById(id)
     if (!territory) {
-      return null;
+      return null
     }
-    return serializeTerritory(await this.enrichTerritory(id));
+    return serializeTerritory(await this.enrichTerritory(id))
   }
 
   async listTerritories(
-    format: "tree" | "flat" = "flat",
+    format: 'tree' | 'flat' = 'flat',
     scope?: ScopeContext,
     filters?: { typeSlug?: string; managerTerritoryId?: string; sectorId?: string }
   ) {
-    const territories = await this.deps.territoryRepository.findAllActive();
+    const territories = await this.deps.territoryRepository.findAllActive()
 
-    let filtered = territories;
+    let filtered = territories
     if (scope && !scope.isGlobal) {
-      const readableIds = await resolveReadableTerritoryIds(
-        scope,
-        this.deps.closureRepository
-      );
+      const readableIds = await resolveReadableTerritoryIds(scope, this.deps.closureRepository)
       filtered =
         readableIds === null
           ? territories
-          : territories.filter((territory) => readableIds.has(territory.id));
+          : territories.filter((territory) => readableIds.has(territory.id))
     }
 
     if (filters?.typeSlug) {
-      filtered = filtered.filter(
-        (t) => t.territoryType?.slug === filters.typeSlug
-      );
+      filtered = filtered.filter((t) => t.territoryType?.slug === filters.typeSlug)
     }
 
     if (filters?.managerTerritoryId) {
-      filtered = filtered.filter(
-        (t) => t.managerTerritoryId === filters.managerTerritoryId
-      );
+      filtered = filtered.filter((t) => t.managerTerritoryId === filters.managerTerritoryId)
     }
 
     if (filters?.sectorId) {
-      filtered = filtered.filter((t) => t.sectorId === filters.sectorId);
-    }
-
-    const enriched = await Promise.all(
-      filtered.map(async (t) =>
-        serializeTerritory(await this.enrichTerritory(t.id))
-      )
-    );
-
-    if (format === "flat") {
-      return { data: enriched };
-    }
-
-    return { data: this.buildTree(enriched) };
-  }
-
-  async listGroupingTree(scope?: ScopeContext) {
-    const territories = await this.deps.territoryRepository.findAllActive();
-    const groupingOnly = territories.filter(
-      (territory) => territory.territoryType?.participatesInGroupingHierarchy
-    );
-
-    let filtered = groupingOnly;
-    if (scope && !scope.isGlobal) {
-      const readableIds = await resolveReadableTerritoryIds(
-        scope,
-        this.deps.closureRepository
-      );
-      filtered =
-        readableIds === null
-          ? groupingOnly
-          : groupingOnly.filter((territory) => readableIds.has(territory.id));
+      filtered = filtered.filter((t) => t.sectorId === filters.sectorId)
     }
 
     const enriched = await Promise.all(
       filtered.map(async (t) => serializeTerritory(await this.enrichTerritory(t.id)))
-    );
+    )
 
-    return { data: this.buildTree(enriched) };
+    if (format === 'flat') {
+      return { data: enriched }
+    }
+
+    return { data: this.buildTree(enriched) }
+  }
+
+  async listGroupingTree(scope?: ScopeContext) {
+    const territories = await this.deps.territoryRepository.findAllActive()
+    const groupingOnly = territories.filter(
+      (territory) => territory.territoryType?.participatesInGroupingHierarchy
+    )
+
+    let filtered = groupingOnly
+    if (scope && !scope.isGlobal) {
+      const readableIds = await resolveReadableTerritoryIds(scope, this.deps.closureRepository)
+      filtered =
+        readableIds === null
+          ? groupingOnly
+          : groupingOnly.filter((territory) => readableIds.has(territory.id))
+    }
+
+    const enriched = await Promise.all(
+      filtered.map(async (t) => serializeTerritory(await this.enrichTerritory(t.id)))
+    )
+
+    return { data: this.buildTree(enriched) }
   }
 
   async updateTerritory(
     id: string,
     input: {
-      name?: string;
-      parentId?: string | null;
-      isActive?: boolean;
+      name?: string
+      parentId?: string | null
+      isActive?: boolean
     }
   ) {
-    const territory = await this.deps.territoryRepository.findById(id);
+    const territory = await this.deps.territoryRepository.findById(id)
     if (!territory) {
-      throw new ResourceNotFoundError("Territory", id);
+      throw new ResourceNotFoundError('Territory', id)
     }
 
     const territoryType =
       territory.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId))
     if (!territoryType) {
-      throw new ResourceNotFoundError("TerritoryType", territory.territoryTypeId);
+      throw new ResourceNotFoundError('TerritoryType', territory.territoryTypeId)
     }
 
     if (input.isActive === false) {
-      await this.validateDeactivate(id, territoryType);
+      await this.validateDeactivate(id, territoryType)
     }
 
     if (input.parentId !== undefined && input.parentId !== territory.parentId) {
       if (!isGroupingHierarchyType(territoryType)) {
         throw new OperationNotAllowedError(
-          "reparent_territory",
-          "Only grouping hierarchy territories can be reparented"
-        );
+          'reparent_territory',
+          'Only grouping hierarchy territories can be reparented'
+        )
       }
 
       if (!input.parentId) {
         if (!territoryType.isCountryLevel) {
           throw new OperationNotAllowedError(
-            "reparent_territory",
-            "Only country-level territories can have no parent"
-          );
+            'reparent_territory',
+            'Only country-level territories can have no parent'
+          )
         }
       } else {
-        const newParent = await this.deps.territoryRepository.findById(input.parentId);
+        const newParent = await this.deps.territoryRepository.findById(input.parentId)
         if (!newParent) {
-          throw new ResourceNotFoundError("Territory", input.parentId);
+          throw new ResourceNotFoundError('Territory', input.parentId)
         }
-        const descendantIds = await this.deps.closureRepository.findDescendantIds(
-          [id],
-          false
-        );
+        const descendantIds = await this.deps.closureRepository.findDescendantIds([id], false)
         this.hierarchyValidator.validateReparent({
           territory,
           territoryType,
           newParent,
-          descendantIds,
-        });
+          descendantIds
+        })
       }
     }
 
     const updated = await this.deps.territoryRepository.update(id, {
       name: input.name,
       parentId: input.parentId,
-      isActive: input.isActive,
-    });
+      isActive: input.isActive
+    })
 
     if (input.parentId !== undefined && input.parentId !== territory.parentId) {
-      await this.closureService.rebuildSubtree(id);
+      await this.closureService.rebuildSubtree(id)
     }
 
     if (input.isActive === false && territory.isActive) {
-      await this.deps.onTerritoryDeactivated?.(id);
+      await this.deps.onTerritoryDeactivated?.(id)
     }
 
-    return serializeTerritory(await this.enrichTerritory(updated.id));
+    return serializeTerritory(await this.enrichTerritory(updated.id))
   }
 
   async deactivateTerritory(id: string) {
-    return this.updateTerritory(id, { isActive: false });
+    return this.updateTerritory(id, { isActive: false })
   }
 
   async getDescendants(id: string, scope?: ScopeContext) {
-    const territory = await this.deps.territoryRepository.findById(id);
+    const territory = await this.deps.territoryRepository.findById(id)
     if (!territory) {
-      throw new ResourceNotFoundError("Territory", id);
+      throw new ResourceNotFoundError('Territory', id)
     }
 
     if (scope && !scope.isGlobal) {
-      const readableIds = await resolveReadableTerritoryIds(
-        scope,
-        this.deps.closureRepository
-      );
-      assertTerritoryReadable(readableIds, id);
+      const readableIds = await resolveReadableTerritoryIds(scope, this.deps.closureRepository)
+      assertTerritoryReadable(readableIds, id)
     }
 
-    const descendantIds = await this.deps.closureRepository.findDescendantIds(
-      [id],
-      true
-    );
+    const descendantIds = await this.deps.closureRepository.findDescendantIds([id], true)
 
     const scopedDescendantIds =
       scope && !scope.isGlobal
         ? descendantIds.filter(
             (descendantId) =>
-              descendantId !== id &&
-              scope.effectiveTerritoryIds.includes(descendantId)
+              descendantId !== id && scope.effectiveTerritoryIds.includes(descendantId)
           )
-        : descendantIds.filter((descendantId) => descendantId !== id);
+        : descendantIds.filter((descendantId) => descendantId !== id)
 
     return {
       territoryId: id,
-      descendantIds: scopedDescendantIds,
-    };
+      descendantIds: scopedDescendantIds
+    }
   }
 
   private async validateDeactivate(
     id: string,
-    territoryType: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>
+    territoryType: NonNullable<Awaited<ReturnType<TerritoryTypeRepository['findById']>>>
   ): Promise<void> {
     if (isManagerZoneType(territoryType)) {
-      const repPatchCount = await this.deps.territoryRepository.countRepPatchesByManagerZone(id);
+      const repPatchCount = await this.deps.territoryRepository.countRepPatchesByManagerZone(id)
       if (repPatchCount > 0) {
         throw new OperationNotAllowedError(
-          "deactivate_territory",
-          "Manager zone still has active rep patches"
-        );
+          'deactivate_territory',
+          'Manager zone still has active rep patches'
+        )
       }
     }
 
     if (isGroupingHierarchyType(territoryType)) {
-      const activeChildren = await this.deps.territoryRepository.countActiveChildren(id);
+      const activeChildren = await this.deps.territoryRepository.countActiveChildren(id)
       if (activeChildren > 0) {
-        throw new OperationNotAllowedError(
-          "deactivate_territory",
-          "Territory has active children"
-        );
+        throw new OperationNotAllowedError('deactivate_territory', 'Territory has active children')
       }
     }
 
-    const clinicCount = await this.deps.territoryRepository.countClinics(id);
+    const clinicCount = await this.deps.territoryRepository.countClinics(id)
     if (clinicCount > 0) {
-      throw new OperationNotAllowedError(
-        "deactivate_territory",
-        "Territory has assigned clinics"
-      );
+      throw new OperationNotAllowedError('deactivate_territory', 'Territory has assigned clinics')
     }
 
-    const assignedUsers = await this.deps.territoryRepository.countAssignedUsers(id);
+    const assignedUsers = await this.deps.territoryRepository.countAssignedUsers(id)
     if (assignedUsers > 0) {
-      throw new OperationNotAllowedError(
-        "deactivate_territory",
-        "Territory has assigned users"
-      );
+      throw new OperationNotAllowedError('deactivate_territory', 'Territory has assigned users')
     }
   }
 
   private async enrichTerritory(id: string) {
-    const territory = await this.deps.territoryRepository.findById(id);
+    const territory = await this.deps.territoryRepository.findById(id)
     if (!territory) {
-      throw new ResourceNotFoundError("Territory", id);
+      throw new ResourceNotFoundError('Territory', id)
     }
 
     const territoryType =
       territory.territoryType ??
-      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId))
     if (!territoryType) {
-      throw new ResourceNotFoundError("TerritoryType", territory.territoryTypeId);
+      throw new ResourceNotFoundError('TerritoryType', territory.territoryTypeId)
     }
 
     const [activeChildCount, clinicCount, assignedUserCount, hasBoundary, repPatchCount] =
@@ -499,8 +465,8 @@ export class TerritoryCrudUseCases {
         this.deps.spatialRepository.hasBoundary(id),
         isManagerZoneType(territoryType)
           ? this.deps.territoryRepository.countRepPatchesByManagerZone(id)
-          : Promise.resolve(0),
-      ]);
+          : Promise.resolve(0)
+      ])
 
     return {
       ...territory,
@@ -509,28 +475,25 @@ export class TerritoryCrudUseCases {
       clinicCount,
       assignedUserCount,
       hasBoundary,
-      repPatchCount,
-    };
+      repPatchCount
+    }
   }
 
   private buildTree(
     territories: ReturnType<typeof serializeTerritory>[]
   ): Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> {
-    const byId = new Map(
-      territories.map((t) => [t.id, { ...t, children: [] as unknown[] }])
-    );
-    const roots: Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> =
-      [];
+    const byId = new Map(territories.map((t) => [t.id, { ...t, children: [] as unknown[] }]))
+    const roots: Array<ReturnType<typeof serializeTerritory> & { children: unknown[] }> = []
 
     for (const territory of byId.values()) {
       if (territory.parentId && byId.has(territory.parentId)) {
-        byId.get(territory.parentId)!.children.push(territory);
+        byId.get(territory.parentId)!.children.push(territory)
       } else {
-        roots.push(territory);
+        roots.push(territory)
       }
     }
 
-    return roots;
+    return roots
   }
 }
 
@@ -539,11 +502,11 @@ export function assertManagerReadScope(
   territoryId: string
 ): void {
   if (scope.isGlobal) {
-    return;
+    return
   }
 
   if (!scope.effectiveTerritoryIds.includes(territoryId)) {
-    throw new OperationNotAllowedError("read_territory", "Territory outside manager scope");
+    throw new OperationNotAllowedError('read_territory', 'Territory outside manager scope')
   }
 }
 
@@ -553,50 +516,50 @@ export async function assertManagerReadableTerritory(
   closureRepository: TerritoryClosureRepository
 ): Promise<void> {
   if (scope.isGlobal) {
-    return;
+    return
   }
 
-  const readableIds = await resolveReadableTerritoryIds(scope, closureRepository);
-  assertTerritoryReadable(readableIds, territoryId);
+  const readableIds = await resolveReadableTerritoryIds(scope, closureRepository)
+  assertTerritoryReadable(readableIds, territoryId)
 }
 
 export function isAdminRole(role: Role): boolean {
-  return role === Role.ADMIN;
+  return role === Role.ADMIN
 }
 
 export function isManagerRole(role: Role): boolean {
-  return role === Role.MANAGER;
+  return role === Role.MANAGER
 }
 
 function resolveCountryCode(input: {
-  countryCode?: string;
-  slug: string;
-  type: { isCountryLevel: boolean };
-  parent: { countryCode: string | null } | null;
+  countryCode?: string
+  slug: string
+  type: { isCountryLevel: boolean }
+  parent: { countryCode: string | null } | null
 }): string {
   if (input.countryCode?.trim()) {
-    return normalizeCountryCode(input.countryCode);
+    return normalizeCountryCode(input.countryCode)
   }
 
   if (input.parent?.countryCode) {
-    return normalizeCountryCode(input.parent.countryCode);
+    return normalizeCountryCode(input.parent.countryCode)
   }
 
   if (input.type.isCountryLevel && input.slug.trim()) {
-    return normalizeCountryCode(input.slug);
+    return normalizeCountryCode(input.slug)
   }
 
-  return normalizeCountryCode(undefined);
+  return normalizeCountryCode(undefined)
 }
 
 function resolveTerritorySlug(input: {
-  slug: string;
-  type: { isCountryLevel: boolean };
-  countryCode: string;
+  slug: string
+  type: { isCountryLevel: boolean }
+  countryCode: string
 }): string {
   if (input.type.isCountryLevel) {
-    return normalizeTerritorySlug(input.countryCode);
+    return normalizeTerritorySlug(input.countryCode)
   }
 
-  return normalizeTerritorySlug(input.slug);
+  return normalizeTerritorySlug(input.slug)
 }

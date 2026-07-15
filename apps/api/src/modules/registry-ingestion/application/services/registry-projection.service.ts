@@ -1,32 +1,32 @@
 import type {
   RegistryFacilityProjection,
   RegistryProfessionalProjection,
-  RegistryRepresentativeProjection,
-} from "../interfaces/registry-read.repository.interface";
+  RegistryRepresentativeProjection
+} from '../interfaces/registry-read.repository.interface'
 
 export function projectRegistryFacility(row: {
-  facilityId: string;
-  cnesCode: string | null;
-  legalName: string | null;
-  tradeName: string | null;
-  streetAddress: string | null;
-  streetNumber: string | null;
-  addressComplement: string | null;
-  neighborhood: string | null;
-  postalCode: string | null;
-  phoneNumber: string | null;
-  faxNumber: string | null;
-  email: string | null;
-  websiteUrl: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  cnpj: string | null;
-  cpf: string | null;
-  facilityTypeCode: string | null;
-  deactivationReasonCode: string | null;
-  lastUpdatedDate: string | null;
+  facilityId: string
+  cnesCode: string | null
+  legalName: string | null
+  tradeName: string | null
+  streetAddress: string | null
+  streetNumber: string | null
+  addressComplement: string | null
+  neighborhood: string | null
+  postalCode: string | null
+  phoneNumber: string | null
+  faxNumber: string | null
+  email: string | null
+  websiteUrl: string | null
+  latitude: number | null
+  longitude: number | null
+  cnpj: string | null
+  cpf: string | null
+  facilityTypeCode: string | null
+  deactivationReasonCode: string | null
+  lastUpdatedDate: string | null
 }): RegistryFacilityProjection {
-  const displayName = row.tradeName?.trim() || row.legalName?.trim() || null;
+  const displayName = row.tradeName?.trim() || row.legalName?.trim() || null
 
   return {
     facilityId: row.facilityId,
@@ -49,24 +49,24 @@ export function projectRegistryFacility(row: {
     cpf: row.cpf,
     facilityTypeCode: row.facilityTypeCode,
     deactivationReasonCode: row.deactivationReasonCode,
-    lastUpdatedDate: row.lastUpdatedDate,
-  };
+    lastUpdatedDate: row.lastUpdatedDate
+  }
 }
 
 export function projectRegistryProfessional(row: {
-  professionalId: string;
-  fullName: string;
-  socialName: string | null;
-  taxId?: string | null;
-  occupationCode: string;
-  municipalityId: string | null;
-  employmentTypeCode: string | null;
-  startDate: string | null;
-  terminationDate: string | null;
-  lastUpdatedDate: string | null;
-  crmCouncil?: string | null;
-  crmNumber?: string | null;
-  crmState?: string | null;
+  professionalId: string
+  fullName: string
+  socialName: string | null
+  taxId?: string | null
+  occupationCode: string
+  municipalityId: string | null
+  employmentTypeCode: string | null
+  startDate: string | null
+  terminationDate: string | null
+  lastUpdatedDate: string | null
+  crmCouncil?: string | null
+  crmNumber?: string | null
+  crmState?: string | null
 }): RegistryProfessionalProjection {
   return {
     professionalId: row.professionalId,
@@ -81,37 +81,37 @@ export function projectRegistryProfessional(row: {
     lastUpdatedDate: row.lastUpdatedDate,
     crmCouncil: row.crmCouncil ?? null,
     crmNumber: row.crmNumber ?? null,
-    crmState: row.crmState ?? null,
-  };
+    crmState: row.crmState ?? null
+  }
 }
 
 function splitRegistryFullName(fullName: string): { firstName: string; lastName: string } {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
+  const parts = fullName.trim().split(/\s+/).filter(Boolean)
 
   if (parts.length === 0) {
-    return { firstName: "Unknown", lastName: "Professional" };
+    return { firstName: 'Unknown', lastName: 'Professional' }
   }
 
   if (parts.length === 1) {
-    return { firstName: parts[0]!, lastName: parts[0]! };
+    return { firstName: parts[0]!, lastName: parts[0]! }
   }
 
   return {
     firstName: parts[0]!,
-    lastName: parts.slice(1).join(" "),
-  };
+    lastName: parts.slice(1).join(' ')
+  }
 }
 
 export function buildProfessionalSourceUpsertFromRegistry(
   projection: RegistryProfessionalProjection,
   params: {
-    sourceProvider: string;
-    sourceContentHash: string;
-    sourceLastSeenAt: Date;
-    specialty?: string | null;
+    sourceProvider: string
+    sourceContentHash: string
+    sourceLastSeenAt: Date
+    specialty?: string | null
   }
 ) {
-  const { firstName, lastName } = splitRegistryFullName(projection.fullName);
+  const { firstName, lastName } = splitRegistryFullName(projection.fullName)
 
   return {
     sourceProvider: params.sourceProvider,
@@ -126,19 +126,19 @@ export function buildProfessionalSourceUpsertFromRegistry(
     crmNumber: projection.crmNumber,
     crmState: projection.crmState,
     sourceContentHash: params.sourceContentHash,
-    sourceLastSeenAt: params.sourceLastSeenAt,
-  };
+    sourceLastSeenAt: params.sourceLastSeenAt
+  }
 }
 
 export function projectRegistryRepresentative(row: {
-  facilityId: string;
-  representativeName: string;
-  roleTitle: string | null;
-  email: string | null;
-  taxId: string | null;
-  lastUpdatedDate: string | null;
+  facilityId: string
+  representativeName: string
+  roleTitle: string | null
+  email: string | null
+  taxId: string | null
+  lastUpdatedDate: string | null
 }): RegistryRepresentativeProjection {
-  const externalKey = row.taxId?.trim() || row.representativeName.trim();
+  const externalKey = row.taxId?.trim() || row.representativeName.trim()
 
   return {
     facilityId: row.facilityId,
@@ -147,8 +147,8 @@ export function projectRegistryRepresentative(row: {
     roleTitle: row.roleTitle,
     email: row.email,
     taxId: row.taxId,
-    lastUpdatedDate: row.lastUpdatedDate,
-  };
+    lastUpdatedDate: row.lastUpdatedDate
+  }
 }
 
 export function buildRegistryAddress(projection: RegistryFacilityProjection): string | null {
@@ -157,14 +157,14 @@ export function buildRegistryAddress(projection: RegistryFacilityProjection): st
     projection.streetNumber,
     projection.addressComplement,
     projection.neighborhood,
-    projection.postalCode,
-  ].filter((part) => part && part.trim().length > 0);
+    projection.postalCode
+  ].filter((part) => part && part.trim().length > 0)
 
-  return parts.length > 0 ? parts.join(", ") : null;
+  return parts.length > 0 ? parts.join(', ') : null
 }
 
 export type {
   RegistryFacilityProjection,
   RegistryProfessionalProjection,
-  RegistryRepresentativeProjection,
-};
+  RegistryRepresentativeProjection
+}

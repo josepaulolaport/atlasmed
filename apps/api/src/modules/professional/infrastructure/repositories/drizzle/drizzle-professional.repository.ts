@@ -1,12 +1,12 @@
 import {
-  professionals,
-  professionalNotes,
-  facilityProfessionals,
   facilities,
-} from "@atlasmed/database";
-import { eq, and, or, isNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
-import { db } from "../../../../../infrastructure/database/db";
-import { ResourceNotFoundError } from "../../../../../shared/errors";
+  facilityProfessionals,
+  professionalNotes,
+  professionals
+} from '@atlasmed/database'
+import { and, asc, desc, eq, getTableColumns, ilike, inArray, isNull, or, sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
+import { ResourceNotFoundError } from '../../../../../shared/errors'
 import type {
   ProfessionalCreateInput,
   ProfessionalFacilitySummary,
@@ -15,17 +15,13 @@ import type {
   ProfessionalRecord,
   ProfessionalRepository,
   ProfessionalSourceUpsertInput,
-  ProfessionalUpdateInput,
-} from "../../../application/interfaces/professional.repository.interface";
+  ProfessionalUpdateInput
+} from '../../../application/interfaces/professional.repository.interface'
 
-type ProfessionalRow = typeof professionals.$inferSelect;
+type ProfessionalRow = typeof professionals.$inferSelect
 
-function resolveFullName(
-  firstName: string,
-  lastName: string,
-  fullName?: string | null
-): string {
-  return fullName?.trim() || `${firstName} ${lastName}`.trim();
+function resolveFullName(firstName: string, lastName: string, fullName?: string | null): string {
+  return fullName?.trim() || `${firstName} ${lastName}`.trim()
 }
 
 function mapProfessional(
@@ -61,44 +57,42 @@ function mapProfessional(
     sourcePresent: professional.sourcePresent,
     sourceTracked: professional.sourceTracked,
     manuallyEditedAt: professional.manuallyEditedAt,
-    facilityIds: facilityAssociations
-      .filter((a) => a.endedAt === null)
-      .map((a) => a.facilityId),
+    facilityIds: facilityAssociations.filter((a) => a.endedAt === null).map((a) => a.facilityId),
     createdAt: professional.createdAt,
     updatedAt: professional.updatedAt,
-    deletedAt: professional.deletedAt,
-  };
+    deletedAt: professional.deletedAt
+  }
 }
 
 async function loadAssociationsMap(
   professionalIds: string[]
 ): Promise<Map<string, Array<{ facilityId: string; endedAt: Date | null }>>> {
   if (professionalIds.length === 0) {
-    return new Map();
+    return new Map()
   }
 
   const rows = await db
     .select({
       professionalId: facilityProfessionals.professionalId,
       facilityId: facilityProfessionals.facilityId,
-      endedAt: facilityProfessionals.endedAt,
+      endedAt: facilityProfessionals.endedAt
     })
     .from(facilityProfessionals)
-    .where(inArray(facilityProfessionals.professionalId, professionalIds));
+    .where(inArray(facilityProfessionals.professionalId, professionalIds))
 
-  const map = new Map<string, Array<{ facilityId: string; endedAt: Date | null }>>();
+  const map = new Map<string, Array<{ facilityId: string; endedAt: Date | null }>>()
   for (const row of rows) {
-    if (!map.has(row.professionalId)) map.set(row.professionalId, []);
-    map.get(row.professionalId)!.push({ facilityId: row.facilityId, endedAt: row.endedAt });
+    if (!map.has(row.professionalId)) map.set(row.professionalId, [])
+    map.get(row.professionalId)!.push({ facilityId: row.facilityId, endedAt: row.endedAt })
   }
-  return map;
+  return map
 }
 
 async function loadAssociationsForOne(
   professionalId: string
 ): Promise<Array<{ facilityId: string; endedAt: Date | null }>> {
-  const map = await loadAssociationsMap([professionalId]);
-  return map.get(professionalId) ?? [];
+  const map = await loadAssociationsMap([professionalId])
+  return map.get(professionalId) ?? []
 }
 
 function buildPersonCreateData(data: ProfessionalCreateInput) {
@@ -121,55 +115,53 @@ function buildPersonCreateData(data: ProfessionalCreateInput) {
     primarySpecialtyLabel: data.specialty ?? null,
     crmCouncil: data.crmCouncil ?? null,
     crmNumber: data.crmNumber ?? null,
-    crmState: data.crmState ?? null,
-  };
+    crmState: data.crmState ?? null
+  }
 }
 
 function buildPersonUpdateData(data: ProfessionalUpdateInput) {
-  const patch: Partial<typeof professionals.$inferInsert> = {};
+  const patch: Partial<typeof professionals.$inferInsert> = {}
 
-  if (data.firstName !== undefined) patch.firstName = data.firstName;
-  if (data.lastName !== undefined) patch.lastName = data.lastName;
-  if (data.fullName !== undefined) patch.fullName = data.fullName;
-  if (data.socialName !== undefined) patch.socialName = data.socialName;
-  if (data.taxId !== undefined) patch.taxId = data.taxId;
-  if (data.birthDate !== undefined) patch.birthDate = data.birthDate;
-  if (data.mobilePhone !== undefined) patch.mobilePhone = data.mobilePhone;
-  if (data.landlinePhone !== undefined) patch.landlinePhone = data.landlinePhone;
-  if (data.email !== undefined) patch.email = data.email;
-  if (data.websiteUrl !== undefined) patch.websiteUrl = data.websiteUrl;
-  if (data.imageUrl !== undefined) patch.imageUrl = data.imageUrl;
-  if (data.favoriteTeam !== undefined) patch.favoriteTeam = data.favoriteTeam;
-  if (data.favoriteSport !== undefined) patch.favoriteSport = data.favoriteSport;
-  if (data.hobbies !== undefined) patch.hobbies = data.hobbies;
-  if (data.notes !== undefined) patch.notes = data.notes;
-  if (data.specialty !== undefined) patch.primarySpecialtyLabel = data.specialty;
-  if (data.crmCouncil !== undefined) patch.crmCouncil = data.crmCouncil;
-  if (data.crmNumber !== undefined) patch.crmNumber = data.crmNumber;
-  if (data.crmState !== undefined) patch.crmState = data.crmState;
-  if (data.manuallyEditedAt !== undefined) patch.manuallyEditedAt = data.manuallyEditedAt;
+  if (data.firstName !== undefined) patch.firstName = data.firstName
+  if (data.lastName !== undefined) patch.lastName = data.lastName
+  if (data.fullName !== undefined) patch.fullName = data.fullName
+  if (data.socialName !== undefined) patch.socialName = data.socialName
+  if (data.taxId !== undefined) patch.taxId = data.taxId
+  if (data.birthDate !== undefined) patch.birthDate = data.birthDate
+  if (data.mobilePhone !== undefined) patch.mobilePhone = data.mobilePhone
+  if (data.landlinePhone !== undefined) patch.landlinePhone = data.landlinePhone
+  if (data.email !== undefined) patch.email = data.email
+  if (data.websiteUrl !== undefined) patch.websiteUrl = data.websiteUrl
+  if (data.imageUrl !== undefined) patch.imageUrl = data.imageUrl
+  if (data.favoriteTeam !== undefined) patch.favoriteTeam = data.favoriteTeam
+  if (data.favoriteSport !== undefined) patch.favoriteSport = data.favoriteSport
+  if (data.hobbies !== undefined) patch.hobbies = data.hobbies
+  if (data.notes !== undefined) patch.notes = data.notes
+  if (data.specialty !== undefined) patch.primarySpecialtyLabel = data.specialty
+  if (data.crmCouncil !== undefined) patch.crmCouncil = data.crmCouncil
+  if (data.crmNumber !== undefined) patch.crmNumber = data.crmNumber
+  if (data.crmState !== undefined) patch.crmState = data.crmState
+  if (data.manuallyEditedAt !== undefined) patch.manuallyEditedAt = data.manuallyEditedAt
 
-  return patch;
+  return patch
 }
 
 export class DrizzleProfessionalRepository implements ProfessionalRepository {
   async findAll(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    facilityId?: string;
-    specialty?: string;
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    scope: ProfessionalListScopeFilter;
+    page: number
+    limit: number
+    search?: string
+    facilityId?: string
+    specialty?: string
+    latitude?: number
+    longitude?: number
+    radiusKm?: number
+    scope: ProfessionalListScopeFilter
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }> {
-    const conditions = [isNull(professionals.deletedAt)];
+    const conditions = [isNull(professionals.deletedAt)]
 
     if (!params.scope.isGlobal) {
-      const facilityIds = params.scope.facilityIds?.length
-        ? params.scope.facilityIds
-        : ["__none__"];
+      const facilityIds = params.scope.facilityIds?.length ? params.scope.facilityIds : ['__none__']
 
       conditions.push(
         inArray(
@@ -184,7 +176,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
               )
             )
         )
-      );
+      )
     }
 
     if (params.facilityId) {
@@ -201,44 +193,65 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
               )
             )
         )
-      );
+      )
     }
 
     if (params.specialty) {
-      conditions.push(sql`lower(${professionals.primarySpecialtyLabel}) = lower(${params.specialty})`);
+      conditions.push(
+        sql`lower(${professionals.primarySpecialtyLabel}) = lower(${params.specialty})`
+      )
     }
 
     // Distances and radius eligibility are calculated only from facilities visible
     // through the active scope. An association outside scope cannot affect a result.
     const scopedFacilityIds = params.scope.isGlobal
       ? undefined
-      : (params.scope.facilityIds?.length ? params.scope.facilityIds : ["__none__"]);
+      : params.scope.facilityIds?.length
+        ? params.scope.facilityIds
+        : ['__none__']
     const distanceScope = scopedFacilityIds
-      ? sql` and fp.facility_id in (${sql.join(scopedFacilityIds.map((id) => sql`${id}`), sql`, `)})`
-      : sql``;
-    const referencePoint = params.latitude === undefined ? undefined : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`;
+      ? sql` and fp.facility_id in (${sql.join(
+          scopedFacilityIds.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      : sql``
+    const referencePoint =
+      params.latitude === undefined
+        ? undefined
+        : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`
     const distanceKm = referencePoint
       ? sql<number>`(select min(ST_Distance(f.location::geography, ${referencePoint}::geography) / 1000)
           from facility_professionals fp
           inner join facilities f on f.id = fp.facility_id
           where fp.professional_id = ${professionals.id} and fp.ended_at is null and f.location is not null${distanceScope})`
-      : undefined;
+      : undefined
     if (referencePoint) {
       const proximityConditions = [
         isNull(facilityProfessionals.endedAt),
         sql`${facilities.location} IS NOT NULL`,
-        ...(scopedFacilityIds ? [inArray(facilityProfessionals.facilityId, scopedFacilityIds)] : []),
-        ...(params.radiusKm === undefined ? [] : [sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`]),
-      ];
-      conditions.push(inArray(professionals.id, db
-        .select({ professionalId: facilityProfessionals.professionalId })
-        .from(facilityProfessionals)
-        .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
-        .where(and(...proximityConditions))));
+        ...(scopedFacilityIds
+          ? [inArray(facilityProfessionals.facilityId, scopedFacilityIds)]
+          : []),
+        ...(params.radiusKm === undefined
+          ? []
+          : [
+              sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`
+            ])
+      ]
+      conditions.push(
+        inArray(
+          professionals.id,
+          db
+            .select({ professionalId: facilityProfessionals.professionalId })
+            .from(facilityProfessionals)
+            .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
+            .where(and(...proximityConditions))
+        )
+      )
     }
 
     if (params.search) {
-      const pattern = `%${params.search}%`;
+      const pattern = `%${params.search}%`
       conditions.push(
         or(
           ilike(professionals.firstName, pattern),
@@ -246,34 +259,41 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           ilike(professionals.fullName, pattern),
           ilike(professionals.primarySpecialtyLabel, pattern),
           ilike(professionals.taxId, pattern),
-          ilike(professionals.crmNumber, pattern),
+          ilike(professionals.crmNumber, pattern)
         )!
-      );
+      )
     }
 
-    const where = and(...conditions);
-    const skip = (params.page - 1) * params.limit;
+    const where = and(...conditions)
+    const skip = (params.page - 1) * params.limit
 
     const [rows, countRows] = await Promise.all([
       db
-        .select({ ...getTableColumns(professionals), distanceKm: distanceKm ?? sql<number | null>`null` })
+        .select({
+          ...getTableColumns(professionals),
+          distanceKm: distanceKm ?? sql<number | null>`null`
+        })
         .from(professionals)
         .where(where)
-        .orderBy(...(distanceKm ? [asc(distanceKm), asc(professionals.lastName), asc(professionals.firstName)] : [asc(professionals.lastName), asc(professionals.firstName)]))
+        .orderBy(
+          ...(distanceKm
+            ? [asc(distanceKm), asc(professionals.lastName), asc(professionals.firstName)]
+            : [asc(professionals.lastName), asc(professionals.firstName)])
+        )
         .offset(skip)
         .limit(params.limit),
-      db.select({ count: sql<number>`count(*)::int` }).from(professionals).where(where),
-    ]);
+      db.select({ count: sql<number>`count(*)::int` }).from(professionals).where(where)
+    ])
 
-    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
+    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id))
 
     return {
       professionals: rows.map((p) => ({
         ...mapProfessional(p, associationsMap.get(p.id) ?? []),
-        distanceKm: p.distanceKm ?? null,
+        distanceKm: p.distanceKm ?? null
       })),
-      total: countRows[0]?.count ?? 0,
-    };
+      total: countRows[0]?.count ?? 0
+    }
   }
 
   async findById(id: string): Promise<ProfessionalRecord | null> {
@@ -281,12 +301,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .select()
       .from(professionals)
       .where(and(eq(professionals.id, id), isNull(professionals.deletedAt)))
-      .limit(1);
+      .limit(1)
 
-    if (!professional) return null;
+    if (!professional) return null
 
-    const associations = await loadAssociationsForOne(professional!.id);
-    return mapProfessional(professional!, associations);
+    const associations = await loadAssociationsForOne(professional!.id)
+    return mapProfessional(professional!, associations)
   }
 
   async findByExternalId(
@@ -303,12 +323,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           isNull(professionals.deletedAt)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    if (!professional) return null;
+    if (!professional) return null
 
-    const associations = await loadAssociationsForOne(professional!.id);
-    return mapProfessional(professional!, associations);
+    const associations = await loadAssociationsForOne(professional!.id)
+    return mapProfessional(professional!, associations)
   }
 
   async findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]> {
@@ -321,11 +341,11 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           eq(professionals.sourceTracked, true),
           isNull(professionals.deletedAt)
         )
-      );
+      )
 
-    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
+    const associationsMap = await loadAssociationsMap(rows.map((p) => p.id))
 
-    return rows.map((p) => mapProfessional(p, associationsMap.get(p.id) ?? []));
+    return rows.map((p) => mapProfessional(p, associationsMap.get(p.id) ?? []))
   }
 
   async findActiveFacilities(professionalId: string): Promise<ProfessionalFacilitySummary[]> {
@@ -334,7 +354,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         id: facilities.id,
         displayName: facilities.displayName,
         legalName: facilities.legalName,
-        tradeName: facilities.tradeName,
+        tradeName: facilities.tradeName
       })
       .from(facilityProfessionals)
       .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))
@@ -344,16 +364,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           isNull(facilityProfessionals.endedAt)
         )
       )
-      .orderBy(asc(facilities.displayName));
+      .orderBy(asc(facilities.displayName))
 
     return rows.map((row) => ({
       id: row.id,
-      name:
-        row.displayName?.trim() ||
-        row.tradeName?.trim() ||
-        row.legalName?.trim() ||
-        row.id,
-    }));
+      name: row.displayName?.trim() || row.tradeName?.trim() || row.legalName?.trim() || row.id
+    }))
   }
 
   async findNotesByProfessionalAndUser(
@@ -369,40 +385,40 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           eq(professionalNotes.userId, userId)
         )
       )
-      .orderBy(desc(professionalNotes.createdAt));
+      .orderBy(desc(professionalNotes.createdAt))
   }
 
   async createNote(input: {
-    professionalId: string;
-    userId: string;
-    note: string;
+    professionalId: string
+    userId: string
+    note: string
   }): Promise<ProfessionalNoteRecord> {
-    const [note] = await db.insert(professionalNotes).values(input).returning();
-    return note!;
+    const [note] = await db.insert(professionalNotes).values(input).returning()
+    return note!
   }
 
   async create(data: ProfessionalCreateInput): Promise<ProfessionalRecord> {
-    const now = new Date();
+    const now = new Date()
 
     const [professional] = await db
       .insert(professionals)
       .values(buildPersonCreateData(data))
-      .returning();
+      .returning()
 
     if (data.facilityIds.length > 0) {
       await db.insert(facilityProfessionals).values(
         data.facilityIds.map((facilityId) => ({
           facilityId,
           professionalId: professional!.id,
-          occupationCode: "LEGACY",
+          occupationCode: 'LEGACY',
           confirmedAt: now,
-          confirmedByUserId: data.confirmedByUserId ?? null,
+          confirmedByUserId: data.confirmedByUserId ?? null
         }))
-      );
+      )
     }
 
-    const associations = await loadAssociationsForOne(professional!.id);
-    return mapProfessional(professional!, associations);
+    const associations = await loadAssociationsForOne(professional!.id)
+    return mapProfessional(professional!, associations)
   }
 
   async update(id: string, data: ProfessionalUpdateInput): Promise<ProfessionalRecord> {
@@ -410,15 +426,15 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .select({
         firstName: professionals.firstName,
         lastName: professionals.lastName,
-        fullName: professionals.fullName,
+        fullName: professionals.fullName
       })
       .from(professionals)
       .where(eq(professionals.id, id))
-      .limit(1);
+      .limit(1)
 
-    if (!existing) throw new ResourceNotFoundError("Professional", id);
+    if (!existing) throw new ResourceNotFoundError('Professional', id)
 
-    const patch = buildPersonUpdateData(data);
+    const patch = buildPersonUpdateData(data)
 
     if (
       data.fullName === undefined &&
@@ -428,37 +444,37 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         data.firstName ?? existing.firstName,
         data.lastName ?? existing.lastName,
         existing.fullName
-      );
+      )
     }
 
     const [professional] = await db
       .update(professionals)
       .set({ ...patch, updatedAt: new Date() })
       .where(eq(professionals.id, id))
-      .returning();
+      .returning()
 
-    const associations = await loadAssociationsForOne(professional!.id);
-    return mapProfessional(professional!, associations);
+    const associations = await loadAssociationsForOne(professional!.id)
+    return mapProfessional(professional!, associations)
   }
 
   async softDelete(id: string): Promise<void> {
     await db
       .update(professionals)
       .set({ deletedAt: new Date(), updatedAt: new Date() })
-      .where(eq(professionals.id, id));
+      .where(eq(professionals.id, id))
   }
 
   async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
     await db
       .update(professionals)
       .set({ sourcePresent: false, sourceLastSeenAt, updatedAt: new Date() })
-      .where(eq(professionals.id, id));
+      .where(eq(professionals.id, id))
   }
 
   async upsertFromSource(input: ProfessionalSourceUpsertInput): Promise<{
-    professional: ProfessionalRecord;
-    created: boolean;
-    updated: boolean;
+    professional: ProfessionalRecord
+    created: boolean
+    updated: boolean
   }> {
     const [existing] = await db
       .select()
@@ -469,20 +485,19 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           eq(professionals.externalSourceId, input.externalSourceId)
         )
       )
-      .limit(1);
+      .limit(1)
 
     const sourcePersonFields = {
       firstName: input.firstName,
       lastName: input.lastName,
-      fullName:
-        input.fullName?.trim() || resolveFullName(input.firstName, input.lastName, null),
+      fullName: input.fullName?.trim() || resolveFullName(input.firstName, input.lastName, null),
       socialName: input.socialName ?? null,
       taxId: input.taxId ?? null,
       primarySpecialtyLabel: input.specialty,
       crmCouncil: input.crmCouncil ?? null,
       crmNumber: input.crmNumber ?? null,
-      crmState: input.crmState ?? null,
-    };
+      crmState: input.crmState ?? null
+    }
 
     if (!existing) {
       const [professional] = await db
@@ -495,54 +510,54 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           sourceFirstSeenAt: input.sourceLastSeenAt,
           sourceLastSeenAt: input.sourceLastSeenAt,
           sourcePresent: true,
-          sourceTracked: true,
+          sourceTracked: true
         })
-        .returning();
+        .returning()
 
-      const associations = await loadAssociationsForOne(professional!.id);
+      const associations = await loadAssociationsForOne(professional!.id)
       return {
         professional: mapProfessional(professional!, associations),
         created: true,
-        updated: false,
-      };
+        updated: false
+      }
     }
 
-    const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
+    const hashUnchanged = existing.sourceContentHash === input.sourceContentHash
 
     const updateData: Partial<typeof professionals.$inferInsert> & { updatedAt: Date } = {
       sourceContentHash: input.sourceContentHash,
       sourceLastSeenAt: input.sourceLastSeenAt,
       sourcePresent: true,
       sourceTracked: true,
-      updatedAt: new Date(),
-    };
+      updatedAt: new Date()
+    }
 
     if (!existing.manuallyEditedAt) {
-      Object.assign(updateData, sourcePersonFields);
+      Object.assign(updateData, sourcePersonFields)
     }
 
     const [professional] = await db
       .update(professionals)
       .set(updateData)
       .where(eq(professionals.id, existing.id))
-      .returning();
+      .returning()
 
-    const associations = await loadAssociationsForOne(professional!.id);
+    const associations = await loadAssociationsForOne(professional!.id)
     return {
       professional: mapProfessional(professional!, associations),
       created: false,
-      updated: !hashUnchanged || !existing.manuallyEditedAt,
-    };
+      updated: !hashUnchanged || !existing.manuallyEditedAt
+    }
   }
 
   async findExistingFacilityIds(facilityIds: string[]): Promise<string[]> {
-    if (facilityIds.length === 0) return [];
+    if (facilityIds.length === 0) return []
 
     const rows = await db
       .select({ id: facilities.id })
       .from(facilities)
-      .where(and(inArray(facilities.id, facilityIds), isNull(facilities.deactivatedAt)));
+      .where(and(inArray(facilities.id, facilityIds), isNull(facilities.deactivatedAt)))
 
-    return rows.map((r) => r.id);
+    return rows.map((r) => r.id)
   }
 }

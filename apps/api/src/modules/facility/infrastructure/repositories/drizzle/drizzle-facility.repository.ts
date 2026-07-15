@@ -1,23 +1,23 @@
 import {
   facilities,
-  facilityProfessionals,
   facilityConsultantAssignments,
+  facilityProfessionals,
   facilityServices,
-  users,
-  orders,
   orderItems,
-} from "@atlasmed/database";
-import { eq, and, isNull, ilike, inArray, sql, asc, getTableColumns } from "drizzle-orm";
-import { db } from "../../../../../infrastructure/database/db";
+  orders,
+  users
+} from '@atlasmed/database'
+import { and, asc, eq, getTableColumns, ilike, inArray, isNull, sql } from 'drizzle-orm'
+import { db } from '../../../../../infrastructure/database/db'
 import type {
   FacilityListRecord,
   FacilityListScopeFilter,
   FacilityRecord,
   FacilityRepository,
-  FacilitySourceUpsertInput,
-} from "../../../application/interfaces/facility.repository.interface";
+  FacilitySourceUpsertInput
+} from '../../../application/interfaces/facility.repository.interface'
 
-type FacilityRow = typeof facilities.$inferSelect;
+type FacilityRow = typeof facilities.$inferSelect
 
 function mapFacility(
   facility: FacilityRow,
@@ -49,109 +49,139 @@ function mapFacility(
     deactivatedAt: facility.deactivatedAt,
     createdAt: facility.createdAt,
     updatedAt: facility.updatedAt,
-    services,
-  };
+    services
+  }
 }
 
 function buildScopeCondition(scope: FacilityListScopeFilter) {
-  if (scope.isGlobal) return null;
-  const ids = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
-  return inArray(facilities.id, ids);
+  if (scope.isGlobal) return null
+  const ids = scope.facilityIds?.length ? scope.facilityIds : ['__none__']
+  return inArray(facilities.id, ids)
 }
 
 export class DrizzleFacilityRepository implements FacilityRepository {
   async findAll(params: {
-    page: number;
-    limit: number;
-    search?: string;
-    latitude?: number;
-    longitude?: number;
-    radiusKm?: number;
-    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
-    productIds?: string[];
-    scope: FacilityListScopeFilter;
+    page: number
+    limit: number
+    search?: string
+    latitude?: number
+    longitude?: number
+    radiusKm?: number
+    commercialStatus?: 'REGISTERED' | 'ACTIVE' | 'SUSPENDED' | 'INACTIVE'
+    productIds?: string[]
+    scope: FacilityListScopeFilter
   }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
-    const conditions = [isNull(facilities.deactivatedAt)];
+    const conditions = [isNull(facilities.deactivatedAt)]
 
-    const scopeCondition = buildScopeCondition(params.scope);
-    if (scopeCondition) conditions.push(scopeCondition);
+    const scopeCondition = buildScopeCondition(params.scope)
+    if (scopeCondition) conditions.push(scopeCondition)
 
     if (params.search) {
-      conditions.push(ilike(facilities.displayName, `%${params.search}%`));
+      conditions.push(ilike(facilities.displayName, `%${params.search}%`))
     }
     if (params.commercialStatus) {
-      conditions.push(eq(facilities.commercialStatus, params.commercialStatus));
+      conditions.push(eq(facilities.commercialStatus, params.commercialStatus))
     }
     if (params.productIds?.length) {
-      conditions.push(inArray(facilities.id, db
-        .select({ facilityId: orders.facilityId })
-        .from(orders)
-        .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
-        .where(inArray(orderItems.productId, params.productIds))));
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: orders.facilityId })
+            .from(orders)
+            .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+            .where(inArray(orderItems.productId, params.productIds))
+        )
+      )
     }
 
-    const referencePoint = params.latitude === undefined ? undefined : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`;
+    const referencePoint =
+      params.latitude === undefined
+        ? undefined
+        : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`
     const distanceKm = referencePoint
       ? sql<number>`ST_Distance(${facilities.location}::geography, ${referencePoint}::geography) / 1000`
-      : undefined;
+      : undefined
     if (referencePoint) {
-      conditions.push(sql`${facilities.location} IS NOT NULL`);
+      conditions.push(sql`${facilities.location} IS NOT NULL`)
       if (params.radiusKm !== undefined) {
-        conditions.push(sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`);
+        conditions.push(
+          sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`
+        )
       }
     }
 
-    const where = and(...conditions);
-    const skip = (params.page - 1) * params.limit;
+    const where = and(...conditions)
+    const skip = (params.page - 1) * params.limit
 
     const [rows, countRows] = await Promise.all([
-      db.select({ ...getTableColumns(facilities), distanceKm: distanceKm ?? sql<number | null>`null` }).from(facilities).where(where).orderBy(...(distanceKm ? [asc(distanceKm), asc(facilities.displayName)] : [asc(facilities.displayName)])).offset(skip).limit(params.limit),
-      db.select({ count: sql<number>`count(*)::int` }).from(facilities).where(where),
-    ]);
+      db
+        .select({
+          ...getTableColumns(facilities),
+          distanceKm: distanceKm ?? sql<number | null>`null`
+        })
+        .from(facilities)
+        .where(where)
+        .orderBy(
+          ...(distanceKm
+            ? [asc(distanceKm), asc(facilities.displayName)]
+            : [asc(facilities.displayName)])
+        )
+        .offset(skip)
+        .limit(params.limit),
+      db.select({ count: sql<number>`count(*)::int` }).from(facilities).where(where)
+    ])
 
     if (rows.length === 0) {
-      return { facilities: [], total: countRows[0]?.count ?? 0 };
+      return { facilities: [], total: countRows[0]?.count ?? 0 }
     }
 
-    const ids = rows.map((r) => r.id);
+    const ids = rows.map((r) => r.id)
 
     const [profCounts, consultantRows] = await Promise.all([
       db
         .select({
           facilityId: facilityProfessionals.facilityId,
-          count: sql<number>`count(*)::int`,
+          count: sql<number>`count(*)::int`
         })
         .from(facilityProfessionals)
-        .where(and(inArray(facilityProfessionals.facilityId, ids), isNull(facilityProfessionals.endedAt)))
+        .where(
+          and(inArray(facilityProfessionals.facilityId, ids), isNull(facilityProfessionals.endedAt))
+        )
         .groupBy(facilityProfessionals.facilityId),
       db
         .select({
           facilityId: facilityConsultantAssignments.facilityId,
           firstName: users.firstName,
-          lastName: users.lastName,
+          lastName: users.lastName
         })
         .from(facilityConsultantAssignments)
         .innerJoin(users, eq(users.id, facilityConsultantAssignments.userId))
-        .where(and(inArray(facilityConsultantAssignments.facilityId, ids), isNull(facilityConsultantAssignments.endedAt))),
-    ]);
+        .where(
+          and(
+            inArray(facilityConsultantAssignments.facilityId, ids),
+            isNull(facilityConsultantAssignments.endedAt)
+          )
+        )
+    ])
 
-    const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
+    const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]))
     const consultantMap = new Map(
       consultantRows.map((r) => [
         r.facilityId,
-        [r.firstName, r.lastName].filter(Boolean).join(" ") || null,
+        [r.firstName, r.lastName].filter(Boolean).join(' ') || null
       ])
-    );
+    )
 
     return {
       facilities: rows.map((row) => ({
         ...mapFacility(row),
         distanceKm: row.distanceKm ?? null,
         professionalCount: countMap.get(row.id) ?? 0,
-        consultantName: consultantMap.get(row.id) ?? null,
+        consultantName: consultantMap.get(row.id) ?? null
       })),
-      total: countRows[0]?.count ?? 0,
-    };
+      total: countRows[0]?.count ?? 0
+    }
   }
 
   async findById(id: string): Promise<FacilityRecord | null> {
@@ -159,19 +189,19 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .select()
       .from(facilities)
       .where(and(eq(facilities.id, id), isNull(facilities.deactivatedAt)))
-      .limit(1);
+      .limit(1)
 
-    if (!facility) return null;
+    if (!facility) return null
 
     const services = await db
       .select({
         serviceCode: facilityServices.serviceCode,
-        classificationCode: facilityServices.classificationCode,
+        classificationCode: facilityServices.classificationCode
       })
       .from(facilityServices)
-      .where(eq(facilityServices.facilityId, id));
+      .where(eq(facilityServices.facilityId, id))
 
-    return mapFacility(facility, services);
+    return mapFacility(facility, services)
   }
 
   async findByExternalId(
@@ -187,73 +217,68 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           eq(facilities.externalSourceId, externalSourceId)
         )
       )
-      .limit(1);
+      .limit(1)
 
-    return facility ? mapFacility(facility) : null;
+    return facility ? mapFacility(facility) : null
   }
 
   async findSourceTrackedByProvider(sourceProvider: string): Promise<FacilityRecord[]> {
     const rows = await db
       .select()
       .from(facilities)
-      .where(
-        and(
-          eq(facilities.sourceProvider, sourceProvider),
-          eq(facilities.sourceTracked, true)
-        )
-      );
+      .where(and(eq(facilities.sourceProvider, sourceProvider), eq(facilities.sourceTracked, true)))
 
-    return rows.map((row) => mapFacility(row));
+    return rows.map((row) => mapFacility(row))
   }
 
   async create(data: {
-    name: string;
-    lat?: number | null;
-    lng?: number | null;
+    name: string
+    lat?: number | null
+    lng?: number | null
   }): Promise<FacilityRecord> {
     const [facility] = await db
       .insert(facilities)
       .values({
-        displayName: data.name,
+        displayName: data.name
         // lat/lng not in schema; location (geometry) handled by spatial repo
       })
-      .returning();
+      .returning()
 
-    return mapFacility(facility!);
+    return mapFacility(facility!)
   }
 
   async update(
     id: string,
     data: {
-      name?: string;
-      lat?: number | null;
-      lng?: number | null;
-      manuallyEditedAt?: Date;
+      name?: string
+      lat?: number | null
+      lng?: number | null
+      manuallyEditedAt?: Date
     }
   ): Promise<FacilityRecord> {
     const setData: Partial<typeof facilities.$inferInsert> & { updatedAt: Date } = {
       updatedAt: new Date(),
-      manuallyEditedAt: data.manuallyEditedAt,
-    };
+      manuallyEditedAt: data.manuallyEditedAt
+    }
 
     if (data.name !== undefined) {
-      setData.displayName = data.name;
+      setData.displayName = data.name
     }
 
     const [facility] = await db
       .update(facilities)
       .set(setData)
       .where(eq(facilities.id, id))
-      .returning();
+      .returning()
 
-    return mapFacility(facility!);
+    return mapFacility(facility!)
   }
 
   async softDelete(id: string): Promise<void> {
     await db
       .update(facilities)
       .set({ deactivatedAt: new Date(), updatedAt: new Date() })
-      .where(eq(facilities.id, id));
+      .where(eq(facilities.id, id))
   }
 
   async reactivate(id: string): Promise<FacilityRecord> {
@@ -261,22 +286,22 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .update(facilities)
       .set({ deactivatedAt: null, updatedAt: new Date() })
       .where(eq(facilities.id, id))
-      .returning();
+      .returning()
 
-    return mapFacility(facility!);
+    return mapFacility(facility!)
   }
 
   async markSourceAbsent(id: string, sourceLastSeenAt: Date): Promise<void> {
     await db
       .update(facilities)
       .set({ sourcePresent: false, sourceLastSeenAt, updatedAt: new Date() })
-      .where(eq(facilities.id, id));
+      .where(eq(facilities.id, id))
   }
 
   async upsertFromSource(input: FacilitySourceUpsertInput): Promise<{
-    facility: FacilityRecord;
-    created: boolean;
-    updated: boolean;
+    facility: FacilityRecord
+    created: boolean
+    updated: boolean
   }> {
     const [existing] = await db
       .select()
@@ -287,7 +312,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           eq(facilities.externalSourceId, input.externalSourceId)
         )
       )
-      .limit(1);
+      .limit(1)
 
     if (!existing) {
       const [facility] = await db
@@ -301,14 +326,14 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           sourceFirstSeenAt: input.sourceLastSeenAt,
           sourceLastSeenAt: input.sourceLastSeenAt,
           sourcePresent: true,
-          sourceTracked: true,
+          sourceTracked: true
         })
-        .returning();
+        .returning()
 
-      return { facility: mapFacility(facility!), created: true, updated: false };
+      return { facility: mapFacility(facility!), created: true, updated: false }
     }
 
-    const hashUnchanged = existing.sourceContentHash === input.sourceContentHash;
+    const hashUnchanged = existing.sourceContentHash === input.sourceContentHash
 
     const [facility] = await db
       .update(facilities)
@@ -317,52 +342,50 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         sourceLastSeenAt: input.sourceLastSeenAt,
         sourcePresent: true,
         sourceTracked: true,
-        updatedAt: new Date(),
+        updatedAt: new Date()
       })
       .where(eq(facilities.id, existing.id))
-      .returning();
+      .returning()
 
     return {
       facility: mapFacility(facility!),
       created: false,
-      updated: !hashUnchanged,
-    };
+      updated: !hashUnchanged
+    }
   }
 
   async applyApprovedFieldUpdates(
     id: string,
     updates: {
-      name?: string;
-      lat?: number | null;
-      lng?: number | null;
+      name?: string
+      lat?: number | null
+      lng?: number | null
     }
   ): Promise<FacilityRecord> {
     const setData: Partial<typeof facilities.$inferInsert> & { updatedAt: Date } = {
-      updatedAt: new Date(),
-    };
+      updatedAt: new Date()
+    }
 
-    if (updates.name !== undefined) setData.displayName = updates.name;
+    if (updates.name !== undefined) setData.displayName = updates.name
     // lat/lng not in schema; location (geometry) handled by spatial repo
 
     const [facility] = await db
       .update(facilities)
       .set(setData)
       .where(eq(facilities.id, id))
-      .returning();
+      .returning()
 
-    return mapFacility(facility!);
+    return mapFacility(facility!)
   }
 
   async findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]> {
-    if (territoryIds.length === 0) return [];
+    if (territoryIds.length === 0) return []
 
     const rows = await db
       .select({ id: facilities.id })
       .from(facilities)
-      .where(
-        and(isNull(facilities.deactivatedAt), inArray(facilities.territoryId, territoryIds))
-      );
+      .where(and(isNull(facilities.deactivatedAt), inArray(facilities.territoryId, territoryIds)))
 
-    return rows.map((r) => r.id);
+    return rows.map((r) => r.id)
   }
 }

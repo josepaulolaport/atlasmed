@@ -1,21 +1,21 @@
-import type { ScopeContext } from "@atlasmed/access";
-import { assertResourceInScope } from "@atlasmed/access";
-import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
-import type { SectorRepository } from "../interfaces/sector.repository.interface";
-import type { ProductRepository } from "../interfaces/product.repository.interface";
+import type { ScopeContext } from '@atlasmed/access'
+import { assertResourceInScope } from '@atlasmed/access'
+import { ResourceNotFoundError, ValidationError } from '../../../../shared/errors'
+import type { FacilityHealthcareProviderShareRepository } from '../interfaces/facility-healthcare-provider-share.repository.interface'
 import type {
   HealthcareProviderRepository,
-  HealthcareProviderType,
-} from "../interfaces/healthcare-provider.repository.interface";
-import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
+  HealthcareProviderType
+} from '../interfaces/healthcare-provider.repository.interface'
+import type { ProductRepository } from '../interfaces/product.repository.interface'
+import type { SectorRepository } from '../interfaces/sector.repository.interface'
 
 function serializeSector(row: {
-  id: string;
-  slug: string;
-  name: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  slug: string
+  name: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }) {
   return {
     id: row.id,
@@ -23,35 +23,35 @@ function serializeSector(row: {
     name: row.name,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+    updatedAt: row.updatedAt.toISOString()
+  }
 }
 
 function serializeProduct(row: {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  commercialCode: string | null;
-  productGroup: string | null;
-  productClassification: string | null;
-  brand: string | null;
-  unit: string | null;
-  sectorIds: string[];
-  pictureUrl: string | null;
-  simproCode: string;
-  brasindiceCode: string;
-  tissCode: string;
-  manufacturer: string;
-  countryOfOrigin: string;
-  price: number;
-  price17: number;
-  price18: number;
-  price20: number;
-  brasindiceUpdatedAt: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  code: string
+  name: string
+  description: string | null
+  commercialCode: string | null
+  productGroup: string | null
+  productClassification: string | null
+  brand: string | null
+  unit: string | null
+  sectorIds: string[]
+  pictureUrl: string | null
+  simproCode: string
+  brasindiceCode: string
+  tissCode: string
+  manufacturer: string
+  countryOfOrigin: string
+  price: number
+  price17: number
+  price18: number
+  price20: number
+  brasindiceUpdatedAt: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }) {
   return {
     id: row.id,
@@ -77,17 +77,17 @@ function serializeProduct(row: {
     brasindiceUpdatedAt: row.brasindiceUpdatedAt,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+    updatedAt: row.updatedAt.toISOString()
+  }
 }
 
 function serializeProvider(row: {
-  id: string;
-  name: string;
-  type: string;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  id: string
+  name: string
+  type: string
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
 }) {
   return {
     id: row.id,
@@ -95,26 +95,26 @@ function serializeProvider(row: {
     type: row.type,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+    updatedAt: row.updatedAt.toISOString()
+  }
 }
 
 export class ListSectorsUseCase {
   constructor(private readonly deps: { sectorRepository: SectorRepository }) {}
 
   async execute(input: { page?: number; limit?: number; isActive?: boolean }) {
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 50;
+    const page = input.page ?? 1
+    const limit = input.limit ?? 50
     const { sectors, total } = await this.deps.sectorRepository.findAll({
       page,
       limit,
-      isActive: input.isActive,
-    });
+      isActive: input.isActive
+    })
 
     return {
       data: sectors.map(serializeSector),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-    };
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
+    }
   }
 }
 
@@ -122,26 +122,21 @@ export class CreateSectorUseCase {
   constructor(private readonly deps: { sectorRepository: SectorRepository }) {}
 
   async execute(input: { slug: string; name: string; isActive?: boolean }) {
-    const sector = await this.deps.sectorRepository.create(input);
-    return serializeSector(sector);
+    const sector = await this.deps.sectorRepository.create(input)
+    return serializeSector(sector)
   }
 }
 
 export class UpdateSectorUseCase {
   constructor(private readonly deps: { sectorRepository: SectorRepository }) {}
 
-  async execute(input: {
-    sectorId: string;
-    slug?: string;
-    name?: string;
-    isActive?: boolean;
-  }) {
+  async execute(input: { sectorId: string; slug?: string; name?: string; isActive?: boolean }) {
     const sector = await this.deps.sectorRepository.update(input.sectorId, {
       slug: input.slug,
       name: input.name,
-      isActive: input.isActive,
-    });
-    return serializeSector(sector);
+      isActive: input.isActive
+    })
+    return serializeSector(sector)
   }
 }
 
@@ -149,26 +144,26 @@ export class ListProductsUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: {
-    page?: number;
-    limit?: number;
-    sectorId?: string;
-    search?: string;
-    isActive?: boolean;
+    page?: number
+    limit?: number
+    sectorId?: string
+    search?: string
+    isActive?: boolean
   }) {
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 50;
+    const page = input.page ?? 1
+    const limit = input.limit ?? 50
     const { products, total } = await this.deps.productRepository.findAll({
       page,
       limit,
       sectorId: input.sectorId,
       search: input.search,
-      isActive: input.isActive,
-    });
+      isActive: input.isActive
+    })
 
     return {
       data: products.map(serializeProduct),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-    };
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
+    }
   }
 }
 
@@ -176,9 +171,9 @@ export class GetProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: { productId: string }) {
-    const product = await this.deps.productRepository.findById(input.productId);
-    if (!product) throw new ResourceNotFoundError("Product", input.productId);
-    return serializeProduct(product);
+    const product = await this.deps.productRepository.findById(input.productId)
+    if (!product) throw new ResourceNotFoundError('Product', input.productId)
+    return serializeProduct(product)
   }
 }
 
@@ -186,24 +181,24 @@ export class CreateProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: {
-    code: string;
-    name: string;
-    sectorIds: string[];
-    pictureUrl?: string | null;
-    simproCode: string;
-    brasindiceCode: string;
-    tissCode: string;
-    manufacturer: string;
-    countryOfOrigin: string;
-    price: number;
-    price17: number;
-    price18: number;
-    price20: number;
-    brasindiceUpdatedAt: string;
-    isActive?: boolean;
+    code: string
+    name: string
+    sectorIds: string[]
+    pictureUrl?: string | null
+    simproCode: string
+    brasindiceCode: string
+    tissCode: string
+    manufacturer: string
+    countryOfOrigin: string
+    price: number
+    price17: number
+    price18: number
+    price20: number
+    brasindiceUpdatedAt: string
+    isActive?: boolean
   }) {
-    const product = await this.deps.productRepository.create(input);
-    return serializeProduct(product);
+    const product = await this.deps.productRepository.create(input)
+    return serializeProduct(product)
   }
 }
 
@@ -211,22 +206,22 @@ export class UpdateProductUseCase {
   constructor(private readonly deps: { productRepository: ProductRepository }) {}
 
   async execute(input: {
-    productId: string;
-    code?: string;
-    name?: string;
-    sectorIds?: string[];
-    pictureUrl?: string | null;
-    simproCode?: string;
-    brasindiceCode?: string;
-    tissCode?: string;
-    manufacturer?: string;
-    countryOfOrigin?: string;
-    price?: number;
-    price17?: number;
-    price18?: number;
-    price20?: number;
-    brasindiceUpdatedAt?: string;
-    isActive?: boolean;
+    productId: string
+    code?: string
+    name?: string
+    sectorIds?: string[]
+    pictureUrl?: string | null
+    simproCode?: string
+    brasindiceCode?: string
+    tissCode?: string
+    manufacturer?: string
+    countryOfOrigin?: string
+    price?: number
+    price17?: number
+    price18?: number
+    price20?: number
+    brasindiceUpdatedAt?: string
+    isActive?: boolean
   }) {
     const product = await this.deps.productRepository.update(input.productId, {
       code: input.code,
@@ -243,9 +238,9 @@ export class UpdateProductUseCase {
       price18: input.price18,
       price20: input.price20,
       brasindiceUpdatedAt: input.brasindiceUpdatedAt,
-      isActive: input.isActive,
-    });
-    return serializeProduct(product);
+      isActive: input.isActive
+    })
+    return serializeProduct(product)
   }
 }
 
@@ -255,18 +250,18 @@ export class ListHealthcareProvidersUseCase {
   ) {}
 
   async execute(input: { page?: number; limit?: number; isActive?: boolean }) {
-    const page = input.page ?? 1;
-    const limit = input.limit ?? 50;
+    const page = input.page ?? 1
+    const limit = input.limit ?? 50
     const { providers, total } = await this.deps.healthcareProviderRepository.findAll({
       page,
       limit,
-      isActive: input.isActive,
-    });
+      isActive: input.isActive
+    })
 
     return {
       data: providers.map(serializeProvider),
-      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
-    };
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 }
+    }
   }
 }
 
@@ -276,8 +271,8 @@ export class CreateHealthcareProviderUseCase {
   ) {}
 
   async execute(input: { name: string; type: HealthcareProviderType; isActive?: boolean }) {
-    const provider = await this.deps.healthcareProviderRepository.create(input);
-    return serializeProvider(provider);
+    const provider = await this.deps.healthcareProviderRepository.create(input)
+    return serializeProvider(provider)
   }
 }
 
@@ -287,30 +282,30 @@ export class UpdateHealthcareProviderUseCase {
   ) {}
 
   async execute(input: {
-    providerId: string;
-    name?: string;
-    type?: HealthcareProviderType;
-    isActive?: boolean;
+    providerId: string
+    name?: string
+    type?: HealthcareProviderType
+    isActive?: boolean
   }) {
     const provider = await this.deps.healthcareProviderRepository.update(input.providerId, {
       name: input.name,
       type: input.type,
-      isActive: input.isActive,
-    });
-    return serializeProvider(provider);
+      isActive: input.isActive
+    })
+    return serializeProvider(provider)
   }
 }
 
 export class ListFacilityHealthcareProviderSharesUseCase {
   constructor(
     private readonly deps: {
-      shareRepository: FacilityHealthcareProviderShareRepository;
+      shareRepository: FacilityHealthcareProviderShareRepository
     }
   ) {}
 
   async execute(input: { facilityId: string; scope: ScopeContext }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
-    const shares = await this.deps.shareRepository.findByFacility(input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
+    const shares = await this.deps.shareRepository.findByFacility(input.facilityId)
 
     return {
       data: shares.map((share) => ({
@@ -321,51 +316,51 @@ export class ListFacilityHealthcareProviderSharesUseCase {
         source: share.source,
         healthcareProvider: share.healthcareProvider,
         createdAt: share.createdAt.toISOString(),
-        updatedAt: share.updatedAt.toISOString(),
-      })),
-    };
+        updatedAt: share.updatedAt.toISOString()
+      }))
+    }
   }
 }
 
 export class CreateFacilityHealthcareProviderShareUseCase {
   constructor(
     private readonly deps: {
-      shareRepository: FacilityHealthcareProviderShareRepository;
+      shareRepository: FacilityHealthcareProviderShareRepository
     }
   ) {}
 
   async execute(input: {
-    facilityId: string;
-    healthcareProviderId: string;
-    sharePercent: number;
-    scope: ScopeContext;
+    facilityId: string
+    healthcareProviderId: string
+    sharePercent: number
+    scope: ScopeContext
   }) {
-    assertResourceInScope(input.scope, "facility", input.facilityId);
+    assertResourceInScope(input.scope, 'facility', input.facilityId)
 
     if (input.sharePercent <= 0 || input.sharePercent > 100) {
       throw new ValidationError([
-        { field: "sharePercent", message: "Share percent must be between 0 and 100" },
-      ]);
+        { field: 'sharePercent', message: 'Share percent must be between 0 and 100' }
+      ])
     }
 
     const existingTotal = await this.deps.shareRepository.sumSharePercentForFacility(
       input.facilityId
-    );
+    )
 
     if (existingTotal + input.sharePercent > 100.01) {
       throw new ValidationError([
         {
-          field: "sharePercent",
-          message: `Total share would exceed 100% (current: ${existingTotal}%)`,
-        },
-      ]);
+          field: 'sharePercent',
+          message: `Total share would exceed 100% (current: ${existingTotal}%)`
+        }
+      ])
     }
 
     const share = await this.deps.shareRepository.create({
       facilityId: input.facilityId,
       healthcareProviderId: input.healthcareProviderId,
-      sharePercent: input.sharePercent,
-    });
+      sharePercent: input.sharePercent
+    })
 
     return {
       id: share.id,
@@ -374,7 +369,7 @@ export class CreateFacilityHealthcareProviderShareUseCase {
       sharePercent: share.sharePercent,
       source: share.source,
       healthcareProvider: share.healthcareProvider,
-      createdAt: share.createdAt.toISOString(),
-    };
+      createdAt: share.createdAt.toISOString()
+    }
   }
 }

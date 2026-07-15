@@ -1,10 +1,10 @@
 /**
  * API Documentation Configuration
- * 
+ *
  * Comprehensive OpenAPI documentation for the AtlasMed API.
  */
 
-import { API_VERSION } from "./versioning";
+import { API_VERSION } from './versioning'
 
 export const apiDocumentation = {
   openapi: '3.1.0',
@@ -194,7 +194,7 @@ Need help?
       url: 'https://atlasmed.com/license'
     }
   },
-  
+
   servers: [
     {
       url: 'http://localhost:3000',
@@ -209,7 +209,7 @@ Need help?
       description: 'Production environment'
     }
   ],
-  
+
   tags: [
     {
       name: 'Authentication',
@@ -240,17 +240,18 @@ Need help?
       description: 'Service health monitoring and metrics'
     }
   ],
-  
+
   components: {
     securitySchemes: {
       BearerAuth: {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        description: 'JWT access token obtained from the login endpoint. Include in Authorization header as: `Bearer <token>`'
+        description:
+          'JWT access token obtained from the login endpoint. Include in Authorization header as: `Bearer <token>`'
       }
     },
-    
+
     schemas: {
       // Common response schemas
       Error: {
@@ -280,7 +281,7 @@ Need help?
           }
         }
       },
-      
+
       Pagination: {
         type: 'object',
         properties: {
@@ -300,7 +301,7 @@ Need help?
         }
       }
     },
-    
+
     responses: {
       UnauthorizedError: {
         description: 'Authentication required or credentials are invalid',
@@ -339,7 +340,7 @@ Need help?
           }
         }
       },
-      
+
       ForbiddenError: {
         description: 'Insufficient permissions to perform this action',
         content: {
@@ -372,7 +373,7 @@ Need help?
           }
         }
       },
-      
+
       NotFoundError: {
         description: 'The requested resource was not found',
         content: {
@@ -391,7 +392,7 @@ Need help?
           }
         }
       },
-      
+
       ValidationError: {
         description: 'Request validation failed',
         content: {
@@ -412,7 +413,7 @@ Need help?
           }
         }
       },
-      
+
       ConflictError: {
         description: 'Resource already exists or conflicts with existing data',
         content: {
@@ -447,7 +448,7 @@ Need help?
           }
         }
       },
-      
+
       RateLimitError: {
         description: 'Rate limit exceeded - too many requests',
         headers: {
@@ -484,7 +485,7 @@ Need help?
           }
         }
       },
-      
+
       InternalServerError: {
         description: 'Internal server error - something went wrong on our end',
         content: {
@@ -500,7 +501,7 @@ Need help?
         }
       }
     },
-    
+
     parameters: {
       RequestId: {
         name: 'X-Request-ID',
@@ -514,4 +515,4 @@ Need help?
       }
     }
   }
-};
+}

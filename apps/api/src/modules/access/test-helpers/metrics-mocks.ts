@@ -1,7 +1,7 @@
-import { mock } from "bun:test";
-import type { IMetrics } from "../application/interfaces/metrics.interface";
+import { mock } from 'bun:test'
+import type { IMetrics } from '../application/interfaces/metrics.interface'
 
-const noop = () => mock(() => {});
+const noop = () => mock(() => {})
 
 /**
  * Full metrics mock — prevents partial mock.module from breaking other tests.
@@ -20,6 +20,6 @@ export function createMockMetricsService(
     recordSuspiciousActivity: noop(),
     recordScopeClinicResolutionStub: noop(),
     recordSiemExportBatch: noop(),
-    ...overrides,
-  };
+    ...overrides
+  }
 }
