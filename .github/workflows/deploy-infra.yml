@@ -115,12 +115,3 @@ jobs:
             fi
           done
           exit 1
-
-      - name: Remove legacy MinIO init service
-        env:
-          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
-        run: |
-          set -euo pipefail
-          if uc inspect atlasmed-minio-init >/dev/null 2>&1; then
-            uc rm atlasmed-minio-init
-          fi
