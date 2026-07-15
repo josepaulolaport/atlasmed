@@ -158,8 +158,22 @@ const [product] = await tx
         return mapProduct(product, uniqueSectorIds);
       }
 
-      const sectorMap = await fetchSectorIds([id]);
-      return mapProduct(product, sectorMap.get(id) ?? []);
+// Option 1: Accept a transaction parameter in fetchSectorIds
+async function fetchSectorIds(
+  productIds: string[],
+  tx?: typeof db
+): Promise<Map<string, string[]>> {
+  if (productIds.length === 0) return new Map();
+  const conn = tx ?? db;
+  const rows = await conn
+    .select({ productId: productSectors.productId, sectorId: productSectors.sectorId })
+    .from(productSectors)
+    .where(inArray(productSectors.productId, productIds));
+  // ...
+}
+
+// Then in update():
+const sectorMap = await fetchSectorIds([id], tx);
     });
   }
 }
