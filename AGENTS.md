@@ -175,7 +175,7 @@ For `experiment/` branches older than 7 days, delete regardless of merge status.
   ```bash
   gh api repos/josepaulolaport/atlasmed/rulesets -X POST --input .github/rulesets/protect-main.json
   ```
-- **Local:** pre-commit + pre-push hooks reject direct commits to `main` and branch names that don't match the pattern. Install with `./scripts/install-git-hooks.sh` (run once per clone / worktree).
+- **Local:** pre-commit + pre-push hooks reject direct commits to `main` and branch names that don't match the pattern. Install with `bun run prepare` (or `bun install`, which runs it automatically).
 
 ## Behavior rules
 

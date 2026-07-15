@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Reject direct commits to main/master.
 # Reject commits on branches whose name violates the AGENTS.md pattern.
-# Install: ./scripts/install-git-hooks.sh
+# Install: bun run prepare (or bun install — runs automatically)
 
 set -euo pipefail
 
