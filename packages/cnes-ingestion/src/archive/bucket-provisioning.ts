@@ -95,18 +95,28 @@ export async function ensureArchiveBucket(input: EnsureArchiveBucketInput, clien
   }
 
   const region = input.region || "us-east-1";
-  const s3Client = client ?? new S3Client({
-    region,
-    endpoint: input.endpoint,
-    forcePathStyle: input.forcePathStyle ?? Boolean(input.endpoint),
-    credentials:
-      input.accessKeyId && input.secretAccessKey
-        ? {
-            accessKeyId: input.accessKeyId,
-            secretAccessKey: input.secretAccessKey,
-          }
-        : undefined,
-  });
+  const provisioningClient: BucketProvisioningClient =
+    client ??
+    (() => {
+      const s3Client = new S3Client({
+        region,
+        endpoint: input.endpoint,
+        forcePathStyle: input.forcePathStyle ?? Boolean(input.endpoint),
+        credentials:
+          input.accessKeyId && input.secretAccessKey
+            ? {
+                accessKeyId: input.accessKeyId,
+                secretAccessKey: input.secretAccessKey,
+              }
+            : undefined,
+      });
 
-  await ensureBucketExists(s3Client, input.bucket, region);
+      return {
+        send(command: BucketProvisioningCommand) {
+          return s3Client.send(command);
+        },
+      };
+    })();
+
+  await ensureBucketExists(provisioningClient, input.bucket, region);
 }
