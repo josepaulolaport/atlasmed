@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+--> statement-breakpoint
 CREATE SCHEMA "audit";
 --> statement-breakpoint
 CREATE SCHEMA "registry";
