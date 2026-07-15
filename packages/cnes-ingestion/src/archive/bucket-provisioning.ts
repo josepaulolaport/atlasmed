@@ -4,7 +4,6 @@ import {
   S3Client,
   type BucketLocationConstraint,
   type CreateBucketCommandInput,
-  type S3ClientConfig,
 } from "@aws-sdk/client-s3";
 
 export interface EnsureArchiveBucketInput {
