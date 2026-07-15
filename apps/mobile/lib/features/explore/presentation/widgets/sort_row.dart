@@ -43,13 +43,12 @@ class SortRow extends StatelessWidget {
         children: [
           _SortChip(label: _sortLabel(sort), onTap: onSortTap),
           const SizedBox(width: 6),
-          ...filterChips.map((chip) => Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: _FilterChip(
-                  label: chip.label,
-                  onRemove: chip.onRemove,
-                ),
-              )),
+          ...filterChips.map(
+            (chip) => Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _FilterChip(label: chip.label, onRemove: chip.onRemove),
+            ),
+          ),
         ],
       ),
     );
@@ -76,7 +75,11 @@ class _SortChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.swap_vert_rounded, size: 12, color: Color(0xFF0f1729)),
+            const Icon(
+              Icons.swap_vert_rounded,
+              size: 12,
+              color: Color(0xFF0f1729),
+            ),
             const SizedBox(width: 5),
             Text(
               label,

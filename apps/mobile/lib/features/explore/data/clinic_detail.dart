@@ -153,7 +153,11 @@ class NearbyClinic {
   final String name;
   final double distanceKm;
 
-  const NearbyClinic({required this.id, required this.name, required this.distanceKm});
+  const NearbyClinic({
+    required this.id,
+    required this.name,
+    required this.distanceKm,
+  });
 }
 
 class ProductPerformance {

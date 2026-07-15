@@ -45,8 +45,12 @@ class _CodeInputState extends State<CodeInput> {
 
   @override
   void dispose() {
-    for (final n in _focusNodes) { n.dispose(); }
-    for (final c in _controllers) { c.dispose(); }
+    for (final n in _focusNodes) {
+      n.dispose();
+    }
+    for (final c in _controllers) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -71,10 +75,7 @@ class _CodeInputState extends State<CodeInput> {
       children: List.generate(6, (i) {
         final filled = _controllers[i].text.isNotEmpty;
         return Padding(
-          padding: EdgeInsets.only(
-            left: i > 0 ? 8 : 0,
-            right: 0,
-          ),
+          padding: EdgeInsets.only(left: i > 0 ? 8 : 0, right: 0),
           child: SizedBox(
             width: (MediaQuery.of(context).size.width - 28 * 2 - 8 * 5) / 6,
             height: 60,
@@ -101,8 +102,8 @@ class _CodeInputState extends State<CodeInput> {
                     color: widget.error
                         ? const Color(0xB2FF7878)
                         : filled
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.white.withValues(alpha: 0.2),
+                        ? Colors.white.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
                 enabledBorder: OutlineInputBorder(
@@ -111,8 +112,8 @@ class _CodeInputState extends State<CodeInput> {
                     color: widget.error
                         ? const Color(0xB2FF7878)
                         : filled
-                            ? Colors.white.withValues(alpha: 0.5)
-                            : Colors.white.withValues(alpha: 0.2),
+                        ? Colors.white.withValues(alpha: 0.5)
+                        : Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
                 focusedBorder: OutlineInputBorder(

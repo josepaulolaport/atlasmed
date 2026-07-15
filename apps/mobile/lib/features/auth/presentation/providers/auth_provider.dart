@@ -103,10 +103,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         error: null,
       );
     } on AuthException catch (e) {
-      state = state.copyWith(
-        status: AuthStatus.unauthenticated,
-        error: e,
-      );
+      state = state.copyWith(status: AuthStatus.unauthenticated, error: e);
     }
   }
 
@@ -128,7 +125,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> submitCode(String code) async {
     final ok = await _repository.verifyResetCode(state.forgotEmail, code);
     if (ok) {
-      state = state.copyWith(forgotStep: 2, verificationCode: code, error: null);
+      state = state.copyWith(
+        forgotStep: 2,
+        verificationCode: code,
+        error: null,
+      );
       return true;
     } else {
       state = state.copyWith(
@@ -142,8 +143,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Step 3: submit new password.
-  Future<void> submitNewPassword(String newPassword, String confirmPassword) async {
-    state = state.copyWith(newPassword: newPassword, confirmPassword: confirmPassword);
+  Future<void> submitNewPassword(
+    String newPassword,
+    String confirmPassword,
+  ) async {
+    state = state.copyWith(
+      newPassword: newPassword,
+      confirmPassword: confirmPassword,
+    );
 
     try {
       await _repository.resetPassword(

@@ -8,11 +8,7 @@ class CartState {
   final SelectableClinic? clinic;
   final SelectableDoctor? doctor;
 
-  const CartState({
-    this.items = const [],
-    this.clinic,
-    this.doctor,
-  });
+  const CartState({this.items = const [], this.clinic, this.doctor});
 
   int get totalQty => items.fold(0, (s, i) => s + i.qty);
 
@@ -58,17 +54,31 @@ class CartNotifier extends StateNotifier<CartState> {
     final existing = state.items.indexWhere((i) => i.productId == productId);
     if (existing >= 0) {
       final updated = [...state.items];
-      updated[existing] = updated[existing].copyWith(qty: qty, unitPrice: unitPrice, priceMode: priceMode);
+      updated[existing] = updated[existing].copyWith(
+        qty: qty,
+        unitPrice: unitPrice,
+        priceMode: priceMode,
+      );
       state = state.copyWith(items: updated);
     } else {
       state = state.copyWith(
-        items: [...state.items, CartItem(productId: productId, qty: qty, unitPrice: unitPrice, priceMode: priceMode)],
+        items: [
+          ...state.items,
+          CartItem(
+            productId: productId,
+            qty: qty,
+            unitPrice: unitPrice,
+            priceMode: priceMode,
+          ),
+        ],
       );
     }
   }
 
   void removeItem(String productId) {
-    state = state.copyWith(items: state.items.where((i) => i.productId != productId).toList());
+    state = state.copyWith(
+      items: state.items.where((i) => i.productId != productId).toList(),
+    );
   }
 
   void updateQty(String productId, int qty) {
@@ -76,7 +86,9 @@ class CartNotifier extends StateNotifier<CartState> {
       removeItem(productId);
       return;
     }
-    final updated = state.items.map((i) => i.productId == productId ? i.copyWith(qty: qty) : i).toList();
+    final updated = state.items
+        .map((i) => i.productId == productId ? i.copyWith(qty: qty) : i)
+        .toList();
     state = state.copyWith(items: updated);
   }
 

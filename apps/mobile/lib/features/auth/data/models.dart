@@ -4,10 +4,7 @@ class LoginRequest {
 
   const LoginRequest({required this.email, required this.password});
 
-  Map<String, dynamic> toJson() => {
-        'email': email,
-        'password': password,
-      };
+  Map<String, dynamic> toJson() => {'email': email, 'password': password};
 }
 
 class ForgotPasswordRequest {
@@ -30,10 +27,10 @@ class ResetPasswordRequest {
   });
 
   Map<String, dynamic> toJson() => {
-        'email': email,
-        'code': code,
-        'newPassword': newPassword,
-      };
+    'email': email,
+    'code': code,
+    'newPassword': newPassword,
+  };
 }
 
 class AuthSession {
@@ -54,18 +51,18 @@ class AuthSession {
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
   factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(
-        userId: json['userId'] as String,
-        accessToken: json['accessToken'] as String,
-        refreshToken: json['refreshToken'] as String,
-        expiresAt: DateTime.parse(json['expiresAt'] as String),
-        userDisplayName: json['userDisplayName'] as String,
-      );
+    userId: json['userId'] as String,
+    accessToken: json['accessToken'] as String,
+    refreshToken: json['refreshToken'] as String,
+    expiresAt: DateTime.parse(json['expiresAt'] as String),
+    userDisplayName: json['userDisplayName'] as String,
+  );
 
   Map<String, dynamic> toJson() => {
-        'userId': userId,
-        'accessToken': accessToken,
-        'refreshToken': refreshToken,
-        'expiresAt': expiresAt.toIso8601String(),
-        'userDisplayName': userDisplayName,
-      };
+    'userId': userId,
+    'accessToken': accessToken,
+    'refreshToken': refreshToken,
+    'expiresAt': expiresAt.toIso8601String(),
+    'userDisplayName': userDisplayName,
+  };
 }

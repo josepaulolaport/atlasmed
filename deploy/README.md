@@ -6,7 +6,7 @@ PostgreSQL + PostGIS runs **locally on your machine** — it is intentionally no
 
 ```bash
 # 1. Start supporting services (Redis, MinIO, Meilisearch)
-bun run dev:up
+bun run infra:up
 
 # 2. Apply migrations and seed (requires local Postgres with PostGIS)
 bun run db:migrate
@@ -19,7 +19,7 @@ bun run temporal:up
 bun run observability:up
 
 # 5. Start apps
-bun run dev
+bun run web:dev
 ```
 
 ## Service access
@@ -87,10 +87,10 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 | `atlasmed-redis` | private | BullMQ, cache, and rate limiting. |
 | `atlasmed-meilisearch` | private | Search index. |
 | `atlasmed-minio` | private | S3-compatible storage for app files and CNES archives. |
-| `atlasmed-minio-init` | one-shot | Creates the app and CNES buckets. |
 
 All service names use the `atlasmed-` prefix to avoid collisions with other services already running in the cluster.
 All production services are pinned to the Uncloud machine named `atlasmed` via `x-machines: atlasmed`.
+The API creates `STORAGE_BUCKET` on startup when object storage is configured. The CNES worker creates `CNES_ARCHIVE_S3_BUCKET` on startup when the archive backend is `s3` or `minio`.
 
 ## One-time setup
 
@@ -100,9 +100,9 @@ All production services are pinned to the Uncloud machine named `atlasmed` via `
 4. Ensure the shared cluster Authelia config still exposes the Caddy snippet `internal_guard`; `atlasmed-temporal-ui` imports it.
 5. Deploy infrastructure manually:
    ```bash
-   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes
    ```
-6. Deploy app services:
+6. Deploy app services. Bucket creation happens during `atlasmed-api` and `atlasmed-cnes-worker` startup; re-running the app deploy is safe because bucket creation first checks whether each bucket already exists.
    ```bash
    uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --yes
    ```

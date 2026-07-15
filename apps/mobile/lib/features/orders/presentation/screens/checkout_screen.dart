@@ -19,7 +19,9 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final cart = ref.read(cartProvider);
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -27,21 +29,31 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             width: 36,
             height: 4,
             margin: const EdgeInsets.only(top: 10),
-            decoration: BoxDecoration(color: const Color(0xFFe5e7eb), borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFe5e7eb),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Selecionar clínica', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            child: Text(
+              'Selecionar clínica',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
           ),
-          ...kSelectorClinics.map((clinic) => ListTile(
-                leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
-                title: Text(clinic.name),
-                trailing: cart.clinic?.id == clinic.id ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f)) : null,
-                onTap: () {
-                  ref.read(cartProvider.notifier).setClinic(clinic);
-                  Navigator.pop(context);
-                },
-              )),
+          ...kSelectorClinics.map(
+            (clinic) => ListTile(
+              leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
+              title: Text(clinic.name),
+              trailing: cart.clinic?.id == clinic.id
+                  ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
+                  : null,
+              onTap: () {
+                ref.read(cartProvider.notifier).setClinic(clinic);
+                Navigator.pop(context);
+              },
+            ),
+          ),
           const SizedBox(height: 16),
         ],
       ),
@@ -51,11 +63,15 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   void _showDoctorSheet(BuildContext context, WidgetRef ref) {
     final cart = ref.read(cartProvider);
     final clinicId = cart.clinic?.id;
-    final doctors = kSelectorDoctors.where((d) => d.clinicId == clinicId).toList();
+    final doctors = kSelectorDoctors
+        .where((d) => d.clinicId == clinicId)
+        .toList();
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
       builder: (_) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -63,27 +79,40 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             width: 36,
             height: 4,
             margin: const EdgeInsets.only(top: 10),
-            decoration: BoxDecoration(color: const Color(0xFFe5e7eb), borderRadius: BorderRadius.circular(2)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFe5e7eb),
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Selecionar médico', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+            child: Text(
+              'Selecionar médico',
+              style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
           ),
           if (doctors.isEmpty)
             const Padding(
               padding: EdgeInsets.only(bottom: 24),
-              child: Text('Nenhum médico disponível para esta clínica', style: TextStyle(color: Color(0xFF6b7280))),
+              child: Text(
+                'Nenhum médico disponível para esta clínica',
+                style: TextStyle(color: Color(0xFF6b7280)),
+              ),
             )
           else
-            ...doctors.map((doc) => ListTile(
-                  title: Text(doc.name),
-                  subtitle: Text(doc.specialty),
-                  trailing: cart.doctor?.id == doc.id ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f)) : null,
-                  onTap: () {
-                    ref.read(cartProvider.notifier).setDoctor(doc);
-                    Navigator.pop(context);
-                  },
-                )),
+            ...doctors.map(
+              (doc) => ListTile(
+                title: Text(doc.name),
+                subtitle: Text(doc.specialty),
+                trailing: cart.doctor?.id == doc.id
+                    ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
+                    : null,
+                onTap: () {
+                  ref.read(cartProvider.notifier).setDoctor(doc);
+                  Navigator.pop(context);
+                },
+              ),
+            ),
           const SizedBox(height: 16),
         ],
       ),
@@ -117,9 +146,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   const Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('NOVO PEDIDO', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF6b7280), letterSpacing: 0.8)),
+                      Text(
+                        'NOVO PEDIDO',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF6b7280),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
                       SizedBox(height: 3),
-                      Text('Checkout', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF0f172a))),
+                      Text(
+                        'Checkout',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF0f172a),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -127,7 +171,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               const SizedBox(height: 18),
               _CheckoutSteps(),
               const SizedBox(height: 18),
-              const Text('Para quem?', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+              const Text(
+                'Para quem?',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF111827),
+                ),
+              ),
               const SizedBox(height: 12),
               SelectorField(
                 label: 'Clínica',
@@ -139,21 +190,38 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               SelectorField(
                 label: 'Médico responsável',
                 value: cart.doctor?.name,
-                placeholder: cart.clinic == null ? 'Selecione a clínica primeiro' : 'Selecione o médico',
-                onTap: cart.clinic == null ? null : () => _showDoctorSheet(context, ref),
+                placeholder: cart.clinic == null
+                    ? 'Selecione a clínica primeiro'
+                    : 'Selecione o médico',
+                onTap: cart.clinic == null
+                    ? null
+                    : () => _showDoctorSheet(context, ref),
                 disabled: cart.clinic == null,
               ),
               const SizedBox(height: 18),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFeef0f3))),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFeef0f3)),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Itens do pedido', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+                    const Text(
+                      'Itens do pedido',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
                     const SizedBox(height: 14),
                     ...cart.items.map((item) {
-                      final product = kProducts.firstWhere((p) => p.id == item.productId);
+                      final product = kProducts.firstWhere(
+                        (p) => p.id == item.productId,
+                      );
                       final lineTotal = item.unitPrice * item.qty;
                       final catalogTotal = product.unit * item.qty;
                       final savings = catalogTotal - lineTotal;
@@ -170,25 +238,73 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(product.name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
+                                  Text(
+                                    product.name,
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF111827),
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
-                                  Text(product.sub, style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
+                                  Text(
+                                    product.sub,
+                                    style: const TextStyle(
+                                      fontSize: 11.5,
+                                      color: Color(0xFF6b7280),
+                                    ),
+                                  ),
                                   const SizedBox(height: 6),
                                   Row(
                                     children: [
-                                      Text('× ${item.qty}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
+                                      Text(
+                                        '× ${item.qty}',
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          color: Color(0xFF6b7280),
+                                        ),
+                                      ),
                                       const Spacer(),
                                       if (negotiated) ...[
-                                        Text(_money(catalogTotal), style: const TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af), decoration: TextDecoration.lineThrough)),
+                                        Text(
+                                          _money(catalogTotal),
+                                          style: const TextStyle(
+                                            fontSize: 11.5,
+                                            color: Color(0xFF9ca3af),
+                                            decoration:
+                                                TextDecoration.lineThrough,
+                                          ),
+                                        ),
                                         const SizedBox(width: 6),
-                                        Text(_money(lineTotal), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF16a373))),
+                                        Text(
+                                          _money(lineTotal),
+                                          style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF16a373),
+                                          ),
+                                        ),
                                       ] else
-                                        Text(_money(lineTotal), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF374151))),
+                                        Text(
+                                          _money(lineTotal),
+                                          style: const TextStyle(
+                                            fontSize: 12.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFF374151),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                   if (savings > 0) ...[
                                     const SizedBox(height: 4),
-                                    Text('-${_money(savings)}', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF16a373))),
+                                    Text(
+                                      '-${_money(savings)}',
+                                      style: const TextStyle(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF16a373),
+                                      ),
+                                    ),
                                   ],
                                 ],
                               ),
@@ -201,8 +317,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Total', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF111827))),
-                        Text(_money(cart.subtotal), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF0a2f7f))),
+                        const Text(
+                          'Total',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF111827),
+                          ),
+                        ),
+                        Text(
+                          _money(cart.subtotal),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF0a2f7f),
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -210,13 +340,33 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               ),
               const SizedBox(height: 12),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(color: const Color(0xFFEAF8F1), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFc8eadb))),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF8F1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFc8eadb)),
+                ),
                 child: const Row(
                   children: [
-                    Icon(Icons.local_shipping_outlined, size: 18, color: Color(0xFF16a373)),
+                    Icon(
+                      Icons.local_shipping_outlined,
+                      size: 18,
+                      color: Color(0xFF16a373),
+                    ),
                     SizedBox(width: 8),
-                    Expanded(child: Text('Entrega estimada em 3–5 dias úteis', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF116a4c)))),
+                    Expanded(
+                      child: Text(
+                        'Entrega estimada em 3–5 dias úteis',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF116a4c),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -225,20 +375,34 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 width: double.infinity,
                 height: 52,
                 child: ElevatedButton(
-                  onPressed: canConfirm ? () => context.push('/pedidos/novo/sucesso') : null,
+                  onPressed: canConfirm
+                      ? () => context.push('/pedidos/novo/sucesso')
+                      : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0a2f7f),
                     disabledBackgroundColor: const Color(0xFFd1d5db),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
-                  child: const Text('Confirmar pedido', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+                  child: const Text(
+                    'Confirmar pedido',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
               if (!canConfirm) ...[
                 const SizedBox(height: 10),
                 const Center(
-                  child: Text('Selecione clínica e médico para continuar', style: TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af))),
+                  child: Text(
+                    'Selecione clínica e médico para continuar',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af)),
+                  ),
                 ),
               ],
             ],
@@ -269,11 +433,20 @@ class _StepItem extends StatelessWidget {
   final bool done;
   final bool current;
   final int index;
-  const _StepItem({required this.label, this.done = false, this.current = false, this.index = 0});
+  const _StepItem({
+    required this.label,
+    this.done = false,
+    this.current = false,
+    this.index = 0,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final bg = done ? const Color(0xFF0a2f7f) : current ? const Color(0xFFEAF0FF) : const Color(0xFFeef0f3);
+    final bg = done
+        ? const Color(0xFF0a2f7f)
+        : current
+        ? const Color(0xFFEAF0FF)
+        : const Color(0xFFeef0f3);
     final fg = done ? Colors.white : const Color(0xFF0a2f7f);
     return Column(
       children: [
@@ -284,10 +457,24 @@ class _StepItem extends StatelessWidget {
           alignment: Alignment.center,
           child: done
               ? const Icon(Icons.check, size: 16, color: Colors.white)
-              : Text('$index', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg)),
+              : Text(
+                  '$index',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
         ),
         const SizedBox(height: 6),
-        Text(label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: Color(0xFF4b5563))),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF4b5563),
+          ),
+        ),
       ],
     );
   }

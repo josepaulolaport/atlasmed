@@ -130,8 +130,8 @@ class _GlassInputState extends State<GlassInput> {
           fillColor: widget.error
               ? const Color(0x1FFF5A5A)
               : focused
-                  ? Colors.white.withValues(alpha: 0.18)
-                  : Colors.white.withValues(alpha: 0.09),
+              ? Colors.white.withValues(alpha: 0.18)
+              : Colors.white.withValues(alpha: 0.09),
           prefixIcon: widget.icon != null
               ? Padding(
                   padding: const EdgeInsets.only(left: 16, right: 8),
@@ -172,16 +172,11 @@ class _GlassInputState extends State<GlassInput> {
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: borderRadius,
-            borderSide: const BorderSide(
-              color: Color(0x99FF7878),
-            ),
+            borderSide: const BorderSide(color: Color(0x99FF7878)),
           ),
           focusedErrorBorder: OutlineInputBorder(
             borderRadius: borderRadius,
-            borderSide: const BorderSide(
-              color: Color(0x99FF7878),
-              width: 1.5,
-            ),
+            borderSide: const BorderSide(color: Color(0x99FF7878), width: 1.5),
           ),
           contentPadding: EdgeInsets.only(
             left: widget.icon != null ? 12 : 16,

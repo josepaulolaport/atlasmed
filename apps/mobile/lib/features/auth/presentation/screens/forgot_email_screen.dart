@@ -107,11 +107,11 @@ class ForgotEmailScreen extends ConsumerWidget {
                                 .read(authProvider.notifier)
                                 .submitForgotEmail(email.text)
                                 .then((_) {
-                              final st = ref.read(authProvider);
-                              if (st.error == null) {
-                                onCodeSent();
-                              }
-                            });
+                                  final st = ref.read(authProvider);
+                                  if (st.error == null) {
+                                    onCodeSent();
+                                  }
+                                });
                           },
                         ),
                         const SizedBox(height: 20),
@@ -128,7 +128,9 @@ class ForgotEmailScreen extends ConsumerWidget {
                               ),
                               TextButton(
                                 onPressed: onBack,
-                                style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                ),
                                 child: const Text(
                                   'Voltar ao login',
                                   style: TextStyle(
