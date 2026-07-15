@@ -36,6 +36,7 @@ services:
       - REDIS_URL=redis://atlasmed-redis:6379
       - "REDIS_KEY_PREFIX=atlasmed:"
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
       - FRONTEND_URL=${FRONTEND_URL}
@@ -74,12 +75,14 @@ services:
       dockerfile: deploy/docker/api-worker.Dockerfile
     environment:
       - NODE_ENV=production
+      - PORT=3000
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_POOL_MIN=${DATABASE_POOL_MIN:-2}
       - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
       - REDIS_URL=redis://atlasmed-redis:6379
       - "REDIS_KEY_PREFIX=atlasmed:"
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
       - FRONTEND_URL=${FRONTEND_URL}

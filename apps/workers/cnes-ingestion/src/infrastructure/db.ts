@@ -1,3 +1,4 @@
+import { environment } from "@atlasmed/config";
 import { createDatabase, type Database } from "@atlasmed/database";
 
 let dbInstance: Database | null = null;
@@ -7,12 +8,7 @@ export function getDb(): Database {
     return dbInstance;
   }
 
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL environment variable is not set");
-  }
-
-  dbInstance = createDatabase(connectionString);
+  dbInstance = createDatabase(environment.DATABASE_URL);
   return dbInstance;
 }
 

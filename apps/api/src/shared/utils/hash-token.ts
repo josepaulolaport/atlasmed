@@ -1,9 +1,10 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { environment } from "../../app/config/environment";
 
 const LEGACY_PREFIX = "sha256:";
 
 function getPepper(): string | undefined {
-  const pepper = process.env.TOKEN_HASH_PEPPER?.trim();
+  const pepper = environment.TOKEN_HASH_PEPPER?.trim();
   return pepper && pepper.length >= 16 ? pepper : undefined;
 }
 

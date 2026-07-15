@@ -1,3 +1,5 @@
+import { environment } from "@atlasmed/config";
+
 export interface WorkerConfig {
   temporalAddress: string;
   temporalNamespace: string;
@@ -23,8 +25,8 @@ const DEFAULT_CNES_IMPORT_SCRIPT =
   "/Users/josepaulolaport/Documents/projects/cnes_mapping/scripts/import_modular.py";
 
 function resolveDefaultImportScript(): string | undefined {
-  if (process.env.CNES_IMPORT_SCRIPT) {
-    return process.env.CNES_IMPORT_SCRIPT;
+  if (environment.CNES_IMPORT_SCRIPT) {
+    return environment.CNES_IMPORT_SCRIPT;
   }
 
   try {
@@ -40,24 +42,24 @@ function resolveDefaultImportScript(): string | undefined {
 
 export function loadWorkerConfig(): WorkerConfig {
   return {
-    temporalAddress: process.env.TEMPORAL_ADDRESS ?? "localhost:7233",
-    temporalNamespace: process.env.TEMPORAL_NAMESPACE ?? "default",
-    taskQueue: process.env.TEMPORAL_TASK_QUEUE ?? "cnes-ingestion",
-    cnesFtpMode: process.env.CNES_FTP_MODE === "ftp" ? "ftp" : "mock",
-    archiveBackend: (process.env.CNES_ARCHIVE_BACKEND as WorkerConfig["archiveBackend"]) ?? "local",
-    archiveLocalPath: process.env.CNES_ARCHIVE_LOCAL_PATH ?? "/tmp/atlasmed-cnes-archive",
-    archiveS3Bucket: process.env.CNES_ARCHIVE_S3_BUCKET,
-    archiveS3Region: process.env.CNES_ARCHIVE_S3_REGION,
-    archiveS3Endpoint: process.env.CNES_ARCHIVE_S3_ENDPOINT,
-    archiveS3AccessKeyId: process.env.CNES_ARCHIVE_S3_ACCESS_KEY_ID,
-    archiveS3SecretAccessKey: process.env.CNES_ARCHIVE_S3_SECRET_ACCESS_KEY,
-    loadMode: process.env.CNES_LOAD_MODE === "ftp" ? "ftp" : "dev",
-    extractDir: process.env.CNES_EXTRACT_DIR ?? "/tmp/cnes-extract",
-    pythonBin: process.env.CNES_PYTHON_BIN ?? "python3",
+    temporalAddress: environment.TEMPORAL_ADDRESS,
+    temporalNamespace: environment.TEMPORAL_NAMESPACE,
+    taskQueue: environment.TEMPORAL_TASK_QUEUE,
+    cnesFtpMode: environment.CNES_FTP_MODE,
+    archiveBackend: environment.CNES_ARCHIVE_BACKEND,
+    archiveLocalPath: environment.CNES_ARCHIVE_LOCAL_PATH,
+    archiveS3Bucket: environment.CNES_ARCHIVE_S3_BUCKET,
+    archiveS3Region: environment.CNES_ARCHIVE_S3_REGION,
+    archiveS3Endpoint: environment.CNES_ARCHIVE_S3_ENDPOINT,
+    archiveS3AccessKeyId: environment.CNES_ARCHIVE_S3_ACCESS_KEY_ID,
+    archiveS3SecretAccessKey: environment.CNES_ARCHIVE_S3_SECRET_ACCESS_KEY,
+    loadMode: environment.CNES_LOAD_MODE,
+    extractDir: environment.CNES_EXTRACT_DIR,
+    pythonBin: environment.CNES_PYTHON_BIN,
     importScript: resolveDefaultImportScript(),
-    validationRowTolerancePct: Number(process.env.CNES_VALIDATION_ROW_TOLERANCE_PCT ?? "15"),
-    devLoadSourceSchema: process.env.CNES_DEV_LOAD_SOURCE_SCHEMA ?? "mcp_test",
-    loadConcurrency: Number(process.env.CNES_LOAD_CONCURRENCY ?? "4"),
+    validationRowTolerancePct: environment.CNES_VALIDATION_ROW_TOLERANCE_PCT,
+    devLoadSourceSchema: environment.CNES_DEV_LOAD_SOURCE_SCHEMA,
+    loadConcurrency: environment.CNES_LOAD_CONCURRENCY,
   };
 }
 

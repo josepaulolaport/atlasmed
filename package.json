@@ -16,6 +16,7 @@
     "typecheck": "turbo typecheck",
     "lint": "turbo lint",
     "lint:fix": "biome check --write .",
+    "env:check": "turbo env:check --filter=@atlasmed/config",
     "api:dev": "turbo dev --filter=@atlasmed/api",
     "api:build": "turbo build --filter=@atlasmed/api",
     "api:lint": "turbo lint --filter=@atlasmed/api",

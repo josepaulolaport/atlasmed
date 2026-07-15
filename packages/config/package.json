@@ -8,10 +8,11 @@
   "type": "module",
   "scripts": {
     "lint": "biome check .",
+    "env:check": "bun src/env/check.ts",
     "typecheck": "bunx tsc -p tsconfig.json"
   },
   "dependencies": {
-    "zod": "^4.4.3"
+    "@sinclair/typebox": "^0.34.49"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",

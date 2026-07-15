@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { environment } from "@atlasmed/config";
 import { registryApi } from "@/lib/api/registry";
 import type { RegistryDemoResult, RegistrySuggestion } from "@/types/facility";
 import { Button } from "@/components/ui/button";
@@ -152,7 +153,7 @@ export default function RegistrySuggestionsPage() {
               fonte antes de aplicá-las.
             </p>
           </div>
-          {isAdmin && process.env.NODE_ENV === "development" && (
+          {isAdmin && environment.NODE_ENV === "development" && (
             <Button onClick={handleRunDemo} disabled={runningDemo}>
               <iconify-icon icon="solar:play-circle-linear" stroke-width="1.5" />
               {runningDemo ? "Executando…" : "Executar cenário de demonstração"}
