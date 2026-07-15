@@ -1,6 +1,23 @@
 name: Validate Backend Production Environment
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'apps/workers/**'
+      - 'packages/**'
+      - 'deploy/**'
+      - '.dockerignore'
+      - '.github/workflows/deploy-services-to-cluster.yml'
+      - '.github/workflows/deploy-infra.yml'
+      - '.github/workflows/validate-production-env.yml'
+      - 'bun.lock'
+      - 'package.json'
+      - 'turbo.json'
+
   workflow_call:
     secrets:
       UNCLOUD_CONNECT:
@@ -52,104 +69,34 @@ jobs:
       MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
       MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
       MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+      NODE_ENV: production
+      PORT: "3000"
+      REDIS_URL: redis://atlasmed-redis:6379
+      JWT_EXPIRATION: ${{ vars.JWT_EXPIRATION || '15m' }}
       STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
       STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+      CNES_ARCHIVE_BACKEND: s3
       CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
       CNES_FTP_MODE: ${{ vars.CNES_FTP_MODE || 'mock' }}
       CNES_LOAD_MODE: ${{ vars.CNES_LOAD_MODE || 'dev' }}
       CNES_LOAD_CONCURRENCY: ${{ vars.CNES_LOAD_CONCURRENCY || '4' }}
+      NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
+      NEXT_PUBLIC_HEALTH_URL: https://atlasmed-api.b1ixob.uncld.dev
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Validate required secrets
-        run: |
-          set -euo pipefail
-          missing=0
-          for name in \
-            UNCLOUD_CONNECT \
-            DATABASE_URL \
-            JWT_ACCESS_SECRET \
-            TOKEN_HASH_PEPPER \
-            CORS_ORIGINS \
-            FRONTEND_URL \
-            RESEND_API_KEY \
-            RESEND_FROM_EMAIL \
-            TEMPORAL_DB_PASSWORD \
-            MEILISEARCH_API_KEY \
-            MINIO_ROOT_USER \
-            MINIO_ROOT_PASSWORD
-          do
-            if [ -z "${!name:-}" ]; then
-              echo "Missing required production value: $name" >&2
-              missing=1
-            fi
-          done
-          exit "$missing"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
 
-      - name: Validate production value formats
-        run: |
-          set -euo pipefail
-          invalid=0
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-          require_min_length() {
-            name="$1"
-            min_length="$2"
-            value="${!name:-}"
-            if [ "${#value}" -lt "$min_length" ]; then
-              echo "$name must be at least $min_length characters" >&2
-              invalid=1
-            fi
-          }
-
-          require_https_url() {
-            name="$1"
-            value="${!name:-}"
-            case "$value" in
-              https://*) ;;
-              *)
-                echo "$name must be an https:// URL" >&2
-                invalid=1
-                ;;
-            esac
-          }
-
-          case "$UNCLOUD_CONNECT" in
-            ssh://*@*|ssh+cli://*@*) ;;
-            *)
-              echo "UNCLOUD_CONNECT must be an ssh:// or ssh+cli:// target" >&2
-              invalid=1
-              ;;
-          esac
-
-          case "$DATABASE_URL" in
-            postgres://*|postgresql://*) ;;
-            *)
-              echo "DATABASE_URL must be a postgres:// or postgresql:// URL" >&2
-              invalid=1
-              ;;
-          esac
-
-          require_min_length JWT_ACCESS_SECRET 32
-          require_min_length TOKEN_HASH_PEPPER 32
-          require_min_length TEMPORAL_DB_PASSWORD 16
-          require_min_length MEILISEARCH_API_KEY 16
-          require_min_length MINIO_ROOT_PASSWORD 16
-          require_https_url FRONTEND_URL
-
-          IFS=',' read -ra origins <<< "$CORS_ORIGINS"
-          for origin in "${origins[@]}"; do
-            case "$origin" in
-              https://*) ;;
-              *)
-                echo "CORS_ORIGINS entries must be https:// origins" >&2
-                invalid=1
-                ;;
-            esac
-          done
-
-          exit "$invalid"
+      - name: Validate production environment
+        run: bun run env:check
 
       - name: Validate compose file
         run: docker compose -f deploy/uncloud.compose.yml config --quiet

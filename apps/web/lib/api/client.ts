@@ -1,12 +1,14 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { environment } from "@atlasmed/config";
 import { isPublicAuthPath } from "@/lib/auth-routes";
 import { isRefreshTokenReuseError } from "@/lib/api/errors";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+const API_URL = environment.NEXT_PUBLIC_API_URL;
 
 function isRefreshRequest(config: InternalAxiosRequestConfig): boolean {
   const url = config.url ?? "";
-  return url.includes("/access/refresh");
+  const method = (config.method ?? "").toLowerCase();
+  return url === "/session/" && method === "put";
 }
 
 function hadAuthorizationHeader(config: InternalAxiosRequestConfig): boolean {
@@ -117,8 +119,8 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post(
-          `${API_URL}/access/refresh`,
+        const response = await axios.put(
+          `${API_URL}/session/`,
           {},
           { withCredentials: true }
         );

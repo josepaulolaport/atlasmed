@@ -1,1 +1,1 @@
-export * from "./env/api/api-env";
+export * from "./environment";

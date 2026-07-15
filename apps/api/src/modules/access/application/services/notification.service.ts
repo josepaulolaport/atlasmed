@@ -1,4 +1,4 @@
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../../app/config/environment";
 import { logger } from "../../../../infrastructure/logging/logger";
 import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
 import { sendPasswordResetWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
@@ -25,11 +25,11 @@ export class NotificationService {
       params.ipAddress ? ` from IP ${params.ipAddress}` : ""
     }. If this was not you, contact support immediately.`;
 
-    if (params.email && resend && apiEnv.RESEND_FROM_EMAIL) {
+    if (params.email && resend && environment.RESEND_FROM_EMAIL) {
       notifications.push(
         resend.emails
           .send({
-            from: apiEnv.RESEND_FROM_EMAIL,
+            from: environment.RESEND_FROM_EMAIL,
             to: params.email,
             subject: "Your AtlasMed password was changed",
             text: emailBody,

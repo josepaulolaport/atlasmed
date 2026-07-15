@@ -1,3 +1,4 @@
+import { environment } from "@atlasmed/config";
 import type { TerritoryMapProvider } from "@/components/territory/map/types";
 
 let cachedProvider: TerritoryMapProvider | null = null;
@@ -7,7 +8,7 @@ export async function getTerritoryMapProvider(): Promise<TerritoryMapProvider> {
     return cachedProvider;
   }
 
-  const providerName = process.env.NEXT_PUBLIC_MAP_PROVIDER ?? "leaflet";
+  const providerName = environment.NEXT_PUBLIC_MAP_PROVIDER;
 
   if (providerName === "mapbox") {
     const mod = await import("@/components/territory/map/providers/mapbox-editor");

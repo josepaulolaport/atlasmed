@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "format": "fvm dart format --set-exit-if-changed .",
-    "lint": "fvm flutter analyze",
+    "lint": "fvm dart format --set-exit-if-changed .",
+    "typecheck": "fvm flutter analyze",
     "test": "if [ -n \"$(find test -name '*_test.dart' -print -quit)\" ]; then fvm flutter test; else echo 'No Flutter tests found; skipping.'; fi"
   }
 }

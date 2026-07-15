@@ -494,8 +494,9 @@ DATABASE_URL=<url> bun run scripts/migrate.ts
 
 ### Rules
 
-- Env vars validated with Zod at startup. Fail loudly on missing required values.
-- No config value baked at build time — everything read at boot.
+- `@atlasmed/config` is the single source of truth for environment variables. Apps and packages that need env values import `environment` from this package instead of reading `process.env` directly.
+- Env vars are validated with TypeBox. Production validation runs through the root `bun run env:check`, which delegates to the only workspace-level `env:check` script in `@atlasmed/config`.
+- No config value baked at build time unless it is explicitly a public `NEXT_PUBLIC_*` value.
 - No secret defaulting — production requires explicit values.
 - Feature flags are typed. No string-keyed lookups.
 
