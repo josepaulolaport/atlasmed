@@ -34,23 +34,29 @@ function loadApiEnv(): void {
 }
 
 async function isWorkerDatabaseReady(): Promise<boolean> {
-  try {
-    const { db } = await import("../src/infrastructure/db");
-    await db.execute(sql`SELECT 1`);
-    const rows = await db.execute<{ exists: boolean }>(sql`
-      SELECT EXISTS (
-        SELECT 1 FROM information_schema.tables
-        WHERE table_schema = 'registry_staging' AND table_name = 'facilities'
-      ) AS exists
-    `);
-    if (!rows[0]?.exists) {
-      await recreateRegistryStagingSchema();
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      const { db } = await import("../src/infrastructure/db");
+      await db.execute(sql`SELECT 1`);
+      const rows = await db.execute<{ exists: boolean }>(sql`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.tables
+          WHERE table_schema = 'registry_staging' AND table_name = 'facilities'
+        ) AS exists
+      `);
+      if (!rows[0]?.exists) {
+        await recreateRegistryStagingSchema();
+      }
+      return true;
+    } catch (err) {
+      if (attempt < 5) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      } else {
+        console.error("[isWorkerDatabaseReady] error after 5 attempts:", err);
+      }
     }
-    return true;
-  } catch (err) {
-    console.error("[isWorkerDatabaseReady] error:", err);
-    return false;
   }
+  return false;
 }
 
 describe("CNES ingestion worker Integration Tests", () => {
