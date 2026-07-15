@@ -21,6 +21,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final sessionProfile = ref.watch(sessionProfileProvider);
     final profileAsync = ref.watch(profileProvider);
     final territoryAsync = ref.watch(territoryStatsProvider);
     final summaryAsync = ref.watch(quickSummaryProvider);
@@ -41,11 +42,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   _buildTopBar(),
 
                   // ── Header · identity ────────────────────────
-                  profileAsync.when(
-                    loading: () => _buildHeaderShimmer(),
-                    error: (_, _) => const SizedBox.shrink(),
-                    data: (profile) => _buildHeader(profile),
-                  ),
+                  if (sessionProfile != null)
+                    _buildHeader(sessionProfile)
+                  else
+                    profileAsync.when(
+                      loading: () => _buildHeaderShimmer(),
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (profile) => _buildHeader(profile),
+                    ),
 
                   // ── Body ─────────────────────────────────────
                   Padding(
@@ -97,11 +101,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _buildLogoutButton(),
 
                         // Footer
-                        profileAsync.when(
-                          data: (profile) => _buildFooter(profile.since),
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, _) => const SizedBox.shrink(),
-                        ),
+                        _buildFooter(sessionProfile?.since ?? ''),
                       ],
                     ),
                   ),
@@ -807,7 +807,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.only(top: 18),
       child: Center(
         child: Text(
-          'Atlasmed · v0.1.0 · $since',
+          since.isEmpty ? 'Atlasmed · v0.1.0' : 'Atlasmed · v0.1.0 · $since',
           style: const TextStyle(
             fontSize: 10.5,
             color: Color(0xFFc4c9d2),
