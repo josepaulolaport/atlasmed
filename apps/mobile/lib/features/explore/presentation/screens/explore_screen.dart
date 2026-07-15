@@ -23,7 +23,6 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
-  bool _filterOpen = false;
   bool _sortOpen = false;
 
   @override
@@ -99,27 +98,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               ],
             ),
 
-            // ── Filter sheet overlay ──────────────────────
-            FilterSheet(
-              open: _filterOpen,
-              onClose: () => setState(() => _filterOpen = false),
-              kind: state.activeTab,
-              filters: state.filters,
-              proximityEnabled: state.proximityOrigin != null,
-              requestingProximity: state.requestingProximity,
-              onProximityToggle: () {
-                if (state.proximityOrigin != null) {
-                  notifier.disableProximity();
-                } else {
-                  notifier.enableProximity();
-                }
-              },
-              onApply: (f) {
-                notifier.setFilters(f);
-                setState(() => _filterOpen = false);
-              },
-            ),
-
             // ── Sort sheet overlay ────────────────────────
             SortSheet(
               open: _sortOpen,
@@ -147,6 +125,33 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     };
   }
 
+  Future<void> _showFilterSheet(
+    ExploreState state,
+    ExploreNotifier notifier,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => FilterSheet(
+        kind: state.activeTab,
+        filters: state.filters,
+        proximityEnabled: state.proximityOrigin != null,
+        requestingProximity: state.requestingProximity,
+        onProximityToggle: () {
+          if (state.proximityOrigin != null) {
+            notifier.disableProximity();
+          } else {
+            notifier.enableProximity();
+          }
+        },
+        onApply: (filters) {
+          notifier.setFilters(filters);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
   Widget _buildSearchBar(
     ExploreState state,
     ExploreNotifier notifier,
@@ -158,7 +163,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       child: SearchBarWidget(
         value: state.query,
         onChanged: notifier.setQuery,
-        onFilter: () => setState(() => _filterOpen = true),
+        onFilter: () => _showFilterSheet(state, notifier),
         filterCount: filterCount,
         hintText: isClinic
             ? 'Buscar clínica, bairro…'

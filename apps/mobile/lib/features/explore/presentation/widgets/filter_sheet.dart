@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'bottom_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 
 class FilterSheet extends StatefulWidget {
-  final bool open;
-  final VoidCallback onClose;
   final String kind;
   final Map<String, List<String>> filters;
   final bool proximityEnabled;
@@ -13,8 +11,6 @@ class FilterSheet extends StatefulWidget {
 
   const FilterSheet({
     super.key,
-    required this.open,
-    required this.onClose,
     required this.kind,
     required this.filters,
     required this.proximityEnabled,
@@ -27,49 +23,13 @@ class FilterSheet extends StatefulWidget {
   State<FilterSheet> createState() => _FilterSheetState();
 }
 
-class _FilterSheetState extends State<FilterSheet>
-    with SingleTickerProviderStateMixin {
+class _FilterSheetState extends State<FilterSheet> {
   late Map<String, List<String>> _local;
-  late AnimationController _animController;
-  late Animation<double> _overlayAnim;
-  late Animation<double> _sheetAnim;
 
   @override
   void initState() {
     super.initState();
     _local = Map.from(widget.filters);
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 320),
-    );
-    _overlayAnim = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(parent: _animController, curve: Curves.ease));
-    _sheetAnim = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Cubic(0.2, 0.8, 0.2, 1),
-      ),
-    );
-    if (widget.open) _animController.forward();
-  }
-
-  @override
-  void didUpdateWidget(FilterSheet oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.open && !oldWidget.open) {
-      _local = Map.from(widget.filters);
-      _animController.forward();
-    } else if (!widget.open && oldWidget.open) {
-      _animController.reverse();
-    }
-  }
-
-  @override
-  void dispose() {
-    _animController.dispose();
-    super.dispose();
   }
 
   void _toggle(String key, String value) {
@@ -91,57 +51,22 @@ class _FilterSheetState extends State<FilterSheet>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open && _animController.isDismissed) {
-      return const SizedBox.shrink();
-    }
-
-    return Stack(
-      children: [
-        FadeTransition(
-          opacity: _overlayAnim,
-          child: GestureDetector(
-            onTap: widget.onClose,
-            child: Container(
-              color: const Color(0x803B82F6).withValues(alpha: 0.5),
-            ),
+    return BottomSheetWidget(
+      title: 'Filtros',
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ProximityFilter(
+            enabled: widget.proximityEnabled,
+            isLoading: widget.requestingProximity,
+            onChanged: widget.onProximityToggle,
           ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: AnimatedBuilder(
-            animation: _animController,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(
-                  0,
-                  _sheetAnim.value * MediaQuery.of(context).size.height * 0.5,
-                ),
-                child: child,
-              );
-            },
-            child: BottomSheetWidget(
-              title: 'Filtros',
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _ProximityFilter(
-                    enabled: widget.proximityEnabled,
-                    isLoading: widget.requestingProximity,
-                    onChanged: widget.onProximityToggle,
-                  ),
-                  widget.kind == 'clinic'
-                      ? _ClinicFilters(local: _local, onToggle: _toggle)
-                      : _DoctorFilters(local: _local, onToggle: _toggle),
-                ],
-              ),
-            ),
-          ),
-        ),
-        if (_animController.isCompleted)
-          Positioned(left: 0, right: 0, bottom: 0, child: _buildButtons()),
-      ],
+          widget.kind == 'clinic'
+              ? _ClinicFilters(local: _local, onToggle: _toggle)
+              : _DoctorFilters(local: _local, onToggle: _toggle),
+          _buildButtons(),
+        ],
+      ),
     );
   }
 
@@ -156,9 +81,7 @@ class _FilterSheetState extends State<FilterSheet>
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                setState(() => _local = {});
-              },
+              onTap: () => setState(() => _local = {}),
               child: Container(
                 height: 46,
                 decoration: BoxDecoration(
