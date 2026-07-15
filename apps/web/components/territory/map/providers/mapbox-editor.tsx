@@ -6,7 +6,6 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import type { TerritoryMapEditorProps, TerritoryMapProvider } from "../types";
-import type { GeoJsonPolygon } from "@/types/territory";
 import { getCachedMapsConfig } from "@/lib/maps/config";
 import {
   boundaryToDrawFeatures,
@@ -157,7 +156,7 @@ function MapboxTerritoryEditorInner({
 
   return (
     <div>
-      <div ref={containerRef} className="h-[420px] w-full rounded-md border" />
+      <div ref={containerRef} className="h-105 w-full rounded-md border" />
       {!readOnly ? (
         <p className="mt-2 text-xs text-gray-500">
           Desenhe múltiplos polígonos para definir partes não contíguas do mesmo território.
