@@ -126,3 +126,20 @@ export const territoryApprovalStatusEnum = pgEnum("territory_approval_status", [
  * PF = Pessoa Física (individual practitioner, identified by CPF).
  */
 export const facilityTaxIdTypeEnum = pgEnum("facility_tax_id_type", ["PJ", "PF"]);
+
+export const orderStatusEnum = pgEnum("order_status", [
+  "DRAFT",
+  "PENDING",
+  "CONFIRMED",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+  "REJECTED",
+]);
+
+export const orderTypeEnum = pgEnum("order_type", [
+  "STANDARD",
+  "URGENT",
+  "RETURN",
+  "SAMPLE",
+]);
