@@ -71,6 +71,8 @@ export const facilities = pgTable(
     commercialStatus: commercialStatusEnum("commercial_status"),
     purchaseStatus: purchaseStatusEnum("purchase_status"),
     imageUrl: text("image_url"),
+    unitType: text("unit_type"),
+    unitSubtype: text("unit_subtype"),
 
     // --- Territory ---
     territoryId: text("territory_id").references(() => territories.id, { onDelete: "set null" }),
