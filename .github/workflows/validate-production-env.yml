@@ -1,6 +1,23 @@
 name: Validate Backend Production Environment
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - 'apps/web/**'
+      - 'apps/workers/**'
+      - 'packages/**'
+      - 'deploy/**'
+      - '.dockerignore'
+      - '.github/workflows/deploy-services-to-cluster.yml'
+      - '.github/workflows/deploy-infra.yml'
+      - '.github/workflows/validate-production-env.yml'
+      - 'bun.lock'
+      - 'package.json'
+      - 'turbo.json'
+
   workflow_call:
     secrets:
       UNCLOUD_CONNECT:
