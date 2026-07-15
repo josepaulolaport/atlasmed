@@ -132,7 +132,17 @@ export class DrizzleProductRepository implements ProductRepository {
     return db.transaction(async (tx) => {
       const [product] = await tx
         .update(products)
-        .set({ ...cleanData, updatedAt: new Date() })
+// Only set updatedAt when product data actually changes
+const hasProductChanges = Object.keys(cleanData).length > 0;
+const setData = hasProductChanges
+  ? { ...cleanData, updatedAt: new Date() }
+  : cleanData;
+
+const [product] = await tx
+  .update(products)
+  .set(setData)
+  .where(eq(products.id, id))
+  .returning(productColumns);
         .where(eq(products.id, id))
         .returning(productColumns);
       if (!product) throw new Error("Product not found");
