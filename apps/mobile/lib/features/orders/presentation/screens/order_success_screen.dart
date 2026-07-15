@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
@@ -310,17 +309,16 @@ class _OrderItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final product = kProducts.firstWhere((p) => p.id == item.productId);
     return Row(
       children: [
-        ProductIcon(name: product.name, size: 28),
+        ProductIcon(name: item.productName, size: 28),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${product.name} × ${item.qty}',
+                '${item.productName} × ${item.qty}',
                 style: const TextStyle(
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
@@ -329,7 +327,7 @@ class _OrderItemRow extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                product.sub,
+                item.productSubtitle,
                 style: const TextStyle(
                   fontSize: 11.5,
                   color: Color(0xFF6B7280),

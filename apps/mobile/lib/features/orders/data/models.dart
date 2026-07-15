@@ -152,22 +152,36 @@ class Product {
 // ── Cart item ────────────────────────────────────────────────
 class CartItem {
   final String productId;
+  final String productName;
+  final String productSubtitle;
   final int qty;
   final double unitPrice;
+  final double? catalogUnitPrice;
   final String? priceMode;
 
   const CartItem({
     required this.productId,
+    required this.productName,
+    required this.productSubtitle,
     required this.qty,
     required this.unitPrice,
+    this.catalogUnitPrice,
     this.priceMode,
   });
 
-  CartItem copyWith({int? qty, double? unitPrice, String? priceMode}) {
+  CartItem copyWith({
+    int? qty,
+    double? unitPrice,
+    double? catalogUnitPrice,
+    String? priceMode,
+  }) {
     return CartItem(
       productId: productId,
+      productName: productName,
+      productSubtitle: productSubtitle,
       qty: qty ?? this.qty,
       unitPrice: unitPrice ?? this.unitPrice,
+      catalogUnitPrice: catalogUnitPrice ?? this.catalogUnitPrice,
       priceMode: priceMode ?? this.priceMode,
     );
   }

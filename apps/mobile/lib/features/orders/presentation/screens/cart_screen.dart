@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
@@ -15,10 +14,7 @@ class CartScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
-    final items = cart.items.map((ci) {
-      final product = kProducts.firstWhere((p) => p.id == ci.productId);
-      return MapEntry(product, ci.qty);
-    }).toList();
+    final items = cart.items;
     final subtotal = cart.subtotal;
 
     return Scaffold(
@@ -40,12 +36,11 @@ class CartScreen extends ConsumerWidget {
                           (entry) => Padding(
                             padding: const EdgeInsets.only(bottom: 12),
                             child: _CartItemCard(
-                              product: entry.key,
-                              qty: entry.value,
+                              item: entry,
                               onChanged: (newQty) {
                                 ref
                                     .read(cartProvider.notifier)
-                                    .updateQty(entry.key.id, newQty);
+                                    .updateQty(entry.productId, newQty);
                               },
                             ),
                           ),
@@ -150,15 +145,10 @@ class _Header extends StatelessWidget {
 }
 
 class _CartItemCard extends StatelessWidget {
-  final Product product;
-  final int qty;
+  final CartItem item;
   final ValueChanged<int> onChanged;
 
-  const _CartItemCard({
-    required this.product,
-    required this.qty,
-    required this.onChanged,
-  });
+  const _CartItemCard({required this.item, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -171,14 +161,14 @@ class _CartItemCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          ProductIcon(name: product.name, size: 42),
+          ProductIcon(name: item.productName, size: 42),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  product.name,
+                  item.productName,
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -187,7 +177,7 @@ class _CartItemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  product.sub,
+                  item.productSubtitle,
                   style: const TextStyle(
                     fontSize: 11.5,
                     color: Color(0xFF6b7280),
@@ -195,7 +185,7 @@ class _CartItemCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  brl(product.unit * qty),
+                  brl(item.unitPrice * item.qty),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -206,7 +196,7 @@ class _CartItemCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          StepperWidget(value: qty, onChange: onChanged),
+          StepperWidget(value: item.qty, onChange: onChanged),
         ],
       ),
     );
@@ -214,7 +204,7 @@ class _CartItemCard extends StatelessWidget {
 }
 
 class _SummaryCard extends StatelessWidget {
-  final List<MapEntry<Product, int>> items;
+  final List<CartItem> items;
   final double subtotal;
 
   const _SummaryCard({required this.items, required this.subtotal});
@@ -240,16 +230,14 @@ class _SummaryCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          ...items.map((entry) {
-            final product = entry.key;
-            final qty = entry.value;
+          ...items.map((item) {
             return Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
-                      '${product.name} × $qty',
+                      '${item.productName} × ${item.qty}',
                       style: const TextStyle(
                         fontSize: 12.5,
                         color: Color(0xFF6b7280),
@@ -258,7 +246,7 @@ class _SummaryCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    brl(product.unit * qty),
+                    brl(item.unitPrice * item.qty),
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: Color(0xFF1f2937),

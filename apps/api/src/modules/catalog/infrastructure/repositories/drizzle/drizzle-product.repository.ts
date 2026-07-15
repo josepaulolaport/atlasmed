@@ -1,6 +1,6 @@
 import { db } from "../../../../../infrastructure/database/db";
 import { products, productSectors } from "@atlasmed/database";
-import { eq, and, asc, sql, inArray } from "drizzle-orm";
+import { eq, and, asc, sql, inArray, ilike, or } from "drizzle-orm";
 import type {
   ProductRecord,
   ProductRepository,
@@ -10,6 +10,12 @@ function mapProduct(row: {
   id: string;
   code: string;
   name: string;
+  description: string | null;
+  commercialCode: string | null;
+  productGroup: string | null;
+  productClassification: string | null;
+  brand: string | null;
+  unit: string | null;
   pictureUrl: string | null;
   simproCode: string;
   brasindiceCode: string;
@@ -29,6 +35,12 @@ function mapProduct(row: {
     id: row.id,
     code: row.code,
     name: row.name,
+    description: row.description,
+    commercialCode: row.commercialCode,
+    productGroup: row.productGroup,
+    productClassification: row.productClassification,
+    brand: row.brand,
+    unit: row.unit,
     sectorIds,
     pictureUrl: row.pictureUrl,
     simproCode: row.simproCode,
@@ -51,6 +63,12 @@ const productColumns = {
   id: products.id,
   code: products.code,
   name: products.name,
+  description: products.description,
+  commercialCode: products.commercialCode,
+  productGroup: products.productGroup,
+  productClassification: products.productClassification,
+  brand: products.brand,
+  unit: products.unit,
   pictureUrl: products.pictureUrl,
   simproCode: products.simproCode,
   brasindiceCode: products.brasindiceCode,
@@ -87,12 +105,17 @@ export class DrizzleProductRepository implements ProductRepository {
     page: number;
     limit: number;
     sectorId?: string;
+    search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }> {
     const skip = (params.page - 1) * params.limit;
 
     const conditions = [];
     if (params.isActive !== undefined) conditions.push(eq(products.isActive, params.isActive));
+    if (params.search?.trim()) {
+      const pattern = `%${params.search.trim()}%`;
+      conditions.push(or(ilike(products.name, pattern), ilike(products.code, pattern)));
+    }
     if (params.sectorId) {
       conditions.push(
         inArray(

@@ -7,6 +7,7 @@ import {
   CreateSectorUseCase,
   UpdateSectorUseCase,
   ListProductsUseCase,
+  GetProductUseCase,
   CreateProductUseCase,
   UpdateProductUseCase,
   ListHealthcareProvidersUseCase,
@@ -28,6 +29,7 @@ export const catalogUseCases = {
   createSector: () => new CreateSectorUseCase({ sectorRepository: catalogRepositories.sector }),
   updateSector: () => new UpdateSectorUseCase({ sectorRepository: catalogRepositories.sector }),
   listProducts: () => new ListProductsUseCase({ productRepository: catalogRepositories.product }),
+  getProduct: () => new GetProductUseCase({ productRepository: catalogRepositories.product }),
   createProduct: () => new CreateProductUseCase({ productRepository: catalogRepositories.product }),
   updateProduct: () => new UpdateProductUseCase({ productRepository: catalogRepositories.product }),
   listHealthcareProviders: () =>

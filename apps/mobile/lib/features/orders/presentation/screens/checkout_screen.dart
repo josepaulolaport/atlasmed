@@ -119,9 +119,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  bool _hasNegotiated(Product p, CartState cart) {
-    final ci = cart.items.firstWhere((i) => i.productId == p.id);
-    return ci.unitPrice != p.unit;
+  bool _hasNegotiated(CartItem item) {
+    return item.unitPrice != (item.catalogUnitPrice ?? item.unitPrice);
   }
 
   String _money(double value) => brl(value);
@@ -219,27 +218,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     const SizedBox(height: 14),
                     ...cart.items.map((item) {
-                      final product = kProducts.firstWhere(
-                        (p) => p.id == item.productId,
-                      );
                       final lineTotal = item.unitPrice * item.qty;
-                      final catalogTotal = product.unit * item.qty;
+                      final catalogTotal =
+                          (item.catalogUnitPrice ?? item.unitPrice) * item.qty;
                       final savings = catalogTotal - lineTotal;
-                      final negotiated = _hasNegotiated(product, cart);
+                      final negotiated = _hasNegotiated(item);
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ProductIcon(name: product.name, size: 32),
+                            ProductIcon(name: item.productName, size: 32),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    product.name,
+                                    item.productName,
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,
@@ -248,7 +245,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    product.sub,
+                                    item.productSubtitle,
                                     style: const TextStyle(
                                       fontSize: 11.5,
                                       color: Color(0xFF6b7280),

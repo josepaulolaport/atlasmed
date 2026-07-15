@@ -23,8 +23,7 @@ class CartState {
   double get catalogSubtotal {
     double total = 0;
     for (final item in items) {
-      final p = kProducts.firstWhere((p) => p.id == item.productId);
-      total += p.unit * item.qty;
+      total += (item.catalogUnitPrice ?? item.unitPrice) * item.qty;
     }
     return total;
   }
@@ -50,13 +49,22 @@ class CartState {
 class CartNotifier extends StateNotifier<CartState> {
   CartNotifier() : super(const CartState());
 
-  void addItem(String productId, int qty, double unitPrice, String? priceMode) {
+  void addItem({
+    required String productId,
+    required String productName,
+    required String productSubtitle,
+    required int qty,
+    required double unitPrice,
+    required double catalogUnitPrice,
+    required String? priceMode,
+  }) {
     final existing = state.items.indexWhere((i) => i.productId == productId);
     if (existing >= 0) {
       final updated = [...state.items];
       updated[existing] = updated[existing].copyWith(
         qty: qty,
         unitPrice: unitPrice,
+        catalogUnitPrice: catalogUnitPrice,
         priceMode: priceMode,
       );
       state = state.copyWith(items: updated);
@@ -66,8 +74,11 @@ class CartNotifier extends StateNotifier<CartState> {
           ...state.items,
           CartItem(
             productId: productId,
+            productName: productName,
+            productSubtitle: productSubtitle,
             qty: qty,
             unitPrice: unitPrice,
+            catalogUnitPrice: catalogUnitPrice,
             priceMode: priceMode,
           ),
         ],

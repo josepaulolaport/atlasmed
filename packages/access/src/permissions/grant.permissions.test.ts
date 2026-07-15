@@ -66,11 +66,12 @@ describe("defineAbilitiesForUser", () => {
 });
 
 describe("role catalog permissions", () => {
-  it("allows only ADMIN to access catalog", () => {
+  it("allows sales roles to read the global catalog while only ADMIN manages it", () => {
     expect(defineAbilitiesFor(Role.ADMIN).can("read", "CATALOG")).toBe(true);
     expect(defineAbilitiesFor(Role.ADMIN).can("manage", "CATALOG")).toBe(true);
-    expect(defineAbilitiesFor(Role.MANAGER).can("read", "CATALOG")).toBe(false);
-    expect(defineAbilitiesFor(Role.REP).can("read", "CATALOG")).toBe(false);
+    expect(defineAbilitiesFor(Role.MANAGER).can("read", "CATALOG")).toBe(true);
+    expect(defineAbilitiesFor(Role.REP).can("read", "CATALOG")).toBe(true);
+    expect(defineAbilitiesFor(Role.REP).can("manage", "CATALOG")).toBe(false);
   });
 });
 

@@ -41,6 +41,7 @@ export function applyRoleAbilities(
       can("read", "REGISTRY_SUGGESTION");
       can("update", "REGISTRY_SUGGESTION");
       can("read", "REGISTRY_INGESTION");
+      can("read", "CATALOG");
       break;
 
     case "REP":
@@ -48,6 +49,7 @@ export function applyRoleAbilities(
       can("update", "FACILITY");
       can("read", "PROFESSIONAL");
       can("update", "PROFESSIONAL");
+      can("read", "CATALOG");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");

@@ -2,6 +2,12 @@ export interface ProductRecord {
   id: string;
   code: string;
   name: string;
+  description: string | null;
+  commercialCode: string | null;
+  productGroup: string | null;
+  productClassification: string | null;
+  brand: string | null;
+  unit: string | null;
   sectorIds: string[];
   pictureUrl: string | null;
   simproCode: string;
@@ -24,6 +30,7 @@ export interface ProductRepository {
     page: number;
     limit: number;
     sectorId?: string;
+    search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }>;
 

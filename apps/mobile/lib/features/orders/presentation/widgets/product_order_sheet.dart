@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
@@ -7,7 +8,7 @@ import 'order_widgets.dart';
 
 /// Bottom-sheet modal for setting quantity + unit price on a product.
 class ProductOrderSheet extends ConsumerStatefulWidget {
-  final Product product;
+  final CatalogProduct product;
   final String? clinicId;
   final String? clinicName;
   final int initialQty;
@@ -37,16 +38,16 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
       ? getSuggestedPrice(
           widget.clinicId!,
           widget.product.id,
-          widget.product.unit,
+          widget.product.price,
         )
       : null;
 
   double get _activeUnit {
     switch (_mode) {
       case 'suggested':
-        return _suggestion?.unit ?? widget.product.unit;
+        return _suggestion?.unit ?? widget.product.price;
       case 'catalog':
-        return widget.product.unit;
+        return widget.product.price;
       default:
         return _customUnit;
     }
@@ -59,7 +60,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
         ? getSuggestedPrice(
             widget.clinicId!,
             widget.product.id,
-            widget.product.unit,
+            widget.product.price,
           )
         : null;
     final startMode =
@@ -68,7 +69,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
         widget.initialUnit ??
         (startMode == 'suggested' && suggestion != null
             ? suggestion.unit
-            : widget.product.unit);
+            : widget.product.price);
     _qty = widget.initialQty > 0 ? widget.initialQty : 1;
     _mode = startMode;
     _customUnit = startUnit;
@@ -77,7 +78,15 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   void _confirm() {
     ref
         .read(cartProvider.notifier)
-        .addItem(widget.product.id, _qty, _activeUnit, _mode);
+        .addItem(
+          productId: widget.product.id,
+          productName: widget.product.name,
+          productSubtitle: widget.product.subtitle,
+          qty: _qty,
+          unitPrice: _activeUnit,
+          catalogUnitPrice: widget.product.price,
+          priceMode: _mode,
+        );
     Navigator.of(context).pop();
   }
 
@@ -144,7 +153,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.product.sub,
+                        widget.product.subtitle,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF6b7280),
@@ -402,7 +411,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     onTap: () => setState(() => _mode = 'catalog'),
                     label: 'Preço de tabela',
                     hint: 'Tabela vigente para todos os clientes',
-                    price: brl(widget.product.unit),
+                    price: brl(widget.product.price),
                   ),
                   const SizedBox(height: 8),
                   _PriceRow(
@@ -596,7 +605,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             suggestion != null &&
                             suggestion.isDiscounted)
                           Text(
-                            'Economia: ${brl((widget.product.unit - suggestion.unit) * _qty)}',
+                            'Economia: ${brl((widget.product.price - suggestion.unit) * _qty)}',
                             style: const TextStyle(
                               fontSize: 10.5,
                               color: Color(0xFF0f7c5a),
