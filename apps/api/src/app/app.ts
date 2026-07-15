@@ -3,7 +3,7 @@ import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { healthRoute } from "../infrastructure/health/health.route";
-import { access, user } from "../modules/access";
+import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
 import { catalog } from "../modules/catalog";
@@ -13,6 +13,7 @@ import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
 import { orders } from "../modules/orders";
 import { visits } from "../modules/visits";
+import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
@@ -105,8 +106,9 @@ const app = new Elysia()
     app
       .use(auditMiddleware)
       .use(sessions)
-      .use(user)
+      .use(profileUser)
       .use(access)
+      .use(avatarUser)
       .use(facility)
       .use(catalog)
       .use(professional)

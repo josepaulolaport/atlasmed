@@ -68,6 +68,7 @@ const EnvironmentSchema = Type.Object({
   STORAGE_SECRET_ACCESS_KEY: OptionalString(),
   STORAGE_BUCKET: OptionalString(),
   STORAGE_REGION: Type.String({ default: "us-east-1", minLength: 1 }),
+  AVATAR_STORAGE_LOCAL_PATH: Type.String({ default: "/tmp/atlasmed-avatars", minLength: 1 }),
 
   MEILISEARCH_URL: OptionalString(),
   MEILISEARCH_API_KEY: OptionalString(),
@@ -175,6 +176,7 @@ function normalizeEnvironment(env: EnvInput) {
     OTEL_SERVICE_NAME: env.OTEL_SERVICE_NAME ?? "atlasmed-api",
     LOG_LEVEL: env.LOG_LEVEL ?? "info",
     STORAGE_REGION: env.STORAGE_REGION ?? "us-east-1",
+    AVATAR_STORAGE_LOCAL_PATH: env.AVATAR_STORAGE_LOCAL_PATH ?? "/tmp/atlasmed-avatars",
     ENABLE_SWAGGER: booleanFromEnv(env.ENABLE_SWAGGER, true),
     ENABLE_METRICS: booleanFromEnv(env.ENABLE_METRICS, true),
     ENABLE_AUDIT_LOG: booleanFromEnv(env.ENABLE_AUDIT_LOG, true),

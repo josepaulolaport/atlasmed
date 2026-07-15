@@ -399,6 +399,13 @@ export const accessUseCases = {
       authCache: accessCaches.auth,
     }),
 
+  updateAvatar: () =>
+    new UpdateAvatarUseCase({
+      userRepository: accessRepositories.user,
+      authCache: accessCaches.auth,
+      storage: new AvatarStorageAdapter(),
+    }),
+
   assignUserManager: () =>
     new AssignUserManagerUseCase({
       userRepository: accessRepositories.user,

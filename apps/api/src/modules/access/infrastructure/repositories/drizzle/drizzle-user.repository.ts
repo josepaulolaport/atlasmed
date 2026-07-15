@@ -533,7 +533,7 @@ export class DrizzleUserRepository implements UserRepository {
 
   async updateProfile(
     userId: string,
-    data: { firstName?: string; lastName?: string; avatarUrl?: string },
+    data: { firstName?: string; lastName?: string; avatarUrl?: string | null },
   ) {
     const updates: Record<string, unknown> = { updatedAt: new Date() };
 

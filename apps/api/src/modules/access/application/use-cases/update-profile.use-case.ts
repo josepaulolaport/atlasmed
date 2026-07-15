@@ -6,7 +6,7 @@ interface UpdateProfileInput {
   userId: string;
   firstName?: string;
   lastName?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 }
 
 interface UpdateProfileDependencies {

@@ -3,10 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 // ======================================================================
@@ -246,6 +245,12 @@ const _drawerItems = <_DrawerItem>[
     icon: Icons.inventory_2_outlined,
   ),
   _DrawerItem(
+    key: 'apresentacoes',
+    label: 'Apresentações',
+    route: '/apresentacoes',
+    icon: Icons.slideshow_outlined,
+  ),
+  _DrawerItem(
     key: 'perfil',
     label: 'Perfil',
     route: '/perfil',
@@ -273,37 +278,33 @@ class AtlasDrawer extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
-        final userRepository = ref.watch(userProvider);
+        final user = ref.watch(userProvider).valueOrNull ?? session.user;
+        final displayName = user.displayName;
+        final email = user.email;
+        final initials = _initials(displayName);
 
-        return RepositoryBuilder<UserRepository, User>(
-          repository: userRepository,
-          builder: (context, user, userRepository) {
-            final displayName = user?.displayName ?? 'Usuário';
-            final email = user?.email ?? '';
-            final initials = _initials(displayName);
-
-            return SizedBox(
-              width: MediaQuery.of(context).size.width * 0.78,
-              child: Drawer(
-                child: Column(
-                  children: [
-                    _DrawerHeader(
-                      initials: initials,
-                      displayName: displayName,
-                      email: email,
-                    ),
-                    Expanded(child: _NavItems(activeSection: activeSection)),
-                    _DrawerFooter(
-                      onLogout: () {
-                        Navigator.of(context).pop();
-                        repository.delete();
-                      },
-                    ),
-                  ],
+        return SizedBox(
+          width: MediaQuery.of(context).size.width * 0.78,
+          child: Drawer(
+            child: Column(
+              children: [
+                _DrawerHeader(
+                  initials: initials,
+                  displayName: displayName,
+                  email: email,
+                  avatarUrl: user.avatarUrl,
+                  avatarToken: session.token,
                 ),
-              ),
-            );
-          },
+                Expanded(child: _NavItems(activeSection: activeSection)),
+                _DrawerFooter(
+                  onLogout: () {
+                    Navigator.of(context).pop();
+                    repository.delete();
+                  },
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -324,12 +325,20 @@ class _DrawerHeader extends StatelessWidget {
   final String initials;
   final String displayName;
   final String email;
+  final String? avatarUrl;
+  final String? avatarToken;
 
   const _DrawerHeader({
     required this.initials,
     required this.displayName,
     required this.email,
+    this.avatarUrl,
+    this.avatarToken,
   });
+
+  String _avatarUri(String url) {
+    return url.startsWith("http") ? url : "${AppConfig.apiBaseUrl}$url";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -376,17 +385,37 @@ class _DrawerHeader extends StatelessWidget {
                   ),
                   shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: avatarUrl != null && avatarUrl!.isNotEmpty
+                    ? Image.network(
+                        _avatarUri(avatarUrl!),
+                        headers: avatarToken == null
+                            ? null
+                            : {"Authorization": "Bearer $avatarToken"},
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Center(
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(height: 12),
               Text(

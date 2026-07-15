@@ -14,6 +14,7 @@ export interface UserRecord {
   phoneVerifiedAt?: Date | null;
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
+  avatarUrl: string | null;
   tokenVersion: number;
   managerId: string | null;
   passwordHistory: string[];
@@ -108,7 +109,7 @@ export interface UserListScopeFilter {
 export interface UpdateProfileParams {
   firstName?: string;
   lastName?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 }
 
 export interface ChangeRoleTransactionParams {

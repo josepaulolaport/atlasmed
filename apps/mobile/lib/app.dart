@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/providers/session_provider.dart';
+import 'features/profile/presentation/providers/avatar_controller.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/auth/presentation/screens/forgot_email_screen.dart';
@@ -43,6 +44,9 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
     final sessionEnvironment = ref.read(sessionProvider);
     _sessionListenable = SessionListenable(sessionEnvironment);
     _router = _buildRouter();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(avatarControllerProvider.notifier).recoverLostData();
+    });
   }
 
   @override
