@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,8 +37,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   int _shakeCount = 0;
   bool _isLoading = false;
   CreateSessionError? _errorKind;
-  int? _retryAfterSeconds;
-  Timer? _countdownTimer;
 
   @override
   void initState() {
@@ -63,28 +59,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     _emailController.dispose();
     _passwordController.dispose();
     _shakeController.dispose();
-    _countdownTimer?.cancel();
     super.dispose();
-  }
-
-  void _startCountdown(int seconds) {
-    _retryAfterSeconds = seconds;
-    _countdownTimer?.cancel();
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) {
-        _countdownTimer?.cancel();
-        return;
-      }
-      setState(() {
-        if (_retryAfterSeconds != null && _retryAfterSeconds! > 1) {
-          _retryAfterSeconds = _retryAfterSeconds! - 1;
-        } else {
-          _retryAfterSeconds = null;
-          _countdownTimer?.cancel();
-          _errorKind = null;
-        }
-      });
-    });
   }
 
   void _triggerShake() {
@@ -102,12 +77,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         return 'Muitas tentativas. Aguarde e tente novamente.';
       case CreateSessionError.networkError:
         return 'Sem conexão. Verifique sua internet.';
-      case CreateSessionError.invalidCode:
-        return 'Código inválido. Confira e tente novamente.';
-      case CreateSessionError.expiredCode:
-        return 'Código expirado. Solicite um novo código.';
-      case CreateSessionError.emailNotFound:
-        return 'E-mail não encontrado.';
       case CreateSessionError.unknown:
         return 'Erro ao fazer login. Tente novamente.';
     }
@@ -116,12 +85,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Future<void> _login(SessionEnvironment repository) async {
     if (_isLoading) return;
 
-    _countdownTimer?.cancel();
-
     setState(() {
       _isLoading = true;
       _errorKind = null;
-      _retryAfterSeconds = null;
     });
 
     final result = await repository.login(
@@ -132,14 +98,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!mounted) return;
 
     result.fold(
-      (exception) {
+      (error) {
         setState(() {
           _isLoading = false;
-          _errorKind = exception.kind;
-          if (exception.kind == CreateSessionError.tooManyAttempts &&
-              exception.retryAfterSeconds != null) {
-            _startCountdown(exception.retryAfterSeconds!);
-          }
+          _errorKind = error;
         });
         _triggerShake();
       },
@@ -256,12 +218,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     if (_errorKind != null) ...[
                                       const SizedBox(height: 12),
                                       Text(
-                                        _errorKind ==
-                                                    CreateSessionError
-                                                        .tooManyAttempts &&
-                                                _retryAfterSeconds != null
-                                            ? 'Muitas tentativas. Aguarde ${_retryAfterSeconds}s.'
-                                            : _errorMessage(_errorKind!),
+                                        _errorMessage(_errorKind!),
                                         style: const TextStyle(
                                           color: Color(0xFFFECACA),
                                           fontSize: 14,

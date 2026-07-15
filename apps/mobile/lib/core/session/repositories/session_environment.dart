@@ -82,7 +82,7 @@ class SessionEnvironment extends Repository<Session?>
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: endpoint,
-        method: RepositoryHttpMethod.put,
+        method: .put,
         headers: {'Content-Type': 'application/json'},
         body: {'refreshToken': session.refreshToken},
       ),
@@ -126,11 +126,9 @@ class SessionEnvironment extends Repository<Session?>
 
   /// Authenticate with email and password.
   ///
-  /// Calls `POST /auth/login` with the credentials, stores the
-  /// returned [Session], and makes it available to the stream.
-  ///
-  /// Returns `Right(session)` on success or `Left(AuthException)` on error.
-  Future<Either<AuthException, Session>> login({
+  /// Returns [Right] with the [Session] on success, or [Left] with a
+  /// [CreateSessionError] on failure.
+  Future<Either<CreateSessionError, Session>> login({
     required String email,
     required String password,
   }) async {
@@ -147,9 +145,7 @@ class SessionEnvironment extends Repository<Session?>
       if (response.statusCode == 200) {
         final session = fromJson(response.body);
         if (session == null) {
-          return Left(
-            AuthException(kind: CreateSessionError.unknown, message: ''),
-          );
+          return const Left(CreateSessionError.unknown);
         }
 
         await update((_) => session);
@@ -157,43 +153,27 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 401) {
-        return Left(
-          AuthException(kind: CreateSessionError.wrongCredentials, message: ''),
-        );
+        return const Left(CreateSessionError.wrongCredentials);
       }
 
       if (response.statusCode == 423) {
-        return Left(
-          AuthException(kind: CreateSessionError.accountLocked, message: ''),
-        );
+        return const Left(CreateSessionError.accountLocked);
       }
 
       if (response.statusCode == 429) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>?;
-        final error = body?['error'] as Map<String, dynamic>?;
-        final retryAfterSeconds = error?['retryAfterSeconds'] as int?;
-
-        return Left(
-          AuthException(
-            kind: CreateSessionError.tooManyAttempts,
-            message:
-                error?['message'] as String? ??
-                'Too many attempts. Try again later.',
-            retryAfterSeconds: retryAfterSeconds,
-          ),
-        );
+        return const Left(CreateSessionError.tooManyAttempts);
       }
 
-      return Left(AuthException(kind: CreateSessionError.unknown, message: ''));
+      return const Left(CreateSessionError.unknown);
     } catch (e) {
-      return Left(
-        AuthException(kind: CreateSessionError.networkError, message: ''),
-      );
+      return const Left(CreateSessionError.networkError);
     }
   }
 
   /// Send password reset code to email.
-  Future<Either<AuthException, void>> requestPasswordReset(String email) async {
+  Future<Either<PasswordResetError, void>> requestPasswordReset(
+    String email,
+  ) async {
     try {
       final response = await client.call(
         request: RepositoryHttpRequest(
@@ -208,32 +188,17 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 404) {
-        return Left(
-          AuthException(
-            kind: CreateSessionError.emailNotFound,
-            message: 'E-mail não encontrado.',
-          ),
-        );
+        return const Left(PasswordResetError.emailNotFound);
       }
 
-      return Left(
-        AuthException(
-          kind: CreateSessionError.unknown,
-          message: 'Erro ao solicitar redefinição de senha.',
-        ),
-      );
+      return const Left(PasswordResetError.unknown);
     } catch (e) {
-      return Left(
-        AuthException(
-          kind: CreateSessionError.networkError,
-          message: 'Erro de rede. Verifique sua conexão.',
-        ),
-      );
+      return const Left(PasswordResetError.networkError);
     }
   }
 
   /// Verify the 6-digit reset code.
-  Future<Either<AuthException, bool>> verifyResetCode(
+  Future<Either<PasswordResetError, bool>> verifyResetCode(
     String email,
     String code,
   ) async {
@@ -254,24 +219,14 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(false);
       }
 
-      return Left(
-        AuthException(
-          kind: CreateSessionError.unknown,
-          message: 'Erro ao verificar código.',
-        ),
-      );
+      return const Left(PasswordResetError.unknown);
     } catch (e) {
-      return Left(
-        AuthException(
-          kind: CreateSessionError.networkError,
-          message: 'Erro de rede. Verifique sua conexão.',
-        ),
-      );
+      return const Left(PasswordResetError.networkError);
     }
   }
 
   /// Reset password with the verified code.
-  Future<Either<AuthException, void>> resetPassword({
+  Future<Either<PasswordResetError, void>> resetPassword({
     required String email,
     required String code,
     required String newPassword,
@@ -289,19 +244,9 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(null);
       }
 
-      return Left(
-        AuthException(
-          kind: CreateSessionError.unknown,
-          message: 'Erro ao redefinir senha.',
-        ),
-      );
+      return const Left(PasswordResetError.unknown);
     } catch (e) {
-      return Left(
-        AuthException(
-          kind: CreateSessionError.networkError,
-          message: 'Erro de rede. Verifique sua conexão.',
-        ),
-      );
+      return const Left(PasswordResetError.networkError);
     }
   }
 
