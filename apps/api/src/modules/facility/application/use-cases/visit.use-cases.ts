@@ -11,7 +11,6 @@ export interface VisitRepositoryPort {
     userId: string;
     facilityId: string;
     visitedAt: Date;
-    type: string;
     createdAt: Date;
   }>>;
 
@@ -21,13 +20,11 @@ export interface VisitRepositoryPort {
     userId: string;
     facilityId: string;
     visitedAt: Date;
-    type?: string;
   }): Promise<{
     id: string;
     userId: string;
     facilityId: string;
     visitedAt: Date;
-    type: string;
     createdAt: Date;
   }>;
 }
@@ -61,7 +58,6 @@ export class ListFacilityVisitsUseCase {
       data: visits.map((v) => ({
         id: v.id,
         visitedAt: v.visitedAt.toISOString(),
-        type: v.type,
         summary: null as string | null,
       })),
       pagination: {
@@ -93,13 +89,11 @@ export class CreateFacilityVisitUseCase {
       userId: input.userId,
       facilityId: input.facilityId,
       visitedAt,
-      type: "visit",
     });
 
     return {
       id: visit.id,
       visitedAt: visit.visitedAt.toISOString(),
-      type: visit.type,
       summary: null as string | null,
     };
   }

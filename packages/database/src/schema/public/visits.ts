@@ -1,4 +1,4 @@
-import { index, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 import { facilities } from "./facilities";
 import { users } from "./users";
@@ -15,7 +15,6 @@ export const visits = pgTable(
       .notNull()
       .references(() => facilities.id, { onDelete: "restrict" }),
     visitedAt: timestamp("visited_at").notNull(),
-    type: varchar("type", { length: 50 }).notNull().default("visit"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [

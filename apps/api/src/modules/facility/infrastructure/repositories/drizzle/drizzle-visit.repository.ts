@@ -7,7 +7,6 @@ export interface VisitRecord {
   userId: string;
   facilityId: string;
   visitedAt: Date;
-  type: string;
   createdAt: Date;
 }
 
@@ -15,7 +14,6 @@ export type CreateVisitInput = {
   userId: string;
   facilityId: string;
   visitedAt: Date;
-  type?: string;
 };
 
 export class DrizzleVisitRepository {
@@ -46,7 +44,6 @@ export class DrizzleVisitRepository {
       userId: row.userId,
       facilityId: row.facilityId,
       visitedAt: row.visitedAt,
-      type: row.type,
       createdAt: row.createdAt,
     }));
   }
@@ -73,7 +70,6 @@ export class DrizzleVisitRepository {
         userId: input.userId,
         facilityId: input.facilityId,
         visitedAt: input.visitedAt,
-        type: input.type ?? "visit",
       })
       .returning();
 
@@ -83,7 +79,6 @@ export class DrizzleVisitRepository {
       userId: row.userId,
       facilityId: row.facilityId,
       visitedAt: row.visitedAt,
-      type: row.type,
       createdAt: row.createdAt,
     };
   }
