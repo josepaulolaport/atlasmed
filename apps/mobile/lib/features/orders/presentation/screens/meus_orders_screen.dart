@@ -42,27 +42,34 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
                 const AtlasTopBar(page: 'Pedidos'),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    padding: const EdgeInsets.only(top: 16, bottom: 120),
                     children: [
-                      const Text(
-                        'Meus Pedidos',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0a2f7f),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Meus Pedidos',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0a2f7f),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      _SummaryStrip(
-                        transitCount: 1,
-                        pendingCount: 1,
-                        deliveredCount: 2,
+                      const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: _SummaryStrip(
+                          transitCount: 1,
+                          pendingCount: 1,
+                          deliveredCount: 2,
+                        ),
                       ),
                       const SizedBox(height: 18),
                       SizedBox(
                         height: 36,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _filters.length,
                           separatorBuilder: (context, index) =>
                               const SizedBox(width: 10),
@@ -80,11 +87,18 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
                       ),
                       const SizedBox(height: 16),
                       if (orders.isEmpty)
-                        const _EmptyState()
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16),
+                          child: _EmptyState(),
+                        )
                       else
                         ...orders.map(
                           (order) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.only(
+                              left: 16,
+                              right: 16,
+                              bottom: 12,
+                            ),
                             child: _OrderCard(
                               order: order,
                               onTap: () => context.push('/pedidos/${order.id}'),
