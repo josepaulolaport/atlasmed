@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { recreateRegistryStagingSchema } from "../src/infrastructure/registry-schemas";
 import { cnesRuns, cnesDiffs, cnesSuggestions, facilities } from "@atlasmed/database";
 import { eq, and, sql } from "drizzle-orm";
 
@@ -43,10 +44,6 @@ async function isWorkerDatabaseReady(): Promise<boolean> {
       ) AS exists
     `);
     if (!rows[0]?.exists) {
-      // Staging schema is a runtime clone of registry — create it so tests can run.
-      const { recreateRegistryStagingSchema } = await import(
-        "../src/infrastructure/registry-schemas"
-      );
       await recreateRegistryStagingSchema();
     }
     return true;
