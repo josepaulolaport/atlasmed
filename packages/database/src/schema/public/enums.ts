@@ -120,6 +120,22 @@ export const territoryApprovalStatusEnum = pgEnum("territory_approval_status", [
   "superseded",
 ]);
 
+export const orderStatusEnum = pgEnum("order_status", [
+  "DRAFT",
+  "PENDING",
+  "APPROVED",
+  "INVOICED",
+  "REJECTED",
+  "NO_BILLING",
+]);
+
+export const orderTypeEnum = pgEnum("order_type", [
+  "SALE",
+  "CONSIGNMENT",
+  "DONATION",
+  "OTHER",
+]);
+
 /**
  * Legal entity type for a facility's tax registration.
  * PJ = Pessoa Jurídica (company, identified by CNPJ).
