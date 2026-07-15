@@ -1,11 +1,11 @@
 import 'dart:async';
 
-import 'domain/entities/data_source.dart';
-import 'domain/entities/repository_state.dart';
-import 'infra/repository_cache_storage.dart';
-import 'infra/repository_fiber.dart';
-import 'infra/repository_logger.dart';
-import 'repositories/http_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_fiber.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_logger.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:meta/meta.dart';
 import 'package:retry/retry.dart';
 import 'package:rxdart/rxdart.dart';

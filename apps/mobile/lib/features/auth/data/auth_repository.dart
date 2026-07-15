@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
-import 'models.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models.dart';
 
 /// Abstract repository for authentication.
 ///

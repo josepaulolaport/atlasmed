@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
-import '../api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
 
 class DoctorsRepository extends Repository<PaginatedDoctors>
     with SessionEnvironmentMixin<PaginatedDoctors> {

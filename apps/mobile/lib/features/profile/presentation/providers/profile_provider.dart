@@ -84,11 +84,14 @@ final territoryStatsProvider = FutureProvider<TerritoryStats>((ref) async {
     doctors: totalDoctors,
     coveragePct: coveragePct,
     visitedThisWeek: visitedThisWeek,
-    coverageWeek: '${summary.weekStart.day}/${summary.weekStart.month} – ${summary.weekEnd.day}/${summary.weekEnd.month}',
+    coverageWeek:
+        '${summary.weekStart.day}/${summary.weekStart.month} – ${summary.weekEnd.day}/${summary.weekEnd.month}',
   );
 });
 
-final quickSummaryProvider = FutureProvider<List<QuickSummaryItem>>((ref) async {
+final quickSummaryProvider = FutureProvider<List<QuickSummaryItem>>((
+  ref,
+) async {
   ref.watch(weeklyVisitSummaryProvider);
   final summary = await ref.read(weeklyVisitSummaryProvider.future);
   final visits = summary.distinctClinicsVisited;

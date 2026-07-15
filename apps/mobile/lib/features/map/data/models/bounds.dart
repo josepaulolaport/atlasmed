@@ -1,4 +1,4 @@
-import 'coordinate.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 
 class MapBounds {
   final MapCoordinate southwest;

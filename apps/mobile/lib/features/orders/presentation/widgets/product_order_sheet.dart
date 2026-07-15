@@ -5,7 +5,7 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/repositories/legacy_orders_mock.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
-import 'order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 /// Bottom-sheet modal for setting quantity + unit price on a product.
 class ProductOrderSheet extends ConsumerStatefulWidget {

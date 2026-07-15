@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart'
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
-import 'session_environment_mixin.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 
 /// Authentication state emitted by [SessionEnvironment].
 enum AuthenticationState { unauthenticated, authenticated }

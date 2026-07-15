@@ -1,6 +1,6 @@
-import 'coordinate.dart';
-import 'facility.dart';
-import 'territory.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/facility.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 
 class MapData {
   final MapCoordinate userLocation;

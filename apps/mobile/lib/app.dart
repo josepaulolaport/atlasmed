@@ -1,31 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'core/session/providers/session_provider.dart';
-import 'core/user/controllers/avatar_controller.dart';
-import 'features/auth/presentation/screens/splash_screen.dart';
-import 'features/auth/presentation/screens/login_screen.dart';
-import 'features/auth/presentation/screens/forgot_email_screen.dart';
-import 'features/auth/presentation/screens/forgot_code_screen.dart';
-import 'features/auth/presentation/screens/forgot_new_password_screen.dart';
-import 'features/auth/presentation/screens/forgot_success_screen.dart';
-import 'features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'features/explore/presentation/screens/clinic_detail_screen.dart';
-import 'features/explore/presentation/screens/doctor_detail_screen.dart';
-import 'features/explore/presentation/screens/explore_screen.dart';
-import 'features/map/presentation/screens/map_screen.dart';
-import 'features/orders/presentation/screens/meus_orders_screen.dart';
-import 'features/orders/presentation/screens/order_detail_screen.dart';
-import 'features/orders/presentation/screens/order_tracking_screen.dart';
-import 'features/orders/presentation/screens/new_order_products_screen.dart';
-import 'features/orders/presentation/screens/cart_screen.dart';
-import 'features/orders/presentation/screens/checkout_screen.dart';
-import 'features/orders/presentation/screens/order_success_screen.dart';
-import 'features/presentations/presentation/screens/presentations_screen.dart';
-import 'features/profile/presentation/screens/profile_screen.dart';
-import 'shared/theme/app_theme.dart';
-import 'shared/widgets/app_shell.dart';
-import 'core/session/session_listenable.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/splash_screen.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/login_screen.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_email_screen.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_code_screen.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_new_password_screen.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_success_screen.dart';
+import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/screens/map_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/my_orders_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_tracking_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/new_order_products_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/cart_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/checkout_screen.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_success_screen.dart';
+import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/core/session/session_listenable.dart';
 
 class AtlasMedApp extends ConsumerStatefulWidget {
   const AtlasMedApp({super.key});
@@ -176,7 +176,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
             GoRoute(
               path: '/pedidos',
               pageBuilder: (_, _) =>
-                  const NoTransitionPage(child: MeusOrdersScreen()),
+                  const NoTransitionPage(child: MyOrdersScreen()),
               routes: [
                 GoRoute(
                   path: 'novo',

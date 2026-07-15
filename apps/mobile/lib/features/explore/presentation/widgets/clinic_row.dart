@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
-import 'status_chip.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 
 class ClinicRow extends StatelessWidget {
   final Clinic clinic;

@@ -1,6 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
-import 'models.dart';
-import 'auth_repository.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/auth_repository.dart';
 
 /// Mock implementation of [AuthRepository] for development.
 ///

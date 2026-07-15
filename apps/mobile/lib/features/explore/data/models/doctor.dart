@@ -1,4 +1,4 @@
-import '../api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
 
 // ── Doctor model ─────────────────────────────────────────────
 class Doctor {
@@ -32,8 +32,8 @@ class Doctor {
     final initials = nameParts.length >= 2
         ? '${nameParts.first[0]}${nameParts.last[0]}'
         : name.isNotEmpty
-            ? name[0]
-            : '?';
+        ? name[0]
+        : '?';
     return Doctor(
       id: api.id,
       name: name,

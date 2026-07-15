@@ -1,4 +1,4 @@
-import 'models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 // ── Clinic detail model ───────────────────────────────────────
 

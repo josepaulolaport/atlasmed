@@ -9,10 +9,7 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      await expectLater(
-        container.read(preferencesProvider.future),
-        completes,
-      );
+      await expectLater(container.read(preferencesProvider.future), completes);
     },
   );
 }

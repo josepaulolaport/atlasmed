@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'firebase_options.dart';
-import 'app.dart';
-import 'repository/base_repository.dart';
-import 'repository/external/hive_repository_cache_storage.dart';
+import 'package:atlasmed_mobile_app/firebase_options.dart';
+import 'package:atlasmed_mobile_app/app.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/external/hive_repository_cache_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

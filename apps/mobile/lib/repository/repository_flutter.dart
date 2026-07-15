@@ -1,5 +1,5 @@
-import 'base_repository.dart';
-import 'domain/entities/repository_state.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:flutter/widgets.dart';
 
 /// {@template repository_builder}

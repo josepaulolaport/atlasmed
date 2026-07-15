@@ -9,26 +9,23 @@ void main() {
     BaseRepository.storage = const _MemoryCacheStorage();
   });
 
-  test(
-    'retains the user location after enabling proximity',
-    () async {
-      final notifier = ExploreNotifier(
-        _LocationServiceReturning(
-          const LocationAvailable(
-            DeviceLocation(latitude: -23.55052, longitude: -46.633308),
-          ),
+  test('retains the user location after enabling proximity', () async {
+    final notifier = ExploreNotifier(
+      _LocationServiceReturning(
+        const LocationAvailable(
+          DeviceLocation(latitude: -23.55052, longitude: -46.633308),
         ),
-      );
+      ),
+    );
 
-      await notifier.enableProximity();
+    await notifier.enableProximity();
 
-      expect(
-        notifier.state.proximityOrigin,
-        const DeviceLocation(latitude: -23.55052, longitude: -46.633308),
-      );
-      expect(notifier.state.proximityFailure, isNull);
-    },
-  );
+    expect(
+      notifier.state.proximityOrigin,
+      const DeviceLocation(latitude: -23.55052, longitude: -46.633308),
+    );
+    expect(notifier.state.proximityFailure, isNull);
+  });
 
   test('exposes a recoverable failure and leaves proximity inactive', () async {
     final notifier = ExploreNotifier(

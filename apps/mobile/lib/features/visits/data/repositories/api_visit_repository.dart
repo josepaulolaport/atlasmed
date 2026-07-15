@@ -8,7 +8,11 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 
 class VisitRepository {
   VisitRepository({RepositoryHttpClient? client})
-    : _client = client ?? HttpRepositoryHttpClient(tokenBuilder: SessionEnvironment.instance.tokenBuilder);
+    : _client =
+          client ??
+          HttpRepositoryHttpClient(
+            tokenBuilder: SessionEnvironment.instance.tokenBuilder,
+          );
 
   final RepositoryHttpClient _client;
 
@@ -21,8 +25,12 @@ class VisitRepository {
       ),
     );
     if (response.statusCode != 200) {
-      throw StateError('Não foi possível carregar o resumo semanal de visitas.');
+      throw StateError(
+        'Não foi possível carregar o resumo semanal de visitas.',
+      );
     }
-    return WeeklyVisitSummary.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+    return WeeklyVisitSummary.fromJson(
+      jsonDecode(response.body) as Map<String, dynamic>,
+    );
   }
 }

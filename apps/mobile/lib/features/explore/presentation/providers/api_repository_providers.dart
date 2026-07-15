@@ -41,15 +41,15 @@ class ClinicsQuery {
 
   @override
   int get hashCode => Object.hash(
-        page,
-        limit,
-        searchQuery,
-        latitude,
-        longitude,
-        radiusKm,
-        commercialStatus,
-        productIds,
-      );
+    page,
+    limit,
+    searchQuery,
+    latitude,
+    longitude,
+    radiusKm,
+    commercialStatus,
+    productIds,
+  );
 
   /// Whether this query would return distinct results from [other].
   bool differsFrom(ClinicsQuery other) => this != other;
@@ -91,15 +91,15 @@ class DoctorsQuery {
 
   @override
   int get hashCode => Object.hash(
-        page,
-        limit,
-        searchQuery,
-        facilityId,
-        latitude,
-        longitude,
-        radiusKm,
-        specialty,
-      );
+    page,
+    limit,
+    searchQuery,
+    facilityId,
+    latitude,
+    longitude,
+    radiusKm,
+    specialty,
+  );
 }
 
 final clinicsRepositoryProvider = Provider.autoDispose

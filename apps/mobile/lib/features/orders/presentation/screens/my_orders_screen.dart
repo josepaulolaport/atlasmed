@@ -8,14 +8,14 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
-class MeusOrdersScreen extends ConsumerStatefulWidget {
-  const MeusOrdersScreen({super.key});
+class MyOrdersScreen extends ConsumerStatefulWidget {
+  const MyOrdersScreen({super.key});
 
   @override
-  ConsumerState<MeusOrdersScreen> createState() => _MeusOrdersScreenState();
+  ConsumerState<MyOrdersScreen> createState() => _MyOrdersScreenState();
 }
 
-class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
+class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
   String selectedFilter = 'Todos';
 
   static const _filters = <String>[

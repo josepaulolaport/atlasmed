@@ -41,9 +41,7 @@ class _DoctorDetailRepository extends Repository<ApiDoctor>
     with SessionEnvironmentMixin<ApiDoctor> {
   _DoctorDetailRepository({required String id})
     : super(
-        endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/professionals/$id',
-        ),
+        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
         resolveOnCreate: false,
         name: 'DoctorDetailRepository',
       );
@@ -66,7 +64,8 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
     // Map ApiClinic → ClinicDetail
     final cityParts = <String>[
       if (apiClinic.city != null && apiClinic.city!.isNotEmpty) apiClinic.city!,
-      if (apiClinic.state != null && apiClinic.state!.isNotEmpty) apiClinic.state!,
+      if (apiClinic.state != null && apiClinic.state!.isNotEmpty)
+        apiClinic.state!,
     ];
     return ClinicDetail(
       id: apiClinic.id,
@@ -102,7 +101,9 @@ Future<DoctorDetail> _fetchDoctorDetail(String id) async {
     final nameParts = name.split(' ');
     final initials = nameParts.length >= 2
         ? '${nameParts.first[0]}${nameParts.last[0]}'
-        : name.isNotEmpty ? name[0] : '?';
+        : name.isNotEmpty
+        ? name[0]
+        : '?';
     final crm = apiDoctor.crm;
     return DoctorDetail(
       id: apiDoctor.id,
@@ -345,10 +346,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     _clinicHasMore = true;
     _doctorHasMore = true;
 
-    await Future.wait([
-      _fetchClinicsPage(page: 1),
-      _fetchDoctorsPage(page: 1),
-    ]);
+    await Future.wait([_fetchClinicsPage(page: 1), _fetchDoctorsPage(page: 1)]);
 
     state = state.copyWith(loading: false);
   }
@@ -363,8 +361,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       searchQuery: state.query.isNotEmpty ? state.query : null,
       latitude: state.proximityOrigin?.latitude,
       longitude: state.proximityOrigin?.longitude,
-      radiusKm:
-          state.proximityOrigin != null ? defaultProximityRadiusKm : null,
+      radiusKm: state.proximityOrigin != null ? defaultProximityRadiusKm : null,
       commercialStatus: _commaJoin(state.filters['status']),
       productIds: _commaJoin(state.filters['products']),
       resolveOnCreate: false,
@@ -379,8 +376,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
           state = state.copyWith(clinics: items);
         }
         _clinicPage = result.pagination.page;
-        _clinicHasMore =
-            result.pagination.page < result.pagination.totalPages;
+        _clinicHasMore = result.pagination.page < result.pagination.totalPages;
       }
     } finally {
       repo.dispose();
@@ -397,8 +393,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       searchQuery: state.query.isNotEmpty ? state.query : null,
       latitude: state.proximityOrigin?.latitude,
       longitude: state.proximityOrigin?.longitude,
-      radiusKm:
-          state.proximityOrigin != null ? defaultProximityRadiusKm : null,
+      radiusKm: state.proximityOrigin != null ? defaultProximityRadiusKm : null,
       specialty: _commaJoin(state.filters['specialties']),
       resolveOnCreate: false,
     );
@@ -412,8 +407,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
           state = state.copyWith(doctors: items);
         }
         _doctorPage = result.pagination.page;
-        _doctorHasMore =
-            result.pagination.page < result.pagination.totalPages;
+        _doctorHasMore = result.pagination.page < result.pagination.totalPages;
       }
     } finally {
       repo.dispose();

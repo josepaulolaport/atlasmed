@@ -61,9 +61,9 @@ class ApiClinic {
       professionalCount: _readInt(map['professionalCount']),
       consultantName: _readNullableString(map['consultantName']),
       distanceKm: _readNullableDouble(map['distanceKm']),
-      services: _readObjectList(map['services'])
-          .map(ApiClinicService.fromMap)
-          .toList(growable: false),
+      services: _readObjectList(
+        map['services'],
+      ).map(ApiClinicService.fromMap).toList(growable: false),
       phone: _readNullableString(map['phone']),
       email: _readNullableString(map['email']),
       website: _readNullableString(map['website']),
@@ -269,7 +269,6 @@ int _readInt(Object? value) {
   if (value is num) return value.toInt();
   return int.tryParse(value?.toString() ?? '') ?? 0;
 }
-
 
 double? _readNullableDouble(Object? value) {
   if (value is double) return value;

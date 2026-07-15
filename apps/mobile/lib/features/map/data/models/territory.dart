@@ -1,5 +1,5 @@
-import 'bounds.dart';
-import 'coordinate.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 
 class TerritoryGeometry {
   final String type;

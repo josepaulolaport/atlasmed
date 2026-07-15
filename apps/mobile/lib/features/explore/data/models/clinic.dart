@@ -1,5 +1,5 @@
-import '../api_types.dart';
-import 'filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 // ── Clinic model ─────────────────────────────────────────────
 class Clinic {

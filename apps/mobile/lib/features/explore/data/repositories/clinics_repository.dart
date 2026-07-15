@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
-import '../api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
 
 /// Default radius (in kilometres) when proximity filtering is enabled.
 const double defaultProximityRadiusKm = 50;
@@ -31,8 +31,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
              if (latitude != null) 'latitude': latitude.toString(),
              if (longitude != null) 'longitude': longitude.toString(),
              if (radiusKm != null) 'radiusKm': radiusKm.toString(),
-             if (commercialStatus != null &&
-                 commercialStatus.trim().isNotEmpty)
+             if (commercialStatus != null && commercialStatus.trim().isNotEmpty)
                'commercialStatus': commercialStatus.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),

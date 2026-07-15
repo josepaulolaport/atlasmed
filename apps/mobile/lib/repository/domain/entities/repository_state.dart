@@ -1,4 +1,4 @@
-import 'data_source.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
 import 'package:equatable/equatable.dart';
 
 /// {@template repository_state}
