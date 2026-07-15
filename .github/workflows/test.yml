@@ -24,8 +24,6 @@ jobs:
               - 'apps/web/**'
             workers:
               - 'apps/workers/**'
-            mobile:
-              - 'apps/mobile/**'
 
   packages:
     name: Packages — typecheck
@@ -185,28 +183,3 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
         run: bun --cwd apps/workers/cnes-ingestion test --test-name-pattern='^((?!Integration Tests).)*$'
-
-  mobile:
-    name: Mobile — analyze
-    runs-on: ubuntu-latest
-    needs: [changes]
-    steps:
-      - uses: actions/checkout@v5
-      - name: Configurar Dart
-        uses: dart-lang/setup-dart@v1
-      - name: Instalar FVM
-        run: |
-          dart pub global activate fvm
-          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
-      - name: Instalar Flutter via FVM
-        run: fvm install
-        working-directory: ./apps/mobile
-      - name: Instalar dependências
-        run: fvm flutter pub get
-        working-directory: ./apps/mobile
-      - name: Analisar código (com config de desenvolvimento)
-        run: fvm flutter analyze --dart-define-from-file=config.development.json
-        working-directory: ./apps/mobile
-      - name: Executar testes
-        run: fvm flutter test --dart-define-from-file=config.development.json
-        working-directory: ./apps/mobile

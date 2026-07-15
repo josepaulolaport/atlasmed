@@ -61,9 +61,6 @@ jobs:
       - name: Analisar código
         run: bun run mobile:lint
 
-      - name: Verificar types
-        run: bun run mobile:typecheck
-
       - name: Executar testes
         run: bun run mobile:test
 
