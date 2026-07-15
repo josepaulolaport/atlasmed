@@ -98,7 +98,7 @@ const createProductRoute = new Elysia()
       body: t.Object({
         code: t.String(),
         name: t.String(),
-        sectorId: t.String(),
+        sectorIds: t.Array(t.String()),
         isActive: t.Optional(t.Boolean()),
       }),
     }
@@ -116,7 +116,7 @@ const updateProductRoute = new Elysia()
       body: t.Object({
         code: t.Optional(t.String()),
         name: t.Optional(t.String()),
-        sectorId: t.Optional(t.String()),
+        sectorIds: t.Optional(t.Array(t.String())),
         isActive: t.Optional(t.Boolean()),
       }),
     }

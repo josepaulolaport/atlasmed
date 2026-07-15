@@ -24,7 +24,7 @@ describe("MapboxClient", () => {
       )
     );
 
-    globalThis.fetch = fetchMock as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const client = new MapboxClient({ accessToken: "sk.test" });
     const result = await client.forwardGeocode({ query: "São Paulo" });
