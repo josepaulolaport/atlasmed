@@ -28,11 +28,6 @@ function errorName(error: unknown): string | undefined {
   return typeof error.name === "string" ? error.name : undefined;
 }
 
-function errorStatusCode(error: unknown): number | undefined {
-  if (!error || typeof error !== "object" || !("$metadata" in error)) {
-    return undefined;
-  }
-
 interface S3ServiceError {
   name?: string;
   $metadata?: { httpStatusCode?: number };
@@ -44,7 +39,6 @@ function errorStatusCode(error: unknown): number | undefined {
   }
 
   return (error as S3ServiceError).$metadata?.httpStatusCode;
-}
 }
 
 function isNotFoundError(error: unknown): boolean {
