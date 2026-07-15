@@ -28,8 +28,10 @@ if ! bun run typecheck; then
   exit 1
 fi
 
-# 3) Flutter mobile validation — only when SDK is available.
-if command -v flutter &>/dev/null; then
+# 3) Flutter mobile validation — only when a working SDK is available.
+# An unresolved Flutter binary reports "0.0.0-unknown"; skip in that case.
+flutter_version="$(flutter --version --machine 2>/dev/null | grep '"frameworkVersion"' | cut -d'"' -f4 || true)"
+if command -v flutter &>/dev/null && [[ "${flutter_version}" != "0.0.0-unknown" && -n "${flutter_version}" ]]; then
   echo "• Running Flutter checks…"
 
   if ! bun run format:mobile; then
