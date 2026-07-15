@@ -85,12 +85,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     }
   }
 
-  void _clearError() {
-    if (_errorKind != null) {
-      setState(() => _errorKind = null);
-    }
-  }
-
   Future<void> _login(SessionEnvironment repository) async {
     if (_isLoading) return;
 
@@ -181,12 +175,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     ),
                                     value: _emailController.text,
                                     onChanged: (v) {
-                                      _emailController.text = v;
-                                      _emailController.selection =
-                                          TextSelection.collapsed(
-                                            offset: v.length,
-                                          );
-                                      _clearError();
+                                      setState(() {
+                                        _emailController.text = v;
+                                        _emailController.selection =
+                                            TextSelection.collapsed(
+                                              offset: v.length,
+                                            );
+                                        _errorKind = null;
+                                      });
                                     },
                                     keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
@@ -202,12 +198,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     ),
                                     value: _passwordController.text,
                                     onChanged: (v) {
-                                      _passwordController.text = v;
-                                      _passwordController.selection =
-                                          TextSelection.collapsed(
-                                            offset: v.length,
-                                          );
-                                      _clearError();
+                                      setState(() {
+                                        _passwordController.text = v;
+                                        _passwordController.selection =
+                                            TextSelection.collapsed(
+                                              offset: v.length,
+                                            );
+                                        _errorKind = null;
+                                      });
                                     },
                                     obscureText: true,
                                     textInputAction: TextInputAction.done,
