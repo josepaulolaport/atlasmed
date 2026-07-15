@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@atlasmed/access": "workspace:*",
@@ -43,7 +44,6 @@
     "@tailwindcss/postcss": "^4",
     "@types/leaflet": "^1.9.21",
     "@types/mapbox__mapbox-gl-draw": "^1.4.9",
-    "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

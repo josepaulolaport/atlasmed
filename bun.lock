@@ -5,7 +5,7 @@
     "": {
       "name": "atlasmed",
       "devDependencies": {
-        "@types/bun": "latest",
+        "@types/bun": "1.3.14",
         "husky": "^9.1.7",
         "turbo": "^2.10.5",
         "typescript": "^5",
@@ -55,8 +55,12 @@
         "typescript": "^5",
       },
     },
+    "apps/mobile": {
+      "name": "@atlasmed/mobile",
+      "version": "0.0.0",
+    },
     "apps/web": {
-      "name": "atlasmed_web_app",
+      "name": "@atlasmed/web",
       "version": "0.1.0",
       "dependencies": {
         "@atlasmed/access": "workspace:*",
@@ -93,7 +97,6 @@
         "@tailwindcss/postcss": "^4",
         "@types/leaflet": "^1.9.21",
         "@types/mapbox__mapbox-gl-draw": "^1.4.9",
-        "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",
         "eslint": "^9",
@@ -117,7 +120,7 @@
         "pg": "^8.16.0",
       },
       "devDependencies": {
-        "@types/bun": "^1.3.14",
+        "@types/bun": "1.3.14",
         "typescript": "^5.9.3",
       },
     },
@@ -139,7 +142,7 @@
         "basic-ftp": "^5.0.5",
       },
       "devDependencies": {
-        "@types/bun": "^1.3.14",
+        "@types/bun": "1.3.14",
         "typescript": "^5.9.3",
       },
     },
@@ -150,7 +153,7 @@
         "zod": "^4.4.3",
       },
       "devDependencies": {
-        "@types/bun": "^1.3.14",
+        "@types/bun": "1.3.14",
         "typescript": "^5.9.3",
       },
     },
@@ -163,7 +166,7 @@
         "postgres": "^3.4.9",
       },
       "devDependencies": {
-        "@types/bun": "^1.3.14",
+        "@types/bun": "1.3.14",
         "drizzle-kit": "^0.31.10",
         "typescript": "^5.9.3",
       },
@@ -175,7 +178,7 @@
         "@types/geojson": "^7946.0.16",
       },
       "devDependencies": {
-        "@types/bun": "latest",
+        "@types/bun": "1.3.14",
         "typescript": "^5",
       },
     },
@@ -195,8 +198,7 @@
       "devDependencies": {
         "@opentelemetry/core": "1.25.1",
         "@opentelemetry/sdk-trace-base": "1.25.1",
-        "@types/bun": "^1.3.5",
-        "@types/node": "^25.9.1",
+        "@types/bun": "1.3.14",
         "typescript": "^5.9.3",
       },
     },
@@ -204,7 +206,7 @@
       "name": "@atlasmed/ui",
       "version": "0.0.0",
       "devDependencies": {
-        "@types/bun": "^1.3.14",
+        "@types/bun": "1.3.14",
         "typescript": "^5.9.3",
       },
     },
@@ -230,9 +232,13 @@
 
     "@atlasmed/mapbox": ["@atlasmed/mapbox@workspace:packages/mapbox"],
 
+    "@atlasmed/mobile": ["@atlasmed/mobile@workspace:apps/mobile"],
+
     "@atlasmed/observability": ["@atlasmed/observability@workspace:packages/observability"],
 
     "@atlasmed/ui": ["@atlasmed/ui@workspace:packages/ui"],
+
+    "@atlasmed/web": ["@atlasmed/web@workspace:apps/web"],
 
     "@aws-sdk/checksums": ["@aws-sdk/checksums@3.1000.16", "", { "dependencies": { "@aws-sdk/core": "^3.975.1", "@aws-sdk/types": "^3.974.0", "@smithy/core": "^3.29.2", "@smithy/types": "^4.16.0", "tslib": "^2.6.2" } }, "sha512-EKnvkXSmz3IpA99tCNuI+dLFXyZyClSm8zns9sB/elvkU+MTuomAs6toJMPMBf98/fICG/urXDkzGz0/c3yyAQ=="],
 
@@ -1175,8 +1181,6 @@
     "async-function": ["async-function@1.0.0", "", {}, "sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA=="],
 
     "asynckit": ["asynckit@0.4.0", "", {}, "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="],
-
-    "atlasmed_web_app": ["atlasmed_web_app@workspace:apps/web"],
 
     "available-typed-arrays": ["available-typed-arrays@1.0.7", "", { "dependencies": { "possible-typed-array-names": "^1.0.0" } }, "sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ=="],
 
@@ -2186,6 +2190,10 @@
 
     "zod-validation-error": ["zod-validation-error@4.0.2", "", { "peerDependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-Q6/nZLe6jxuU80qb/4uJ4t5v2VEZ44lzQjPDhYJNztRQ4wyWc6VF3D3Kb/fAuPetZQnhS3hnajCf9CsWesghLQ=="],
 
+    "@atlasmed/web/react": ["react@19.2.4", "", {}, "sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ=="],
+
+    "@atlasmed/web/react-dom": ["react-dom@19.2.4", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.4" } }, "sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ=="],
+
     "@babel/core/json5": ["json5@2.2.3", "", { "bin": { "json5": "lib/cli.js" } }, "sha512-XmOWe7eyHYH14cLdVPoyg+GOH3rYX++KpzrylJwSW98t3Nk+U8XOl8FWKOgwtzdb8lXGf6zYwDUzeHMWfxasyg=="],
 
     "@babel/core/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
@@ -2378,12 +2386,6 @@
 
     "ajv-keywords/ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
 
-    "atlasmed_web_app/@types/node": ["@types/node@20.19.41", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-ECymXOukMnOoVkC2bb1Vc/w/836DXncOg5m8Xj1RH7xSHZJWNYY6Zh7EH477vcnD5egKNNfy2RpNOmuChhFPgQ=="],
-
-    "atlasmed_web_app/react": ["react@19.2.4", "", {}, "sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ=="],
-
-    "atlasmed_web_app/react-dom": ["react-dom@19.2.4", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.4" } }, "sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ=="],
-
     "c12/pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
 
     "chalk/supports-color": ["supports-color@7.2.0", "", { "dependencies": { "has-flag": "^4.0.0" } }, "sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw=="],
@@ -2569,8 +2571,6 @@
     "ajv-formats/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "ajv-keywords/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
-
-    "atlasmed_web_app/@types/node/undici-types": ["undici-types@6.21.0", "", {}, "sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ=="],
 
     "eslint-import-resolver-node/debug/ms": ["ms@2.1.3", "", {}, "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA=="],
 

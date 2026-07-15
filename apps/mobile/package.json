@@ -1,0 +1,10 @@
+{
+  "name": "@atlasmed/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "format": "dart format --set-exit-if-changed .",
+    "lint": "flutter analyze",
+    "test": "flutter test"
+  }
+}

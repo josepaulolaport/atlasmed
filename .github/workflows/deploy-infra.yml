@@ -82,9 +82,9 @@ jobs:
       - name: Check remote Docker storage
         run: $UNCLOUD_SSH_CMD 'df -h / && docker system df'
 
-      - name: Prune unused Docker data
+      - name: Prune dangling Docker images
         run: |
-          $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+          $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
       - name: Deploy AtlasMed infrastructure services
@@ -110,7 +110,7 @@ jobs:
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
-              $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+              $UNCLOUD_SSH_CMD 'docker image prune -f'
               sleep 5
             fi
           done

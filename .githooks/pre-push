@@ -32,13 +32,13 @@ fi
 if command -v flutter &>/dev/null; then
   echo "• Running Flutter checks…"
 
-  if ! bun run format:mobile; then
+  if ! bun run mobile:format; then
     echo "✗ Dart formatting issues found in apps/mobile/."
     echo "  Fix with: cd apps/mobile && dart format ."
     exit 1
   fi
 
-  if ! bun run lint:mobile; then
+  if ! bun run mobile:lint; then
     echo "✗ Flutter analyze failed. Resolve issues and push again."
     exit 1
   fi
