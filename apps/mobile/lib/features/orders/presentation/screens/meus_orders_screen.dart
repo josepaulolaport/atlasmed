@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class MeusOrdersScreen extends ConsumerStatefulWidget {
@@ -27,10 +27,8 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final orders = kOrdersList.where((order) {
-      if (selectedFilter == 'Todos') return true;
-      return order.status.label.toLowerCase() == selectedFilter.toLowerCase();
-    }).toList();
+    final statuses = _apiStatusesFor(selectedFilter);
+    final ordersAsync = ref.watch(meusOrdersProvider(statuses));
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
@@ -42,34 +40,48 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
                 const AtlasTopBar(page: 'Pedidos'),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.only(top: 16, bottom: 120),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          'Meus Pedidos',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0a2f7f),
-                          ),
+                      const Text(
+                        'Meus Pedidos',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0a2f7f),
                         ),
                       ),
                       const SizedBox(height: 16),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: _SummaryStrip(
-                          transitCount: 1,
-                          pendingCount: 1,
-                          deliveredCount: 2,
-                        ),
+                      _SummaryStrip(
+                        transitCount:
+                            ordersAsync.valueOrNull
+                                ?.where(
+                                  (order) =>
+                                      order.status == OrderStatus.transito,
+                                )
+                                .length ??
+                            0,
+                        pendingCount:
+                            ordersAsync.valueOrNull
+                                ?.where(
+                                  (order) =>
+                                      order.status == OrderStatus.pendente,
+                                )
+                                .length ??
+                            0,
+                        deliveredCount:
+                            ordersAsync.valueOrNull
+                                ?.where(
+                                  (order) =>
+                                      order.status == OrderStatus.entregue,
+                                )
+                                .length ??
+                            0,
                       ),
                       const SizedBox(height: 18),
                       SizedBox(
                         height: 36,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _filters.length,
                           separatorBuilder: (context, index) =>
                               const SizedBox(width: 10),
@@ -86,25 +98,41 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      if (orders.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16),
-                          child: _EmptyState(),
-                        )
-                      else
-                        ...orders.map(
-                          (order) => Padding(
-                            padding: const EdgeInsets.only(
-                              left: 16,
-                              right: 16,
-                              bottom: 12,
-                            ),
-                            child: _OrderCard(
-                              order: order,
-                              onTap: () => context.push('/pedidos/${order.id}'),
+                      ...ordersAsync.when(
+                        loading: () => const [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                        ],
+                        error: (_, _) => const [
+                          Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Center(
+                              child: Text(
+                                'Não foi possível carregar os pedidos.',
+                              ),
                             ),
                           ),
-                        ),
+                        ],
+                        data: (orders) => orders.isEmpty
+                            ? const [_EmptyState()]
+                            : orders
+                                  .map(
+                                    (order) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
+                                      child: _OrderCard(
+                                        order: order,
+                                        onTap: () => context.push(
+                                          '/pedidos/${order.id}',
+                                        ),
+                                      ),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                      ),
                     ],
                   ),
                 ),
@@ -147,6 +175,21 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
         ),
       ),
     );
+  }
+}
+
+List<String>? _apiStatusesFor(String filter) {
+  switch (filter) {
+    case 'Em trânsito':
+      return const ['SHIPPED'];
+    case 'Pendente':
+      return const ['DRAFT', 'PENDING'];
+    case 'Entregue':
+      return const ['DELIVERED'];
+    case 'Cancelado':
+      return const ['CANCELLED', 'REJECTED'];
+    default:
+      return null;
   }
 }
 

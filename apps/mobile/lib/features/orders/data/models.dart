@@ -227,8 +227,15 @@ class TimelineStep {
 class OrderDetailItem {
   final String productId;
   final int qty;
+  final String? name;
+  final double? unitPrice;
 
-  const OrderDetailItem({required this.productId, required this.qty});
+  const OrderDetailItem({
+    required this.productId,
+    required this.qty,
+    this.name,
+    this.unitPrice,
+  });
 }
 
 // ── Order detail ─────────────────────────────────────────────

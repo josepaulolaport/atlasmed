@@ -1,6 +1,101 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/api_orders_repository.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+
+final ordersRepositoryProvider = Provider<ApiOrdersRepository>((ref) {
+  return ApiOrdersRepository(baseUrl: AppConfig.apiBaseUrl);
+});
+
+final ordersPageProvider = FutureProvider.family<ApiOrdersPage, List<String>?>((
+  ref,
+  statuses,
+) {
+  return ref.watch(ordersRepositoryProvider).listOrders(statuses: statuses);
+});
+
+final orderDetailProvider = FutureProvider.family<ApiOrderDetail, String>((
+  ref,
+  orderId,
+) {
+  return ref.watch(ordersRepositoryProvider).getOrder(orderId);
+});
+
+OrderStatus _orderStatusFromApi(String status) {
+  switch (status) {
+    case 'SHIPPED':
+      return OrderStatus.transito;
+    case 'DELIVERED':
+      return OrderStatus.entregue;
+    case 'CANCELLED':
+    case 'REJECTED':
+      return OrderStatus.cancelado;
+    case 'CONFIRMED':
+      return OrderStatus.separacao;
+    default:
+      return OrderStatus.pendente;
+  }
+}
+
+String _formatDate(DateTime date) =>
+    '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+String _formatCurrency(double value) =>
+    'R\$ ${value.toStringAsFixed(2).replaceAll('.', ',')}';
+
+final meusOrdersProvider =
+    FutureProvider.family<List<OrderListItem>, List<String>?>((
+      ref,
+      statuses,
+    ) async {
+      final page = await ref.watch(ordersPageProvider(statuses).future);
+      return page.data
+          .map(
+            (order) => OrderListItem(
+              id: order.id,
+              clinic: order.facility.name,
+              doctor: order.professional?.name ?? 'Profissional não informado',
+              date: _formatDate(order.orderedAt ?? order.createdAt),
+              value: _formatCurrency(order.total),
+              status: _orderStatusFromApi(order.status),
+              items: order.itemCount,
+            ),
+          )
+          .toList(growable: false);
+    });
+
+OrderDetail orderDetailForApi(ApiOrderDetail order) => OrderDetail(
+  id: order.displayId,
+  placedAt: _formatDate(order.orderedAt ?? order.createdAt),
+  clinic: order.facility.name,
+  clinicAddress: '',
+  doctor: order.professional?.name ?? 'Profissional não informado',
+  doctorCrm: '',
+  status: _orderStatusFromApi(order.status),
+  items: order.items
+      .map(
+        (item) => OrderDetailItem(
+          productId: item.product?.id ?? item.id,
+          qty: item.quantity.round(),
+          name: item.product?.name,
+          unitPrice: item.unitPrice,
+        ),
+      )
+      .toList(growable: false),
+  shipping: order.freight,
+  paymentMethod: order.notes ?? 'Informação não disponível',
+  invoice: '',
+  tracking: '',
+  estimate: '',
+  timeline: [
+    TimelineStep(
+      step: _orderStatusFromApi(order.status).label,
+      date: _formatDate(order.updatedAt),
+      done: true,
+      current: true,
+    ),
+  ],
+);
 
 // ── Cart state ───────────────────────────────────────────────
 class CartState {
