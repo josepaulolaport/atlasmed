@@ -106,7 +106,7 @@ jobs:
           CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
         run: |
           for attempt in 1 2; do
-            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
@@ -115,3 +115,53 @@ jobs:
             fi
           done
           exit 1
+
+      - name: Remove legacy MinIO init service
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+        run: |
+          set -euo pipefail
+          if uc inspect atlasmed-minio-init >/dev/null 2>&1; then
+            uc rm atlasmed-minio-init
+          fi
+
+      - name: Provision MinIO buckets
+        env:
+          MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+          MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+          STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+          CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
+        run: |
+          set -euo pipefail
+
+          remote_env_file="$($UNCLOUD_SSH_CMD 'mktemp')"
+          cleanup_remote_env() {
+            $UNCLOUD_SSH_CMD "rm -f '$remote_env_file'"
+          }
+          trap cleanup_remote_env EXIT
+
+          {
+            printf 'MINIO_ROOT_USER=%s\n' "$MINIO_ROOT_USER"
+            printf 'MINIO_ROOT_PASSWORD=%s\n' "$MINIO_ROOT_PASSWORD"
+            printf 'STORAGE_BUCKET=%s\n' "$STORAGE_BUCKET"
+            printf 'CNES_ARCHIVE_S3_BUCKET=%s\n' "$CNES_ARCHIVE_S3_BUCKET"
+          } | $UNCLOUD_SSH_CMD "cat > '$remote_env_file'"
+          $UNCLOUD_SSH_CMD "chmod 600 '$remote_env_file'"
+
+          $UNCLOUD_SSH_CMD "REMOTE_ENV_FILE='$remote_env_file' bash -seuo pipefail" <<'REMOTE'
+          minio_container="$(docker ps --filter 'ancestor=minio/minio:latest' --filter 'name=atlasmed-minio' --format '{{.ID}}' | head -n 1)"
+          if [ -z "$minio_container" ]; then
+            echo "atlasmed-minio container is not running" >&2
+            exit 1
+          fi
+
+          docker run --rm \
+            --network "container:${minio_container}" \
+            --env-file "$REMOTE_ENV_FILE" \
+            minio/mc:latest \
+            sh -euc '
+              mc alias set local http://127.0.0.1:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null
+              mc mb --ignore-existing "local/${STORAGE_BUCKET:-atlasmed-production}"
+              mc mb --ignore-existing "local/${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}"
+            '
+          REMOTE

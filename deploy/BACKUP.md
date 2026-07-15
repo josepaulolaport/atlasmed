@@ -24,7 +24,7 @@ pg_dump -h 127.0.0.1 -U temporal temporal > atlasmed-temporal-$(date +%F-%H%M).s
 ## MinIO
 
 - Back up the `atlasmed_minio_data` volume.
-- `atlasmed-minio-init` creates the configured `STORAGE_BUCKET` and `CNES_ARCHIVE_S3_BUCKET` buckets.
+- The `Deploy Backend Infrastructure` workflow creates the configured `STORAGE_BUCKET` and `CNES_ARCHIVE_S3_BUCKET` buckets with an ephemeral `minio/mc` container after `atlasmed-minio` deploys.
 
 ## Recommended schedule
 

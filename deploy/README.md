@@ -87,10 +87,10 @@ Production backend services deploy to Uncloud with `deploy/uncloud.compose.yml`.
 | `atlasmed-redis` | private | BullMQ, cache, and rate limiting. |
 | `atlasmed-meilisearch` | private | Search index. |
 | `atlasmed-minio` | private | S3-compatible storage for app files and CNES archives. |
-| `atlasmed-minio-init` | one-shot | Creates the app and CNES buckets. |
 
 All service names use the `atlasmed-` prefix to avoid collisions with other services already running in the cluster.
 All production services are pinned to the Uncloud machine named `atlasmed` via `x-machines: atlasmed`.
+The `Deploy Backend Infrastructure` workflow provisions the configured `STORAGE_BUCKET` and `CNES_ARCHIVE_S3_BUCKET` after MinIO deploys by running an ephemeral `minio/mc` container over SSH; bucket provisioning is not modeled as a long-lived Uncloud service.
 
 ## One-time setup
 
@@ -98,9 +98,10 @@ All production services are pinned to the Uncloud machine named `atlasmed` via `
 2. Ensure `DATABASE_URL` points at the remote Postgres application database. Do not deploy app Postgres in Uncloud.
 3. Ensure the Uncloud cluster has a machine named `atlasmed`; the compose file pins every service to that machine.
 4. Ensure the shared cluster Authelia config still exposes the Caddy snippet `internal_guard`; `atlasmed-temporal-ui` imports it.
-5. Deploy infrastructure manually:
+5. Deploy infrastructure with the manual `Deploy Backend Infrastructure` GitHub Actions workflow. For local operator-only deploys, deploy the persistent services and then create the buckets from an ephemeral MinIO client container on the Uncloud host:
    ```bash
-   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes
+   uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes
+   docker run --rm --network container:$(docker ps --filter 'ancestor=minio/minio:latest' --filter 'name=atlasmed-minio' --format '{{.ID}}' | head -n 1) -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD -e STORAGE_BUCKET -e CNES_ARCHIVE_S3_BUCKET minio/mc:latest sh -c 'mc alias set local http://127.0.0.1:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" && mc mb --ignore-existing "local/${STORAGE_BUCKET:-atlasmed-production}" && mc mb --ignore-existing "local/${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}"'
    ```
 6. Deploy app services:
    ```bash
