@@ -144,7 +144,9 @@ class SessionEnvironment extends Repository<Session?>
       if (response.statusCode == 200) {
         final session = fromJson(response.body);
         if (session == null) {
-          return const Left(.unknown);
+          throw StateError(
+            'login: 200 OK but failed to parse session. Body: ${response.body}',
+          );
         }
 
         await update((_) => session);
@@ -163,7 +165,11 @@ class SessionEnvironment extends Repository<Session?>
         return const Left(.tooManyAttempts);
       }
 
-      return const Left(.unknown);
+      throw StateError(
+        'login: unexpected status ${response.statusCode}. Body: ${response.body}',
+      );
+    } on StateError {
+      rethrow;
     } catch (e) {
       return const Left(.networkError);
     }
@@ -190,7 +196,11 @@ class SessionEnvironment extends Repository<Session?>
         return const Left(.emailNotFound);
       }
 
-      return const Left(.unknown);
+      throw StateError(
+        'requestPasswordReset: unexpected status ${response.statusCode}. Body: ${response.body}',
+      );
+    } on StateError {
+      rethrow;
     } catch (e) {
       return const Left(.networkError);
     }
@@ -218,7 +228,11 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(false);
       }
 
-      return const Left(.unknown);
+      throw StateError(
+        'verifyResetCode: unexpected status ${response.statusCode}. Body: ${response.body}',
+      );
+    } on StateError {
+      rethrow;
     } catch (e) {
       return const Left(.networkError);
     }
@@ -243,7 +257,11 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(null);
       }
 
-      return const Left(.unknown);
+      throw StateError(
+        'resetPassword: unexpected status ${response.statusCode}. Body: ${response.body}',
+      );
+    } on StateError {
+      rethrow;
     } catch (e) {
       return const Left(.networkError);
     }

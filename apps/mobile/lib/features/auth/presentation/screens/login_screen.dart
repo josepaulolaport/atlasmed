@@ -77,8 +77,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         return 'Muitas tentativas. Aguarde e tente novamente.';
       case CreateSessionError.networkError:
         return 'Sem conexão. Verifique sua internet.';
-      case CreateSessionError.unknown:
-        return 'Erro ao fazer login. Tente novamente.';
     }
   }
 

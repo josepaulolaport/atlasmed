@@ -4,7 +4,6 @@ enum CreateSessionError {
   accountLocked,
   tooManyAttempts,
   networkError,
-  unknown,
 }
 
 /// Errors returned by password reset flows.
@@ -13,5 +12,4 @@ enum PasswordResetError {
   invalidCode,
   expiredCode,
   networkError,
-  unknown,
 }
