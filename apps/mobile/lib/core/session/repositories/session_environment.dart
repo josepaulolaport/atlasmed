@@ -5,7 +5,6 @@ import 'package:dartz/dartz.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
-import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
@@ -43,7 +42,7 @@ class SessionEnvironment extends Repository<Session?>
         endpoint: Uri.parse('${baseUrl ?? _defaultBaseUrl}/api/v1/session/'),
         autoRefreshInterval: const Duration(minutes: 8),
         name: 'SessionEnvironment',
-        method: RepositoryHttpMethod.put,
+        method: .put,
       );
 
   static String get _defaultBaseUrl => AppConfig.apiBaseUrl;
@@ -108,7 +107,7 @@ class SessionEnvironment extends Repository<Session?>
   Future<bool> onErrorStatusCode(int statusCode) async {
     if (statusCode == 400) {
       await delete();
-      await emit(data: null, datasource: RepositoryDatasource.remote);
+      await emit(data: null, datasource: .remote);
       return false;
     }
     return super.onErrorStatusCode(statusCode);
@@ -136,7 +135,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/api/v1/session/'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           headers: {'Content-Type': 'application/json'},
           body: {'identifier': email, 'password': password},
         ),
@@ -145,7 +144,7 @@ class SessionEnvironment extends Repository<Session?>
       if (response.statusCode == 200) {
         final session = fromJson(response.body);
         if (session == null) {
-          return const Left(CreateSessionError.unknown);
+          return const Left(.unknown);
         }
 
         await update((_) => session);
@@ -153,20 +152,20 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 401) {
-        return const Left(CreateSessionError.wrongCredentials);
+        return const Left(.wrongCredentials);
       }
 
       if (response.statusCode == 423) {
-        return const Left(CreateSessionError.accountLocked);
+        return const Left(.accountLocked);
       }
 
       if (response.statusCode == 429) {
-        return const Left(CreateSessionError.tooManyAttempts);
+        return const Left(.tooManyAttempts);
       }
 
-      return const Left(CreateSessionError.unknown);
+      return const Left(.unknown);
     } catch (e) {
-      return const Left(CreateSessionError.networkError);
+      return const Left(.networkError);
     }
   }
 
@@ -178,7 +177,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/forgot-password'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           body: {'email': email},
         ),
       );
@@ -188,12 +187,12 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 404) {
-        return const Left(PasswordResetError.emailNotFound);
+        return const Left(.emailNotFound);
       }
 
-      return const Left(PasswordResetError.unknown);
+      return const Left(.unknown);
     } catch (e) {
-      return const Left(PasswordResetError.networkError);
+      return const Left(.networkError);
     }
   }
 
@@ -206,7 +205,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/verify-reset-code'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           body: {'email': email, 'code': code},
         ),
       );
@@ -219,9 +218,9 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(false);
       }
 
-      return const Left(PasswordResetError.unknown);
+      return const Left(.unknown);
     } catch (e) {
-      return const Left(PasswordResetError.networkError);
+      return const Left(.networkError);
     }
   }
 
@@ -235,7 +234,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/reset-password'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           body: {'email': email, 'code': code, 'password': newPassword},
         ),
       );
@@ -244,9 +243,9 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(null);
       }
 
-      return const Left(PasswordResetError.unknown);
+      return const Left(.unknown);
     } catch (e) {
-      return const Left(PasswordResetError.networkError);
+      return const Left(.networkError);
     }
   }
 
@@ -260,7 +259,7 @@ class SessionEnvironment extends Repository<Session?>
         await client.call(
           request: RepositoryHttpRequest(
             url: Uri.parse('$_baseUrl/api/v1/session/'),
-            method: RepositoryHttpMethod.delete,
+            method: .delete,
             headers: {'Authorization': 'Bearer $bearerToken'},
           ),
         );
