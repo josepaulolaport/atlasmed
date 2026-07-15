@@ -1,8 +1,8 @@
 # AtlasMed Recovery Plan
 
 **Created:** 2026-07-09  
-**Last updated:** 2026-07-10  
-**Status:** Phase 0.5 complete → Phase 1 complete (SigNoz E2E verify optional when stack is running)
+**Last updated:** 2026-07-14  
+**Status:** Phase 3 complete → pre-Phase 4 domain modelling shipped (facility type + services)
 
 This document is the single source of truth for the project recovery. Update it as work progresses. Every checkbox represents a concrete task. Every phase must be fully checked before the next one begins.
 
@@ -20,6 +20,8 @@ This document is the single source of truth for the project recovery. Update it 
 | `phase-3-contracts.md` | Contract bugs, invite flow fix, selector fixes |
 | `phase-4-features.md` | Feature completion, one at a time |
 | `backlog.md` | Deferred items: design system, RSC, TanStack Query, Temporal versioning |
+
+> **Pre-Phase 4 domain modelling (shipped separately):** facility `taxIdType` enum (PJ/PF), `facility_services` table + CNES ingestion sync. See `feature/facility-type-services-20260714` PR.
 
 ---
 

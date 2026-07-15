@@ -119,3 +119,10 @@ export const territoryApprovalStatusEnum = pgEnum("territory_approval_status", [
   "rejected",
   "superseded",
 ]);
+
+/**
+ * Legal entity type for a facility's tax registration.
+ * PJ = Pessoa Jurídica (company, identified by CNPJ).
+ * PF = Pessoa Física (individual practitioner, identified by CPF).
+ */
+export const facilityTaxIdTypeEnum = pgEnum("facility_tax_id_type", ["PJ", "PF"]);

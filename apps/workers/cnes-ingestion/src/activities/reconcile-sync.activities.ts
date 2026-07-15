@@ -190,6 +190,69 @@ export async function syncCrmMetadataActivity(input: {
   };
 }
 
+/**
+ * Syncs facility services from registry.facility_services → public.facility_services.
+ * Uses upsert to handle re-runs idempotently; removes services no longer in the registry.
+ */
+export async function syncFacilityServicesActivity(_input: {
+  ingestionRunId: string;
+}): Promise<{ upserted: number; deleted: number }> {
+  const now = new Date();
+
+  const upsertResult = await db.execute(sql`
+    INSERT INTO public.facility_services (
+      id,
+      facility_id,
+      service_code,
+      classification_code,
+      source_provider,
+      source_first_seen_at,
+      source_last_seen_at,
+      created_at,
+      updated_at
+    )
+    SELECT
+      gen_random_uuid()::text,
+      f.id,
+      rs.service_code,
+      rs.classification_code,
+      'cnes',
+      ${now},
+      ${now},
+      ${now},
+      ${now}
+    FROM registry.facility_services rs
+    INNER JOIN public.facilities f
+      ON f."sourceProvider" = 'cnes'
+     AND f."externalSourceId" = rs.facility_id
+    ON CONFLICT (facility_id, service_code, classification_code)
+    DO UPDATE SET
+      source_last_seen_at = EXCLUDED.source_last_seen_at,
+      updated_at = EXCLUDED.updated_at
+  `);
+
+  const deleteResult = await db.execute(sql`
+    DELETE FROM public.facility_services ps
+    WHERE ps.source_provider = 'cnes'
+      AND NOT EXISTS (
+        SELECT 1
+        FROM registry.facility_services rs
+        INNER JOIN public.facilities f
+          ON f."sourceProvider" = 'cnes'
+         AND f."externalSourceId" = rs.facility_id
+        WHERE f.id = ps.facility_id
+          AND rs.service_code = ps.service_code
+          AND (rs.classification_code = ps.classification_code
+               OR (rs.classification_code IS NULL AND ps.classification_code IS NULL))
+      )
+  `);
+
+  return {
+    upserted: Number(upsertResult.count ?? 0),
+    deleted: Number(deleteResult.count ?? 0),
+  };
+}
+
 export async function finalizeIngestionRunActivity(input: {
   ingestionRunId: string;
   stats: Record<string, unknown>;

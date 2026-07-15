@@ -2,6 +2,7 @@ import {
   facilities,
   facilityProfessionals,
   facilityConsultantAssignments,
+  facilityServices,
   users,
 } from "@atlasmed/database";
 import { eq, and, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
@@ -16,13 +17,18 @@ import type {
 
 type FacilityRow = typeof facilities.$inferSelect;
 
-function mapFacility(facility: FacilityRow): FacilityRecord {
+function mapFacility(
+  facility: FacilityRow,
+  services: Array<{ serviceCode: string; classificationCode: string }> = []
+): FacilityRecord {
   return {
     id: facility.id,
     name: facility.displayName,
     city: facility.city,
     state: facility.state,
+    taxIdType: facility.taxIdType ?? null,
     cnpj: facility.cnpj,
+    cpf: facility.cpf,
     // location geometry column replaces lat/lng; spatial repos handle geometry
     lat: null,
     lng: null,
@@ -41,6 +47,7 @@ function mapFacility(facility: FacilityRow): FacilityRecord {
     deactivatedAt: facility.deactivatedAt,
     createdAt: facility.createdAt,
     updatedAt: facility.updatedAt,
+    services,
   };
 }
 
@@ -125,7 +132,17 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .where(and(eq(facilities.id, id), isNull(facilities.deactivatedAt)))
       .limit(1);
 
-    return facility ? mapFacility(facility) : null;
+    if (!facility) return null;
+
+    const services = await db
+      .select({
+        serviceCode: facilityServices.serviceCode,
+        classificationCode: facilityServices.classificationCode,
+      })
+      .from(facilityServices)
+      .where(eq(facilityServices.facilityId, id));
+
+    return mapFacility(facility, services);
   }
 
   async findByExternalId(
@@ -157,7 +174,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         )
       );
 
-    return rows.map(mapFacility);
+    return rows.map((row) => mapFacility(row));
   }
 
   async create(data: {

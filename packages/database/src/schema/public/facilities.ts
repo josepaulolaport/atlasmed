@@ -20,6 +20,7 @@ import {
   conformityRecordStatusEnum,
   territoryAssignmentStatusEnum,
   territoryAssignmentSourceEnum,
+  facilityTaxIdTypeEnum,
 } from "./enums";
 import { territories } from "./territories";
 import { sectors } from "./sectors";
@@ -43,6 +44,7 @@ export const facilities = pgTable(
     registryDeactivationCode: text("registry_deactivation_code"),
 
     // --- Tax identifiers ---
+    taxIdType: facilityTaxIdTypeEnum("tax_id_type"),
     cnpj: text("cnpj"),
     cpf: text("cpf"),
 
@@ -340,6 +342,34 @@ export const conformityRecords = pgTable(
   ]
 );
 
+/**
+ * Healthcare services offered by a facility, sourced from CNES rlEstabServClass.
+ * Synced from registry.facility_services during ingestion reconciliation.
+ */
+export const facilityServices = pgTable(
+  "facility_services",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    serviceCode: text("service_code").notNull(),
+    classificationCode: text("classification_code").notNull(),
+    sourceProvider: text("source_provider").notNull().default("cnes"),
+    sourceFirstSeenAt: timestamp("source_first_seen_at"),
+    sourceLastSeenAt: timestamp("source_last_seen_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("facility_services_facility_id_service_code_classification_code_uidx").on(
+      t.facilityId,
+      t.serviceCode,
+      t.classificationCode
+    ),
+    index("facility_services_facility_id_idx").on(t.facilityId),
+    index("facility_services_service_code_idx").on(t.serviceCode),
+  ]
+);
+
 // --- Relations ---
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
@@ -350,6 +380,11 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   consultantAssignments: many(facilityConsultantAssignments),
   healthcareProviderShares: many(facilityHealthcareProviderShares),
   conformityRecords: many(conformityRecords),
+  services: many(facilityServices),
+}));
+
+export const facilityServicesRelations = relations(facilityServices, ({ one }) => ({
+  facility: one(facilities, { fields: [facilityServices.facilityId], references: [facilities.id] }),
 }));
 
 export const professionalsRelations = relations(professionals, ({ many }) => ({

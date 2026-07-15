@@ -26,6 +26,7 @@ import {
   authSessionDeviceTypeEnum,
   authSessionTypeEnum,
   verificationTokenTypeEnum,
+  facilityTaxIdTypeEnum,
 } from "./schema/public/enums";
 import {
   cnesRunStatusEnum,
@@ -55,3 +56,4 @@ export type PurchaseStatus = (typeof purchaseStatusEnum.enumValues)[number];
 export type AuthSessionDeviceType = (typeof authSessionDeviceTypeEnum.enumValues)[number];
 export type AuthSessionType = (typeof authSessionTypeEnum.enumValues)[number];
 export type VerificationTokenType = (typeof verificationTokenTypeEnum.enumValues)[number];
+export type FacilityTaxIdType = (typeof facilityTaxIdTypeEnum.enumValues)[number];

@@ -12,6 +12,13 @@ export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
 
 export type PurchaseStatus = "NAO_COMPRA" | "COMPRA" | "COMPRA_POUCO" | "COMPRA_MUITO";
 
+export type FacilityTaxIdType = "PJ" | "PF";
+
+export interface FacilityServiceItem {
+  serviceCode: string;
+  classificationCode: string;
+}
+
 export interface Facility {
   id: string;
   name: string;
@@ -20,12 +27,15 @@ export interface Facility {
   stateCode?: string;
   lat?: number;
   lng?: number;
-  cnpj?: string;
+  taxIdType?: FacilityTaxIdType | null;
+  cnpj?: string | null;
+  cpf?: string | null;
   territoryId?: string;
   territoryAssignmentStatus?: TerritoryAssignmentStatus;
   purchaseStatus?: PurchaseStatus;
   professionalCount?: number;
   consultantName?: string | null;
+  services?: FacilityServiceItem[];
   createdAt: string;
   updatedAt: string;
 }
