@@ -27,7 +27,7 @@ describe("DrizzleUserRepository (Integration)", () => {
       .then((r) => r[0] ?? null);
 
     if (!testRole) {
-      throw new Error("USER role not found in seeded database");
+      throw new Error("REP role not found in seeded database");
     }
 
     testRoleId = testRole.id;
@@ -215,7 +215,7 @@ describe("DrizzleUserRepository (Integration)", () => {
         status: "ACTIVE",
         tokenVersion: created.tokenVersion,
         roleId: testRoleId,
-        roleName: "USER",
+        roleName: "REP",
       });
     });
 

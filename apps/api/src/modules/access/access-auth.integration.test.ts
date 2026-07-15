@@ -55,7 +55,7 @@ describe("Access Auth HTTP Integration Tests", () => {
       .limit(1)
       .then((r) => r[0] ?? null);
     if (!userRole) {
-      throw new Error("USER role not found in seeded database");
+      throw new Error("REP role not found in seeded database");
     }
 
     const user = await db
