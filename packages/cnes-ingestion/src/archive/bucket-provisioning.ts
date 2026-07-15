@@ -83,13 +83,13 @@ export async function ensureBucketExists(
   }
 }
 
-export async function ensureArchiveBucket(input: EnsureArchiveBucketInput): Promise<void> {
+export async function ensureArchiveBucket(input: EnsureArchiveBucketInput, client?: BucketProvisioningClient): Promise<void> {
   if (!input.bucket) {
     return;
   }
 
   const region = input.region ?? "us-east-1";
-  const config: S3ClientConfig = {
+  const s3Client = client ?? new S3Client({
     region,
     endpoint: input.endpoint,
     forcePathStyle: input.forcePathStyle ?? Boolean(input.endpoint),
@@ -100,7 +100,7 @@ export async function ensureArchiveBucket(input: EnsureArchiveBucketInput): Prom
             secretAccessKey: input.secretAccessKey,
           }
         : undefined,
-  };
+  });
 
-  await ensureBucketExists(new S3Client(config), input.bucket, region);
+  await ensureBucketExists(s3Client, input.bucket, region);
 }
