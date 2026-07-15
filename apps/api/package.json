@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "./dev.sh",
-    "dev:direct": "bun --watch src/app/server.ts",
+    "dev": "bun --watch src/app/server.ts",
     "start": "bun src/app/server.ts",
     "start:worker": "bun src/app/jobs-worker.ts",
     "predev": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
