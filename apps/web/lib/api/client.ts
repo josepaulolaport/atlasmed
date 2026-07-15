@@ -66,7 +66,9 @@ function subscribeTokenRefresh(callback: (token: string) => void) {
 }
 
 function onRefreshed(token: string) {
-  refreshSubscribers.forEach((callback) => callback(token))
+  for (const callback of refreshSubscribers) {
+    callback(token)
+  }
   refreshSubscribers = []
 }
 

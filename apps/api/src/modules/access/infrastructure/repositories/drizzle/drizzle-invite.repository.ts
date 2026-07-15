@@ -281,7 +281,11 @@ export class DrizzleInviteRepository implements InviteRepository {
         .where(eq(users.id, newUserRow?.id))
         .limit(1)
 
-      const user = { ...userRow?.users, role: userRow?.roles! }
+      if (!newUserRow || !userRow?.users || !userRow.roles) {
+        throw new ResourceNotFoundError('User', newUserRow?.id ?? 'newly created')
+      }
+
+      const user = { ...userRow.users, role: userRow.roles }
 
       // Create territory assignments and derive sector assignments if specified in invitation
       const assignedTerritoryIds: string[] = []

@@ -29,22 +29,18 @@ function TerritoryTreeNodeRow({
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => onSelect(node.id)}
+      <div
         className={cn(
-          'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-left text-sm hover:bg-gray-50',
+          'flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50',
           isSelected && 'bg-blue-50 text-blue-900'
         )}
         style={{ paddingLeft: `${depth * 12 + 8}px` }}
       >
         {hasChildren ? (
-          <span
-            role="presentation"
-            onClick={(e) => {
-              e.stopPropagation()
-              setExpanded((v) => !v)
-            }}
+          <button
+            type="button"
+            aria-label={expanded ? `Recolher ${node.name}` : `Expandir ${node.name}`}
+            onClick={() => setExpanded((value) => !value)}
             className="inline-flex shrink-0"
           >
             {expanded ? (
@@ -52,15 +48,21 @@ function TerritoryTreeNodeRow({
             ) : (
               <ChevronRight className="h-4 w-4 text-gray-500" />
             )}
-          </span>
+          </button>
         ) : (
           <span className="w-4 shrink-0" />
         )}
-        <span className="min-w-0 flex-1 truncate font-medium">{node.name}</span>
-        <span className="hidden truncate text-gray-500 sm:inline">
-          {node.isCountryLevel ? node.countryCode : node.slug}
-        </span>
-      </button>
+        <button
+          type="button"
+          onClick={() => onSelect(node.id)}
+          className="flex min-w-0 flex-1 items-center gap-1 text-left"
+        >
+          <span className="min-w-0 flex-1 truncate font-medium">{node.name}</span>
+          <span className="hidden truncate text-gray-500 sm:inline">
+            {node.isCountryLevel ? node.countryCode : node.slug}
+          </span>
+        </button>
+      </div>
       {expanded && hasChildren && (
         <div>
           {node.children.map((child) => (

@@ -345,7 +345,7 @@ export default function FacilityDetailPage() {
 function Field({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
-      <label className="mb-1 block font-medium text-xs text-zinc-500">{label}</label>
+      <div className="mb-1 block font-medium text-xs text-zinc-500">{label}</div>
       <div className="text-sm text-zinc-900">{value || '—'}</div>
     </div>
   )
@@ -393,9 +393,9 @@ function OverviewTab({ facility }: { facility: Facility }) {
             <div className="space-y-4 p-5">
               <Field label="ID do território" value={facility.territoryId} />
               <div>
-                <label className="mb-1 block font-medium text-xs text-zinc-500">
+                <div className="mb-1 block font-medium text-xs text-zinc-500">
                   Status de atribuição
-                </label>
+                </div>
                 {facility.territoryAssignmentStatus ? (
                   <Badge
                     variant={

@@ -58,7 +58,7 @@ export function TopHeader({ breadcrumbs, actions }: TopHeaderProps) {
           <span className="text-zinc-900">AtlasMed</span>
         ) : (
           crumbs.map((crumb, idx) => (
-            <Fragment key={idx}>
+            <Fragment key={crumb.href ?? crumb.label}>
               {idx > 0 && (
                 <iconify-icon
                   icon="solar:alt-arrow-right-linear"

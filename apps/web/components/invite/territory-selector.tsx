@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertCircle, List, Loader2, Map, Plus, Search } from 'lucide-react'
+import { AlertCircle, List, Loader2, Map as MapIcon, Plus, Search } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -135,7 +135,7 @@ export function TerritorySelector({
                   Lista
                 </TabsTrigger>
                 <TabsTrigger value="map" className="flex items-center gap-2">
-                  <Map className="h-4 w-4" />
+                  <MapIcon className="h-4 w-4" />
                   Mapa
                 </TabsTrigger>
               </TabsList>
@@ -221,7 +221,7 @@ export function TerritorySelector({
 
             <TabsContent value="map" className="space-y-3">
               <div className="rounded-md border border-dashed p-12 text-center">
-                <Map className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                <MapIcon className="mx-auto mb-3 h-12 w-12 text-gray-400" />
                 <p className="mb-2 text-gray-500 text-sm">Visualização de mapa</p>
                 <p className="text-gray-400 text-xs">
                   A visualização de mapa com limites de território será implementada aqui. Use a

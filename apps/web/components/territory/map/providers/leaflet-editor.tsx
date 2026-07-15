@@ -1,7 +1,7 @@
 'use client'
 
 import L from 'leaflet'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import '@geoman-io/leaflet-geoman-free'
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css'
@@ -17,14 +17,14 @@ function MapController({ value, onChange, readOnly, onValidationError }: Territo
   const map = useMap()
   const layersRef = useRef<L.Layer[]>([])
 
-  const clearLayers = () => {
+  const clearLayers = useCallback(() => {
     for (const layer of layersRef.current) {
       map.removeLayer(layer)
     }
     layersRef.current = []
-  }
+  }, [map])
 
-  const syncAllLayers = () => {
+  const syncAllLayers = useCallback(() => {
     const features = layersRef.current
       .map((layer) => {
         const withGeo = layer as L.Layer & { toGeoJSON?: () => GeoJSON.Feature }
@@ -40,7 +40,7 @@ function MapController({ value, onChange, readOnly, onValidationError }: Territo
     }
 
     onChange(boundary)
-  }
+  }, [onChange, onValidationError])
 
   useEffect(() => {
     if (!map.pm) return

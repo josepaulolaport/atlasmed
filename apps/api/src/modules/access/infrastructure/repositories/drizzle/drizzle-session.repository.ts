@@ -499,9 +499,13 @@ export class DrizzleSessionRepository implements SessionRepository {
         .where(eq(users.id, updatedSession?.userId))
         .limit(1)
 
+      if (!updatedSession || !userRow?.users || !userRow.roles) {
+        throw new UnauthorizedError('Session user not found')
+      }
+
       const session = {
-        ...updatedSession!,
-        user: { ...userRow?.users, role: userRow?.roles! }
+        ...updatedSession,
+        user: { ...userRow.users, role: userRow.roles }
       }
 
       return {

@@ -252,10 +252,10 @@ function RegisterForm() {
               <div className="space-y-2 rounded-md border border-zinc-200 bg-zinc-50 p-3">
                 <p className="font-medium text-xs text-zinc-700">Requisitos da senha</p>
                 <ul className="space-y-1">
-                  {passwordRequirements.map((req, index) => {
+                  {passwordRequirements.map((req) => {
                     const passed = req.test(password)
                     return (
-                      <li key={index} className="flex items-center gap-2 text-xs">
+                      <li key={req.label} className="flex items-center gap-2 text-xs">
                         <iconify-icon
                           icon={passed ? 'solar:check-circle-linear' : 'solar:close-circle-linear'}
                           stroke-width="1.5"

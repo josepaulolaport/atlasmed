@@ -353,7 +353,7 @@ function SuggestionCard({
           <div className="space-y-3">
             <FieldRow label="Ação" value={TYPE_LABELS[suggestion.type]} highlight />
             <div>
-              <label className="mb-1 block font-medium text-blue-600/70 text-xs">Payload</label>
+              <div className="mb-1 block font-medium text-blue-600/70 text-xs">Payload</div>
               <pre className="max-h-40 overflow-auto rounded-md border border-blue-200 bg-white p-3 text-xs text-zinc-700">
                 {JSON.stringify(suggestion.payload, null, 2)}
               </pre>
@@ -383,7 +383,7 @@ function FieldRow({
 }) {
   return (
     <div>
-      <label className="mb-1 block font-medium text-xs text-zinc-500">{label}</label>
+      <div className="mb-1 block font-medium text-xs text-zinc-500">{label}</div>
       <div
         className={cn(
           'rounded-md border px-3 py-2 text-sm text-zinc-900',
