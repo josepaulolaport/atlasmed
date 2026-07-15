@@ -10,6 +10,17 @@ function mapProduct(row: {
   id: string;
   code: string;
   name: string;
+  pictureUrl: string | null;
+  simproCode: string;
+  brasindiceCode: string;
+  tissCode: string;
+  manufacturer: string;
+  countryOfOrigin: string;
+  price: string;
+  price17: string;
+  price18: string;
+  price20: string;
+  brasindiceUpdatedAt: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -19,6 +30,17 @@ function mapProduct(row: {
     code: row.code,
     name: row.name,
     sectorIds,
+    pictureUrl: row.pictureUrl,
+    simproCode: row.simproCode,
+    brasindiceCode: row.brasindiceCode,
+    tissCode: row.tissCode,
+    manufacturer: row.manufacturer,
+    countryOfOrigin: row.countryOfOrigin,
+    price: Number(row.price),
+    price17: Number(row.price17),
+    price18: Number(row.price18),
+    price20: Number(row.price20),
+    brasindiceUpdatedAt: row.brasindiceUpdatedAt,
     isActive: row.isActive,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -29,6 +51,17 @@ const productColumns = {
   id: products.id,
   code: products.code,
   name: products.name,
+  pictureUrl: products.pictureUrl,
+  simproCode: products.simproCode,
+  brasindiceCode: products.brasindiceCode,
+  tissCode: products.tissCode,
+  manufacturer: products.manufacturer,
+  countryOfOrigin: products.countryOfOrigin,
+  price: products.price,
+  price17: products.price17,
+  price18: products.price18,
+  price20: products.price20,
+  brasindiceUpdatedAt: products.brasindiceUpdatedAt,
   isActive: products.isActive,
   createdAt: products.createdAt,
   updatedAt: products.updatedAt,
@@ -97,6 +130,17 @@ export class DrizzleProductRepository implements ProductRepository {
     code: string;
     name: string;
     sectorIds: string[];
+    pictureUrl?: string | null;
+    simproCode: string;
+    brasindiceCode: string;
+    tissCode: string;
+    manufacturer: string;
+    countryOfOrigin: string;
+    price: number;
+    price17: number;
+    price18: number;
+    price20: number;
+    brasindiceUpdatedAt: string;
     isActive?: boolean;
   }): Promise<ProductRecord> {
     return db.transaction(async (tx) => {
@@ -105,6 +149,17 @@ export class DrizzleProductRepository implements ProductRepository {
         .values({
           code: data.code,
           name: data.name,
+          pictureUrl: data.pictureUrl ?? null,
+          simproCode: data.simproCode,
+          brasindiceCode: data.brasindiceCode,
+          tissCode: data.tissCode,
+          manufacturer: data.manufacturer,
+          countryOfOrigin: data.countryOfOrigin,
+          price: String(data.price),
+          price17: String(data.price17),
+          price18: String(data.price18),
+          price20: String(data.price20),
+          brasindiceUpdatedAt: data.brasindiceUpdatedAt,
           isActive: data.isActive ?? true,
         })
         .returning(productColumns);
@@ -122,9 +177,31 @@ export class DrizzleProductRepository implements ProductRepository {
 
   async update(
     id: string,
-    data: { code?: string; name?: string; sectorIds?: string[]; isActive?: boolean }
+    data: {
+      code?: string;
+      name?: string;
+      sectorIds?: string[];
+      pictureUrl?: string | null;
+      simproCode?: string;
+      brasindiceCode?: string;
+      tissCode?: string;
+      manufacturer?: string;
+      countryOfOrigin?: string;
+      price?: number;
+      price17?: number;
+      price18?: number;
+      price20?: number;
+      brasindiceUpdatedAt?: string;
+      isActive?: boolean;
+    }
   ): Promise<ProductRecord> {
-    const { sectorIds, ...productData } = data;
+    const { sectorIds, price, price17, price18, price20, ...rest } = data;
+    const productData: Record<string, unknown> = { ...rest };
+    if (price !== undefined) productData.price = String(price);
+    if (price17 !== undefined) productData.price17 = String(price17);
+    if (price18 !== undefined) productData.price18 = String(price18);
+    if (price20 !== undefined) productData.price20 = String(price20);
+
     const cleanData = Object.fromEntries(
       Object.entries(productData).filter(([, v]) => v !== undefined)
     );

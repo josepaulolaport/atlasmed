@@ -32,6 +32,17 @@ function serializeProduct(row: {
   code: string;
   name: string;
   sectorIds: string[];
+  pictureUrl: string | null;
+  simproCode: string;
+  brasindiceCode: string;
+  tissCode: string;
+  manufacturer: string;
+  countryOfOrigin: string;
+  price: number;
+  price17: number;
+  price18: number;
+  price20: number;
+  brasindiceUpdatedAt: string;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -41,6 +52,17 @@ function serializeProduct(row: {
     code: row.code,
     name: row.name,
     sectorIds: row.sectorIds,
+    pictureUrl: row.pictureUrl,
+    simproCode: row.simproCode,
+    brasindiceCode: row.brasindiceCode,
+    tissCode: row.tissCode,
+    manufacturer: row.manufacturer,
+    countryOfOrigin: row.countryOfOrigin,
+    price: row.price,
+    price17: row.price17,
+    price18: row.price18,
+    price20: row.price20,
+    brasindiceUpdatedAt: row.brasindiceUpdatedAt,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -143,6 +165,17 @@ export class CreateProductUseCase {
     code: string;
     name: string;
     sectorIds: string[];
+    pictureUrl?: string | null;
+    simproCode: string;
+    brasindiceCode: string;
+    tissCode: string;
+    manufacturer: string;
+    countryOfOrigin: string;
+    price: number;
+    price17: number;
+    price18: number;
+    price20: number;
+    brasindiceUpdatedAt: string;
     isActive?: boolean;
   }) {
     const product = await this.deps.productRepository.create(input);
@@ -158,12 +191,34 @@ export class UpdateProductUseCase {
     code?: string;
     name?: string;
     sectorIds?: string[];
+    pictureUrl?: string | null;
+    simproCode?: string;
+    brasindiceCode?: string;
+    tissCode?: string;
+    manufacturer?: string;
+    countryOfOrigin?: string;
+    price?: number;
+    price17?: number;
+    price18?: number;
+    price20?: number;
+    brasindiceUpdatedAt?: string;
     isActive?: boolean;
   }) {
     const product = await this.deps.productRepository.update(input.productId, {
       code: input.code,
       name: input.name,
       sectorIds: input.sectorIds,
+      pictureUrl: input.pictureUrl,
+      simproCode: input.simproCode,
+      brasindiceCode: input.brasindiceCode,
+      tissCode: input.tissCode,
+      manufacturer: input.manufacturer,
+      countryOfOrigin: input.countryOfOrigin,
+      price: input.price,
+      price17: input.price17,
+      price18: input.price18,
+      price20: input.price20,
+      brasindiceUpdatedAt: input.brasindiceUpdatedAt,
       isActive: input.isActive,
     });
     return serializeProduct(product);
