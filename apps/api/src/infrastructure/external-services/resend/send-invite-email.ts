@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../app/config/environment";
 
 import { resend } from "./resend.client";
 import { logger } from "../../logging/logger";
@@ -24,7 +24,7 @@ export async function sendInviteEmail(
 
   try {
     await resend.emails.send({
-      from: apiEnv.RESEND_FROM_EMAIL!,
+      from: environment.RESEND_FROM_EMAIL!,
       to,
       subject: "You've been invited to join AtlasMed",
       react: InviteEmail({
@@ -53,7 +53,7 @@ export async function sendPasswordResetEmail(
 
   try {
     await resend.emails.send({
-      from: apiEnv.RESEND_FROM_EMAIL!,
+      from: environment.RESEND_FROM_EMAIL!,
       to,
       subject: "Reset your password",
       react: PasswordResetEmail({

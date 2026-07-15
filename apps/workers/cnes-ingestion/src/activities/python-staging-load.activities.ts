@@ -2,6 +2,7 @@
  * TECHNICAL DEBT (v1): Staging load delegates to Python `import_modular.py`.
  * Replace with TS streaming loaders in `packages/cnes-ingestion` and golden parity tests.
  */
+import { environment } from "@atlasmed/config";
 import { loadWorkerConfig } from "../config";
 import { truncateRegistryStaging } from "../infrastructure/registry-schemas";
 import { updateIngestionRunPhase } from "./discover-download.activities";
@@ -27,11 +28,6 @@ export async function loadRegistryStagingViaPythonActivity(input: {
     throw new Error(`CNES import script not found: ${config.importScript}`);
   }
 
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL is required for CNES Python staging load");
-  }
-
   await truncateRegistryStaging();
 
   const version = cnesVersionSuffix({ ano: input.ano, mes: input.mes });
@@ -40,7 +36,7 @@ export async function loadRegistryStagingViaPythonActivity(input: {
     "--csv-dir",
     input.extractPath,
     "--db-url",
-    databaseUrl,
+    environment.DATABASE_URL,
     "--schema",
     "registry_staging",
     "--cnes-version",

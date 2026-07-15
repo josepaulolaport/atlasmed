@@ -1,8 +1,9 @@
 import axios from "axios";
+import { environment } from "@atlasmed/config";
 import type { HealthStatus } from "@/types/api";
 
 // Health endpoints are NOT versioned, so use a separate client
-const HEALTH_URL = process.env.NEXT_PUBLIC_HEALTH_URL || "http://localhost:3000";
+const HEALTH_URL = environment.NEXT_PUBLIC_HEALTH_URL;
 
 const healthClient = axios.create({
   baseURL: HEALTH_URL,

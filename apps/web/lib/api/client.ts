@@ -1,8 +1,9 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from "axios";
+import { environment } from "@atlasmed/config";
 import { isPublicAuthPath } from "@/lib/auth-routes";
 import { isRefreshTokenReuseError } from "@/lib/api/errors";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api/v1";
+const API_URL = environment.NEXT_PUBLIC_API_URL;
 
 function isRefreshRequest(config: InternalAxiosRequestConfig): boolean {
   const url = config.url ?? "";

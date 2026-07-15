@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../../app/config/environment";
 
 import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
 import { logger } from "../../../../infrastructure/logging/logger";
@@ -20,7 +20,7 @@ export async function sendInviteEmail(
     return;
   }
 
-  if (!apiEnv.RESEND_FROM_EMAIL) {
+  if (!environment.RESEND_FROM_EMAIL) {
     logger.error("RESEND_FROM_EMAIL is not set — cannot send invite email");
     return;
   }
@@ -28,7 +28,7 @@ export async function sendInviteEmail(
   try {
     logger.info("Sending invite email", { to });
     const result = await resend.emails.send({
-      from: apiEnv.RESEND_FROM_EMAIL,
+      from: environment.RESEND_FROM_EMAIL,
       to,
       subject: "You've been invited to join AtlasMed",
       react: InviteEmail({
