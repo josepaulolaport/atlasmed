@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 
 // ── Clinic detail model ───────────────────────────────────────
 
@@ -105,7 +106,7 @@ class PayerInfo {
 
 class ClinicVisit {
   final DateTime date;
-  final String type; // 'visita', 'retorno', 'entrega', 'reuniao'
+  final VisitType type;
   final String? summary;
   final String? consultantName;
   final bool hasPendingOrder;

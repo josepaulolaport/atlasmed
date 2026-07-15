@@ -1,6 +1,8 @@
+import 'activity_kind.dart';
+
 // ── Recent activity ──────────────────────────────────────────
 class RecentActivity {
-  final String kind;
+  final ActivityKind kind;
   final String title;
   final String detail;
   final String when;

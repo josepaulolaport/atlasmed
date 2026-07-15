@@ -1,7 +1,8 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 
 /// Default radius (in kilometres) when proximity filtering is enabled.
 const double defaultProximityRadiusKm = 50;
@@ -50,7 +51,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
   final String? productIds;
 
   /// Build the endpoint URI for this repository.
-  /// Calls the shared [buildEndpoint] from api_types.dart.
+  /// Calls the shared [buildEndpoint] from [query_builder.dart].
   static Uri makeEndpoint({
     required String baseUrl,
     required int page,

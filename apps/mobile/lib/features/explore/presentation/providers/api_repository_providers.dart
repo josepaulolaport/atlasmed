@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 

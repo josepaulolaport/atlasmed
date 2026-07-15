@@ -1,4 +1,5 @@
 import 'tracking_status.dart';
+import 'suggestion_kind.dart';
 
 // ── Driver info for tracking ─────────────────────────────────
 class DriverInfo {
@@ -92,7 +93,7 @@ class TrackingClinic {
 class PriceSuggestion {
   final double unit;
   final String date;
-  final String kind;
+  final SuggestionKind kind;
   final bool isDiscounted;
   final int discountPct;
   final List<PriceHistoryEntry> history;
@@ -110,7 +111,7 @@ class PriceSuggestion {
 class PriceHistoryEntry {
   final double unit;
   final String date;
-  final String kind;
+  final SuggestionKind kind;
   final int qty;
   final String orderId;
 

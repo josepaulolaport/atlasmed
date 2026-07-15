@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 
 // ── Doctor model ─────────────────────────────────────────────
 class Doctor {

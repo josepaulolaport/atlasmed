@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/payment_method.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
@@ -50,7 +51,7 @@ class OrderDetailScreen extends ConsumerWidget {
         );
         final total = subtotal + detail.shipping;
         final hasTracking =
-            detail.status == OrderStatus.transit && detail.tracking.isNotEmpty;
+            detail.status == OrderStatus.shipped && detail.tracking.isNotEmpty;
 
         return Scaffold(
           backgroundColor: const Color(0xFFf7f8fb),
@@ -551,7 +552,7 @@ class _PaymentCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _moneyRow('Método', detail.paymentMethod),
+          _moneyRow('Método', detail.paymentMethod.label),
           const SizedBox(height: 8),
           _moneyRow('Subtotal', brl(subtotal)),
           const SizedBox(height: 8),

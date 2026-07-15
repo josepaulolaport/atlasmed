@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
@@ -1215,7 +1216,7 @@ class _ClinicVisitsState extends State<_ClinicVisits> {
   Widget build(BuildContext context) {
     final filtered = _filter == 'todas'
         ? widget.visits
-        : widget.visits.where((v) => v.type == _filter).toList();
+        : widget.visits.where((v) => v.type.name == _filter).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -1248,23 +1249,23 @@ class _ClinicVisitsState extends State<_ClinicVisits> {
                 const SizedBox(width: 8),
                 _FilterPill(
                   label: 'Visitas',
-                  value: 'visita',
-                  selected: _filter == 'visita',
-                  onTap: () => setState(() => _filter = 'visita'),
+                  value: 'visit',
+                  selected: _filter == 'visit',
+                  onTap: () => setState(() => _filter = 'visit'),
                 ),
                 const SizedBox(width: 8),
                 _FilterPill(
                   label: 'Entregas',
-                  value: 'entrega',
-                  selected: _filter == 'entrega',
-                  onTap: () => setState(() => _filter = 'entrega'),
+                  value: 'order',
+                  selected: _filter == 'order',
+                  onTap: () => setState(() => _filter = 'order'),
                 ),
                 const SizedBox(width: 8),
                 _FilterPill(
                   label: 'Retornos',
-                  value: 'retorno',
-                  selected: _filter == 'retorno',
-                  onTap: () => setState(() => _filter = 'retorno'),
+                  value: 'followup',
+                  selected: _filter == 'followup',
+                  onTap: () => setState(() => _filter = 'followup'),
                 ),
               ],
             ),
@@ -1330,11 +1331,11 @@ class _VisitItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = visit.type == 'visita'
+    final color = visit.type == VisitType.visit
         ? const Color(0xFF1e40af)
-        : visit.type == 'entrega'
+        : visit.type == VisitType.order
         ? const Color(0xFF16a373)
-        : visit.type == 'retorno'
+        : visit.type == VisitType.followup
         ? const Color(0xFFc6861b)
         : const Color(0xFF7c3aed);
     final monthNames = [
@@ -1418,7 +1419,7 @@ class _VisitItem extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          visit.type[0].toUpperCase() + visit.type.substring(1),
+                          visit.type.label,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,

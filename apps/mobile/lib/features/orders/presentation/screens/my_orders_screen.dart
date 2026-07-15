@@ -57,7 +57,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                             ordersAsync.valueOrNull
                                 ?.where(
                                   (order) =>
-                                      order.status == OrderStatus.transit,
+                                      order.status == OrderStatus.shipped,
                                 )
                                 .length ??
                             0,

@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart' as api;
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 // ── Clinic model ─────────────────────────────────────────────
@@ -27,22 +27,22 @@ class Clinic {
     required this.products,
   });
 
-  /// Maps an [ApiClinic] from the paginated API response to a [Clinic] model.
+  /// Maps a [Clinic] from the paginated API response to a [Clinic] model.
   /// Fields not present in the API response use sensible defaults.
-  factory Clinic.fromApi(ApiClinic api) {
+  factory Clinic.fromApi(api.Clinic clinicDto) {
     final cityParts = <String>[
-      if (api.city != null && api.city!.isNotEmpty) api.city!,
-      if (api.state != null && api.state!.isNotEmpty) api.state!,
+      if (clinicDto.city != null && clinicDto.city!.isNotEmpty) clinicDto.city!,
+      if (clinicDto.state != null && clinicDto.state!.isNotEmpty) clinicDto.state!,
     ];
     return Clinic(
-      id: api.id,
-      name: api.name,
+      id: clinicDto.id,
+      name: clinicDto.name,
       city: cityParts.isNotEmpty ? cityParts.join(', ') : '',
       neighborhood: '',
-      distanceKm: api.distanceKm ?? 0,
+      distanceKm: clinicDto.distanceKm ?? 0,
       status: ClinicStatus.active,
       lastVisitDays: null,
-      doctorCount: api.professionalCount,
+      doctorCount: clinicDto.professionalCount,
       isPriority: false,
       products: [],
     );

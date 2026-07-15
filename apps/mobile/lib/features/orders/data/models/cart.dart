@@ -1,3 +1,5 @@
+import 'price_mode.dart';
+
 // ── Product model (mock) ─────────────────────────────────────
 class Product {
   final String id;
@@ -25,7 +27,7 @@ class CartItem {
   final int qty;
   final double unitPrice;
   final double? catalogUnitPrice;
-  final String? priceMode;
+  final PriceMode? priceMode;
 
   const CartItem({
     required this.productId,
@@ -41,7 +43,7 @@ class CartItem {
     int? qty,
     double? unitPrice,
     double? catalogUnitPrice,
-    String? priceMode,
+    PriceMode? priceMode,
   }) {
     return CartItem(
       productId: productId,

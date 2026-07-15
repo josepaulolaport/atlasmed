@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/price_mode.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/suggestion_kind.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
@@ -13,7 +15,7 @@ class ProductOrderSheet extends ConsumerStatefulWidget {
   final String? clinicName;
   final int initialQty;
   final double? initialUnit;
-  final String? initialMode;
+  final PriceMode? initialMode;
 
   const ProductOrderSheet({
     super.key,
@@ -51,7 +53,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   void initState() {
     super.initState();
     // No price suggestion API yet — default to catalog price
-    final startMode = widget.initialMode ?? 'catalog';
+    final startMode = widget.initialMode == PriceMode.custom ? 'custom' : 'catalog';
     final startUnit = widget.initialUnit ?? widget.product.price;
     _qty = widget.initialQty > 0 ? widget.initialQty : 1;
     _mode = startMode;
@@ -68,7 +70,10 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
           qty: _qty,
           unitPrice: _activeUnit,
           catalogUnitPrice: widget.product.price,
-          priceMode: _mode,
+          priceMode: switch (_mode) {
+            'custom' => PriceMode.custom,
+            _ => PriceMode.catalog,
+          },
         );
     Navigator.of(context).pop();
   }
@@ -852,43 +857,23 @@ class _PriceRow extends StatelessWidget {
 }
 
 // ── Helpers ──────────────────────────────────────────────────
-const _agreementMeta = {
-  'tabela': {
-    'label': 'Tabela',
-    'color': Color(0xFF6b7280),
-    'bg': Color(0xFFf3f4f6),
-  },
-  'recorrente': {
-    'label': 'Cliente recorrente',
-    'color': Color(0xFF0f7c5a),
-    'bg': Color(0xFFe7f6ef),
-  },
-  'campanha': {
-    'label': 'Campanha',
-    'color': Color(0xFFa85a05),
-    'bg': Color(0xFFfef3e1),
-  },
-};
-
-String _agreementLabel(String kind) {
-  return _agreementMeta[kind]?['label'] as String? ?? kind;
+String _agreementLabel(SuggestionKind kind) {
+  return kind.label;
 }
 
-Widget _agreementBadge(String kind) {
-  final meta = _agreementMeta[kind];
-  if (meta == null) return const SizedBox.shrink();
+Widget _agreementBadge(SuggestionKind kind) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
     decoration: BoxDecoration(
-      color: meta['bg'] as Color,
+      color: const Color(0xFFf3f4f6),
       borderRadius: BorderRadius.circular(5),
     ),
     child: Text(
-      meta['label'] as String,
-      style: TextStyle(
+      kind.label,
+      style: const TextStyle(
         fontSize: 9,
         fontWeight: FontWeight.w700,
-        color: meta['color'] as Color,
+        color: Color(0xFF6b7280),
       ),
     ),
   );

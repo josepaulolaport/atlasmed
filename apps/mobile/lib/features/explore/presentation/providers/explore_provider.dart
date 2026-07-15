@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart' as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
@@ -16,15 +17,15 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
-// ── Helper: parse a single ApiClinic from a detail endpoint response ──
-ApiClinic _parseClinicDetail(String json) {
+// ── Helper: parse a single Clinic from a detail endpoint response ──
+api.Clinic _parseClinicDetail(String json) {
   final map = jsonDecode(json) as Map<String, dynamic>;
-  return ApiClinic.fromMap(map);
+  return api.Clinic.fromMap(map);
 }
 
 // ── Clinic detail repository ────────────────────────────────
-class _ClinicDetailRepository extends Repository<ApiClinic>
-    with SessionEnvironmentMixin<ApiClinic> {
+class _ClinicDetailRepository extends Repository<api.Clinic>
+    with SessionEnvironmentMixin<api.Clinic> {
   _ClinicDetailRepository({required String id})
     : super(
         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/facilities/$id'),
@@ -33,7 +34,7 @@ class _ClinicDetailRepository extends Repository<ApiClinic>
       );
 
   @override
-  ApiClinic fromJson(String json) => _parseClinicDetail(json);
+  api.Clinic fromJson(String json) => _parseClinicDetail(json);
 }
 
 // ── Doctor detail repository ────────────────────────────────
@@ -61,7 +62,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
     if (apiClinic == null) {
       throw Exception('Clinic not found: $id');
     }
-    // Map ApiClinic → ClinicDetail
+    // Map DTO Clinic → ClinicDetail
     final cityParts = <String>[
       if (apiClinic.city != null && apiClinic.city!.isNotEmpty) apiClinic.city!,
       if (apiClinic.state != null && apiClinic.state!.isNotEmpty)

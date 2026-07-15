@@ -1,4 +1,5 @@
 import 'order_status.dart';
+import 'payment_method.dart';
 
 // ── Order list item ──────────────────────────────────────────
 class OrderListItem {
@@ -62,7 +63,7 @@ class OrderDetail {
   final OrderStatus status;
   final List<OrderDetailItem> items;
   final double shipping;
-  final String paymentMethod;
+  final PaymentMethod paymentMethod;
   final String invoice;
   final String tracking;
   final String estimate;

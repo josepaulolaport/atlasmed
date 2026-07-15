@@ -3,6 +3,8 @@ import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dar
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/payment_method.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/price_mode.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 
@@ -24,21 +26,7 @@ final orderDetailProvider = FutureProvider.family<ApiOrderDetail, String>((
   return ref.watch(ordersRepositoryProvider).getOrder(orderId);
 });
 
-OrderStatus _orderStatusFromApi(String status) {
-  switch (status) {
-    case 'SHIPPED':
-      return OrderStatus.transit;
-    case 'DELIVERED':
-      return OrderStatus.delivered;
-    case 'CANCELLED':
-    case 'REJECTED':
-      return OrderStatus.cancelled;
-    case 'CONFIRMED':
-      return OrderStatus.separating;
-    default:
-      return OrderStatus.pending;
-  }
-}
+OrderStatus _orderStatusFromApi(String status) => orderStatusFromJson(status);
 
 String _formatDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -85,7 +73,7 @@ OrderDetail orderDetailForApi(ApiOrderDetail order) => OrderDetail(
       )
       .toList(growable: false),
   shipping: order.freight,
-  paymentMethod: order.notes ?? 'Informação não disponível',
+  paymentMethod: paymentMethodFromJson(order.notes ?? 'credit'),
   invoice: '',
   tracking: '',
   estimate: '',
@@ -153,7 +141,7 @@ class CartNotifier extends StateNotifier<CartState> {
     required int qty,
     required double unitPrice,
     required double catalogUnitPrice,
-    required String? priceMode,
+    required PriceMode? priceMode,
   }) {
     final existing = state.items.indexWhere((i) => i.productId == productId);
     if (existing >= 0) {
