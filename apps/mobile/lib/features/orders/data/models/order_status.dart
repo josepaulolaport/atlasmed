@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 
 // ── Order status ─────────────────────────────────────────────
-enum OrderStatus {
-  draft,
-  pending,
-  approved,
-  invoiced,
-  rejected,
-  noBilling,
-}
+enum OrderStatus { draft, pending, approved, invoiced, rejected, noBilling }
 
 extension OrderStatusX on OrderStatus {
   String get label {
