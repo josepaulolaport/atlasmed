@@ -22,6 +22,7 @@
       "when": 1784107153526,
       "tag": "0002_cool_klaw",
       "breakpoints": true
+<<<<<<< HEAD
     },
     {
       "idx": 3,
@@ -29,13 +30,8 @@
       "when": 1784119483841,
       "tag": "0003_glamorous_echo",
       "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1784128757655,
-      "tag": "0004_add_visit_type_column",
-      "breakpoints": true
+=======
+>>>>>>> origin/main
     }
   ]
 }

@@ -3,7 +3,6 @@ import { DrizzleFacilityProfessionalRepository } from "./infrastructure/reposito
 import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
 import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
 import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
-import { DrizzleVisitRepository } from "./infrastructure/repositories/drizzle/drizzle-visit.repository";
 import { DrizzleTerritoryScopePort } from "./infrastructure/scope/drizzle-territory-scope.port";
 import {
   CreateFacilityUseCase,
@@ -32,10 +31,6 @@ import {
   ListFacilityConformityRecordsUseCase,
 } from "./application/use-cases/conformity.use-cases";
 import {
-  ListFacilityVisitsUseCase,
-  CreateFacilityVisitUseCase,
-} from "./application/use-cases/visit.use-cases";
-import {
   territoryMembershipService,
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
@@ -51,7 +46,6 @@ export const facilityRepositories = {
   representative: new DrizzleFacilityRepresentativeRepository(),
   consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
   conformity: new DrizzleConformityRepository(),
-  visit: new DrizzleVisitRepository(),
 };
 
 export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
@@ -136,14 +130,6 @@ export const facilityUseCases = {
   createFacilityConformityRecord: () =>
     new CreateFacilityConformityRecordUseCase({
       conformityRepository: facilityRepositories.conformity,
-    }),
-  listFacilityVisits: () =>
-    new ListFacilityVisitsUseCase({
-      visitRepository: facilityRepositories.visit,
-    }),
-  createFacilityVisit: () =>
-    new CreateFacilityVisitUseCase({
-      visitRepository: facilityRepositories.visit,
     }),
 };
 

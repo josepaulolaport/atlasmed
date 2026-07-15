@@ -583,62 +583,6 @@ const createFacilityConformityRecordRoute = new Elysia()
     }
   );
 
-const listFacilityVisitsRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
-  .get(
-    "/facilities/:id/visits",
-    async ({ params, query, getUserId, getScope }) => {
-      const scope = await getScope();
-      const userId = await getUserId();
-      return facilityUseCases.listFacilityVisits().execute({
-        facilityId: params.id,
-        userId,
-        scope,
-        page: query.page ? Number(query.page) : 1,
-        limit: query.limit ? Number(query.limit) : 20,
-      });
-    },
-    {
-      detail: {
-        summary: "List visits for the authenticated user at a facility",
-        tags: ["Clinics"],
-        security: [{ bearerAuth: [] }],
-      },
-      query: t.Object({
-        page: t.Optional(t.String()),
-        limit: t.Optional(t.String()),
-      }),
-    }
-  );
-
-const createFacilityVisitRoute = new Elysia()
-  .use(auth)
-  .use(requirePermission("create", "FACILITY", { resourceIdParam: "id" }))
-  .post(
-    "/facilities/:id/visits",
-    async ({ params, body, getUserId, getScope }) => {
-      const scope = await getScope();
-      const userId = await getUserId();
-      return facilityUseCases.createFacilityVisit().execute({
-        facilityId: params.id,
-        userId,
-        scope,
-        visitedAt: body.visitedAt,
-      });
-    },
-    {
-      detail: {
-        summary: "Create a visit for the authenticated user at a facility",
-        tags: ["Clinics"],
-        security: [{ bearerAuth: [] }],
-      },
-      body: t.Object({
-        visitedAt: t.Optional(t.String()),
-      }),
-    }
-  );
-
 export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   .use(createFacilityRoute)
@@ -660,6 +604,4 @@ export const facilitiesRoute = new Elysia()
   .use(assignConsultantRoute)
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
-  .use(createFacilityConformityRecordRoute)
-  .use(listFacilityVisitsRoute)
-  .use(createFacilityVisitRoute);
+  .use(createFacilityConformityRecordRoute);
