@@ -4,6 +4,7 @@ import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { healthRoute } from "../infrastructure/health/health.route";
 import { access } from "../modules/access";
+import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
 import { catalog } from "../modules/catalog";
 import { professional } from "../modules/professional";
@@ -99,6 +100,7 @@ const app = new Elysia()
   .group('/api/v1', (app) =>
     app
       .use(auditMiddleware)
+      .use(sessions)
       .use(access)
       .use(facility)
       .use(catalog)
