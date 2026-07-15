@@ -1,3 +1,4 @@
+import { environment } from "../../app/config/environment";
 import { auditLogService } from "../audit/audit-log.service";
 import { metricsService } from "../monitoring/metrics.service";
 
@@ -13,8 +14,7 @@ export interface SessionSecurityCheck {
 export type SessionSecurityMode = "strict" | "audit_only";
 
 function getSessionSecurityMode(): SessionSecurityMode {
-  const mode = process.env.SESSION_SECURITY_MODE?.trim().toLowerCase();
-  return mode === "audit_only" ? "audit_only" : "strict";
+  return environment.SESSION_SECURITY_MODE;
 }
 
 export class SessionSecurityService {

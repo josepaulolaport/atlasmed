@@ -1,4 +1,5 @@
 import { defineConfig } from "drizzle-kit";
+import { environment } from "@atlasmed/config";
 
 export default defineConfig({
   dialect: "postgresql",
@@ -10,7 +11,7 @@ export default defineConfig({
   ],
   out: "./drizzle",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: environment.DATABASE_URL,
   },
   schemaFilter: ["public", "audit", "registry", "ingestion"],
 });

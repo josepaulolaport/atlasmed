@@ -1,4 +1,4 @@
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../app/config/environment";
 
 import type {
   MessagingService,
@@ -18,7 +18,7 @@ export class TwilioMessagingService implements MessagingService {
 
     try {
       await twilioClient.messages.create({
-        from: apiEnv.TWILIO_WHATSAPP_FROM!,
+        from: environment.TWILIO_WHATSAPP_NUMBER!,
         to: `whatsapp:${params.to}`,
         body: params.message,
       });
