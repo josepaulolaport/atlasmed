@@ -11,6 +11,7 @@ WORKDIR /app
 COPY --from=prepare /app/out/json/ ./
 RUN for i in 1 2 3; do bun install --frozen-lockfile --ignore-scripts && exit 0; echo "bun install failed (attempt $i), retrying..."; sleep 5; done; exit 1
 COPY --from=prepare /app/out/full/ ./
+COPY --from=prepare /app/tsconfig.base.json ./tsconfig.base.json
 
 FROM installer AS builder
 
