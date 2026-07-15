@@ -5,6 +5,7 @@ import 'package:dartz/dartz.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/network_unavailable_exception.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
@@ -168,9 +169,7 @@ class SessionEnvironment extends Repository<Session?>
       throw StateError(
         'login: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } on StateError {
-      rethrow;
-    } catch (e) {
+    } on NetworkUnavailableException {
       return const Left(.networkError);
     }
   }
@@ -199,9 +198,7 @@ class SessionEnvironment extends Repository<Session?>
       throw StateError(
         'requestPasswordReset: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } on StateError {
-      rethrow;
-    } catch (e) {
+    } on NetworkUnavailableException {
       return const Left(.networkError);
     }
   }
@@ -231,9 +228,7 @@ class SessionEnvironment extends Repository<Session?>
       throw StateError(
         'verifyResetCode: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } on StateError {
-      rethrow;
-    } catch (e) {
+    } on NetworkUnavailableException {
       return const Left(.networkError);
     }
   }
@@ -260,9 +255,7 @@ class SessionEnvironment extends Repository<Session?>
       throw StateError(
         'resetPassword: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } on StateError {
-      rethrow;
-    } catch (e) {
+    } on NetworkUnavailableException {
       return const Left(.networkError);
     }
   }
