@@ -279,6 +279,7 @@ class SessionEnvironment extends Repository<Session?>
       BaseRepository.logger(
         'Repository($name): Failed to revoke remote session: $e',
       );
+      rethrow;
     } finally {
       await clear();
     }
