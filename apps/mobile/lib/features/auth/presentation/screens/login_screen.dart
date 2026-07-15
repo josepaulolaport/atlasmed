@@ -116,7 +116,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     return RepositoryBuilder<SessionEnvironment, Session?>(
       repository: sessionEnvironment,
       builder: (context, Session? session, repository) {
-        final isBlocked = _errorKind == CreateSessionError.accountLocked ||
+        final isBlocked =
+            _errorKind == CreateSessionError.accountLocked ||
             _errorKind == CreateSessionError.tooManyAttempts;
         final hasInputError = _errorKind != null && !isBlocked;
 
