@@ -2,12 +2,27 @@ import "./bootstrap-telemetry";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { NativeConnection, Worker } from "@temporalio/worker";
+import { ensureArchiveBucket } from "@atlasmed/cnes-ingestion";
 import * as activities from "./activities/index";
 import { loadWorkerConfig } from "./config";
 import { logger } from "./logger";
 
 async function run() {
   const config = loadWorkerConfig();
+
+  if (config.archiveBackend === "s3" || config.archiveBackend === "minio") {
+    logger.info("Ensuring archive bucket exists", { bucket: config.archiveS3Bucket });
+    await ensureArchiveBucket({
+      bucket: config.archiveS3Bucket,
+      region: config.archiveS3Region,
+      endpoint: config.archiveS3Endpoint,
+      accessKeyId: config.archiveS3AccessKeyId,
+      secretAccessKey: config.archiveS3SecretAccessKey,
+      forcePathStyle: Boolean(config.archiveS3Endpoint),
+    });
+    logger.info("Archive bucket ensured successfully");
+  }
+
   const connection = await NativeConnection.connect({
     address: config.temporalAddress,
   });

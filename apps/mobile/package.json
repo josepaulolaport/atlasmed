@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "format": "dart format --set-exit-if-changed .",
-    "lint": "flutter analyze",
-    "test": "flutter test"
+    "format": "fvm dart format --set-exit-if-changed .",
+    "lint": "fvm flutter analyze",
+    "test": "fvm flutter test"
   }
 }
