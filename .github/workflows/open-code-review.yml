@@ -1,21 +1,23 @@
 name: Open Code Review
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
 
 permissions:
   pull-requests: write
   contents: read
 
 concurrency:
-  group: open-code-review-${{ github.event.pull_request.number || github.run_id }}
+  group: open-code-review-${{ github.event.workflow_run.pull_requests[0].number || github.event.workflow_run.id }}
   cancel-in-progress: true
 
 jobs:
   code-review:
     name: AI Code Review
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.pull_requests[0] != null }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -29,11 +31,21 @@ jobs:
             exit 1
           fi
 
+      - name: Extract pull request details
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prs = context.payload.workflow_run.pull_requests;
+            const pr = prs[0];
+            core.setOutput('base_ref', pr.base.ref);
+            core.setOutput('head_sha', pr.head.sha);
+
       - uses: alibaba/open-code-review@a32f85272bac1d21e80762d40470b975ec1d84d9
         with:
           llm_url: https://opencode.ai/zen/go/v1/
           llm_auth_token: ${{ secrets.OPEN_CODE_REVIEW_API_KEY }}
           llm_model: deepseek-v4-flash
           llm_use_anthropic: 'false'
-          base_ref: ${{ github.base_ref }}
-          head_sha: ${{ github.event.pull_request.head.sha }}
+          base_ref: ${{ steps.pr.outputs.base_ref }}
+          head_sha: ${{ steps.pr.outputs.head_sha }}
