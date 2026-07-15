@@ -57,6 +57,13 @@
       "when": 1784094157887,
       "tag": "0008_products_pricing_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1753047000000,
+      "tag": "0009_competitor_products_pricing",
+      "breakpoints": true
     }
   ]
 }
