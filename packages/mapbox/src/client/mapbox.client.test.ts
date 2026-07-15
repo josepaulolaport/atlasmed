@@ -24,7 +24,7 @@ describe("MapboxClient", () => {
       )
     );
 
-    globalThis.fetch = fetchMock as typeof fetch;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const client = new MapboxClient({ accessToken: "sk.test" });
     const result = await client.forwardGeocode({ query: "São Paulo" });
@@ -42,7 +42,7 @@ describe("MapboxClient", () => {
   it("throws MapboxError on failed requests", async () => {
     globalThis.fetch = mock(async () =>
       new Response(JSON.stringify({ message: "Not Authorized" }), { status: 401 })
-    ) as typeof fetch;
+    ) as unknown as typeof fetch;
 
     const client = new MapboxClient({ accessToken: "sk.invalid" });
 
