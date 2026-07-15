@@ -51,6 +51,7 @@ export const orders = pgTable(
     // Lifecycle: rejected
     rejectedById: text("rejected_by_id").references(() => users.id),
     rejectionReason: text("rejection_reason"),
+    rejectedAt: timestamp("rejected_at"),
 
     // Lifecycle: no billing
     noBillingById: text("no_billing_by_id").references(() => users.id),
@@ -88,6 +89,7 @@ export const orderItems = pgTable(
     legacyProductId: integer("legacy_product_id"),
 
     // Line item
+    // Note: at least one of productId or legacyProductId should be set per line item
     lineNumber: integer("line_number"),
     quantity: numeric("quantity", { precision: 12, scale: 3 }).notNull().default("0"),
     unitPrice: numeric("unit_price", { precision: 12, scale: 2 }).notNull().default("0"),
@@ -106,6 +108,7 @@ export const orderItems = pgTable(
     index("order_items_order_id_idx").on(t.orderId),
     index("order_items_product_id_idx").on(t.productId),
     index("order_items_batch_number_idx").on(t.batchNumber),
+    index("order_items_legacy_product_id_idx").on(t.legacyProductId),
   ]
 );
 

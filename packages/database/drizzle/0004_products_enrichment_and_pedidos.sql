@@ -6,13 +6,20 @@
 -- ------------------------------------------------------------
 -- 1. Drop single-sector FK from products
 --    (replaced by many-to-many product_sectors below)
+--    Migrate existing sector assignments before dropping the column.
 -- ------------------------------------------------------------
+INSERT INTO product_sectors (id, product_id, sector_id, created_at)
+SELECT gen_random_uuid()::text, id, sector_id, now()
+FROM products
+WHERE sector_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
 ALTER TABLE products
   DROP CONSTRAINT IF EXISTS products_sector_id_fkey,
   DROP COLUMN IF EXISTS sector_id;
 
 -- ------------------------------------------------------------
--- 3. Enrich products with legacy fields from atlasmed.produtos
+-- 2. Enrich products with legacy fields from atlasmed.produtos
 -- ------------------------------------------------------------
 ALTER TABLE products
   ADD COLUMN IF NOT EXISTS legacy_id               integer         UNIQUE,
@@ -36,7 +43,7 @@ ALTER TABLE products
 CREATE INDEX IF NOT EXISTS products_product_group_idx ON products(product_group);
 
 -- ------------------------------------------------------------
--- 2. Seed sectors from legacy Grupo values
+-- 3. Seed sectors from legacy Grupo values
 --    (run only if sectors table is empty)
 -- ------------------------------------------------------------
 INSERT INTO sectors (id, slug, name, is_active, created_at, updated_at)
@@ -54,7 +61,7 @@ FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM sectors LIMIT 1);
 
 -- ------------------------------------------------------------
--- 3. Many-to-many: product ↔ sector
+-- 4. Many-to-many: product ↔ sector
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS product_sectors (
   id          text        NOT NULL DEFAULT gen_random_uuid()::text,
@@ -62,15 +69,15 @@ CREATE TABLE IF NOT EXISTS product_sectors (
   sector_id   text        NOT NULL REFERENCES sectors(id)  ON DELETE CASCADE,
   created_at  timestamp   NOT NULL DEFAULT now(),
 
-  CONSTRAINT product_sectors_pkey   PRIMARY KEY (id),
-  CONSTRAINT product_sectors_unique UNIQUE (product_id, sector_id)
+  CONSTRAINT product_sectors_pkey PRIMARY KEY (id)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS product_sectors_product_id_sector_id_uidx ON product_sectors(product_id, sector_id);
 CREATE INDEX IF NOT EXISTS product_sectors_product_id_idx ON product_sectors(product_id);
 CREATE INDEX IF NOT EXISTS product_sectors_sector_id_idx  ON product_sectors(sector_id);
 
 -- ------------------------------------------------------------
--- 4. Enums for orders
+-- 5. Enums for orders
 -- ------------------------------------------------------------
 DO $$ BEGIN
   CREATE TYPE order_status AS ENUM (
@@ -95,7 +102,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 -- ------------------------------------------------------------
--- 5. orders (order header — from atlasmed.avulsa)
+-- 6. orders (order header — from atlasmed.avulsa)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS orders (
   id                        text          NOT NULL DEFAULT gen_random_uuid()::text,
@@ -137,7 +144,7 @@ CREATE INDEX IF NOT EXISTS orders_ordered_at_idx        ON orders(ordered_at);
 CREATE INDEX IF NOT EXISTS orders_legacy_id_idx         ON orders(legacy_id);
 
 -- ------------------------------------------------------------
--- 6. order_items (line items — from atlasmed.avulsa_envio_padrao)
+-- 7. order_items (line items — from atlasmed.avulsa_envio_padrao)
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS order_items (
   id                text          NOT NULL DEFAULT gen_random_uuid()::text,

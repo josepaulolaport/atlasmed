@@ -101,13 +101,18 @@ export class DrizzleProductRepository implements ProductRepository {
         .values({ code: data.code, name: data.name, isActive: data.isActive ?? true })
         .returning();
 
-      if (data.sectorIds.length > 0) {
+      if (!product) {
+        throw new Error("Failed to create product: no row returned");
+      }
+
+      const uniqueSectorIds = [...new Set(data.sectorIds)];
+      if (uniqueSectorIds.length > 0) {
         await tx.insert(productSectors).values(
-          data.sectorIds.map((sectorId) => ({ productId: product!.id, sectorId }))
+          uniqueSectorIds.map((sectorId) => ({ productId: product.id, sectorId }))
         );
       }
 
-      return mapProduct(product!, data.sectorIds);
+      return mapProduct(product, uniqueSectorIds);
     });
   }
 
@@ -124,17 +129,24 @@ export class DrizzleProductRepository implements ProductRepository {
         .where(eq(products.id, id))
         .returning();
 
+      if (!product) {
+        throw new Error(`Product with id "${id}" not found`);
+      }
+
       if (sectorIds !== undefined) {
         await tx.delete(productSectors).where(eq(productSectors.productId, id));
-        if (sectorIds.length > 0) {
+        const uniqueSectorIds = [...new Set(sectorIds)];
+        if (uniqueSectorIds.length > 0) {
           await tx.insert(productSectors).values(
-            sectorIds.map((sectorId) => ({ productId: id, sectorId }))
+            uniqueSectorIds.map((sectorId) => ({ productId: id, sectorId }))
           );
         }
       }
 
-      const finalSectorIds = sectorIds ?? (await loadSectorIds([id])).get(id) ?? [];
-      return mapProduct(product!, finalSectorIds);
+      const finalSectorIds = sectorIds !== undefined
+        ? [...new Set(sectorIds)]
+        : (await loadSectorIds([id])).get(id) ?? [];
+      return mapProduct(product, finalSectorIds);
     });
   }
 }
