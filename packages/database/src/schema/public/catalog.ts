@@ -79,7 +79,7 @@ export const competitorProductSectors = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("competitor_product_sectors_uidx").on(t.competitorProductId, t.sectorId),
+uniqueIndex("competitor_product_sectors_competitor_product_id_sector_id_uidx").on(t.competitorProductId, t.sectorId),
     index("competitor_product_sectors_sector_id_idx").on(t.sectorId),
   ]
 );
