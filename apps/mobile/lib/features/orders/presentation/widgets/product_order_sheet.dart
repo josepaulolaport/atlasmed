@@ -36,7 +36,8 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   late String _mode; // 'suggested', 'catalog', 'custom'
   late double _customUnit;
 
-  PriceSuggestion? get _suggestion => null; // TODO: wire via PriceSuggestionRepository when available
+  PriceSuggestion? get _suggestion =>
+      null; // TODO: wire via PriceSuggestionRepository when available
 
   double get _activeUnit {
     switch (_mode) {
@@ -53,7 +54,9 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   void initState() {
     super.initState();
     // No price suggestion API yet — default to catalog price
-    final startMode = widget.initialMode == PriceMode.custom ? 'custom' : 'catalog';
+    final startMode = widget.initialMode == PriceMode.custom
+        ? 'custom'
+        : 'catalog';
     final startUnit = widget.initialUnit ?? widget.product.price;
     _qty = widget.initialQty > 0 ? widget.initialQty : 1;
     _mode = startMode;

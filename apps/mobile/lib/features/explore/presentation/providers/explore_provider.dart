@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart' as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
+    as api;
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
@@ -186,16 +187,15 @@ final clinicVisitsRepositoryProvider =
       return repository;
     });
 
-final clinicVisitsProvider =
-    FutureProvider.family<List<ClinicVisit>, String>((
-      ref,
-      facilityId,
-    ) {
-      return ref
-          .watch(clinicVisitsRepositoryProvider(facilityId))
-          .currentValueOrResolve()
-          .then((visits) => visits ?? const []);
-    });
+final clinicVisitsProvider = FutureProvider.family<List<ClinicVisit>, String>((
+  ref,
+  facilityId,
+) {
+  return ref
+      .watch(clinicVisitsRepositoryProvider(facilityId))
+      .currentValueOrResolve()
+      .then((visits) => visits ?? const []);
+});
 
 // ── Explore state ───────────────────────────────────────────
 class ExploreState {

@@ -220,11 +220,19 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
         final steps = const ['confirmed', 'processing', 'shipped', 'delivered'];
         final stepMeta = <String, ({String label, TrackingStatus status})>{
           'confirmed': (label: 'Confirmado', status: TrackingStatus.confirmed),
-          'processing': (label: 'Em preparação', status: TrackingStatus.processing),
-          'shipped': (label: 'Saiu para entrega', status: TrackingStatus.shipped),
+          'processing': (
+            label: 'Em preparação',
+            status: TrackingStatus.processing,
+          ),
+          'shipped': (
+            label: 'Saiu para entrega',
+            status: TrackingStatus.shipped,
+          ),
           'delivered': (label: 'Entregue', status: TrackingStatus.delivered),
         };
-        final currentIndex = steps.indexWhere((s) => stepMeta[s]!.status == status);
+        final currentIndex = steps.indexWhere(
+          (s) => stepMeta[s]!.status == status,
+        );
         final statusColor = status.color;
         final gradient = LinearGradient(
           begin: Alignment.topLeft,
@@ -241,7 +249,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                 Container(
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFeef0f3)),
+                    ),
                   ),
                   padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
                   child: Row(
@@ -270,96 +280,132 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                                 color: Color(0xFF0f1729),
                               ),
                             ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _refresh,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFeef0f3)),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white,
-                      ),
-                      child: AnimatedBuilder(
-                        animation: _refreshController,
-                        builder: (context, child) => Transform.rotate(
-                          angle: _refreshing
-                              ? _refreshController.value * 2 * math.pi
-                              : 0,
-                          child: child,
-                        ),
-                        child: const Icon(
-                          Icons.refresh_rounded,
-                          size: 18,
-                          color: Color(0xFF0a2f7f),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: gradient,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x120f1729),
-                          blurRadius: 16,
-                          offset: Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  status.icon,
-                                  style: const TextStyle(fontSize: 24),
-                                ),
-                              ),
+                      GestureDetector(
+                        onTap: _refresh,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFeef0f3)),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white,
+                          ),
+                          child: AnimatedBuilder(
+                            animation: _refreshController,
+                            builder: (context, child) => Transform.rotate(
+                              angle: _refreshing
+                                  ? _refreshController.value * 2 * math.pi
+                                  : 0,
+                              child: child,
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'STATUS ATUAL',
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.78,
-                                      ),
-                                      letterSpacing: 0.7,
+                            child: const Icon(
+                              Icons.refresh_rounded,
+                              size: 18,
+                              color: Color(0xFF0a2f7f),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: gradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x120f1729),
+                              blurRadius: 16,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      status.icon,
+                                      style: const TextStyle(fontSize: 24),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'STATUS ATUAL',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.78,
+                                          ),
+                                          letterSpacing: 0.7,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        status.label,
+                                        style: const TextStyle(
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    status.label,
+                                    'Entrega estimada: ${order.estimatedDelivery}',
                                     style: const TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -368,201 +414,172 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        title: 'Linha do tempo',
+                        child: Column(
+                          children: List.generate(steps.length, (i) {
+                            final key = steps[i];
+                            final meta = stepMeta[key]!;
+                            final event = i < order.timeline.length
+                                ? order.timeline[i]
+                                : null;
+                            final isDone = i < order.timeline.length;
+                            final isCurrent =
+                                meta.status == status ||
+                                (currentIndex == -1 &&
+                                    i == order.timeline.length - 1);
+                            return _TimelineRow(
+                              isFirst: i == 0,
+                              isLast: i == steps.length - 1,
+                              isDone: isDone,
+                              isCurrent: isCurrent,
+                              color: statusColor,
+                              label: meta.label,
+                              timestamp: event != null
+                                  ? _fmtTimestamp(event.timestamp)
+                                  : 'Aguardando',
+                              description:
+                                  event?.description ??
+                                  'Aguardando atualização do status.',
+                              stepNumber: i + 1,
+                            );
+                          }),
+                        ),
+                      ),
+                      if (order.driver != null) ...[
                         const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_month_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Entrega estimada: ${order.estimatedDelivery}',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
+                        _SectionCard(
+                          title: 'ENTREGA · EM ROTA',
+                          child: _DriverCard(driver: order.driver!),
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'Linha do tempo',
-                    child: Column(
-                      children: List.generate(steps.length, (i) {
-                        final key = steps[i];
-                        final meta = stepMeta[key]!;
-                        final event = i < order.timeline.length
-                            ? order.timeline[i]
-                            : null;
-                        final isDone = i < order.timeline.length;
-                        final isCurrent =
-                            meta.status == status ||
-                            (currentIndex == -1 &&
-                                i == order.timeline.length - 1);
-                        return _TimelineRow(
-                          isFirst: i == 0,
-                          isLast: i == steps.length - 1,
-                          isDone: isDone,
-                          isCurrent: isCurrent,
-                          color: statusColor,
-                          label: meta.label,
-                          timestamp: event != null
-                              ? _fmtTimestamp(event.timestamp)
-                              : 'Aguardando',
-                          description:
-                              event?.description ??
-                              'Aguardando atualização do status.',
-                          stepNumber: i + 1,
-                        );
-                      }),
-                    ),
-                  ),
-                  if (order.driver != null) ...[
-                    const SizedBox(height: 14),
-                    _SectionCard(
-                      title: 'ENTREGA · EM ROTA',
-                      child: _DriverCard(driver: order.driver!),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'PRODUTOS (${order.items.length} itens)',
-                    child: Column(
-                      children: [
-                        for (final item in order.items) ...[
-                          _ProductRow(item: item),
-                          const SizedBox(height: 12),
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        title: 'PRODUTOS (${order.items.length} itens)',
+                        child: Column(
+                          children: [
+                            for (final item in order.items) ...[
+                              _ProductRow(item: item),
+                              const SizedBox(height: 12),
+                            ],
+                            Container(
+                              height: 1,
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: Color(0xFFd8dde5),
+                                    width: 1,
+                                    style: BorderStyle.solid,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _infoLine('Total', order.total, strong: true),
+                            const SizedBox(height: 4),
+                            _infoLine('Pagamento', order.paymentMethod),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        title: 'ENDEREÇO DE ENTREGA',
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFeef2ff),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                '🏥',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    order.clinic.name,
+                                    style: const TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0f1729),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    order.clinic.address,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: Color(0xFF5b6474),
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          if (canCancel)
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _showCancel,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFb84545),
+                                  side: const BorderSide(
+                                    color: Color(0xFFe9b7b7),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text('Cancelar pedido'),
+                              ),
+                            ),
+                          if (canCancel) const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () => context.go('/splash'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF0a2f7f),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text('Suporte'),
+                            ),
+                          ),
                         ],
-                        Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(
-                                color: Color(0xFFd8dde5),
-                                width: 1,
-                                style: BorderStyle.solid,
-                              ),
-                            ),
-                          ),
-                        ),
-                        _infoLine('Total', order.total, strong: true),
-                        const SizedBox(height: 4),
-                        _infoLine('Pagamento', order.paymentMethod),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'ENDEREÇO DE ENTREGA',
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFeef2ff),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            '🏥',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                order.clinic.name,
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0f1729),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                order.clinic.address,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  color: Color(0xFF5b6474),
-                                  height: 1.35,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      if (canCancel)
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _showCancel,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFb84545),
-                              side: const BorderSide(color: Color(0xFFe9b7b7)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: const Text('Cancelar pedido'),
-                          ),
-                        ),
-                      if (canCancel) const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () => context.go('/splash'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0a2f7f),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text('Suporte'),
-                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
-    },
-  );
   }
 
   Widget _infoLine(String label, String value, {bool strong = false}) {

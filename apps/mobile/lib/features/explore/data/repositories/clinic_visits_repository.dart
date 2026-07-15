@@ -12,17 +12,15 @@ class ClinicVisitsException implements Exception {
 
 class ClinicVisitsRepository extends Repository<List<ClinicVisit>>
     with SessionEnvironmentMixin<List<ClinicVisit>> {
-  ClinicVisitsRepository(
-    this.facilityId, {
-    RepositoryHttpClient? client,
-  }) : _client = client,
-       super(
-         endpoint: Uri.parse(
-           '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/visits',
-         ),
-         resolveOnCreate: false,
-         name: 'ClinicVisitsRepository',
-       );
+  ClinicVisitsRepository(this.facilityId, {RepositoryHttpClient? client})
+    : _client = client,
+      super(
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/visits',
+        ),
+        resolveOnCreate: false,
+        name: 'ClinicVisitsRepository',
+      );
 
   final String facilityId;
   final RepositoryHttpClient? _client;

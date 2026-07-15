@@ -463,7 +463,9 @@ class _QuickActions extends ConsumerWidget {
             label: 'Visita',
             onTap: () async {
               try {
-                final repo = ref.read(clinicVisitsRepositoryProvider(detail.id));
+                final repo = ref.read(
+                  clinicVisitsRepositoryProvider(detail.id),
+                );
                 await repo.createVisit();
                 ref.invalidate(clinicVisitsProvider(detail.id));
                 if (context.mounted) {

@@ -1,4 +1,5 @@
-import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart' as api;
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
+    as api;
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 // ── Clinic model ─────────────────────────────────────────────
@@ -32,7 +33,8 @@ class Clinic {
   factory Clinic.fromApi(api.Clinic clinicDto) {
     final cityParts = <String>[
       if (clinicDto.city != null && clinicDto.city!.isNotEmpty) clinicDto.city!,
-      if (clinicDto.state != null && clinicDto.state!.isNotEmpty) clinicDto.state!,
+      if (clinicDto.state != null && clinicDto.state!.isNotEmpty)
+        clinicDto.state!,
     ];
     return Clinic(
       id: clinicDto.id,

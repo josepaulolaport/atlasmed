@@ -91,7 +91,9 @@ class User extends Equatable {
       lastName: userJson['lastName'] as String?,
       avatarUrl: userJson['avatarUrl'] as String?,
       status: UserStatus.values.firstWhere(
-        (e) => e.name.toUpperCase() == (userJson['status'] as String).toUpperCase(),
+        (e) =>
+            e.name.toUpperCase() ==
+            (userJson['status'] as String).toUpperCase(),
         orElse: () => UserStatus.active,
       ),
       emailVerified: userJson['emailVerified'] as bool? ?? false,

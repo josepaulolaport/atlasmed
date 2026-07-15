@@ -43,20 +43,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ),
           ),
           // TODO: fetch real clinic list via FacilitiesRepository
-          ...<SelectableClinic>[]
-              .map(
-                (clinic) => ListTile(
-                  leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
-                  title: Text(clinic.name),
-                  trailing: cart.clinic?.id == clinic.id
-                      ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
-                      : null,
-                  onTap: () {
-                    ref.read(cartProvider.notifier).setClinic(clinic);
-                    Navigator.pop(context);
-                  },
-                ),
-              ),
+          ...<SelectableClinic>[].map(
+            (clinic) => ListTile(
+              leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
+              title: Text(clinic.name),
+              trailing: cart.clinic?.id == clinic.id
+                  ? const Icon(Icons.check_circle, color: Color(0xFF0a2f7f))
+                  : null,
+              onTap: () {
+                ref.read(cartProvider.notifier).setClinic(clinic);
+                Navigator.pop(context);
+              },
+            ),
+          ),
           const SizedBox(height: 16),
         ],
       ),
