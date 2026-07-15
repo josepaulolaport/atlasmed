@@ -191,7 +191,9 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                                     // Resend logic
                                     _startCooldown();
                                   },
-                                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                  ),
                                   child: const Text(
                                     'Reenviar código',
                                     style: TextStyle(

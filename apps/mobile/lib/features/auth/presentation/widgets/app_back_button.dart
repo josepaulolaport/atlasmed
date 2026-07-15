@@ -18,11 +18,7 @@ class AppBackButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           onTap: onTap,
           child: const Center(
-            child: Icon(
-              Icons.chevron_left,
-              color: Colors.white,
-              size: 22,
-            ),
+            child: Icon(Icons.chevron_left, color: Colors.white, size: 22),
           ),
         ),
       ),

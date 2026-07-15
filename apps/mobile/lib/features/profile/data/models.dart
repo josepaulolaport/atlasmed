@@ -89,9 +89,5 @@ class SupportItem {
   final String? sub;
   final String kind; // 'help' | 'chat' | 'legal'
 
-  const SupportItem({
-    required this.label,
-    this.sub,
-    required this.kind,
-  });
+  const SupportItem({required this.label, this.sub, required this.kind});
 }

@@ -19,11 +19,19 @@ class OrdersScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.inventory_2_outlined, size: 48, color: Color(0xFFc8cdd5)),
+                    Icon(
+                      Icons.inventory_2_outlined,
+                      size: 48,
+                      color: Color(0xFFc8cdd5),
+                    ),
                     SizedBox(height: 16),
                     Text(
                       'Pedidos',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF6b7280)),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF6b7280),
+                      ),
                     ),
                     SizedBox(height: 4),
                     Text(

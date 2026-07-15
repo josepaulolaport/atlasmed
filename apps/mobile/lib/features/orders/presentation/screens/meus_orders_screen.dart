@@ -64,14 +64,16 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: _filters.length,
-                          separatorBuilder: (context, index) => const SizedBox(width: 10),
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(width: 10),
                           itemBuilder: (context, index) {
                             final filter = _filters[index];
                             final selected = filter == selectedFilter;
                             return _FilterChip(
                               label: filter,
                               selected: selected,
-                              onTap: () => setState(() => selectedFilter = filter),
+                              onTap: () =>
+                                  setState(() => selectedFilter = filter),
                             );
                           },
                         ),
@@ -109,7 +111,10 @@ class _MeusOrdersScreenState extends ConsumerState<MeusOrdersScreen> {
                       icon: const Icon(Icons.add_rounded, size: 20),
                       label: const Text(
                         'Novo pedido',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0a2f7f),
@@ -146,11 +151,29 @@ class _SummaryStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: _SummaryCard(label: 'Em trânsito', count: transitCount, color: const Color(0xFF0a2f7f))),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Em trânsito',
+            count: transitCount,
+            color: const Color(0xFF0a2f7f),
+          ),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _SummaryCard(label: 'Pendentes', count: pendingCount, color: const Color(0xFFc6861b))),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Pendentes',
+            count: pendingCount,
+            color: const Color(0xFFc6861b),
+          ),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _SummaryCard(label: 'Entregues', count: deliveredCount, color: const Color(0xFF16a373))),
+        Expanded(
+          child: _SummaryCard(
+            label: 'Entregues',
+            count: deliveredCount,
+            color: const Color(0xFF16a373),
+          ),
+        ),
       ],
     );
   }
@@ -161,7 +184,11 @@ class _SummaryCard extends StatelessWidget {
   final int count;
   final Color color;
 
-  const _SummaryCard({required this.label, required this.count, required this.color});
+  const _SummaryCard({
+    required this.label,
+    required this.count,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -174,9 +201,24 @@ class _SummaryCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Text('$count', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: color)),
+          Text(
+            '$count',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280), fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 11,
+              color: Color(0xFF6b7280),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -188,7 +230,11 @@ class _FilterChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _FilterChip({required this.label, required this.selected, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -234,11 +280,28 @@ class _OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${order.id} • ${order.date}', style: const TextStyle(fontSize: 11, color: Color(0xFF9ca3af), fontWeight: FontWeight.w500)),
+            Text(
+              '${order.id} • ${order.date}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFF9ca3af),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 8),
-            Text(order.clinic, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1f2937))),
+            Text(
+              order.clinic,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1f2937),
+              ),
+            ),
             const SizedBox(height: 3),
-            Text(order.doctor, style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280))),
+            Text(
+              order.doctor,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+            ),
             const SizedBox(height: 10),
             PStatusChip(status: order.status),
             const SizedBox(height: 12),
@@ -246,9 +309,23 @@ class _OrderCard extends StatelessWidget {
             const SizedBox(height: 10),
             Row(
               children: [
-                Text('${order.items} itens · toque para detalhes', style: const TextStyle(fontSize: 12, color: Color(0xFF9ca3af), fontWeight: FontWeight.w500)),
+                Text(
+                  '${order.items} itens · toque para detalhes',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF9ca3af),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const Spacer(),
-                Text(order.value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))),
+                Text(
+                  order.value,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0a2f7f),
+                  ),
+                ),
               ],
             ),
           ],
@@ -273,12 +350,25 @@ class _EmptyState extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.all(Radius.circular(20)),
-              border: Border.fromBorderSide(BorderSide(color: Color(0xFFeef0f3))),
+              border: Border.fromBorderSide(
+                BorderSide(color: Color(0xFFeef0f3)),
+              ),
             ),
-            child: Icon(Icons.shopping_bag_outlined, size: 32, color: Color(0xFF0a2f7f)),
+            child: Icon(
+              Icons.shopping_bag_outlined,
+              size: 32,
+              color: Color(0xFF0a2f7f),
+            ),
           ),
           const SizedBox(height: 16),
-          const Text('Nenhum pedido ainda', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1f2937))),
+          const Text(
+            'Nenhum pedido ainda',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1f2937),
+            ),
+          ),
           const SizedBox(height: 6),
           Text(
             'Toque em “Novo pedido” para começar.',

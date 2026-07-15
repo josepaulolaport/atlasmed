@@ -4,11 +4,7 @@ class BottomSheetWidget extends StatelessWidget {
   final Widget child;
   final String? title;
 
-  const BottomSheetWidget({
-    super.key,
-    required this.child,
-    this.title,
-  });
+  const BottomSheetWidget({super.key, required this.child, this.title});
 
   @override
   Widget build(BuildContext context) {

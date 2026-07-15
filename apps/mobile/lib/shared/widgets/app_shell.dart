@@ -130,8 +130,7 @@ class AtlasTopBar extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            const Icon(Icons.menu_rounded,
-                color: Color(0xFF0a2f7f), size: 15),
+            const Icon(Icons.menu_rounded, color: Color(0xFF0a2f7f), size: 15),
             // Green dot accent
             Positioned(
               top: 6,
@@ -426,8 +425,7 @@ class _NavItems extends StatelessWidget {
   }
 
   Widget _buildNavRow(_DrawerItem item, bool isActive, BuildContext context) {
-    final color =
-        isActive ? const Color(0xFF0a2f7f) : const Color(0xFF374151);
+    final color = isActive ? const Color(0xFF0a2f7f) : const Color(0xFF374151);
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Material(
@@ -440,10 +438,7 @@ class _NavItems extends StatelessWidget {
             context.go(item.route);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
               children: [
                 Icon(item.icon, size: 22, color: color),

@@ -173,10 +173,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
           builder: (_, _, child) => AppShellScreen(child: child),
           routes: [
             // Desempenho
-            GoRoute(
-              path: '/bi',
-              builder: (_, _) => const DashboardScreen(),
-            ),
+            GoRoute(path: '/bi', builder: (_, _) => const DashboardScreen()),
             // Explorar (with clinic/doctor detail sub-routes)
             GoRoute(
               path: '/workspace',
@@ -184,23 +181,18 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               routes: [
                 GoRoute(
                   path: 'clinic/:id',
-                  builder: (_, state) => ClinicDetailScreen(
-                    clinicId: state.pathParameters['id']!,
-                  ),
+                  builder: (_, state) =>
+                      ClinicDetailScreen(clinicId: state.pathParameters['id']!),
                 ),
                 GoRoute(
                   path: 'doctor/:id',
-                  builder: (_, state) => DoctorDetailScreen(
-                    doctorId: state.pathParameters['id']!,
-                  ),
+                  builder: (_, state) =>
+                      DoctorDetailScreen(doctorId: state.pathParameters['id']!),
                 ),
               ],
             ),
             // Mapa
-            GoRoute(
-              path: '/mapa',
-              builder: (_, _) => const MapScreen(),
-            ),
+            GoRoute(path: '/mapa', builder: (_, _) => const MapScreen()),
             // Pedidos
             GoRoute(
               path: '/pedidos',
@@ -210,16 +202,24 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                   path: 'novo',
                   builder: (_, _) => const NewOrderProductsScreen(),
                   routes: [
-                    GoRoute(path: 'carrinho', builder: (_, _) => const CartScreen()),
-                    GoRoute(path: 'checkout', builder: (_, _) => const CheckoutScreen()),
-                    GoRoute(path: 'sucesso', builder: (_, _) => const OrderSuccessScreen()),
+                    GoRoute(
+                      path: 'carrinho',
+                      builder: (_, _) => const CartScreen(),
+                    ),
+                    GoRoute(
+                      path: 'checkout',
+                      builder: (_, _) => const CheckoutScreen(),
+                    ),
+                    GoRoute(
+                      path: 'sucesso',
+                      builder: (_, _) => const OrderSuccessScreen(),
+                    ),
                   ],
                 ),
                 GoRoute(
                   path: ':id',
-                  builder: (_, state) => OrderDetailScreen(
-                    orderId: state.pathParameters['id']!,
-                  ),
+                  builder: (_, state) =>
+                      OrderDetailScreen(orderId: state.pathParameters['id']!),
                   routes: [
                     GoRoute(
                       path: 'rastreio',
@@ -237,10 +237,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               builder: (_, _) => const PresentationsScreen(),
             ),
             // Perfil
-            GoRoute(
-              path: '/perfil',
-              builder: (_, _) => const ProfileScreen(),
-            ),
+            GoRoute(path: '/perfil', builder: (_, _) => const ProfileScreen()),
           ],
         ),
       ],

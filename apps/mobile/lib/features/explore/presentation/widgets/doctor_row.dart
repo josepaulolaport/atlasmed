@@ -5,11 +5,7 @@ class DoctorRow extends StatelessWidget {
   final Doctor doctor;
   final VoidCallback onTap;
 
-  const DoctorRow({
-    super.key,
-    required this.doctor,
-    required this.onTap,
-  });
+  const DoctorRow({super.key, required this.doctor, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +111,13 @@ class DoctorRow extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Text(' · ', style: TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
+                      const Text(
+                        ' · ',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF6b7280),
+                        ),
+                      ),
                       Text(
                         doctor.crm,
                         style: const TextStyle(
