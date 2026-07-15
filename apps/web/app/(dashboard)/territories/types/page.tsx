@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { canManageTerritories, canReadTerritories, isAdmin } from "@/lib/permissions";
+import { canReadTerritories, isAdmin } from "@/lib/permissions";
 import { territoriesApi } from "@/lib/api/territories";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { TerritorySubnav } from "@/components/territory/territory-subnav";
@@ -20,11 +20,36 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2, Pencil } from "lucide-react";
 import type { TerritoryType, TerritoryTypeFlags } from "@/types/territory";
 
+type TypesState = {
+  types: TerritoryType[];
+  loading: boolean;
+};
+
+type TypesAction =
+  | { type: "FETCH_START" }
+  | { type: "FETCH_SUCCESS"; types: TerritoryType[] }
+  | { type: "FETCH_ERROR" };
+
+function typesReducer(state: TypesState, action: TypesAction): TypesState {
+  switch (action.type) {
+    case "FETCH_START":
+      return { ...state, loading: true };
+    case "FETCH_SUCCESS":
+      return { ...state, types: action.types, loading: false };
+    case "FETCH_ERROR":
+      return { ...state, loading: false };
+    default:
+      return state;
+  }
+}
+
+const initialTypesState: TypesState = { types: [], loading: true };
+
+
 export default function TerritoryTypesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [types, setTypes] = useState<TerritoryType[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, dispatch] = useReducer(typesReducer, initialTypesState);
   const [slug, setSlug] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -38,36 +63,33 @@ export default function TerritoryTypesPage() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const canRead = user ? canReadTerritories(user.role.name) : false;
-  const canManage = user ? canManageTerritories(user.role.name) : false;
   const userIsAdmin = user ? isAdmin(user.role.name) : false;
-
-  const loadTypes = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await territoriesApi.listTerritoryTypes();
-      setTypes(response.data);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar tipos de território",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   useEffect(() => {
     if (user && !canRead) {
       router.replace("/unauthorized");
+      return;
     }
-  }, [user, canRead, router]);
 
-  useEffect(() => {
-    if (canRead) {
-      void loadTypes();
-    }
-  }, [canRead, loadTypes]);
+    if (!canRead) return;
+
+    const fetchTypes = async () => {
+      dispatch({ type: "FETCH_START" });
+      try {
+        const response = await territoriesApi.listTerritoryTypes();
+        dispatch({ type: "FETCH_SUCCESS", types: response.data });
+      } catch {
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar tipos de território",
+          variant: "destructive",
+        });
+        dispatch({ type: "FETCH_ERROR" });
+      }
+    };
+
+    fetchTypes();
+  }, [user, canRead, router]);
 
   const resetCreateForm = () => {
     setSlug("");
@@ -87,7 +109,13 @@ export default function TerritoryTypesPage() {
         ...createFlags,
       });
       resetCreateForm();
-      await loadTypes();
+      dispatch({ type: "FETCH_START" });
+      try {
+        const response = await territoriesApi.listTerritoryTypes();
+        dispatch({ type: "FETCH_SUCCESS", types: response.data });
+      } catch {
+        dispatch({ type: "FETCH_ERROR" });
+      }
       toast({ title: "Sucesso", description: "Tipo de território criado", variant: "success" });
     } catch (err) {
       toast({
@@ -129,7 +157,13 @@ export default function TerritoryTypesPage() {
         ...editFlags,
       });
       setEditingId(null);
-      await loadTypes();
+      dispatch({ type: "FETCH_START" });
+      try {
+        const response = await territoriesApi.listTerritoryTypes();
+        dispatch({ type: "FETCH_SUCCESS", types: response.data });
+      } catch {
+        dispatch({ type: "FETCH_ERROR" });
+      }
       toast({ title: "Sucesso", description: "Tipo de território atualizado", variant: "success" });
     } catch (err) {
       toast({
@@ -199,13 +233,13 @@ export default function TerritoryTypesPage() {
           <CardTitle>Tipos configurados</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {state.loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {types.map((type) => {
+              {state.types.map((type) => {
                 const isEditing = editingId === type.id;
 
                 return (
