@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "biomejs.biome",
+    "fronterior.biome-monorepo",
+    "bradlc.vscode-tailwindcss",
+    "yoavbls.pretty-ts-errors",
+    "dart-code.dart-code",
+    "dart-code.flutter"
+  ]
+}

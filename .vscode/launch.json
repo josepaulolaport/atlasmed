@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Mobile",
+      "request": "launch",
+      "type": "dart",
+      "cwd": "apps/mobile",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define-from-file=config.development.json"
+      ]
+    },
+    {
+      "name": "Run API",
+      "request": "launch",
+      "type": "node-terminal",
+      "command": "bun run api:dev"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run All",
+      "configurations": [
+        "Run Mobile",
+        "Run API"
+      ]
+    }
+  ]
+}

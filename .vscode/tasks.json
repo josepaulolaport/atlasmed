@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run API",
+      "type": "shell",
+      "command": "bun run api:dev",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Mobile",
+      "type": "shell",
+      "command": "bun run mobile:dev",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run All",
+      "type": "shell",
+      "command": "bun run dev",
+      "group": "build",
+      "problemMatcher": []
+    }
+  ]
+}
