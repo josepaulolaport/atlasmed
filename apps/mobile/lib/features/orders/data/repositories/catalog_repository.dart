@@ -7,8 +7,7 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 class CatalogRepository extends Repository<String>
-    with SessionEnvironmentMixin<String>
- {
+    with SessionEnvironmentMixin<String> {
   CatalogRepository({String? baseUrl, RepositoryHttpClient? client})
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
       _client = client,
@@ -25,7 +24,6 @@ class CatalogRepository extends Repository<String>
 
   @override
   RepositoryHttpClient get client => _client ?? super.client;
-
 
   Future<CatalogProductPage> getProducts({
     required int page,
@@ -55,7 +53,6 @@ class CatalogRepository extends Repository<String>
       jsonDecode(response.body) as Map<String, dynamic>,
     );
   }
-
 
   Future<CatalogProduct> getProduct(String id) async {
     final response = await client.call(

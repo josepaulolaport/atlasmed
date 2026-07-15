@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/features/map/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/map_data.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';

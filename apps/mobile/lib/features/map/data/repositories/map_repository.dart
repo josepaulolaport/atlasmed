@@ -6,7 +6,10 @@ import 'package:atlasmed_mobile_app/core/user/repositories/user_assignments_repo
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
-import '../models/models.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/facility.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/map_data.dart';
 
 /// One-shot location port. Its platform implementation must request permission
 /// once and never subscribe to location updates.
@@ -21,7 +24,6 @@ class DeviceCurrentLocationService implements CurrentLocationService {
   final LocationService _locationService;
 
   DeviceCurrentLocationService(this._locationService);
-
 
   @override
   Future<MapCoordinate> getCurrentLocation() async {
@@ -52,7 +54,9 @@ class MapRepository extends Repository<MapData>
   }) : _assignmentsRepo = assignmentsRepo,
        _baseUrl = baseUrl ?? AppConfig.apiBaseUrl,
        super(
-         endpoint: Uri.parse('${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/user/assignments'),
+         endpoint: Uri.parse(
+           '${baseUrl ?? AppConfig.apiBaseUrl}/api/v1/user/assignments',
+         ),
          resolveOnCreate: false,
        );
 
@@ -64,7 +68,6 @@ class MapRepository extends Repository<MapData>
   );
 
   // ── Territory ─────────────────────────────────────────────────
-
 
   Future<TerritoryGeometry?> getAssignedTerritory() async {
     final assignments = await _assignmentsRepo.currentValueOrResolve();
@@ -83,9 +86,7 @@ class MapRepository extends Repository<MapData>
   }
 
   Future<TerritoryGeometry?> _fetchBoundary(String territoryId) async {
-    final url = Uri.parse(
-      '$_baseUrl/api/v1/territories/$territoryId/boundary',
-    );
+    final url = Uri.parse('$_baseUrl/api/v1/territories/$territoryId/boundary');
     final request = RepositoryHttpRequest(url: url);
     final response = await client.call(request: request);
     if (response.statusCode != 200) return null;
@@ -124,13 +125,11 @@ class MapRepository extends Repository<MapData>
     if (type == 'MultiPolygon') {
       final coordinates = json['coordinates'] as List<dynamic>;
       final polygons = coordinates.map((polygon) {
-        return (polygon as List<dynamic>)
-            .map((ring) {
-              return (ring as List<dynamic>)
-                  .map((coord) => _toMapCoordinate(coord as List<dynamic>))
-                  .toList();
-            })
-            .toList();
+        return (polygon as List<dynamic>).map((ring) {
+          return (ring as List<dynamic>)
+              .map((coord) => _toMapCoordinate(coord as List<dynamic>))
+              .toList();
+        }).toList();
       }).toList();
       return TerritoryGeometry.multiPolygon(polygons);
     }
@@ -165,7 +164,6 @@ class MapRepository extends Repository<MapData>
   }
 
   // ── Facilities ────────────────────────────────────────────────
-
 
   Future<List<MapFacility>> getNearbyFacilities(
     double latitude,

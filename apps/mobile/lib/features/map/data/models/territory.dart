@@ -42,16 +42,22 @@ class TerritoryGeometry {
   Map<String, Object?> toFeatureCollection() {
     final geometryCoordinates = type == 'Polygon'
         ? coordinates.single
-              .map((ring) => ring
-                  .map((point) => [point.longitude, point.latitude])
-                  .toList())
+              .map(
+                (ring) => ring
+                    .map((point) => [point.longitude, point.latitude])
+                    .toList(),
+              )
               .toList()
         : coordinates
-              .map((polygon) => polygon
-                  .map((ring) => ring
-                      .map((point) => [point.longitude, point.latitude])
-                      .toList())
-                  .toList())
+              .map(
+                (polygon) => polygon
+                    .map(
+                      (ring) => ring
+                          .map((point) => [point.longitude, point.latitude])
+                          .toList(),
+                    )
+                    .toList(),
+              )
               .toList();
     return {
       'type': 'FeatureCollection',

@@ -1,4 +1,6 @@
-import 'package:atlasmed_mobile_app/features/map/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
