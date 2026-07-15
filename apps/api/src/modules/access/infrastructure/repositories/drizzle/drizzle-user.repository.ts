@@ -1,5 +1,12 @@
 import { eq, and, or, isNull, ilike, inArray, sql, desc } from "drizzle-orm";
-import { users, roles, sessions, passwordResets, type Database, type AnyDatabase } from "@atlasmed/database";
+import {
+  users,
+  roles,
+  sessions,
+  passwordResets,
+  type Database,
+  type AnyDatabase,
+} from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import {
   ResetTokenExpiredError,
@@ -187,7 +194,9 @@ export class DrizzleUserRepository implements UserRepository {
           revokedReason: "Role changed",
           updatedAt: new Date(),
         })
-        .where(and(eq(sessions.userId, params.userId), isNull(sessions.revokedAt)));
+        .where(
+          and(eq(sessions.userId, params.userId), isNull(sessions.revokedAt)),
+        );
     });
   }
 
@@ -220,7 +229,9 @@ export class DrizzleUserRepository implements UserRepository {
         ];
 
         if (params.keepSessionId) {
-          conditions.push(sql`${sessions.id} != ${params.keepSessionId}` as any);
+          conditions.push(
+            sql`${sessions.id} != ${params.keepSessionId}` as any,
+          );
         }
 
         await tx
@@ -278,7 +289,9 @@ export class DrizzleUserRepository implements UserRepository {
     return updated!.tokenVersion;
   }
 
-  async resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult> {
+  async resetPasswordTransaction(
+    params: ResetPasswordTransactionParams,
+  ): Promise<ResetPasswordTransactionResult> {
     return await db.transaction(async (tx) => {
       const lockedReset = await tx.execute<{
         id: string;
@@ -323,10 +336,10 @@ export class DrizzleUserRepository implements UserRepository {
 
       const userLock = lockedUser[0]!;
 
-      const updatedHistory = [userLock.passwordHash, ...userLock.passwordHistory].slice(
-        0,
-        PASSWORD_HISTORY_LIMIT,
-      );
+      const updatedHistory = [
+        userLock.passwordHash,
+        ...userLock.passwordHistory,
+      ].slice(0, PASSWORD_HISTORY_LIMIT);
 
       await tx
         .update(users)
@@ -377,7 +390,10 @@ export class DrizzleUserRepository implements UserRepository {
 
   async findPhoneVerificationState(userId: string) {
     const [row] = await db
-      .select({ phoneNumber: users.phoneNumber, phoneVerified: users.phoneVerified })
+      .select({
+        phoneNumber: users.phoneNumber,
+        phoneVerified: users.phoneVerified,
+      })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
@@ -456,7 +472,9 @@ export class DrizzleUserRepository implements UserRepository {
     const limit = Math.min(params.limit, 100);
     const skip = (page - 1) * limit;
 
-    const conditions: ReturnType<typeof eq>[] = [isNull(users.deletedAt) as any];
+    const conditions: ReturnType<typeof eq>[] = [
+      isNull(users.deletedAt) as any,
+    ];
 
     if (params.status) {
       conditions.push(eq(users.status, params.status as any));
@@ -500,7 +518,11 @@ export class DrizzleUserRepository implements UserRepository {
         .orderBy(desc(users.createdAt))
         .offset(skip)
         .limit(limit),
-      db.select({ count: sql<number>`count(*)::int` }).from(users).leftJoin(roles, eq(users.roleId, roles.id)).where(where),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .leftJoin(roles, eq(users.roleId, roles.id))
+        .where(where),
     ]);
 
     return {
@@ -523,6 +545,26 @@ export class DrizzleUserRepository implements UserRepository {
 
     const result = await fetchUserWithRole(userId);
     return result!;
+  }
+
+  async getMetadata(userId: string): Promise<unknown> {
+    const [row] = await db
+      .select({ metadata: users.metadata })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    return row?.metadata ?? null;
+  }
+
+  async updateMetadata(
+    userId: string,
+    metadata: Record<string, unknown>,
+  ): Promise<void> {
+    await db
+      .update(users)
+      .set({ metadata, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async updateManagerId(userId: string, managerId: string | null) {

@@ -32,8 +32,9 @@ export class GetUserAssignmentsUseCase {
   async execute(params: {
     targetUserId: string;
     actorRole: Role;
+    self?: boolean;
   }): Promise<GetUserAssignmentsOutput> {
-    if (params.actorRole !== Role.ADMIN) {
+    if (!params.self && params.actorRole !== Role.ADMIN) {
       throw new InsufficientPermissionsError(
         ["user:read_assignments"],
         [`role:${params.actorRole}`]

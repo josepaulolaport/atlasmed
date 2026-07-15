@@ -22,6 +22,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final sessionProfile = ref.watch(sessionProfileProvider);
+    final userProfile = sessionProfile.valueOrNull;
     final profileAsync = ref.watch(profileProvider);
     final territoryAsync = ref.watch(territoryStatsProvider);
     final summaryAsync = ref.watch(quickSummaryProvider);
@@ -42,8 +43,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   _buildTopBar(),
 
                   // ── Header · identity ────────────────────────
-                  if (sessionProfile != null)
-                    _buildHeader(sessionProfile)
+                  if (userProfile != null)
+                    _buildHeader(userProfile)
                   else
                     profileAsync.when(
                       loading: () => _buildHeaderShimmer(),
@@ -101,7 +102,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _buildLogoutButton(),
 
                         // Footer
-                        _buildFooter(sessionProfile?.since ?? ''),
+                        _buildFooter(userProfile?.since ?? ''),
                       ],
                     ),
                   ),

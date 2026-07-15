@@ -63,6 +63,10 @@ import { AssignUserManagerUseCase } from "./application/use-cases/assign-user-ma
 import { AssignUserTerritoryUseCase } from "./application/use-cases/assign-user-territory.use-case";
 import { RevokeUserTerritoryUseCase } from "./application/use-cases/revoke-user-territory.use-case";
 import { GetUserAssignmentsUseCase } from "./application/use-cases/get-user-assignments.use-case";
+import {
+  GetUserPreferencesUseCase,
+  UpdateUserPreferencesUseCase,
+} from "./application/use-cases/user-preferences.use-case";
 import { ChangePasswordUseCase } from "./application/use-cases/change-password.use-case";
 import { Setup2FAUseCase } from "./application/use-cases/setup-2fa.use-case";
 import { Confirm2FASetupUseCase } from "./application/use-cases/confirm-2fa-setup.use-case";
@@ -76,7 +80,11 @@ import { Pending2FALoginService } from "./application/services/pending-2fa-login
 import { DrizzleScopeRepository } from "./infrastructure/repositories/drizzle/drizzle-scope.repository";
 import { DrizzleAccessGrantRepository } from "./infrastructure/repositories/drizzle/drizzle-access-grant.repository";
 import { facilityTerritoryScopePort } from "../facility/composition";
-import { territoryHierarchyPort, territoryAssignmentPolicy, territoryRepositories } from "../territory/composition";
+import {
+  territoryHierarchyPort,
+  territoryAssignmentPolicy,
+  territoryRepositories,
+} from "../territory/composition";
 import { ScopeService } from "./application/services/scope.service";
 import { AccessGrantService } from "./application/services/access-grant.service";
 import { AccessGrantCacheService } from "./infrastructure/cache/access-grant-cache.service";
@@ -137,7 +145,7 @@ export const accessCaches = {
 export const accessServices = {
   token: new TokenService(),
   password: new PasswordService(),
-  session: new SessionService({ 
+  session: new SessionService({
     sessionRepository: accessRepositories.session,
     sessionCache: accessCaches.session,
   }),
@@ -157,247 +165,291 @@ export const accessServices = {
 
 // Use Case Factories
 export const accessUseCases = {
-  login: () => new LoginUseCase({
-    userRepository: accessRepositories.user,
-    sessionRepository: accessRepositories.session,
-    sessionCache: accessCaches.session,
-    tokenService: accessServices.token,
-    passwordService: accessServices.password,
-    sessionService: accessServices.session,
-    rateLimiterService: accessServices.rateLimiter,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-    pending2faLoginService: accessServices.pending2faLogin,
-  }),
-  
-  logout: () => new LogoutUseCase({
-    sessionRepository: accessRepositories.session,
-    sessionCache: accessCaches.session,
-    authCache: accessCaches.auth,
-    auditLog: accessInfrastructure.auditLog,
-  }),
-  
-  refreshSession: () => new RefreshSessionUseCase({
-    sessionRepository: accessRepositories.session,
-    sessionCache: accessCaches.session,
-    tokenService: accessServices.token,
-    sessionService: accessServices.session,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-    sessionSecurity: accessInfrastructure.sessionSecurity,
-  }),
-  
-  inviteUser: () => new InviteUserUseCase({
-    userRepository: accessRepositories.user,
-    inviteRepository: accessRepositories.invite,
-    roleRepository: accessRepositories.role,
-    territoryRepository: territoryRepositories.territory,
-    territoryTypeRepository: territoryRepositories.territoryType,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
-  
-  acceptInvite: () => new AcceptInviteUseCase({
-    inviteRepository: accessRepositories.invite,
-    passwordService: accessServices.password,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  login: () =>
+    new LoginUseCase({
+      userRepository: accessRepositories.user,
+      sessionRepository: accessRepositories.session,
+      sessionCache: accessCaches.session,
+      tokenService: accessServices.token,
+      passwordService: accessServices.password,
+      sessionService: accessServices.session,
+      rateLimiterService: accessServices.rateLimiter,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+      pending2faLoginService: accessServices.pending2faLogin,
+    }),
 
-  validateInvite: () => new ValidateInviteUseCase({
-    inviteRepository: accessRepositories.invite,
-  }),
-  
-  revokeInvite: () => new RevokeInviteUseCase({
-    inviteRepository: accessRepositories.invite,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  logout: () =>
+    new LogoutUseCase({
+      sessionRepository: accessRepositories.session,
+      sessionCache: accessCaches.session,
+      authCache: accessCaches.auth,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  resendInvite: () => new ResendInviteUseCase({
-    inviteRepository: accessRepositories.invite,
-    inviteService: accessServices.invite,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
+  refreshSession: () =>
+    new RefreshSessionUseCase({
+      sessionRepository: accessRepositories.session,
+      sessionCache: accessCaches.session,
+      tokenService: accessServices.token,
+      sessionService: accessServices.session,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+      sessionSecurity: accessInfrastructure.sessionSecurity,
+    }),
 
-  getInvitations: () => new GetInvitationsUseCase({
-    inviteRepository: accessRepositories.invite,
-    userRepository: accessRepositories.user,
-  }),
-  
-  requestPasswordReset: () => new RequestPasswordResetUseCase({
-    userRepository: accessRepositories.user,
-    passwordResetRepository: accessRepositories.passwordReset,
-    emailService: accessServices.email,
-    messagingService: accessServices.messaging,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
-  
-  resetPassword: () => new ResetPasswordUseCase({
-    userRepository: accessRepositories.user,
-    passwordResetRepository: accessRepositories.passwordReset,
-    authCache: accessCaches.auth,
-    sessionCache: accessCaches.session,
-    passwordService: accessServices.password,
-    notificationService: accessServices.notification,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
+  inviteUser: () =>
+    new InviteUserUseCase({
+      userRepository: accessRepositories.user,
+      inviteRepository: accessRepositories.invite,
+      roleRepository: accessRepositories.role,
+      territoryRepository: territoryRepositories.territory,
+      territoryTypeRepository: territoryRepositories.territoryType,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  changePassword: () => new ChangePasswordUseCase({
-    userRepository: accessRepositories.user,
-    authCache: accessCaches.auth,
-    sessionCache: accessCaches.session,
-    passwordService: accessServices.password,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  acceptInvite: () =>
+    new AcceptInviteUseCase({
+      inviteRepository: accessRepositories.invite,
+      passwordService: accessServices.password,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  setup2fa: () => new Setup2FAUseCase({
-    userRepository: accessRepositories.user,
-    twoFactorService: accessServices.twoFactor,
-  }),
+  validateInvite: () =>
+    new ValidateInviteUseCase({
+      inviteRepository: accessRepositories.invite,
+    }),
 
-  confirm2faSetup: () => new Confirm2FASetupUseCase({
-    userRepository: accessRepositories.user,
-    twoFactorService: accessServices.twoFactor,
-    authCache: accessCaches.auth,
-    sessionService: accessServices.session,
-    sessionCache: accessCaches.session,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  revokeInvite: () =>
+    new RevokeInviteUseCase({
+      inviteRepository: accessRepositories.invite,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  verify2faLogin: () => new Verify2FALoginUseCase({
-    userRepository: accessRepositories.user,
-    sessionCache: accessCaches.session,
-    twoFactorService: accessServices.twoFactor,
-    pending2faLoginService: accessServices.pending2faLogin,
-    tokenService: accessServices.token,
-    sessionService: accessServices.session,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
+  resendInvite: () =>
+    new ResendInviteUseCase({
+      inviteRepository: accessRepositories.invite,
+      inviteService: accessServices.invite,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  disable2fa: () => new Disable2FAUseCase({
-    userRepository: accessRepositories.user,
-    twoFactorService: accessServices.twoFactor,
-    authCache: accessCaches.auth,
-    sessionService: accessServices.session,
-    sessionCache: accessCaches.session,
-    passwordService: accessServices.password,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  getInvitations: () =>
+    new GetInvitationsUseCase({
+      inviteRepository: accessRepositories.invite,
+      userRepository: accessRepositories.user,
+    }),
 
-  getCapabilities: () => new GetCapabilitiesUseCase({
-    userRepository: accessRepositories.user,
-    accessGrantService,
-  }),
-  
-  deactivateUser: () => new DeactivateUserUseCase({
-    userRepository: accessRepositories.user,
-    sessionRepository: accessRepositories.session,
-    authCache: accessCaches.auth,
-    sessionCache: accessCaches.session,
-    scopeService: accessScopeServices.scope,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
-  
-  activateUser: () => new ActivateUserUseCase({
-    userRepository: accessRepositories.user,
-    authCache: accessCaches.auth,
-    auditLog: accessInfrastructure.auditLog,
-  }),
-  
-  suspendUser: () => new SuspendUserUseCase({
-    userRepository: accessRepositories.user,
-    sessionRepository: accessRepositories.session,
-    authCache: accessCaches.auth,
-    sessionCache: accessCaches.session,
-    scopeService: accessScopeServices.scope,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
-  
-  unsuspendUser: () => new UnsuspendUserUseCase({
-    userRepository: accessRepositories.user,
-    authCache: accessCaches.auth,
-    auditLog: accessInfrastructure.auditLog,
-  }),
-  
-  getUserSessions: () => new GetUserSessionsUseCase({
-    sessionRepository: accessRepositories.session,
-  }),
-  
-  revokeSession: () => new RevokeSessionUseCase({
-    sessionRepository: accessRepositories.session,
-    sessionCache: accessCaches.session,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  requestPasswordReset: () =>
+    new RequestPasswordResetUseCase({
+      userRepository: accessRepositories.user,
+      passwordResetRepository: accessRepositories.passwordReset,
+      emailService: accessServices.email,
+      messagingService: accessServices.messaging,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  revokeOtherSessions: () => new RevokeOtherSessionsUseCase({
-    sessionRepository: accessRepositories.session,
-    sessionCache: accessCaches.session,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  resetPassword: () =>
+    new ResetPasswordUseCase({
+      userRepository: accessRepositories.user,
+      passwordResetRepository: accessRepositories.passwordReset,
+      authCache: accessCaches.auth,
+      sessionCache: accessCaches.session,
+      passwordService: accessServices.password,
+      notificationService: accessServices.notification,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  changeUserRole: () => new ChangeUserRoleUseCase({
-    userRepository: accessRepositories.user,
-    roleRepository: accessRepositories.role,
-    authCache: accessCaches.auth,
-    sessionCache: accessCaches.session,
-    scopeService: accessScopeServices.scope,
-    auditLog: accessInfrastructure.auditLog,
-    metrics: accessInfrastructure.metrics,
-  }),
+  changePassword: () =>
+    new ChangePasswordUseCase({
+      userRepository: accessRepositories.user,
+      authCache: accessCaches.auth,
+      sessionCache: accessCaches.session,
+      passwordService: accessServices.password,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  listRoles: () => new ListRolesUseCase({
-    roleRepository: accessRepositories.role,
-  }),
+  setup2fa: () =>
+    new Setup2FAUseCase({
+      userRepository: accessRepositories.user,
+      twoFactorService: accessServices.twoFactor,
+    }),
 
-  listUsers: () => new ListUsersUseCase({
-    userRepository: accessRepositories.user,
-  }),
+  confirm2faSetup: () =>
+    new Confirm2FASetupUseCase({
+      userRepository: accessRepositories.user,
+      twoFactorService: accessServices.twoFactor,
+      authCache: accessCaches.auth,
+      sessionService: accessServices.session,
+      sessionCache: accessCaches.session,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  updateProfile: () => new UpdateProfileUseCase({
-    userRepository: accessRepositories.user,
-    authCache: accessCaches.auth,
-  }),
+  verify2faLogin: () =>
+    new Verify2FALoginUseCase({
+      userRepository: accessRepositories.user,
+      sessionCache: accessCaches.session,
+      twoFactorService: accessServices.twoFactor,
+      pending2faLoginService: accessServices.pending2faLogin,
+      tokenService: accessServices.token,
+      sessionService: accessServices.session,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  assignUserManager: () => new AssignUserManagerUseCase({
-    userRepository: accessRepositories.user,
-    scopeRepository: accessRepositories.scope,
-    scopeService: accessScopeServices.scope,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  disable2fa: () =>
+    new Disable2FAUseCase({
+      userRepository: accessRepositories.user,
+      twoFactorService: accessServices.twoFactor,
+      authCache: accessCaches.auth,
+      sessionService: accessServices.session,
+      sessionCache: accessCaches.session,
+      passwordService: accessServices.password,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  assignUserTerritory: () => new AssignUserTerritoryUseCase({
-    userRepository: accessRepositories.user,
-    scopeRepository: accessRepositories.scope,
-    scopeService: accessScopeServices.scope,
-    auditLog: accessInfrastructure.auditLog,
-    territoryAssignmentPolicy,
-  }),
+  getCapabilities: () =>
+    new GetCapabilitiesUseCase({
+      userRepository: accessRepositories.user,
+      accessGrantService,
+    }),
 
-  revokeUserTerritory: () => new RevokeUserTerritoryUseCase({
-    userRepository: accessRepositories.user,
-    scopeRepository: accessRepositories.scope,
-    scopeService: accessScopeServices.scope,
-    auditLog: accessInfrastructure.auditLog,
-  }),
+  deactivateUser: () =>
+    new DeactivateUserUseCase({
+      userRepository: accessRepositories.user,
+      sessionRepository: accessRepositories.session,
+      authCache: accessCaches.auth,
+      sessionCache: accessCaches.session,
+      scopeService: accessScopeServices.scope,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  getUserAssignments: () => new GetUserAssignmentsUseCase({
-    userRepository: accessRepositories.user,
-    scopeRepository: accessRepositories.scope,
-  }),
+  activateUser: () =>
+    new ActivateUserUseCase({
+      userRepository: accessRepositories.user,
+      authCache: accessCaches.auth,
+      auditLog: accessInfrastructure.auditLog,
+    }),
 
-  grantPermission: () => new GrantPermissionUseCase({
-    accessGrantService,
-    userRepository: accessRepositories.user,
-  }),
+  suspendUser: () =>
+    new SuspendUserUseCase({
+      userRepository: accessRepositories.user,
+      sessionRepository: accessRepositories.session,
+      authCache: accessCaches.auth,
+      sessionCache: accessCaches.session,
+      scopeService: accessScopeServices.scope,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
 
-  revokePermission: () => new RevokePermissionUseCase({
-    accessGrantService,
-  }),
+  unsuspendUser: () =>
+    new UnsuspendUserUseCase({
+      userRepository: accessRepositories.user,
+      authCache: accessCaches.auth,
+      auditLog: accessInfrastructure.auditLog,
+    }),
+
+  getUserSessions: () =>
+    new GetUserSessionsUseCase({
+      sessionRepository: accessRepositories.session,
+    }),
+
+  revokeSession: () =>
+    new RevokeSessionUseCase({
+      sessionRepository: accessRepositories.session,
+      sessionCache: accessCaches.session,
+      auditLog: accessInfrastructure.auditLog,
+    }),
+
+  revokeOtherSessions: () =>
+    new RevokeOtherSessionsUseCase({
+      sessionRepository: accessRepositories.session,
+      sessionCache: accessCaches.session,
+      auditLog: accessInfrastructure.auditLog,
+    }),
+
+  changeUserRole: () =>
+    new ChangeUserRoleUseCase({
+      userRepository: accessRepositories.user,
+      roleRepository: accessRepositories.role,
+      authCache: accessCaches.auth,
+      sessionCache: accessCaches.session,
+      scopeService: accessScopeServices.scope,
+      auditLog: accessInfrastructure.auditLog,
+      metrics: accessInfrastructure.metrics,
+    }),
+
+  listRoles: () =>
+    new ListRolesUseCase({
+      roleRepository: accessRepositories.role,
+    }),
+
+  listUsers: () =>
+    new ListUsersUseCase({
+      userRepository: accessRepositories.user,
+    }),
+
+  updateProfile: () =>
+    new UpdateProfileUseCase({
+      userRepository: accessRepositories.user,
+      authCache: accessCaches.auth,
+    }),
+
+  assignUserManager: () =>
+    new AssignUserManagerUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      scopeService: accessScopeServices.scope,
+      auditLog: accessInfrastructure.auditLog,
+    }),
+
+  assignUserTerritory: () =>
+    new AssignUserTerritoryUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      scopeService: accessScopeServices.scope,
+      auditLog: accessInfrastructure.auditLog,
+      territoryAssignmentPolicy,
+    }),
+
+  revokeUserTerritory: () =>
+    new RevokeUserTerritoryUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      scopeService: accessScopeServices.scope,
+      auditLog: accessInfrastructure.auditLog,
+    }),
+
+  getUserAssignments: () =>
+    new GetUserAssignmentsUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+    }),
+
+  getUserPreferences: () =>
+    new GetUserPreferencesUseCase({
+      userRepository: accessRepositories.user,
+    }),
+
+  updateUserPreferences: () =>
+    new UpdateUserPreferencesUseCase({
+      userRepository: accessRepositories.user,
+    }),
+
+  grantPermission: () =>
+    new GrantPermissionUseCase({
+      accessGrantService,
+      userRepository: accessRepositories.user,
+    }),
+
+  revokePermission: () =>
+    new RevokePermissionUseCase({
+      accessGrantService,
+    }),
 };
 
 // Plugins
@@ -414,9 +466,9 @@ export const auth = createAuthPlugin({
 
 /**
  * Example usage in routes:
- * 
+ *
  * import { accessUseCases, auth } from "../../composition";
- * 
+ *
  * const loginUseCase = accessUseCases.login();
  * const result = await loginUseCase.execute({ email, password });
  */

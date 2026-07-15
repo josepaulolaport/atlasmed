@@ -16,8 +16,9 @@ final profileProvider = FutureProvider<UserProfile>((ref) {
   return repo.getProfile();
 });
 
-final sessionProfileProvider = Provider<UserProfile?>((ref) {
-  final user = ref.watch(userProvider).valueOrNull;
+final sessionProfileProvider = FutureProvider<UserProfile?>((ref) async {
+  final userRepository = ref.watch(userProvider);
+  final user = await userRepository.currentValueOrResolve();
   if (user == null) return null;
 
   return UserProfile(
@@ -27,6 +28,7 @@ final sessionProfileProvider = Provider<UserProfile?>((ref) {
     role: user.role.name,
     region: 'Sem território definido',
     email: user.email,
+    phone: user.phoneNumber,
   );
 });
 

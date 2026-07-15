@@ -51,6 +51,7 @@ export function serializeUser(user: {
   };
   createdAt: Date;
   updatedAt: Date;
+  metadata?: unknown;
 }) {
   return {
     id: user.id,

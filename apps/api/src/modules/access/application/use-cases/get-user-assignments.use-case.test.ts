@@ -40,11 +40,14 @@ describe("GetUserAssignmentsUseCase", () => {
 
     const scopeRepository = createMockScopeRepository({
       findTerritoryAssignmentsByUserId: mock(() =>
-        Promise.resolve([{ territoryId: "territory-a", assignedAt }])
+        Promise.resolve([{ territoryId: "territory-a", assignedAt }]),
       ),
     });
 
-    const useCase = new GetUserAssignmentsUseCase({ userRepository, scopeRepository });
+    const useCase = new GetUserAssignmentsUseCase({
+      userRepository,
+      scopeRepository,
+    });
     const result = await useCase.execute({
       targetUserId: "user-1",
       actorRole: Role.ADMIN,
@@ -60,7 +63,9 @@ describe("GetUserAssignmentsUseCase", () => {
         firstName: "Jane",
         lastName: "Manager",
       },
-      territories: [{ territoryId: "territory-a", assignedAt: assignedAt.toISOString() }],
+      territories: [
+        { territoryId: "territory-a", assignedAt: assignedAt.toISOString() },
+      ],
       sectors: [],
       isOperationallyActive: true,
     });
@@ -75,12 +80,15 @@ describe("GetUserAssignmentsUseCase", () => {
           username: "unassigned",
           email: "u@example.com",
           role: { name: Role.REP },
-        })
+        }),
       ) as any,
     });
 
     const scopeRepository = createMockScopeRepository();
-    const useCase = new GetUserAssignmentsUseCase({ userRepository, scopeRepository });
+    const useCase = new GetUserAssignmentsUseCase({
+      userRepository,
+      scopeRepository,
+    });
     const result = await useCase.execute({
       targetUserId: "user-2",
       actorRole: Role.ADMIN,
@@ -101,17 +109,22 @@ describe("GetUserAssignmentsUseCase", () => {
           username: "mgr",
           email: "mgr@example.com",
           role: { name: Role.MANAGER },
-        })
+        }),
       ) as any,
     });
 
     const scopeRepository = createMockScopeRepository({
       findTerritoryAssignmentsByUserId: mock(() =>
-        Promise.resolve([{ territoryId: "territory-x", assignedAt: new Date() }])
+        Promise.resolve([
+          { territoryId: "territory-x", assignedAt: new Date() },
+        ]),
       ),
     });
 
-    const useCase = new GetUserAssignmentsUseCase({ userRepository, scopeRepository });
+    const useCase = new GetUserAssignmentsUseCase({
+      userRepository,
+      scopeRepository,
+    });
     const result = await useCase.execute({
       targetUserId: "manager-1",
       actorRole: Role.ADMIN,
@@ -127,20 +140,53 @@ describe("GetUserAssignmentsUseCase", () => {
     });
     const scopeRepository = createMockScopeRepository();
 
-    const useCase = new GetUserAssignmentsUseCase({ userRepository, scopeRepository });
+    const useCase = new GetUserAssignmentsUseCase({
+      userRepository,
+      scopeRepository,
+    });
 
     await expect(
-      useCase.execute({ targetUserId: "missing", actorRole: Role.ADMIN })
+      useCase.execute({ targetUserId: "missing", actorRole: Role.ADMIN }),
     ).rejects.toThrow(UserNotFoundError);
+  });
+
+  it("allows non-ADMIN actor to read their own assignments", async () => {
+    const userRepository = createMockUserRepository({
+      findById: mock(() =>
+        Promise.resolve({
+          id: "manager-1",
+          managerId: null,
+          username: "mgr",
+          email: "mgr@example.com",
+          role: { name: Role.MANAGER },
+        }),
+      ) as any,
+    });
+    const scopeRepository = createMockScopeRepository();
+    const useCase = new GetUserAssignmentsUseCase({
+      userRepository,
+      scopeRepository,
+    });
+
+    const result = await useCase.execute({
+      targetUserId: "manager-1",
+      actorRole: Role.MANAGER,
+      self: true,
+    });
+
+    expect(result.userId).toBe("manager-1");
   });
 
   it("rejects non-ADMIN actor", async () => {
     const userRepository = createMockUserRepository();
     const scopeRepository = createMockScopeRepository();
-    const useCase = new GetUserAssignmentsUseCase({ userRepository, scopeRepository });
+    const useCase = new GetUserAssignmentsUseCase({
+      userRepository,
+      scopeRepository,
+    });
 
     await expect(
-      useCase.execute({ targetUserId: "user-1", actorRole: Role.MANAGER })
+      useCase.execute({ targetUserId: "user-1", actorRole: Role.MANAGER }),
     ).rejects.toThrow(InsufficientPermissionsError);
   });
 });

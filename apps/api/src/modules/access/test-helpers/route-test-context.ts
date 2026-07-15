@@ -38,17 +38,43 @@ export const routeTestContext = {
         managerId: null,
         manager: null,
         territories: [],
+        sectors: [],
         isOperationallyActive: false,
-      })
+      }),
     ),
-    assignUserManagerExecute: mock(async (_params?: unknown) => Promise.resolve()),
-    assignUserTerritoryExecute: mock(async (_params?: unknown) => Promise.resolve()),
-    revokeUserTerritoryExecute: mock(async (_params?: unknown) => Promise.resolve()),
+    assignUserManagerExecute: mock(async (_params?: unknown) =>
+      Promise.resolve(),
+    ),
+    assignUserTerritoryExecute: mock(async (_params?: unknown) =>
+      Promise.resolve(),
+    ),
+    revokeUserTerritoryExecute: mock(async (_params?: unknown) =>
+      Promise.resolve(),
+    ),
+    updateProfileExecute: mock(async (_params?: unknown) =>
+      Promise.resolve(routeTestContext.user),
+    ),
+    getUserPreferencesExecute: mock(async (_params?: unknown) =>
+      Promise.resolve({
+        theme: "system",
+        pushNotificationsEnabled: true,
+        emailNotificationsEnabled: true,
+        smsNotificationsEnabled: false,
+      }),
+    ),
+    updateUserPreferencesExecute: mock(async (_params?: unknown) =>
+      Promise.resolve({
+        theme: "system",
+        pushNotificationsEnabled: true,
+        emailNotificationsEnabled: true,
+        smsNotificationsEnabled: false,
+      }),
+    ),
     listUsersExecute: mock(async (_params?: unknown) =>
       Promise.resolve({
         data: [],
         pagination: { page: 1, limit: 20, total: 0, totalPages: 1 },
-      })
+      }),
     ),
   },
 };
@@ -58,7 +84,10 @@ export function setRouteTestActor(user: RouteTestUser, scope?: ScopeContext) {
   routeTestContext.scope = scope ?? createGlobalScopeContext();
 }
 
-export function createRouteTestAuthPlugin(actor?: RouteTestUser, scope?: ScopeContext) {
+export function createRouteTestAuthPlugin(
+  actor?: RouteTestUser,
+  scope?: ScopeContext,
+) {
   return new Elysia({ name: `auth-test-${actor?.id ?? "default"}` }).derive(
     { as: "scoped" },
     async () => {
@@ -76,14 +105,14 @@ export function createRouteTestAuthPlugin(actor?: RouteTestUser, scope?: ScopeCo
           roleName: user.role.name,
         }),
       };
-    }
+    },
   );
 }
 
 export async function assertRoutePermission(
   getUser: () => Promise<RouteTestUser>,
   action: Action,
-  subject: Subject
+  subject: Subject,
 ) {
   const user = await getUser();
   const ability = defineAbilitiesFor(user.role.name);
@@ -156,4 +185,3 @@ export function emptyManagerScope(): ScopeContext {
     managedUserIds: [],
   };
 }
-
