@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'bottom_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 
 class SortSheet extends StatefulWidget {
   final bool open;

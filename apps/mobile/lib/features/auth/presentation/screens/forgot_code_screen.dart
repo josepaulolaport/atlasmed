@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/auth_repository.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/code_input.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/blue_backdrop.dart';
-import '../widgets/app_back_button.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/code_input.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_back_button.dart';
 
 /// Forgot password — step 2: 6-digit code verification.
 class ForgotCodeScreen extends ConsumerStatefulWidget {
@@ -27,6 +28,9 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
   String _code = '';
   int _cooldown = 42;
   Timer? _timer;
+
+  bool _isLoading = false;
+  AuthErrorKind? _errorKind;
 
   @override
   void initState() {
@@ -51,17 +55,44 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
   }
 
   void _handleVerify() async {
-    final ok = await ref.read(authProvider.notifier).submitCode(_code);
-    if (ok && mounted) {
-      widget.onCodeVerified();
-    }
+    setState(() {
+      _isLoading = true;
+      _errorKind = null;
+    });
+
+    final forgotPassword = ref.read(forgotPasswordProvider);
+    final result = await ref
+        .read(sessionProvider)
+        .verifyResetCode(forgotPassword.email, _code);
+
+    if (!mounted) return;
+
+    result.fold(
+      (errorKind) {
+        setState(() {
+          _isLoading = false;
+          _errorKind = errorKind.kind;
+        });
+      },
+      (isValid) {
+        setState(() {
+          _isLoading = false;
+          _errorKind = isValid ? null : AuthErrorKind.invalidCode;
+        });
+
+        if (isValid) {
+          ref.read(forgotPasswordProvider.notifier).setCode(_code);
+          widget.onCodeVerified();
+        }
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(authProvider);
-    final isLoading = state.status == AuthStatus.authenticating;
-    final codeError = state.error?.kind == AuthErrorKind.invalidCode;
+    final forgotPassword = ref.watch(forgotPasswordProvider);
+    final isLoading = _isLoading;
+    final codeError = _errorKind == AuthErrorKind.invalidCode;
 
     return Scaffold(
       body: Stack(
@@ -131,7 +162,7 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                             children: [
                               const TextSpan(text: 'Enviamos um código para\n'),
                               TextSpan(
-                                text: state.forgotEmail,
+                                text: forgotPassword.email,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
@@ -144,8 +175,10 @@ class _ForgotCodeScreenState extends ConsumerState<ForgotCodeScreen> {
                         CodeInput(
                           value: _code,
                           onChanged: (v) {
-                            setState(() => _code = v);
-                            ref.read(authProvider.notifier).clearError();
+                            setState(() {
+                              _code = v;
+                              _errorKind = null;
+                            });
                           },
                           error: codeError,
                         ),

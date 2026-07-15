@@ -3,9 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models.dart';
-import '../../data/mock_orders_repository.dart';
-import '../widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/payment_method.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -14,83 +18,96 @@ class OrderDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final detail = kOrdersDetail[orderId] ?? kOrdersDetail['PED-2041']!;
-    final resolvedItems = detail.items
-        .map((item) {
-          final product = kProducts.firstWhere(
-            (p) => p.id == item.productId,
-            orElse: () => Product(
-              id: item.productId,
-              name: item.productId,
-              sub: 'Produto não encontrado',
-              unit: 0,
-              category: '',
-            ),
-          );
-          return MapEntry(product, item.qty);
-        })
-        .toList(growable: false);
+    final detailAsync = ref.watch(orderDetailProvider(orderId));
 
-    final subtotal = resolvedItems.fold<double>(
-      0,
-      (sum, entry) => sum + (entry.key.unit * entry.value),
-    );
-    final total = subtotal + detail.shipping;
-    final hasTracking = detail.status == OrderStatus.transito;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _Header(detail: detail),
-              const SizedBox(height: 14),
-              _DeliveryBanner(detail: detail),
-              const SizedBox(height: 14),
-              _CardShell(child: _TimelineCard(detail: detail)),
-              if (hasTracking) ...[
-                const SizedBox(height: 14),
-                _CardShell(child: _TrackingCard(tracking: detail.tracking)),
-              ],
-              const SizedBox(height: 14),
-              _CardShell(child: _DestinationCard(detail: detail)),
-              const SizedBox(height: 14),
-              _CardShell(child: _ItemsCard(items: resolvedItems)),
-              const SizedBox(height: 14),
-              _CardShell(
-                child: _PaymentCard(
-                  detail: detail,
-                  subtotal: subtotal,
-                  total: total,
+    return detailAsync.when(
+      loading: () => const Scaffold(
+        backgroundColor: Color(0xFFf7f8fb),
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, _) => const Scaffold(
+        backgroundColor: Color(0xFFf7f8fb),
+        body: Center(child: Text('Não foi possível carregar o pedido.')),
+      ),
+      data: (apiDetail) {
+        final detail = orderDetailForApi(apiDetail);
+        final resolvedItems = detail.items
+            .map(
+              (item) => MapEntry(
+                Product(
+                  id: item.productId,
+                  name: item.name ?? item.productId,
+                  sub: '',
+                  unit: item.unitPrice ?? 0,
+                  category: '',
                 ),
+                item.qty,
               ),
-              const SizedBox(height: 18),
-              Row(
+            )
+            .toList(growable: false);
+        final subtotal = resolvedItems.fold<double>(
+          0,
+          (sum, entry) => sum + (entry.key.unit * entry.value),
+        );
+        final total = subtotal + detail.shipping;
+        final hasTracking =
+            detail.status == OrderStatus.approved && detail.tracking.isNotEmpty;
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFf7f8fb),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Repetir pedido',
-                      filled: false,
-                      onTap: () => context.go('/pedidos/novo'),
+                  _Header(detail: detail),
+                  const SizedBox(height: 14),
+                  _DeliveryBanner(detail: detail),
+                  const SizedBox(height: 14),
+                  _CardShell(child: _TimelineCard(detail: detail)),
+                  if (hasTracking) ...[
+                    const SizedBox(height: 14),
+                    _CardShell(child: _TrackingCard(tracking: detail.tracking)),
+                  ],
+                  const SizedBox(height: 14),
+                  _CardShell(child: _DestinationCard(detail: detail)),
+                  const SizedBox(height: 14),
+                  _CardShell(child: _ItemsCard(items: resolvedItems)),
+                  const SizedBox(height: 14),
+                  _CardShell(
+                    child: _PaymentCard(
+                      detail: detail,
+                      subtotal: subtotal,
+                      total: total,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _ActionButton(
-                      label: 'Suporte',
-                      filled: true,
-                      onTap: () {},
-                    ),
+                  const SizedBox(height: 18),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _ActionButton(
+                          label: 'Repetir pedido',
+                          filled: false,
+                          onTap: () => context.go('/pedidos/novo'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _ActionButton(
+                          label: 'Suporte',
+                          filled: true,
+                          onTap: () {},
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -535,7 +552,7 @@ class _PaymentCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          _moneyRow('Método', detail.paymentMethod),
+          _moneyRow('Método', detail.paymentMethod.label),
           const SizedBox(height: 8),
           _moneyRow('Subtotal', brl(subtotal)),
           const SizedBox(height: 8),
@@ -578,7 +595,7 @@ class _DeliveryBanner extends StatelessWidget {
   const _DeliveryBanner({required this.detail});
   @override
   Widget build(BuildContext context) {
-    final delivered = detail.status == OrderStatus.entregue;
+    final delivered = detail.status == OrderStatus.invoiced;
     final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
     final fg = delivered ? const Color(0xFF0f8a5f) : const Color(0xFF0a2f7f);
     return Container(
@@ -627,7 +644,7 @@ class _AvatarInitials extends StatelessWidget {
   const _AvatarInitials({required this.name});
   @override
   Widget build(BuildContext context) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(' ');
     final initials = parts.length >= 2
         ? '${parts.first[0]}${parts.last[0]}'
         : parts.first.substring(0, 1);

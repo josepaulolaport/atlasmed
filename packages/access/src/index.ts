@@ -13,6 +13,7 @@ export * from "./schemas/login.schema";
 export * from "./schemas/refresh-token.schema";
 export * from "./schemas/list-users.schema";
 export * from "./schemas/update-profile.schema";
+export * from "./schemas/user-preferences.schema";
 export * from "./schemas/change-password.schema";
 export * from "./schemas/user-assignment.schema";
 export * from "./schemas/user-permission.schema";

@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models.dart';
-import '../../data/mock_orders_repository.dart';
-import '../providers/orders_provider.dart';
-import '../widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -41,7 +42,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
-          ...kSelectorClinics.map(
+          // TODO: fetch real clinic list via FacilitiesRepository
+          ...<SelectableClinic>[].map(
             (clinic) => ListTile(
               leading: const Icon(Icons.business, color: Color(0xFF0a2f7f)),
               title: Text(clinic.name),
@@ -62,10 +64,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   void _showDoctorSheet(BuildContext context, WidgetRef ref) {
     final cart = ref.read(cartProvider);
-    final clinicId = cart.clinic?.id;
-    final doctors = kSelectorDoctors
-        .where((d) => d.clinicId == clinicId)
-        .toList();
+    // TODO: fetch real doctor list via ProfessionalsRepository filtered by clinicId
+    final doctors = <SelectableDoctor>[];
 
     showModalBottomSheet(
       context: context,
@@ -119,9 +119,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  bool _hasNegotiated(Product p, CartState cart) {
-    final ci = cart.items.firstWhere((i) => i.productId == p.id);
-    return ci.unitPrice != p.unit;
+  bool _hasNegotiated(CartItem item) {
+    return item.unitPrice != (item.catalogUnitPrice ?? item.unitPrice);
   }
 
   String _money(double value) => brl(value);
@@ -219,27 +218,25 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     ),
                     const SizedBox(height: 14),
                     ...cart.items.map((item) {
-                      final product = kProducts.firstWhere(
-                        (p) => p.id == item.productId,
-                      );
                       final lineTotal = item.unitPrice * item.qty;
-                      final catalogTotal = product.unit * item.qty;
+                      final catalogTotal =
+                          (item.catalogUnitPrice ?? item.unitPrice) * item.qty;
                       final savings = catalogTotal - lineTotal;
-                      final negotiated = _hasNegotiated(product, cart);
+                      final negotiated = _hasNegotiated(item);
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ProductIcon(name: product.name, size: 32),
+                            ProductIcon(name: item.productName, size: 32),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    product.name,
+                                    item.productName,
                                     style: const TextStyle(
                                       fontSize: 13.5,
                                       fontWeight: FontWeight.w700,
@@ -248,7 +245,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    product.sub,
+                                    item.productSubtitle,
                                     style: const TextStyle(
                                       fontSize: 11.5,
                                       color: Color(0xFF6b7280),
@@ -376,7 +373,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 height: 52,
                 child: ElevatedButton(
                   onPressed: canConfirm
-                      ? () => context.push('/pedidos/novo/sucesso')
+                      ? () {
+                          // TODO: submit order via OrdersRepository.createOrder()
+                          // when POST /api/v1/orders endpoint exists
+                          context.push('/pedidos/novo/sucesso');
+                        }
                       : null,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0a2f7f),

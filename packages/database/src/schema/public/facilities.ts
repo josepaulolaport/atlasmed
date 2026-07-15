@@ -151,6 +151,30 @@ export const professionals = pgTable(
   ]
 );
 
+export const professionalNotes = pgTable(
+  "professional_notes",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    professionalId: text("professional_id")
+      .notNull()
+      .references(() => professionals.id, { onDelete: "cascade" }),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("professional_notes_professional_id_user_id_created_at_idx").on(
+      t.professionalId,
+      t.userId,
+      t.createdAt
+    ),
+    index("professional_notes_user_id_created_at_idx").on(t.userId, t.createdAt),
+  ]
+);
+
 export const facilityProfessionals = pgTable(
   "facility_professionals",
   {
@@ -391,6 +415,15 @@ export const facilityServicesRelations = relations(facilityServices, ({ one }) =
 
 export const professionalsRelations = relations(professionals, ({ many }) => ({
   facilityAssociations: many(facilityProfessionals),
+  notes: many(professionalNotes),
+}));
+
+export const professionalNotesRelations = relations(professionalNotes, ({ one }) => ({
+  user: one(users, { fields: [professionalNotes.userId], references: [users.id] }),
+  professional: one(professionals, {
+    fields: [professionalNotes.professionalId],
+    references: [professionals.id],
+  }),
 }));
 
 export const facilityProfessionalsRelations = relations(facilityProfessionals, ({ one }) => ({

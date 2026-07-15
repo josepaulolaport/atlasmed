@@ -5,6 +5,7 @@ import { requirePermission } from "../../../access/infrastructure/middleware/per
 import { facilityUseCases } from "../../composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import type { z } from "zod";
 
 function parseSchema<T extends z.ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -29,16 +30,18 @@ const listFacilitiesRoute = new Elysia()
     "/facilities",
     async ({ query, getScope }) => {
       const scope = await getScope();
+      const filters = parseListFacilitiesQuery(query);
       return facilityUseCases.listFacilities().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
+        ...filters,
         scope,
       });
     },
     {
       detail: {
-        summary: "List clinics",
+        summary: "List clinics (coordinates exclude facilities without location; results are ordered by distance)",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -46,6 +49,11 @@ const listFacilitiesRoute = new Elysia()
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
+        latitude: t.Optional(t.String()),
+        longitude: t.Optional(t.String()),
+        radiusKm: t.Optional(t.String()),
+        commercialStatus: t.Optional(t.String()),
+        productIds: t.Optional(t.String()),
       }),
     }
   );
@@ -575,6 +583,62 @@ const createFacilityConformityRecordRoute = new Elysia()
     }
   );
 
+const listFacilityVisitsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/visits",
+    async ({ params, query, getUserId, getScope }) => {
+      const scope = await getScope();
+      const userId = await getUserId();
+      return facilityUseCases.listFacilityVisits().execute({
+        facilityId: params.id,
+        userId,
+        scope,
+        page: query.page ? Number(query.page) : 1,
+        limit: query.limit ? Number(query.limit) : 20,
+      });
+    },
+    {
+      detail: {
+        summary: "List visits for the authenticated user at a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+    }
+  );
+
+const createFacilityVisitRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("create", "FACILITY", { resourceIdParam: "id" }))
+  .post(
+    "/facilities/:id/visits",
+    async ({ params, body, getUserId, getScope }) => {
+      const scope = await getScope();
+      const userId = await getUserId();
+      return facilityUseCases.createFacilityVisit().execute({
+        facilityId: params.id,
+        userId,
+        scope,
+        visitedAt: body.visitedAt,
+      });
+    },
+    {
+      detail: {
+        summary: "Create a visit for the authenticated user at a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        visitedAt: t.Optional(t.String()),
+      }),
+    }
+  );
+
 export const facilitiesRoute = new Elysia()
   .use(listFacilitiesRoute)
   .use(createFacilityRoute)
@@ -596,4 +660,6 @@ export const facilitiesRoute = new Elysia()
   .use(assignConsultantRoute)
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
-  .use(createFacilityConformityRecordRoute);
+  .use(createFacilityConformityRecordRoute)
+  .use(listFacilityVisitsRoute)
+  .use(createFacilityVisitRoute);

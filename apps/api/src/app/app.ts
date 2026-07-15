@@ -3,7 +3,7 @@ import { cors } from "@elysiajs/cors";
 import { openapi } from "@elysiajs/openapi";
 import { swagger } from "@elysiajs/swagger";
 import { healthRoute } from "../infrastructure/health/health.route";
-import { access } from "../modules/access";
+import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
 import { catalog } from "../modules/catalog";
@@ -11,6 +11,9 @@ import { professional } from "../modules/professional";
 import { registryIngestion } from "../modules/registry-ingestion";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
+import { orders } from "../modules/orders";
+import { visits } from "../modules/visits";
+import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
@@ -19,23 +22,24 @@ import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
 
-const configuredCorsOrigins = environment.CORS_ORIGINS.split(',')
+const configuredCorsOrigins = environment.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const firebaseHostingOrigins = /^https:\/\/atlasmed-app(?:--[a-z0-9-]+)?\.web\.app$/;
+const firebaseHostingOrigins =
+  /^https:\/\/atlasmed-app(?:--[a-z0-9-]+)?\.web\.app$/;
 
 const app = new Elysia()
   // Observability MUST come first to track all requests
   .use(observabilityPlugin)
-  
+
   // Apply global error handler
   .onError(({ code, error, set }) => {
     // Handle custom AppError instances
     if (error instanceof AppError) {
       set.status = error.statusCode;
       return {
-        error: error.toClientJSON()
+        error: error.toClientJSON(),
       };
     }
 
@@ -43,7 +47,7 @@ const app = new Elysia()
     if (error instanceof HttpError) {
       set.status = error.statusCode;
       return {
-        error: error.toJSON()
+        error: error.toJSON(),
       };
     }
 
@@ -52,10 +56,10 @@ const app = new Elysia()
       set.status = 400;
       return {
         error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid request data',
-          details: error instanceof Error ? error.message : String(error)
-        }
+          code: "VALIDATION_ERROR",
+          message: "Invalid request data",
+          details: error instanceof Error ? error.message : String(error),
+        },
       };
     }
 
@@ -63,11 +67,14 @@ const app = new Elysia()
     set.status = 500;
     return {
       error: {
-        code: 'INTERNAL_SERVER_ERROR',
-        message: environment.NODE_ENV === 'development'
-          ? (error instanceof Error ? error.message : String(error))
-          : 'An unexpected error occurred. Please try again later.'
-      }
+        code: "INTERNAL_SERVER_ERROR",
+        message:
+          environment.NODE_ENV === "development"
+            ? error instanceof Error
+              ? error.message
+              : String(error)
+            : "An unexpected error occurred. Please try again later.",
+      },
     };
   })
   // Configure CORS for frontend access
@@ -95,17 +102,21 @@ const app = new Elysia()
   // Versioned API routes
   // auditMiddleware is applied first in the group so its onAfterHandle runs
   // for all authenticated routes within this group.
-  .group('/api/v1', (app) =>
+  .group("/api/v1", (app) =>
     app
       .use(auditMiddleware)
       .use(sessions)
+      .use(profileUser)
       .use(access)
+      .use(avatarUser)
       .use(facility)
       .use(catalog)
       .use(professional)
       .use(registryIngestion)
       .use(territory)
       .use(maps)
+      .use(orders)
+      .use(visits),
   );
 
 export default app;

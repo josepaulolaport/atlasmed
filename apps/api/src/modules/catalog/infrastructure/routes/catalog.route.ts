@@ -74,6 +74,7 @@ const listProductsRoute = new Elysia()
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         sectorId: query.sectorId,
+        search: query.search,
         isActive: query.isActive === "true" ? true : query.isActive === "false" ? false : undefined,
       }),
     {
@@ -82,8 +83,20 @@ const listProductsRoute = new Elysia()
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         sectorId: t.Optional(t.String()),
+        search: t.Optional(t.String()),
         isActive: t.Optional(t.String()),
       }),
+    }
+  );
+
+const getProductRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "CATALOG"))
+  .get(
+    "/products/:id",
+    async ({ params }) => catalogUseCases.getProduct().execute({ productId: params.id }),
+    {
+      detail: { summary: "Get product", tags: ["Catalog"], security: [{ bearerAuth: [] }] },
     }
   );
 
@@ -275,6 +288,7 @@ export const catalogRoute = new Elysia()
   .use(createSectorRoute)
   .use(updateSectorRoute)
   .use(listProductsRoute)
+  .use(getProductRoute)
   .use(createProductRoute)
   .use(updateProductRoute)
   .use(listHealthcareProvidersRoute)

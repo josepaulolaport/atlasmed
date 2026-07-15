@@ -18,6 +18,16 @@ App Flutter do atlas médico AtlasMed.
 - **Professional Detail** — 8 seções (header, prescribing trends, visit history, field notes, etc.)
 - **Profile** — Visão do representante: território (mapa + stats), resumo rápido, preferências, atividade recente, suporte & conta
 
+## Mapa
+
+O mapa nativo usa `mapbox_maps_flutter` e recebe o token público do Mapbox em tempo de execução. Copie `config.template.json` para o arquivo de configuração local adequado e forneça `MAPBOX_ACCESS_TOKEN`, ou execute com:
+
+```sh
+fvm flutter run --dart-define=API_BASE_URL=https://api.atlasmed.com --dart-define=MAPBOX_ACCESS_TOKEN=pk.seu_token_publico
+```
+
+A tela solicita apenas uma localização atual. A integração de API deve fornecer o território atribuído (GeoJSON `Polygon` ou `MultiPolygon`) e clínicas previamente filtradas pelo escopo autorizado. O cliente não amplia esse escopo.
+
 ## Run
 
 ```sh

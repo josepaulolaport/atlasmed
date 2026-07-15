@@ -8,4 +8,7 @@ final class AppConfig {
     }
     return value;
   }
+
+  static String get mapboxAccessToken =>
+      const String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
 }

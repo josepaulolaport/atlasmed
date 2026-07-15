@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/models.dart';
-import '../../data/mock_orders_repository.dart';
-import '../providers/orders_provider.dart';
-import 'order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/price_mode.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/suggestion_kind.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 /// Bottom-sheet modal for setting quantity + unit price on a product.
 class ProductOrderSheet extends ConsumerStatefulWidget {
-  final Product product;
+  final CatalogProduct product;
   final String? clinicId;
   final String? clinicName;
   final int initialQty;
   final double? initialUnit;
-  final String? initialMode;
+  final PriceMode? initialMode;
 
   const ProductOrderSheet({
     super.key,
@@ -33,20 +36,15 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   late String _mode; // 'suggested', 'catalog', 'custom'
   late double _customUnit;
 
-  PriceSuggestion? get _suggestion => widget.clinicId != null
-      ? getSuggestedPrice(
-          widget.clinicId!,
-          widget.product.id,
-          widget.product.unit,
-        )
-      : null;
+  PriceSuggestion? get _suggestion =>
+      null; // TODO: wire via PriceSuggestionRepository when available
 
   double get _activeUnit {
     switch (_mode) {
       case 'suggested':
-        return _suggestion?.unit ?? widget.product.unit;
+        return _suggestion?.unit ?? widget.product.price;
       case 'catalog':
-        return widget.product.unit;
+        return widget.product.price;
       default:
         return _customUnit;
     }
@@ -55,20 +53,11 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   @override
   void initState() {
     super.initState();
-    final suggestion = widget.clinicId != null
-        ? getSuggestedPrice(
-            widget.clinicId!,
-            widget.product.id,
-            widget.product.unit,
-          )
-        : null;
-    final startMode =
-        widget.initialMode ?? (suggestion != null ? 'suggested' : 'catalog');
-    final startUnit =
-        widget.initialUnit ??
-        (startMode == 'suggested' && suggestion != null
-            ? suggestion.unit
-            : widget.product.unit);
+    // No price suggestion API yet — default to catalog price
+    final startMode = widget.initialMode == PriceMode.custom
+        ? 'custom'
+        : 'catalog';
+    final startUnit = widget.initialUnit ?? widget.product.price;
     _qty = widget.initialQty > 0 ? widget.initialQty : 1;
     _mode = startMode;
     _customUnit = startUnit;
@@ -77,7 +66,18 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
   void _confirm() {
     ref
         .read(cartProvider.notifier)
-        .addItem(widget.product.id, _qty, _activeUnit, _mode);
+        .addItem(
+          productId: widget.product.id,
+          productName: widget.product.name,
+          productSubtitle: widget.product.subtitle,
+          qty: _qty,
+          unitPrice: _activeUnit,
+          catalogUnitPrice: widget.product.price,
+          priceMode: switch (_mode) {
+            'custom' => PriceMode.custom,
+            _ => PriceMode.catalog,
+          },
+        );
     Navigator.of(context).pop();
   }
 
@@ -144,7 +144,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.product.sub,
+                        widget.product.subtitle,
                         style: const TextStyle(
                           fontSize: 12,
                           color: Color(0xFF6b7280),
@@ -402,7 +402,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                     onTap: () => setState(() => _mode = 'catalog'),
                     label: 'Preço de tabela',
                     hint: 'Tabela vigente para todos os clientes',
-                    price: brl(widget.product.unit),
+                    price: brl(widget.product.price),
                   ),
                   const SizedBox(height: 8),
                   _PriceRow(
@@ -596,7 +596,7 @@ class _ProductOrderSheetState extends ConsumerState<ProductOrderSheet> {
                             suggestion != null &&
                             suggestion.isDiscounted)
                           Text(
-                            'Economia: ${brl((widget.product.unit - suggestion.unit) * _qty)}',
+                            'Economia: ${brl((widget.product.price - suggestion.unit) * _qty)}',
                             style: const TextStyle(
                               fontSize: 10.5,
                               color: Color(0xFF0f7c5a),
@@ -860,43 +860,23 @@ class _PriceRow extends StatelessWidget {
 }
 
 // ── Helpers ──────────────────────────────────────────────────
-const _agreementMeta = {
-  'tabela': {
-    'label': 'Tabela',
-    'color': Color(0xFF6b7280),
-    'bg': Color(0xFFf3f4f6),
-  },
-  'recorrente': {
-    'label': 'Cliente recorrente',
-    'color': Color(0xFF0f7c5a),
-    'bg': Color(0xFFe7f6ef),
-  },
-  'campanha': {
-    'label': 'Campanha',
-    'color': Color(0xFFa85a05),
-    'bg': Color(0xFFfef3e1),
-  },
-};
-
-String _agreementLabel(String kind) {
-  return _agreementMeta[kind]?['label'] as String? ?? kind;
+String _agreementLabel(SuggestionKind kind) {
+  return kind.label;
 }
 
-Widget _agreementBadge(String kind) {
-  final meta = _agreementMeta[kind];
-  if (meta == null) return const SizedBox.shrink();
+Widget _agreementBadge(SuggestionKind kind) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
     decoration: BoxDecoration(
-      color: meta['bg'] as Color,
+      color: const Color(0xFFf3f4f6),
       borderRadius: BorderRadius.circular(5),
     ),
     child: Text(
-      meta['label'] as String,
-      style: TextStyle(
+      kind.label,
+      style: const TextStyle(
         fontSize: 9,
         fontWeight: FontWeight.w700,
-        color: meta['color'] as Color,
+        color: Color(0xFF6b7280),
       ),
     ),
   );

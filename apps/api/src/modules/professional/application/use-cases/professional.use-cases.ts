@@ -4,6 +4,7 @@ import { assertResourceInScope } from "@atlasmed/access";
 import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type {
   ProfessionalCreateInput,
+  ProfessionalNoteRecord,
   ProfessionalRecord,
   ProfessionalRepository,
   ProfessionalUpdateInput,
@@ -63,6 +64,7 @@ function serializeProfessionalSummary(professional: ProfessionalRecord) {
     crmNumber: professional.crmNumber ?? undefined,
     crmState: professional.crmState ?? undefined,
     facilityIds: professional.facilityIds,
+    distanceKm: professional.distanceKm ?? undefined,
     createdAt: professional.createdAt.toISOString(),
     updatedAt: professional.updatedAt.toISOString(),
   };
@@ -90,6 +92,30 @@ function assertProfessionalAccessible(scope: ScopeContext, facilityIds: string[]
   if (!hasAccessibleFacility) {
     throw new ForbiddenError("Professional outside scope");
   }
+}
+
+function serializeProfessionalNote(note: ProfessionalNoteRecord) {
+  return {
+    id: note.id,
+    note: note.note,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
+  };
+}
+
+async function getAccessibleProfessional(
+  repository: ProfessionalRepository,
+  professionalId: string,
+  scope: ScopeContext
+): Promise<ProfessionalRecord> {
+  const professional = await repository.findById(professionalId);
+
+  if (!professional) {
+    throw new ResourceNotFoundError("Professional", professionalId);
+  }
+
+  assertProfessionalAccessible(scope, professional.facilityIds);
+  return professional;
 }
 
 function parseBirthDate(value?: string | null): Date | null | undefined {
@@ -212,6 +238,10 @@ export class ListProfessionalsUseCase {
     limit?: number;
     search?: string;
     facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
@@ -226,6 +256,10 @@ export class ListProfessionalsUseCase {
       limit,
       search: input.search,
       facilityId: input.facilityId,
+      specialty: input.specialty,
+      latitude: input.latitude,
+      longitude: input.longitude,
+      radiusKm: input.radiusKm,
       scope: input.scope.isGlobal
         ? { isGlobal: true }
         : { isGlobal: false, facilityIds: input.scope.facilityIds },
@@ -256,6 +290,50 @@ export class GetProfessionalUseCase {
     assertProfessionalAccessible(input.scope, professional.facilityIds);
 
     return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+  }
+}
+
+export class ListProfessionalNotesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: { professionalId: string; userId: string; scope: ScopeContext }) {
+    await getAccessibleProfessional(
+      this.deps.doctorRepository,
+      input.professionalId,
+      input.scope
+    );
+
+    const notes = await this.deps.doctorRepository.findNotesByProfessionalAndUser(
+      input.professionalId,
+      input.userId
+    );
+
+    return notes.map(serializeProfessionalNote);
+  }
+}
+
+export class CreateProfessionalNoteUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: {
+    professionalId: string;
+    userId: string;
+    note: string;
+    scope: ScopeContext;
+  }) {
+    await getAccessibleProfessional(
+      this.deps.doctorRepository,
+      input.professionalId,
+      input.scope
+    );
+
+    return serializeProfessionalNote(
+      await this.deps.doctorRepository.createNote({
+        professionalId: input.professionalId,
+        userId: input.userId,
+        note: input.note,
+      })
+    );
   }
 }
 

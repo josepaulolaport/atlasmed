@@ -9,7 +9,7 @@ import { resendInviteRoute } from "./infrastructure/routes/resend-invite.route";
 import { listInvitationsRoute } from "./infrastructure/routes/list-invitations.route";
 import { listUsersRoute } from "./infrastructure/routes/list-users.route";
 import { userManagementRoute } from "./infrastructure/routes/user-management.route";
-import { profileRoute } from "./infrastructure/routes/profile.route";
+import { userRoute } from "./infrastructure/routes/user.route";
 import { requestPasswordResetRoute } from "./infrastructure/routes/request-password-reset.route";
 import { resetPasswordRoute } from "./infrastructure/routes/reset-password.route";
 import { verificationRoute } from "./infrastructure/routes/verification.route";
@@ -19,6 +19,8 @@ import { userPermissionsRoute } from "./infrastructure/routes/user-permissions.r
 import { changePasswordRoute } from "./infrastructure/routes/change-password.route";
 import { capabilitiesRoute } from "./infrastructure/routes/capabilities.route";
 import { sectorsRoute } from "./infrastructure/routes/sectors.route";
+
+export const user = userRoute;
 
 export const access = new Elysia({
   name: "access",
@@ -35,7 +37,6 @@ export const access = new Elysia({
   .use(resendInviteRoute)
   .use(userManagementRoute)
   .use(userAssignmentsRoute)
-  .use(profileRoute)
   .use(changePasswordRoute)
   .use(capabilitiesRoute)
   .use(requestPasswordResetRoute)

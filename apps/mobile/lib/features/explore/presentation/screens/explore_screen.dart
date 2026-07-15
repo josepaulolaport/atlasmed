@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../shared/widgets/app_shell.dart';
-import '../../data/models.dart';
-import '../providers/explore_provider.dart';
-import '../widgets/clinic_row.dart';
-import '../widgets/doctor_row.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/filter_sheet.dart';
-import '../widgets/search_bar_widget.dart';
-import '../widgets/skeleton_row.dart';
-import '../widgets/sort_row.dart';
-import '../widgets/sort_sheet.dart';
-import '../widgets/tab_toggle.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+
+import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -22,7 +26,6 @@ class ExploreScreen extends ConsumerStatefulWidget {
 }
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
-  bool _filterOpen = false;
   bool _sortOpen = false;
 
   @override
@@ -49,6 +52,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
 
+    ref.listen<ExploreState>(exploreProvider, (previous, next) {
+      final failure = next.proximityFailure;
+      if (failure != null && failure != previous?.proximityFailure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_proximityFailureMessage(failure))),
+        );
+      }
+    });
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -58,6 +70,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             Column(
               children: [
                 const AtlasTopBar(page: 'Explorar'),
+                const SizedBox(height: 16),
                 _buildSearchBar(state, notifier, filterCount, isClinic),
                 TabToggle(
                   value: state.activeTab,
@@ -88,18 +101,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               ],
             ),
 
-            // ── Filter sheet overlay ──────────────────────
-            FilterSheet(
-              open: _filterOpen,
-              onClose: () => setState(() => _filterOpen = false),
-              kind: state.activeTab,
-              filters: state.filters,
-              onApply: (f) {
-                notifier.setFilters(f);
-                setState(() => _filterOpen = false);
-              },
-            ),
-
             // ── Sort sheet overlay ────────────────────────
             SortSheet(
               open: _sortOpen,
@@ -110,6 +111,46 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  String _proximityFailureMessage(LocationFailure failure) {
+    return switch (failure) {
+      LocationFailure.serviceDisabled =>
+        'Ative os serviços de localização para usar este filtro.',
+      LocationFailure.denied =>
+        'Permita o acesso à localização para usar este filtro.',
+      LocationFailure.deniedForever =>
+        'Ative a permissão de localização nos ajustes do dispositivo.',
+      LocationFailure.unavailable =>
+        'Não foi possível obter sua localização. Tente novamente.',
+    };
+  }
+
+  Future<void> _showFilterSheet(
+    ExploreState state,
+    ExploreNotifier notifier,
+  ) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => FilterSheet(
+        kind: state.activeTab,
+        filters: state.filters,
+        proximityEnabled: state.proximityOrigin != null,
+        requestingProximity: state.requestingProximity,
+        onProximityToggle: () {
+          if (state.proximityOrigin != null) {
+            notifier.disableProximity();
+          } else {
+            notifier.enableProximity();
+          }
+        },
+        onApply: (filters) {
+          notifier.setFilters(filters);
+          Navigator.pop(context);
+        },
       ),
     );
   }
@@ -125,7 +166,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       child: SearchBarWidget(
         value: state.query,
         onChanged: notifier.setQuery,
-        onFilter: () => setState(() => _filterOpen = true),
+        onFilter: () => _showFilterSheet(state, notifier),
         filterCount: filterCount,
         hintText: isClinic
             ? 'Buscar clínica, bairro…'
@@ -216,7 +257,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       for (final key in (state.filters['status'] ?? [])) {
         final status = ClinicStatus.values.firstWhere(
           (s) => s.name == key,
-          orElse: () => ClinicStatus.ativa,
+          orElse: () => ClinicStatus.active,
         );
         chips.add(
           FilterChipData(

@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/auth/presentation/providers/auth_provider.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/core/session/models/session.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 // ======================================================================
 // AppShellScreen — Scaffold wrapper with shared navigation drawer.
@@ -265,48 +271,58 @@ class AtlasDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authProvider);
-    final session = authState.session;
-    final displayName = session?.userDisplayName ?? 'Rafael Melo';
-    final email = _inferEmail(displayName);
-    final initials = _initials(displayName);
+    final sessionEnvironment = ref.watch(sessionProvider);
 
-    return SizedBox(
-      width: MediaQuery.of(context).size.width * 0.78,
-      child: Drawer(
-        child: Column(
-          children: [
-            _DrawerHeader(
-              initials: initials,
-              displayName: displayName,
-              email: email,
-            ),
-            Expanded(child: _NavItems(activeSection: activeSection)),
-            _DrawerFooter(
-              onLogout: () {
-                Navigator.of(context).pop(); // close drawer
-                ref.read(authProvider.notifier).logout();
-                context.go('/splash');
-              },
-            ),
-          ],
-        ),
-      ),
+    return RepositoryBuilder<SessionEnvironment, Session?>(
+      repository: sessionEnvironment,
+      builder: (context, session, repository) {
+        if (session == null) {
+          return const SizedBox.shrink();
+        }
+
+        return RepositoryBuilder<UserRepository, User>(
+          repository: ref.watch(userProvider),
+          builder: (context, user, _) {
+            final displayName = user?.displayName ?? 'Usuário';
+            final email = user?.email ?? '';
+            final initials = _initials(displayName);
+
+            return SizedBox(
+              width: MediaQuery.of(context).size.width * 0.78,
+              child: Drawer(
+                shape: const RoundedRectangleBorder(),
+                child: Column(
+                  children: [
+                    _DrawerHeader(
+                      initials: initials,
+                      displayName: displayName,
+                      email: email,
+                      avatarUrl: user?.avatarUrl,
+                      avatarToken: session.token,
+                    ),
+                    Expanded(child: _NavItems(activeSection: activeSection)),
+                    _DrawerFooter(
+                      onLogout: () {
+                        Navigator.of(context).pop();
+                        repository.delete();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
-    if (parts.length == 1) return parts.first[0].toUpperCase();
-    return 'RM';
-  }
-
-  String _inferEmail(String displayName) {
-    final slug = displayName.toLowerCase().replaceAll(RegExp(r'\s+'), '.');
-    return '$slug@atlasmed.com';
+    return parts.first[0].toUpperCase();
   }
 }
 
@@ -316,12 +332,20 @@ class _DrawerHeader extends StatelessWidget {
   final String initials;
   final String displayName;
   final String email;
+  final String? avatarUrl;
+  final String? avatarToken;
 
   const _DrawerHeader({
     required this.initials,
     required this.displayName,
     required this.email,
+    this.avatarUrl,
+    this.avatarToken,
   });
+
+  String _avatarUri(String url) {
+    return url.startsWith("http") ? url : "${AppConfig.apiBaseUrl}$url";
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,17 +392,37 @@ class _DrawerHeader extends StatelessWidget {
                   ),
                   shape: BoxShape.circle,
                 ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                clipBehavior: Clip.antiAlias,
+                child: avatarUrl != null && avatarUrl!.isNotEmpty
+                    ? Image.network(
+                        _avatarUri(avatarUrl!),
+                        headers: avatarToken == null
+                            ? null
+                            : {"Authorization": "Bearer $avatarToken"},
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Center(
+                          child: Text(
+                            initials,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
               ),
               const SizedBox(height: 12),
               Text(
@@ -520,7 +564,7 @@ class _DrawerFooter extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Atlasmed · v2.4.1',
+            'Atlasmed · v0.1.0',
             style: TextStyle(
               fontSize: 10.5,
               color: Color(0xFF9ca3af),

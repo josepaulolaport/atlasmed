@@ -35,6 +35,8 @@ export interface FacilityRecord {
 export interface FacilityListRecord extends FacilityRecord {
   professionalCount: number;
   consultantName: string | null;
+  /** Present only when a coordinate query was supplied. */
+  distanceKm?: number | null;
 }
 
 export interface FacilityListScopeFilter {
@@ -57,6 +59,12 @@ export interface FacilityRepository {
     page: number;
     limit: number;
     search?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
+    productIds?: string[];
     scope: FacilityListScopeFilter;
   }): Promise<{ facilities: FacilityListRecord[]; total: number }>;
 
