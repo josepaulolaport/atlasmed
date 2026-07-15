@@ -51,7 +51,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       .then((r) => r[0] ?? null);
 
     if (!role) {
-      throw new Error("USER role not found in database");
+      throw new Error("REP role not found in database");
     }
 
     roleId = role.id;
