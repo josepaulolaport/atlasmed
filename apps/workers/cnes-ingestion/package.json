@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun --watch src/worker.ts",
     "start": "bun src/worker.ts",
+    "lint": "biome check .",
     "typecheck": "bunx tsc -p tsconfig.json",
     "test": "bun test"
   },

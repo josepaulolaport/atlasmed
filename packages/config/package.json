@@ -7,6 +7,7 @@
   },
   "type": "module",
   "scripts": {
+    "lint": "biome check .",
     "typecheck": "bunx tsc -p tsconfig.json"
   },
   "dependencies": {

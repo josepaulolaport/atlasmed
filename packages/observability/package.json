@@ -8,6 +8,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "lint": "biome check .",
     "typecheck": "bunx tsc -p tsconfig.json --skipLibCheck",
     "test": "bun test"
   },

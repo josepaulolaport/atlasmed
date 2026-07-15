@@ -13,6 +13,7 @@
     "test:unit": "NODE_ENV=test bun test --test-name-pattern='^(?!.*Integration Tests)(?!.*\\(Integration\\))(?!.*integration)(?!.*race-condition).*$'",
     "test:integration": "NODE_ENV=test bun test --test-name-pattern=\"Integration Tests\"",
     "test:watch": "NODE_ENV=test bun test --watch",
+    "lint": "biome check .",
     "typecheck": "tsc --noEmit",
     "db:migrate": "cd ../../packages/database && bunx drizzle-kit migrate",
     "db:push": "cd ../../packages/database && bunx drizzle-kit push",
