@@ -1,21 +1,27 @@
 import 'package:equatable/equatable.dart';
 
+import 'user_role_name.dart';
+import 'user_status.dart';
+
 class UserRole extends Equatable {
   const UserRole({required this.id, required this.name, this.description});
 
   final String id;
-  final String name;
+  final UserRoleName name;
   final String? description;
 
   factory UserRole.fromJson(Map<String, dynamic> json) => UserRole(
     id: json['id'] as String,
-    name: json['name'] as String,
+    name: UserRoleName.values.firstWhere(
+      (e) => e.name.toUpperCase() == (json['name'] as String).toUpperCase(),
+      orElse: () => UserRoleName.rep,
+    ),
     description: json['description'] as String?,
   );
 
   Map<String, dynamic> toJson() => {
     'id': id,
-    'name': name,
+    'name': name.name.toUpperCase(),
     if (description != null) 'description': description,
   };
 
@@ -50,7 +56,7 @@ class User extends Equatable {
   final String? firstName;
   final String? lastName;
   final String? avatarUrl;
-  final String status;
+  final UserStatus status;
   final bool emailVerified;
   final bool phoneVerified;
   final bool twoFactorEnabled;
@@ -84,7 +90,10 @@ class User extends Equatable {
       firstName: userJson['firstName'] as String?,
       lastName: userJson['lastName'] as String?,
       avatarUrl: userJson['avatarUrl'] as String?,
-      status: userJson['status'] as String,
+      status: UserStatus.values.firstWhere(
+        (e) => e.name.toUpperCase() == (userJson['status'] as String).toUpperCase(),
+        orElse: () => UserStatus.active,
+      ),
       emailVerified: userJson['emailVerified'] as bool? ?? false,
       phoneVerified: userJson['phoneVerified'] as bool? ?? false,
       twoFactorEnabled: userJson['twoFactorEnabled'] as bool? ?? false,
@@ -104,7 +113,7 @@ class User extends Equatable {
     if (firstName != null) 'firstName': firstName,
     if (lastName != null) 'lastName': lastName,
     if (avatarUrl != null) 'avatarUrl': avatarUrl,
-    'status': status,
+    'status': status.name.toUpperCase(),
     'emailVerified': emailVerified,
     'phoneVerified': phoneVerified,
     'twoFactorEnabled': twoFactorEnabled,

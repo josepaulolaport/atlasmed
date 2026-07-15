@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/avatar_repository.dart';
 
 void main() {
@@ -7,10 +9,10 @@ void main() {
     id: 'user-1',
     email: 'ana@example.com',
     username: 'ana',
-    status: 'ACTIVE',
+    status: UserStatus.active,
     emailVerified: true,
     phoneVerified: false,
-    role: UserRole(id: 'role-1', name: 'USER'),
+    role: UserRole(id: 'role-1', name: UserRoleName.rep),
     twoFactorEnabled: false,
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),

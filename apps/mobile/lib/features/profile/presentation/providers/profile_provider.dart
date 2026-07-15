@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_preferences_repository.dart';
@@ -20,7 +21,7 @@ final profileProvider = FutureProvider<UserProfile>((ref) async {
     id: user.id,
     displayName: user.displayName,
     initials: _initials(user.displayName),
-    role: user.role.name,
+    role: user.role.name.label,
     region: 'Sem território definido',
     email: user.email,
     phone: user.phoneNumber,
@@ -40,7 +41,7 @@ final sessionProfileProvider = FutureProvider<UserProfile?>((ref) async {
     id: user.id,
     displayName: user.displayName,
     initials: _initials(user.displayName),
-    role: user.role.name,
+    role: user.role.name.label,
     region: 'Sem território definido',
     email: user.email,
     phone: user.phoneNumber,
