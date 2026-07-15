@@ -21,7 +21,17 @@ if grep -q '\\n' "$raw_path"; then
   perl -pe 's/\\n/\n/g' "$raw_path" > "$target_path"
   rm -f "$raw_path"
 else
-  mv "$raw_path" "$target_path"
+  perl -0pe '
+    if (/\A\s*(-----BEGIN [^-]+ PRIVATE KEY-----)\s*(.*?)\s*(-----END [^-]+ PRIVATE KEY-----)\s*\z/s) {
+      my $header = $1;
+      my $body = $2;
+      my $footer = $3;
+      $body =~ s/\s+//g;
+      $body =~ s/(.{1,70})/$1\n/g;
+      $_ = "$header\n$body$footer\n";
+    }
+  ' "$raw_path" > "$target_path"
+  rm -f "$raw_path"
 fi
 
 chmod 600 "$target_path"
