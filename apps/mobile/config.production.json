@@ -1,0 +1,4 @@
+{
+  "$schema": "./config.schema.json",
+  "API_BASE_URL": "https://api.atlasmed.com"
+}
