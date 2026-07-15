@@ -39,5 +39,6 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "modules/professional/infrastructure/routes/professionals.route.ts": "auth+permission",
   "modules/registry-ingestion/infrastructure/routes/registry-ingestion.route.ts":
     "auth+permission",
+  "modules/sessions/infrastructure/routes/sessions.route.ts": "auth",
   "modules/territory/infrastructure/routes/territories.route.ts": "auth+permission",
 };
