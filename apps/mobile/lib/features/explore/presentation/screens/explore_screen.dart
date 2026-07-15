@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
+import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -48,6 +49,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     // Build filter chips for active filters
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
+
+    ref.listen<ExploreState>(exploreProvider, (previous, next) {
+      final failure = next.proximityFailure;
+      if (failure != null && failure != previous?.proximityFailure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_proximityFailureMessage(failure))),
+        );
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -95,6 +105,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               onClose: () => setState(() => _filterOpen = false),
               kind: state.activeTab,
               filters: state.filters,
+              proximityEnabled: state.proximityOrigin != null,
+              requestingProximity: state.requestingProximity,
+              onProximityToggle: () {
+                if (state.proximityOrigin != null) {
+                  notifier.disableProximity();
+                } else {
+                  notifier.enableProximity();
+                }
+              },
               onApply: (f) {
                 notifier.setFilters(f);
                 setState(() => _filterOpen = false);
@@ -113,6 +132,19 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         ),
       ),
     );
+  }
+
+  String _proximityFailureMessage(LocationFailure failure) {
+    return switch (failure) {
+      LocationFailure.serviceDisabled =>
+        'Ative os serviços de localização para usar este filtro.',
+      LocationFailure.denied =>
+        'Permita o acesso à localização para usar este filtro.',
+      LocationFailure.deniedForever =>
+        'Ative a permissão de localização nos ajustes do dispositivo.',
+      LocationFailure.unavailable =>
+        'Não foi possível obter sua localização. Tente novamente.',
+    };
   }
 
   Widget _buildSearchBar(

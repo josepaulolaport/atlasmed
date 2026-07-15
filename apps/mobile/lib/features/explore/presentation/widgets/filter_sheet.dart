@@ -6,6 +6,9 @@ class FilterSheet extends StatefulWidget {
   final VoidCallback onClose;
   final String kind;
   final Map<String, List<String>> filters;
+  final bool proximityEnabled;
+  final bool requestingProximity;
+  final VoidCallback onProximityToggle;
   final ValueChanged<Map<String, List<String>>> onApply;
 
   const FilterSheet({
@@ -14,6 +17,9 @@ class FilterSheet extends StatefulWidget {
     required this.onClose,
     required this.kind,
     required this.filters,
+    required this.proximityEnabled,
+    required this.requestingProximity,
+    required this.onProximityToggle,
     required this.onApply,
   });
 
@@ -117,9 +123,19 @@ class _FilterSheetState extends State<FilterSheet>
             },
             child: BottomSheetWidget(
               title: 'Filtros',
-              child: widget.kind == 'clinic'
-                  ? _ClinicFilters(local: _local, onToggle: _toggle)
-                  : _DoctorFilters(local: _local, onToggle: _toggle),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ProximityFilter(
+                    enabled: widget.proximityEnabled,
+                    isLoading: widget.requestingProximity,
+                    onChanged: widget.onProximityToggle,
+                  ),
+                  widget.kind == 'clinic'
+                      ? _ClinicFilters(local: _local, onToggle: _toggle)
+                      : _DoctorFilters(local: _local, onToggle: _toggle),
+                ],
+              ),
             ),
           ),
         ),
@@ -194,6 +210,57 @@ class _FilterSheetState extends State<FilterSheet>
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProximityFilter extends StatelessWidget {
+  final bool enabled;
+  final bool isLoading;
+  final VoidCallback onChanged;
+
+  const _ProximityFilter({
+    required this.enabled,
+    required this.isLoading,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 16, 12),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Usar minha localização',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0f1729),
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Preparar filtro por proximidade',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
+                ),
+              ],
+            ),
+          ),
+          if (isLoading)
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          else
+            Switch(value: enabled, onChanged: (_) => onChanged()),
         ],
       ),
     );

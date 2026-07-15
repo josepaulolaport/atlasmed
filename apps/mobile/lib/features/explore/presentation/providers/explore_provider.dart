@@ -4,10 +4,15 @@ import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/explore_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/mock_explore_repository.dart';
+import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 
 // ── Repository provider ─────────────────────────────────────
 final exploreRepositoryProvider = Provider<ExploreRepository>((ref) {
   return MockExploreRepository();
+});
+
+final locationServiceProvider = Provider<LocationService>((ref) {
+  return LocationService(GeolocatorLocationPlatform());
 });
 
 // ── Clinic detail provider ──────────────────────────────────
@@ -39,6 +44,10 @@ class ExploreState {
   filters; // {status: [...], products: [...], specialties: [...]}
   final String sort;
   final int visibleCount;
+  // Coordinates are retained until the list API accepts proximity parameters.
+  final DeviceLocation? proximityOrigin;
+  final LocationFailure? proximityFailure;
+  final bool requestingProximity;
 
   const ExploreState({
     this.clinics = const [],
@@ -49,6 +58,9 @@ class ExploreState {
     this.filters = const {},
     this.sort = 'distance',
     this.visibleCount = 15,
+    this.proximityOrigin,
+    this.proximityFailure,
+    this.requestingProximity = false,
   });
 
   ExploreState copyWith({
@@ -60,6 +72,11 @@ class ExploreState {
     Map<String, List<String>>? filters,
     String? sort,
     int? visibleCount,
+    DeviceLocation? proximityOrigin,
+    LocationFailure? proximityFailure,
+    bool? requestingProximity,
+    bool clearProximityOrigin = false,
+    bool clearProximityFailure = false,
     bool resetVisible = false,
   }) {
     return ExploreState(
@@ -71,6 +88,13 @@ class ExploreState {
       filters: filters ?? this.filters,
       sort: sort ?? this.sort,
       visibleCount: resetVisible ? 15 : (visibleCount ?? this.visibleCount),
+      proximityOrigin: clearProximityOrigin
+          ? null
+          : (proximityOrigin ?? this.proximityOrigin),
+      proximityFailure: clearProximityFailure
+          ? null
+          : (proximityFailure ?? this.proximityFailure),
+      requestingProximity: requestingProximity ?? this.requestingProximity,
     );
   }
 
@@ -169,8 +193,10 @@ class ExploreState {
 // ── Explore notifier ────────────────────────────────────────
 class ExploreNotifier extends StateNotifier<ExploreState> {
   final ExploreRepository _repository;
+  final LocationService _locationService;
 
-  ExploreNotifier(this._repository) : super(const ExploreState());
+  ExploreNotifier(this._repository, this._locationService)
+    : super(const ExploreState());
 
   Future<void> loadData() async {
     state = state.copyWith(loading: true, resetVisible: true);
@@ -182,6 +208,41 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       clinics: results[0] as List<Clinic>,
       doctors: results[1] as List<Doctor>,
       loading: false,
+    );
+  }
+
+  Future<void> enableProximity() async {
+    state = state.copyWith(
+      requestingProximity: true,
+      clearProximityFailure: true,
+    );
+    final result = await _locationService.requestCurrentLocation();
+
+    switch (result) {
+      case LocationAvailable(:final location):
+        // The current API has no proximity query contract, so retain the origin
+        // for the API repository to submit when that contract is introduced.
+        state = state.copyWith(
+          proximityOrigin: location,
+          requestingProximity: false,
+          clearProximityFailure: true,
+          resetVisible: true,
+        );
+      case LocationUnavailable(:final failure):
+        state = state.copyWith(
+          requestingProximity: false,
+          proximityFailure: failure,
+          clearProximityOrigin: true,
+        );
+    }
+  }
+
+  void disableProximity() {
+    state = state.copyWith(
+      clearProximityOrigin: true,
+      clearProximityFailure: true,
+      requestingProximity: false,
+      resetVisible: true,
     );
   }
 
@@ -211,5 +272,6 @@ final exploreProvider = StateNotifierProvider<ExploreNotifier, ExploreState>((
   ref,
 ) {
   final repo = ref.watch(exploreRepositoryProvider);
-  return ExploreNotifier(repo);
+  final locationService = ref.watch(locationServiceProvider);
+  return ExploreNotifier(repo, locationService);
 });
