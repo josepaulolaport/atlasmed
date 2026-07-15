@@ -1,4 +1,4 @@
-name: Deploy Backend Production
+name: Deploy services to cluster
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
       - 'packages/**'
       - 'deploy/**'
       - '.dockerignore'
-      - '.github/workflows/deploy-backend-production.yml'
+      - '.github/workflows/deploy-services-to-cluster.yml'
       - '.github/workflows/deploy-infra.yml'
       - '.github/workflows/validate-production-env.yml'
       - 'bun.lock'
@@ -81,7 +81,7 @@ jobs:
       - name: Build web
         env:
           NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
-        run: bun run --filter atlasmed_web_app build
+        run: bun run --filter @atlasmed/web build
 
       - name: Run database migrations
         env:
@@ -134,7 +134,7 @@ jobs:
           $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
           $UNCLOUD_SSH_CMD 'docker system df'
 
-      - name: Deploy AtlasMed backend services
+      - name: Deploy services to cluster
         env:
           UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
