@@ -71,19 +71,24 @@ jobs:
           echo "channel_id=$channel_id" >> "$GITHUB_OUTPUT"
           echo "expires=$expires" >> "$GITHUB_OUTPUT"
 
-      - name: Configurar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.6'
-          channel: 'stable'
-          cache: true
+      - name: Configurar Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Instalar FVM
+        run: |
+          dart pub global activate fvm
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Flutter via FVM
+        run: fvm install
+        working-directory: ./apps/mobile
 
       - name: Instalar dependências
-        run: flutter pub get
+        run: fvm flutter pub get
         working-directory: ./apps/mobile
 
       - name: Build Flutter Web
-        run: flutter build web --release
+        run: fvm flutter build web --release
         working-directory: ./apps/mobile
 
       - name: Instalar Firebase CLI

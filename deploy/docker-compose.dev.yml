@@ -1,5 +1,5 @@
 # Local development infrastructure (excluding PostgreSQL — use your local PostGIS install).
-# Usage: bun run dev:up
+# Usage: bun run infra:up
 
 services:
   redis:
