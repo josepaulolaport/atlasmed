@@ -449,6 +449,7 @@ DATABASE_URL=<url> bun run scripts/migrate.ts
 - PostGIS columns use `geometryPoint` or `geometryMultiPolygon` from `types/geometry.ts`.
 - All DB identifiers (column names, enum names, index names) are `snake_case`.
 - Export new enum value types from `src/index.ts` when consumers need them.
+- **Never manually edit files inside `packages/database/drizzle/*`.** Migration SQL, snapshots, and meta files are generated **exclusively** by `bunx drizzle-kit generate`. Any manual edit to these files will be overwritten on the next `drizzle-kit` run and is forbidden. If you need a custom migration SQL, use `drizzle-kit generate --custom` and fill the generated empty file — never hand-edit a non-custom migration.
 
 ### Anti-patterns
 
