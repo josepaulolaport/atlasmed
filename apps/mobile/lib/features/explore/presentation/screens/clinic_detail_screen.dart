@@ -133,10 +133,8 @@ class _ClinicDetailContent extends StatelessWidget {
           _SectionHeader(title: 'Clínicas próximas'),
           _NearbyClinics(items: detail.nearbyClinics),
         ],
-        if (detail.visits.isNotEmpty) ...[
-          _SectionHeader(title: 'Histórico de visitas'),
-          _ClinicVisits(visits: detail.visits),
-        ],
+        _SectionHeader(title: 'Histórico de visitas'),
+        _ClinicVisits(facilityId: detail.id),
         if (detail.clinicDoctors.isNotEmpty) ...[
           _SectionHeader(title: 'Médicos'),
           _ClinicDoctors(doctors: detail.clinicDoctors),
@@ -422,12 +420,12 @@ class _InteractionRibbon extends StatelessWidget {
 
 // ===============================================================// 2. QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
 // ===============================================================
-class _QuickActions extends StatelessWidget {
+class _QuickActions extends ConsumerWidget {
   final ClinicDetail detail;
   const _QuickActions({required this.detail});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -463,7 +461,30 @@ class _QuickActions extends StatelessWidget {
           _ActionButton(
             icon: Icons.calendar_month_rounded,
             label: 'Visita',
-            onTap: () {},
+            onTap: () async {
+              try {
+                final repo = ref.read(clinicVisitsRepositoryProvider(detail.id));
+                await repo.createVisit();
+                ref.invalidate(clinicVisitsProvider(detail.id));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Visita registrada com sucesso'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Erro ao registrar visita'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }
+            },
           ),
           _ActionButton(
             icon: Icons.note_add_rounded,
@@ -1201,22 +1222,25 @@ class _NearbyClinics extends StatelessWidget {
 
 // ===============================================================// 12. ClinicVisits — visit history with filter pills
 // ===============================================================
-class _ClinicVisits extends StatefulWidget {
-  final List<ClinicVisit> visits;
-  const _ClinicVisits({required this.visits});
+class _ClinicVisits extends ConsumerStatefulWidget {
+  final String facilityId;
+  const _ClinicVisits({required this.facilityId});
 
   @override
-  State<_ClinicVisits> createState() => _ClinicVisitsState();
+  ConsumerState<_ClinicVisits> createState() => _ClinicVisitsState();
 }
 
-class _ClinicVisitsState extends State<_ClinicVisits> {
+class _ClinicVisitsState extends ConsumerState<_ClinicVisits> {
   String _filter = 'todas';
 
   @override
   Widget build(BuildContext context) {
+    final visitsAsync = ref.watch(clinicVisitsProvider(widget.facilityId));
+    final isLoading = visitsAsync.isLoading;
+    final visits = visitsAsync.valueOrNull ?? const <ClinicVisit>[];
     final filtered = _filter == 'todas'
-        ? widget.visits
-        : widget.visits.where((v) => v.type.name == _filter).toList();
+        ? visits
+        : visits.where((v) => v.type.name == _filter).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -1272,7 +1296,18 @@ class _ClinicVisitsState extends State<_ClinicVisits> {
           ),
           const SizedBox(height: 8),
           // List
-          if (filtered.isEmpty)
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else if (filtered.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(
@@ -1427,37 +1462,7 @@ class _VisitItem extends StatelessWidget {
                           ),
                         ),
                       ),
-                      if (visit.consultantName != null) ...[
-                        const SizedBox(width: 6),
-                        Text(
-                          visit.consultantName!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFF9ca3af),
-                          ),
-                        ),
-                      ],
-                      if (visit.hasPendingOrder) ...[
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFfef3d5),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'Pedido pendente',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFc6861b),
-                            ),
-                          ),
-                        ),
-                      ],
+                      // consultantName and hasPendingOrder removed from model
                     ],
                   ),
                   if (visit.summary != null) ...[

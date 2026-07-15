@@ -12,6 +12,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_visits_repository.dart';
+
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
@@ -174,6 +176,25 @@ final professionalNotesProvider =
           .watch(professionalNotesRepositoryProvider(professionalId))
           .currentValueOrResolve()
           .then((notes) => notes ?? const []);
+    });
+
+// ── Clinic visits ──────────────────────────────────────────
+final clinicVisitsRepositoryProvider =
+    Provider.family<ClinicVisitsRepository, String>((ref, facilityId) {
+      final repository = ClinicVisitsRepository(facilityId);
+      ref.onDispose(repository.dispose);
+      return repository;
+    });
+
+final clinicVisitsProvider =
+    FutureProvider.family<List<ClinicVisit>, String>((
+      ref,
+      facilityId,
+    ) {
+      return ref
+          .watch(clinicVisitsRepositoryProvider(facilityId))
+          .currentValueOrResolve()
+          .then((visits) => visits ?? const []);
     });
 
 // ── Explore state ───────────────────────────────────────────
