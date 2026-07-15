@@ -27,8 +27,8 @@ jobs:
       - name: Install fvm & Flutter
         run: |
           curl -fsSL https://fvm.app/install.sh | bash
-          echo "$HOME/.fvm/bin" >> "$GITHUB_PATH"
-          export PATH="$HOME/.fvm/bin:$PATH"
+          echo "$HOME/fvm/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/fvm/bin:$PATH"
           fvm install
           fvm use --force
       - name: Install dependencies
