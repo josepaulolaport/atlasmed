@@ -5,9 +5,7 @@ import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/models/activity.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
-import 'package:atlasmed_mobile_app/features/profile/data/models/support.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 
@@ -78,7 +76,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final territoryAsync = ref.watch(territoryStatsProvider);
     final summaryAsync = ref.watch(quickSummaryProvider);
     final prefsAsync = ref.watch(preferencesProvider);
-    final activityAsync = ref.watch(recentActivityProvider);
     ref.listen<AsyncValue<void>>(avatarControllerProvider, (_, next) {
       if (next.hasError) _showAvatarError(next.error.toString());
     });
@@ -150,14 +147,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           loading: () => _buildSectionShimmer(height: 250),
                           error: (_, _) => const SizedBox.shrink(),
                           data: (items) => _buildPreferences(items),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Atividade recente
-                        activityAsync.when(
-                          loading: () => _buildSectionShimmer(height: 200),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildRecentActivity(items),
                         ),
                         const SizedBox(height: 20),
 
@@ -610,46 +599,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     };
   }
 
-  // ── Atividade recente ───────────────────────────────────────
-  Widget _buildRecentActivity(List<RecentActivity> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'Atividade recente', action: 'Ver tudo'),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: items.map((a) => _ActivityRow(activity: a)).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── Suporte & conta ─────────────────────────────────────────
-  // ignore: unused_element, preserved for when support/account links return
-  Widget _buildSupportSection(List<SupportItem> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'Suporte & conta'),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: items.map((item) => _SupportRow(item: item)).toList(),
-          ),
-        ),
-      ],
-    );
-  }
+  // Removed — pending real API support endpoints.
 
   // ── Logout button ───────────────────────────────────────────
   Widget _buildLogoutButton() {
@@ -1328,169 +1279,3 @@ class _PrefRow extends StatelessWidget {
 }
 
 // ── Activity row ─────────────────────────────────────────────
-class _ActivityRow extends StatelessWidget {
-  final RecentActivity activity;
-  const _ActivityRow({required this.activity});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        border: const Border(top: BorderSide(color: Color(0xFFf1f3f6))),
-      ),
-      child: Row(
-        children: [
-          _ActivityIcon(kind: activity.kind),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activity.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1f2937),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  activity.detail,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF9ca3af),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            activity.when,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF9ca3af),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityIcon extends StatelessWidget {
-  final String kind;
-  const _ActivityIcon({required this.kind});
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color bg, Color color, IconData icon) = switch (kind) {
-      'visit' => (
-        const Color(0x140a2f7f),
-        const Color(0xFF0a2f7f),
-        Icons.location_on_outlined,
-      ),
-      'followup' => (
-        const Color(0x1A16a373),
-        const Color(0xFF16a373),
-        Icons.check_circle_outline,
-      ),
-      'order' => (
-        const Color(0x1Fc6861b),
-        const Color(0xFFb07a10),
-        Icons.shopping_bag_outlined,
-      ),
-      'download' => (
-        const Color(0x1A1e40af),
-        const Color(0xFF1e40af),
-        Icons.download_outlined,
-      ),
-      _ => (
-        const Color(0x140a2f7f),
-        const Color(0xFF0a2f7f),
-        Icons.circle_outlined,
-      ),
-    };
-
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, size: 14, color: color),
-    );
-  }
-}
-
-// ── Support row ──────────────────────────────────────────────
-class _SupportRow extends StatelessWidget {
-  final SupportItem item;
-  const _SupportRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (item.kind) {
-      'help' => Icons.help_outline_rounded,
-      'chat' => Icons.chat_outlined,
-      'legal' => Icons.description_outlined,
-      _ => Icons.chevron_right_rounded,
-    };
-
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          border: const Border(top: BorderSide(color: Color(0xFFf1f3f6))),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0x120a2f7f),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(icon, size: 14, color: const Color(0xFF0a2f7f)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.label,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1f2937),
-                    ),
-                  ),
-                  if (item.sub != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      item.sub!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF9ca3af),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const _ProfileChevron(),
-          ],
-        ),
-      ),
-    );
-  }
-}
