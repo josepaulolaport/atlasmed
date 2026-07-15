@@ -8,4 +8,8 @@ final class AppConfig {
     }
     return value;
   }
+
+  /// Public Mapbox access token passed at build/run time, never committed.
+  static String get mapboxAccessToken =>
+      const String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
 }

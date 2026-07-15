@@ -1,4 +1,5 @@
 {
   "$schema": "./config.schema.json",
-  "API_BASE_URL": "https://api.atlasmed.com"
+  "API_BASE_URL": "https://api.atlasmed.com",
+  "MAPBOX_ACCESS_TOKEN": "pk.seu_token_publico_do_mapbox"
 }
