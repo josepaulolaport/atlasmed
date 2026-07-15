@@ -73,7 +73,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       city: cityParts.isNotEmpty ? cityParts.join(', ') : '',
       neighborhood: '',
       distanceKm: apiClinic.distanceKm ?? 0,
-      status: ClinicStatus.ativa,
+      status: ClinicStatus.active,
       lastVisitDays: null,
       doctorCount: apiClinic.professionalCount,
       isPriority: false,

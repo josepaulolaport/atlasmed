@@ -1,4 +1,4 @@
-import 'models.dart' show OrderStatus;
+import 'order_status.dart';
 
 // ── Order list item ──────────────────────────────────────────
 class OrderListItem {

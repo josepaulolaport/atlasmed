@@ -40,7 +40,7 @@ class Clinic {
       city: cityParts.isNotEmpty ? cityParts.join(', ') : '',
       neighborhood: '',
       distanceKm: api.distanceKm ?? 0,
-      status: ClinicStatus.ativa,
+      status: ClinicStatus.active,
       lastVisitDays: null,
       doctorCount: api.professionalCount,
       isPriority: false,

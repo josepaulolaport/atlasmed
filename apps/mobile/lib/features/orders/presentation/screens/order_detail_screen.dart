@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
@@ -49,7 +50,7 @@ class OrderDetailScreen extends ConsumerWidget {
         );
         final total = subtotal + detail.shipping;
         final hasTracking =
-            detail.status == OrderStatus.transito && detail.tracking.isNotEmpty;
+            detail.status == OrderStatus.transit && detail.tracking.isNotEmpty;
 
         return Scaffold(
           backgroundColor: const Color(0xFFf7f8fb),
@@ -593,7 +594,7 @@ class _DeliveryBanner extends StatelessWidget {
   const _DeliveryBanner({required this.detail});
   @override
   Widget build(BuildContext context) {
-    final delivered = detail.status == OrderStatus.entregue;
+    final delivered = detail.status == OrderStatus.delivered;
     final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
     final fg = delivered ? const Color(0xFF0f8a5f) : const Color(0xFF0a2f7f);
     return Container(

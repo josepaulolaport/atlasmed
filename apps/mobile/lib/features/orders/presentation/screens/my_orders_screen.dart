@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
@@ -57,7 +57,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                             ordersAsync.valueOrNull
                                 ?.where(
                                   (order) =>
-                                      order.status == OrderStatus.transito,
+                                      order.status == OrderStatus.transit,
                                 )
                                 .length ??
                             0,
@@ -65,7 +65,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                             ordersAsync.valueOrNull
                                 ?.where(
                                   (order) =>
-                                      order.status == OrderStatus.pendente,
+                                      order.status == OrderStatus.pending,
                                 )
                                 .length ??
                             0,
@@ -73,7 +73,7 @@ class _MyOrdersScreenState extends ConsumerState<MyOrdersScreen> {
                             ordersAsync.valueOrNull
                                 ?.where(
                                   (order) =>
-                                      order.status == OrderStatus.entregue,
+                                      order.status == OrderStatus.delivered,
                                 )
                                 .length ??
                             0,

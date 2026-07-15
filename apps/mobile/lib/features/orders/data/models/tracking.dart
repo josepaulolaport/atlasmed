@@ -1,4 +1,4 @@
-import 'models.dart' show TrackingStatus;
+import 'tracking_status.dart';
 
 // ── Driver info for tracking ─────────────────────────────────
 class DriverInfo {

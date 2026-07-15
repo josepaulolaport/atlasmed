@@ -257,7 +257,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       for (final key in (state.filters['status'] ?? [])) {
         final status = ClinicStatus.values.firstWhere(
           (s) => s.name == key,
-          orElse: () => ClinicStatus.ativa,
+          orElse: () => ClinicStatus.active,
         );
         chips.add(
           FilterChipData(

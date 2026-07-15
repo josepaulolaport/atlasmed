@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/orders/data/models/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/order_status.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/order.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/selectable.dart';
@@ -27,16 +27,16 @@ final orderDetailProvider = FutureProvider.family<ApiOrderDetail, String>((
 OrderStatus _orderStatusFromApi(String status) {
   switch (status) {
     case 'SHIPPED':
-      return OrderStatus.transito;
+      return OrderStatus.transit;
     case 'DELIVERED':
-      return OrderStatus.entregue;
+      return OrderStatus.delivered;
     case 'CANCELLED':
     case 'REJECTED':
-      return OrderStatus.cancelado;
+      return OrderStatus.cancelled;
     case 'CONFIRMED':
-      return OrderStatus.separacao;
+      return OrderStatus.separating;
     default:
-      return OrderStatus.pendente;
+      return OrderStatus.pending;
   }
 }
 

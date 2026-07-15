@@ -1,55 +1,5 @@
 import 'package:flutter/material.dart';
 
-// ── Order status ─────────────────────────────────────────────
-enum OrderStatus { pendente, separacao, transito, entregue, cancelado }
-
-extension OrderStatusX on OrderStatus {
-  String get label {
-    switch (this) {
-      case OrderStatus.pendente:
-        return 'Pendente';
-      case OrderStatus.separacao:
-        return 'Em separação';
-      case OrderStatus.transito:
-        return 'Em trânsito';
-      case OrderStatus.entregue:
-        return 'Entregue';
-      case OrderStatus.cancelado:
-        return 'Cancelado';
-    }
-  }
-
-  Color get color {
-    switch (this) {
-      case OrderStatus.pendente:
-        return const Color(0xFFc6861b);
-      case OrderStatus.separacao:
-        return const Color(0xFF1e40af);
-      case OrderStatus.transito:
-        return const Color(0xFF0a2f7f);
-      case OrderStatus.entregue:
-        return const Color(0xFF16a373);
-      case OrderStatus.cancelado:
-        return const Color(0xFFb84545);
-    }
-  }
-
-  Color get bg {
-    switch (this) {
-      case OrderStatus.pendente:
-        return const Color(0x21c6861b);
-      case OrderStatus.separacao:
-        return const Color(0x1C1e40af);
-      case OrderStatus.transito:
-        return const Color(0x1A0a2f7f);
-      case OrderStatus.entregue:
-        return const Color(0x1F16a373);
-      case OrderStatus.cancelado:
-        return const Color(0x1Fb84545);
-    }
-  }
-}
-
 // ── Tracking status ──────────────────────────────────────────
 enum TrackingStatus {
   pending,
@@ -128,19 +78,4 @@ extension TrackingStatusX on TrackingStatus {
         return const Color(0xFFfee2e2);
     }
   }
-}
-
-// ── BRL formatter ───────────────────────────────────────────
-String brl(double value) {
-  final parts = value.toStringAsFixed(2).split('.');
-  final intPart = parts[0];
-  final decPart = parts[1];
-  final buf = StringBuffer();
-  int count = 0;
-  for (int i = intPart.length - 1; i >= 0; i--) {
-    if (count > 0 && count % 3 == 0) buf.write('.');
-    buf.write(intPart[i]);
-    count++;
-  }
-  return 'R\$${buf.toString().split('').reversed.join()},$decPart';
 }
