@@ -32,4 +32,37 @@ describe("ensureBucketExists", () => {
     expect(calls[0]?.[0]).toBeInstanceOf(HeadBucketCommand);
     expect(calls[1]?.[0]).toBeInstanceOf(CreateBucketCommand);
   });
+
+  test("sets location constraint when creating a bucket outside us-east-1", async () => {
+    const client = {
+      send: mock((command: unknown) => {
+        if (command instanceof HeadBucketCommand) {
+          return Promise.reject({ $metadata: { httpStatusCode: 404 } });
+        }
+        return Promise.resolve({});
+      }),
+    };
+
+    await ensureBucketExists(client, "cnes-raw", "eu-west-1");
+
+    const createCommand = client.send.mock.calls[1]?.[0];
+    expect(createCommand).toBeInstanceOf(CreateBucketCommand);
+    expect((createCommand as CreateBucketCommand).input).toMatchObject({
+      Bucket: "cnes-raw",
+      CreateBucketConfiguration: { LocationConstraint: "eu-west-1" },
+    });
+  });
+
+  test("treats concurrent bucket creation as success", async () => {
+    const client = {
+      send: mock((command: unknown) => {
+        if (command instanceof HeadBucketCommand) {
+          return Promise.reject({ $metadata: { httpStatusCode: 404 } });
+        }
+        return Promise.reject({ name: "BucketAlreadyOwnedByYou" });
+      }),
+    };
+
+    await expect(ensureBucketExists(client, "cnes-raw")).resolves.toBeUndefined();
+  });
 });
