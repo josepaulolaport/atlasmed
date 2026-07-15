@@ -7,6 +7,6 @@
     { "idx": 3, "version": "7", "when": 1752530400000, "tag": "0003_facility_type_and_services", "breakpoints": true },
     { "idx": 4, "version": "7", "when": 1752617000000, "tag": "0004_products_enrichment_and_pedidos", "breakpoints": true },
     { "idx": 5, "version": "7", "when": 1752703000000, "tag": "0005_competitor_products", "breakpoints": true },
-    { "idx": 6, "version": "7", "when": 1752789000000, "tag": "0006_facility_unit_type_subtype", "breakpoints": true },
+    { "idx": 6, "version": "7", "when": 1752789000000, "tag": "0006_facility_unit_type_subtype", "breakpoints": true }
   ]
 }
