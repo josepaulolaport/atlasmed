@@ -16,7 +16,9 @@
     "dev:mobile": "cd apps/mobile && flutter run",
     "build": "turbo build",
     "build:mobile": "cd apps/mobile && flutter build",
-    "lint": "turbo lint",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
     "typecheck": "turbo typecheck",
     "hooks:install": "bun run prepare",
     "prepare": "husky",
@@ -40,6 +42,7 @@
     "dev:cnes-worker": "turbo dev --filter=@atlasmed/cnes-ingestion-worker"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
     "@types/bun": "latest",
     "husky": "^9.1.7",
     "turbo": "^2.9.12",
