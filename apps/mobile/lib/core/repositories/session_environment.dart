@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:dartz/dartz.dart';
-import '../config/app_config.dart';
-import '../../features/auth/data/auth_repository.dart';
-import '../../repository/base_repository.dart';
-import '../../repository/domain/entities/data_source.dart';
-import '../../repository/infra/repository_http_client.dart';
-import '../../repository/repositories/http_repository.dart';
-import '../../features/auth/data/models/session.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/auth_repository.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
 import 'mixins/session_environment_mixin.dart';
 
 /// Authentication state emitted by [SessionEnvironment].

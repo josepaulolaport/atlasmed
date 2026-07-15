@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import '../../../repository/domain/exceptions/network_unavailable_exception.dart';
-import '../../../repository/external/platform_http_client.dart';
-import '../../../repository/infra/repository_http_client.dart';
-import '../../../repository/repositories/http_repository.dart';
-import '../session_environment.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/network_unavailable_exception.dart';
+import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
 
 /// Thrown when a session expires and needs refresh.
 class SessionExpiredException implements Exception {

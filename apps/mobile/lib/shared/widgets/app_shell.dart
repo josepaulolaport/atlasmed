@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/providers/session_provider.dart';
-import '../../core/repositories/session_environment.dart';
-import '../../features/auth/data/models/session.dart';
-import '../../repository/repository_flutter.dart';
+import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 // ======================================================================
 // AppShellScreen — Scaffold wrapper with shared navigation drawer.
@@ -308,7 +308,7 @@ class AtlasDrawer extends ConsumerWidget {
   }
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }

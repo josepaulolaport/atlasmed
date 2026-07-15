@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:io' show SocketException;
 
-import '../base_repository.dart';
-import '../domain/exceptions/network_unavailable_exception.dart';
-import '../domain/exceptions/unexpected_status_code_exception.dart';
-import '../external/platform_http_client.dart';
-import '../infra/repository_http_client.dart';
-import '../infra/repository_logger.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/network_unavailable_exception.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
+import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_logger.dart';
 
 /// {@template http_repository}
 /// A `Repository` that fetches data from an HTTP endpoint.

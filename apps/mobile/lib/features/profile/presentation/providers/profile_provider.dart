@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/models.dart';
-import '../../data/mock_profile_repository.dart';
-import '../../data/profile_repository.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/mock_profile_repository.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/profile_repository.dart';
 
-import '../../../../core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
 
 // ── Repository provider ─────────────────────────────────────
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
@@ -31,7 +31,7 @@ final sessionProfileProvider = Provider<UserProfile?>((ref) {
 });
 
 String _initials(String name) {
-  final parts = name.trim().split(RegExp(r'\s+'));
+  final parts = name.trim().split(' ');
   if (parts.isEmpty || parts.first.isEmpty) return '';
   if (parts.length >= 2) {
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();

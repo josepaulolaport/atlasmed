@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../shared/theme/app_theme.dart';
+import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 
 /// Deep-blue gradient mesh with soft animated orbs.
 class BlueBackdrop extends StatelessWidget {

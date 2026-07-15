@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models.dart';
-import '../../data/mock_orders_repository.dart';
-import '../widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   final String orderId;
@@ -627,7 +627,7 @@ class _AvatarInitials extends StatelessWidget {
   const _AvatarInitials({required this.name});
   @override
   Widget build(BuildContext context) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(' ');
     final initials = parts.length >= 2
         ? '${parts.first[0]}${parts.last[0]}'
         : parts.first.substring(0, 1);

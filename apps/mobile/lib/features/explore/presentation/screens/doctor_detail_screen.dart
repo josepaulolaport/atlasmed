@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/doctor_detail.dart';
-import '../providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
 // ======================================================================
 // DoctorDetailScreen — full doctor profile with multiple sections

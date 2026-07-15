@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock_orders_repository.dart';
-import '../../data/models.dart';
-import '../widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -699,7 +699,7 @@ class _DriverCard extends StatelessWidget {
   const _DriverCard({required this.driver});
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }

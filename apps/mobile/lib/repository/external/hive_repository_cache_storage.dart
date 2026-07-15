@@ -1,4 +1,4 @@
-import '../infra/repository_cache_storage.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:hive/hive.dart';
 import 'package:meta/meta.dart';
 

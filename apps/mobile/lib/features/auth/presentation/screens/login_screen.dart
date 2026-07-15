@@ -2,16 +2,16 @@ import 'package:another_flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/providers/session_provider.dart';
-import '../../../../core/repositories/session_environment.dart';
-import '../../../../repository/repository_flutter.dart';
-import '../../data/auth_repository.dart';
-import '../../data/models/session.dart';
-import '../widgets/app_logo.dart';
-import '../widgets/blue_backdrop.dart';
-import '../widgets/glass_input.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/terms_footer.dart';
+import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/auth_repository.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_logo.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/glass_input.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/terms_footer.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback onForgotPassword;

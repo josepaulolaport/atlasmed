@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-import '../../features/auth/data/models/session.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
 import 'session_environment.dart';
 
 class SessionListenable extends ChangeNotifier {

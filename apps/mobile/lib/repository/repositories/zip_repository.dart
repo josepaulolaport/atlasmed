@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../base_repository.dart';
-import '../domain/entities/repository_state.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/entities/repository_state.dart';
 import 'package:rxdart/rxdart.dart';
 
 /// {@template zip_repository}
@@ -44,12 +44,13 @@ class ZipRepository<Data> extends BaseRepository<Data> {
   }) : _zipper = zipper,
        _name = name,
        super() {
-    _combinedSubscription = CombineLatestStream(
-      repositories.map((e) => e.stream.startWith(e.currentState)),
-      _zipperInternal,
-    ).listen((data) {
-      emit(data: data);
-    });
+    _combinedSubscription =
+        CombineLatestStream(
+          repositories.map((e) => e.stream.startWith(e.currentState)),
+          _zipperInternal,
+        ).listen((data) {
+          emit(data: data);
+        });
   }
 
   final String? _name;

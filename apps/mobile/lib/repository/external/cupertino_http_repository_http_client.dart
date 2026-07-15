@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import '../base_repository.dart';
-import '../domain/exceptions/network_unavailable_exception.dart';
-import '../infra/repository_http_client.dart';
-import '../infra/repository_logger.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/network_unavailable_exception.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_logger.dart';
 import 'package:cupertino_http/cupertino_http.dart' as cupertino;
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;

@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/auth/data/models/user.dart';
-import '../repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
+import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
 
 final sessionProvider = Provider<SessionEnvironment>((ref) {
   return SessionEnvironment.instance;

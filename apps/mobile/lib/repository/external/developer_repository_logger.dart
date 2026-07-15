@@ -1,6 +1,6 @@
 import 'dart:developer';
 
-import '../infra/repository_logger.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_logger.dart';
 
 /// {@template default_repository_logger}
 /// A [RepositoryLogger] that uses `dart:developer` to log messages.

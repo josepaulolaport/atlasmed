@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/models.dart';
-import '../../data/mock_orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/mock_orders_repository.dart';
 
 // ── Cart state ───────────────────────────────────────────────
 class CartState {

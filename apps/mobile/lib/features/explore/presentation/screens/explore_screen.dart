@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../shared/widgets/app_shell.dart';
-import '../../data/models.dart';
-import '../providers/explore_provider.dart';
-import '../widgets/clinic_row.dart';
-import '../widgets/doctor_row.dart';
-import '../widgets/empty_state.dart';
-import '../widgets/filter_sheet.dart';
-import '../widgets/search_bar_widget.dart';
-import '../widgets/skeleton_row.dart';
-import '../widgets/sort_row.dart';
-import '../widgets/sort_sheet.dart';
-import '../widgets/tab_toggle.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skeleton_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -58,6 +58,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             Column(
               children: [
                 const AtlasTopBar(page: 'Explorar'),
+                const SizedBox(height: 16),
                 _buildSearchBar(state, notifier, filterCount, isClinic),
                 TabToggle(
                   value: state.activeTab,

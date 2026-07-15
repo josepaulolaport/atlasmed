@@ -1,13 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/providers/session_provider.dart';
-import '../../data/auth_repository.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/code_input.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/blue_backdrop.dart';
-import '../widgets/app_back_button.dart';
+import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/auth_repository.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/code_input.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_back_button.dart';
 
 /// Forgot password — step 2: 6-digit code verification.
 class ForgotCodeScreen extends ConsumerStatefulWidget {

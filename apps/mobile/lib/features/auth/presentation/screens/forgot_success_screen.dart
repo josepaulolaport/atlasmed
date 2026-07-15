@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/blue_backdrop.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
 
 /// Forgot password — success screen shown after password is reset.
 class ForgotSuccessScreen extends StatefulWidget {

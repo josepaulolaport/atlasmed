@@ -1,4 +1,4 @@
-import '../external/developer_repository_logger.dart';
+import 'package:atlasmed_mobile_app/repository/external/developer_repository_logger.dart';
 
 /// {@template repository_logging}
 /// Abstract class for logging in repositories.

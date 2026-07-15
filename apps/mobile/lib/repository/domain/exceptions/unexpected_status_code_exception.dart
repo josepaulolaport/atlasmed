@@ -1,4 +1,4 @@
-import '../../infra/repository_http_client.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 
 /// {@template http_repository}
 /// Exception thrown when the endpoint returns a unsuccessful status code.

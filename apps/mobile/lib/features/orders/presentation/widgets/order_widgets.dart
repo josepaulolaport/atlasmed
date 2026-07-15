@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/models.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models.dart';
 
 // ── PStatusChip ──────────────────────────────────────────────
 class PStatusChip extends StatelessWidget {
