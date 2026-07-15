@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
 // ======================================================================
@@ -53,7 +52,7 @@ class ClinicDetailScreen extends ConsumerWidget {
 
   Widget _buildHeaderShimmer() {
     return Container(
-      height: 200,
+      height: 280,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -111,52 +110,46 @@ class _ClinicDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _ClinicHeader(detail: detail),
-            _QuickActions(detail: detail),
-            _SuggestEditBanner(),
-            _ClinicContextCard(detail: detail),
-            _AddToRouteButton(),
-            // _PhotosButton(),
-            if (detail.signals.isNotEmpty)
-              _ClinicSignals(signals: detail.signals),
-            _SectionHeader(title: 'Saúde da clínica'),
-            _ClinicHealth(detail: detail),
-            if (detail.productPerformance.isNotEmpty) ...[
-              _SectionHeader(title: 'Produtos'),
-              _ClinicProducts(items: detail.productPerformance),
-            ],
-            if (detail.payers.isNotEmpty) ...[
-              _SectionHeader(title: 'Convênios'),
-              _ClinicPayers(items: detail.payers),
-            ],
-            if (detail.nearbyClinics.isNotEmpty) ...[
-              _SectionHeader(title: 'Clínicas próximas'),
-              _NearbyClinics(items: detail.nearbyClinics),
-            ],
-            if (detail.visits.isNotEmpty) ...[
-              _SectionHeader(title: 'Histórico de visitas'),
-              _ClinicVisits(visits: detail.visits),
-            ],
-            if (detail.clinicDoctors.isNotEmpty) ...[
-              _SectionHeader(title: 'Médicos'),
-              _ClinicDoctors(doctors: detail.clinicDoctors),
-            ],
-            if (detail.fieldNotes != null && detail.fieldNotes!.isNotEmpty) ...[
-              _SectionHeader(title: 'Observações de campo'),
-              _ClinicNotes(notes: detail.fieldNotes!),
-            ],
-            _SectionHeader(title: 'Dados administrativos'),
-            _ClinicAdmin(detail: detail),
-            const SizedBox(height: 32),
-          ],
-        ),
-      ),
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.only(bottom: 32),
+      children: [
+        _ClinicHeader(detail: detail),
+        _QuickActions(detail: detail),
+        _SuggestEditBanner(),
+        _ClinicContextCard(detail: detail),
+        _AddToRouteButton(),
+        // _PhotosButton(),
+        if (detail.signals.isNotEmpty) _ClinicSignals(signals: detail.signals),
+        _SectionHeader(title: 'Saúde da clínica'),
+        _ClinicHealth(detail: detail),
+        if (detail.productPerformance.isNotEmpty) ...[
+          _SectionHeader(title: 'Produtos'),
+          _ClinicProducts(items: detail.productPerformance),
+        ],
+        if (detail.payers.isNotEmpty) ...[
+          _SectionHeader(title: 'Convênios'),
+          _ClinicPayers(items: detail.payers),
+        ],
+        if (detail.nearbyClinics.isNotEmpty) ...[
+          _SectionHeader(title: 'Clínicas próximas'),
+          _NearbyClinics(items: detail.nearbyClinics),
+        ],
+        if (detail.visits.isNotEmpty) ...[
+          _SectionHeader(title: 'Histórico de visitas'),
+          _ClinicVisits(visits: detail.visits),
+        ],
+        if (detail.clinicDoctors.isNotEmpty) ...[
+          _SectionHeader(title: 'Médicos'),
+          _ClinicDoctors(doctors: detail.clinicDoctors),
+        ],
+        if (detail.fieldNotes != null && detail.fieldNotes!.isNotEmpty) ...[
+          _SectionHeader(title: 'Observações de campo'),
+          _ClinicNotes(notes: detail.fieldNotes!),
+        ],
+        _SectionHeader(title: 'Dados administrativos'),
+        _ClinicAdmin(detail: detail),
+      ],
     );
   }
 }
@@ -196,227 +189,174 @@ class _ClinicHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
+
     return Container(
+      width: double.infinity,
+      padding: EdgeInsets.fromLTRB(4, top + 4, 4, 24),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1e40af), Color(0xFF2563eb), Color(0xFF3b82f6)],
+          colors: [Color(0xFF1e40af), Color(0xFF2563eb)],
+        ),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
       ),
-      child: Stack(
+      child: Column(
         children: [
-          Positioned(
-            top: -60,
-            right: -60,
-            child: Container(
-              width: 220,
-              height: 220,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [Color(0x593bf6ff), Colors.transparent],
+          // Top bar — back + kebab menu
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_rounded,
+                    color: Colors.white,
+                  ),
+                  onPressed: () => context.pop(),
                 ),
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.white,
+                  ),
+                  color: Colors.white,
+                  onSelected: (value) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('$value — em breve'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(
+                      value: 'Editar',
+                      child: ListTile(
+                        tileColor: Colors.white,
+                        leading: Icon(Icons.edit_rounded),
+                        title: Text('Editar'),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'Compartilhar',
+                      child: ListTile(
+                        tileColor: Colors.white,
+                        leading: Icon(Icons.share_rounded),
+                        title: Text('Compartilhar'),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'Reportar',
+                      child: ListTile(
+                        tileColor: Colors.white,
+                        leading: Icon(Icons.flag_rounded),
+                        title: Text('Reportar problema'),
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Avatar
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.local_hospital_rounded,
+                size: 36,
+                color: Color(0xFF1e40af),
               ),
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 14),
+          // Name
+          Text(
+            detail.name,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          // Status + distance row
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _GlassButton(
-                      child: const Icon(
-                        Icons.arrow_back_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      onTap: () => context.pop(),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.22),
-                          ),
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
-                        child: const Icon(
-                          Icons.more_horiz_rounded,
-                          color: Colors.white,
-                          size: 18,
-                        ),
-                      ),
-                      color: Colors.white,
-                      onSelected: (value) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('$value — em breve'),
-                            behavior: SnackBarBehavior.floating,
-                          ),
-                        );
-                      },
-                      itemBuilder: (_) => const [
-                        PopupMenuItem(
-                          value: 'Editar',
-                          child: ListTile(
-                            leading: Icon(Icons.edit_rounded),
-                            title: Text('Editar'),
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'Compartilhar',
-                          child: ListTile(
-                            leading: Icon(Icons.share_rounded),
-                            title: Text('Compartilhar'),
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'Reportar',
-                          child: ListTile(
-                            leading: Icon(Icons.flag_rounded),
-                            title: Text('Reportar problema'),
-                            dense: true,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              _StatusBadge(status: detail.status),
+              const SizedBox(width: 10),
+              Container(
+                width: 4,
+                height: 4,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white38,
                 ),
               ),
-              const SizedBox(height: 14),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 72,
-                      height: 72,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0xFFdbeafe),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          width: 3,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.22),
-                            blurRadius: 18,
-                            offset: const Offset(0, 6),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.local_hospital_rounded,
-                        size: 34,
-                        color: Color(0xFF1e40af),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _StatusBadge(
-                            status: detail.status,
-                            segment: detail.segment,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            detail.name,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.5,
-                              height: 1.15,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            detail.streetAddress != null
-                                ? '${detail.streetAddress} · ${detail.neighborhood}'
-                                : '${detail.neighborhood}, ${detail.city}',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.white.withValues(alpha: 0.78),
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_rounded,
-                                size: 14,
-                                color: Colors.white.withValues(alpha: 0.72),
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                '${detail.distanceKm.toStringAsFixed(1)} km',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: Colors.white.withValues(alpha: 0.72),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (detail.lastVisitDays != null) ...[
-                            const SizedBox(height: 8),
-                            _InteractionRibbon(days: detail.lastVisitDays!),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(width: 10),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.location_on_rounded,
+                    size: 14,
+                    color: Colors.white70,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    '${detail.distanceKm.toStringAsFixed(1)} km',
+                    style: const TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
+                ],
               ),
-              const SizedBox(height: 22),
             ],
           ),
+          const SizedBox(height: 6),
+          // Address
+          if (detail.streetAddress != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40),
+              child: Text(
+                '${detail.streetAddress} — ${detail.neighborhood}',
+                style: const TextStyle(fontSize: 12, color: Colors.white60),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          const SizedBox(height: 10),
+          // Last interaction ribbon
+          if (detail.lastVisitDays != null)
+            _InteractionRibbon(days: detail.lastVisitDays!),
         ],
-      ),
-    );
-  }
-}
-
-class _GlassButton extends StatelessWidget {
-  final Widget child;
-  final VoidCallback onTap;
-
-  const _GlassButton({required this.child, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(19),
-        onTap: onTap,
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
-            color: Colors.white.withValues(alpha: 0.12),
-          ),
-          child: child,
-        ),
       ),
     );
   }
@@ -424,48 +364,24 @@ class _GlassButton extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   final ClinicStatus status;
-  final String? segment;
-
-  const _StatusBadge({required this.status, this.segment});
+  const _StatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
-    final label = segment == null || segment!.isEmpty
-        ? status.label
-        : '${status.label} · $segment';
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.18),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+        color: status.color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: status.color,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -482,7 +398,7 @@ class _InteractionRibbon extends StatelessWidget {
     final text = days == 0 ? 'Hoje' : 'Há $days dia${days > 1 ? 's' : ''}';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
         color: bg.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(20),
@@ -492,14 +408,14 @@ class _InteractionRibbon extends StatelessWidget {
         children: [
           Icon(
             Icons.access_time_rounded,
-            size: 13,
+            size: 14,
             color: Colors.white.withValues(alpha: 0.9),
           ),
-          const SizedBox(width: 5),
+          const SizedBox(width: 6),
           Text(
             'Última interação: $text',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 11.5,
               fontWeight: FontWeight.w500,
               color: Colors.white.withValues(alpha: 0.95),
             ),
@@ -521,40 +437,31 @@ class _QuickActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      transform: Matrix4.translationValues(0, -14, 0),
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFedeff3)),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0f1729).withValues(alpha: 0.08),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 8,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _ActionButton(
             icon: Icons.phone_rounded,
             label: 'Ligar',
-            onTap: () => launchContactUrl(
-              context,
-              url: callUrl(detail.phone),
-              contactLabel: 'telefone',
-            ),
+            onTap: () {},
           ),
           _ActionButton(
             icon: Icons.chat_rounded,
             label: 'WhatsApp',
-            onTap: () => launchContactUrl(
-              context,
-              url: whatsappUrl(detail.whatsapp),
-              contactLabel: 'WhatsApp',
-            ),
+            onTap: () {},
           ),
           _ActionButton(
             icon: Icons.directions_rounded,
@@ -590,34 +497,33 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Column(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Color(0xFFeef4ff),
-                ),
-                child: Icon(icon, size: 18, color: const Color(0xFF1e40af)),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFFeef4ff),
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(height: 5),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.1,
-                  color: Color(0xFF0f1729),
-                ),
+              child: Icon(icon, size: 20, color: const Color(0xFF1e40af)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF4b5563),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
