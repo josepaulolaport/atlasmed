@@ -106,7 +106,7 @@ jobs:
           CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
         run: |
           for attempt in 1 2; do
-            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
@@ -115,3 +115,12 @@ jobs:
             fi
           done
           exit 1
+
+      - name: Remove legacy MinIO init service
+        env:
+          UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+        run: |
+          set -euo pipefail
+          if uc inspect atlasmed-minio-init >/dev/null 2>&1; then
+            uc rm atlasmed-minio-init
+          fi
