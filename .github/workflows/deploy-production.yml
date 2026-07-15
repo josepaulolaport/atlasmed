@@ -59,10 +59,16 @@ jobs:
         working-directory: ./apps/mobile
 
       - name: Analisar código
-        run: bun run mobile:lint
+        run: fvm dart format --set-exit-if-changed .
+        working-directory: ./apps/mobile
+
+      - name: Verificar types
+        run: fvm flutter analyze --dart-define-from-file=config.development.json
+        working-directory: ./apps/mobile
 
       - name: Executar testes
-        run: bun run mobile:test
+        run: fvm flutter test --dart-define-from-file=config.development.json
+        working-directory: ./apps/mobile
 
   deploy_web_production:
     name: Deploy Web (Produção)
@@ -94,7 +100,7 @@ jobs:
         working-directory: ./apps/mobile
 
       - name: Build Flutter Web (Release)
-        run: fvm flutter build web --release
+        run: fvm flutter build web --release --dart-define-from-file=config.production.json
         working-directory: ./apps/mobile
 
       - name: Instalar Firebase CLI
