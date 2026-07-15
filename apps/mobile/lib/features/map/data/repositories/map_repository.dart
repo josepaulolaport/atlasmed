@@ -14,20 +14,6 @@ abstract interface class CurrentLocationService {
   Future<MapCoordinate> getCurrentLocation();
 }
 
-/// Map-specific API seam. Facility responses must already be scope-filtered by
-/// the backend; the mobile client never attempts to widen a territory scope.
-class MapData {
-  final MapCoordinate userLocation;
-  final TerritoryGeometry? territory;
-  final List<MapFacility> facilities;
-
-  const MapData({
-    required this.userLocation,
-    required this.territory,
-    required this.facilities,
-  });
-}
-
 // ── Concrete implementations ───────────────────────────────────
 
 /// Uses [LocationService] to resolve the device position once.
