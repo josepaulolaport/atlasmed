@@ -11,7 +11,7 @@ on:
       - 'packages/**'
       - 'deploy/**'
       - '.dockerignore'
-      - '.github/workflows/deploy-backend-production.yml'
+      - '.github/workflows/deploy-services-to-cluster.yml'
       - '.github/workflows/deploy-infra.yml'
       - '.github/workflows/validate-production-env.yml'
       - 'bun.lock'
