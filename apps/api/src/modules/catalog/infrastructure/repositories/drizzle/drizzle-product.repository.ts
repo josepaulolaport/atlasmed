@@ -132,17 +132,7 @@ export class DrizzleProductRepository implements ProductRepository {
     return db.transaction(async (tx) => {
       const [product] = await tx
         .update(products)
-// Only set updatedAt when product data actually changes
-const hasProductChanges = Object.keys(cleanData).length > 0;
-const setData = hasProductChanges
-  ? { ...cleanData, updatedAt: new Date() }
-  : cleanData;
-
-const [product] = await tx
-  .update(products)
-  .set(setData)
-  .where(eq(products.id, id))
-  .returning(productColumns);
+        .set({ ...cleanData, updatedAt: new Date() })
         .where(eq(products.id, id))
         .returning(productColumns);
       if (!product) throw new Error("Product not found");
@@ -158,22 +148,8 @@ const [product] = await tx
         return mapProduct(product, uniqueSectorIds);
       }
 
-// Option 1: Accept a transaction parameter in fetchSectorIds
-async function fetchSectorIds(
-  productIds: string[],
-  tx?: typeof db
-): Promise<Map<string, string[]>> {
-  if (productIds.length === 0) return new Map();
-  const conn = tx ?? db;
-  const rows = await conn
-    .select({ productId: productSectors.productId, sectorId: productSectors.sectorId })
-    .from(productSectors)
-    .where(inArray(productSectors.productId, productIds));
-  // ...
-}
-
-// Then in update():
-const sectorMap = await fetchSectorIds([id], tx);
+      const sectorMap = await fetchSectorIds([id]);
+      return mapProduct(product, sectorMap.get(id) ?? []);
     });
   }
 }
