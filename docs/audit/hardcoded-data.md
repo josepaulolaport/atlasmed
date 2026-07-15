@@ -1,101 +1,189 @@
-# Mobile App — Hardcoded/Mock Data Audit
+# Hardcoded/Mock Data Audit — Mobile App Screens & Widgets
 
-**Date:** 2026-07-15  
-**Scope:** All `*.dart` files under `apps/mobile/lib/features/` and `apps/mobile/lib/core/`  
+**Scope:** `apps/mobile/lib/features/` — all feature directories (auth, dashboard, explore, location, map, orders, presentations, profile, visits).
+
+**Date:** 2026-07-09
+
+**Method:** Each feature directory was scanned file-by-file for hardcoded data (string literals, const lists, `Future.delayed` in providers/repos, `Mock*` references, inline-constructed data in `build()`). Findings were cross-referenced against available API endpoints in `apps/api/src/modules/`.
+
+---
 
 ## Summary
 
-| Category | Count |
+| Status | Count |
 |---|---|
-| Fully stubbed screens ("Em breve") | 3 |
-| Partially hardcoded detail data (fields defaulted when API has them) | 2 screens + 2 models |
-| Hardcoded fallback strings shown to user | 3 screens |
-| Empty clinic/doctor selections with TODO to wire | 1 screen |
-| Mock repository references | 0 |
-| `Future.delayed` simulating API calls | 0 |
+| ✅ Fully wired to real API | **5 features** (auth, explore, map, profile, visits) |
+| ⚠️ Has mock/hardcoded data | **1 feature** (orders — 4 screens/widgets) |
+| 🚧 Placeholder stub (no data) | **2 screens** (dashboard, presentations) |
+| 🗑️ Dead/unused model files | **2 files** (activity.dart, support.dart) |
 
 ---
 
-## Screens
+## Per-Feature Detail
 
-### Fully stubbed screens
+### Auth — ✅ Fully Real API
 
-| Screen | Hardcoded Data | Current Source | API Available? | Recommendation |
+All 7 screens and 6 widgets are wired via `SessionEnvironment` → real `RepositoryHttpClient`. No mock repositories, no `Future.delayed` returning fake data.
+
+| Screen | Data | Current source | API available? | Recommendation |
 |---|---|---|---|---|
-| `dashboard/presentation/screens/dashboard_screen.dart` | Full stub — "Em breve" placeholder with icon. No data loading. | Inline widget | ❌ | Needs a dashboard/performance summary endpoint |
-| `presentations/presentation/screens/presentations_screen.dart` | Full stub — "Em breve" placeholder with icon. No data loading. | Inline widget | ❌ | Needs presentations endpoint or may be deprecated |
-| `orders/presentation/screens/orders_screen.dart` | Full stub — "Em breve" placeholder with icon. **Does NOT delegate to `MyOrdersScreen`.** There is a separate `MyOrdersScreen` that is properly wired, but this stub appears to be the top-level orders tab. | Inline widget | ❌ (top-level stub) | Replace with navigation to `MyOrdersScreen` or remove if unused |
-
-### Partially hardcoded detail screens
-
-| Screen | Hardcoded Data | Current Source | API Available? | Recommendation |
-|---|---|---|---|---|
-| `explore/presentation/screens/clinic_detail_screen.dart` | Uses `ClinicDetail` from `clinicDetailProvider`; the provider (`_fetchClinicDetail()` in `explore_provider.dart`) maps from `ApiClinic` but **leaves many fields as defaults**: `neighborhood: ''`, `status: ClinicStatus.active`, `lastVisitDays: null`, `fieldNotes: null`, `isPriority: false`, `products: []`, `region: null`, `segment: null`, `consultantName: null`. The API response (`ApiClinic` from `GET /api/v1/facilities/:id`) contains `city`, `state`, `phone`, `email`, `website`, `streetAddress`, `cnpj` but **lacks** most detail fields (status, LTV, avgTicket, signals, payers, visits, doctors, productPerformance, nearbyClinics). | Mapped from real API via `ApiClinic` | ⚠️ Partial | Expand backend `/api/v1/facilities/:id` endpoint to return all fields consumed by `ClinicDetail`, then map them in `_fetchClinicDetail()` |
-| `explore/presentation/screens/doctor_detail_screen.dart` | Uses `DoctorDetail` from `doctorDetailProvider`; the provider (`_fetchDoctorDetail()` in `explore_provider.dart`) maps from `ApiDoctor` but **leaves most fields as null/defaults**: `hue: 0`, `phone: null`, `email: null`, `whatsapp: null`, `birthday: null`, `faculty: null`, `residency: null`, `team: null`, `interests: null`, `language: null`, `statusLabel: ''`, `relationshipLabel: ''`, `notes: const []`, `clinics: const []`, `gallery: const []`, `signals: const []`, `prescribing: const []`, `visits: const []`. The API (`ApiDoctor` from `GET /api/v1/professionals/:id`) only has `id`, `firstName`, `lastName`, `fullName`, `specialty`, `crmNumber`, `crmState`, `facilityIds`, `distanceKm`. | Mapped from real API via `ApiDoctor` | ⚠️ Partial | Expand backend `/api/v1/professionals/:id` endpoint with all DoctorDetail fields, then map them in `_fetchDoctorDetail()` |
-| `profile/presentation/screens/profile_screen.dart` | The `region` display comes from `UserProfile.region` which is hardcoded as `'Sem território definido'` in both `profileProvider` and `sessionProfileProvider`. Territory name is never resolved from the API. | Hardcoded string in provider | ⚠️ UserAssignments has territory IDs only | Needs territory name resolution in assignments API or a separate territory/name endpoint |
-| `map/presentation/screens/map_screen.dart` | The `MapRepository.fromJson()` (line 64-68) returns a dummy `MapData` with `latitude: 0, longitude: 0`. This method is never called in practice because the provider uses `getAssignedTerritory()` and `getNearbyFacilities()` directly. Not a runtime bug, but misleading. | Dummy data in unused `fromJson()` | ✅ Properly wired | Remove the misleading dummy `fromJson()` or make it throw `UnimplementedError` |
-
-### Order screens with hardcoded fallback data
-
-| Screen | Hardcoded Data | Current Source | API Available? | Recommendation |
-|---|---|---|---|---|
-| `orders/presentation/screens/order_tracking_screen.dart` | `_mapToTrackingOrder()` produces: `estimatedDelivery: ''`, clinic `address: ''`, item `unit: ''`, synthetic timeline with **only 2 generic events** (confirmed + last update), `driver: null`. | Mapped from real API (`ApiOrderDetail`) | ✅ Real `GET /api/v1/orders/:id` endpoint exists | Backend should provide `estimatedDelivery`, clinic address, unit, timeline events, and driver info. Until then these are empty fallbacks |
-| `orders/presentation/screens/order_success_screen.dart` | Hardcoded fallbacks: clinic name `'Clínica Santa Mônica'`, doctor name `'Dra. Mariana Silva'`, order ID `'PED-2042'`, delivery estimate `'25 a 29 de abril de 2026'`. The `_HeroSection` shows `'PED-2042'` as literal. | Local cart state + hardcoded fallbacks | ✅ Cart state is the source | Use the actual order ID returned by the create-order API response; show real delivery ETA; remove fake names |
-| `orders/presentation/screens/checkout_screen.dart` | Clinic selection sheet has **empty list** (`...<SelectableClinic>[]`). Doctor selection sheet is **empty** (`final doctors = <SelectableDoctor>[]`). Source comments acknowledge: `// TODO: fetch real clinic list via FacilitiesRepository` and `// TODO: fetch real doctor list via ProfessionalsRepository filtered by clinicId`. | Inline `[]` | ✅ `GET /api/v1/facilities` and `GET /api/v1/professionals?facilityId=...` exist | Wire clinic picker to `FacilitiesRepository` and doctor picker to `ProfessionalsRepository` |
+| `login_screen.dart` | Auth session | `SessionEnvironment.login()` — real API `POST /api/v1/session/` | ✅ | None needed |
+| `splash_screen.dart` | N/A — pure animation | N/A | N/A | None needed |
+| `forgot_email_screen.dart` | Password reset request | `sessionProvider.requestPasswordReset()` — real API `POST /auth/forgot-password` | ⚠️ Route mismatch: API has `POST /api/v1/password-reset/request` | Align mobile endpoint to `/api/v1/password-reset/request` |
+| `forgot_code_screen.dart` | Verify reset code | `sessionProvider.verifyResetCode()` — real API `POST /auth/verify-reset-code` | ❌ No matching endpoint in API | Needs verification endpoint or map to existing flow |
+| `forgot_new_password_screen.dart` | Reset password | `sessionProvider.resetPassword()` — real API `POST /auth/reset-password` | ⚠️ Route mismatch: API has `POST /api/v1/password-reset/confirm` | Align mobile endpoint to `/api/v1/password-reset/confirm` |
+| `forgot_success_screen.dart` | N/A — confirmation UI | N/A | N/A | None needed |
 
 ---
 
-## Model / Data files
+### Dashboard — 🚧 Placeholder Stub
 
-| File | Hardcoded Data | Current Source | API Available? | Recommendation |
+| Screen | Data | Current source | API available? | Recommendation |
 |---|---|---|---|---|
-| `features/explore/data/models/clinic.dart` | `Clinic.fromApi()` defaults: `neighborhood: ''`, `status: ClinicStatus.active`, `lastVisitDays: null`, `isPriority: false`, `products: []`, `distanceKm: 0` when API has null. `ApiClinic` has `city`, `state`, `consultantName`, `distanceKm`, `services`, `phone`, `email`, `website`, `streetAddress`, `cnpj` but many UI-needed fields (status, lastVisitDays, etc.) are **not present in the API response**. | `ApiClinic` → `Clinic` mapping | ⚠️ API response missing fields | Add `status`, `lastVisitDays`, `isPriority`, `products`, `distanceKm`, `neighborhood` to `ApiClinic` response, then map them |
-| `features/explore/data/models/doctor.dart` | `Doctor.fromApi()` defaults: `hue: 0`, `specialty: ''` (when API has null), `primaryClinic: ''`, `distanceKm: 0` (when API has null), `isPriority: false`. | `ApiDoctor` → `Doctor` mapping | ⚠️ API response missing fields | Add `primaryClinicName`, `isPriority`, `distanceKm`, `hue` to `ApiDoctor` response, then map them |
-| `features/profile/data/models/user_profile.dart` | `UserProfile` model defaults: `since = ''`, `avatarHue = 220`. `region` field has no default but **all providers set it to hardcoded `'Sem território definido'`**. | Model + Provider | ⚠️ User/assignments API has territory IDs but no name | Add territory name to assignments API response; resolve real name in provider |
-| `features/profile/data/models/territory.dart` | `TerritoryStats` defaults: `coverageWeek = 'esta semana'`. This default **is overwritten** in `territoryStatsProvider` with real computed dates (`'$day/$month – $day/$month'`). Not a user-facing issue. | Provider overwrites default | ✅ | Acceptable — the default is never exposed |
-| `features/profile/presentation/providers/profile_provider.dart` | Both `profileProvider` and `sessionProfileProvider` hardcode `region: 'Sem território definido'` directly when constructing `UserProfile`. The `UserAssignments` API response has territory **IDs** but not names. | Inline string | ⚠️ API has IDs, not names | Backend should include territory `name` alongside `territoryId` in the assignments response |
-| `features/orders/data/models/order.dart` | `OrderListItem` and `OrderDetail` models have **no `fromJson` factory**. They are constructed manually in `orders_provider.dart`, where API mapping is incomplete: `clinicAddress: ''`, `doctorCrm: ''`, `invoice: ''`, `tracking: ''`, `estimate: ''`, `timeline: [single synthetic step]`, `paymentMethod: order.notes ?? 'Informação não disponível'`. | Manual construction in provider | ✅ API response (`ApiOrderDetail`) has real data | Map all available fields from `ApiOrderDetail` to `OrderDetail`; add missing fields to API if needed |
-| `features/orders/data/models/tracking.dart` | `TrackingOrderDetail`, `TrackingOrderItem`, `TrackingClinic`, `DriverInfo`, `PriceSuggestion` have **no `fromJson` factory**. They are constructed manually in `order_tracking_screen.dart` where many fields are left empty/zero. | Manual construction | ⚠️ Partially available | Add proper `fromJson` factories and map all available fields from the API response |
-| `features/orders/data/models/cart.dart` | `Product` model (line 4 comment: `// ── Product model (mock) ─────────────────────`). This model is **duplicated** from `CatalogProduct` — it has fewer fields and is only used to display items in order detail screens. | Inline model | ✅ | Replace `Product` usage with `CatalogProduct` from the API |
-| `core/user/models/user.dart` | None — proper `fromJson`/`toJson` with no hardcoded values. Acceptable. | API | ✅ | No action needed |
-| `core/session/repositories/session_environment.dart` | None — properly wired to `POST /api/v1/session/`, `PUT /api/v1/session/`, `DELETE /api/v1/session/`. Acceptable. | API | ✅ | No action needed |
+| `dashboard_screen.dart` | Entire screen is hardcoded "Em breve" stub | Inline string literals, color constants, icon | No dashboard endpoint exists | Design and implement dashboard API + wire mobile |
 
 ---
 
-## Files verified as clean (no hardcoded data)
+### Explore — ✅ Fully Real API
 
-These were checked and found to be properly wired to real APIs or pure UI/presentation:
+All 3 screens and 10 widgets are wired via `ClinicsRepository`, `DoctorsRepository`, `ProfessionalNotesRepository` → real API endpoints (`GET /api/v1/facilities`, `GET /api/v1/professionals`, `GET /api/v1/professionals/:id/notes`). No mock data.
 
-- `auth/presentation/screens/login_screen.dart` — uses `SessionEnvironment.login()`
-- `auth/presentation/screens/forgot_email_screen.dart` — uses `SessionEnvironment.requestPasswordReset()`
-- `auth/presentation/screens/forgot_code_screen.dart` — uses `SessionEnvironment.verifyResetCode()`
-- `auth/presentation/screens/forgot_new_password_screen.dart` — uses `SessionEnvironment.resetPassword()`
-- `auth/presentation/screens/forgot_success_screen.dart` — pure UI, no data
-- `auth/presentation/screens/splash_screen.dart` — pure UI, no data
-- `auth/presentation/providers/auth_provider.dart` — local state holder (acceptable)
-- `explore/presentation/screens/explore_screen.dart` — properly wired to real API
-- `explore/data/professional_note.dart` — proper `fromJson`
-- `explore/data/api_types.dart` — proper `fromMap` factories for all API types
-- `location/data/location_service.dart` — pure platform service (no remote data)
-- `map/presentation/providers/map_provider.dart` — properly wired to real API
-- `map/data/models/` — pure value objects (no hardcoded values)
-- `map/data/repositories/map_repository.dart` — properly wired (except unused dummy `fromJson`)
-- `visits/` — properly wired to `GET /api/v1/visits/weekly-summary`
-- `orders/presentation/screens/my_orders_screen.dart` — uses real API
-- `orders/presentation/screens/order_detail_screen.dart` — uses real API
-- `orders/presentation/screens/new_order_products_screen.dart` — uses real API
-- `orders/data/catalog_product.dart` — proper `fromJson`
-- `orders/data/repositories/` — proper HTTP calls
-- `core/user/` — proper `fromJson`/`toJson` for all models
-- `core/session/` — proper API calls
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `explore_screen.dart` | Clinic/doctor lists, search, sort | `ClinicsRepository`, `DoctorsRepository` → real API | ✅ | None needed |
+| `clinic_detail_screen.dart` | Facility detail + notes | `_ClinicDetailRepository` → `GET /api/v1/facilities/:id` | ✅ | None needed |
+| `doctor_detail_screen.dart` | Professional detail + notes | `_DoctorDetailRepository` → `GET /api/v1/professionals/:id` | ✅ | None needed |
+
+**Note:** The `fromApi()` mappers in `clinic.dart` and `doctor.dart` default some fields (`neighborhood`, `status`, `lastVisitDays`, `isPriority`, `products`, `initials`, `hue`, `primaryClinic`) to empty/zero values because the paginated list API doesn't return them. This is an API completeness gap, not mock data.
 
 ---
 
-## Top Priorities
+### Location — ✅ Real Device GPS
 
-1. **Checkout screen**: Wire clinic picker to `FacilitiesRepository` and doctor picker to `ProfessionalsRepository` (two TODO comments)
-2. **Orders stub**: Either replace `orders_screen.dart` stub with a redirect to `MyOrdersScreen`, or remove it
-3. **Order success screen**: Use real order ID, real clinic/doctor names, real delivery ETA from API response
-4. **Profile territory**: Resolve territory name from the assignments API (backend needs to include name alongside ID)
-5. **Detail screens**: Expand backend endpoints (`/api/v1/facilities/:id` and `/api/v1/professionals/:id`) to return all fields consumed by `ClinicDetail` and `DoctorDetail`
-6. **Order tracking**: Backend should provide `estimatedDelivery`, clinic address, timeline events, and driver info
+| File | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `location_service.dart` | Device GPS coordinates | `Geolocator.getCurrentPosition()` (real device GPS) | N/A — device hardware | None needed |
+
+---
+
+### Map — ✅ Fully Real API
+
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `map_screen.dart` | Territory boundary, nearby facilities | `MapRepository` → `GET /api/v1/territories/:id/boundary`, `GET /api/v1/facilities?...` | ✅ | None needed |
+
+**Note:** `DeviceCurrentLocationService` falls back to São Paulo center coordinates (`-23.5505, -46.6333`) when `LocationService.requestCurrentLocation()` returns `LocationUnavailable`. This is a documented graceful fallback for the initial map view.
+
+---
+
+### Orders — ⚠️ Mixed (Real API + Mock Data)
+
+#### Real API screens (no action needed):
+
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `my_orders_screen.dart` | Order list | `OrdersRepository.listOrders()` → `GET /api/v1/orders` | ✅ | None needed |
+| `new_order_products_screen.dart` | Product catalog | `CatalogRepository.getProducts()` → `GET /api/v1/products` | ✅ | None needed |
+| `order_detail_screen.dart` | Order detail | `OrdersRepository.getOrder()` → `GET /api/v1/orders/:id` | ✅ | None needed |
+| `cart_screen.dart` | Cart items (Riverpod state) | `cartProvider` (in-memory Riverpod state) | N/A — local state | None needed |
+
+#### Screens/widgets still using mock data:
+
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `order_tracking_screen.dart` | Tracking order detail (items, timeline, driver info, pricing) | **Fully mock** — reads `kTrackingOrders[widget.orderId]` from `legacy_orders_mock.dart` | ❌ No tracking endpoint exists | Needs new `GET /api/v1/orders/:id/tracking` endpoint + wire mobile |
+| `checkout_screen.dart` | Clinic & doctor selectors | **Mock lists** — `kSelectorClinics` and `kSelectorDoctors` from `legacy_orders_mock.dart` | ❌ No endpoint exists | Needs endpoints: `GET /api/v1/checkout/clinics` and `GET /api/v1/checkout/doctors?clinicId=...` |
+| `checkout_screen.dart` | Order submission (confirm button) | **No API call** — navigates to success screen without posting | ❌ No `POST /api/v1/orders` endpoint | Needs new `POST /api/v1/orders` endpoint + wire mobile |
+| `order_success_screen.dart` | Order confirmation data (orderId, clinic, doctor, delivery estimate) | **Hardcoded fallbacks** — `PED-2042`, "Clínica Santa Mônica", "Dra. Mariana Silva", "25 a 29 de abril de 2026" | ❌ No create-order response consumed | Wire to response from `POST /api/v1/orders` once created |
+| `product_order_sheet.dart` | Price suggestions (negotiated price, discount badges, price history) | **Mock function** — `getSuggestedPrice()` from `legacy_orders_mock.dart` | ❌ No price suggestion endpoint | Needs new `GET /api/v1/products/:id/price-suggestion?clinicId=...` endpoint |
+| `orders_provider.dart` | Cart provider types | **Imports mock types** — `SelectableClinic`, `SelectableDoctor` from `legacy_orders_mock.dart` | ❌ | Replace with real models from checkout API |
+
+#### Central mock file:
+
+| File | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `legacy_orders_mock.dart` | 7 products, 5 orders, 2 tracking orders, 5 clinics, 7 doctors, price suggestion function | All hardcoded constants and maps | N/A (mock file) | Remove when all consumers are migrated to real API |
+
+---
+
+### Presentations — 🚧 Placeholder Stub
+
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `presentations_screen.dart` | Entire screen is hardcoded "Em breve" stub | Inline string literals, color constants, icon | No presentations endpoint exists | Design and implement presentations API + wire mobile |
+
+---
+
+### Profile — ✅ Fully Real API
+
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `profile_screen.dart` | User info, territory stats, quick summary, preferences | `currentUserProvider`, `TerritoryStatsProvider`, `QuickSummaryProvider`, `PreferencesProvider` — all real API-backed | ✅ | None needed. Dead `activity.dart` and `support.dart` models should be cleaned up. |
+| `profile_screen.dart` | Region fallback text | Hardcoded string `'Sem território definido'` when no territory assigned | ✅ Acceptable UI fallback | None needed (territory may genuinely be unassigned) |
+
+**Note:** Support & account settings section was intentionally removed (lines 602–603 comment) pending real API endpoints for those features. The model files `activity.dart` and `support.dart` are unused dead code.
+
+---
+
+### Visits — ✅ Fully Real API (No Screens Yet)
+
+| Provider | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `visit_summary_provider.dart` | Weekly visit summary | `VisitRepository.getWeeklySummary()` → `GET /api/v1/visits/weekly-summary` | ✅ | None needed for data; screens need to be built |
+
+**Note:** `POST /api/v1/visits` (record visit) exists in the API but is not consumed by any mobile screen — the mobile visits feature has no UI screens yet.
+
+---
+
+## Full Flagged Items Table
+
+| Screen | Data | Current source | API available? | Recommendation |
+|---|---|---|---|---|
+| `orders/checkout_screen.dart` | Clinic selector list | `kSelectorClinics` (mock list in `legacy_orders_mock.dart`) | ❌ | Create `GET /api/v1/checkout/clinics` endpoint + replace with real repo |
+| `orders/checkout_screen.dart` | Doctor selector list | `kSelectorDoctors` (mock list in `legacy_orders_mock.dart`) | ❌ | Create `GET /api/v1/checkout/doctors` endpoint + replace with real repo |
+| `orders/checkout_screen.dart` | Order submission | No API call; navigates to success screen | ❌ No `POST /api/v1/orders` | Create `POST /api/v1/orders` endpoint + wire mobile |
+| `orders/order_tracking_screen.dart` | Full tracking detail (items, driver, timeline, pricing) | `kTrackingOrders` (mock map) | ❌ No tracking endpoint | Create `GET /api/v1/orders/:id/tracking` + wire mobile |
+| `orders/order_success_screen.dart` | Order ID, clinic/doctor name, delivery estimate | Hardcoded string fallbacks: `PED-2042`, "Clínica Santa Mônica", "Dra. Mariana Silva" | ❌ | Wire to `POST /api/v1/orders` response data |
+| `orders/product_order_sheet.dart` | Price suggestion data | `getSuggestedPrice()` mock function | ❌ | Create `GET /api/v1/products/:id/price-suggestion` endpoint |
+| `orders/orders_provider.dart` | Cart clinic/doctor types | Imports `SelectableClinic`, `SelectableDoctor` from mock file | ❌ | Replace with real models from API |
+| `orders/data/repositories/legacy_orders_mock.dart` | All mock products, orders, clinics, doctors, price logic | Fully hardcoded constants | N/A | Delete after migration complete |
+| `dashboard/dashboard_screen.dart` | Entire screen | Hardcoded "Em breve" stub string | ❌ | Design dashboard feature; create API + wire |
+| `presentations/presentations_screen.dart` | Entire screen | Hardcoded "Em breve" stub string | ❌ | Design presentations feature; create API + wire |
+| `profile/data/models/activity.dart` | RecentActivity model | Unused dead code | N/A | Remove if not planned; or wire to API |
+| `profile/data/models/support.dart` | SupportItem model | Unused dead code | N/A | Remove if not planned; or wire to API when support endpoints exist |
+
+---
+
+## API Endpoint Gaps Summary
+
+| Missing endpoint | Needed by | Priority |
+|---|---|---|
+| `POST /api/v1/orders` (create order) | `checkout_screen.dart` | **High** — blocks checkout flow |
+| `GET /api/v1/orders/:id/tracking` | `order_tracking_screen.dart` | **High** — currently fully mock |
+| `GET /api/v1/products/:id/price-suggestion` | `product_order_sheet.dart` | **High** — currently fully mock |
+| `GET /api/v1/checkout/clinics` (or similar) | `checkout_screen.dart` | **High** — currently mock list |
+| `GET /api/v1/checkout/doctors` (or similar) | `checkout_screen.dart` | **High** — currently mock list |
+| Dashboard endpoints | `dashboard_screen.dart` | **Low** — stub placeholder |
+| Presentations endpoints | `presentations_screen.dart` | **Low** — stub placeholder |
+| Align `POST /auth/forgot-password` → `/api/v1/password-reset/request` | `forgot_email_screen.dart` | **Medium** — works but wrong path |
+| Align `POST /auth/reset-password` → `/api/v1/password-reset/confirm` | `forgot_new_password_screen.dart` | **Medium** — works but wrong path |
+
+---
+
+## Key Findings
+
+1. **Orders is the only feature with mock data.** The legacy mock file `legacy_orders_mock.dart` is the single source, imported by 4 files. Order listing/detail/catalog already use the real API.
+
+2. **4 screens/widgets still consume mock data:** `order_tracking_screen.dart`, `checkout_screen.dart`, `order_success_screen.dart`, and `product_order_sheet.dart`. None have corresponding API endpoints yet.
+
+3. **No `POST /api/v1/orders` endpoint exists.** The API only exposes `GET /api/v1/orders` (list) and `GET /api/v1/orders/:id` (detail). Checkout cannot submit orders.
+
+4. **Dashboard and Presentations are pure stubs.** They contain no data layer whatsoever — just "Em breve" placeholder text.
+
+5. **Auth password-reset routes are mismatched.** Mobile calls `/auth/forgot-password`, `/auth/verify-reset-code`, `/auth/reset-password` but the API exposes `/api/v1/password-reset/request` and `/api/v1/password-reset/confirm`. A verification-code endpoint is entirely missing from the API.
+
+6. **The visits feature has real API wiring but no screens.** `POST /api/v1/visits` (record visit) exists server-side but no mobile screen calls it.
+
+7. **Dead models `activity.dart` and `support.dart`** exist in the profile feature but are not imported anywhere. They should be removed or wired to future API endpoints.
+
+8. **Data mapping gaps** in the Explore `fromApi()` mappers default several fields (`neighborhood`, `status`, `lastVisitDays`, `isPriority`, `products`, `initials`, `hue`, `primaryClinic`) to empty/zero because the paginated API responses don't include them. These are API completeness gaps, not mock data.
