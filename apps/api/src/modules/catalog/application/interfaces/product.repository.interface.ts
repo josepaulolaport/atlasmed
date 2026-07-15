@@ -2,7 +2,7 @@ export interface ProductRecord {
   id: string;
   code: string;
   name: string;
-  sectorId: string;
+  sectorIds: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -21,12 +21,12 @@ export interface ProductRepository {
   create(data: {
     code: string;
     name: string;
-    sectorId: string;
+    sectorIds: string[];
     isActive?: boolean;
   }): Promise<ProductRecord>;
 
   update(
     id: string,
-    data: { code?: string; name?: string; sectorId?: string; isActive?: boolean }
+    data: { code?: string; name?: string; sectorIds?: string[]; isActive?: boolean }
   ): Promise<ProductRecord>;
 }

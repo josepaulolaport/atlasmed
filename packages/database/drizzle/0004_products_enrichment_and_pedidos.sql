@@ -6,7 +6,15 @@
 BEGIN;
 
 -- ------------------------------------------------------------
--- 1. Enrich products with legacy fields from atlasmed.produtos
+-- 1. Drop single-sector FK from products
+--    (replaced by many-to-many product_sectors below)
+-- ------------------------------------------------------------
+ALTER TABLE products
+  DROP CONSTRAINT IF EXISTS products_sector_id_fkey,
+  DROP COLUMN IF EXISTS sector_id;
+
+-- ------------------------------------------------------------
+-- 3. Enrich products with legacy fields from atlasmed.produtos
 -- ------------------------------------------------------------
 ALTER TABLE products
   ADD COLUMN IF NOT EXISTS legacy_id               integer         UNIQUE,

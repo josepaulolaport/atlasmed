@@ -31,7 +31,7 @@ function serializeProduct(row: {
   id: string;
   code: string;
   name: string;
-  sectorId: string;
+  sectorIds: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -40,7 +40,7 @@ function serializeProduct(row: {
     id: row.id,
     code: row.code,
     name: row.name,
-    sectorId: row.sectorId,
+    sectorIds: row.sectorIds,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -142,7 +142,7 @@ export class CreateProductUseCase {
   async execute(input: {
     code: string;
     name: string;
-    sectorId: string;
+    sectorIds: string[];
     isActive?: boolean;
   }) {
     const product = await this.deps.productRepository.create(input);
@@ -157,13 +157,13 @@ export class UpdateProductUseCase {
     productId: string;
     code?: string;
     name?: string;
-    sectorId?: string;
+    sectorIds?: string[];
     isActive?: boolean;
   }) {
     const product = await this.deps.productRepository.update(input.productId, {
       code: input.code,
       name: input.name,
-      sectorId: input.sectorId,
+      sectorIds: input.sectorIds,
       isActive: input.isActive,
     });
     return serializeProduct(product);
