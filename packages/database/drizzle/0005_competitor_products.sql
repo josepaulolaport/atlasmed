@@ -33,7 +33,7 @@ CREATE TABLE "product_equivalences" (
 -- Indexes
 CREATE INDEX IF NOT EXISTS "competitor_products_competitor_name_idx" ON "competitor_products" ("competitor_name");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "competitor_products_is_active_idx" ON "competitor_products" ("is_active");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "competitor_product_sectors_uidx" ON "competitor_product_sectors" ("competitor_product_id", "sector_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "competitor_product_sectors_competitor_product_id_sector_id_uidx" ON "competitor_product_sectors" ("competitor_product_id", "sector_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "competitor_product_sectors_sector_id_idx" ON "competitor_product_sectors" ("sector_id");--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "product_equivalences_uidx" ON "product_equivalences" ("product_id", "competitor_product_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "product_equivalences_product_id_competitor_product_id_uidx" ON "product_equivalences" ("product_id", "competitor_product_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "product_equivalences_competitor_product_idx" ON "product_equivalences" ("competitor_product_id");
