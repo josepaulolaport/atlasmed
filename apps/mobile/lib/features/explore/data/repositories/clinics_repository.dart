@@ -3,6 +3,9 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import '../api_types.dart';
 
+/// Default radius (in kilometres) when proximity filtering is enabled.
+const double defaultProximityRadiusKm = 50;
+
 class ClinicsRepository extends Repository<PaginatedClinics>
     with SessionEnvironmentMixin<PaginatedClinics> {
   ClinicsRepository({
@@ -10,6 +13,11 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     this.page = 1,
     this.limit = 20,
     this.searchQuery,
+    this.latitude,
+    this.longitude,
+    this.radiusKm,
+    this.commercialStatus,
+    this.productIds,
     super.resolveOnCreate = false,
   }) : super(
          endpoint: buildEndpoint(
@@ -20,6 +28,14 @@ class ClinicsRepository extends Repository<PaginatedClinics>
              'limit': limit.toString(),
              if (searchQuery != null && searchQuery.trim().isNotEmpty)
                'search': searchQuery.trim(),
+             if (latitude != null) 'latitude': latitude.toString(),
+             if (longitude != null) 'longitude': longitude.toString(),
+             if (radiusKm != null) 'radiusKm': radiusKm.toString(),
+             if (commercialStatus != null &&
+                 commercialStatus.trim().isNotEmpty)
+               'commercialStatus': commercialStatus.trim(),
+             if (productIds != null && productIds.trim().isNotEmpty)
+               'productIds': productIds.trim(),
            },
          ),
          name: 'ClinicsRepository',
@@ -28,6 +44,11 @@ class ClinicsRepository extends Repository<PaginatedClinics>
   final int page;
   final int limit;
   final String? searchQuery;
+  final double? latitude;
+  final double? longitude;
+  final double? radiusKm;
+  final String? commercialStatus;
+  final String? productIds;
 
   /// Build the endpoint URI for this repository.
   /// Calls the shared [buildEndpoint] from api_types.dart.
@@ -36,6 +57,11 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     required int page,
     required int limit,
     String? searchQuery,
+    double? latitude,
+    double? longitude,
+    double? radiusKm,
+    String? commercialStatus,
+    String? productIds,
   }) {
     return buildEndpoint(
       baseUrl: baseUrl,
@@ -45,6 +71,13 @@ class ClinicsRepository extends Repository<PaginatedClinics>
         'limit': limit.toString(),
         if (searchQuery != null && searchQuery.trim().isNotEmpty)
           'search': searchQuery.trim(),
+        if (latitude != null) 'latitude': latitude.toString(),
+        if (longitude != null) 'longitude': longitude.toString(),
+        if (radiusKm != null) 'radiusKm': radiusKm.toString(),
+        if (commercialStatus != null && commercialStatus.trim().isNotEmpty)
+          'commercialStatus': commercialStatus.trim(),
+        if (productIds != null && productIds.trim().isNotEmpty)
+          'productIds': productIds.trim(),
       },
     );
   }

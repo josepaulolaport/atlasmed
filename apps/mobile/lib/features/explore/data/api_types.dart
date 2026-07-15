@@ -36,6 +36,14 @@ class ApiClinic {
     this.territoryId,
     this.territoryAssignmentStatus,
     this.consultantName,
+    this.distanceKm,
+    this.services = const [],
+    this.phone,
+    this.email,
+    this.website,
+    this.streetAddress,
+    this.cnpj,
+    this.cpf,
     this.createdAt,
     this.updatedAt,
   });
@@ -52,6 +60,16 @@ class ApiClinic {
       ),
       professionalCount: _readInt(map['professionalCount']),
       consultantName: _readNullableString(map['consultantName']),
+      distanceKm: _readNullableDouble(map['distanceKm']),
+      services: _readObjectList(map['services'])
+          .map(ApiClinicService.fromMap)
+          .toList(growable: false),
+      phone: _readNullableString(map['phone']),
+      email: _readNullableString(map['email']),
+      website: _readNullableString(map['website']),
+      streetAddress: _readNullableString(map['streetAddress']),
+      cnpj: _readNullableString(map['cnpj']),
+      cpf: _readNullableString(map['cpf']),
       createdAt: _readNullableDateTime(map['createdAt']),
       updatedAt: _readNullableDateTime(map['updatedAt']),
     );
@@ -65,8 +83,35 @@ class ApiClinic {
   final String? territoryAssignmentStatus;
   final int professionalCount;
   final String? consultantName;
+  final double? distanceKm;
+  final List<ApiClinicService> services;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+
+  // Detail-only fields (filled when fetching single clinic)
+  final String? phone;
+  final String? email;
+  final String? website;
+  final String? streetAddress;
+  final String? cnpj;
+  final String? cpf;
+}
+
+class ApiClinicService {
+  final String serviceCode;
+  final String classificationCode;
+
+  const ApiClinicService({
+    required this.serviceCode,
+    required this.classificationCode,
+  });
+
+  factory ApiClinicService.fromMap(Map<String, dynamic> map) {
+    return ApiClinicService(
+      serviceCode: _readString(map['serviceCode']),
+      classificationCode: _readString(map['classificationCode']),
+    );
+  }
 }
 
 class ApiDoctor {
@@ -79,6 +124,7 @@ class ApiDoctor {
     this.specialty,
     this.crmNumber,
     this.crmState,
+    this.distanceKm,
     this.createdAt,
     this.updatedAt,
   });
@@ -95,6 +141,7 @@ class ApiDoctor {
       crmNumber: _readNullableString(map['crmNumber']),
       crmState: _readNullableString(map['crmState']),
       facilityIds: _readStringList(map['facilityIds']),
+      distanceKm: _readNullableDouble(map['distanceKm']),
       createdAt: _readNullableDateTime(map['createdAt']),
       updatedAt: _readNullableDateTime(map['updatedAt']),
     );
@@ -108,6 +155,7 @@ class ApiDoctor {
   final String? crmNumber;
   final String? crmState;
   final List<String> facilityIds;
+  final double? distanceKm;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -220,6 +268,13 @@ int _readInt(Object? value) {
   if (value is int) return value;
   if (value is num) return value.toInt();
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+
+double? _readNullableDouble(Object? value) {
+  if (value is double) return value;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
 }
 
 DateTime? _readNullableDateTime(Object? value) {

@@ -6,22 +6,53 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_r
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 
 class ClinicsQuery {
-  const ClinicsQuery({this.page = 1, this.limit = 20, this.searchQuery});
+  const ClinicsQuery({
+    this.page = 1,
+    this.limit = 20,
+    this.searchQuery,
+    this.latitude,
+    this.longitude,
+    this.radiusKm,
+    this.commercialStatus,
+    this.productIds,
+  });
 
   final int page;
   final int limit;
   final String? searchQuery;
+  final double? latitude;
+  final double? longitude;
+  final double? radiusKm;
+  final String? commercialStatus;
+  final String? productIds;
 
   @override
   bool operator ==(Object other) {
     return other is ClinicsQuery &&
         other.page == page &&
         other.limit == limit &&
-        other.searchQuery == searchQuery;
+        other.searchQuery == searchQuery &&
+        other.latitude == latitude &&
+        other.longitude == longitude &&
+        other.radiusKm == radiusKm &&
+        other.commercialStatus == commercialStatus &&
+        other.productIds == productIds;
   }
 
   @override
-  int get hashCode => Object.hash(page, limit, searchQuery);
+  int get hashCode => Object.hash(
+        page,
+        limit,
+        searchQuery,
+        latitude,
+        longitude,
+        radiusKm,
+        commercialStatus,
+        productIds,
+      );
+
+  /// Whether this query would return distinct results from [other].
+  bool differsFrom(ClinicsQuery other) => this != other;
 }
 
 class DoctorsQuery {
@@ -30,12 +61,20 @@ class DoctorsQuery {
     this.limit = 20,
     this.searchQuery,
     this.facilityId,
+    this.latitude,
+    this.longitude,
+    this.radiusKm,
+    this.specialty,
   });
 
   final int page;
   final int limit;
   final String? searchQuery;
   final String? facilityId;
+  final double? latitude;
+  final double? longitude;
+  final double? radiusKm;
+  final String? specialty;
 
   @override
   bool operator ==(Object other) {
@@ -43,11 +82,24 @@ class DoctorsQuery {
         other.page == page &&
         other.limit == limit &&
         other.searchQuery == searchQuery &&
-        other.facilityId == facilityId;
+        other.facilityId == facilityId &&
+        other.latitude == latitude &&
+        other.longitude == longitude &&
+        other.radiusKm == radiusKm &&
+        other.specialty == specialty;
   }
 
   @override
-  int get hashCode => Object.hash(page, limit, searchQuery, facilityId);
+  int get hashCode => Object.hash(
+        page,
+        limit,
+        searchQuery,
+        facilityId,
+        latitude,
+        longitude,
+        radiusKm,
+        specialty,
+      );
 }
 
 final clinicsRepositoryProvider = Provider.autoDispose
@@ -57,6 +109,11 @@ final clinicsRepositoryProvider = Provider.autoDispose
         page: query.page,
         limit: query.limit,
         searchQuery: query.searchQuery,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radiusKm: query.radiusKm,
+        commercialStatus: query.commercialStatus,
+        productIds: query.productIds,
       );
       ref.onDispose(repository.dispose);
       return repository;
@@ -70,6 +127,10 @@ final doctorsRepositoryProvider = Provider.autoDispose
         limit: query.limit,
         searchQuery: query.searchQuery,
         facilityId: query.facilityId,
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radiusKm: query.radiusKm,
+        specialty: query.specialty,
       );
       ref.onDispose(repository.dispose);
       return repository;

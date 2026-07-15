@@ -1,3 +1,5 @@
+import '../api_types.dart';
+
 // ── Doctor model ─────────────────────────────────────────────
 class Doctor {
   final String id;
@@ -21,4 +23,27 @@ class Doctor {
     required this.distanceKm,
     required this.isPriority,
   });
+
+  /// Maps an [ApiDoctor] from the paginated API response to a [Doctor] model.
+  /// Fields not present in the API response use sensible defaults.
+  factory Doctor.fromApi(ApiDoctor api) {
+    final name = api.displayName;
+    final nameParts = name.split(' ');
+    final initials = nameParts.length >= 2
+        ? '${nameParts.first[0]}${nameParts.last[0]}'
+        : name.isNotEmpty
+            ? name[0]
+            : '?';
+    return Doctor(
+      id: api.id,
+      name: name,
+      initials: initials.toUpperCase(),
+      hue: 0,
+      specialty: api.specialty ?? '',
+      primaryClinic: '',
+      crm: api.crm,
+      distanceKm: api.distanceKm ?? 0,
+      isPriority: false,
+    );
+  }
 }

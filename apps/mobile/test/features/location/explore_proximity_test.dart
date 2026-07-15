@@ -1,18 +1,18 @@
-import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/explore_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  setUp(() {
+    BaseRepository.storage = const _MemoryCacheStorage();
+  });
+
   test(
-    'retains the user location for a future proximity list request',
+    'retains the user location after enabling proximity',
     () async {
       final notifier = ExploreNotifier(
-        _EmptyExploreRepository(),
         _LocationServiceReturning(
           const LocationAvailable(
             DeviceLocation(latitude: -23.55052, longitude: -46.633308),
@@ -32,7 +32,6 @@ void main() {
 
   test('exposes a recoverable failure and leaves proximity inactive', () async {
     final notifier = ExploreNotifier(
-      _EmptyExploreRepository(),
       _LocationServiceReturning(
         const LocationUnavailable(LocationFailure.denied),
       ),
@@ -43,6 +42,22 @@ void main() {
     expect(notifier.state.proximityOrigin, isNull);
     expect(notifier.state.proximityFailure, LocationFailure.denied);
   });
+}
+
+class _MemoryCacheStorage extends RepositoryCacheStorage {
+  const _MemoryCacheStorage();
+
+  @override
+  Future<void> clear() async {}
+
+  @override
+  Future<void> delete({required String key}) async {}
+
+  @override
+  Future<String?> read({required String key}) async => null;
+
+  @override
+  Future<void> write({required String key, required String value}) async {}
 }
 
 class _LocationServiceReturning extends LocationService {
@@ -68,18 +83,4 @@ class _UnusedLocationPlatform implements LocationPlatform {
   @override
   Future<LocationPermissionStatus> requestPermission() =>
       throw UnimplementedError();
-}
-
-class _EmptyExploreRepository implements ExploreRepository {
-  @override
-  Future<List<Clinic>> getClinics() async => const [];
-
-  @override
-  Future<List<Doctor>> getDoctors() async => const [];
-
-  @override
-  Future<ClinicDetail> getClinicDetail(String id) => throw UnimplementedError();
-
-  @override
-  Future<DoctorDetail> getDoctorDetail(String id) => throw UnimplementedError();
 }
