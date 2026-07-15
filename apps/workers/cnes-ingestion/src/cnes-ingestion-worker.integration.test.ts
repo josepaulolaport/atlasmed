@@ -47,7 +47,8 @@ async function isWorkerDatabaseReady(): Promise<boolean> {
       await recreateRegistryStagingSchema();
     }
     return true;
-  } catch {
+  } catch (err) {
+    console.error("[isWorkerDatabaseReady] error:", err);
     return false;
   }
 }
@@ -57,7 +58,9 @@ describe("CNES ingestion worker Integration Tests", () => {
 
   beforeAll(async () => {
     loadApiEnv();
+    console.log("[test] DATABASE_URL set?", !!process.env.DATABASE_URL);
     dbReady = await isWorkerDatabaseReady();
+    console.log("[test] dbReady:", dbReady);
   });
 
   it("discover activity sets reference on ingestion run", async () => {
