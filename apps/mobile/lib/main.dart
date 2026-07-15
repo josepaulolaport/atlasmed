@@ -8,13 +8,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inicializa o Firebase (configuração gerada pelo FlutterFire CLI)
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(
-    const ProviderScope(
-      child: AtlasMedApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: AtlasMedApp()));
 }

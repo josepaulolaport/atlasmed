@@ -51,7 +51,14 @@ extension OrderStatusX on OrderStatus {
 }
 
 // ── Tracking status for the tracking screen ──────────────────
-enum TrackingStatus { pending, confirmed, processing, shipped, delivered, cancelled }
+enum TrackingStatus {
+  pending,
+  confirmed,
+  processing,
+  shipped,
+  delivered,
+  cancelled,
+}
 
 extension TrackingStatusX on TrackingStatus {
   String get label {

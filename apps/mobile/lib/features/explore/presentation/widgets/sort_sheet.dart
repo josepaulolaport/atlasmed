@@ -36,9 +36,10 @@ class _SortSheetState extends State<SortSheet>
       vsync: this,
       duration: const Duration(milliseconds: 320),
     );
-    _overlayAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.ease),
-    );
+    _overlayAnim = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.ease));
     _sheetAnim = Tween<double>(begin: 1, end: 0).animate(
       CurvedAnimation(
         parent: _animController,
@@ -70,19 +71,28 @@ class _SortSheetState extends State<SortSheet>
       return [
         _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
         _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
-        _SortOption('oldest-visit', 'Sem visita há mais tempo', 'Priorize clínicas ativas sem atenção'),
+        _SortOption(
+          'oldest-visit',
+          'Sem visita há mais tempo',
+          'Priorize clínicas ativas sem atenção',
+        ),
       ];
     }
     return [
       _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
       _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
-      _SortOption('last-contact', 'Sem contato há mais tempo', 'Retome relacionamentos'),
+      _SortOption(
+        'last-contact',
+        'Sem contato há mais tempo',
+        'Retome relacionamentos',
+      ),
     ];
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open && _animController.isDismissed) return const SizedBox.shrink();
+    if (!widget.open && _animController.isDismissed)
+      return const SizedBox.shrink();
 
     return Stack(
       children: [
@@ -90,7 +100,9 @@ class _SortSheetState extends State<SortSheet>
           opacity: _overlayAnim,
           child: GestureDetector(
             onTap: widget.onClose,
-            child: Container(color: const Color(0x803B82F6).withValues(alpha: 0.5)),
+            child: Container(
+              color: const Color(0x803B82F6).withValues(alpha: 0.5),
+            ),
           ),
         ),
         Positioned(
@@ -101,7 +113,10 @@ class _SortSheetState extends State<SortSheet>
             animation: _animController,
             builder: (context, child) {
               return Transform.translate(
-                offset: Offset(0, _sheetAnim.value * MediaQuery.of(context).size.height * 0.5),
+                offset: Offset(
+                  0,
+                  _sheetAnim.value * MediaQuery.of(context).size.height * 0.5,
+                ),
                 child: child,
               );
             },
@@ -121,10 +136,15 @@ class _SortSheetState extends State<SortSheet>
                       },
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
                         margin: const EdgeInsets.only(bottom: 4),
                         decoration: BoxDecoration(
-                          color: on ? const Color(0xFFeef2ff) : Colors.transparent,
+                          color: on
+                              ? const Color(0xFFeef2ff)
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -135,14 +155,22 @@ class _SortSheetState extends State<SortSheet>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: on ? const Color(0xFF1e40af) : const Color(0xFFd1d5db),
+                                  color: on
+                                      ? const Color(0xFF1e40af)
+                                      : const Color(0xFFd1d5db),
                                   width: 2,
                                 ),
-                                color: on ? const Color(0xFF1e40af) : Colors.white,
+                                color: on
+                                    ? const Color(0xFF1e40af)
+                                    : Colors.white,
                               ),
                               child: on
                                   ? const Center(
-                                      child: Icon(Icons.circle, size: 8, color: Colors.white),
+                                      child: Icon(
+                                        Icons.circle,
+                                        size: 8,
+                                        color: Colors.white,
+                                      ),
                                     )
                                   : null,
                             ),

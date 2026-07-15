@@ -36,9 +36,10 @@ class _FilterSheetState extends State<FilterSheet>
       vsync: this,
       duration: const Duration(milliseconds: 320),
     );
-    _overlayAnim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.ease),
-    );
+    _overlayAnim = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _animController, curve: Curves.ease));
     _sheetAnim = Tween<double>(begin: 1, end: 0).animate(
       CurvedAnimation(
         parent: _animController,
@@ -84,7 +85,8 @@ class _FilterSheetState extends State<FilterSheet>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open && _animController.isDismissed) return const SizedBox.shrink();
+    if (!widget.open && _animController.isDismissed)
+      return const SizedBox.shrink();
 
     return Stack(
       children: [
@@ -92,7 +94,9 @@ class _FilterSheetState extends State<FilterSheet>
           opacity: _overlayAnim,
           child: GestureDetector(
             onTap: widget.onClose,
-            child: Container(color: const Color(0x803B82F6).withValues(alpha: 0.5)),
+            child: Container(
+              color: const Color(0x803B82F6).withValues(alpha: 0.5),
+            ),
           ),
         ),
         Positioned(
@@ -103,7 +107,10 @@ class _FilterSheetState extends State<FilterSheet>
             animation: _animController,
             builder: (context, child) {
               return Transform.translate(
-                offset: Offset(0, _sheetAnim.value * MediaQuery.of(context).size.height * 0.5),
+                offset: Offset(
+                  0,
+                  _sheetAnim.value * MediaQuery.of(context).size.height * 0.5,
+                ),
                 child: child,
               );
             },
@@ -116,12 +123,7 @@ class _FilterSheetState extends State<FilterSheet>
           ),
         ),
         if (_animController.isCompleted)
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _buildButtons(),
-          ),
+          Positioned(left: 0, right: 0, bottom: 0, child: _buildButtons()),
       ],
     );
   }
@@ -211,9 +213,7 @@ class _ClinicFilters extends StatelessWidget {
     ('rejeicao', 'Rejeição', Color(0xFFb84545)),
   ];
 
-  static const _products = [
-    'AtlasGel', 'AtlasCaps', 'AtlasSpray', 'AtlasDerm',
-  ];
+  static const _products = ['AtlasGel', 'AtlasCaps', 'AtlasSpray', 'AtlasDerm'];
 
   @override
   Widget build(BuildContext context) {
@@ -266,8 +266,13 @@ class _DoctorFilters extends StatelessWidget {
   const _DoctorFilters({required this.local, required this.onToggle});
 
   static const _specialties = [
-    'Cardiologia', 'Ortopedia', 'Dermatologia', 'Pediatria',
-    'Ginecologia', 'Neurologia', 'Endocrinologia',
+    'Cardiologia',
+    'Ortopedia',
+    'Dermatologia',
+    'Pediatria',
+    'Ginecologia',
+    'Neurologia',
+    'Endocrinologia',
   ];
 
   @override
@@ -338,11 +343,11 @@ class _ToggleChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: selected ? dotColor.withValues(alpha: 0.1) : const Color(0xFFf3f4f6),
+          color: selected
+              ? dotColor.withValues(alpha: 0.1)
+              : const Color(0xFFf3f4f6),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? dotColor : Colors.transparent,
-          ),
+          border: Border.all(color: selected ? dotColor : Colors.transparent),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,

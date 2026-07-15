@@ -29,12 +29,12 @@ class AppColors {
 
 class AppTheme {
   static ThemeData get light => ThemeData(
-        useMaterial3: true,
-        fontFamily: 'Inter',
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppColors.navyDeep,
-          brightness: Brightness.light,
-        ),
-        scaffoldBackgroundColor: AppColors.background,
-      );
+    useMaterial3: true,
+    fontFamily: 'Inter',
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: AppColors.navyDeep,
+      brightness: Brightness.light,
+    ),
+    scaffoldBackgroundColor: AppColors.background,
+  );
 }
