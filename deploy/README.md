@@ -97,7 +97,11 @@ The API creates `STORAGE_BUCKET` on startup when object storage is configured. T
 1. Create GitHub environment `production` secrets using `deploy/.env.production.example` as the checklist.
 2. Ensure `DATABASE_URL` points at the remote Postgres application database. Do not deploy app Postgres in Uncloud.
 3. Ensure the Uncloud cluster has a machine named `atlasmed`; the compose file pins every service to that machine.
-4. Ensure the shared cluster Authelia config still exposes the Caddy snippet `internal_guard`; `atlasmed-temporal-ui` imports it.
+4. Apply the AtlasMed global Caddy snippets before deploying protected services:
+   ```bash
+   uc caddy deploy --image caddy:2.11.2 --caddyfile deploy/caddy.global.Caddyfile
+   ```
+   This defines `atlasmed_internal_guard` globally. Do not define reusable snippets only inside another service's `x-caddy`; Uncloud validates service Caddy configs incrementally, so cross-service snippet imports can fail depending on service order.
 5. Deploy infrastructure manually:
    ```bash
    uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes

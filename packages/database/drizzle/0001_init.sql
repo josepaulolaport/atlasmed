@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS postgis;
---> statement-breakpoint
 CREATE SCHEMA "audit";
 --> statement-breakpoint
 CREATE SCHEMA "registry";
@@ -12,11 +10,13 @@ CREATE TYPE "public"."commercial_status" AS ENUM('REGISTERED', 'ACTIVE', 'SUSPEN
 CREATE TYPE "public"."conformity_record_status" AS ENUM('PENDING', 'SUBMITTED', 'VALIDATED', 'REJECTED', 'EXPIRED');--> statement-breakpoint
 CREATE TYPE "public"."conformity_status" AS ENUM('INCOMPLETE', 'COMPLETE', 'EXPIRING_SOON', 'NON_CONFORMING');--> statement-breakpoint
 CREATE TYPE "public"."contact_type" AS ENUM('PROFESSIONAL', 'DECISOR', 'COMPRADOR');--> statement-breakpoint
+CREATE TYPE "public"."facility_tax_id_type" AS ENUM('PJ', 'PF');--> statement-breakpoint
 CREATE TYPE "public"."healthcare_provider_share_source" AS ENUM('MANUAL', 'REGISTRY', 'IMPORT');--> statement-breakpoint
 CREATE TYPE "public"."healthcare_provider_type" AS ENUM('PRIVATE', 'PUBLIC', 'MIXED', 'OTHER');--> statement-breakpoint
 CREATE TYPE "public"."invitation_status" AS ENUM('PENDING', 'ACCEPTED', 'EXPIRED', 'REVOKED');--> statement-breakpoint
+CREATE TYPE "public"."order_status" AS ENUM('DRAFT', 'PENDING', 'CONFIRMED', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REJECTED');--> statement-breakpoint
+CREATE TYPE "public"."order_type" AS ENUM('STANDARD', 'URGENT', 'RETURN', 'SAMPLE');--> statement-breakpoint
 CREATE TYPE "public"."purchase_status" AS ENUM('NON_BUYER', 'LOW_BUYER', 'REGULAR_BUYER', 'HIGH_BUYER');--> statement-breakpoint
-CREATE TYPE "public"."relationship_level" AS ENUM('LOW', 'MEDIUM', 'HIGH');--> statement-breakpoint
 CREATE TYPE "public"."territory_approval_status" AS ENUM('pending', 'approved', 'rejected', 'superseded');--> statement-breakpoint
 CREATE TYPE "public"."territory_approval_type" AS ENUM('create_territory', 'reparent_territory', 'deactivate_territory', 'clinic_territory_change');--> statement-breakpoint
 CREATE TYPE "public"."territory_assignment_source" AS ENUM('geo', 'manual');--> statement-breakpoint
@@ -25,12 +25,30 @@ CREATE TYPE "public"."territory_node_type" AS ENUM('root', 'region', 'state', 'i
 CREATE TYPE "public"."user_status" AS ENUM('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING');--> statement-breakpoint
 CREATE TYPE "public"."verification_token_type" AS ENUM('EMAIL_VERIFICATION', 'PHONE_VERIFICATION', 'EMAIL_CHANGE', 'PHONE_CHANGE');--> statement-breakpoint
 CREATE TYPE "audit"."audit_event_severity" AS ENUM('INFO', 'WARNING', 'CRITICAL');--> statement-breakpoint
-CREATE TYPE "audit"."audit_event_type" AS ENUM('USER_LOGIN', 'USER_LOGOUT', 'USER_REGISTER', 'USER_INVITE', 'USER_ACCEPT_INVITE', 'USER_DEACTIVATE', 'USER_ACTIVATE', 'USER_SUSPEND', 'USER_UNSUSPEND', 'USER_MANAGER_ASSIGNED', 'USER_MANAGER_REMOVED', 'USER_TERRITORY_ASSIGNED', 'USER_TERRITORY_REVOKED', 'PASSWORD_CHANGE', 'PASSWORD_RESET_REQUEST', 'PASSWORD_RESET_COMPLETE', 'EMAIL_CHANGE', 'PHONE_CHANGE', 'EMAIL_VERIFY', 'PHONE_VERIFY', 'ROLE_CHANGE', 'SESSION_CREATE', 'SESSION_REVOKE', 'PERMISSION_GRANT', 'PERMISSION_REVOKE', 'TWO_FACTOR_ENABLE', 'TWO_FACTOR_DISABLE', 'SUSPICIOUS_ACTIVITY', 'DATA_ACCESS', 'DATA_EXPORT', 'REGISTRY_INGESTION_STARTED', 'REGISTRY_INGESTION_COMPLETED', 'REGISTRY_SUGGESTION_APPROVED', 'REGISTRY_SUGGESTION_REJECTED', 'DOCTOR_CLINIC_CONFIRMED', 'DOCTOR_CLINIC_ASSOCIATION_ENDED', 'DOCTOR_CLINIC_MANUAL_ASSOCIATED', 'CLINIC_REACTIVATED');--> statement-breakpoint
 CREATE TYPE "ingestion"."cnes_diff_scope" AS ENUM('WAREHOUSE', 'CRM');--> statement-breakpoint
 CREATE TYPE "ingestion"."cnes_run_phase" AS ENUM('DISCOVERING', 'DOWNLOADING', 'EXTRACTING', 'PREFLIGHT', 'PARSING', 'LOADING', 'VALIDATING', 'RECONCILING', 'PROMOTING', 'SYNCING', 'FAILED');--> statement-breakpoint
 CREATE TYPE "ingestion"."cnes_run_status" AS ENUM('RUNNING', 'COMPLETED', 'FAILED');--> statement-breakpoint
 CREATE TYPE "ingestion"."cnes_suggestion_status" AS ENUM('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'SUPERSEDED');--> statement-breakpoint
 CREATE TYPE "ingestion"."cnes_suggestion_type" AS ENUM('FACILITY_FIELD_UPDATE', 'PROFESSIONAL_FIELD_UPDATE', 'FACILITY_REGISTRY_DEACTIVATED', 'FACILITY_REGISTRY_REACTIVATED', 'FACILITY_PROFESSIONAL_REMOVAL', 'FACILITY_PROFESSIONAL_ADD', 'FACILITY_REPRESENTATIVE_REMOVAL', 'FACILITY_REPRESENTATIVE_ADD', 'FACILITY_REPRESENTATIVE_FIELD_UPDATE', 'CLINIC_REMOVAL', 'CLINIC_REACTIVATION', 'DOCTOR_CLINIC_REMOVAL');--> statement-breakpoint
+CREATE TABLE "sectors" (
+	"id" text PRIMARY KEY NOT NULL,
+	"slug" text NOT NULL,
+	"name" text NOT NULL,
+	"is_active" boolean DEFAULT true NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "sectors_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
+CREATE TABLE "user_sector_assignments" (
+	"id" text PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"sector_id" text NOT NULL,
+	"assigned_by_user_id" text,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "invitations" (
 	"id" text PRIMARY KEY NOT NULL,
 	"email" text,
@@ -179,7 +197,7 @@ CREATE TABLE "territories" (
 	"parent_id" text,
 	"manager_territory_id" text,
 	"is_active" boolean DEFAULT true NOT NULL,
-	"organization_id" text,
+	"sector_id" text,
 	"boundary" geometry(MultiPolygon,4326),
 	"centroid" geometry(Point,4326),
 	"boundary_min_lng" double precision,
@@ -279,6 +297,7 @@ CREATE TABLE "facilities" (
 	"facility_type_code" text,
 	"is_active_in_registry" boolean DEFAULT true NOT NULL,
 	"registry_deactivation_code" text,
+	"tax_id_type" "facility_tax_id_type",
 	"cnpj" text,
 	"cpf" text,
 	"country" text,
@@ -299,6 +318,8 @@ CREATE TABLE "facilities" (
 	"commercial_status" "commercial_status",
 	"purchase_status" "purchase_status",
 	"image_url" text,
+	"unit_type" text,
+	"unit_subtype" text,
 	"territory_id" text,
 	"territory_assignment_status" "territory_assignment_status" DEFAULT 'unassigned' NOT NULL,
 	"territory_assignment_source" "territory_assignment_source" DEFAULT 'geo' NOT NULL,
@@ -352,7 +373,7 @@ CREATE TABLE "facility_professionals" (
 	"is_buyer" boolean DEFAULT false NOT NULL,
 	"is_decision_maker" boolean DEFAULT false NOT NULL,
 	"is_partner" boolean DEFAULT false NOT NULL,
-	"relationship_level" "relationship_level",
+	"relationship_level" smallint,
 	"notes" text,
 	"source_active" boolean DEFAULT false NOT NULL,
 	"source_first_seen_at" timestamp,
@@ -374,7 +395,6 @@ CREATE TABLE "facility_representatives" (
 	"email" text,
 	"tax_id" text,
 	"contact_type" "contact_type" DEFAULT 'PROFESSIONAL' NOT NULL,
-	"relationship_level" text,
 	"phone" text,
 	"notes" text,
 	"source_provider" text,
@@ -384,6 +404,18 @@ CREATE TABLE "facility_representatives" (
 	"confirmed_by_user_id" text,
 	"ended_at" timestamp,
 	"manually_edited_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "facility_services" (
+	"id" text PRIMARY KEY NOT NULL,
+	"facility_id" text NOT NULL,
+	"service_code" text NOT NULL,
+	"classification_code" text NOT NULL,
+	"source_provider" text DEFAULT 'cnes' NOT NULL,
+	"source_first_seen_at" timestamp,
+	"source_last_seen_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
@@ -431,31 +463,139 @@ CREATE TABLE "professionals" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "sectors" (
+CREATE TABLE "competitor_product_sectors" (
 	"id" text PRIMARY KEY NOT NULL,
-	"slug" text NOT NULL,
+	"competitor_product_id" text NOT NULL,
+	"sector_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "competitor_products" (
+	"id" text PRIMARY KEY NOT NULL,
+	"code" text,
 	"name" text NOT NULL,
+	"manufacturer" text,
+	"brand" text,
 	"is_active" boolean DEFAULT true NOT NULL,
+	"legacy_id" integer,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "sectors_slug_unique" UNIQUE("slug")
+	"country_of_origin" text,
+	"price_17" numeric(12, 2),
+	"price_18" numeric(12, 2),
+	"price_20" numeric(12, 2),
+	"brasindice_updated_at" date
+);
+--> statement-breakpoint
+CREATE TABLE "facility_competitor_product_standards" (
+	"id" text PRIMARY KEY NOT NULL,
+	"facility_id" text NOT NULL,
+	"competitor_product_id" text NOT NULL,
+	"standardized_quantity" integer,
+	"source" text DEFAULT 'crm' NOT NULL,
+	"source_first_seen_at" timestamp,
+	"source_last_seen_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "product_equivalences" (
+	"id" text PRIMARY KEY NOT NULL,
+	"product_id" text NOT NULL,
+	"competitor_product_id" text NOT NULL,
+	"notes" text,
+	"created_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "product_sectors" (
+	"id" text PRIMARY KEY NOT NULL,
+	"product_id" text NOT NULL,
+	"sector_id" text NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "products" (
 	"id" text PRIMARY KEY NOT NULL,
 	"code" text NOT NULL,
 	"name" text NOT NULL,
-	"sector_id" text NOT NULL,
+	"legacy_id" text,
+	"description" text,
+	"barcode" text,
+	"commercial_code" text,
+	"product_group" text,
+	"product_classification" text,
+	"brand" text,
+	"unit" text,
+	"picture_url" text,
+	"simpro_code" text NOT NULL,
+	"brasindice_code" text NOT NULL,
+	"tiss_code" text NOT NULL,
+	"manufacturer" text NOT NULL,
+	"country_of_origin" text NOT NULL,
+	"price" numeric(12, 2) NOT NULL,
+	"price_17" numeric(12, 2) NOT NULL,
+	"price_18" numeric(12, 2) NOT NULL,
+	"price_20" numeric(12, 2) NOT NULL,
+	"brasindice_updated_at" date NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "products_code_unique" UNIQUE("code")
+	CONSTRAINT "products_code_unique" UNIQUE("code"),
+	CONSTRAINT "products_simpro_code_unique" UNIQUE("simpro_code"),
+	CONSTRAINT "products_brasindice_code_unique" UNIQUE("brasindice_code"),
+	CONSTRAINT "products_tiss_code_unique" UNIQUE("tiss_code")
+);
+--> statement-breakpoint
+CREATE TABLE "order_items" (
+	"id" text PRIMARY KEY NOT NULL,
+	"legacy_id" integer,
+	"order_id" text NOT NULL,
+	"product_id" text,
+	"legacy_product_id" integer,
+	"line_number" integer,
+	"quantity" numeric(15, 4) DEFAULT '0' NOT NULL,
+	"unit_price" numeric(15, 4) DEFAULT '0' NOT NULL,
+	"usd_price" numeric(15, 4),
+	"batch_number" text,
+	"written_off" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "orders" (
+	"id" text PRIMARY KEY NOT NULL,
+	"legacy_id" integer,
+	"facility_id" text NOT NULL,
+	"seller_id" text,
+	"professional_id" text,
+	"status" "order_status" DEFAULT 'DRAFT' NOT NULL,
+	"type" "order_type" DEFAULT 'STANDARD' NOT NULL,
+	"surgery_type" text,
+	"surgery_subtype" text,
+	"ordered_at" timestamp,
+	"notes" text,
+	"freight" numeric(15, 4) DEFAULT '0' NOT NULL,
+	"gross_weight" numeric(15, 4) DEFAULT '0' NOT NULL,
+	"net_weight" numeric(15, 4) DEFAULT '0' NOT NULL,
+	"currency" text DEFAULT 'BRL' NOT NULL,
+	"usd_exchange_rate" numeric(15, 4),
+	"finalized_by_id" text,
+	"finalized_at" timestamp,
+	"rejected_by_id" text,
+	"rejection_reason" text,
+	"no_billing_by_id" text,
+	"no_billing_at" timestamp,
+	"no_billing_notes" text,
+	"expense_authorized_by_id" text,
+	"expense_authorized_at" timestamp,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "audit"."audit_logs" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text,
-	"event_type" "audit"."audit_event_type" NOT NULL,
+	"event_type" text NOT NULL,
 	"severity" "audit"."audit_event_severity" DEFAULT 'INFO' NOT NULL,
 	"actor" text,
 	"actor_id" text,
@@ -577,6 +717,15 @@ CREATE TABLE "registry"."facility_representatives" (
 	"origin_updated_date" text,
 	"created_at" timestamp,
 	"updated_at" timestamp
+);
+--> statement-breakpoint
+CREATE TABLE "registry"."facility_services" (
+	"facility_id" text NOT NULL,
+	"service_code" text NOT NULL,
+	"classification_code" text NOT NULL,
+	"created_at" timestamp,
+	"updated_at" timestamp,
+	CONSTRAINT "facility_services_facility_id_service_code_classification_code_pk" PRIMARY KEY("facility_id","service_code","classification_code")
 );
 --> statement-breakpoint
 CREATE TABLE "registry"."facility_types" (
@@ -714,39 +863,68 @@ CREATE TABLE "ingestion"."cnes_suggestions" (
 	"resolution_note" text
 );
 --> statement-breakpoint
+ALTER TABLE "user_sector_assignments" ADD CONSTRAINT "user_sector_assignments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_sector_assignments" ADD CONSTRAINT "user_sector_assignments_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_sector_assignments" ADD CONSTRAINT "user_sector_assignments_assigned_by_user_id_users_id_fk" FOREIGN KEY ("assigned_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_invited_by_user_id_users_id_fk" FOREIGN KEY ("invited_by_user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invitations" ADD CONSTRAINT "invitations_manager_id_users_id_fk" FOREIGN KEY ("manager_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_resets" ADD CONSTRAINT "password_resets_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "permissions" ADD CONSTRAINT "permissions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "permissions" ADD CONSTRAINT "permissions_granted_by_users_id_fk" FOREIGN KEY ("granted_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_role_id_roles_id_fk" FOREIGN KEY ("role_id") REFERENCES "public"."roles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "territories" ADD CONSTRAINT "territories_territory_type_id_territory_types_id_fk" FOREIGN KEY ("territory_type_id") REFERENCES "public"."territory_types"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "territories" ADD CONSTRAINT "territories_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "territory_approval_requests" ADD CONSTRAINT "territory_approval_requests_requester_id_users_id_fk" FOREIGN KEY ("requester_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "territory_approval_requests" ADD CONSTRAINT "territory_approval_requests_reviewer_id_users_id_fk" FOREIGN KEY ("reviewer_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "territory_approval_requests" ADD CONSTRAINT "territory_approval_requests_target_territory_id_territories_id_fk" FOREIGN KEY ("target_territory_id") REFERENCES "public"."territories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "territory_approval_requests" ADD CONSTRAINT "territory_approval_requests_to_territory_id_territories_id_fk" FOREIGN KEY ("to_territory_id") REFERENCES "public"."territories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "territory_closure" ADD CONSTRAINT "territory_closure_ancestor_id_territories_id_fk" FOREIGN KEY ("ancestor_id") REFERENCES "public"."territories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "territory_closure" ADD CONSTRAINT "territory_closure_descendant_id_territories_id_fk" FOREIGN KEY ("descendant_id") REFERENCES "public"."territories"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_territory_assignments" ADD CONSTRAINT "user_territory_assignments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_territory_assignments" ADD CONSTRAINT "user_territory_assignments_territory_id_territories_id_fk" FOREIGN KEY ("territory_id") REFERENCES "public"."territories"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_territory_assignments" ADD CONSTRAINT "user_territory_assignments_assigned_by_users_id_fk" FOREIGN KEY ("assigned_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conformity_records" ADD CONSTRAINT "conformity_records_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conformity_records" ADD CONSTRAINT "conformity_records_requirement_id_conformity_requirements_id_fk" FOREIGN KEY ("requirement_id") REFERENCES "public"."conformity_requirements"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "conformity_records" ADD CONSTRAINT "conformity_records_validated_by_user_id_users_id_fk" FOREIGN KEY ("validated_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "conformity_requirements" ADD CONSTRAINT "conformity_requirements_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facilities" ADD CONSTRAINT "facilities_primary_sector_id_sectors_id_fk" FOREIGN KEY ("primary_sector_id") REFERENCES "public"."sectors"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facilities" ADD CONSTRAINT "facilities_territory_id_territories_id_fk" FOREIGN KEY ("territory_id") REFERENCES "public"."territories"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_consultant_assignments" ADD CONSTRAINT "facility_consultant_assignments_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_consultant_assignments" ADD CONSTRAINT "facility_consultant_assignments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_consultant_assignments" ADD CONSTRAINT "facility_consultant_assignments_assigned_by_user_id_users_id_fk" FOREIGN KEY ("assigned_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_healthcare_provider_shares" ADD CONSTRAINT "facility_healthcare_provider_shares_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_healthcare_provider_shares" ADD CONSTRAINT "facility_healthcare_provider_shares_healthcare_provider_id_healthcare_providers_id_fk" FOREIGN KEY ("healthcare_provider_id") REFERENCES "public"."healthcare_providers"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_professionals" ADD CONSTRAINT "facility_professionals_professional_id_professionals_id_fk" FOREIGN KEY ("professional_id") REFERENCES "public"."professionals"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_professionals" ADD CONSTRAINT "facility_professionals_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_professionals" ADD CONSTRAINT "facility_professionals_confirmed_by_user_id_users_id_fk" FOREIGN KEY ("confirmed_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_professionals" ADD CONSTRAINT "facility_professionals_ended_by_user_id_users_id_fk" FOREIGN KEY ("ended_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "facility_representatives" ADD CONSTRAINT "facility_representatives_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "products" ADD CONSTRAINT "products_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_representatives" ADD CONSTRAINT "facility_representatives_confirmed_by_user_id_users_id_fk" FOREIGN KEY ("confirmed_by_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_services" ADD CONSTRAINT "facility_services_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "competitor_product_sectors" ADD CONSTRAINT "competitor_product_sectors_competitor_product_id_competitor_products_id_fk" FOREIGN KEY ("competitor_product_id") REFERENCES "public"."competitor_products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "competitor_product_sectors" ADD CONSTRAINT "competitor_product_sectors_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_competitor_product_standards" ADD CONSTRAINT "facility_competitor_product_standards_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "facility_competitor_product_standards" ADD CONSTRAINT "facility_competitor_product_standards_competitor_product_id_competitor_products_id_fk" FOREIGN KEY ("competitor_product_id") REFERENCES "public"."competitor_products"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_equivalences" ADD CONSTRAINT "product_equivalences_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_equivalences" ADD CONSTRAINT "product_equivalences_competitor_product_id_competitor_products_id_fk" FOREIGN KEY ("competitor_product_id") REFERENCES "public"."competitor_products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_sectors" ADD CONSTRAINT "product_sectors_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "product_sectors" ADD CONSTRAINT "product_sectors_sector_id_sectors_id_fk" FOREIGN KEY ("sector_id") REFERENCES "public"."sectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "orders" ADD CONSTRAINT "orders_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "audit"."audit_logs" ADD CONSTRAINT "audit_logs_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion"."cnes_diffs" ADD CONSTRAINT "cnes_diffs_cnes_run_id_cnes_runs_id_fk" FOREIGN KEY ("cnes_run_id") REFERENCES "ingestion"."cnes_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_cnes_run_id_cnes_runs_id_fk" FOREIGN KEY ("cnes_run_id") REFERENCES "ingestion"."cnes_runs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_facility_id_facilities_id_fk" FOREIGN KEY ("facility_id") REFERENCES "public"."facilities"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_professional_id_professionals_id_fk" FOREIGN KEY ("professional_id") REFERENCES "public"."professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "ingestion"."cnes_suggestions" ADD CONSTRAINT "cnes_suggestions_facility_professional_id_facility_professionals_id_fk" FOREIGN KEY ("facility_professional_id") REFERENCES "public"."facility_professionals"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "sectors_is_active_idx" ON "sectors" USING btree ("is_active");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_sector_assignments_user_id_sector_id_uidx" ON "user_sector_assignments" USING btree ("user_id","sector_id");--> statement-breakpoint
+CREATE INDEX "user_sector_assignments_user_id_idx" ON "user_sector_assignments" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "user_sector_assignments_sector_id_idx" ON "user_sector_assignments" USING btree ("sector_id");--> statement-breakpoint
 CREATE INDEX "invitations_email_idx" ON "invitations" USING btree ("email");--> statement-breakpoint
 CREATE INDEX "invitations_phone_number_idx" ON "invitations" USING btree ("phone_number");--> statement-breakpoint
 CREATE INDEX "invitations_token_hash_idx" ON "invitations" USING btree ("token_hash");--> statement-breakpoint
@@ -790,6 +968,7 @@ CREATE INDEX "territories_is_active_idx" ON "territories" USING btree ("is_activ
 CREATE INDEX "territories_node_type_idx" ON "territories" USING btree ("node_type");--> statement-breakpoint
 CREATE INDEX "territories_country_code_idx" ON "territories" USING btree ("country_code");--> statement-breakpoint
 CREATE INDEX "territories_territory_type_id_idx" ON "territories" USING btree ("territory_type_id");--> statement-breakpoint
+CREATE INDEX "territories_sector_id_idx" ON "territories" USING btree ("sector_id");--> statement-breakpoint
 CREATE INDEX "territory_approval_requests_status_type_idx" ON "territory_approval_requests" USING btree ("status","type");--> statement-breakpoint
 CREATE INDEX "territory_approval_requests_requester_id_idx" ON "territory_approval_requests" USING btree ("requester_id");--> statement-breakpoint
 CREATE INDEX "territory_approval_requests_target_territory_id_status_idx" ON "territory_approval_requests" USING btree ("target_territory_id","status");--> statement-breakpoint
@@ -828,15 +1007,33 @@ CREATE INDEX "facility_professionals_facility_id_confirmed_at_ended_at_idx" ON "
 CREATE UNIQUE INDEX "facility_representatives_facility_id_external_source_key_uidx" ON "facility_representatives" USING btree ("facility_id","external_source_key");--> statement-breakpoint
 CREATE INDEX "facility_representatives_facility_id_idx" ON "facility_representatives" USING btree ("facility_id");--> statement-breakpoint
 CREATE INDEX "facility_representatives_facility_id_source_active_ended_at_idx" ON "facility_representatives" USING btree ("facility_id","source_active","ended_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "facility_services_facility_id_service_code_classification_code_uidx" ON "facility_services" USING btree ("facility_id","service_code","classification_code");--> statement-breakpoint
+CREATE INDEX "facility_services_facility_id_idx" ON "facility_services" USING btree ("facility_id");--> statement-breakpoint
+CREATE INDEX "facility_services_service_code_idx" ON "facility_services" USING btree ("service_code");--> statement-breakpoint
 CREATE INDEX "healthcare_providers_is_active_idx" ON "healthcare_providers" USING btree ("is_active");--> statement-breakpoint
 CREATE UNIQUE INDEX "professionals_source_provider_external_source_id_uidx" ON "professionals" USING btree ("source_provider","external_source_id");--> statement-breakpoint
 CREATE INDEX "professionals_deleted_at_idx" ON "professionals" USING btree ("deleted_at");--> statement-breakpoint
 CREATE INDEX "professionals_last_name_first_name_idx" ON "professionals" USING btree ("last_name","first_name");--> statement-breakpoint
 CREATE INDEX "professionals_source_provider_source_present_idx" ON "professionals" USING btree ("source_provider","source_present");--> statement-breakpoint
 CREATE INDEX "professionals_tax_id_idx" ON "professionals" USING btree ("tax_id");--> statement-breakpoint
-CREATE INDEX "sectors_is_active_idx" ON "sectors" USING btree ("is_active");--> statement-breakpoint
-CREATE INDEX "products_sector_id_idx" ON "products" USING btree ("sector_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "competitor_product_sectors_competitor_product_id_sector_id_uidx" ON "competitor_product_sectors" USING btree ("competitor_product_id","sector_id");--> statement-breakpoint
+CREATE INDEX "competitor_product_sectors_sector_id_idx" ON "competitor_product_sectors" USING btree ("sector_id");--> statement-breakpoint
+CREATE INDEX "competitor_products_is_active_idx" ON "competitor_products" USING btree ("is_active");--> statement-breakpoint
+CREATE UNIQUE INDEX "facility_competitor_product_standards_pair_uidx" ON "facility_competitor_product_standards" USING btree ("facility_id","competitor_product_id");--> statement-breakpoint
+CREATE INDEX "facility_competitor_product_standards_facility_idx" ON "facility_competitor_product_standards" USING btree ("facility_id");--> statement-breakpoint
+CREATE INDEX "facility_competitor_product_standards_competitor_idx" ON "facility_competitor_product_standards" USING btree ("competitor_product_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "product_equivalences_product_id_competitor_product_id_uidx" ON "product_equivalences" USING btree ("product_id","competitor_product_id");--> statement-breakpoint
+CREATE INDEX "product_equivalences_competitor_product_idx" ON "product_equivalences" USING btree ("competitor_product_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "product_sectors_product_sector_uidx" ON "product_sectors" USING btree ("product_id","sector_id");--> statement-breakpoint
+CREATE INDEX "product_sectors_sector_id_idx" ON "product_sectors" USING btree ("sector_id");--> statement-breakpoint
 CREATE INDEX "products_is_active_idx" ON "products" USING btree ("is_active");--> statement-breakpoint
+CREATE INDEX "products_legacy_id_idx" ON "products" USING btree ("legacy_id");--> statement-breakpoint
+CREATE INDEX "order_items_order_id_idx" ON "order_items" USING btree ("order_id");--> statement-breakpoint
+CREATE INDEX "order_items_product_id_idx" ON "order_items" USING btree ("product_id");--> statement-breakpoint
+CREATE INDEX "order_items_legacy_product_id_idx" ON "order_items" USING btree ("legacy_product_id");--> statement-breakpoint
+CREATE INDEX "orders_facility_id_idx" ON "orders" USING btree ("facility_id");--> statement-breakpoint
+CREATE INDEX "orders_status_idx" ON "orders" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "orders_legacy_id_idx" ON "orders" USING btree ("legacy_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_user_id_idx" ON "audit"."audit_logs" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "audit_logs_event_type_idx" ON "audit"."audit_logs" USING btree ("event_type");--> statement-breakpoint
 CREATE INDEX "audit_logs_severity_idx" ON "audit"."audit_logs" USING btree ("severity");--> statement-breakpoint
