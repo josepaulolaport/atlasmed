@@ -8,6 +8,7 @@
  * - /health/metrics - Prometheus metrics
  */
 
+import os from "os";
 import { Elysia } from "elysia";
 import { db } from "../database/db";
 import { sql } from "drizzle-orm";
@@ -231,7 +232,7 @@ export const healthRoute = new Elysia({
         node: process.version,
         platform: process.platform,
         arch: process.arch,
-        cpus: (await import('os')).cpus().length
+        cpus: os.cpus().length
       }
     };
   }, {

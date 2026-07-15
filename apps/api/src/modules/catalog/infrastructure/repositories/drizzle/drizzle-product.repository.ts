@@ -106,30 +106,32 @@ export class DrizzleProductRepository implements ProductRepository {
     sectorIds: string[];
     isActive?: boolean;
   }): Promise<ProductRecord> {
-    const [product] = await db
-      .insert(products)
-      .values({
-        code: data.code,
-        name: data.name,
-        isActive: data.isActive ?? true,
-      })
-      .returning({
-        id: products.id,
-        code: products.code,
-        name: products.name,
-        isActive: products.isActive,
-        createdAt: products.createdAt,
-        updatedAt: products.updatedAt,
-      });
-    if (!product) throw new Error("Failed to insert product");
+    return db.transaction(async (tx) => {
+      const [product] = await tx
+        .insert(products)
+        .values({
+          code: data.code,
+          name: data.name,
+          isActive: data.isActive ?? true,
+        })
+        .returning({
+          id: products.id,
+          code: products.code,
+          name: products.name,
+          isActive: products.isActive,
+          createdAt: products.createdAt,
+          updatedAt: products.updatedAt,
+        });
+      if (!product) throw new Error("Failed to insert product");
 
-    const uniqueSectorIds = [...new Set(data.sectorIds)];
-    if (uniqueSectorIds.length > 0) {
-      await db.insert(productSectors).values(
-        uniqueSectorIds.map((sectorId) => ({ productId: product.id, sectorId }))
-      );
-    }
-    return mapProduct(product, uniqueSectorIds);
+      const uniqueSectorIds = [...new Set(data.sectorIds)];
+      if (uniqueSectorIds.length > 0) {
+        await tx.insert(productSectors).values(
+          uniqueSectorIds.map((sectorId) => ({ productId: product.id, sectorId }))
+        );
+      }
+      return mapProduct(product, uniqueSectorIds);
+    });
   }
 
   async update(
@@ -137,9 +139,12 @@ export class DrizzleProductRepository implements ProductRepository {
     data: { code?: string; name?: string; sectorIds?: string[]; isActive?: boolean }
   ): Promise<ProductRecord> {
     const { sectorIds, ...productData } = data;
+    const cleanData = Object.fromEntries(
+      Object.entries(productData).filter(([, v]) => v !== undefined)
+    );
     const [product] = await db
       .update(products)
-      .set({ ...productData, updatedAt: new Date() })
+      .set({ ...cleanData, updatedAt: new Date() })
       .where(eq(products.id, id))
       .returning({
         id: products.id,
@@ -152,14 +157,16 @@ export class DrizzleProductRepository implements ProductRepository {
     if (!product) throw new Error("Product not found");
 
     if (sectorIds !== undefined) {
-      const uniqueSectorIds = [...new Set(sectorIds)];
-      await db.delete(productSectors).where(eq(productSectors.productId, id));
-      if (uniqueSectorIds.length > 0) {
-        await db.insert(productSectors).values(
-          uniqueSectorIds.map((sectorId) => ({ productId: id, sectorId }))
-        );
-      }
-      return mapProduct(product, uniqueSectorIds);
+      return db.transaction(async (tx) => {
+        const uniqueSectorIds = [...new Set(sectorIds)];
+        await tx.delete(productSectors).where(eq(productSectors.productId, id));
+        if (uniqueSectorIds.length > 0) {
+          await tx.insert(productSectors).values(
+            uniqueSectorIds.map((sectorId) => ({ productId: id, sectorId }))
+          );
+        }
+        return mapProduct(product, uniqueSectorIds);
+      });
     }
 
     const sectorMap = await fetchSectorIds([id]);

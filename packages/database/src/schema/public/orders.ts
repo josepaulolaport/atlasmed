@@ -10,6 +10,7 @@ import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { facilities } from "./facilities";
+import { products } from "./catalog";
 
 export const orders = pgTable(
   "orders",
@@ -40,7 +41,7 @@ export const orderItems = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     orderId: text("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-    productId: text("product_id").notNull(),
+    productId: text("product_id").notNull().references(() => products.id, { onDelete: "restrict" }),
     legacyProductId: text("legacy_product_id"),
     quantity: integer("quantity").notNull(),
     unitPrice: numeric("unit_price", { precision: 15, scale: 4 }),

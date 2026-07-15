@@ -10,6 +10,7 @@ ALTER TABLE "products" ADD COLUMN "unit" text;--> statement-breakpoint
 
 -- 2. Migrate existing sector_id data to product_sectors, then drop the FK column
 CREATE TABLE IF NOT EXISTS "product_sectors" (
+  "id" text PRIMARY KEY NOT NULL,
   "product_id" text NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
   "sector_id" text NOT NULL REFERENCES "sectors"("id") ON DELETE CASCADE,
   "created_at" timestamp NOT NULL DEFAULT now()
@@ -51,7 +52,7 @@ CREATE TABLE "orders" (
 CREATE TABLE "order_items" (
   "id" text PRIMARY KEY NOT NULL,
   "order_id" text NOT NULL REFERENCES "orders"("id") ON DELETE CASCADE,
-  "product_id" text NOT NULL,
+  "product_id" text NOT NULL REFERENCES "products"("id") ON DELETE RESTRICT,
   "legacy_product_id" text,
   "quantity" integer NOT NULL,
   "unit_price" numeric(15,4),

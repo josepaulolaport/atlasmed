@@ -38,6 +38,7 @@ export const products = pgTable(
 export const productSectors = pgTable(
   "product_sectors",
   {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
     productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
     sectorId: text("sector_id").notNull().references(() => sectors.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -72,6 +73,7 @@ export const competitorProducts = pgTable(
 export const competitorProductSectors = pgTable(
   "competitor_product_sectors",
   {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
     competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
     sectorId: text("sector_id").notNull().references(() => sectors.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -85,6 +87,7 @@ export const competitorProductSectors = pgTable(
 export const productEquivalences = pgTable(
   "product_equivalences",
   {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
     productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
     competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
     note: text("note"),

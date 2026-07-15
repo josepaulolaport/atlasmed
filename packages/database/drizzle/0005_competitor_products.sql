@@ -15,6 +15,7 @@ CREATE TABLE "competitor_products" (
 
 -- competitor_product_sectors join table
 CREATE TABLE "competitor_product_sectors" (
+  "id" text PRIMARY KEY NOT NULL,
   "competitor_product_id" text NOT NULL REFERENCES "competitor_products"("id") ON DELETE CASCADE,
   "sector_id" text NOT NULL REFERENCES "sectors"("id") ON DELETE CASCADE,
   "created_at" timestamp NOT NULL DEFAULT now()
@@ -22,6 +23,7 @@ CREATE TABLE "competitor_product_sectors" (
 
 -- product_equivalences bridge table
 CREATE TABLE "product_equivalences" (
+  "id" text PRIMARY KEY NOT NULL,
   "product_id" text NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
   "competitor_product_id" text NOT NULL REFERENCES "competitor_products"("id") ON DELETE CASCADE,
   "note" text,
