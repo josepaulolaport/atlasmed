@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/models.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/mock_profile_repository.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/profile_repository.dart';
 
@@ -16,9 +17,13 @@ final profileProvider = FutureProvider<UserProfile>((ref) {
   return repo.getProfile();
 });
 
-final sessionProfileProvider = FutureProvider<UserProfile?>((ref) async {
+final currentUserProvider = FutureProvider<User?>((ref) async {
   final userRepository = ref.watch(userProvider);
-  final user = await userRepository.currentValueOrResolve();
+  return userRepository.currentValueOrResolve();
+});
+
+final sessionProfileProvider = FutureProvider<UserProfile?>((ref) async {
+  final user = await ref.watch(currentUserProvider.future);
   if (user == null) return null;
 
   return UserProfile(

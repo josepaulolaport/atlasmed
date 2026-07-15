@@ -259,8 +259,9 @@ Future<void> _showAddNoteSheet(
                               ref.invalidate(
                                 professionalNotesProvider(professionalId),
                               );
-                              if (sheetContext.mounted)
+                              if (sheetContext.mounted) {
                                 Navigator.pop(sheetContext);
+                              }
                             } catch (_) {
                               setState(() {
                                 isSaving = false;

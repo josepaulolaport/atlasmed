@@ -3,7 +3,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
-import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/avatar_repository.dart';
 
 final avatarRepositoryProvider = Provider<AvatarRepository>((ref) {
@@ -124,16 +123,7 @@ class AvatarController extends StateNotifier<AsyncValue<void>> {
   }
 
   Future<void> _replaceSessionUser(User user) async {
-    final sessionEnvironment = _ref.read(sessionProvider);
-    final current = sessionEnvironment.currentValue;
-    if (current == null) return;
-    await sessionEnvironment.update(
-      (_) => Session(
-        token: current.token,
-        refreshToken: current.refreshToken,
-        user: user,
-      ),
-    );
+    await _ref.read(userProvider).replaceCachedUser(user);
   }
 
   String? _contentTypeFor(String name) {

@@ -12,6 +12,9 @@ void main() {
           body: FilterSheet(
             kind: 'clinic',
             filters: const {},
+            proximityEnabled: false,
+            requestingProximity: false,
+            onProximityToggle: () {},
             onApply: (filters) => appliedFilters = filters,
           ),
         ),

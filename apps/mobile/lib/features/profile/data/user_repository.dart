@@ -22,6 +22,8 @@ class UserRepository extends Repository<User>
     return User.fromJson(jsonDecode(json) as Map<String, dynamic>);
   }
 
+  Future<void> replaceCachedUser(User user) => emit(data: user);
+
   Future<User?> updateProfile({
     String? firstName,
     String? lastName,

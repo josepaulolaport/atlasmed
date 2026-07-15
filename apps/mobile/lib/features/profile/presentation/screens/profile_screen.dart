@@ -69,6 +69,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final sessionProfile = ref.watch(sessionProfileProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final profileAsync = ref.watch(profileProvider);
     final territoryAsync = ref.watch(territoryStatsProvider);
     final summaryAsync = ref.watch(quickSummaryProvider);
@@ -93,20 +94,30 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   const AtlasTopBar(page: 'Perfil'),
 
                   // ── Header · identity ────────────────────────
-                  if (sessionProfile != null)
-                    _buildHeader(
-                      sessionProfile,
-                      avatarUrl: ref.watch(userProvider).valueOrNull?.avatarUrl,
-                      avatarToken: avatarToken,
-                      updating: avatarUpdating,
-                    )
-                  else
-                    profileAsync.when(
-                      loading: () => _buildHeaderShimmer(),
+                  sessionProfile.when(
+                    loading: _buildHeaderShimmer,
+                    error: (_, _) => profileAsync.when(
+                      loading: _buildHeaderShimmer,
                       error: (_, _) => const SizedBox.shrink(),
                       data: (profile) =>
                           _buildHeader(profile, updating: avatarUpdating),
                     ),
+                    data: (profile) => profile == null
+                        ? profileAsync.when(
+                            loading: _buildHeaderShimmer,
+                            error: (_, _) => const SizedBox.shrink(),
+                            data: (fallback) => _buildHeader(
+                              fallback,
+                              updating: avatarUpdating,
+                            ),
+                          )
+                        : _buildHeader(
+                            profile,
+                            avatarUrl: currentUser.valueOrNull?.avatarUrl,
+                            avatarToken: avatarToken,
+                            updating: avatarUpdating,
+                          ),
+                  ),
 
                   // ── Body ─────────────────────────────────────
                   Padding(
@@ -150,7 +161,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         _buildLogoutButton(),
 
                         // Footer
-                        _buildFooter(sessionProfile?.since ?? ''),
+                        _buildFooter(sessionProfile.valueOrNull?.since ?? ''),
                       ],
                     ),
                   ),
@@ -829,33 +840,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 // ======================================================================
 // Shared components
 // ======================================================================
-
-class _GlassButton extends StatelessWidget {
-  final Widget child;
-  final VoidCallback onTap;
-  const _GlassButton({required this.child, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
 
 class _AvatarEditor extends StatelessWidget {
   const _AvatarEditor({

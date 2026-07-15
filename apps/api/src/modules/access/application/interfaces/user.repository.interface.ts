@@ -9,7 +9,6 @@ export interface UserRecord {
   emailVerified: boolean;
   phoneVerified: boolean;
   phoneNumber: string | null;
-  avatarUrl?: string | null;
   emailVerifiedAt?: Date | null;
   phoneVerifiedAt?: Date | null;
   twoFactorEnabled: boolean;

@@ -6,6 +6,8 @@ import 'package:atlasmed_mobile_app/core/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/auth/data/models/session.dart';
+import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
 // ======================================================================
@@ -278,34 +280,38 @@ class AtlasDrawer extends ConsumerWidget {
           return const SizedBox.shrink();
         }
 
-        final user = ref.watch(userProvider).valueOrNull ?? session.user;
-        final displayName = user.displayName;
-        final email = user.email;
-        final initials = _initials(displayName);
+        return RepositoryBuilder<UserRepository, User>(
+          repository: ref.watch(userProvider),
+          builder: (context, user, _) {
+            final displayName = user?.displayName ?? 'Usuário';
+            final email = user?.email ?? '';
+            final initials = _initials(displayName);
 
-        return SizedBox(
-          width: MediaQuery.of(context).size.width * 0.78,
-          child: Drawer(
-            shape: const RoundedRectangleBorder(),
-            child: Column(
-              children: [
-                _DrawerHeader(
-                  initials: initials,
-                  displayName: displayName,
-                  email: email,
-                  avatarUrl: user.avatarUrl,
-                  avatarToken: session.token,
+            return SizedBox(
+              width: MediaQuery.of(context).size.width * 0.78,
+              child: Drawer(
+                shape: const RoundedRectangleBorder(),
+                child: Column(
+                  children: [
+                    _DrawerHeader(
+                      initials: initials,
+                      displayName: displayName,
+                      email: email,
+                      avatarUrl: user?.avatarUrl,
+                      avatarToken: session.token,
+                    ),
+                    Expanded(child: _NavItems(activeSection: activeSection)),
+                    _DrawerFooter(
+                      onLogout: () {
+                        Navigator.of(context).pop();
+                        repository.delete();
+                      },
+                    ),
+                  ],
                 ),
-                Expanded(child: _NavItems(activeSection: activeSection)),
-                _DrawerFooter(
-                  onLogout: () {
-                    Navigator.of(context).pop();
-                    repository.delete();
-                  },
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

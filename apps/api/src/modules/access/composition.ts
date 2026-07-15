@@ -59,6 +59,8 @@ import { ChangeUserRoleUseCase } from "./application/use-cases/change-user-role.
 import { ListRolesUseCase } from "./application/use-cases/list-roles.use-case";
 import { ListUsersUseCase } from "./application/use-cases/list-users.use-case";
 import { UpdateProfileUseCase } from "./application/use-cases/update-profile.use-case";
+import { UpdateAvatarUseCase } from "./application/use-cases/update-avatar.use-case";
+import { AvatarStorageAdapter } from "./infrastructure/avatar-storage/avatar-storage.adapter";
 import { AssignUserManagerUseCase } from "./application/use-cases/assign-user-manager.use-case";
 import { AssignUserTerritoryUseCase } from "./application/use-cases/assign-user-territory.use-case";
 import { RevokeUserTerritoryUseCase } from "./application/use-cases/revoke-user-territory.use-case";

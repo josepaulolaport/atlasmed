@@ -75,7 +75,19 @@ describe("ListFacilitiesUseCase", () => {
     const result = await useCase.execute({
       page: 2,
       limit: 10,
-      scope: { isGlobal: true, facilityIds: [], territoryIds: [] },
+      scope: {
+  isGlobal: true,
+  assignedTerritoryIds: [],
+  effectiveTerritoryIds: [],
+  analyticsEffectiveTerritoryIds: [],
+  territoryIds: [],
+  facilityIds: [],
+  analyticsFacilityIds: [],
+  clinicIds: [],
+  analyticsClinicIds: [],
+  managedUserIds: [],
+  isOperationallyActive: true,
+},
     });
 
     expect(result.data).toHaveLength(1);
@@ -91,8 +103,16 @@ describe("ListFacilitiesUseCase", () => {
     let receivedScope: unknown;
     const scope: ScopeContext = {
       isGlobal: false,
-      facilityIds: ["facility-1"],
+      assignedTerritoryIds: ["territory-1"],
+      effectiveTerritoryIds: ["territory-1"],
+      analyticsEffectiveTerritoryIds: ["territory-1"],
       territoryIds: ["territory-1"],
+      facilityIds: ["facility-1"],
+      analyticsFacilityIds: ["facility-1"],
+      clinicIds: ["facility-1"],
+      analyticsClinicIds: ["facility-1"],
+      managedUserIds: [],
+      isOperationallyActive: true,
     };
     const useCase = new ListFacilitiesUseCase({
       facilityRepository: fakeRepository(async (params) => {

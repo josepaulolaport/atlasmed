@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/auth/data/models/user.dart';
 import 'package:atlasmed_mobile_app/features/profile/data/avatar_repository.dart';
 
 void main() {
-  const user = User(
+  final user = User(
     id: 'user-1',
     email: 'ana@example.com',
     username: 'ana',
@@ -11,6 +11,9 @@ void main() {
     emailVerified: true,
     phoneVerified: false,
     role: UserRole(id: 'role-1', name: 'USER'),
+    twoFactorEnabled: false,
+    createdAt: DateTime(2026),
+    updatedAt: DateTime(2026),
   );
 
   test('formats a multipart avatar request with its bearer token', () async {
