@@ -51,7 +51,7 @@ class OrderDetailScreen extends ConsumerWidget {
         );
         final total = subtotal + detail.shipping;
         final hasTracking =
-            detail.status == OrderStatus.shipped && detail.tracking.isNotEmpty;
+            detail.status == OrderStatus.approved && detail.tracking.isNotEmpty;
 
         return Scaffold(
           backgroundColor: const Color(0xFFf7f8fb),
@@ -595,7 +595,7 @@ class _DeliveryBanner extends StatelessWidget {
   const _DeliveryBanner({required this.detail});
   @override
   Widget build(BuildContext context) {
-    final delivered = detail.status == OrderStatus.delivered;
+    final delivered = detail.status == OrderStatus.invoiced;
     final bg = delivered ? const Color(0x1F16a373) : const Color(0x1A0a2f7f);
     final fg = delivered ? const Color(0xFF0f8a5f) : const Color(0xFF0a2f7f);
     return Container(

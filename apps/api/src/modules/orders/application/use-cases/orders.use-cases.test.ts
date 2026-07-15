@@ -47,7 +47,7 @@ function createRepository(): OrderRepository {
             facility: { id: "facility-2", name: "Clínica Dois" },
             professional: null,
             seller: null,
-            status: "SHIPPED",
+            status: "APPROVED",
             type: "STANDARD",
             orderedAt: null,
             createdAt: new Date("2026-01-01T10:00:00Z"),
@@ -88,7 +88,7 @@ describe("orders use cases", () => {
     const result = await new ListOrdersUseCase({ orderRepository: repository }).execute({
       page: 2,
       limit: 10,
-      statuses: ["PENDING", "SHIPPED"],
+      statuses: ["PENDING", "APPROVED"],
       scope: scopedToFacilityOne,
     });
 
@@ -96,7 +96,7 @@ describe("orders use cases", () => {
     expect(received).toMatchObject({
       page: 2,
       limit: 10,
-      statuses: ["PENDING", "SHIPPED"],
+      statuses: ["PENDING", "APPROVED"],
       scope: { isGlobal: false, facilityIds: ["facility-1"] },
     });
     expect(result.pagination).toEqual({ page: 2, limit: 10, total: 1, totalPages: 1 });

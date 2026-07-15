@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 enum OrderStatus {
   draft,
   pending,
-  confirmed,
-  shipped,
-  delivered,
-  cancelled,
+  approved,
+  invoiced,
   rejected,
+  noBilling,
 }
 
 extension OrderStatusX on OrderStatus {
@@ -18,16 +17,14 @@ extension OrderStatusX on OrderStatus {
         return 'Rascunho';
       case OrderStatus.pending:
         return 'Pendente';
-      case OrderStatus.confirmed:
-        return 'Confirmado';
-      case OrderStatus.shipped:
-        return 'Em trânsito';
-      case OrderStatus.delivered:
-        return 'Entregue';
-      case OrderStatus.cancelled:
-        return 'Cancelado';
+      case OrderStatus.approved:
+        return 'Aprovado';
+      case OrderStatus.invoiced:
+        return 'Faturado';
       case OrderStatus.rejected:
         return 'Rejeitado';
+      case OrderStatus.noBilling:
+        return 'Sem Faturamento';
     }
   }
 
@@ -37,16 +34,14 @@ extension OrderStatusX on OrderStatus {
         return const Color(0xFF6b7280);
       case OrderStatus.pending:
         return const Color(0xFFc6861b);
-      case OrderStatus.confirmed:
+      case OrderStatus.approved:
         return const Color(0xFF1e40af);
-      case OrderStatus.shipped:
-        return const Color(0xFF0a2f7f);
-      case OrderStatus.delivered:
+      case OrderStatus.invoiced:
         return const Color(0xFF16a373);
-      case OrderStatus.cancelled:
-        return const Color(0xFFb84545);
       case OrderStatus.rejected:
         return const Color(0xFFb84545);
+      case OrderStatus.noBilling:
+        return const Color(0xFF7c3aed);
     }
   }
 
@@ -56,16 +51,14 @@ extension OrderStatusX on OrderStatus {
         return const Color(0x1F6b7280);
       case OrderStatus.pending:
         return const Color(0x21c6861b);
-      case OrderStatus.confirmed:
+      case OrderStatus.approved:
         return const Color(0x1C1e40af);
-      case OrderStatus.shipped:
-        return const Color(0x1A0a2f7f);
-      case OrderStatus.delivered:
+      case OrderStatus.invoiced:
         return const Color(0x1F16a373);
-      case OrderStatus.cancelled:
-        return const Color(0x1Fb84545);
       case OrderStatus.rejected:
         return const Color(0x1Fb84545);
+      case OrderStatus.noBilling:
+        return const Color(0x1A7c3aed);
     }
   }
 }
@@ -76,16 +69,14 @@ OrderStatus orderStatusFromJson(String json) {
       return OrderStatus.draft;
     case 'PENDING':
       return OrderStatus.pending;
-    case 'CONFIRMED':
-      return OrderStatus.confirmed;
-    case 'SHIPPED':
-      return OrderStatus.shipped;
-    case 'DELIVERED':
-      return OrderStatus.delivered;
-    case 'CANCELLED':
-      return OrderStatus.cancelled;
+    case 'APPROVED':
+      return OrderStatus.approved;
+    case 'INVOICED':
+      return OrderStatus.invoiced;
     case 'REJECTED':
       return OrderStatus.rejected;
+    case 'NO_BILLING':
+      return OrderStatus.noBilling;
     default:
       return OrderStatus.pending;
   }

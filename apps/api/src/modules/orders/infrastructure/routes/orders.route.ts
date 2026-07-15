@@ -8,11 +8,10 @@ import type { OrderStatus } from "../../application/interfaces/order.repository.
 const orderStatuses = [
   "DRAFT",
   "PENDING",
-  "CONFIRMED",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
+  "APPROVED",
+  "INVOICED",
   "REJECTED",
+  "NO_BILLING",
 ] as const;
 
 function parseStatuses(status: string | undefined): OrderStatus[] | undefined {
@@ -49,7 +48,7 @@ const listOrdersRoute = new Elysia()
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         status: t.Optional(t.String({
-          description: "Comma-separated statuses: PENDING,SHIPPED",
+          description: "Comma-separated statuses: PENDING,APPROVED,INVOICED",
         })),
       }),
     }

@@ -1,11 +1,10 @@
 export type OrderStatus =
   | "DRAFT"
   | "PENDING"
-  | "CONFIRMED"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED"
-  | "REJECTED";
+  | "APPROVED"
+  | "INVOICED"
+  | "REJECTED"
+  | "NO_BILLING";
 
 export interface OrderScopeFilter {
   isGlobal: boolean;
