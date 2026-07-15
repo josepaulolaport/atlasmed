@@ -21,7 +21,7 @@ describe("DrizzleSessionRepository (Integration)", () => {
       .then((r) => r[0] ?? null);
 
     if (!testRole) {
-      throw new Error("USER role not found in seeded database");
+      throw new Error("REP role not found in seeded database");
     }
 
     testRoleId = testRole.id;

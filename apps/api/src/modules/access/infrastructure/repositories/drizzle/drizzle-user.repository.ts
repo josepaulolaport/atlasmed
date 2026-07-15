@@ -293,23 +293,21 @@ export class DrizzleUserRepository implements UserRepository {
     params: ResetPasswordTransactionParams,
   ): Promise<ResetPasswordTransactionResult> {
     return await db.transaction(async (tx) => {
-      const lockedReset = await tx.execute<{
-        id: string;
-        userId: string;
-        expiresAt: Date;
-        usedAt: Date | null;
-      }>(sql`
-        SELECT id, "userId", "expiresAt", "usedAt"
-        FROM password_resets
-        WHERE "tokenHash" = ${params.tokenHash}
-        FOR UPDATE
-      `);
+      const [passwordReset] = await tx
+        .select({
+          id: passwordResets.id,
+          userId: passwordResets.userId,
+          expiresAt: passwordResets.expiresAt,
+          usedAt: passwordResets.usedAt,
+        })
+        .from(passwordResets)
+        .where(eq(passwordResets.tokenHash, params.tokenHash))
+        .for("update")
+        .limit(1);
 
-      if (!lockedReset || lockedReset.length === 0) {
+      if (!passwordReset) {
         throw new ResetTokenInvalidError();
       }
-
-      const passwordReset = lockedReset[0]!;
 
       if (passwordReset.usedAt) {
         throw new ResetTokenUsedError();
@@ -319,22 +317,20 @@ export class DrizzleUserRepository implements UserRepository {
         throw new ResetTokenExpiredError();
       }
 
-      const lockedUser = await tx.execute<{
-        id: string;
-        passwordHash: string;
-        passwordHistory: string[];
-      }>(sql`
-        SELECT id, "passwordHash", "passwordHistory"
-        FROM users
-        WHERE id = ${passwordReset.userId}
-        FOR UPDATE
-      `);
+      const [userLock] = await tx
+        .select({
+          id: users.id,
+          passwordHash: users.passwordHash,
+          passwordHistory: users.passwordHistory,
+        })
+        .from(users)
+        .where(eq(users.id, passwordReset.userId))
+        .for("update")
+        .limit(1);
 
-      if (!lockedUser || lockedUser.length === 0) {
+      if (!userLock) {
         throw new ResetTokenInvalidError();
       }
-
-      const userLock = lockedUser[0]!;
 
       const updatedHistory = [
         userLock.passwordHash,

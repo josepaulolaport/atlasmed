@@ -63,7 +63,7 @@ export async function seedTestDatabase() {
     });
 
     if (!userRole) {
-      throw new Error("USER role not found");
+      throw new Error("REP role not found");
     }
 
     const testPasswordHash = await hash("Password123!");

@@ -41,7 +41,7 @@ describe("Login Session Race Condition Integration Tests", () => {
       .then((r) => r[0] ?? null);
 
     if (!userRole) {
-      throw new Error("USER role not found in database");
+      throw new Error("REP role not found in database");
     }
 
     const uniqueId = getUniqueTestId();
