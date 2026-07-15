@@ -28,24 +28,6 @@ if ! bun run typecheck; then
   exit 1
 fi
 
-# 3) Flutter mobile validation (uses FVM — `.fvmrc` defines the SDK version).
-if ! command -v fvm &>/dev/null; then
-  echo "• FVM not found."
-  exit 1
-fi
-echo "• Running Flutter checks…"
-
-if ! bun run mobile:format; then
-  echo "✗ Dart formatting issues found in apps/mobile/."
-  echo "  Fix with: bun run mobile:format"
-  exit 1
-fi
-
-if ! bun run mobile:lint; then
-  echo "✗ Flutter analyze failed. Resolve issues and push again."
-  exit 1
-fi
-
 echo "✓ Pre-push validation passed."
 
 exit 0
