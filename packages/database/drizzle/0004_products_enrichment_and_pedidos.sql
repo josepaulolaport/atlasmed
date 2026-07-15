@@ -3,8 +3,6 @@
 -- Source: pedidos_data_extraction/migrations/001 + 002
 -- ============================================================
 
-BEGIN;
-
 -- ------------------------------------------------------------
 -- 1. Drop single-sector FK from products
 --    (replaced by many-to-many product_sectors below)
@@ -162,5 +160,3 @@ CREATE TABLE IF NOT EXISTS order_items (
 CREATE INDEX IF NOT EXISTS order_items_order_id_idx    ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS order_items_product_id_idx  ON order_items(product_id);
 CREATE INDEX IF NOT EXISTS order_items_batch_number_idx ON order_items(batch_number);
-
-COMMIT;

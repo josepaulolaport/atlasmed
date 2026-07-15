@@ -3,8 +3,6 @@
 --                 product_equivalences
 -- ============================================================
 
-BEGIN;
-
 -- ------------------------------------------------------------
 -- 1. Competitor products
 -- ------------------------------------------------------------
@@ -57,5 +55,3 @@ CREATE TABLE IF NOT EXISTS product_equivalences (
 
 CREATE INDEX IF NOT EXISTS product_equivalences_product_id_idx ON product_equivalences(product_id);
 CREATE INDEX IF NOT EXISTS product_equivalences_cp_id_idx      ON product_equivalences(competitor_product_id);
-
-COMMIT;
