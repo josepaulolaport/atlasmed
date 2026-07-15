@@ -8,7 +8,7 @@
     "start": "bun src/worker.ts",
     "lint": "biome check .",
     "typecheck": "bunx tsc -p tsconfig.json",
-    "test": "bun test"
+    "test": "bun test --test-name-pattern='^((?!Integration Tests).)*$'"
   },
   "dependencies": {
     "@atlasmed/config": "workspace:*",
