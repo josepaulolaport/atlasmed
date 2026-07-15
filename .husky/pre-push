@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 # Reuse the existing pre-push validation logic.
 bash ./.githooks/pre-push "$@"
