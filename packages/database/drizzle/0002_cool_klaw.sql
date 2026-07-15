@@ -23,7 +23,7 @@ DROP INDEX "product_equivalences_competitor_product_idx";--> statement-breakpoin
 DROP INDEX "product_sectors_product_sector_uidx";--> statement-breakpoint
 DROP INDEX "products_legacy_id_idx";--> statement-breakpoint
 DROP INDEX "order_items_legacy_product_id_idx";--> statement-breakpoint
-ALTER TABLE "products" ALTER COLUMN "legacy_id" SET DATA TYPE integer;--> statement-breakpoint
+ALTER TABLE "products" ALTER COLUMN "legacy_id" SET DATA TYPE integer USING "legacy_id"::integer;--> statement-breakpoint
 ALTER TABLE "order_items" ALTER COLUMN "quantity" SET DATA TYPE numeric(12, 3);--> statement-breakpoint
 ALTER TABLE "order_items" ALTER COLUMN "quantity" SET DEFAULT '0';--> statement-breakpoint
 ALTER TABLE "order_items" ALTER COLUMN "unit_price" SET DATA TYPE numeric(12, 2);--> statement-breakpoint
