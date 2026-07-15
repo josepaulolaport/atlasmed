@@ -231,7 +231,7 @@ export const healthRoute = new Elysia({
         node: process.version,
         platform: process.platform,
         arch: process.arch,
-        cpus: require('os').cpus().length
+        cpus: (await import('os')).cpus().length
       }
     };
   }, {
