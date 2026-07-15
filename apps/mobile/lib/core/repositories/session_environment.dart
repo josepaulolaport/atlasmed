@@ -131,8 +131,8 @@ class SessionEnvironment extends Repository<Session?>
   /// Calls `POST /auth/login` with the credentials, stores the
   /// returned [Session], and makes it available to the stream.
   ///
-  /// Returns `Right(session)` on success or `Left(AuthException)` on error.
-  Future<Either<AuthException, Session?>> login({
+  /// Returns `Right(session)` on success or `Left(AuthErrorKind)` on error.
+  Future<Either<AuthErrorKind, Session>> login({
     required String email,
     required String password,
   }) async {
@@ -147,35 +147,25 @@ class SessionEnvironment extends Repository<Session?>
 
       if (response.statusCode == 200) {
         final session = fromJson(response.body);
-        if (session != null) {
-          await update((_) => session);
+        if (session == null) {
+          return const Left(AuthErrorKind.unknown);
         }
+
+        await update((_) => session);
         return Right(session);
       }
 
       if (response.statusCode == 401) {
-        return Left(AuthException(
-          kind: AuthErrorKind.wrongCredentials,
-          message: 'E-mail ou senha incorretos.',
-        ));
+        return const Left(AuthErrorKind.wrongCredentials);
       }
 
       if (response.statusCode == 423) {
-        return Left(AuthException(
-          kind: AuthErrorKind.accountLocked,
-          message: 'Conta temporariamente bloqueada. Tente novamente mais tarde.',
-        ));
+        return const Left(AuthErrorKind.accountLocked);
       }
 
-      return Left(AuthException(
-        kind: AuthErrorKind.unknown,
-        message: 'Erro ao fazer login. Tente novamente.',
-      ));
+      return const Left(AuthErrorKind.unknown);
     } catch (e) {
-      return Left(AuthException(
-        kind: AuthErrorKind.networkError,
-        message: 'Erro de rede. Verifique sua conexão.',
-      ));
+      return const Left(AuthErrorKind.networkError);
     }
   }
 
