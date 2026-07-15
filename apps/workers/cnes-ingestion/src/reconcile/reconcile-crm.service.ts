@@ -113,7 +113,10 @@ export async function reconcileCrmFromStaging(input: {
           sourceTracked: true
         })
         .returning()
-      facilityExternalToInternal.set(row.facility_id, created?.id)
+      if (!created) {
+        throw new Error('Failed to create facility during reconciliation')
+      }
+      facilityExternalToInternal.set(row.facility_id, created.id)
       stats.facilitiesCreated += 1
       continue
     }
@@ -221,7 +224,10 @@ export async function reconcileCrmFromStaging(input: {
           sourceTracked: true
         })
         .returning()
-      professionalExternalToInternal.set(row.professional_id, created?.id)
+      if (!created) {
+        throw new Error('Failed to create professional during reconciliation')
+      }
+      professionalExternalToInternal.set(row.professional_id, created.id)
       stats.professionalsCreated += 1
       continue
     }
