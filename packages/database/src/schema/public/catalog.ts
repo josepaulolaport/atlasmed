@@ -42,6 +42,7 @@ export const productSectors = pgTable(
     productId: text("product_id").notNull().references(() => products.id, { onDelete: "cascade" }),
     sectorId: text("sector_id").notNull().references(() => sectors.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("product_sectors_product_sector_uidx").on(t.productId, t.sectorId),
@@ -77,6 +78,7 @@ export const competitorProductSectors = pgTable(
     competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
     sectorId: text("sector_id").notNull().references(() => sectors.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
 uniqueIndex("competitor_product_sectors_competitor_product_id_sector_id_uidx").on(t.competitorProductId, t.sectorId),
@@ -92,6 +94,7 @@ export const productEquivalences = pgTable(
     competitorProductId: text("competitor_product_id").notNull().references(() => competitorProducts.id, { onDelete: "cascade" }),
     note: text("note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
 uniqueIndex("product_equivalences_product_id_competitor_product_id_uidx").on(t.productId, t.competitorProductId),
