@@ -94,7 +94,7 @@ export const productEquivalences = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("product_equivalences_uidx").on(t.productId, t.competitorProductId),
+uniqueIndex("product_equivalences_product_id_competitor_product_id_uidx").on(t.productId, t.competitorProductId),
     index("product_equivalences_competitor_product_idx").on(t.competitorProductId),
   ]
 );
