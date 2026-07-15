@@ -32,8 +32,8 @@ jobs:
         run: |
           dart pub global activate fvm 2>/dev/null
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
-      - name: fvm use
-        run: fvm use --force
+      - name: Install Flutter version with fvm
+        run: fvm install 3.29.0 --setup
       - name: Install dependencies
         run: bun install
       - name: Restore Turbo cache
