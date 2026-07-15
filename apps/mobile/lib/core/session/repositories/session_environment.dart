@@ -5,7 +5,7 @@ import 'package:dartz/dartz.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/user/models/auth_error.dart';
 import 'package:atlasmed_mobile_app/repository/base_repository.dart';
-import 'package:atlasmed_mobile_app/repository/domain/entities/data_source.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/network_unavailable_exception.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
@@ -43,7 +43,7 @@ class SessionEnvironment extends Repository<Session?>
         endpoint: Uri.parse('${baseUrl ?? _defaultBaseUrl}/api/v1/session/'),
         autoRefreshInterval: const Duration(minutes: 8),
         name: 'SessionEnvironment',
-        method: RepositoryHttpMethod.put,
+        method: .put,
       );
 
   static String get _defaultBaseUrl => AppConfig.apiBaseUrl;
@@ -60,12 +60,11 @@ class SessionEnvironment extends Repository<Session?>
   /// Exposes a simplified auth state stream for consumers.
   late final Stream<AuthenticationState> authState = stream.map((state) {
     return state.map(
-          ready: (ready) => ready.data != null
-              ? AuthenticationState.authenticated
-              : AuthenticationState.unauthenticated,
-          empty: (_) => AuthenticationState.unauthenticated,
+          ready: (ready) =>
+              ready.data != null ? .authenticated : .unauthenticated,
+          empty: (_) => .unauthenticated,
         ) ??
-        AuthenticationState.unauthenticated;
+        .unauthenticated;
   });
 
   /// Returns a future that completes when the repository hydrates
@@ -83,7 +82,7 @@ class SessionEnvironment extends Repository<Session?>
     final response = await client.call(
       request: RepositoryHttpRequest(
         url: endpoint,
-        method: RepositoryHttpMethod.put,
+        method: .put,
         headers: {'Content-Type': 'application/json'},
         body: {'refreshToken': session.refreshToken},
       ),
@@ -109,7 +108,7 @@ class SessionEnvironment extends Repository<Session?>
   Future<bool> onErrorStatusCode(int statusCode) async {
     if (statusCode == 400) {
       await delete();
-      await emit(data: null, datasource: RepositoryDatasource.remote);
+      await emit(data: null, datasource: .remote);
       return false;
     }
     return super.onErrorStatusCode(statusCode);
@@ -127,11 +126,9 @@ class SessionEnvironment extends Repository<Session?>
 
   /// Authenticate with email and password.
   ///
-  /// Calls `POST /auth/login` with the credentials, stores the
-  /// returned [Session], and makes it available to the stream.
-  ///
-  /// Returns `Right(session)` on success or `Left(AuthErrorKind)` on error.
-  Future<Either<AuthErrorKind, Session>> login({
+  /// Returns [Right] with the [Session] on success, or [Left] with a
+  /// [CreateSessionError] on failure.
+  Future<Either<CreateSessionError, Session>> login({
     required String email,
     required String password,
   }) async {
@@ -139,7 +136,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/api/v1/session/'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           headers: {'Content-Type': 'application/json'},
           body: {'identifier': email, 'password': password},
         ),
@@ -148,7 +145,9 @@ class SessionEnvironment extends Repository<Session?>
       if (response.statusCode == 200) {
         final session = fromJson(response.body);
         if (session == null) {
-          return const Left(AuthErrorKind.unknown);
+          throw StateError(
+            'login: 200 OK but failed to parse session. Body: ${response.body}',
+          );
         }
 
         await update((_) => session);
@@ -156,26 +155,34 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 401) {
-        return const Left(AuthErrorKind.wrongCredentials);
+        return const Left(.wrongCredentials);
       }
 
       if (response.statusCode == 423) {
-        return const Left(AuthErrorKind.accountLocked);
+        return const Left(.accountLocked);
       }
 
-      return const Left(AuthErrorKind.unknown);
-    } catch (e) {
-      return const Left(AuthErrorKind.networkError);
+      if (response.statusCode == 429) {
+        return const Left(.tooManyAttempts);
+      }
+
+      throw StateError(
+        'login: unexpected status ${response.statusCode}. Body: ${response.body}',
+      );
+    } on NetworkUnavailableException {
+      return const Left(.networkError);
     }
   }
 
   /// Send password reset code to email.
-  Future<Either<AuthException, void>> requestPasswordReset(String email) async {
+  Future<Either<PasswordResetError, void>> requestPasswordReset(
+    String email,
+  ) async {
     try {
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/forgot-password'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           body: {'email': email},
         ),
       );
@@ -185,32 +192,19 @@ class SessionEnvironment extends Repository<Session?>
       }
 
       if (response.statusCode == 404) {
-        return Left(
-          AuthException(
-            kind: AuthErrorKind.emailNotFound,
-            message: 'E-mail não encontrado.',
-          ),
-        );
+        return const Left(.emailNotFound);
       }
 
-      return Left(
-        AuthException(
-          kind: AuthErrorKind.unknown,
-          message: 'Erro ao solicitar redefinição de senha.',
-        ),
+      throw StateError(
+        'requestPasswordReset: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } catch (e) {
-      return Left(
-        AuthException(
-          kind: AuthErrorKind.networkError,
-          message: 'Erro de rede. Verifique sua conexão.',
-        ),
-      );
+    } on NetworkUnavailableException {
+      return const Left(.networkError);
     }
   }
 
   /// Verify the 6-digit reset code.
-  Future<Either<AuthException, bool>> verifyResetCode(
+  Future<Either<PasswordResetError, bool>> verifyResetCode(
     String email,
     String code,
   ) async {
@@ -218,7 +212,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/verify-reset-code'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           body: {'email': email, 'code': code},
         ),
       );
@@ -231,24 +225,16 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(false);
       }
 
-      return Left(
-        AuthException(
-          kind: AuthErrorKind.unknown,
-          message: 'Erro ao verificar código.',
-        ),
+      throw StateError(
+        'verifyResetCode: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } catch (e) {
-      return Left(
-        AuthException(
-          kind: AuthErrorKind.networkError,
-          message: 'Erro de rede. Verifique sua conexão.',
-        ),
-      );
+    } on NetworkUnavailableException {
+      return const Left(.networkError);
     }
   }
 
   /// Reset password with the verified code.
-  Future<Either<AuthException, void>> resetPassword({
+  Future<Either<PasswordResetError, void>> resetPassword({
     required String email,
     required String code,
     required String newPassword,
@@ -257,7 +243,7 @@ class SessionEnvironment extends Repository<Session?>
       final response = await client.call(
         request: RepositoryHttpRequest(
           url: Uri.parse('$_baseUrl/auth/reset-password'),
-          method: RepositoryHttpMethod.post,
+          method: .post,
           body: {'email': email, 'code': code, 'password': newPassword},
         ),
       );
@@ -266,19 +252,11 @@ class SessionEnvironment extends Repository<Session?>
         return const Right(null);
       }
 
-      return Left(
-        AuthException(
-          kind: AuthErrorKind.unknown,
-          message: 'Erro ao redefinir senha.',
-        ),
+      throw StateError(
+        'resetPassword: unexpected status ${response.statusCode}. Body: ${response.body}',
       );
-    } catch (e) {
-      return Left(
-        AuthException(
-          kind: AuthErrorKind.networkError,
-          message: 'Erro de rede. Verifique sua conexão.',
-        ),
-      );
+    } on NetworkUnavailableException {
+      return const Left(.networkError);
     }
   }
 
@@ -292,7 +270,7 @@ class SessionEnvironment extends Repository<Session?>
         await client.call(
           request: RepositoryHttpRequest(
             url: Uri.parse('$_baseUrl/api/v1/session/'),
-            method: RepositoryHttpMethod.delete,
+            method: .delete,
             headers: {'Authorization': 'Bearer $bearerToken'},
           ),
         );
@@ -301,6 +279,7 @@ class SessionEnvironment extends Repository<Session?>
       BaseRepository.logger(
         'Repository($name): Failed to revoke remote session: $e',
       );
+      rethrow;
     } finally {
       await clear();
     }

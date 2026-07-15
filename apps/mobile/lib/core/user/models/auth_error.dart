@@ -1,20 +1,15 @@
-/// Exception thrown by authentication operations.
-class AuthException implements Exception {
-  final AuthErrorKind kind;
-  final String message;
-
-  const AuthException({required this.kind, required this.message});
-
-  @override
-  String toString() => 'AuthException($kind): $message';
-}
-
-enum AuthErrorKind {
+/// Errors returned by create session (login).
+enum CreateSessionError {
   wrongCredentials,
   accountLocked,
+  tooManyAttempts,
   networkError,
+}
+
+/// Errors returned by password reset flows.
+enum PasswordResetError {
+  emailNotFound,
   invalidCode,
   expiredCode,
-  emailNotFound,
-  unknown,
+  networkError,
 }

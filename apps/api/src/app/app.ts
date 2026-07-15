@@ -21,6 +21,7 @@ import { observabilityPlugin } from "../infrastructure/plugins/observability.plu
 import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
+import { hasDuplicatePathSlashes } from "./request-path";
 
 const configuredCorsOrigins = environment.CORS_ORIGINS.split(",")
   .map((origin) => origin.trim())
@@ -32,6 +33,17 @@ const firebaseHostingOrigins =
 const app = new Elysia()
   // Observability MUST come first to track all requests
   .use(observabilityPlugin)
+  .onRequest(({ request, set }) => {
+    if (!hasDuplicatePathSlashes(request)) return;
+
+    set.status = 400;
+    return {
+      error: {
+        code: "INVALID_REQUEST_PATH",
+        message: "Request path must not contain duplicate slashes",
+      },
+    };
+  })
 
   // Apply global error handler
   .onError(({ code, error, set }) => {
