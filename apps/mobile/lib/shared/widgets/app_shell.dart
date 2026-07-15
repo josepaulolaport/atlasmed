@@ -246,12 +246,6 @@ const _drawerItems = <_DrawerItem>[
     icon: Icons.inventory_2_outlined,
   ),
   _DrawerItem(
-    key: 'apresentacoes',
-    label: 'Apresentações',
-    route: '/apresentacoes',
-    icon: Icons.slideshow_outlined,
-  ),
-  _DrawerItem(
     key: 'perfil',
     label: 'Perfil',
     route: '/perfil',
