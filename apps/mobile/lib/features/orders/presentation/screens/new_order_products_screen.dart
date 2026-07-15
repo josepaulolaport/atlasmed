@@ -12,10 +12,12 @@ class NewOrderProductsScreen extends ConsumerStatefulWidget {
   const NewOrderProductsScreen({super.key});
 
   @override
-  ConsumerState<NewOrderProductsScreen> createState() => _NewOrderProductsScreenState();
+  ConsumerState<NewOrderProductsScreen> createState() =>
+      _NewOrderProductsScreenState();
 }
 
-class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen> {
+class _NewOrderProductsScreenState
+    extends ConsumerState<NewOrderProductsScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
@@ -47,7 +49,9 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
   }
 
   void _openProductSheet(Product product, CartState cart) {
-    final cartIndex = cart.items.indexWhere((item) => item.productId == product.id);
+    final cartIndex = cart.items.indexWhere(
+      (item) => item.productId == product.id,
+    );
     final cartItem = cartIndex >= 0 ? cart.items[cartIndex] : null;
 
     showModalBottomSheet(
@@ -69,8 +73,10 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
     final products = kProducts.where((p) {
-      final matchCat = _selectedCategory == 'Todos' || p.category == _selectedCategory;
-      final matchQ = _searchQuery.isEmpty ||
+      final matchCat =
+          _selectedCategory == 'Todos' || p.category == _selectedCategory;
+      final matchQ =
+          _searchQuery.isEmpty ||
           p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           p.sub.toLowerCase().contains(_searchQuery.toLowerCase());
       return matchCat && matchQ;
@@ -94,8 +100,12 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         final product = products[index];
-                        final cartIndex = cart.items.indexWhere((item) => item.productId == product.id);
-                        final cartItem = cartIndex >= 0 ? cart.items[cartIndex] : null;
+                        final cartIndex = cart.items.indexWhere(
+                          (item) => item.productId == product.id,
+                        );
+                        final cartItem = cartIndex >= 0
+                            ? cart.items[cartIndex]
+                            : null;
                         return _ProductCard(
                           product: product,
                           cartItem: cartItem,
@@ -138,9 +148,25 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('NOVO PEDIDO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF6b7280), letterSpacing: 0.8)),
+                Text(
+                  'NOVO PEDIDO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF6b7280),
+                    letterSpacing: 0.8,
+                  ),
+                ),
                 SizedBox(height: 2),
-                Text('Produtos', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f), letterSpacing: -0.2)),
+                Text(
+                  'Produtos',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0a2f7f),
+                    letterSpacing: -0.2,
+                  ),
+                ),
               ],
             ),
           ),
@@ -172,12 +198,23 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
             Expanded(
               child: Text(
                 'Pedido para · ${cart.clinic!.name}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0a2f7f)),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0a2f7f),
+                ),
               ),
             ),
             GestureDetector(
               onTap: () {},
-              child: const Text('Trocar', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF1e40af))),
+              child: const Text(
+                'Trocar',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF1e40af),
+                ),
+              ),
             ),
           ],
         ),
@@ -195,7 +232,12 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: focused ? const Color(0xFF0a2f7f) : const Color(0xFFd8dee9), width: 1.5),
+            border: Border.all(
+              color: focused
+                  ? const Color(0xFF0a2f7f)
+                  : const Color(0xFFd8dee9),
+              width: 1.5,
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
           child: TextField(
@@ -225,11 +267,17 @@ class _NewOrderProductsScreenState extends ConsumerState<NewOrderProductsScreen>
             label: Text(cat),
             selected: active,
             onSelected: (_) => setState(() => _selectedCategory = cat),
-            labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: active ? Colors.white : const Color(0xFF6b7280)),
+            labelStyle: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: active ? Colors.white : const Color(0xFF6b7280),
+            ),
             selectedColor: const Color(0xFF0a2f7f),
             backgroundColor: Colors.white,
             side: const BorderSide(color: Color(0xFFd8dee9), width: 1),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(999),
+            ),
           );
         },
         separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -245,7 +293,12 @@ class _ProductCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback onAdd;
 
-  const _ProductCard({required this.product, required this.cartItem, required this.onTap, required this.onAdd});
+  const _ProductCard({
+    required this.product,
+    required this.cartItem,
+    required this.onTap,
+    required this.onAdd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -257,9 +310,18 @@ class _ProductCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: inCart ? const Color(0xFF0a2f7f) : const Color(0xFFd8dee9), width: 1.5),
+          border: Border.all(
+            color: inCart ? const Color(0xFF0a2f7f) : const Color(0xFFd8dee9),
+            width: 1.5,
+          ),
           boxShadow: inCart
-              ? [BoxShadow(color: const Color(0x140a2f7f), blurRadius: 14, offset: const Offset(0, 4))]
+              ? [
+                  BoxShadow(
+                    color: const Color(0x140a2f7f),
+                    blurRadius: 14,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
               : null,
         ),
         child: Row(
@@ -273,24 +335,57 @@ class _ProductCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(product.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
+                        child: Text(
+                          product.name,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0f1729),
+                          ),
+                        ),
                       ),
                       PTag(tag: product.tag),
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(product.sub, style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280))),
+                  Text(
+                    product.sub,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF6b7280),
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(brl(product.unit), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))),
+                  Text(
+                    brl(product.unit),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0a2f7f),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(width: 10),
             if (inCart)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(color: const Color(0x1F16a373), borderRadius: BorderRadius.circular(999)),
-                child: Text('${cartItem!.qty}× no carrinho', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0f8a5f))),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0x1F16a373),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${cartItem!.qty}× no carrinho',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0f8a5f),
+                  ),
+                ),
               )
             else
               GestureDetector(
@@ -298,8 +393,15 @@ class _ProductCard extends StatelessWidget {
                 child: Container(
                   width: 30,
                   height: 30,
-                  decoration: const BoxDecoration(color: Color(0xFFeef2ff), shape: BoxShape.circle),
-                  child: const Icon(Icons.add, size: 18, color: Color(0xFF0a2f7f)),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFeef2ff),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add,
+                    size: 18,
+                    color: Color(0xFF0a2f7f),
+                  ),
                 ),
               ),
           ],
@@ -315,7 +417,14 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Text('Nenhum produto encontrado', style: TextStyle(fontSize: 14, color: Color(0xFF6b7280), fontWeight: FontWeight.w600)),
+      child: Text(
+        'Nenhum produto encontrado',
+        style: TextStyle(
+          fontSize: 14,
+          color: Color(0xFF6b7280),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

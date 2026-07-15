@@ -75,10 +75,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 return AnimatedBuilder(
                   animation: _pulseController,
                   builder: (_, child) {
-                    final phase =
-                        ((_pulseController.value * 5 + i * 0.2) % 1).toDouble();
-                    final scale = 1.0 + (phase < 0.5 ? phase : 1.0 - phase) * 0.6;
-                    final opacity = 1.0 - (phase < 0.5 ? phase : 1.0 - phase) * 0.3;
+                    final phase = ((_pulseController.value * 5 + i * 0.2) % 1)
+                        .toDouble();
+                    final scale =
+                        1.0 + (phase < 0.5 ? phase : 1.0 - phase) * 0.6;
+                    final opacity =
+                        1.0 - (phase < 0.5 ? phase : 1.0 - phase) * 0.3;
                     return Transform.scale(
                       scale: scale,
                       child: Container(

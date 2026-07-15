@@ -84,7 +84,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
     // Listen for login success
     ref.listen<AuthState>(authProvider, (prev, next) {
-      if (next.status == AuthStatus.authenticated && prev?.status != AuthStatus.authenticated) {
+      if (next.status == AuthStatus.authenticated &&
+          prev?.status != AuthStatus.authenticated) {
         widget.onLoginSuccess();
       }
     });
@@ -106,9 +107,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 children: [
                   const SizedBox(height: 40),
                   // Logo
-                  const Center(
-                    child: AppLogo(size: 120),
-                  ),
+                  const Center(child: AppLogo(size: 120)),
                   const SizedBox(height: 16),
                   // Title + form
                   Padding(
@@ -142,16 +141,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               const SizedBox(height: 28),
                               GlassInput(
                                 label: 'E-mail corporativo',
-                                icon: const Icon(Icons.email_outlined, size: 18),
+                                icon: const Icon(
+                                  Icons.email_outlined,
+                                  size: 18,
+                                ),
                                 value: _emailController.text,
                                 onChanged: (v) {
                                   _emailController.text = v;
-                                  _emailController.selection = TextSelection.collapsed(offset: v.length);
+                                  _emailController.selection =
+                                      TextSelection.collapsed(offset: v.length);
                                   ref.read(authProvider.notifier).clearError();
                                 },
                                 keyboardType: TextInputType.emailAddress,
                                 textInputAction: TextInputAction.next,
-                                error: authState.error?.kind == AuthErrorKind.wrongCredentials,
+                                error:
+                                    authState.error?.kind ==
+                                    AuthErrorKind.wrongCredentials,
                                 enabled: !isLocked,
                               ),
                               const SizedBox(height: 12),
@@ -161,12 +166,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 value: _passwordController.text,
                                 onChanged: (v) {
                                   _passwordController.text = v;
-                                  _passwordController.selection = TextSelection.collapsed(offset: v.length);
+                                  _passwordController.selection =
+                                      TextSelection.collapsed(offset: v.length);
                                   ref.read(authProvider.notifier).clearError();
                                 },
                                 obscureText: true,
                                 textInputAction: TextInputAction.done,
-                                error: authState.error?.kind == AuthErrorKind.wrongCredentials,
+                                error:
+                                    authState.error?.kind ==
+                                    AuthErrorKind.wrongCredentials,
                                 enabled: !isLocked,
                               ),
                               // Error message
@@ -200,12 +208,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                 child: TextButton(
                                   onPressed: widget.onForgotPassword,
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4,
+                                    ),
                                   ),
                                   child: Text(
                                     'Esqueci minha senha',
                                     style: TextStyle(
-                                      color: Colors.white.withValues(alpha: 0.85),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -216,7 +228,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               PrimaryButton(
                                 label: 'Entrar',
                                 loading: isLoading,
-                                disabled: _emailController.text.isEmpty ||
+                                disabled:
+                                    _emailController.text.isEmpty ||
                                     _passwordController.text.isEmpty ||
                                     isLocked,
                                 trailingIcon: Icons.arrow_forward,
@@ -238,12 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
           ),
           // Terms footer
-          const Positioned(
-            bottom: 24,
-            left: 0,
-            right: 0,
-            child: TermsFooter(),
-          ),
+          const Positioned(bottom: 24, left: 0, right: 0, child: TermsFooter()),
         ],
       ),
     );

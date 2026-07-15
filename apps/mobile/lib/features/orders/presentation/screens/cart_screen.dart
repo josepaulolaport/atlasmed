@@ -26,7 +26,10 @@ class CartScreen extends ConsumerWidget {
       body: SafeArea(
         child: Column(
           children: [
-            _Header(totalQty: cart.totalQty, onBack: () => Navigator.of(context).pop()),
+            _Header(
+              totalQty: cart.totalQty,
+              onBack: () => Navigator.of(context).pop(),
+            ),
             Expanded(
               child: cart.items.isEmpty
                   ? _EmptyState(onBackToProducts: () => context.pop())
@@ -40,7 +43,9 @@ class CartScreen extends ConsumerWidget {
                               product: entry.key,
                               qty: entry.value,
                               onChanged: (newQty) {
-                                ref.read(cartProvider.notifier).updateQty(entry.key.id, newQty);
+                                ref
+                                    .read(cartProvider.notifier)
+                                    .updateQty(entry.key.id, newQty);
                               },
                             ),
                           ),
@@ -56,16 +61,24 @@ class CartScreen extends ConsumerWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: cart.items.isEmpty ? null : () => context.push('/pedidos/novo/checkout'),
+                  onPressed: cart.items.isEmpty
+                      ? null
+                      : () => context.push('/pedidos/novo/checkout'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _navy,
                     disabledBackgroundColor: _navy.withValues(alpha: 0.4),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
                   child: const Text(
                     'Finalizar pedido',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -98,19 +111,32 @@ class _Header extends StatelessWidget {
               children: [
                 const Text(
                   'NOVO PEDIDO',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF9ca3af), letterSpacing: 0.7),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF9ca3af),
+                    letterSpacing: 0.7,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
                     const Text(
                       'Carrinho',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f)),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0a2f7f),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '$totalQty itens',
-                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af), fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Color(0xFF9ca3af),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ],
                 ),
@@ -128,7 +154,11 @@ class _CartItemCard extends StatelessWidget {
   final int qty;
   final ValueChanged<int> onChanged;
 
-  const _CartItemCard({required this.product, required this.qty, required this.onChanged});
+  const _CartItemCard({
+    required this.product,
+    required this.qty,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -147,11 +177,31 @@ class _CartItemCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(product.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1f2937))),
+                Text(
+                  product.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1f2937),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text(product.sub, style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280))),
+                Text(
+                  product.sub,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Color(0xFF6b7280),
+                  ),
+                ),
                 const SizedBox(height: 8),
-                Text(brl(product.unit * qty), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))),
+                Text(
+                  brl(product.unit * qty),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0a2f7f),
+                  ),
+                ),
               ],
             ),
           ),
@@ -181,7 +231,14 @@ class _SummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Resumo', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1f2937))),
+          const Text(
+            'Resumo',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1f2937),
+            ),
+          ),
           const SizedBox(height: 12),
           ...items.map((entry) {
             final product = entry.key;
@@ -193,10 +250,21 @@ class _SummaryCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       '${product.name} × $qty',
-                      style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280), fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Color(0xFF6b7280),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                  Text(brl(product.unit * qty), style: const TextStyle(fontSize: 12.5, color: Color(0xFF1f2937), fontWeight: FontWeight.w600)),
+                  Text(
+                    brl(product.unit * qty),
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF1f2937),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -205,9 +273,23 @@ class _SummaryCard extends StatelessWidget {
           Row(
             children: [
               const Expanded(
-                child: Text('Total', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1f2937))),
+                child: Text(
+                  'Total',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1f2937),
+                  ),
+                ),
               ),
-              Text(brl(subtotal), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))),
+              Text(
+                brl(subtotal),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0a2f7f),
+                ),
+              ),
             ],
           ),
         ],
@@ -229,7 +311,14 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Carrinho vazio', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1f2937))),
+            const Text(
+              'Carrinho vazio',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF1f2937),
+              ),
+            ),
             const SizedBox(height: 12),
             SizedBox(
               height: 46,
@@ -237,10 +326,18 @@ class _EmptyState extends StatelessWidget {
                 onPressed: onBackToProducts,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0a2f7f),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Voltar aos produtos', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                child: const Text(
+                  'Voltar aos produtos',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           ],

@@ -38,14 +38,20 @@ class SearchBarWidget extends StatelessWidget {
             child: Row(
               children: [
                 const SizedBox(width: 12),
-                const Icon(Icons.search_rounded, size: 16, color: Color(0xFF6b7280)),
+                const Icon(
+                  Icons.search_rounded,
+                  size: 16,
+                  color: Color(0xFF6b7280),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: TextEditingController.fromValue(
                       TextEditingValue(
                         text: value,
-                        selection: TextSelection.collapsed(offset: value.length),
+                        selection: TextSelection.collapsed(
+                          offset: value.length,
+                        ),
                       ),
                     ),
                     onChanged: onChanged,
@@ -73,7 +79,11 @@ class SearchBarWidget extends StatelessWidget {
                         color: const Color(0xFFe5e7eb),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.close_rounded, size: 10, color: Color(0xFF6b7280)),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        size: 10,
+                        color: Color(0xFF6b7280),
+                      ),
                     ),
                   ),
               ],
@@ -104,7 +114,9 @@ class SearchBarWidget extends StatelessWidget {
                   child: Icon(
                     Icons.tune_rounded,
                     size: 18,
-                    color: filterCount > 0 ? Colors.white : const Color(0xFF1e40af),
+                    color: filterCount > 0
+                        ? Colors.white
+                        : const Color(0xFF1e40af),
                   ),
                 ),
                 if (filterCount > 0)

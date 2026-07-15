@@ -27,7 +27,6 @@ class _ForgotNewPasswordScreenState
   final _newPwController = TextEditingController();
   final _confirmPwController = TextEditingController();
 
-
   @override
   void dispose() {
     _newPwController.dispose();
@@ -152,7 +151,7 @@ class _ForgotNewPasswordScreenState
                             setState(() {});
                           },
                           obscureText: true,
-                         ),
+                        ),
                         const SizedBox(height: 16),
                         // Strength checklist
                         Container(
@@ -168,7 +167,10 @@ class _ForgotNewPasswordScreenState
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _checkItem('Mín. 8 caracteres', _getCheck('length')),
+                              _checkItem(
+                                'Mín. 8 caracteres',
+                                _getCheck('length'),
+                              ),
                               _checkItem('Um número', _getCheck('number')),
                               _checkItem('Uma maiúscula', _getCheck('upper')),
                               _checkItem('Senhas iguais', _getCheck('match')),
@@ -188,11 +190,11 @@ class _ForgotNewPasswordScreenState
                                   _confirmPwController.text,
                                 )
                                 .then((_) {
-                              final st = ref.read(authProvider);
-                              if (st.forgotStep == 3) {
-                                widget.onSuccess();
-                              }
-                            });
+                                  final st = ref.read(authProvider);
+                                  if (st.forgotStep == 3) {
+                                    widget.onSuccess();
+                                  }
+                                });
                           },
                         ),
                       ],
@@ -219,7 +221,9 @@ class _ForgotNewPasswordScreenState
             height: 14,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: valid ? const Color(0xE648BB78) : Colors.white.withValues(alpha: 0.12),
+              color: valid
+                  ? const Color(0xE648BB78)
+                  : Colors.white.withValues(alpha: 0.12),
               border: valid
                   ? Border.all(width: 0, color: Colors.transparent)
                   : Border.all(color: Colors.white.withValues(alpha: 0.25)),
