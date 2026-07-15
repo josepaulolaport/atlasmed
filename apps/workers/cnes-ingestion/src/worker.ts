@@ -10,7 +10,7 @@ import { logger } from "./logger";
 async function run() {
   const config = loadWorkerConfig();
 
-if (config.archiveBackend === "s3" || config.archiveBackend === "minio") {
+  if (config.archiveBackend === "s3" || config.archiveBackend === "minio") {
     logger.info("Ensuring archive bucket exists", { bucket: config.archiveS3Bucket });
     await ensureArchiveBucket({
       bucket: config.archiveS3Bucket,
