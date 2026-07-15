@@ -53,6 +53,9 @@ export async function ensureBucketExists(
   bucket: string,
   region?: string
 ): Promise<void> {
+  if (!bucket) {
+    throw new Error("Bucket name must be a non-empty string");
+  }
   try {
     await client.send(new HeadBucketCommand({ Bucket: bucket }));
     return;
