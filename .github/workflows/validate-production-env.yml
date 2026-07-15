@@ -151,5 +151,8 @@ jobs:
 
           exit "$invalid"
 
+      - name: Validate deploy startup regressions
+        run: node --test deploy/startup-regressions.test.mjs
+
       - name: Validate compose file
         run: docker compose -f deploy/uncloud.compose.yml config --quiet

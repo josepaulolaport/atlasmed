@@ -31,6 +31,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_URL=${DATABASE_URL}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
       - DATABASE_POOL_MIN=${DATABASE_POOL_MIN:-2}
       - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
       - REDIS_URL=redis://atlasmed-redis:6379
@@ -74,7 +75,9 @@ services:
       dockerfile: deploy/docker/api-worker.Dockerfile
     environment:
       - NODE_ENV=production
+      - PORT=3000
       - DATABASE_URL=${DATABASE_URL}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-15m}
       - DATABASE_POOL_MIN=${DATABASE_POOL_MIN:-2}
       - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
       - REDIS_URL=redis://atlasmed-redis:6379
