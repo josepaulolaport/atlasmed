@@ -35,16 +35,19 @@ class DoctorDetailScreen extends ConsumerWidget {
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
-              children: List.generate(6, (_) => Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Container(
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(14),
+              children: List.generate(
+                6,
+                (_) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Container(
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                 ),
-              )),
+              ),
             ),
           ),
         ],
@@ -76,13 +79,26 @@ class DoctorDetailScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Color(0xFFb84545)),
+              const Icon(
+                Icons.error_outline,
+                size: 48,
+                color: Color(0xFFb84545),
+              ),
               const SizedBox(height: 12),
-              const Text('Erro ao carregar',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF0f1729))),
+              const Text(
+                'Erro ao carregar',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0f1729),
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(message, textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF6b7280))),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+              ),
             ],
           ),
         ),
@@ -165,9 +181,11 @@ class _DoctorHeader extends StatelessWidget {
         children: [
           // Decorative glow
           Positioned(
-            top: -60, right: -60,
+            top: -60,
+            right: -60,
             child: Container(
-              width: 220, height: 220,
+              width: 220,
+              height: 220,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
@@ -190,11 +208,19 @@ class _DoctorHeader extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _GlassButton(
-                        child: const Icon(Icons.arrow_back_rounded, color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.arrow_back_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         onTap: () => context.pop(),
                       ),
                       _GlassButton(
-                        child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
+                        child: const Icon(
+                          Icons.more_horiz_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
                         onTap: () {},
                       ),
                     ],
@@ -209,18 +235,36 @@ class _DoctorHeader extends StatelessWidget {
                     children: [
                       // Avatar
                       Container(
-                        width: 72, height: 72,
+                        width: 72,
+                        height: 72,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 3),
-                          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.22), blurRadius: 18, offset: const Offset(0, 6))],
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.22),
+                              blurRadius: 18,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                           color: HSLColor.fromAHSL(1, h, 0.45, 0.72).toColor(),
                         ),
                         child: Center(
-                          child: Text(detail.initials,
+                          child: Text(
+                            detail.initials,
                             style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.5,
-                              color: HSLColor.fromAHSL(1, h, 0.60, 0.22).toColor(),
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.5,
+                              color: HSLColor.fromAHSL(
+                                1,
+                                h,
+                                0.60,
+                                0.22,
+                              ).toColor(),
                             ),
                           ),
                         ),
@@ -233,32 +277,69 @@ class _DoctorHeader extends StatelessWidget {
                           children: [
                             // Status badge
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 3,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.18),
                                 borderRadius: BorderRadius.circular(999),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.28),
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Container(width: 5, height: 5, decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white)),
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: const BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                   const SizedBox(width: 6),
-                                  Text('${detail.statusLabel} · ${detail.specialty}',
-                                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Colors.white)),
+                                  Text(
+                                    '${detail.statusLabel} · ${detail.specialty}',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.3,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             const SizedBox(height: 6),
-                            Text(detail.name,
-                              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.15, color: Colors.white)),
+                            Text(
+                              detail.name,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                                height: 1.15,
+                                color: Colors.white,
+                              ),
+                            ),
                             const SizedBox(height: 4),
-                            Text(detail.crm,
-                              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.78))),
+                            Text(
+                              detail.crm,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.78),
+                              ),
+                            ),
                             if (detail.residency != null) ...[
                               const SizedBox(height: 2),
-                              Text(detail.residency!,
-                                style: TextStyle(fontSize: 11.5, color: Colors.white.withValues(alpha: 0.72))),
+                              Text(
+                                detail.residency!,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: Colors.white.withValues(alpha: 0.72),
+                                ),
+                              ),
                             ],
                           ],
                         ),
@@ -289,7 +370,8 @@ class _GlassButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(19),
         onTap: onTap,
         child: Container(
-          width: 38, height: 38,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white.withValues(alpha: 0.22)),
@@ -320,14 +402,40 @@ class _DoctorQuickActions extends StatelessWidget {
         color: Colors.white,
         border: Border.all(color: const Color(0xFFedeff3)),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.08), blurRadius: 24, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0f1729).withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          _QuickAction(label: 'Ligar', icon: Icons.phone_rounded, hue: detail.hue, onTap: detail.phone != null ? () {} : null),
-          _QuickAction(label: 'WhatsApp', icon: Icons.chat_rounded, hue: detail.hue, onTap: detail.whatsapp != null ? () {} : null),
-          _QuickAction(label: 'E-mail', icon: Icons.email_rounded, hue: detail.hue, onTap: detail.email != null ? () {} : null),
-          _QuickAction(label: 'Nova visita', icon: Icons.event_rounded, hue: detail.hue, onTap: () {}),
+          _QuickAction(
+            label: 'Ligar',
+            icon: Icons.phone_rounded,
+            hue: detail.hue,
+            onTap: detail.phone != null ? () {} : null,
+          ),
+          _QuickAction(
+            label: 'WhatsApp',
+            icon: Icons.chat_rounded,
+            hue: detail.hue,
+            onTap: detail.whatsapp != null ? () {} : null,
+          ),
+          _QuickAction(
+            label: 'E-mail',
+            icon: Icons.email_rounded,
+            hue: detail.hue,
+            onTap: detail.email != null ? () {} : null,
+          ),
+          _QuickAction(
+            label: 'Nova visita',
+            icon: Icons.event_rounded,
+            hue: detail.hue,
+            onTap: () {},
+          ),
         ],
       ),
     );
@@ -339,7 +447,12 @@ class _QuickAction extends StatelessWidget {
   final IconData icon;
   final double hue;
   final VoidCallback? onTap;
-  const _QuickAction({required this.label, required this.icon, required this.hue, this.onTap});
+  const _QuickAction({
+    required this.label,
+    required this.icon,
+    required this.hue,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -352,23 +465,32 @@ class _QuickAction extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isDisabled
                       ? const Color(0xFFf3f4f6)
                       : HSLColor.fromAHSL(1, hue, 0.60, 0.94).toColor(),
                 ),
-                child: Icon(icon, size: 18,
+                child: Icon(
+                  icon,
+                  size: 18,
                   color: isDisabled
                       ? const Color(0xFFd1d5db)
-                      : HSLColor.fromAHSL(1, hue, 0.55, 0.30).toColor()),
+                      : HSLColor.fromAHSL(1, hue, 0.55, 0.30).toColor(),
+                ),
               ),
               const SizedBox(height: 5),
-              Text(label,
+              Text(
+                label,
                 style: TextStyle(
-                  fontSize: 10.5, fontWeight: FontWeight.w600, letterSpacing: 0.1,
-                  color: isDisabled ? const Color(0xFFd1d5db) : const Color(0xFF0f1729),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.1,
+                  color: isDisabled
+                      ? const Color(0xFFd1d5db)
+                      : const Color(0xFF0f1729),
                 ),
               ),
             ],
@@ -393,10 +515,14 @@ class _DoctorSignals extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: signals.map((s) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: _SignalCard(signal: s),
-        )).toList(),
+        children: signals
+            .map(
+              (s) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _SignalCard(signal: s),
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -409,9 +535,21 @@ class _SignalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color color, Color bg, IconData icon) = switch (signal.kind) {
-      'good' => (const Color(0xFF16a373), const Color(0xFFe6f7f0), Icons.trending_up_rounded),
-      'warn' => (const Color(0xFFc6861b), const Color(0xFFfef3d5), Icons.info_outline_rounded),
-      _ => (const Color(0xFF1e40af), const Color(0xFFeef4ff), Icons.lightbulb_outline_rounded),
+      'good' => (
+        const Color(0xFF16a373),
+        const Color(0xFFe6f7f0),
+        Icons.trending_up_rounded,
+      ),
+      'warn' => (
+        const Color(0xFFc6861b),
+        const Color(0xFFfef3d5),
+        Icons.info_outline_rounded,
+      ),
+      _ => (
+        const Color(0xFF1e40af),
+        const Color(0xFFeef4ff),
+        Icons.lightbulb_outline_rounded,
+      ),
     };
 
     return Container(
@@ -429,12 +567,25 @@ class _SignalCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(signal.title,
-                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: color, height: 1.3)),
+                Text(
+                  signal.title,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                    height: 1.3,
+                  ),
+                ),
                 if (signal.body.isNotEmpty) ...[
                   const SizedBox(height: 3),
-                  Text(signal.body,
-                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF4b5563), height: 1.35)),
+                  Text(
+                    signal.body,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF4b5563),
+                      height: 1.35,
+                    ),
+                  ),
                 ],
               ],
             ),
@@ -472,7 +623,13 @@ class _DoctorPersonalCard extends StatelessWidget {
           color: Colors.white,
           border: Border.all(color: const Color(0xFFedeff3)),
           borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -480,10 +637,19 @@ class _DoctorPersonalCard extends StatelessWidget {
             // Section header
             Row(
               children: [
-                const Text('PESSOAL',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: Color(0xFF8a94a6))),
+                const Text(
+                  'PESSOAL',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: Color(0xFF8a94a6),
+                  ),
+                ),
                 const SizedBox(width: 12),
-                Expanded(child: Container(height: 1, color: const Color(0xFFeef0f3))),
+                Expanded(
+                  child: Container(height: 1, color: const Color(0xFFeef0f3)),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -491,20 +657,39 @@ class _DoctorPersonalCard extends StatelessWidget {
             Wrap(
               spacing: 12,
               runSpacing: 10,
-              children: rows.where((r) => r.value != null).map((r) => SizedBox(
-                width: (MediaQuery.of(context).size.width - 60) / 2,
-                child: r,
-              )).toList(),
+              children: rows
+                  .where((r) => r.value != null)
+                  .map(
+                    (r) => SizedBox(
+                      width: (MediaQuery.of(context).size.width - 60) / 2,
+                      child: r,
+                    ),
+                  )
+                  .toList(),
             ),
-            if (detail.phone != null || detail.email != null || detail.whatsapp != null) ...[
-              Container(height: 1, color: const Color(0xFFeef0f3), margin: const EdgeInsets.symmetric(vertical: 14)),
+            if (detail.phone != null ||
+                detail.email != null ||
+                detail.whatsapp != null) ...[
+              Container(
+                height: 1,
+                color: const Color(0xFFeef0f3),
+                margin: const EdgeInsets.symmetric(vertical: 14),
+              ),
               // Contacts
               if (detail.phone != null)
-                _ContactRow(label: 'TELEFONE', value: detail.phone!, mono: true),
+                _ContactRow(
+                  label: 'TELEFONE',
+                  value: detail.phone!,
+                  mono: true,
+                ),
               if (detail.whatsapp != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: _ContactRow(label: 'WHATSAPP', value: detail.whatsapp!, mono: true),
+                  child: _ContactRow(
+                    label: 'WHATSAPP',
+                    value: detail.whatsapp!,
+                    mono: true,
+                  ),
                 ),
               if (detail.email != null)
                 Padding(
@@ -536,12 +721,26 @@ class _InfoRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: Color(0xFF8a94a6))),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                  color: Color(0xFF8a94a6),
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(value ?? '',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Color(0xFF0f1729)),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
+              Text(
+                value ?? '',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF0f1729),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
@@ -554,7 +753,11 @@ class _ContactRow extends StatelessWidget {
   final String label;
   final String value;
   final bool mono;
-  const _ContactRow({required this.label, required this.value, this.mono = false});
+  const _ContactRow({
+    required this.label,
+    required this.value,
+    this.mono = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -562,15 +765,25 @@ class _ContactRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 68,
-          child: Text(label,
-            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, letterSpacing: 0.6, color: Color(0xFF8a94a6))),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+              color: Color(0xFF8a94a6),
+            ),
+          ),
         ),
         Expanded(
-          child: Text(value,
+          child: Text(
+            value,
             style: TextStyle(
-              fontSize: 12.5, color: const Color(0xFF0f1729),
+              fontSize: 12.5,
+              color: const Color(0xFF0f1729),
               fontFamily: mono ? 'monospace' : null,
-            )),
+            ),
+          ),
         ),
       ],
     );
@@ -590,7 +803,10 @@ class _DoctorPrescribing extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'PRESCRIÇÃO · 6 MESES', subtitle: 'volume atribuído a esta médica'),
+        _SectionHeader(
+          title: 'PRESCRIÇÃO · 6 MESES',
+          subtitle: 'volume atribuído a esta médica',
+        ),
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -599,7 +815,13 @@ class _DoctorPrescribing extends StatelessWidget {
               color: Colors.white,
               border: Border.all(color: const Color(0xFFedeff3)),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: Column(
               children: List.generate(items.length, (i) {
@@ -608,7 +830,8 @@ class _DoctorPrescribing extends StatelessWidget {
                 final positive = item.growth >= 0;
                 return Column(
                   children: [
-                    if (i > 0) Container(height: 1, color: const Color(0xFFeef0f3)),
+                    if (i > 0)
+                      Container(height: 1, color: const Color(0xFFeef0f3)),
                     Padding(
                       padding: const EdgeInsets.all(14),
                       child: Column(
@@ -617,29 +840,54 @@ class _DoctorPrescribing extends StatelessWidget {
                           // Header row
                           Row(
                             children: [
-                              Text(item.product,
-                                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0f1729), letterSpacing: -0.1)),
+                              Text(
+                                item.product,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0f1729),
+                                  letterSpacing: -0.1,
+                                ),
+                              ),
                               if (item.isNew) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFe6f7f0),
                                     borderRadius: BorderRadius.circular(999),
                                   ),
-                                  child: const Text('novo',
-                                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Color(0xFF117a55))),
+                                  child: const Text(
+                                    'novo',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.3,
+                                      color: Color(0xFF117a55),
+                                    ),
+                                  ),
                                 ),
                               ],
                               const Spacer(),
-                              Text(item.volume,
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280))),
+                              Text(
+                                item.volume,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF6b7280),
+                                ),
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 '${positive ? '▲' : '▼'} ${item.growth.toStringAsFixed(0)}%',
                                 style: TextStyle(
-                                  fontSize: 11.5, fontWeight: FontWeight.w700,
-                                  color: positive ? const Color(0xFF117a55) : const Color(0xFFb84545),
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: positive
+                                      ? const Color(0xFF117a55)
+                                      : const Color(0xFFb84545),
                                 ),
                               ),
                             ],
@@ -657,7 +905,10 @@ class _DoctorPrescribing extends StatelessWidget {
                                   children: item.trend.map((v) {
                                     final pct = max > 0 ? v / max : 0.0;
                                     return Container(
-                                      width: 5, margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                                      width: 5,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 1.5,
+                                      ),
                                       height: pct * 28,
                                       decoration: BoxDecoration(
                                         color: v == item.trend.last
@@ -676,12 +927,24 @@ class _DoctorPrescribing extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        const Text('Share da médica',
-                                          style: TextStyle(fontSize: 10.5, color: Color(0xFF6b7280))),
-                                        Text('${item.share}%',
-                                          style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF0f1729))),
+                                        const Text(
+                                          'Share da médica',
+                                          style: TextStyle(
+                                            fontSize: 10.5,
+                                            color: Color(0xFF6b7280),
+                                          ),
+                                        ),
+                                        Text(
+                                          '${item.share}%',
+                                          style: const TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0f1729),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     const SizedBox(height: 3),
@@ -696,7 +959,9 @@ class _DoctorPrescribing extends StatelessWidget {
                                         child: Container(
                                           decoration: BoxDecoration(
                                             color: const Color(0xFF1e40af),
-                                            borderRadius: BorderRadius.circular(3),
+                                            borderRadius: BorderRadius.circular(
+                                              3,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -733,7 +998,10 @@ class _DoctorClinics extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'CLÍNICAS · ${clinics.length}', subtitle: 'onde atende'),
+        _SectionHeader(
+          title: 'CLÍNICAS · ${clinics.length}',
+          subtitle: 'onde atende',
+        ),
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -743,7 +1011,13 @@ class _DoctorClinics extends StatelessWidget {
               color: Colors.white,
               border: Border.all(color: const Color(0xFFedeff3)),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: Column(
               children: List.generate(clinics.length, (i) {
@@ -755,18 +1029,30 @@ class _DoctorClinics extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      border: i > 0 ? const Border(top: BorderSide(color: Color(0xFFeef0f3))) : null,
+                      border: i > 0
+                          ? const Border(
+                              top: BorderSide(color: Color(0xFFeef0f3)),
+                            )
+                          : null,
                     ),
                     child: Row(
                       children: [
                         Container(
-                          width: 34, height: 34,
+                          width: 34,
+                          height: 34,
                           decoration: BoxDecoration(
-                            color: c.isMain ? const Color(0xFFeef2ff) : const Color(0xFFf3f4f6),
+                            color: c.isMain
+                                ? const Color(0xFFeef2ff)
+                                : const Color(0xFFf3f4f6),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Icon(Icons.local_hospital_rounded, size: 16,
-                            color: c.isMain ? const Color(0xFF1e40af) : const Color(0xFF6b7280)),
+                          child: Icon(
+                            Icons.local_hospital_rounded,
+                            size: 16,
+                            color: c.isMain
+                                ? const Color(0xFF1e40af)
+                                : const Color(0xFF6b7280),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -776,31 +1062,61 @@ class _DoctorClinics extends StatelessWidget {
                               Row(
                                 children: [
                                   Flexible(
-                                    child: Text(c.name,
-                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0f1729), letterSpacing: -0.1),
-                                      overflow: TextOverflow.ellipsis),
+                                    child: Text(
+                                      c.name,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0f1729),
+                                        letterSpacing: -0.1,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                   if (c.isMain) ...[
                                     const SizedBox(width: 6),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1e40af).withValues(alpha: 0.10),
-                                        borderRadius: BorderRadius.circular(999),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 1,
                                       ),
-                                      child: const Text('principal',
-                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3, color: Color(0xFF1e40af))),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF1e40af,
+                                        ).withValues(alpha: 0.10),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'principal',
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 0.3,
+                                          color: Color(0xFF1e40af),
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ],
                               ),
                               const SizedBox(height: 1),
-                              Text('${c.role} · ${c.days}',
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280))),
+                              Text(
+                                '${c.role} · ${c.days}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF6b7280),
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right_rounded, size: 18, color: const Color(0xFF8a94a6).withValues(alpha: 0.7)),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          size: 18,
+                          color: const Color(0xFF8a94a6).withValues(alpha: 0.7),
+                        ),
                       ],
                     ),
                   ),
@@ -837,7 +1153,13 @@ class _DoctorVisits extends StatelessWidget {
               color: Colors.white,
               border: Border.all(color: const Color(0xFFedeff3)),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: Column(
               children: List.generate(visits.length, (i) {
@@ -859,18 +1181,34 @@ class _DoctorVisits extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(v.date.split(' · ').first,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF0f1729))),
-                            Text(v.time,
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF9ca3af))),
+                            Text(
+                              v.date.split(' · ').first,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0f1729),
+                              ),
+                            ),
+                            Text(
+                              v.time,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFF9ca3af),
+                              ),
+                            ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       // Outcome indicator
                       Container(
-                        width: 8, height: 8, margin: const EdgeInsets.only(top: 3),
-                        decoration: BoxDecoration(color: outcomeColor, shape: BoxShape.circle),
+                        width: 8,
+                        height: 8,
+                        margin: const EdgeInsets.only(top: 3),
+                        decoration: BoxDecoration(
+                          color: outcomeColor,
+                          shape: BoxShape.circle,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       // Content
@@ -881,41 +1219,81 @@ class _DoctorVisits extends StatelessWidget {
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 1,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFf3f4f6),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(v.kind,
-                                    style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFF6b7280))),
+                                  child: Text(
+                                    v.kind,
+                                    style: const TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF6b7280),
+                                    ),
+                                  ),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
-                                  child: Text(v.location,
-                                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF9ca3af)),
-                                    overflow: TextOverflow.ellipsis),
+                                  child: Text(
+                                    v.location,
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      color: Color(0xFF9ca3af),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ],
                             ),
                             if (v.note.isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text(v.note,
-                                style: const TextStyle(fontSize: 11.5, color: Color(0xFF4b5563), height: 1.35),
-                                maxLines: 3, overflow: TextOverflow.ellipsis),
+                              Text(
+                                v.note,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: Color(0xFF4b5563),
+                                  height: 1.35,
+                                ),
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ],
                             if (v.duration.isNotEmpty) ...[
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.access_time_rounded, size: 11, color: Color(0xFF9ca3af)),
+                                  const Icon(
+                                    Icons.access_time_rounded,
+                                    size: 11,
+                                    color: Color(0xFF9ca3af),
+                                  ),
                                   const SizedBox(width: 3),
-                                  Text(v.duration,
-                                    style: const TextStyle(fontSize: 10, color: Color(0xFF9ca3af))),
+                                  Text(
+                                    v.duration,
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Color(0xFF9ca3af),
+                                    ),
+                                  ),
                                   if (v.orderValue != null) ...[
                                     const SizedBox(width: 8),
-                                    const Icon(Icons.attach_money_rounded, size: 11, color: Color(0xFF16a373)),
-                                    Text(v.orderValue!,
-                                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF16a373))),
+                                    const Icon(
+                                      Icons.attach_money_rounded,
+                                      size: 11,
+                                      color: Color(0xFF16a373),
+                                    ),
+                                    Text(
+                                      v.orderValue!,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF16a373),
+                                      ),
+                                    ),
                                   ],
                                   // Consultant
                                   const Spacer(),
@@ -923,21 +1301,41 @@ class _DoctorVisits extends StatelessWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Container(
-                                        width: 16, height: 16,
+                                        width: 16,
+                                        height: 16,
                                         decoration: BoxDecoration(
                                           shape: BoxShape.circle,
-                                          color: HSLColor.fromAHSL(1, v.consultantHue, 0.40, 0.72).toColor(),
+                                          color: HSLColor.fromAHSL(
+                                            1,
+                                            v.consultantHue,
+                                            0.40,
+                                            0.72,
+                                          ).toColor(),
                                         ),
                                         child: Center(
-                                          child: Text(v.consultantInitials,
-                                            style: TextStyle(fontSize: 7, fontWeight: FontWeight.w700,
-                                              color: HSLColor.fromAHSL(1, v.consultantHue, 0.60, 0.22).toColor()),
+                                          child: Text(
+                                            v.consultantInitials,
+                                            style: TextStyle(
+                                              fontSize: 7,
+                                              fontWeight: FontWeight.w700,
+                                              color: HSLColor.fromAHSL(
+                                                1,
+                                                v.consultantHue,
+                                                0.60,
+                                                0.22,
+                                              ).toColor(),
+                                            ),
                                           ),
                                         ),
                                       ),
                                       const SizedBox(width: 3),
-                                      Text(v.consultant,
-                                        style: const TextStyle(fontSize: 9.5, color: Color(0xFF6b7280))),
+                                      Text(
+                                        v.consultant,
+                                        style: const TextStyle(
+                                          fontSize: 9.5,
+                                          color: Color(0xFF6b7280),
+                                        ),
+                                      ),
                                     ],
                                   ),
                                 ],
@@ -981,7 +1379,13 @@ class _DoctorNotes extends StatelessWidget {
               color: Colors.white,
               border: Border.all(color: const Color(0xFFedeff3)),
               borderRadius: BorderRadius.circular(14),
-              boxShadow: [BoxShadow(color: const Color(0xFF0f1729).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1))],
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+                  blurRadius: 2,
+                  offset: const Offset(0, 1),
+                ),
+              ],
             ),
             child: Column(
               children: [
@@ -989,26 +1393,43 @@ class _DoctorNotes extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      border: i < notes.length - 1 ? const Border(bottom: BorderSide(color: Color(0xFFeef0f3))) : null,
+                      border: i < notes.length - 1
+                          ? const Border(
+                              bottom: BorderSide(color: Color(0xFFeef0f3)),
+                            )
+                          : null,
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 18, height: 18,
+                          width: 18,
+                          height: 18,
                           decoration: BoxDecoration(
                             color: const Color(0xFFeef2ff),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Center(
-                            child: Text('${i + 1}',
-                              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF1e40af))),
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF1e40af),
+                              ),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: Text(notes[i],
-                            style: const TextStyle(fontSize: 12.5, color: Color(0xFF374151), height: 1.45)),
+                          child: Text(
+                            notes[i],
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF374151),
+                              height: 1.45,
+                            ),
+                          ),
                         ),
                       ],
                     ),
@@ -1021,17 +1442,31 @@ class _DoctorNotes extends StatelessWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     decoration: BoxDecoration(
-                      border: Border.all(color: const Color(0xFFc7d2fe), width: 1, style: BorderStyle.solid),
+                      border: Border.all(
+                        color: const Color(0xFFc7d2fe),
+                        width: 1,
+                        style: BorderStyle.solid,
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Center(
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add_rounded, size: 14, color: Color(0xFF1e40af)),
+                          Icon(
+                            Icons.add_rounded,
+                            size: 14,
+                            color: Color(0xFF1e40af),
+                          ),
                           SizedBox(width: 4),
-                          Text('Adicionar nota',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF1e40af))),
+                          Text(
+                            'Adicionar nota',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1e40af),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1066,17 +1501,25 @@ class _SectionHeader extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title,
+              Text(
+                title,
                 style: const TextStyle(
-                  fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.4,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.4,
                   color: Color(0xFF8a94a6),
                 ),
               ),
               if (subtitle != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 2),
-                  child: Text(subtitle!,
-                    style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280))),
+                  child: Text(
+                    subtitle!,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF6b7280),
+                    ),
+                  ),
                 ),
             ],
           ),

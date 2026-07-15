@@ -51,16 +51,33 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                             color: const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.local_hospital_outlined, color: Color(0xFF0A2F7F), size: 20),
+                          child: const Icon(
+                            Icons.local_hospital_outlined,
+                            color: Color(0xFF0A2F7F),
+                            size: 20,
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(destinationName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
+                              Text(
+                                destinationName,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1F2937),
+                                ),
+                              ),
                               const SizedBox(height: 3),
-                              Text(doctorName, style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                              Text(
+                                doctorName,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF6B7280),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -72,25 +89,57 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Itens do pedido', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
+                        const Text(
+                          'Itens do pedido',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1F2937),
+                          ),
+                        ),
                         const SizedBox(height: 14),
                         if (items.isEmpty)
-                          const Text('Seu carrinho foi limpo após a confirmação.', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280)))
+                          const Text(
+                            'Seu carrinho foi limpo após a confirmação.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF6B7280),
+                            ),
+                          )
                         else
                           Column(
                             children: [
                               for (final item in items) ...[
                                 _OrderItemRow(item: item),
-                                if (item != items.last) const SizedBox(height: 12),
+                                if (item != items.last)
+                                  const SizedBox(height: 12),
                               ],
                               const SizedBox(height: 14),
-                              const Divider(height: 1, color: Color(0xFFE5E7EB)),
+                              const Divider(
+                                height: 1,
+                                color: Color(0xFFE5E7EB),
+                              ),
                               const SizedBox(height: 14),
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('Total', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
-                                  Text(brl(total), style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0A2F7F))),
+                                  const Text(
+                                    'Total',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF1F2937),
+                                    ),
+                                  ),
+                                  Text(
+                                    brl(total),
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF0A2F7F),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -108,12 +157,20 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.schedule_outlined, size: 18, color: Color(0xFF16A373)),
+                        Icon(
+                          Icons.schedule_outlined,
+                          size: 18,
+                          color: Color(0xFF16A373),
+                        ),
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
                             'Previsão de entrega: 25 a 29 de abril de 2026',
-                            style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF166534)),
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF166534),
+                            ),
                           ),
                         ),
                       ],
@@ -132,10 +189,15 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0A2F7F),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                     elevation: 0,
                   ),
-                  child: const Text('Ver meus pedidos', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                  child: const Text(
+                    'Ver meus pedidos',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),
@@ -173,15 +235,31 @@ class _HeroSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFBEE7CC), width: 2),
             ),
-            child: const Icon(Icons.check_rounded, size: 42, color: Color(0xFF16A373)),
+            child: const Icon(
+              Icons.check_rounded,
+              size: 42,
+              color: Color(0xFF16A373),
+            ),
           ),
           const SizedBox(height: 16),
-          const Text('Pedido realizado!', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF1F2937))),
+          const Text(
+            'Pedido realizado!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF1F2937),
+            ),
+          ),
           const SizedBox(height: 8),
           const Text(
             'Seu pedido foi confirmado e está sendo processado.',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13.5, color: Color(0xFF6B7280), height: 1.4),
+            style: TextStyle(
+              fontSize: 13.5,
+              color: Color(0xFF6B7280),
+              height: 1.4,
+            ),
           ),
           const SizedBox(height: 14),
           Container(
@@ -191,7 +269,15 @@ class _HeroSection extends StatelessWidget {
               borderRadius: BorderRadius.circular(999),
               border: Border.all(color: const Color(0xFFE5E7EB)),
             ),
-            child: Text(orderId, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0A2F7F), letterSpacing: 0.2)),
+            child: Text(
+              orderId,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF0A2F7F),
+                letterSpacing: 0.2,
+              ),
+            ),
           ),
         ],
       ),
@@ -233,13 +319,33 @@ class _OrderItemRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('${product.name} × ${item.qty}', style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF1F2937))),
+              Text(
+                '${product.name} × ${item.qty}',
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(product.sub, style: const TextStyle(fontSize: 11.5, color: Color(0xFF6B7280))),
+              Text(
+                product.sub,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
             ],
           ),
         ),
-        Text(brl(item.unitPrice * item.qty), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF374151))),
+        Text(
+          brl(item.unitPrice * item.qty),
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF374151),
+          ),
+        ),
       ],
     );
   }

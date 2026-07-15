@@ -6,11 +6,7 @@ class ClinicRow extends StatelessWidget {
   final Clinic clinic;
   final VoidCallback onTap;
 
-  const ClinicRow({
-    super.key,
-    required this.clinic,
-    required this.onTap,
-  });
+  const ClinicRow({super.key, required this.clinic, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +33,11 @@ class ClinicRow extends StatelessWidget {
                       colors: [Color(0xFFdbeafe), Color(0xFFeef4ff)],
                     ),
                   ),
-                  child: const Icon(Icons.local_hospital_rounded, size: 22, color: Color(0xFF1e40af)),
+                  child: const Icon(
+                    Icons.local_hospital_rounded,
+                    size: 22,
+                    color: Color(0xFF1e40af),
+                  ),
                 ),
                 if (clinic.isPriority)
                   Positioned(
@@ -90,7 +90,11 @@ class ClinicRow extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Icon(Icons.location_on_rounded, size: 11, color: const Color(0xFF6b7280)),
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 11,
+                        color: const Color(0xFF6b7280),
+                      ),
                       const SizedBox(width: 2),
                       Text(
                         clinic.neighborhood,
@@ -122,7 +126,8 @@ class ClinicRow extends StatelessWidget {
                         ),
                       _MetaItem(
                         icon: Icons.person_outline_rounded,
-                        text: '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
+                        text:
+                            '${clinic.doctorCount} ${clinic.doctorCount == 1 ? 'médico' : 'médicos'}',
                       ),
                     ],
                   ),
