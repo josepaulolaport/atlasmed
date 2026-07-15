@@ -130,16 +130,15 @@ export const facilityTaxIdTypeEnum = pgEnum("facility_tax_id_type", ["PJ", "PF"]
 export const orderStatusEnum = pgEnum("order_status", [
   "DRAFT",
   "PENDING",
-  "CONFIRMED",
-  "SHIPPED",
-  "DELIVERED",
-  "CANCELLED",
+  "APPROVED",
+  "INVOICED",
   "REJECTED",
+  "NO_BILLING",
 ]);
 
 export const orderTypeEnum = pgEnum("order_type", [
-  "STANDARD",
-  "URGENT",
-  "RETURN",
-  "SAMPLE",
+  "SALE",
+  "CONSIGNMENT",
+  "DONATION",
+  "OTHER",
 ]);

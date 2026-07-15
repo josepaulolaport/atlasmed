@@ -15,7 +15,6 @@ import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
 import { environment } from "./config/environment";
 import { observabilityPlugin } from "../infrastructure/plugins/observability.plugin";
-import { securityHeadersPlugin } from "../infrastructure/middleware/security-headers.middleware";
 import { auditMiddleware } from "../infrastructure/audit/audit.middleware";
 import { API_VERSION } from "./versioning";
 import { apiDocumentation } from "./documentation";
@@ -29,7 +28,6 @@ const firebaseHostingOrigins = /^https:\/\/atlasmed-app(?:--[a-z0-9-]+)?\.web\.a
 const app = new Elysia()
   // Observability MUST come first to track all requests
   .use(observabilityPlugin)
-  .use(securityHeadersPlugin)
   
   // Apply global error handler
   .onError(({ code, error, set }) => {
