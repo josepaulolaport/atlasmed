@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 class TermsFooter extends StatelessWidget {
   final String version;
 
-  const TermsFooter({super.key, this.version = 'v2.8.1'});
+  const TermsFooter({super.key, this.version = 'v0.1.0'});
 
   @override
   Widget build(BuildContext context) {

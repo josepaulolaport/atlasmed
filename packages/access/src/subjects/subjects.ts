@@ -14,6 +14,8 @@ export const Subjects = {
   REGISTRY_SUGGESTION: "REGISTRY_SUGGESTION",
 
   CATALOG: "CATALOG",
+
+  VISIT: "VISIT",
 } as const;
 
 export type Subject = (typeof Subjects)[keyof typeof Subjects];

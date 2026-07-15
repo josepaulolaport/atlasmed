@@ -9,8 +9,11 @@ export interface UserRecord {
   emailVerified: boolean;
   phoneVerified: boolean;
   phoneNumber: string | null;
+  emailVerifiedAt?: Date | null;
+  phoneVerifiedAt?: Date | null;
   twoFactorEnabled: boolean;
   twoFactorSecret: string | null;
+  avatarUrl: string | null;
   tokenVersion: number;
   managerId: string | null;
   passwordHistory: string[];
@@ -22,6 +25,7 @@ export interface UserRecord {
   };
   createdAt: Date;
   updatedAt: Date;
+  metadata?: unknown;
 }
 
 export interface FindUserByIdentifierParams {
@@ -104,7 +108,7 @@ export interface UserListScopeFilter {
 export interface UpdateProfileParams {
   firstName?: string;
   lastName?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
 }
 
 export interface ChangeRoleTransactionParams {
@@ -131,7 +135,9 @@ export interface EnableTwoFactorParams {
 }
 
 export interface UserRepository {
-  findByIdentifier(params: FindUserByIdentifierParams): Promise<UserRecord | null>;
+  findByIdentifier(
+    params: FindUserByIdentifierParams,
+  ): Promise<UserRecord | null>;
 
   findById(id: string): Promise<UserRecord | null>;
 
@@ -156,7 +162,7 @@ export interface UserRepository {
   changeRoleTransaction(params: ChangeRoleTransactionParams): Promise<void>;
 
   changePasswordTransaction(
-    params: ChangePasswordTransactionParams
+    params: ChangePasswordTransactionParams,
   ): Promise<ChangePasswordTransactionResult>;
 
   enableTwoFactor(params: EnableTwoFactorParams): Promise<void>;
@@ -165,11 +171,17 @@ export interface UserRepository {
 
   incrementTokenVersion(userId: string): Promise<number>;
 
-  resetPasswordTransaction(params: ResetPasswordTransactionParams): Promise<ResetPasswordTransactionResult>;
+  resetPasswordTransaction(
+    params: ResetPasswordTransactionParams,
+  ): Promise<ResetPasswordTransactionResult>;
 
-  findEmailVerificationState(userId: string): Promise<EmailVerificationState | null>;
+  findEmailVerificationState(
+    userId: string,
+  ): Promise<EmailVerificationState | null>;
 
-  findPhoneVerificationState(userId: string): Promise<PhoneVerificationState | null>;
+  findPhoneVerificationState(
+    userId: string,
+  ): Promise<PhoneVerificationState | null>;
 
   findByEmail(email: string): Promise<UserIdentifierMatch | null>;
 
@@ -183,9 +195,21 @@ export interface UserRepository {
 
   updatePhone(userId: string, newPhone: string): Promise<void>;
 
-  findAll(params: FindAllUsersParams): Promise<{ users: UserRecord[]; total: number }>;
+  findAll(
+    params: FindAllUsersParams,
+  ): Promise<{ users: UserRecord[]; total: number }>;
 
   updateProfile(userId: string, data: UpdateProfileParams): Promise<UserRecord>;
 
-  updateManagerId(userId: string, managerId: string | null): Promise<UserRecord>;
+  getMetadata(userId: string): Promise<unknown>;
+
+  updateMetadata(
+    userId: string,
+    metadata: Record<string, unknown>,
+  ): Promise<void>;
+
+  updateManagerId(
+    userId: string,
+    managerId: string | null,
+  ): Promise<UserRecord>;
 }

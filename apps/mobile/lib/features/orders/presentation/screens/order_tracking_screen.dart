@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock_orders_repository.dart';
-import '../../data/models.dart';
-import '../widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/tracking_status.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/tracking.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/repositories/orders_repository.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
 
 class OrderTrackingScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -75,14 +77,12 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     return '${dt.day.toString().padLeft(2, '0')}/${_monthsShort[dt.month - 1]} · ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  TrackingOrderDetail get _order {
-    return kTrackingOrders[widget.orderId] ?? kTrackingOrders['ORD-2841']!;
-  }
-
   Future<void> _refresh() async {
     if (_refreshing) return;
     setState(() => _refreshing = true);
     await _refreshController.forward(from: 0);
+    // Invalidate provider to refetch order detail
+    ref.invalidate(orderDetailProvider(widget.orderId));
     await Future<void>.delayed(const Duration(seconds: 1));
     if (!mounted) return;
     setState(() => _refreshing = false);
@@ -145,158 +145,267 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
     }
   }
 
+  /// Maps [ApiOrderDetail] from the API to the [TrackingOrderDetail] used by UI.
+  TrackingOrderDetail _mapToTrackingOrder(ApiOrderDetail detail) {
+    final status = _parseStatus(detail.status, TrackingStatus.pending);
+    final ts = detail.createdAt.toIso8601String();
+    final updatedTs = detail.updatedAt.toIso8601String();
+    return TrackingOrderDetail(
+      id: detail.displayId,
+      status: status,
+      createdAt: ts,
+      estimatedDelivery: '',
+      paymentMethod: detail.notes ?? '',
+      total: 'R\$ ${detail.total.toStringAsFixed(2).replaceAll('.', ',')}',
+      clinic: TrackingClinic(
+        id: detail.facility.id,
+        name: detail.facility.name,
+        address: '',
+      ),
+      items: detail.items
+          .map(
+            (item) => TrackingOrderItem(
+              id: item.id,
+              productName: item.product?.name ?? 'Produto',
+              code: item.product?.code ?? '',
+              quantity: item.quantity.round(),
+              unit: '',
+              subtotal:
+                  'R\$ ${item.lineTotal.toStringAsFixed(2).replaceAll('.', ',')}',
+            ),
+          )
+          .toList(growable: false),
+      timeline: [
+        TrackingEvent(
+          status: TrackingStatus.confirmed,
+          timestamp: ts,
+          description: 'Pedido confirmado',
+        ),
+        TrackingEvent(
+          status: status,
+          timestamp: updatedTs,
+          description: 'Última atualização: $status',
+        ),
+      ],
+      driver: null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final order = _order;
-    final status = _parseStatus(widget.orderStatus, order.status);
-    final canCancel = ![
-      TrackingStatus.shipped,
-      TrackingStatus.delivered,
-      TrackingStatus.cancelled,
-    ].contains(status);
-    final steps = const ['confirmed', 'processing', 'shipped', 'delivered'];
-    final stepMeta = <String, ({String label, TrackingStatus status})>{
-      'confirmed': (label: 'Confirmado', status: TrackingStatus.confirmed),
-      'processing': (label: 'Em preparação', status: TrackingStatus.processing),
-      'shipped': (label: 'Saiu para entrega', status: TrackingStatus.shipped),
-      'delivered': (label: 'Entregue', status: TrackingStatus.delivered),
-    };
-    final currentIndex = steps.indexWhere((s) => stepMeta[s]!.status == status);
-    final statusColor = status.color;
-    final gradient = LinearGradient(
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
-      colors: [statusColor, Color.lerp(statusColor, Colors.black, 0.18)!],
-    );
+    final orderAsync = ref.watch(orderDetailProvider(widget.orderId));
+    return orderAsync.when(
+      loading: () => Scaffold(
+        backgroundColor: const Color(0xFFf7f8fb),
+        body: const Center(child: CircularProgressIndicator()),
+      ),
+      error: (err, stack) => Scaffold(
+        backgroundColor: const Color(0xFFf7f8fb),
+        body: Center(
+          child: Text(
+            'Não foi possível carregar o pedido.\n$err',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF6b7280)),
+          ),
+        ),
+      ),
+      data: (apiOrder) {
+        final order = _mapToTrackingOrder(apiOrder);
+        final status = _parseStatus(widget.orderStatus, order.status);
+        final canCancel = ![
+          TrackingStatus.shipped,
+          TrackingStatus.delivered,
+          TrackingStatus.cancelled,
+        ].contains(status);
+        final steps = const ['confirmed', 'processing', 'shipped', 'delivered'];
+        final stepMeta = <String, ({String label, TrackingStatus status})>{
+          'confirmed': (label: 'Confirmado', status: TrackingStatus.confirmed),
+          'processing': (
+            label: 'Em preparação',
+            status: TrackingStatus.processing,
+          ),
+          'shipped': (
+            label: 'Saiu para entrega',
+            status: TrackingStatus.shipped,
+          ),
+          'delivered': (label: 'Entregue', status: TrackingStatus.delivered),
+        };
+        final currentIndex = steps.indexWhere(
+          (s) => stepMeta[s]!.status == status,
+        );
+        final statusColor = status.color;
+        final gradient = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [statusColor, Color.lerp(statusColor, Colors.black, 0.18)!],
+        );
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFf7f8fb),
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
-              ),
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-              child: Row(
-                children: [
-                  const BackChevron(),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'ACOMPANHAR PEDIDO',
-                          style: TextStyle(
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.2,
-                            color: Color(0xFF8a94a6),
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '#ORD-2841',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF0f1729),
-                          ),
-                        ),
-                      ],
+        return Scaffold(
+          backgroundColor: const Color(0xFFf7f8fb),
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Color(0xFFeef0f3)),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: _refresh,
-                    child: Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFeef0f3)),
-                        borderRadius: BorderRadius.circular(12),
-                        color: Colors.white,
-                      ),
-                      child: AnimatedBuilder(
-                        animation: _refreshController,
-                        builder: (context, child) => Transform.rotate(
-                          angle: _refreshing
-                              ? _refreshController.value * 2 * math.pi
-                              : 0,
-                          child: child,
-                        ),
-                        child: const Icon(
-                          Icons.refresh_rounded,
-                          size: 18,
-                          color: Color(0xFF0a2f7f),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      gradient: gradient,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x120f1729),
-                          blurRadius: 16,
-                          offset: Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+                  child: Row(
+                    children: [
+                      const BackChevron(),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.18),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text(
-                                  status.icon,
-                                  style: const TextStyle(fontSize: 24),
-                                ),
+                            Text(
+                              'ACOMPANHAR PEDIDO',
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                                color: Color(0xFF8a94a6),
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'STATUS ATUAL',
-                                    style: TextStyle(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white.withValues(
-                                        alpha: 0.78,
-                                      ),
-                                      letterSpacing: 0.7,
+                            SizedBox(height: 2),
+                            Text(
+                              '#ORD-2841',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0f1729),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _refresh,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFeef0f3)),
+                            borderRadius: BorderRadius.circular(12),
+                            color: Colors.white,
+                          ),
+                          child: AnimatedBuilder(
+                            animation: _refreshController,
+                            builder: (context, child) => Transform.rotate(
+                              angle: _refreshing
+                                  ? _refreshController.value * 2 * math.pi
+                                  : 0,
+                              child: child,
+                            ),
+                            child: const Icon(
+                              Icons.refresh_rounded,
+                              size: 18,
+                              color: Color(0xFF0a2f7f),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: gradient,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x120f1729),
+                              blurRadius: 16,
+                              offset: Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: 50,
+                                  height: 50,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.18),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      status.icon,
+                                      style: const TextStyle(fontSize: 24),
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'STATUS ATUAL',
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white.withValues(
+                                            alpha: 0.78,
+                                          ),
+                                          letterSpacing: 0.7,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        status.label,
+                                        style: const TextStyle(
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_month_rounded,
+                                    size: 16,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    status.label,
+                                    'Entrega estimada: ${order.estimatedDelivery}',
                                     style: const TextStyle(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w600,
                                       color: Colors.white,
                                     ),
                                   ),
@@ -305,198 +414,171 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        title: 'Linha do tempo',
+                        child: Column(
+                          children: List.generate(steps.length, (i) {
+                            final key = steps[i];
+                            final meta = stepMeta[key]!;
+                            final event = i < order.timeline.length
+                                ? order.timeline[i]
+                                : null;
+                            final isDone = i < order.timeline.length;
+                            final isCurrent =
+                                meta.status == status ||
+                                (currentIndex == -1 &&
+                                    i == order.timeline.length - 1);
+                            return _TimelineRow(
+                              isFirst: i == 0,
+                              isLast: i == steps.length - 1,
+                              isDone: isDone,
+                              isCurrent: isCurrent,
+                              color: statusColor,
+                              label: meta.label,
+                              timestamp: event != null
+                                  ? _fmtTimestamp(event.timestamp)
+                                  : 'Aguardando',
+                              description:
+                                  event?.description ??
+                                  'Aguardando atualização do status.',
+                              stepNumber: i + 1,
+                            );
+                          }),
+                        ),
+                      ),
+                      if (order.driver != null) ...[
                         const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.16),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_month_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Entrega estimada: ${order.estimatedDelivery}',
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
+                        _SectionCard(
+                          title: 'ENTREGA · EM ROTA',
+                          child: _DriverCard(driver: order.driver!),
                         ),
                       ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'Linha do tempo',
-                    child: Column(
-                      children: List.generate(steps.length, (i) {
-                        final key = steps[i];
-                        final meta = stepMeta[key]!;
-                        final event = i < order.timeline.length
-                            ? order.timeline[i]
-                            : null;
-                        final isDone = i < order.timeline.length;
-                        final isCurrent =
-                            meta.status == status ||
-                            (currentIndex == -1 &&
-                                i == order.timeline.length - 1);
-                        return _TimelineRow(
-                          isFirst: i == 0,
-                          isLast: i == steps.length - 1,
-                          isDone: isDone,
-                          isCurrent: isCurrent,
-                          color: statusColor,
-                          label: meta.label,
-                          timestamp: event != null
-                              ? _fmtTimestamp(event.timestamp)
-                              : 'Aguardando',
-                          description:
-                              event?.description ??
-                              'Aguardando atualização do status.',
-                          stepNumber: i + 1,
-                        );
-                      }),
-                    ),
-                  ),
-                  if (order.driver != null) ...[
-                    const SizedBox(height: 14),
-                    _SectionCard(
-                      title: 'ENTREGA · EM ROTA',
-                      child: _DriverCard(driver: order.driver!),
-                    ),
-                  ],
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'PRODUTOS (${order.items.length} itens)',
-                    child: Column(
-                      children: [
-                        for (final item in order.items) ...[
-                          _ProductRow(item: item),
-                          const SizedBox(height: 12),
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        title: 'PRODUTOS (${order.items.length} itens)',
+                        child: Column(
+                          children: [
+                            for (final item in order.items) ...[
+                              _ProductRow(item: item),
+                              const SizedBox(height: 12),
+                            ],
+                            Container(
+                              height: 1,
+                              margin: const EdgeInsets.symmetric(vertical: 6),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(
+                                    color: Color(0xFFd8dde5),
+                                    width: 1,
+                                    style: BorderStyle.solid,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            _infoLine('Total', order.total, strong: true),
+                            const SizedBox(height: 4),
+                            _infoLine('Pagamento', order.paymentMethod),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      _SectionCard(
+                        title: 'ENDEREÇO DE ENTREGA',
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFeef2ff),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              alignment: Alignment.center,
+                              child: const Text(
+                                '🏥',
+                                style: TextStyle(fontSize: 18),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    order.clinic.name,
+                                    style: const TextStyle(
+                                      fontSize: 14.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF0f1729),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    order.clinic.address,
+                                    style: const TextStyle(
+                                      fontSize: 12.5,
+                                      color: Color(0xFF5b6474),
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          if (canCancel)
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _showCancel,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFb84545),
+                                  side: const BorderSide(
+                                    color: Color(0xFFe9b7b7),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                ),
+                                child: const Text('Cancelar pedido'),
+                              ),
+                            ),
+                          if (canCancel) const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: () => context.go('/splash'),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF0a2f7f),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Text('Suporte'),
+                            ),
+                          ),
                         ],
-                        Container(
-                          height: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 6),
-                          decoration: const BoxDecoration(
-                            border: Border(
-                              top: BorderSide(
-                                color: Color(0xFFd8dde5),
-                                width: 1,
-                                style: BorderStyle.solid,
-                              ),
-                            ),
-                          ),
-                        ),
-                        _infoLine('Total', order.total, strong: true),
-                        const SizedBox(height: 4),
-                        _infoLine('Pagamento', order.paymentMethod),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _SectionCard(
-                    title: 'ENDEREÇO DE ENTREGA',
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFeef2ff),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            '🏥',
-                            style: TextStyle(fontSize: 18),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                order.clinic.name,
-                                style: const TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0f1729),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                order.clinic.address,
-                                style: const TextStyle(
-                                  fontSize: 12.5,
-                                  color: Color(0xFF5b6474),
-                                  height: 1.35,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      if (canCancel)
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _showCancel,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFFb84545),
-                              side: const BorderSide(color: Color(0xFFe9b7b7)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                            ),
-                            child: const Text('Cancelar pedido'),
-                          ),
-                        ),
-                      if (canCancel) const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () => context.go('/splash'),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0a2f7f),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text('Suporte'),
-                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -699,7 +781,7 @@ class _DriverCard extends StatelessWidget {
   const _DriverCard({required this.driver});
 
   String _initials(String name) {
-    final parts = name.trim().split(RegExp(r'\s+'));
+    final parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }

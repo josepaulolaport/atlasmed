@@ -13,6 +13,7 @@ const EnvironmentSchema = Type.Object({
     { default: "development" },
   ),
   PORT: Type.Number({ default: 3000, minimum: 1, maximum: 65535 }),
+  APP_TIMEZONE: Type.String({ default: "America/Sao_Paulo", minLength: 1 }),
 
   DATABASE_URL: Type.String({ default: "postgresql://postgres:postgres@localhost:5432/atlasmed" }),
   DATABASE_POOL_MIN: Type.Number({ default: 2, minimum: 1 }),
@@ -67,6 +68,7 @@ const EnvironmentSchema = Type.Object({
   STORAGE_SECRET_ACCESS_KEY: OptionalString(),
   STORAGE_BUCKET: OptionalString(),
   STORAGE_REGION: Type.String({ default: "us-east-1", minLength: 1 }),
+  AVATAR_STORAGE_LOCAL_PATH: Type.String({ default: "/tmp/atlasmed-avatars", minLength: 1 }),
 
   MEILISEARCH_URL: OptionalString(),
   MEILISEARCH_API_KEY: OptionalString(),
@@ -146,6 +148,7 @@ function normalizeEnvironment(env: EnvInput) {
     ...env,
     NODE_ENV: env.NODE_ENV ?? "development",
     PORT: numberFromEnv(env.PORT, 3000),
+    APP_TIMEZONE: env.APP_TIMEZONE ?? "America/Sao_Paulo",
     DATABASE_URL: env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/atlasmed",
     DATABASE_POOL_MIN: numberFromEnv(env.DATABASE_POOL_MIN, 2),
     DATABASE_POOL_MAX: numberFromEnv(env.DATABASE_POOL_MAX, 10),
@@ -173,6 +176,7 @@ function normalizeEnvironment(env: EnvInput) {
     OTEL_SERVICE_NAME: env.OTEL_SERVICE_NAME ?? "atlasmed-api",
     LOG_LEVEL: env.LOG_LEVEL ?? "info",
     STORAGE_REGION: env.STORAGE_REGION ?? "us-east-1",
+    AVATAR_STORAGE_LOCAL_PATH: env.AVATAR_STORAGE_LOCAL_PATH ?? "/tmp/atlasmed-avatars",
     ENABLE_SWAGGER: booleanFromEnv(env.ENABLE_SWAGGER, true),
     ENABLE_METRICS: booleanFromEnv(env.ENABLE_METRICS, true),
     ENABLE_AUDIT_LOG: booleanFromEnv(env.ENABLE_AUDIT_LOG, true),

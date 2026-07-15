@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../widgets/app_logo.dart';
-import '../widgets/blue_backdrop.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_logo.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
 
 /// Animated splash screen — logo fades in, dot loader pulses, auto-advances.
 class SplashScreen extends ConsumerStatefulWidget {

@@ -1,6 +1,6 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import { ValidationError } from "../../../../shared/errors";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type { SectorRepository } from "../interfaces/sector.repository.interface";
 import type { ProductRepository } from "../interfaces/product.repository.interface";
 import type {
@@ -31,6 +31,12 @@ function serializeProduct(row: {
   id: string;
   code: string;
   name: string;
+  description: string | null;
+  commercialCode: string | null;
+  productGroup: string | null;
+  productClassification: string | null;
+  brand: string | null;
+  unit: string | null;
   sectorIds: string[];
   pictureUrl: string | null;
   simproCode: string;
@@ -51,6 +57,12 @@ function serializeProduct(row: {
     id: row.id,
     code: row.code,
     name: row.name,
+    description: row.description,
+    commercialCode: row.commercialCode,
+    productGroup: row.productGroup,
+    productClassification: row.productClassification,
+    brand: row.brand,
+    unit: row.unit,
     sectorIds: row.sectorIds,
     pictureUrl: row.pictureUrl,
     simproCode: row.simproCode,
@@ -140,6 +152,7 @@ export class ListProductsUseCase {
     page?: number;
     limit?: number;
     sectorId?: string;
+    search?: string;
     isActive?: boolean;
   }) {
     const page = input.page ?? 1;
@@ -148,6 +161,7 @@ export class ListProductsUseCase {
       page,
       limit,
       sectorId: input.sectorId,
+      search: input.search,
       isActive: input.isActive,
     });
 
@@ -155,6 +169,16 @@ export class ListProductsUseCase {
       data: products.map(serializeProduct),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
+  }
+}
+
+export class GetProductUseCase {
+  constructor(private readonly deps: { productRepository: ProductRepository }) {}
+
+  async execute(input: { productId: string }) {
+    const product = await this.deps.productRepository.findById(input.productId);
+    if (!product) throw new ResourceNotFoundError("Product", input.productId);
+    return serializeProduct(product);
   }
 }
 

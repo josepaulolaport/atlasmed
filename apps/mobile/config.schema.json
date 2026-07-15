@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "description": "AtlasMed Mobile App Configuration Schema",
+  "type": "object",
+  "properties": {
+    "API_BASE_URL": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Base URL da API backend"
+    },
+    "MAPBOX_ACCESS_TOKEN": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Token público do Mapbox usado pelo mapa nativo"
+    }
+  },
+  "required": [
+    "API_BASE_URL",
+    "MAPBOX_ACCESS_TOKEN"
+  ]
+}

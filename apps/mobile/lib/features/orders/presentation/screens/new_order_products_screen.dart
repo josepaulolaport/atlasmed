@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/models.dart';
-import '../../data/mock_orders_repository.dart';
-import '../providers/orders_provider.dart';
-import '../widgets/order_widgets.dart';
-import '../widgets/product_order_sheet.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/catalog_product.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/features/orders/data/models/cart.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/catalog_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/providers/orders_provider.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/product_order_sheet.dart';
 
 class NewOrderProductsScreen extends ConsumerStatefulWidget {
   const NewOrderProductsScreen({super.key});
@@ -21,7 +23,6 @@ class _NewOrderProductsScreenState
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
-  String _searchQuery = '';
   String _selectedCategory = 'Todos';
 
   static const _categories = [
@@ -34,21 +35,13 @@ class _NewOrderProductsScreenState
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      setState(() => _searchQuery = _searchController.text.trim());
-    });
-  }
-
-  @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
 
-  void _openProductSheet(Product product, CartState cart) {
+  void _openProductSheet(CatalogProduct product, CartState cart) {
     final cartIndex = cart.items.indexWhere(
       (item) => item.productId == product.id,
     );
@@ -72,15 +65,13 @@ class _NewOrderProductsScreenState
   @override
   Widget build(BuildContext context) {
     final cart = ref.watch(cartProvider);
-    final products = kProducts.where((p) {
-      final matchCat =
-          _selectedCategory == 'Todos' || p.category == _selectedCategory;
-      final matchQ =
-          _searchQuery.isEmpty ||
-          p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          p.sub.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchCat && matchQ;
-    }).toList();
+    final catalog = ref.watch(catalogProductsProvider);
+    final products = catalog.products
+        .where(
+          (p) =>
+              _selectedCategory == 'Todos' || p.category == _selectedCategory,
+        )
+        .toList();
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
@@ -92,7 +83,14 @@ class _NewOrderProductsScreenState
             _buildSearchBar(),
             _buildCategoryChips(),
             Expanded(
-              child: products.isEmpty
+              child: catalog.loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : catalog.error != null
+                  ? _CatalogErrorState(
+                      onRetry: () =>
+                          ref.read(catalogProductsProvider.notifier).load(),
+                    )
+                  : products.isEmpty
                   ? const _EmptyState()
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -243,6 +241,9 @@ class _NewOrderProductsScreenState
           child: TextField(
             controller: _searchController,
             focusNode: _searchFocusNode,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (query) =>
+                ref.read(catalogProductsProvider.notifier).load(search: query),
             decoration: const InputDecoration(
               icon: Icon(Icons.search, size: 20, color: Color(0xFF9ca3af)),
               hintText: 'Buscar produto…',
@@ -288,7 +289,7 @@ class _NewOrderProductsScreenState
 }
 
 class _ProductCard extends StatelessWidget {
-  final Product product;
+  final CatalogProduct product;
   final CartItem? cartItem;
   final VoidCallback onTap;
   final VoidCallback onAdd;
@@ -344,12 +345,12 @@ class _ProductCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      PTag(tag: product.tag),
+                      PTag(tag: null),
                     ],
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    product.sub,
+                    product.subtitle,
                     style: const TextStyle(
                       fontSize: 12,
                       color: Color(0xFF6b7280),
@@ -357,7 +358,7 @@ class _ProductCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    brl(product.unit),
+                    brl(product.price),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -409,6 +410,23 @@ class _ProductCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _CatalogErrorState extends StatelessWidget {
+  const _CatalogErrorState({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: TextButton.icon(
+      onPressed: onRetry,
+      icon: const Icon(Icons.refresh),
+      label: const Text(
+        'Não foi possível carregar os produtos. Tentar novamente',
+      ),
+    ),
+  );
 }
 
 class _EmptyState extends StatelessWidget {

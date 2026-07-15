@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../shared/widgets/app_shell.dart';
-import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../data/models.dart';
-import '../providers/profile_provider.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/user_profile.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/profile/data/models/preferences.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 
 // ======================================================================
 // ProfileScreen — representative's personal overview
@@ -20,14 +23,64 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _logoutConfirm = false;
 
+  Future<void> _showAvatarActions(bool hasAvatar) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text("Escolher nova foto"),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                ref.read(avatarControllerProvider.notifier).chooseFromGallery();
+              },
+            ),
+            if (hasAvatar)
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: Color(0xFFb84545),
+                ),
+                title: const Text(
+                  "Remover foto",
+                  style: TextStyle(color: Color(0xFFb84545)),
+                ),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ref.read(avatarControllerProvider.notifier).remove();
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAvatarError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final sessionProfile = ref.watch(sessionProfileProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final profileAsync = ref.watch(profileProvider);
     final territoryAsync = ref.watch(territoryStatsProvider);
     final summaryAsync = ref.watch(quickSummaryProvider);
     final prefsAsync = ref.watch(preferencesProvider);
-    final activityAsync = ref.watch(recentActivityProvider);
-    final supportAsync = ref.watch(supportItemsProvider);
+    ref.listen<AsyncValue<void>>(avatarControllerProvider, (_, next) {
+      if (next.hasError) _showAvatarError(next.error.toString());
+    });
+    final avatarUpdating = ref.watch(avatarControllerProvider).isLoading;
+    final avatarToken = ref.watch(sessionProvider).currentValue?.token;
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
@@ -39,13 +92,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Top bar ──────────────────────────────────
-                  _buildTopBar(),
+                  const AtlasTopBar(page: 'Perfil'),
 
                   // ── Header · identity ────────────────────────
-                  profileAsync.when(
-                    loading: () => _buildHeaderShimmer(),
-                    error: (_, _) => const SizedBox.shrink(),
-                    data: (profile) => _buildHeader(profile),
+                  sessionProfile.when(
+                    loading: _buildHeaderShimmer,
+                    error: (_, _) => profileAsync.when(
+                      loading: _buildHeaderShimmer,
+                      error: (_, _) => const SizedBox.shrink(),
+                      data: (profile) =>
+                          _buildHeader(profile, updating: avatarUpdating),
+                    ),
+                    data: (profile) => profile == null
+                        ? profileAsync.when(
+                            loading: _buildHeaderShimmer,
+                            error: (_, _) => const SizedBox.shrink(),
+                            data: (fallback) => _buildHeader(
+                              fallback,
+                              updating: avatarUpdating,
+                            ),
+                          )
+                        : _buildHeader(
+                            profile,
+                            avatarUrl: currentUser.valueOrNull?.avatarUrl,
+                            avatarToken: avatarToken,
+                            updating: avatarUpdating,
+                          ),
                   ),
 
                   // ── Body ─────────────────────────────────────
@@ -78,31 +150,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Atividade recente
-                        activityAsync.when(
-                          loading: () => _buildSectionShimmer(height: 200),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildRecentActivity(items),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Suporte & conta
-                        supportAsync.when(
-                          loading: () => _buildSectionShimmer(height: 160),
-                          error: (_, _) => const SizedBox.shrink(),
-                          data: (items) => _buildSupportSection(items),
-                        ),
-                        const SizedBox(height: 12),
-
                         // Logout
                         _buildLogoutButton(),
 
                         // Footer
-                        profileAsync.when(
-                          data: (profile) => _buildFooter(profile.since),
-                          loading: () => const SizedBox.shrink(),
-                          error: (_, _) => const SizedBox.shrink(),
-                        ),
+                        _buildFooter(sessionProfile.valueOrNull?.since ?? ''),
                       ],
                     ),
                   ),
@@ -118,60 +170,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
-  // ── Top bar ─────────────────────────────────────────────────
-  Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 4, 8, 0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          _GlassButton(
-            child: const Icon(
-              Icons.menu_rounded,
-              color: Color(0xFF0a2f7f),
-              size: 18,
-            ),
-            onTap: () => openAppDrawer(context),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFeef0f3)),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF0a2f7f),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                const Text(
-                  'Perfil',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.3,
-                    color: Color(0xFF0a2f7f),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 38), // balance menu on left
-        ],
-      ),
-    );
-  }
-
   // ── Header ──────────────────────────────────────────────────
-  Widget _buildHeader(UserProfile profile) {
+  Widget _buildHeader(
+    UserProfile profile, {
+    String? avatarUrl,
+    String? avatarToken,
+    bool updating = false,
+  }) {
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
       decoration: const BoxDecoration(
@@ -183,25 +188,18 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Column(
         children: [
-          // Edit button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              _GlassButton(
-                child: const Icon(
-                  Icons.edit_outlined,
-                  color: Color(0xFF374151),
-                  size: 15,
-                ),
-                onTap: () {},
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
           // Avatar + info
           Row(
             children: [
-              _ProfileAvatar(initials: profile.initials, size: 66),
+              _AvatarEditor(
+                initials: profile.initials,
+                avatarUrl: avatarUrl,
+                avatarToken: avatarToken,
+                updating: updating,
+                onTap: () => _showAvatarActions(
+                  avatarUrl != null && avatarUrl.isNotEmpty,
+                ),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
@@ -278,7 +276,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       child: Column(
         children: [
-          const SizedBox(height: 30),
           Row(
             children: [
               Container(
@@ -602,45 +599,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     };
   }
 
-  // ── Atividade recente ───────────────────────────────────────
-  Widget _buildRecentActivity(List<RecentActivity> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'Atividade recente', action: 'Ver tudo'),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: items.map((a) => _ActivityRow(activity: a)).toList(),
-          ),
-        ),
-      ],
-    );
-  }
-
   // ── Suporte & conta ─────────────────────────────────────────
-  Widget _buildSupportSection(List<SupportItem> items) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'Suporte & conta'),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: items.map((item) => _SupportRow(item: item)).toList(),
-          ),
-        ),
-      ],
-    );
-  }
+  // Removed — pending real API support endpoints.
 
   // ── Logout button ───────────────────────────────────────────
   Widget _buildLogoutButton() {
@@ -752,8 +712,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       width: double.infinity,
                       child: FilledButton(
                         onPressed: () {
-                          ref.read(authProvider.notifier).logout();
-                          context.go('/splash');
+                          ref.read(sessionProvider).delete();
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: const Color(0xFFb84545),
@@ -809,7 +768,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       padding: const EdgeInsets.only(top: 18),
       child: Center(
         child: Text(
-          'Atlasmed · v2.6.1 · $since',
+          since.isEmpty ? 'Atlasmed · v0.1.0' : 'Atlasmed · v0.1.0 · $since',
           style: const TextStyle(
             fontSize: 10.5,
             color: Color(0xFFc4c9d2),
@@ -837,28 +796,70 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 // Shared components
 // ======================================================================
 
-class _GlassButton extends StatelessWidget {
-  final Widget child;
+class _AvatarEditor extends StatelessWidget {
+  const _AvatarEditor({
+    required this.initials,
+    required this.avatarUrl,
+    required this.avatarToken,
+    required this.updating,
+    required this.onTap,
+  });
+
+  final String initials;
+  final String? avatarUrl;
+  final String? avatarToken;
+  final bool updating;
   final VoidCallback onTap;
-  const _GlassButton({required this.child, required this.onTap});
+
+  String? _absoluteAvatarUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+    return url.startsWith("http") ? url : "${AppConfig.apiBaseUrl}$url";
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: const Color(0xFFeef0f3)),
-            borderRadius: BorderRadius.circular(10),
+    return Semantics(
+      button: true,
+      label: "Alterar foto de perfil",
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          _ProfileAvatar(
+            initials: initials,
+            imageUrl: _absoluteAvatarUrl(avatarUrl),
+            authorization: avatarToken == null ? null : "Bearer $avatarToken",
+            size: 66,
           ),
-          child: child,
-        ),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Material(
+              color: const Color(0xFF0a2f7f),
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: updating ? null : onTap,
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: updating
+                      ? const Padding(
+                          padding: EdgeInsets.all(7),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.camera_alt_outlined,
+                          size: 15,
+                          color: Colors.white,
+                        ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -866,8 +867,15 @@ class _GlassButton extends StatelessWidget {
 
 class _ProfileAvatar extends StatelessWidget {
   final String initials;
+  final String? imageUrl;
+  final String? authorization;
   final double size;
-  const _ProfileAvatar({required this.initials, this.size = 72});
+  const _ProfileAvatar({
+    required this.initials,
+    this.imageUrl,
+    this.authorization,
+    this.size = 72,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -894,15 +902,29 @@ class _ProfileAvatar extends StatelessWidget {
           ),
         ],
       ),
-      child: Center(
-        child: Text(
-          initials,
-          style: TextStyle(
-            fontSize: size * 0.36,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-            color: Colors.white,
-          ),
+      clipBehavior: Clip.antiAlias,
+      child: imageUrl != null && imageUrl!.isNotEmpty
+          ? Image.network(
+              imageUrl!,
+              headers: authorization == null
+                  ? null
+                  : {"Authorization": authorization!},
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => _initials(),
+            )
+          : _initials(),
+    );
+  }
+
+  Widget _initials() {
+    return Center(
+      child: Text(
+        initials,
+        style: TextStyle(
+          fontSize: size * 0.36,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+          color: Colors.white,
         ),
       ),
     );
@@ -1257,169 +1279,3 @@ class _PrefRow extends StatelessWidget {
 }
 
 // ── Activity row ─────────────────────────────────────────────
-class _ActivityRow extends StatelessWidget {
-  final RecentActivity activity;
-  const _ActivityRow({required this.activity});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        border: const Border(top: BorderSide(color: Color(0xFFf1f3f6))),
-      ),
-      child: Row(
-        children: [
-          _ActivityIcon(kind: activity.kind),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activity.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1f2937),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  activity.detail,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Color(0xFF9ca3af),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            activity.when,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF9ca3af),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityIcon extends StatelessWidget {
-  final String kind;
-  const _ActivityIcon({required this.kind});
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color bg, Color color, IconData icon) = switch (kind) {
-      'visit' => (
-        const Color(0x140a2f7f),
-        const Color(0xFF0a2f7f),
-        Icons.location_on_outlined,
-      ),
-      'followup' => (
-        const Color(0x1A16a373),
-        const Color(0xFF16a373),
-        Icons.check_circle_outline,
-      ),
-      'order' => (
-        const Color(0x1Fc6861b),
-        const Color(0xFFb07a10),
-        Icons.shopping_bag_outlined,
-      ),
-      'download' => (
-        const Color(0x1A1e40af),
-        const Color(0xFF1e40af),
-        Icons.download_outlined,
-      ),
-      _ => (
-        const Color(0x140a2f7f),
-        const Color(0xFF0a2f7f),
-        Icons.circle_outlined,
-      ),
-    };
-
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Icon(icon, size: 14, color: color),
-    );
-  }
-}
-
-// ── Support row ──────────────────────────────────────────────
-class _SupportRow extends StatelessWidget {
-  final SupportItem item;
-  const _SupportRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = switch (item.kind) {
-      'help' => Icons.help_outline_rounded,
-      'chat' => Icons.chat_outlined,
-      'legal' => Icons.description_outlined,
-      _ => Icons.chevron_right_rounded,
-    };
-
-    return InkWell(
-      onTap: () {},
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          border: const Border(top: BorderSide(color: Color(0xFFf1f3f6))),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: const Color(0x120a2f7f),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(icon, size: 14, color: const Color(0xFF0a2f7f)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.label,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF1f2937),
-                    ),
-                  ),
-                  if (item.sub != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      item.sub!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF9ca3af),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const _ProfileChevron(),
-          ],
-        ),
-      ),
-    );
-  }
-}

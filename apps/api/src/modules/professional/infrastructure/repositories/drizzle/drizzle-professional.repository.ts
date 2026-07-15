@@ -1,15 +1,17 @@
 import {
   professionals,
+  professionalNotes,
   facilityProfessionals,
   facilities,
 } from "@atlasmed/database";
-import { eq, and, or, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
+import { eq, and, or, isNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
   ProfessionalCreateInput,
   ProfessionalFacilitySummary,
   ProfessionalListScopeFilter,
+  ProfessionalNoteRecord,
   ProfessionalRecord,
   ProfessionalRepository,
   ProfessionalSourceUpsertInput,
@@ -156,6 +158,10 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     limit: number;
     search?: string;
     facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
     scope: ProfessionalListScopeFilter;
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }> {
     const conditions = [isNull(professionals.deletedAt)];
@@ -198,6 +204,39 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       );
     }
 
+    if (params.specialty) {
+      conditions.push(sql`lower(${professionals.primarySpecialtyLabel}) = lower(${params.specialty})`);
+    }
+
+    // Distances and radius eligibility are calculated only from facilities visible
+    // through the active scope. An association outside scope cannot affect a result.
+    const scopedFacilityIds = params.scope.isGlobal
+      ? undefined
+      : (params.scope.facilityIds?.length ? params.scope.facilityIds : ["__none__"]);
+    const distanceScope = scopedFacilityIds
+      ? sql` and fp.facility_id in (${sql.join(scopedFacilityIds.map((id) => sql`${id}`), sql`, `)})`
+      : sql``;
+    const referencePoint = params.latitude === undefined ? undefined : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`;
+    const distanceKm = referencePoint
+      ? sql<number>`(select min(ST_Distance(f.location::geography, ${referencePoint}::geography) / 1000)
+          from facility_professionals fp
+          inner join facilities f on f.id = fp.facility_id
+          where fp.professional_id = ${professionals.id} and fp.ended_at is null and f.location is not null${distanceScope})`
+      : undefined;
+    if (referencePoint) {
+      const proximityConditions = [
+        isNull(facilityProfessionals.endedAt),
+        sql`${facilities.location} IS NOT NULL`,
+        ...(scopedFacilityIds ? [inArray(facilityProfessionals.facilityId, scopedFacilityIds)] : []),
+        ...(params.radiusKm === undefined ? [] : [sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`]),
+      ];
+      conditions.push(inArray(professionals.id, db
+        .select({ professionalId: facilityProfessionals.professionalId })
+        .from(facilityProfessionals)
+        .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
+        .where(and(...proximityConditions))));
+    }
+
     if (params.search) {
       const pattern = `%${params.search}%`;
       conditions.push(
@@ -217,10 +256,10 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     const [rows, countRows] = await Promise.all([
       db
-        .select()
+        .select({ ...getTableColumns(professionals), distanceKm: distanceKm ?? sql<number | null>`null` })
         .from(professionals)
         .where(where)
-        .orderBy(asc(professionals.lastName), asc(professionals.firstName))
+        .orderBy(...(distanceKm ? [asc(distanceKm), asc(professionals.lastName), asc(professionals.firstName)] : [asc(professionals.lastName), asc(professionals.firstName)]))
         .offset(skip)
         .limit(params.limit),
       db.select({ count: sql<number>`count(*)::int` }).from(professionals).where(where),
@@ -229,9 +268,10 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     const associationsMap = await loadAssociationsMap(rows.map((p) => p.id));
 
     return {
-      professionals: rows.map((p) =>
-        mapProfessional(p, associationsMap.get(p.id) ?? [])
-      ),
+      professionals: rows.map((p) => ({
+        ...mapProfessional(p, associationsMap.get(p.id) ?? []),
+        distanceKm: p.distanceKm ?? null,
+      })),
       total: countRows[0]?.count ?? 0,
     };
   }
@@ -314,6 +354,31 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         row.legalName?.trim() ||
         row.id,
     }));
+  }
+
+  async findNotesByProfessionalAndUser(
+    professionalId: string,
+    userId: string
+  ): Promise<ProfessionalNoteRecord[]> {
+    return db
+      .select()
+      .from(professionalNotes)
+      .where(
+        and(
+          eq(professionalNotes.professionalId, professionalId),
+          eq(professionalNotes.userId, userId)
+        )
+      )
+      .orderBy(desc(professionalNotes.createdAt));
+  }
+
+  async createNote(input: {
+    professionalId: string;
+    userId: string;
+    note: string;
+  }): Promise<ProfessionalNoteRecord> {
+    const [note] = await db.insert(professionalNotes).values(input).returning();
+    return note!;
   }
 
   async create(data: ProfessionalCreateInput): Promise<ProfessionalRecord> {

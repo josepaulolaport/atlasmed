@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/auth_provider.dart';
-import '../widgets/glass_input.dart';
-import '../widgets/primary_button.dart';
-import '../widgets/blue_backdrop.dart';
-import '../widgets/app_back_button.dart';
+import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/glass_input.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/primary_button.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/blue_backdrop.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/app_back_button.dart';
 
 /// Forgot password — step 3: new password with strength checklist.
 class ForgotNewPasswordScreen extends ConsumerStatefulWidget {
@@ -26,6 +27,8 @@ class _ForgotNewPasswordScreenState
     extends ConsumerState<ForgotNewPasswordScreen> {
   final _newPwController = TextEditingController();
   final _confirmPwController = TextEditingController();
+
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -58,8 +61,8 @@ class _ForgotNewPasswordScreenState
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(authProvider);
-    final isLoading = state.status == AuthStatus.authenticating;
+    final forgotPassword = ref.watch(forgotPasswordProvider);
+    final isLoading = _isLoading;
 
     return Scaffold(
       body: Stack(
@@ -182,19 +185,26 @@ class _ForgotNewPasswordScreenState
                           label: 'Salvar nova senha',
                           loading: isLoading,
                           disabled: !_allValid,
-                          onPressed: () {
-                            ref
-                                .read(authProvider.notifier)
-                                .submitNewPassword(
-                                  _newPwController.text,
-                                  _confirmPwController.text,
-                                )
-                                .then((_) {
-                                  final st = ref.read(authProvider);
-                                  if (st.forgotStep == 3) {
-                                    widget.onSuccess();
-                                  }
-                                });
+                          onPressed: () async {
+                            setState(() => _isLoading = true);
+
+                            final result = await ref
+                                .read(sessionProvider)
+                                .resetPassword(
+                                  email: forgotPassword.email,
+                                  code: forgotPassword.code,
+                                  newPassword: _newPwController.text,
+                                );
+
+                            if (!mounted) return;
+
+                            result.fold(
+                              (_) => setState(() => _isLoading = false),
+                              (_) {
+                                setState(() => _isLoading = false);
+                                widget.onSuccess();
+                              },
+                            );
                           },
                         ),
                       ],

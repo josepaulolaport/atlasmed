@@ -4,8 +4,10 @@ import {
   facilityConsultantAssignments,
   facilityServices,
   users,
+  orders,
+  orderItems,
 } from "@atlasmed/database";
-import { eq, and, isNull, ilike, inArray, sql, asc } from "drizzle-orm";
+import { eq, and, isNull, ilike, inArray, sql, asc, getTableColumns } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityListRecord,
@@ -62,6 +64,11 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     page: number;
     limit: number;
     search?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    productIds?: string[];
     scope: FacilityListScopeFilter;
   }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
     const conditions = [isNull(facilities.deactivatedAt)];
@@ -72,12 +79,33 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     if (params.search) {
       conditions.push(ilike(facilities.displayName, `%${params.search}%`));
     }
+    if (params.commercialStatus) {
+      conditions.push(eq(facilities.commercialStatus, params.commercialStatus));
+    }
+    if (params.productIds?.length) {
+      conditions.push(inArray(facilities.id, db
+        .select({ facilityId: orders.facilityId })
+        .from(orders)
+        .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+        .where(inArray(orderItems.productId, params.productIds))));
+    }
+
+    const referencePoint = params.latitude === undefined ? undefined : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`;
+    const distanceKm = referencePoint
+      ? sql<number>`ST_Distance(${facilities.location}::geography, ${referencePoint}::geography) / 1000`
+      : undefined;
+    if (referencePoint) {
+      conditions.push(sql`${facilities.location} IS NOT NULL`);
+      if (params.radiusKm !== undefined) {
+        conditions.push(sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`);
+      }
+    }
 
     const where = and(...conditions);
     const skip = (params.page - 1) * params.limit;
 
     const [rows, countRows] = await Promise.all([
-      db.select().from(facilities).where(where).orderBy(asc(facilities.displayName)).offset(skip).limit(params.limit),
+      db.select({ ...getTableColumns(facilities), distanceKm: distanceKm ?? sql<number | null>`null` }).from(facilities).where(where).orderBy(...(distanceKm ? [asc(distanceKm), asc(facilities.displayName)] : [asc(facilities.displayName)])).offset(skip).limit(params.limit),
       db.select({ count: sql<number>`count(*)::int` }).from(facilities).where(where),
     ]);
 
@@ -118,6 +146,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return {
       facilities: rows.map((row) => ({
         ...mapFacility(row),
+        distanceKm: row.distanceKm ?? null,
         professionalCount: countMap.get(row.id) ?? 0,
         consultantName: consultantMap.get(row.id) ?? null,
       })),

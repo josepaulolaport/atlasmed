@@ -5,6 +5,15 @@ export interface ProfessionalFacilitySummary {
   name: string;
 }
 
+export interface ProfessionalNoteRecord {
+  id: string;
+  userId: string;
+  professionalId: string;
+  note: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ProfessionalRecord {
   id: string;
   firstName: string;
@@ -38,6 +47,8 @@ export interface ProfessionalRecord {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  /** Present only when a coordinate query was supplied. */
+  distanceKm?: number | null;
 }
 
 export interface ProfessionalListScopeFilter {
@@ -119,6 +130,10 @@ export interface ProfessionalRepository {
     limit: number;
     search?: string;
     facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
     scope: ProfessionalListScopeFilter;
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;
 
@@ -132,6 +147,17 @@ export interface ProfessionalRepository {
   findSourceTrackedByProvider(sourceProvider: string): Promise<ProfessionalRecord[]>;
 
   findActiveFacilities(professionalId: string): Promise<ProfessionalFacilitySummary[]>;
+
+  findNotesByProfessionalAndUser(
+    professionalId: string,
+    userId: string
+  ): Promise<ProfessionalNoteRecord[]>;
+
+  createNote(input: {
+    professionalId: string;
+    userId: string;
+    note: string;
+  }): Promise<ProfessionalNoteRecord>;
 
   create(data: ProfessionalCreateInput): Promise<ProfessionalRecord>;
 

@@ -17,12 +17,13 @@ import {
 function buildUserAssignmentsTestRoute(actor: RouteTestUser) {
   return new Elysia()
     .use(createRouteTestAuthPlugin(actor))
-    .get("/users/:id/assignments", async ({ params, getUser }: any) => {
-      await assertRoutePermission(getUser, "manage", "USER");
+    .get("/user/assignments", async ({ getUserId, getUser }: any) => {
+      const userId = await getUserId();
       const actor = await getUser();
       return routeTestContext.mocks.getUserAssignmentsExecute({
-        targetUserId: params.id,
+        targetUserId: userId,
         actorRole: actor.role.name,
+        self: true,
       });
     })
     .patch(
@@ -49,7 +50,7 @@ function buildUserAssignmentsTestRoute(actor: RouteTestUser) {
         body: t.Object({
           managerId: t.Union([t.String(), t.Null()]),
         }),
-      }
+      },
     )
     .post(
       "/users/:id/territories",
@@ -71,22 +72,25 @@ function buildUserAssignmentsTestRoute(actor: RouteTestUser) {
         body: t.Object({
           territoryId: t.String(),
         }),
-      }
+      },
     )
-    .delete("/users/:id/territories/:territoryId", async ({ params, getUserId, getUser }: any) => {
-      await assertRoutePermission(getUser, "manage", "USER");
-      const revokedBy = await getUserId();
-      const actorUser = await getUser();
+    .delete(
+      "/users/:id/territories/:territoryId",
+      async ({ params, getUserId, getUser }: any) => {
+        await assertRoutePermission(getUser, "manage", "USER");
+        const revokedBy = await getUserId();
+        const actorUser = await getUser();
 
-      await routeTestContext.mocks.revokeUserTerritoryExecute({
-        targetUserId: params.id,
-        territoryId: params.territoryId,
-        revokedBy,
-        actorRole: actorUser.role.name,
-      });
+        await routeTestContext.mocks.revokeUserTerritoryExecute({
+          targetUserId: params.id,
+          territoryId: params.territoryId,
+          revokedBy,
+          actorRole: actorUser.role.name,
+        });
 
-      return { message: "User territory revoked successfully" };
-    });
+        return { message: "User territory revoked successfully" };
+      },
+    );
 }
 
 describe("userAssignmentsRoute", () => {
@@ -101,20 +105,21 @@ describe("userAssignmentsRoute", () => {
         managerId: null,
         manager: null,
         territories: [],
+        sectors: [],
         isOperationallyActive: false,
-      })
+      }),
     );
     routeTestContext.mocks.assignUserManagerExecute.mockReset();
     routeTestContext.mocks.assignUserManagerExecute.mockImplementation(() =>
-      Promise.resolve()
+      Promise.resolve(),
     );
     routeTestContext.mocks.assignUserTerritoryExecute.mockReset();
     routeTestContext.mocks.assignUserTerritoryExecute.mockImplementation(() =>
-      Promise.resolve()
+      Promise.resolve(),
     );
     routeTestContext.mocks.revokeUserTerritoryExecute.mockReset();
     routeTestContext.mocks.revokeUserTerritoryExecute.mockImplementation(() =>
-      Promise.resolve()
+      Promise.resolve(),
     );
   });
 
@@ -122,31 +127,40 @@ describe("userAssignmentsRoute", () => {
     return createAccessTestApp().use(buildUserAssignmentsTestRoute(actor));
   }
 
-  describe("GET /users/:id/assignments", () => {
-    it("returns assignments for ADMIN", async () => {
+  describe("GET /user/assignments", () => {
+    it("returns authenticated user assignments for ADMIN", async () => {
       const app = createApp();
       const response = await app.handle(
-        new Request(`http://localhost/users/${targetUserId}/assignments`)
+        new Request("http://localhost/user/assignments"),
       );
 
       expect(response.status).toBe(200);
       const body = await parseJsonResponse<{ userId: string }>(response);
       expect(body.userId).toBe(targetUserId);
-      expect(routeTestContext.mocks.getUserAssignmentsExecute).toHaveBeenCalledWith({
-        targetUserId,
+      expect(
+        routeTestContext.mocks.getUserAssignmentsExecute,
+      ).toHaveBeenCalledWith({
+        targetUserId: adminRouteTestUser.id,
         actorRole: "ADMIN",
+        self: true,
       });
     });
 
-    it("returns 403 for MANAGER", async () => {
+    it("returns authenticated user assignments for MANAGER without manage USER permission", async () => {
       setRouteTestActor(managerRouteTestUser);
       const app = createApp(managerRouteTestUser);
       const response = await app.handle(
-        new Request(`http://localhost/users/${targetUserId}/assignments`)
+        new Request("http://localhost/user/assignments"),
       );
 
-      expect(response.status).toBe(403);
-      expect(routeTestContext.mocks.getUserAssignmentsExecute).not.toHaveBeenCalled();
+      expect(response.status).toBe(200);
+      expect(
+        routeTestContext.mocks.getUserAssignmentsExecute,
+      ).toHaveBeenCalledWith({
+        targetUserId: managerRouteTestUser.id,
+        actorRole: "MANAGER",
+        self: true,
+      });
     });
   });
 
@@ -158,11 +172,13 @@ describe("userAssignmentsRoute", () => {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ managerId: "manager-1" }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
-      expect(routeTestContext.mocks.assignUserManagerExecute).toHaveBeenCalledWith({
+      expect(
+        routeTestContext.mocks.assignUserManagerExecute,
+      ).toHaveBeenCalledWith({
         targetUserId,
         managerId: "manager-1",
         assignedBy: adminRouteTestUser.id,
@@ -178,11 +194,13 @@ describe("userAssignmentsRoute", () => {
           method: "PATCH",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ managerId: "manager-1" }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
-      expect(routeTestContext.mocks.assignUserManagerExecute).not.toHaveBeenCalled();
+      expect(
+        routeTestContext.mocks.assignUserManagerExecute,
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -194,11 +212,13 @@ describe("userAssignmentsRoute", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ territoryId: "territory-a" }),
-        })
+        }),
       );
 
       expect(response.status).toBe(200);
-      expect(routeTestContext.mocks.assignUserTerritoryExecute).toHaveBeenCalled();
+      expect(
+        routeTestContext.mocks.assignUserTerritoryExecute,
+      ).toHaveBeenCalled();
     });
 
     it("returns 403 for MANAGER", async () => {
@@ -209,7 +229,7 @@ describe("userAssignmentsRoute", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ territoryId: "territory-a" }),
-        })
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -222,12 +242,14 @@ describe("userAssignmentsRoute", () => {
       const response = await app.handle(
         new Request(
           `http://localhost/users/${targetUserId}/territories/territory-a`,
-          { method: "DELETE" }
-        )
+          { method: "DELETE" },
+        ),
       );
 
       expect(response.status).toBe(200);
-      expect(routeTestContext.mocks.revokeUserTerritoryExecute).toHaveBeenCalledWith({
+      expect(
+        routeTestContext.mocks.revokeUserTerritoryExecute,
+      ).toHaveBeenCalledWith({
         targetUserId,
         territoryId: "territory-a",
         revokedBy: adminRouteTestUser.id,
@@ -241,8 +263,8 @@ describe("userAssignmentsRoute", () => {
       const response = await app.handle(
         new Request(
           `http://localhost/users/${targetUserId}/territories/territory-a`,
-          { method: "DELETE" }
-        )
+          { method: "DELETE" },
+        ),
       );
 
       expect(response.status).toBe(403);

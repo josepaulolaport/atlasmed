@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../shared/widgets/app_shell.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 
 /// Stub screen for Apresentações section.
 class PresentationsScreen extends ConsumerWidget {
