@@ -59,16 +59,13 @@ jobs:
         working-directory: ./apps/mobile
 
       - name: Analisar código
-        run: fvm dart format --set-exit-if-changed .
-        working-directory: ./apps/mobile
+        run: bun run mobile:lint
 
       - name: Verificar types
-        run: fvm flutter analyze --dart-define-from-file=config.development.json
-        working-directory: ./apps/mobile
+        run: bun run mobile:typecheck
 
       - name: Executar testes
-        run: fvm flutter test --dart-define-from-file=config.development.json
-        working-directory: ./apps/mobile
+        run: bun run mobile:test
 
   deploy_web_production:
     name: Deploy Web (Produção)
