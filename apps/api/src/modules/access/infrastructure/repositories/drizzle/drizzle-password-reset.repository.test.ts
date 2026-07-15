@@ -3,15 +3,15 @@ import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { DrizzlePasswordResetRepository } from './drizzle-password-reset.repository'
 
 // Track the last arguments passed to each db operation for assertions
-let lastInsertedValues: any
-let lastUpdateSet: any
-let lastUpdateWhereExpr: any
-let lastDeleteWhereExpr: any
+let _lastInsertedValues: any
+let _lastUpdateSet: any
+let _lastUpdateWhereExpr: any
+let _lastDeleteWhereExpr: any
 let mockSelectResult: any = null
 
 const mockReturning = mock(() => Promise.resolve([{ id: 'reset-123', usedAt: null }]))
 const mockValues = mock((vals: any) => {
-  lastInsertedValues = vals
+  _lastInsertedValues = vals
   return { returning: mockReturning }
 })
 const mockInsert = mock(() => ({ values: mockValues }))
@@ -23,17 +23,17 @@ const mockFromInner = mock(() => ({ where: mockSelectWhere, innerJoin: mockInner
 const mockSelect = mock(() => ({ from: mockFromInner }))
 
 const mockUpdateWhere = mock((expr: any) => {
-  lastUpdateWhereExpr = expr
+  _lastUpdateWhereExpr = expr
   return Promise.resolve()
 })
 const mockSet = mock((setData: any) => {
-  lastUpdateSet = setData
+  _lastUpdateSet = setData
   return { where: mockUpdateWhere }
 })
 const mockUpdate = mock(() => ({ set: mockSet }))
 
 const mockDeleteWhere = mock((expr: any) => {
-  lastDeleteWhereExpr = expr
+  _lastDeleteWhereExpr = expr
   return Promise.resolve()
 })
 const mockDelete = mock(() => ({ where: mockDeleteWhere }))
@@ -51,10 +51,10 @@ describe('DrizzlePasswordResetRepository', () => {
   let repository: DrizzlePasswordResetRepository
 
   beforeEach(() => {
-    lastInsertedValues = undefined
-    lastUpdateSet = undefined
-    lastUpdateWhereExpr = undefined
-    lastDeleteWhereExpr = undefined
+    _lastInsertedValues = undefined
+    _lastUpdateSet = undefined
+    _lastUpdateWhereExpr = undefined
+    _lastDeleteWhereExpr = undefined
     mockSelectResult = null
     mockReturning.mockClear()
     mockValues.mockClear()

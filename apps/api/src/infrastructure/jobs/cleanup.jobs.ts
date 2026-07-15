@@ -6,7 +6,7 @@ import {
   verificationTokens
 } from '@atlasmed/database'
 import type { Worker } from 'bullmq'
-import { and, eq, inArray, isNotNull, lt, or, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, lt, or } from 'drizzle-orm'
 import { environment } from '../../app/config/environment'
 import { formatAuditLogForSiem, postSiemBatch } from '../audit/siem-export.helper'
 import { redis } from '../cache/redis.client'
@@ -258,7 +258,7 @@ export function startCleanupWorker(): void {
                 webhookUrl,
                 secret: environment.SIEM_WEBHOOK_SECRET
               })
-              const lastExported = logs[logs.length - 1]!.createdAt.toISOString()
+              const lastExported = logs[logs.length - 1]?.createdAt.toISOString()
               await redis.set(SIEM_CURSOR_KEY, lastExported)
               metricsService.recordSiemExportBatch(true)
               logger.info('Exported audit events to SIEM', { count: logs.length })

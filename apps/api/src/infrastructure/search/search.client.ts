@@ -14,6 +14,7 @@ export function getSearchClient(): Meilisearch {
 
   if (!client) {
     client = new Meilisearch({
+      // biome-ignore lint/style/noNonNullAssertion: guarded by isSearchConfigured()
       host: environment.MEILISEARCH_URL!,
       ...(environment.MEILISEARCH_API_KEY ? { apiKey: environment.MEILISEARCH_API_KEY } : {})
     })

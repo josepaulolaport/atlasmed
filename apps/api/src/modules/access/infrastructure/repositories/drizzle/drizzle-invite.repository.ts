@@ -54,7 +54,7 @@ export class DrizzleInviteRepository implements InviteRepository {
       })
       .returning()
 
-    const result = await fetchInviteWithRole(inserted!.id)
+    const result = await fetchInviteWithRole(inserted?.id)
     return result!
   }
 
@@ -141,7 +141,7 @@ export class DrizzleInviteRepository implements InviteRepository {
 
     return {
       invitations: invitationRows.map((row) => ({ ...row.invitations, role: row.roles! })),
-      total: countRows[0]!.count
+      total: countRows[0]?.count
     }
   }
 
@@ -278,10 +278,10 @@ export class DrizzleInviteRepository implements InviteRepository {
         .select()
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
-        .where(eq(users.id, newUserRow!.id))
+        .where(eq(users.id, newUserRow?.id))
         .limit(1)
 
-      const user = { ...userRow!.users, role: userRow!.roles! }
+      const user = { ...userRow?.users, role: userRow?.roles! }
 
       // Create territory assignments and derive sector assignments if specified in invitation
       const assignedTerritoryIds: string[] = []

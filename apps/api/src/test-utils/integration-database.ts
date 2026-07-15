@@ -5,7 +5,7 @@ export async function isIntegrationDatabaseReady(): Promise<boolean> {
   try {
     await db.select({ managerId: users.managerId }).from(users).limit(1)
     return true
-  } catch (error) {
+  } catch (_error) {
     return false
   }
 }

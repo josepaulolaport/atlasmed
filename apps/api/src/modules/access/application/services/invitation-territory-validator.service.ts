@@ -77,7 +77,7 @@ export class InvitationTerritoryValidatorService {
 
     const territory = await this.deps.territoryRepository.findById(params.managerTerritoryId)
 
-    if (!territory || !territory.isActive) {
+    if (!territory?.isActive) {
       throw new ValidationError([
         {
           field: 'managerTerritoryId',
@@ -144,9 +144,11 @@ export class InvitationTerritoryValidatorService {
       throw new ValidationError(errors)
     }
 
+    // biome-ignore lint/style/noNonNullAssertion: validated by role checks before this point
     const manager = await this.deps.userRepository.findById(params.managerId!)
 
     if (!manager) {
+      // biome-ignore lint/style/noNonNullAssertion: validated by role checks before this point
       throw new UserNotFoundError(params.managerId!)
     }
 
@@ -163,9 +165,10 @@ export class InvitationTerritoryValidatorService {
       return
     }
 
+    // biome-ignore lint/style/noNonNullAssertion: validated by role checks before this point
     const repTerritory = await this.deps.territoryRepository.findById(params.repTerritoryId!)
 
-    if (!repTerritory || !repTerritory.isActive) {
+    if (!repTerritory?.isActive) {
       throw new ValidationError([
         {
           field: 'repTerritoryId',

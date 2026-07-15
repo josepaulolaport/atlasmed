@@ -1,5 +1,5 @@
 import { facilities } from '@atlasmed/database'
-import { and, between, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, inArray, isNull, sql } from 'drizzle-orm'
 import { db } from '../../../../infrastructure/database/db'
 import type {
   ClinicMembershipTarget,

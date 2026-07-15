@@ -23,7 +23,7 @@ export async function sendInviteEmail(
 
   try {
     await resend.emails.send({
-      from: environment.RESEND_FROM_EMAIL!,
+      from: environment.RESEND_FROM_EMAIL ?? '',
       to,
       subject: "You've been invited to join AtlasMed",
       react: InviteEmail({
@@ -55,7 +55,7 @@ export async function sendPasswordResetEmail(
 
   try {
     await resend.emails.send({
-      from: environment.RESEND_FROM_EMAIL!,
+      from: environment.RESEND_FROM_EMAIL ?? '',
       to,
       subject: 'Reset your password',
       react: PasswordResetEmail({

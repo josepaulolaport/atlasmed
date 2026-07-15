@@ -76,7 +76,7 @@ export async function seedScopeIntegrationFixtures(
       })
       .returning()
       .then((r) => r[0]!)
-    await rebuildClosure(rootOrNull!.id)
+    await rebuildClosure(rootOrNull?.id)
   }
 
   const root = rootOrNull!

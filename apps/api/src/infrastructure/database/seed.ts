@@ -98,10 +98,10 @@ async function createInitialAdmin(config: SeedConfig) {
     .returning()
 
   console.log('   ✓ Created initial admin user:')
-  console.log(`      Email: ${admin!.email}`)
-  console.log(`      Username: ${admin!.username}`)
+  console.log(`      Email: ${admin?.email}`)
+  console.log(`      Username: ${admin?.username}`)
   console.log(`      Role: ${adminRole.name}`)
-  console.log(`      Status: ${admin!.status}`)
+  console.log(`      Status: ${admin?.status}`)
 }
 
 async function createOpsUser(config: OpsUserConfig) {
@@ -143,8 +143,8 @@ async function createOpsUser(config: OpsUserConfig) {
     .returning()
 
   console.log('   ✓ Created OPS seed user:')
-  console.log(`      Email: ${ops!.email}`)
-  console.log(`      Username: ${ops!.username}`)
+  console.log(`      Email: ${ops?.email}`)
+  console.log(`      Username: ${ops?.username}`)
   console.log(`      Role: ${opsRole.name}`)
 }
 

@@ -1,8 +1,7 @@
 import {
   InvalidCredentialsError,
   OperationNotAllowedError,
-  TokenInvalidError,
-  UserNotFoundError
+  TokenInvalidError
 } from '../../../../shared/errors'
 import type { IAuditLog } from '../interfaces/audit-log.interface'
 import type { IMetrics } from '../interfaces/metrics.interface'
@@ -38,7 +37,7 @@ export class Verify2FALoginUseCase {
 
     const user = await this.deps.userRepository.findById(pendingLogin.userId)
 
-    if (!user || user.status !== 'ACTIVE') {
+    if (user?.status !== 'ACTIVE') {
       throw new InvalidCredentialsError()
     }
 

@@ -73,7 +73,7 @@ export default function FacilitiesPage() {
   const [formLng, setFormLng] = useState('')
   const [saving, setSaving] = useState(false)
   const [geocoding, setGeocoding] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [_refreshKey, setRefreshKey] = useState(0)
 
   const canRead = user ? canReadFacilities(user.role.name) : false
   const canManage = user ? canManageFacilities(user.role.name) : false
@@ -110,7 +110,7 @@ export default function FacilitiesPage() {
     }
 
     void loadFacilities()
-  }, [page, search, refreshKey, canRead])
+  }, [page, search, canRead])
 
   const openCreateDialog = () => {
     setEditingFacility(null)

@@ -9,6 +9,7 @@ export async function ensureStorageBuckets(): Promise<void> {
 
   await ensureBucketExists(
     getStorageClient(),
+    // biome-ignore lint/style/noNonNullAssertion: guarded by isStorageConfigured()
     environment.STORAGE_BUCKET!,
     environment.STORAGE_REGION
   )

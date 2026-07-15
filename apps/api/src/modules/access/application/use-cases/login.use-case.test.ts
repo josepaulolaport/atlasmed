@@ -127,7 +127,7 @@ describe('LoginUseCase', () => {
 
       const result = await loginUseCase.execute(params)
 
-      expect(result.user!.username).toBe('testuser')
+      expect(result.user?.username).toBe('testuser')
     })
 
     it('should return access token as string', async () => {
@@ -137,7 +137,7 @@ describe('LoginUseCase', () => {
       })
 
       expect(result.accessToken).toBeString()
-      expect(result.accessToken!.split('.')).toHaveLength(3)
+      expect(result.accessToken?.split('.')).toHaveLength(3)
     })
 
     it('should return refresh token as string', async () => {
@@ -147,7 +147,7 @@ describe('LoginUseCase', () => {
       })
 
       expect(result.refreshToken).toBeString()
-      expect(result.refreshToken!.length).toBeGreaterThan(0)
+      expect(result.refreshToken?.length).toBeGreaterThan(0)
     })
 
     it('should return user object', async () => {
@@ -157,9 +157,9 @@ describe('LoginUseCase', () => {
       })
 
       expect(result.user).toBeDefined()
-      expect(result.user!.id).toBe('user-123')
-      expect(result.user!.email).toBe('user@example.com')
-      expect(result.user!.username).toBe('testuser')
+      expect(result.user?.id).toBe('user-123')
+      expect(result.user?.email).toBe('user@example.com')
+      expect(result.user?.username).toBe('testuser')
     })
 
     it('should create a session', async () => {

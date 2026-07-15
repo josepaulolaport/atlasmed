@@ -5,7 +5,7 @@ import {
   users,
   userTerritoryAssignments
 } from '@atlasmed/database'
-import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull } from 'drizzle-orm'
 import { db } from '../../../../../infrastructure/database/db'
 import type { ScopeRepository } from '../../../application/interfaces/scope.repository.interface'
 

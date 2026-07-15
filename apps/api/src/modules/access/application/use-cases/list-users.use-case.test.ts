@@ -179,7 +179,7 @@ describe('ListUsersUseCase', () => {
 
     const firstCall = (userRepository.findAll as ReturnType<typeof mock>).mock.calls[0]
     expect(firstCall).toBeDefined()
-    const callScope = firstCall![0].scope
+    const callScope = firstCall?.[0].scope
     expect(callScope.managedUserIds).toEqual(['direct-report-1'])
     expect(callScope.isGlobal).toBe(false)
   })

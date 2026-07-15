@@ -21,7 +21,7 @@ export async function sendInviteWhatsApp(
 
     logger.info('Sending invite WhatsApp message', { to })
     const result = await twilioClient.messages.create({
-      from: environment.TWILIO_WHATSAPP_NUMBER!,
+      from: environment.TWILIO_WHATSAPP_NUMBER ?? '',
       to: `whatsapp:${to}`,
       body: message
     })
@@ -43,7 +43,7 @@ export async function sendPasswordResetWhatsApp(to: string, token: string): Prom
 
     logger.info('Sending password reset WhatsApp message', { to })
     const result = await twilioClient.messages.create({
-      from: environment.TWILIO_WHATSAPP_NUMBER!,
+      from: environment.TWILIO_WHATSAPP_NUMBER ?? '',
       to: `whatsapp:${to}`,
       body: message
     })

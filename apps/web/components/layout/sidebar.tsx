@@ -38,7 +38,7 @@ export function Sidebar() {
   const { user, logout } = useAuth()
   const pathname = usePathname()
 
-  if (!user || !user.role) return null
+  if (!user?.role) return null
 
   const roleName = user.role.name
 
@@ -127,7 +127,7 @@ export function Sidebar() {
               {group.items.map((item) => {
                 const isActive =
                   pathname === item.href ||
-                  (item.href !== '/dashboard' && pathname?.startsWith(item.href + '/'))
+                  (item.href !== '/dashboard' && pathname?.startsWith(`${item.href}/`))
                 return (
                   <Link
                     key={item.name + item.href}

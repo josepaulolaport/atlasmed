@@ -137,7 +137,7 @@ export class TerritoryCrudUseCases {
         ? await this.deps.territoryTypeRepository.findBySlug(input.typeSlug)
         : null
 
-    if (!type || !type.isActive) {
+    if (!type?.isActive) {
       throw new ResourceNotFoundError(
         'TerritoryType',
         input.territoryTypeId ?? input.typeSlug ?? 'unknown'
@@ -487,7 +487,7 @@ export class TerritoryCrudUseCases {
 
     for (const territory of byId.values()) {
       if (territory.parentId && byId.has(territory.parentId)) {
-        byId.get(territory.parentId)!.children.push(territory)
+        byId.get(territory.parentId)?.children.push(territory)
       } else {
         roots.push(territory)
       }

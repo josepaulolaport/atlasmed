@@ -90,7 +90,7 @@ function MapController({ value, onChange, readOnly, onValidationError }: Territo
       map.off('pm:remove', handleRemove)
       clearLayers()
     }
-  }, [map, onChange, onValidationError, readOnly])
+  }, [map, readOnly, clearLayers, syncAllLayers])
 
   useEffect(() => {
     clearLayers()
@@ -116,7 +116,7 @@ function MapController({ value, onChange, readOnly, onValidationError }: Territo
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [20, 20] })
     }
-  }, [map, value, readOnly])
+  }, [map, value, readOnly, clearLayers])
 
   return null
 }

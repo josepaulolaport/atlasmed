@@ -83,7 +83,7 @@ async function loadAssociationsMap(
   const map = new Map<string, Array<{ facilityId: string; endedAt: Date | null }>>()
   for (const row of rows) {
     if (!map.has(row.professionalId)) map.set(row.professionalId, [])
-    map.get(row.professionalId)!.push({ facilityId: row.facilityId, endedAt: row.endedAt })
+    map.get(row.professionalId)?.push({ facilityId: row.facilityId, endedAt: row.endedAt })
   }
   return map
 }
@@ -305,7 +305,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     if (!professional) return null
 
-    const associations = await loadAssociationsForOne(professional!.id)
+    const associations = await loadAssociationsForOne(professional?.id)
     return mapProfessional(professional!, associations)
   }
 
@@ -327,7 +327,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
 
     if (!professional) return null
 
-    const associations = await loadAssociationsForOne(professional!.id)
+    const associations = await loadAssociationsForOne(professional?.id)
     return mapProfessional(professional!, associations)
   }
 
@@ -409,7 +409,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       await db.insert(facilityProfessionals).values(
         data.facilityIds.map((facilityId) => ({
           facilityId,
-          professionalId: professional!.id,
+          professionalId: professional?.id,
           occupationCode: 'LEGACY',
           confirmedAt: now,
           confirmedByUserId: data.confirmedByUserId ?? null
@@ -417,7 +417,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       )
     }
 
-    const associations = await loadAssociationsForOne(professional!.id)
+    const associations = await loadAssociationsForOne(professional?.id)
     return mapProfessional(professional!, associations)
   }
 
@@ -453,7 +453,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(eq(professionals.id, id))
       .returning()
 
-    const associations = await loadAssociationsForOne(professional!.id)
+    const associations = await loadAssociationsForOne(professional?.id)
     return mapProfessional(professional!, associations)
   }
 
@@ -514,7 +514,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
         })
         .returning()
 
-      const associations = await loadAssociationsForOne(professional!.id)
+      const associations = await loadAssociationsForOne(professional?.id)
       return {
         professional: mapProfessional(professional!, associations),
         created: true,
@@ -542,7 +542,7 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(eq(professionals.id, existing.id))
       .returning()
 
-    const associations = await loadAssociationsForOne(professional!.id)
+    const associations = await loadAssociationsForOne(professional?.id)
     return {
       professional: mapProfessional(professional!, associations),
       created: false,

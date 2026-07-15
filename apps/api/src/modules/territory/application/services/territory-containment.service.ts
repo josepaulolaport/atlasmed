@@ -86,7 +86,7 @@ export class TerritoryContainmentService {
     }
 
     return {
-      managerTerritoryId: candidates[0]!.id,
+      managerTerritoryId: candidates[0]?.id,
       candidates
     }
   }

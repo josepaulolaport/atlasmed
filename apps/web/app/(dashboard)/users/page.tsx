@@ -45,7 +45,7 @@ export default function UsersPage() {
   const [roleOpen, setRoleOpen] = useState(false)
   const [permissionsUser, setPermissionsUser] = useState<User | null>(null)
   const [permissionsOpen, setPermissionsOpen] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [_refreshKey, setRefreshKey] = useState(0)
 
   const userIsAdmin = currentUser ? isAdmin(currentUser.role.name) : false
 
@@ -79,7 +79,7 @@ export default function UsersPage() {
     }
 
     loadUsers()
-  }, [page, search, refreshKey])
+  }, [page, search])
 
   const handleUserAction = async (
     userId: string,

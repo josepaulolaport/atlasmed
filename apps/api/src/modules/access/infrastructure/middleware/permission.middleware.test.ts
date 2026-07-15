@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'bun:test'
-import type { Action, Subject } from '@atlasmed/access'
 import { defineAbilitiesFor } from '@atlasmed/access'
 import { Elysia } from 'elysia'
 import { AppError, ForbiddenError } from '../../../../shared/errors'
 import { requirePermission } from './permission.middleware'
 
 describe('PermissionMiddleware', () => {
-  const mockAdminUser = {
+  const _mockAdminUser = {
     id: 'admin-123',
     email: 'admin@example.com',
     username: 'admin',
@@ -19,7 +18,7 @@ describe('PermissionMiddleware', () => {
     }
   }
 
-  const mockManagerUser = {
+  const _mockManagerUser = {
     id: 'manager-123',
     email: 'manager@example.com',
     username: 'manager',
@@ -32,7 +31,7 @@ describe('PermissionMiddleware', () => {
     }
   }
 
-  const mockRegularUser = {
+  const _mockRegularUser = {
     id: 'user-123',
     email: 'user@example.com',
     username: 'user',

@@ -1,11 +1,4 @@
-import {
-  type AnyDatabase,
-  type Database,
-  passwordResets,
-  roles,
-  sessions,
-  users
-} from '@atlasmed/database'
+import { type AnyDatabase, passwordResets, roles, sessions, users } from '@atlasmed/database'
 import { and, desc, eq, ilike, inArray, isNull, or, sql } from 'drizzle-orm'
 import { db } from '../../../../../infrastructure/database/db'
 import {
@@ -103,7 +96,7 @@ export class DrizzleUserRepository implements UserRepository {
       })
       .returning()
 
-    const result = await fetchUserWithRole(inserted!.id)
+    const result = await fetchUserWithRole(inserted?.id)
     return result!
   }
 
@@ -273,7 +266,7 @@ export class DrizzleUserRepository implements UserRepository {
       .where(eq(users.id, userId))
       .returning({ tokenVersion: users.tokenVersion })
 
-    return updated!.tokenVersion
+    return updated?.tokenVersion
   }
 
   async resetPasswordTransaction(
@@ -353,7 +346,7 @@ export class DrizzleUserRepository implements UserRepository {
           revokedReason: 'Password reset',
           updatedAt: new Date()
         })
-        .where(and(eq(sessions.userId, user!.id), isNull(sessions.revokedAt)))
+        .where(and(eq(sessions.userId, user?.id), isNull(sessions.revokedAt)))
 
       const [passwordResetRecord] = await tx
         .select()
@@ -512,7 +505,7 @@ export class DrizzleUserRepository implements UserRepository {
 
     return {
       users: userRows.map((row) => ({ ...row.users, role: row.roles! })),
-      total: countRows[0]!.count
+      total: countRows[0]?.count
     }
   }
 

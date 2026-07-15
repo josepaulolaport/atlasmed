@@ -17,6 +17,7 @@ export interface EmailNotification {
     | 'password-changed'
     | 'email-verification'
     | 'security-alert'
+  // biome-ignore lint/suspicious/noExplicitAny: notification data payload is dynamic
   data: Record<string, any>
 }
 

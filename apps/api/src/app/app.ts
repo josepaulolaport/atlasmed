@@ -20,7 +20,6 @@ import { visits } from '../modules/visits'
 import { AppError } from '../shared/errors'
 import { environment } from './config/environment'
 import { apiDocumentation } from './documentation'
-import { API_VERSION } from './versioning'
 
 const configuredCorsOrigins = environment.CORS_ORIGINS.split(',')
   .map((origin) => origin.trim())
@@ -89,6 +88,7 @@ const app = new Elysia()
   )
   .use(
     openapi({
+      // biome-ignore lint/suspicious/noExplicitAny: API doc type is too complex for OpenAPI schema
       documentation: apiDocumentation as any
     })
   )

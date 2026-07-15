@@ -190,7 +190,7 @@ async function seedTerritories() {
         regionSlug: 'BR'
       })
       .returning()
-    await rebuildClosure(country!.id)
+    await rebuildClosure(country?.id)
   }
 
   const [region] = await db
@@ -203,10 +203,10 @@ async function seedTerritories() {
       territoryTypeId: 'tt_region',
       countryCode: 'BR',
       regionSlug: 'SE',
-      parentId: country!.id
+      parentId: country?.id
     })
     .returning()
-  await rebuildClosure(region!.id)
+  await rebuildClosure(region?.id)
 
   const [inScopePatch] = await db
     .insert(territories)
@@ -218,10 +218,10 @@ async function seedTerritories() {
       territoryTypeId: 'tt_patch',
       countryCode: 'BR',
       regionSlug: 'SE',
-      parentId: region!.id
+      parentId: region?.id
     })
     .returning()
-  await rebuildClosure(inScopePatch!.id)
+  await rebuildClosure(inScopePatch?.id)
 
   const [northRegion] = await db
     .insert(territories)
@@ -233,10 +233,10 @@ async function seedTerritories() {
       territoryTypeId: 'tt_region',
       countryCode: 'BR',
       regionSlug: 'N',
-      parentId: country!.id
+      parentId: country?.id
     })
     .returning()
-  await rebuildClosure(northRegion!.id)
+  await rebuildClosure(northRegion?.id)
 
   const [outOfScopePatch] = await db
     .insert(territories)
@@ -248,12 +248,12 @@ async function seedTerritories() {
       territoryTypeId: 'tt_patch',
       countryCode: 'BR',
       regionSlug: 'N',
-      parentId: northRegion!.id
+      parentId: northRegion?.id
     })
     .returning()
-  await rebuildClosure(outOfScopePatch!.id)
+  await rebuildClosure(outOfScopePatch?.id)
 
-  return { inScopePatchId: inScopePatch!.id, outOfScopePatchId: outOfScopePatch!.id }
+  return { inScopePatchId: inScopePatch?.id, outOfScopePatchId: outOfScopePatch?.id }
 }
 
 async function seedUsers(roleSet: {
@@ -302,7 +302,7 @@ async function seedUsers(roleSet: {
       roleId: roleSet.rep.id,
       status: 'ACTIVE',
       emailVerified: true,
-      managerId: manager!.id
+      managerId: manager?.id
     })
     .returning()
 
@@ -565,7 +565,7 @@ async function seedRegistrySuggestions(params: {
     .returning()
 
   await db.insert(cnesSuggestions).values({
-    cnesRunId: run!.id,
+    cnesRunId: run?.id,
     type: 'FACILITY_PROFESSIONAL_REMOVAL',
     status: 'PENDING',
     facilityId: params.facilities.clinicAlpha.id,
@@ -576,7 +576,7 @@ async function seedRegistrySuggestions(params: {
   })
 
   await db.insert(cnesSuggestions).values({
-    cnesRunId: run!.id,
+    cnesRunId: run?.id,
     type: 'FACILITY_FIELD_UPDATE',
     status: 'PENDING',
     facilityId: params.facilities.clinicBeta.id,

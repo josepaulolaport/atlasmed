@@ -16,10 +16,12 @@ export const connection = {
   port: redis.options.port || 6379
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: generic queue type for BullMQ
 export function createQueue<T = any>(name: string): Queue<T> {
   return new Queue<T>(name, { connection })
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: generic worker type for BullMQ
 export function createWorker<T = any>(
   name: string,
   processor: (job: { data: T }) => Promise<void>,

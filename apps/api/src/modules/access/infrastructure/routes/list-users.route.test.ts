@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import type { ScopeContext } from '@atlasmed/access'
 import { createGlobalScopeContext } from '@atlasmed/access'
 import { Elysia, t } from 'elysia'

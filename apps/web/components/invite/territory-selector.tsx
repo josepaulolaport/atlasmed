@@ -80,7 +80,7 @@ export function TerritorySelector({
       setTerritories([])
       setLoading(false)
     }
-  }, [territoryType, managerTerritoryId, disabled, isRepPatch])
+  }, [managerTerritoryId, disabled, isRepPatch])
 
   const filteredTerritories = territories.filter(
     (territory) =>

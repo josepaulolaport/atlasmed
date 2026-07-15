@@ -510,8 +510,7 @@ export class AuditLogService {
     const limit = params.limit ?? 50
     const offset = params.offset ?? 0
 
-    const { sql: sqlTag, count } = await import('drizzle-orm').then((m) => ({
-      sql: m.sql,
+    const { count } = await import('drizzle-orm').then((m) => ({
       count: m.count
     }))
 

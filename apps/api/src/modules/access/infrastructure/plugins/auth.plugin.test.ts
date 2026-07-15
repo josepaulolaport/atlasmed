@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { Elysia } from 'elysia'
 import type { Redis } from 'ioredis'
-import { AppError, UnauthorizedError } from '../../../../shared/errors'
+import { AppError } from '../../../../shared/errors'
 import type { SessionRepository } from '../../application/interfaces/session.repository.interface'
 import type { UserRepository } from '../../application/interfaces/user.repository.interface'
 import type { AccessGrantService } from '../../application/services/access-grant.service'

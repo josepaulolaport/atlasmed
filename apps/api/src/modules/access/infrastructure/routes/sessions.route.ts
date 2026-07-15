@@ -1,4 +1,4 @@
-import { Elysia, t } from 'elysia'
+import { Elysia } from 'elysia'
 import { accessUseCases, auth } from '../../composition'
 import { sessionRevokeRateLimit } from '../middleware/rate-limit.middleware'
 

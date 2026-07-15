@@ -1,5 +1,3 @@
-import type { RelationshipLevel } from '@atlasmed/database'
-
 export interface ProfessionalFacilitySummary {
   id: string
   name: string

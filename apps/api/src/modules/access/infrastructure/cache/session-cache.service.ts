@@ -22,7 +22,6 @@ export class SessionCacheService implements ISessionCache {
   private readonly revokedKeyPrefix = 'session:revoked:'
   private readonly validatedKeyPrefix = 'session:validated:'
   private readonly supersededKeyPrefix = 'session:superseded:'
-  private readonly ttl = 86400
 
   constructor(redisClient: Redis = redis) {
     this.redis = redisClient

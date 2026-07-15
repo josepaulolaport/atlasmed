@@ -1,5 +1,17 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.3/schema.json",
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": { "noExplicitAny": "warn" },
+          "style": { "noNonNullAssertion": "warn" },
+          "correctness": { "noUnusedVariables": "warn" }
+        }
+      }
+    }
+  ],
   "files": {
     "ignoreUnknown": true,
     "includes": [
@@ -14,7 +26,8 @@
       "!**/coverage",
       "!**/bun.lockb",
       "!**/generated",
-      "!**/*.md"
+      "!**/*.md",
+      "!**/.pub-cache"
     ]
   },
   "formatter": {

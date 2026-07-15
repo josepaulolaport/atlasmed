@@ -3,20 +3,20 @@ import { beforeEach, describe, expect, it, mock } from 'bun:test'
 import { DrizzleVerificationTokenRepository } from './drizzle-verification-token.repository'
 
 // Track calls for assertions
-let lastDeletedWhere: any
-let lastInsertedValues: any
+let _lastDeletedWhere: any
+let _lastInsertedValues: any
 let mockSelectResult: any = null
-let lastUpdateWhere: any
+let _lastUpdateWhere: any
 
 const mockDeleteWhere = mock((expr: any) => {
-  lastDeletedWhere = expr
+  _lastDeletedWhere = expr
   return Promise.resolve()
 })
 const mockDeleteFn = mock(() => ({ where: mockDeleteWhere }))
 
 const mockReturningVoid = mock(() => Promise.resolve())
 const mockValues = mock((vals: any) => {
-  lastInsertedValues = vals
+  _lastInsertedValues = vals
   return mockReturningVoid()
 })
 const mockInsert = mock(() => ({ values: mockValues }))
@@ -27,7 +27,7 @@ const mockFromInner = mock(() => ({ where: mockSelectWhere }))
 const mockSelect = mock(() => ({ from: mockFromInner }))
 
 const mockUpdateWhere = mock((expr: any) => {
-  lastUpdateWhere = expr
+  _lastUpdateWhere = expr
   return Promise.resolve()
 })
 const mockSet = mock(() => ({ where: mockUpdateWhere }))
@@ -46,10 +46,10 @@ describe('DrizzleVerificationTokenRepository', () => {
   let repository: DrizzleVerificationTokenRepository
 
   beforeEach(() => {
-    lastDeletedWhere = undefined
-    lastInsertedValues = undefined
+    _lastDeletedWhere = undefined
+    _lastInsertedValues = undefined
     mockSelectResult = null
-    lastUpdateWhere = undefined
+    _lastUpdateWhere = undefined
     mockDeleteWhere.mockClear()
     mockDeleteFn.mockClear()
     mockReturningVoid.mockClear()

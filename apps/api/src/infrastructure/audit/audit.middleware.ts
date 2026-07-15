@@ -49,11 +49,7 @@ export const auditMiddleware = new Elysia({ name: 'audit-middleware' }).onAfterH
       'params' in ctx && ctx.params != null ? (ctx.params as Record<string, string>) : {}
 
     const resourceId =
-      params['id'] ??
-      params['professionalId'] ??
-      params['territoryId'] ??
-      params['permissionId'] ??
-      undefined
+      params.id ?? params.professionalId ?? params.territoryId ?? params.permissionId ?? undefined
 
     void getAuthContext()
       .then((authCtx) =>

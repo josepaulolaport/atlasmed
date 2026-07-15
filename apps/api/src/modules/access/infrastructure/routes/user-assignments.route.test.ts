@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test'
+import { beforeEach, describe, expect, it } from 'bun:test'
 import { Elysia, t } from 'elysia'
 import { createAccessTestApp, parseJsonResponse } from '../../test-helpers/access-test-app'
 import {

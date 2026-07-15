@@ -66,7 +66,7 @@ export class TerritoryApprovalUseCases {
     ).filter((request) => request.requesterId !== input.requesterId)
 
     if (pendingFromOthers.length > 0) {
-      throw new ResourceConflictError('TerritoryApprovalRequest', pendingFromOthers[0]!.id)
+      throw new ResourceConflictError('TerritoryApprovalRequest', pendingFromOthers[0]?.id)
     }
 
     const ownPending = await this.deps.approvalRepository.findPendingByRequesterAndEntity({

@@ -20,7 +20,9 @@ export function getStorageClient(): S3Client {
     client = new S3Client({
       region: environment.STORAGE_REGION ?? 'us-east-1',
       credentials: {
+        // biome-ignore lint/style/noNonNullAssertion: guarded by isStorageConfigured()
         accessKeyId: environment.STORAGE_ACCESS_KEY_ID!,
+        // biome-ignore lint/style/noNonNullAssertion: guarded by isStorageConfigured()
         secretAccessKey: environment.STORAGE_SECRET_ACCESS_KEY!
       },
       ...(environment.STORAGE_ENDPOINT

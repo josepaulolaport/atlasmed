@@ -1,6 +1,6 @@
 import { afterAll, beforeAll } from 'bun:test'
 import { redis } from './infrastructure/cache/redis.client'
-import { cleanupTestDatabase, seedTestDatabase } from './infrastructure/database/test-seed'
+import { seedTestDatabase } from './infrastructure/database/test-seed'
 
 /**
  * Global test setup

@@ -51,7 +51,7 @@ export default function InviteUserPage() {
       try {
         const rolesData = await usersApi.getRoles()
         setRoles(rolesData)
-      } catch (err) {
+      } catch (_err) {
         toast({
           title: 'Erro',
           description: 'Falha ao carregar funções',

@@ -1,13 +1,4 @@
-import {
-  doublePrecision,
-  index,
-  integer,
-  pgSchema,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp
-} from 'drizzle-orm/pg-core'
+import { integer, pgSchema, primaryKey, text, timestamp } from 'drizzle-orm/pg-core'
 import { geometryPoint } from '../../types/geometry'
 
 export const registrySchema = pgSchema('registry')

@@ -1,6 +1,5 @@
 'use client'
 
-import { Label } from '@/components/ui/label'
 import type { TerritoryTypeFlags } from '@/types/territory'
 
 const FLAG_FIELDS: Array<{

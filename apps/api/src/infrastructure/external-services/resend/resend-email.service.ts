@@ -17,7 +17,7 @@ export class ResendEmailService implements EmailService {
 
     try {
       await resend.emails.send({
-        from: environment.RESEND_FROM_EMAIL!,
+        from: environment.RESEND_FROM_EMAIL ?? '',
         to: params.to,
         subject: params.subject,
         react: params.react

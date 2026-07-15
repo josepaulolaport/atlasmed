@@ -22,7 +22,7 @@ export class TerritoryAssignmentPolicyService {
     territoryId: string
   }): Promise<void> {
     const territory = await this.deps.territoryRepository.findById(params.territoryId)
-    if (!territory || !territory.isActive) {
+    if (!territory?.isActive) {
       throw new OperationNotAllowedError(
         'assign_territory',
         'Territory does not exist or is inactive'

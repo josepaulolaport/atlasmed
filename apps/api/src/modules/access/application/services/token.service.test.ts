@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'bun:test'
 import type { AccessTokenPayload } from '@atlasmed/access'
-import { jwtVerify } from 'jose'
 import { environment } from '../../../../app/config/environment'
 import { TokenService } from './token.service'
 
@@ -11,7 +10,7 @@ function parseDurationToSeconds(duration: string): number {
   }
 
   const value = Number(match[1])
-  const unit = match[2]!.toLowerCase()
+  const unit = match[2]?.toLowerCase()
 
   switch (unit) {
     case 's':

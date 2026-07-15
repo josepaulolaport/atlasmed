@@ -17,7 +17,7 @@ export class TwilioMessagingService implements MessagingService {
 
     try {
       await twilioClient.messages.create({
-        from: environment.TWILIO_WHATSAPP_NUMBER!,
+        from: environment.TWILIO_WHATSAPP_NUMBER ?? '',
         to: `whatsapp:${params.to}`,
         body: params.message
       })

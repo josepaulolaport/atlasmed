@@ -20,7 +20,7 @@ const scopedToFacilityOne: ScopeContext = {
 
 function createRepository(): OrderRepository {
   return {
-    findAll: async (input) => ({
+    findAll: async (_input) => ({
       orders: [
         {
           id: 'order-1',

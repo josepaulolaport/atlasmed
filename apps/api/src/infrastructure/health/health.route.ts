@@ -8,9 +8,9 @@
  * - /health/metrics - Prometheus metrics
  */
 
+import os from 'node:os'
 import { sql } from 'drizzle-orm'
 import { Elysia } from 'elysia'
-import os from 'os'
 import { environment } from '../../app/config/environment'
 import { redis } from '../cache/redis.client'
 import { db } from '../database/db'

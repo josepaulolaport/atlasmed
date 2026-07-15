@@ -496,12 +496,12 @@ export class DrizzleSessionRepository implements SessionRepository {
         .select()
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
-        .where(eq(users.id, updatedSession!.userId))
+        .where(eq(users.id, updatedSession?.userId))
         .limit(1)
 
       const session = {
         ...updatedSession!,
-        user: { ...userRow!.users, role: userRow!.roles! }
+        user: { ...userRow?.users, role: userRow?.roles! }
       }
 
       return {

@@ -1,9 +1,9 @@
+import { resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { environment } from '@atlasmed/config'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { migrate } from 'drizzle-orm/postgres-js/migrator'
-import { resolve } from 'path'
 import postgres from 'postgres'
-import { fileURLToPath } from 'url'
 
 const client = postgres(environment.DATABASE_URL, { max: 1 })
 const db = drizzle(client)

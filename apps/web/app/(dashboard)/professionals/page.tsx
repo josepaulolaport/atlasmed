@@ -45,7 +45,7 @@ export default function ProfessionalsPage() {
   const [formSpecialty, setFormSpecialty] = useState('')
   const [formFacilityIds, setFormFacilityIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [_refreshKey, setRefreshKey] = useState(0)
 
   const canRead = user ? canReadProfessionals(user.role.name) : false
   const canManage = user ? canManageProfessionals(user.role.name) : false
@@ -86,7 +86,7 @@ export default function ProfessionalsPage() {
     }
 
     void loadData()
-  }, [page, search, refreshKey, canRead])
+  }, [page, search, canRead])
 
   const facilityNameById = (facilityId: string) =>
     facilities.find((facility) => facility.id === facilityId)?.name ?? facilityId

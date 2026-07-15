@@ -5,8 +5,6 @@
  * Current version: v1
  */
 
-import { Elysia } from 'elysia'
-
 export const API_VERSION = 'v1'
 
 /**

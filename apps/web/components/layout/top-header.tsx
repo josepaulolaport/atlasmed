@@ -31,7 +31,7 @@ function buildCrumbs(pathname: string): Crumb[] {
   const crumbs: Crumb[] = []
   let acc = ''
   segments.forEach((seg, idx) => {
-    acc += '/' + seg
+    acc += `/${seg}`
     const isLast = idx === segments.length - 1
     const isDynamicId = /^[0-9a-f-]{20,}$/i.test(seg) || /^\d+$/.test(seg)
     crumbs.push({

@@ -113,7 +113,7 @@ export async function reconcileCrmFromStaging(input: {
           sourceTracked: true
         })
         .returning()
-      facilityExternalToInternal.set(row.facility_id, created!.id)
+      facilityExternalToInternal.set(row.facility_id, created?.id)
       stats.facilitiesCreated += 1
       continue
     }
@@ -221,7 +221,7 @@ export async function reconcileCrmFromStaging(input: {
           sourceTracked: true
         })
         .returning()
-      professionalExternalToInternal.set(row.professional_id, created!.id)
+      professionalExternalToInternal.set(row.professional_id, created?.id)
       stats.professionalsCreated += 1
       continue
     }
@@ -389,7 +389,7 @@ export async function reconcileCrmFromStaging(input: {
       email: row.email,
       taxId
     }
-    const contentHash = computeContentHash(hashPayload)
+    const _contentHash = computeContentHash(hashPayload)
 
     const [existing] = await db
       .select()

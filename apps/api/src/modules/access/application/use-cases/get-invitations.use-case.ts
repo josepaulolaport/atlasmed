@@ -52,7 +52,7 @@ export class GetInvitationsUseCase {
     )
 
     const inviterMap = new Map(
-      inviters.filter((inviter) => inviter !== null).map((inviter) => [inviter!.id, inviter!])
+      inviters.filter((inviter) => inviter !== null).map((inviter) => [inviter?.id, inviter!])
     )
 
     return {
