@@ -13,7 +13,7 @@ import type {
 
 export const authApi = {
   login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<LoginResponse>("/access/login", data);
+    const response = await apiClient.post<LoginResponse>("/session/", data);
     return response.data;
   },
 
@@ -24,12 +24,12 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     // Backend gets sessionId from the auth context, no body needed
-    await apiClient.post("/access/logout");
+    await apiClient.delete("/session/");
   },
 
   refreshToken: async (): Promise<RefreshTokenResponse> => {
     // Refresh token is sent automatically via HTTP-only cookie
-    const response = await apiClient.post<RefreshTokenResponse>("/access/refresh", {});
+    const response = await apiClient.put<RefreshTokenResponse>("/session/", {});
     return response.data;
   },
 
@@ -54,17 +54,17 @@ export const authApi = {
   },
 
   getSessions: async (): Promise<Session[]> => {
-    const response = await apiClient.get<{ sessions: Session[] }>("/access/sessions");
+    const response = await apiClient.get<{ sessions: Session[] }>("/session/");
     return response.data.sessions;
   },
 
   revokeSession: async (sessionId: string): Promise<void> => {
-    await apiClient.delete(`/access/sessions/${sessionId}`);
+    await apiClient.delete(`/session/${sessionId}`);
   },
 
   revokeOtherSessions: async (): Promise<{ revokedCount: number }> => {
     const response = await apiClient.post<{ revokedCount: number }>(
-      "/access/sessions/revoke-others"
+      "/session/revoke-others"
     );
     return response.data;
   },

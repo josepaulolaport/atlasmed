@@ -1,9 +1,8 @@
 import Redis from "ioredis";
+import { environment } from "../../app/config/environment";
 import { logger } from "../logging/logger";
 
-const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
-
-export const redis = new Redis(redisUrl, {
+export const redis = new Redis(environment.REDIS_URL, {
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
     const delay = Math.min(times * 50, 2000);

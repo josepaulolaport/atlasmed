@@ -1,9 +1,4 @@
 import { createDatabase, type Database } from "@atlasmed/database";
+import { environment } from "../../app/config/environment";
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is not set");
-}
-
-export const db: Database = createDatabase(connectionString);
+export const db: Database = createDatabase(environment.DATABASE_URL);

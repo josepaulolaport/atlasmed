@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -36,13 +36,46 @@ import { toast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import type { UnassignedFacility } from "@/types/territory";
 
+type FacilitiesState = {
+  facilities: UnassignedFacility[];
+  loading: boolean;
+  page: number;
+  totalPages: number;
+};
+
+type FacilitiesAction =
+  | { type: "FETCH_START" }
+  | { type: "FETCH_SUCCESS"; facilities: UnassignedFacility[]; totalPages: number }
+  | { type: "FETCH_ERROR" }
+  | { type: "SET_PAGE"; page: number };
+
+function facilitiesReducer(state: FacilitiesState, action: FacilitiesAction): FacilitiesState {
+  switch (action.type) {
+    case "FETCH_START":
+      return { ...state, loading: true };
+    case "FETCH_SUCCESS":
+      return { ...state, facilities: action.facilities, totalPages: action.totalPages, loading: false };
+    case "FETCH_ERROR":
+      return { ...state, loading: false };
+    case "SET_PAGE":
+      return { ...state, page: action.page };
+    default:
+      return state;
+  }
+}
+
+const initialFacilitiesState: FacilitiesState = {
+  facilities: [],
+  loading: true,
+  page: 1,
+  totalPages: 1,
+};
+
+
 export default function UnassignedFacilitiesPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [facilities, setFacilities] = useState<UnassignedFacility[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [state, dispatch] = useReducer(facilitiesReducer, initialFacilitiesState);
   const [overrideFacility, setOverrideFacility] = useState<UnassignedFacility | null>(null);
   const [overrideTerritoryId, setOverrideTerritoryId] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
@@ -52,34 +85,38 @@ export default function UnassignedFacilitiesPage() {
   const canRead = user ? canReadTerritories(user.role.name) : false;
   const userIsAdmin = user ? isAdmin(user.role.name) : false;
 
-  const loadFacilities = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await territoriesApi.listUnassignedFacilities({ page, limit: 20 });
-      setFacilities(response.data);
-      setTotalPages(response.pagination.totalPages);
-    } catch {
-      toast({
-        title: "Erro",
-        description: "Falha ao carregar unidades sem território",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
-
   useEffect(() => {
     if (user && !canRead) {
       router.replace("/unauthorized");
+      return;
     }
-  }, [user, canRead, router]);
 
-  useEffect(() => {
-    if (canRead) {
-      void loadFacilities();
-    }
-  }, [canRead, loadFacilities]);
+    if (!canRead) return;
+
+    const fetchFacilities = async () => {
+      dispatch({ type: "FETCH_START" });
+      try {
+        const response = await territoriesApi.listUnassignedFacilities({
+          page: state.page,
+          limit: 20,
+        });
+        dispatch({
+          type: "FETCH_SUCCESS",
+          facilities: response.data,
+          totalPages: response.pagination.totalPages,
+        });
+      } catch {
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar unidades sem território",
+          variant: "destructive",
+        });
+        dispatch({ type: "FETCH_ERROR" });
+      }
+    };
+
+    fetchFacilities();
+  }, [user, canRead, state.page, router]);
 
   const handleOverride = async () => {
     if (!overrideFacility || !overrideTerritoryId) return;
@@ -98,7 +135,20 @@ export default function UnassignedFacilitiesPage() {
       setOverrideFacility(null);
       setOverrideTerritoryId("");
       setOverrideReason("");
-      await loadFacilities();
+      dispatch({ type: "FETCH_START" });
+      try {
+        const refreshResponse = await territoriesApi.listUnassignedFacilities({
+          page: state.page,
+          limit: 20,
+        });
+        dispatch({
+          type: "FETCH_SUCCESS",
+          facilities: refreshResponse.data,
+          totalPages: refreshResponse.pagination.totalPages,
+        });
+      } catch {
+        dispatch({ type: "FETCH_ERROR" });
+      }
     } catch (err) {
       toast({
         title: "Erro",
@@ -119,7 +169,20 @@ export default function UnassignedFacilitiesPage() {
         description: "Bloqueio geográfico da unidade removido",
         variant: "success",
       });
-      await loadFacilities();
+      dispatch({ type: "FETCH_START" });
+      try {
+        const refreshResponse = await territoriesApi.listUnassignedFacilities({
+          page: state.page,
+          limit: 20,
+        });
+        dispatch({
+          type: "FETCH_SUCCESS",
+          facilities: refreshResponse.data,
+          totalPages: refreshResponse.pagination.totalPages,
+        });
+      } catch {
+        dispatch({ type: "FETCH_ERROR" });
+      }
     } catch (err) {
       toast({
         title: "Erro",
@@ -151,7 +214,7 @@ export default function UnassignedFacilitiesPage() {
           <CardTitle>Clínicas que precisam de território</CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {state.loading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
             </div>
@@ -167,7 +230,7 @@ export default function UnassignedFacilitiesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {facilities.length === 0 ? (
+                  {state.facilities.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={userIsAdmin ? 4 : 3}
@@ -177,7 +240,7 @@ export default function UnassignedFacilitiesPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    facilities.map((facility) => (
+                    state.facilities.map((facility) => (
                       <TableRow key={facility.id}>
                         <TableCell>
                           <Link
@@ -237,18 +300,18 @@ export default function UnassignedFacilitiesPage() {
               <div className="mt-4 flex items-center justify-between">
                 <Button
                   variant="outline"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
+                  disabled={state.page <= 1}
+                  onClick={() => dispatch({ type: "SET_PAGE", page: state.page - 1 })}
                 >
                   Anterior
                 </Button>
                 <span className="text-sm text-gray-500">
-                  Página {page} de {totalPages}
+                  Página {state.page} de {state.totalPages}
                 </span>
                 <Button
                   variant="outline"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
+                  disabled={state.page >= state.totalPages}
+                  onClick={() => dispatch({ type: "SET_PAGE", page: state.page + 1 })}
                 >
                   Próxima
                 </Button>

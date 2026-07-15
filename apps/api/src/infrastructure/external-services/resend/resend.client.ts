@@ -1,5 +1,5 @@
 import { Resend } from "resend";
 
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../app/config/environment";
 
-export const resend = apiEnv.RESEND_API_KEY ? new Resend(apiEnv.RESEND_API_KEY) : null;
+export const resend = environment.RESEND_API_KEY ? new Resend(environment.RESEND_API_KEY) : null;
