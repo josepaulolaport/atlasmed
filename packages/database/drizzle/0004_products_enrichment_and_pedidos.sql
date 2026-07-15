@@ -1,3 +1,5 @@
+-- Note: Drizzle migrator wraps each migration in a transaction; explicit BEGIN/COMMIT would cause nested transaction errors.
+
 -- 1. Add enrichment columns to products
 ALTER TABLE "products" ADD COLUMN "legacy_id" text;--> statement-breakpoint
 ALTER TABLE "products" ADD COLUMN "description" text;--> statement-breakpoint
@@ -55,8 +57,8 @@ CREATE TABLE "order_items" (
   "product_id" text NOT NULL REFERENCES "products"("id") ON DELETE RESTRICT,
   "legacy_product_id" text,
   "quantity" integer NOT NULL,
-  "unit_price" numeric(15,4),
-  "total_price" numeric(15,4),
+  "unit_price" numeric(15,4) NOT NULL,
+  "total_price" numeric(15,4) NOT NULL,
   "notes" text,
   "created_at" timestamp NOT NULL DEFAULT now(),
   "updated_at" timestamp NOT NULL DEFAULT now()
