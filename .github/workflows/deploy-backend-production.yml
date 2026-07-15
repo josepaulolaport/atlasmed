@@ -81,7 +81,7 @@ jobs:
       - name: Build web
         env:
           NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
-        run: bun run --filter atlasmed_web_app build
+        run: bun run --filter @atlasmed/web build
 
       - name: Run database migrations
         env:
