@@ -62,8 +62,9 @@ class _OrderTrackingScreenState extends ConsumerState<OrderTrackingScreen>
   TrackingStatus _parseStatus(String? value, TrackingStatus fallback) {
     if (value == null) return fallback;
     for (final s in TrackingStatus.values) {
-      if (s.name == value || s.label.toLowerCase() == value.toLowerCase())
+      if (s.name == value || s.label.toLowerCase() == value.toLowerCase()) {
         return s;
+      }
     }
     return fallback;
   }
@@ -699,8 +700,9 @@ class _DriverCard extends StatelessWidget {
 
   String _initials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length >= 2)
+    if (parts.length >= 2) {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    }
     return name.isEmpty ? 'D' : name[0].toUpperCase();
   }
 

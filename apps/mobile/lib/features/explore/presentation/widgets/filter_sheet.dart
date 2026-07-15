@@ -85,8 +85,9 @@ class _FilterSheetState extends State<FilterSheet>
 
   @override
   Widget build(BuildContext context) {
-    if (!widget.open && _animController.isDismissed)
+    if (!widget.open && _animController.isDismissed) {
       return const SizedBox.shrink();
+    }
 
     return Stack(
       children: [

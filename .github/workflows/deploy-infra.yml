@@ -82,9 +82,9 @@ jobs:
       - name: Check remote Docker storage
         run: $UNCLOUD_SSH_CMD 'df -h / && docker system df'
 
-      - name: Prune unused Docker data
+      - name: Prune dangling Docker images
         run: |
-          $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+          $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
       - name: Deploy AtlasMed infrastructure services
@@ -106,11 +106,11 @@ jobs:
           CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
         run: |
           for attempt in 1 2; do
-            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio atlasmed-minio-init --yes; then
+            if uc deploy -f deploy/uncloud.compose.yml atlasmed-temporal-db atlasmed-temporal atlasmed-temporal-ui atlasmed-redis atlasmed-meilisearch atlasmed-minio --yes; then
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
-              $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+              $UNCLOUD_SSH_CMD 'docker image prune -f'
               sleep 5
             fi
           done

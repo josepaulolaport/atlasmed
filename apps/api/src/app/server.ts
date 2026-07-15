@@ -1,12 +1,16 @@
 import "dotenv/config";
 import "./bootstrap-telemetry";
 import app from "./app";
+import { environment } from "./config/environment";
 import { logger } from "../infrastructure/logging/logger";
+import { ensureStorageBuckets } from "../infrastructure/storage/bucket-provisioning";
 
-const port = process.env.PORT || 3000;
+const port = environment.PORT;
 
 async function start() {
   try {
+    await ensureStorageBuckets();
+
     app.listen(port, () => {
       logger.info("Server started", {
         port: Number(port),

@@ -1,9 +1,10 @@
+import { environment } from '@atlasmed/config'
 import type { LoggerContext, ObservabilityLogger } from './logger'
 
 function usePrettyConsole(): boolean {
   return (
-    process.env.NODE_ENV !== 'production' &&
-    process.env.LOG_FORMAT !== 'json'
+    environment.NODE_ENV !== 'production' &&
+    environment.LOG_FORMAT !== 'json'
   )
 }
 

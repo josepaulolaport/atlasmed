@@ -39,6 +39,7 @@ services:
       - REDIS_URL=redis://atlasmed-redis:6379
       - "REDIS_KEY_PREFIX=atlasmed:"
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev,https://app.tdomains.uk}
       - FRONTEND_URL=${FRONTEND_URL:-https://app.tdomains.uk}
@@ -80,12 +81,14 @@ services:
       dockerfile: deploy/docker/api-worker.Dockerfile
     environment:
       - NODE_ENV=production
+      - PORT=3000
       - DATABASE_URL=${DATABASE_URL}
       - DATABASE_POOL_MIN=${DATABASE_POOL_MIN:-2}
       - DATABASE_POOL_MAX=${DATABASE_POOL_MAX:-10}
       - REDIS_URL=redis://atlasmed-redis:6379
       - "REDIS_KEY_PREFIX=atlasmed:"
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-15m}
       - TOKEN_HASH_PEPPER=${TOKEN_HASH_PEPPER}
       - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
       - FRONTEND_URL=${FRONTEND_URL}
@@ -204,26 +207,6 @@ services:
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
     volumes:
       - atlasmed_minio_data:/data
-
-  atlasmed-minio-init:
-    x-machines: atlasmed
-    image: minio/mc:latest
-    depends_on:
-      - atlasmed-minio
-    entrypoint:
-      - /bin/sh
-      - -c
-    command:
-      - |
-        mc alias set local http://atlasmed-minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
-        mc mb --ignore-existing "local/${STORAGE_BUCKET:-atlasmed-production}"
-        mc mb --ignore-existing "local/${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}"
-    environment:
-      - MINIO_ROOT_USER=${MINIO_ROOT_USER}
-      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD}
-      - STORAGE_BUCKET=${STORAGE_BUCKET:-atlasmed-production}
-      - CNES_ARCHIVE_S3_BUCKET=${CNES_ARCHIVE_S3_BUCKET:-cnes-raw}
-    restart: "no"
 
 volumes:
   atlasmed_temporal_postgres_data:

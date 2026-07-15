@@ -16,6 +16,18 @@ class MemoryLogExporter implements LogRecordExporter {
   shutdown(): Promise<void> {
     return Promise.resolve()
   }
+
+  forceFlush(): Promise<void> {
+    return Promise.resolve()
+  }
+}
+
+function firstRecord(records: ReadableLogRecord[]): ReadableLogRecord {
+  const record = records[0]
+  if (!record) {
+    throw new Error('Expected at least one exported log record')
+  }
+  return record
 }
 
 describe('OpenTelemetryLogger', () => {
@@ -42,7 +54,7 @@ describe('OpenTelemetryLogger', () => {
     const logger = new OpenTelemetryLogger('orders', '1.0.0')
     logger.info('placed', { orderId: 'o1', count: 2 })
     expect(exporter.records).toHaveLength(1)
-    const r = exporter.records[0]
+    const r = firstRecord(exporter.records)
     expect(r.body).toBe('placed')
     expect(r.severityNumber).toBe(SeverityNumber.INFO)
     expect(r.severityText).toBe('info')
@@ -76,7 +88,7 @@ describe('OpenTelemetryLogger', () => {
     err.name = 'CustomError'
     logger.error('failed', err, { reqId: 'r1' })
     expect(exporter.records).toHaveLength(1)
-    const attrs = exporter.records[0].attributes
+    const attrs = firstRecord(exporter.records).attributes
     expect(attrs['exception.message']).toBe('boom')
     expect(attrs['exception.type']).toBe('CustomError')
     expect(attrs.reqId).toBe('r1')
@@ -86,12 +98,12 @@ describe('OpenTelemetryLogger', () => {
   it('stringifies non-Error values passed as error', () => {
     const logger = new OpenTelemetryLogger('svc')
     logger.error('x', 'not-an-error')
-    expect(exporter.records[0].attributes['exception.message']).toBe('not-an-error')
+    expect(firstRecord(exporter.records).attributes['exception.message']).toBe('not-an-error')
   })
 
   it('omits undefined context keys from attributes', () => {
     const logger = new OpenTelemetryLogger('svc')
     logger.info('m', { a: '1', b: undefined })
-    expect(Object.keys(exporter.records[0].attributes)).toEqual(['a'])
+    expect(Object.keys(firstRecord(exporter.records).attributes)).toEqual(['a'])
   })
 })

@@ -4,10 +4,9 @@ import { jwtVerify, SignJWT } from "jose";
 
 import type { AccessTokenPayload } from "@atlasmed/access";
 
-import { apiEnv } from "@atlasmed/config";
 import { environment } from "../../../../app/config/environment";
 
-const secret = new TextEncoder().encode(apiEnv.JWT_SECRET);
+const secret = new TextEncoder().encode(environment.JWT_ACCESS_SECRET);
 
 export class TokenService {
   async signAccessToken(payload: AccessTokenPayload): Promise<string> {
@@ -29,7 +28,7 @@ export class TokenService {
 
       .setAudience(environment.JWT_AUDIENCE)
 
-      .setExpirationTime(apiEnv.JWT_EXPIRES_IN)
+      .setExpirationTime(environment.JWT_EXPIRATION)
 
       .sign(secret);
   }

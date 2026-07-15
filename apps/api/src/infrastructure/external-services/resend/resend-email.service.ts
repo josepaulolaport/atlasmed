@@ -1,4 +1,4 @@
-import { apiEnv } from "@atlasmed/config";
+import { environment } from "../../../app/config/environment";
 
 import type {
   EmailService,
@@ -18,7 +18,7 @@ export class ResendEmailService implements EmailService {
 
     try {
       await resend.emails.send({
-        from: apiEnv.RESEND_FROM_EMAIL!,
+        from: environment.RESEND_FROM_EMAIL!,
         to: params.to,
         subject: params.subject,
         react: params.react,
