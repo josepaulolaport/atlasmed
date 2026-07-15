@@ -136,7 +136,12 @@ function MapboxTerritoryEditorInner({
       const bounds = polygons
         .flatMap((polygon) => polygon[0] ?? [])
         .reduce(
-          (acc, [lng, lat]) => acc.extend([lng, lat]),
+          (acc, coord) => {
+            const lng = coord[0];
+            const lat = coord[1];
+            if (lng === undefined || lat === undefined) return acc;
+            return acc.extend([lng, lat]);
+          },
           new mapboxgl.LngLatBounds(
             firstRing[0] as [number, number],
             firstRing[0] as [number, number]
