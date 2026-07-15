@@ -123,8 +123,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       repository: sessionEnvironment,
       builder: (context, Session? session, repository) {
         final isLocked = _errorKind == AuthErrorKind.accountLocked;
-        final hasWrongCredentials =
-            _errorKind == AuthErrorKind.wrongCredentials;
+        final hasInputError = _errorKind != null && !isLocked;
 
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: const SystemUiOverlayStyle(
@@ -193,7 +192,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       },
                                       keyboardType: TextInputType.emailAddress,
                                       textInputAction: TextInputAction.next,
-                                      error: hasWrongCredentials,
+                                      error: hasInputError,
                                       enabled: !isLocked && !_isLoading,
                                     ),
                                     const SizedBox(height: 12),
@@ -216,7 +215,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                       },
                                       obscureText: true,
                                       textInputAction: TextInputAction.done,
-                                      error: hasWrongCredentials,
+                                      error: hasInputError,
                                       enabled: !isLocked && !_isLoading,
                                     ),
                                     if (_errorKind != null) ...[

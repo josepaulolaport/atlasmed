@@ -107,6 +107,7 @@ class _GlassInputState extends State<GlassInput> {
         obscureText: _obscured,
         keyboardType: widget.keyboardType,
         textInputAction: widget.textInputAction,
+        cursorColor: Colors.white,
         style: const TextStyle(
           fontSize: 15,
           color: Colors.white,
@@ -168,6 +169,14 @@ class _GlassInputState extends State<GlassInput> {
                   ? const Color(0x99FF7878)
                   : Colors.white.withValues(alpha: 0.5),
               width: 1.5,
+            ),
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: borderRadius,
+            borderSide: BorderSide(
+              color: widget.error
+                  ? const Color(0x99FF7878)
+                  : Colors.white.withValues(alpha: 0.18),
             ),
           ),
           errorBorder: OutlineInputBorder(
