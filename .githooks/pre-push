@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Reject pushes to main/master from a local branch that IS main/master.
-# Reject force-pushes to protected refs.
+# Enforce protected-branch guard and run pre-push validation.
+# Validation uses root scripts: "bun run lint" and "bun run typecheck".
 
 set -euo pipefail
 
@@ -15,5 +15,37 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     fi
   fi
 done
+
+# 2) Run lint and typecheck before push.
+# This uses existing workspace scripts to keep behavior aligned.
+if ! bun run lint; then
+  echo "✗ Lint validation failed. Resolve issues and push again."
+  exit 1
+fi
+
+if ! bun run typecheck; then
+  echo "✗ Typecheck validation failed. Resolve issues and push again."
+  exit 1
+fi
+
+# 3) Flutter mobile validation — only when SDK is available.
+if command -v flutter &>/dev/null; then
+  echo "• Running Flutter checks…"
+
+  if ! bun run format:mobile; then
+    echo "✗ Dart formatting issues found in apps/mobile/."
+    echo "  Fix with: cd apps/mobile && dart format ."
+    exit 1
+  fi
+
+  if ! bun run lint:mobile; then
+    echo "✗ Flutter analyze failed. Resolve issues and push again."
+    exit 1
+  fi
+else
+  echo "• Flutter SDK not found — skipping mobile validation."
+fi
+
+echo "✓ Pre-push validation passed."
 
 exit 0
