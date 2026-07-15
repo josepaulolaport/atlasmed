@@ -1,0 +1,326 @@
+import 'dart:convert';
+
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/repositories/mixins/session_environment_mixin.dart';
+import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+
+class Pagination {
+  const Pagination({
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  factory Pagination.fromMap(Map<String, dynamic> map) {
+    return Pagination(
+      page: _readInt(map['page']),
+      limit: _readInt(map['limit']),
+      total: _readInt(map['total']),
+      totalPages: _readInt(map['totalPages']),
+    );
+  }
+
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+}
+
+class ApiClinic {
+  const ApiClinic({
+    required this.id,
+    required this.name,
+    required this.professionalCount,
+    this.city,
+    this.state,
+    this.territoryId,
+    this.territoryAssignmentStatus,
+    this.consultantName,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory ApiClinic.fromMap(Map<String, dynamic> map) {
+    return ApiClinic(
+      id: _readString(map['id']),
+      name: _readString(map['name']),
+      city: _readNullableString(map['city']),
+      state: _readNullableString(map['state']),
+      territoryId: _readNullableString(map['territoryId']),
+      territoryAssignmentStatus: _readNullableString(
+        map['territoryAssignmentStatus'],
+      ),
+      professionalCount: _readInt(map['professionalCount']),
+      consultantName: _readNullableString(map['consultantName']),
+      createdAt: _readNullableDateTime(map['createdAt']),
+      updatedAt: _readNullableDateTime(map['updatedAt']),
+    );
+  }
+
+  final String id;
+  final String name;
+  final String? city;
+  final String? state;
+  final String? territoryId;
+  final String? territoryAssignmentStatus;
+  final int professionalCount;
+  final String? consultantName;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+}
+
+class ApiDoctor {
+  const ApiDoctor({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.facilityIds,
+    this.fullName,
+    this.specialty,
+    this.crmNumber,
+    this.crmState,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  factory ApiDoctor.fromMap(Map<String, dynamic> map) {
+    return ApiDoctor(
+      id: _readString(map['id']),
+      firstName: _readString(map['firstName']),
+      lastName: _readString(map['lastName']),
+      fullName: _readNullableString(map['fullName']),
+      specialty: _readNullableString(
+        map['specialty'] ?? map['primarySpecialtyLabel'],
+      ),
+      crmNumber: _readNullableString(map['crmNumber']),
+      crmState: _readNullableString(map['crmState']),
+      facilityIds: _readStringList(map['facilityIds']),
+      createdAt: _readNullableDateTime(map['createdAt']),
+      updatedAt: _readNullableDateTime(map['updatedAt']),
+    );
+  }
+
+  final String id;
+  final String firstName;
+  final String lastName;
+  final String? fullName;
+  final String? specialty;
+  final String? crmNumber;
+  final String? crmState;
+  final List<String> facilityIds;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  String get displayName {
+    final explicitName = fullName?.trim();
+    if (explicitName != null && explicitName.isNotEmpty) {
+      return explicitName;
+    }
+    return '$firstName $lastName'.trim();
+  }
+
+  String get crm {
+    if (crmNumber == null || crmNumber!.isEmpty) {
+      return '';
+    }
+    if (crmState == null || crmState!.isEmpty) {
+      return crmNumber!;
+    }
+    return 'CRM-$crmState $crmNumber';
+  }
+}
+
+class PaginatedClinics {
+  const PaginatedClinics({required this.items, required this.pagination});
+
+  factory PaginatedClinics.fromJson(String json) {
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    return PaginatedClinics.fromMap(decoded);
+  }
+
+  factory PaginatedClinics.fromMap(Map<String, dynamic> map) {
+    return PaginatedClinics(
+      items: _readObjectList(
+        map['data'],
+      ).map(ApiClinic.fromMap).toList(growable: false),
+      pagination: Pagination.fromMap(
+        (map['pagination'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
+    );
+  }
+
+  final List<ApiClinic> items;
+  final Pagination pagination;
+}
+
+class PaginatedDoctors {
+  const PaginatedDoctors({required this.items, required this.pagination});
+
+  factory PaginatedDoctors.fromJson(String json) {
+    final decoded = jsonDecode(json) as Map<String, dynamic>;
+    return PaginatedDoctors.fromMap(decoded);
+  }
+
+  factory PaginatedDoctors.fromMap(Map<String, dynamic> map) {
+    return PaginatedDoctors(
+      items: _readObjectList(
+        map['data'],
+      ).map(ApiDoctor.fromMap).toList(growable: false),
+      pagination: Pagination.fromMap(
+        (map['pagination'] as Map?)?.cast<String, dynamic>() ?? const {},
+      ),
+    );
+  }
+
+  final List<ApiDoctor> items;
+  final Pagination pagination;
+}
+
+class ClinicsRepository extends Repository<PaginatedClinics>
+    with SessionEnvironmentMixin<PaginatedClinics> {
+  ClinicsRepository({
+    String? baseUrl,
+    this.page = 1,
+    this.limit = 20,
+    this.searchQuery,
+    super.resolveOnCreate = false,
+  }) : super(
+         endpoint: buildEndpoint(
+           baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
+           page: page,
+           limit: limit,
+           searchQuery: searchQuery,
+         ),
+         name: 'ClinicsRepository',
+       );
+
+  final int page;
+  final int limit;
+  final String? searchQuery;
+
+  static Uri buildEndpoint({
+    required String baseUrl,
+    required int page,
+    required int limit,
+    String? searchQuery,
+  }) {
+    return _buildEndpoint(
+      baseUrl: baseUrl,
+      path: '/api/v1/facilities',
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (searchQuery != null && searchQuery.trim().isNotEmpty)
+          'search': searchQuery.trim(),
+      },
+    );
+  }
+
+  @override
+  PaginatedClinics fromJson(String json) => PaginatedClinics.fromJson(json);
+}
+
+class DoctorsRepository extends Repository<PaginatedDoctors>
+    with SessionEnvironmentMixin<PaginatedDoctors> {
+  DoctorsRepository({
+    String? baseUrl,
+    this.page = 1,
+    this.limit = 20,
+    this.searchQuery,
+    this.facilityId,
+    super.resolveOnCreate = false,
+  }) : super(
+         endpoint: buildEndpoint(
+           baseUrl: baseUrl ?? AppConfig.apiBaseUrl,
+           page: page,
+           limit: limit,
+           searchQuery: searchQuery,
+           facilityId: facilityId,
+         ),
+         name: 'DoctorsRepository',
+       );
+
+  final int page;
+  final int limit;
+  final String? searchQuery;
+  final String? facilityId;
+
+  static Uri buildEndpoint({
+    required String baseUrl,
+    required int page,
+    required int limit,
+    String? searchQuery,
+    String? facilityId,
+  }) {
+    return _buildEndpoint(
+      baseUrl: baseUrl,
+      path: '/api/v1/professionals',
+      queryParameters: {
+        'page': page.toString(),
+        'limit': limit.toString(),
+        if (searchQuery != null && searchQuery.trim().isNotEmpty)
+          'search': searchQuery.trim(),
+        if (facilityId != null && facilityId.trim().isNotEmpty)
+          'facilityId': facilityId.trim(),
+      },
+    );
+  }
+
+  @override
+  PaginatedDoctors fromJson(String json) => PaginatedDoctors.fromJson(json);
+}
+
+Uri _buildEndpoint({
+  required String baseUrl,
+  required String path,
+  required Map<String, String> queryParameters,
+}) {
+  final base = Uri.parse(baseUrl);
+  final basePath = base.path.endsWith('/')
+      ? base.path.substring(0, base.path.length - 1)
+      : base.path;
+
+  return base.replace(path: '$basePath$path', queryParameters: queryParameters);
+}
+
+List<Map<String, dynamic>> _readObjectList(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+  return value
+      .whereType<Map>()
+      .map((item) => item.cast<String, dynamic>())
+      .toList(growable: false);
+}
+
+List<String> _readStringList(Object? value) {
+  if (value is! List) {
+    return const [];
+  }
+  return value.whereType<String>().toList(growable: false);
+}
+
+String _readString(Object? value) => value?.toString() ?? '';
+
+String? _readNullableString(Object? value) {
+  final stringValue = value?.toString();
+  if (stringValue == null || stringValue.isEmpty) {
+    return null;
+  }
+  return stringValue;
+}
+
+int _readInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+DateTime? _readNullableDateTime(Object? value) {
+  final stringValue = _readNullableString(value);
+  if (stringValue == null) {
+    return null;
+  }
+  return DateTime.tryParse(stringValue);
+}
