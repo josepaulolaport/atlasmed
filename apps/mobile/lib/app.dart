@@ -8,7 +8,6 @@ import 'features/auth/presentation/screens/forgot_email_screen.dart';
 import 'features/auth/presentation/screens/forgot_code_screen.dart';
 import 'features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'features/auth/presentation/screens/forgot_success_screen.dart';
-import 'features/auth/presentation/screens/login_success_screen.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'features/explore/presentation/screens/doctor_detail_screen.dart';
@@ -25,11 +24,8 @@ import 'features/presentations/presentation/screens/presentations_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
 import 'shared/widgets/app_shell.dart';
-
-/// Notifies GoRouter to re-evaluate redirects when auth state changes.
-class _RouterRefreshNotifier extends ChangeNotifier {
-  void requestRefresh() => notifyListeners();
-}
+import 'core/repositories/session_environment.dart';
+import 'core/repositories/session_listenable.dart';
 
 class AtlasMedApp extends ConsumerStatefulWidget {
   const AtlasMedApp({super.key});
@@ -40,35 +36,23 @@ class AtlasMedApp extends ConsumerStatefulWidget {
 
 class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
   late final GoRouter _router;
-  final _routerRefreshNotifier = _RouterRefreshNotifier();
+  late final SessionListenable _sessionListenable;
 
   @override
   void initState() {
     super.initState();
+    _sessionListenable = SessionListenable();
     _router = _buildRouter();
-
-    // Check stored session on app start
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(authProvider.notifier).checkSession();
-    });
   }
 
   @override
   void dispose() {
-    _routerRefreshNotifier.dispose();
+    _sessionListenable.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen to auth changes inside build() — ref.listen only allowed here
-    ref.listen<AuthState>(authProvider, (_, next) {
-      if (next.status == AuthStatus.authenticated ||
-          next.status == AuthStatus.unauthenticated) {
-        _routerRefreshNotifier.requestRefresh();
-      }
-    });
-
     return MaterialApp.router(
       title: 'AtlasMed',
       debugShowCheckedModeBanner: false,
@@ -80,23 +64,18 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
   GoRouter _buildRouter() {
     return GoRouter(
       initialLocation: '/splash',
-      refreshListenable: _routerRefreshNotifier,
+      refreshListenable: _sessionListenable,
       redirect: (context, state) {
-        final auth = ref.read(authProvider);
-
-        // While on splash/unknown, allow to play
-        if (auth.status == AuthStatus.unknown) return null;
+        final isAuthenticated = _sessionListenable.isAuthenticated;
 
         final location = state.matchedLocation;
         final isSplash = location.startsWith('/splash');
 
-        if (auth.status == AuthStatus.authenticated) {
-          // Logged in — leave splash/*, allow everything else
+        if (isAuthenticated) {
           if (isSplash) return '/workspace';
           return null;
         }
 
-        // Not authenticated — only splash/* allowed
         if (!isSplash) return '/splash';
         return null;
       },
@@ -105,12 +84,9 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
           path: '/splash',
           builder: (gc, _) => SplashScreen(
             onDone: () {
-              final auth = ref.read(authProvider);
-              if (auth.status == AuthStatus.authenticated) {
+              if (_sessionListenable.isAuthenticated) {
                 gc.go('/workspace');
               } else {
-                // unauthenticated or still unknown → login screen
-                // redirect only allows splash/* for unauthenticated, this is safe
                 gc.go('/splash/login');
               }
             },
@@ -158,15 +134,6 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               ],
             ),
           ],
-        ),
-        GoRoute(
-          path: '/login-success',
-          builder: (_, _) {
-            final auth = ref.read(authProvider);
-            return LoginSuccessScreen(
-              displayName: auth.session?.userDisplayName ?? 'Rafael',
-            );
-          },
         ),
         // Authenticated shell — shared drawer across all main sections
         ShellRoute(
