@@ -1,5 +1,6 @@
 import { createQueue, createWorker, type JobOptions } from "./queue.client";
 import { ConfigurationError } from "../../shared/errors";
+import type { Worker } from "bullmq";
 
 export interface TerritoryMembershipJob {
   territoryId?: string;
@@ -20,11 +21,15 @@ type MembershipHandler = (job: TerritoryMembershipJob) => Promise<void>;
 
 export class TerritoryMembershipQueue {
   private handler: MembershipHandler | null = null;
+  private worker: Worker<TerritoryMembershipJob> | null = null;
 
   registerHandler(handler: MembershipHandler): void {
     this.handler = handler;
+    if (this.worker) {
+      return;
+    }
 
-    createWorker<TerritoryMembershipJob>("territory-membership", async (job) => {
+    this.worker = createWorker<TerritoryMembershipJob>("territory-membership", async (job) => {
       if (!this.handler) {
         throw new ConfigurationError("Territory membership handler not registered");
       }

@@ -2,6 +2,7 @@ import { createQueue, createWorker, type JobOptions } from "./queue.client";
 import { sendInviteEmail, sendPasswordResetEmail } from "../external-services/resend/send-invite-email";
 import { sendPasswordResetWhatsApp } from "../external-services/twilio/send-whatsapp";
 import { logger } from "../logging/logger";
+import type { Worker } from "bullmq";
 
 export interface EmailNotification {
   type: "email";
@@ -20,6 +21,7 @@ export interface SmsNotification {
 export type NotificationJob = EmailNotification | SmsNotification;
 
 const queue = createQueue<NotificationJob>("notifications");
+let notificationWorker: Worker<NotificationJob> | undefined;
 
 const defaultJobOptions: JobOptions = {
   attempts: 3,
@@ -123,51 +125,60 @@ export class NotificationQueue {
   }
 }
 
-const notificationWorker = createWorker<NotificationJob>(
-  "notifications",
-  async (job) => {
-    const { data } = job;
+export function startNotificationWorker(): void {
+  if (notificationWorker) {
+    logger.info("Notification worker already started");
+    return;
+  }
 
-    try {
-      if (data.type === "email") {
-        switch (data.template) {
-          case "invite":
-            await sendInviteEmail(data.to, data.data.token, data.data.invitedBy);
-            break;
-          case "password-reset":
-            await sendPasswordResetEmail(data.to, data.data.token);
-            break;
-          case "password-changed":
-          case "email-verification":
-          case "security-alert":
-            logger.info("Sending template email", {
-              template: data.template,
-              to: data.to,
-            });
-            break;
+  notificationWorker = createWorker<NotificationJob>(
+    "notifications",
+    async (job) => {
+      const { data } = job;
+
+      try {
+        if (data.type === "email") {
+          switch (data.template) {
+            case "invite":
+              await sendInviteEmail(data.to, data.data.token, data.data.invitedBy);
+              break;
+            case "password-reset":
+              await sendPasswordResetEmail(data.to, data.data.token);
+              break;
+            case "password-changed":
+            case "email-verification":
+            case "security-alert":
+              logger.info("Sending template email", {
+                template: data.template,
+                to: data.to,
+              });
+              break;
+          }
+        } else if (data.type === "sms") {
+          await sendPasswordResetWhatsApp(data.to, data.message);
         }
-      } else if (data.type === "sms") {
-        await sendPasswordResetWhatsApp(data.to, data.message);
+
+        logger.info("Notification sent", {
+          type: data.type,
+          to: data.to,
+        });
+      } catch (error) {
+        logger.error("Failed to send notification", error);
+        throw error;
       }
+    },
+    { concurrency: 5 }
+  );
 
-      logger.info("Notification sent", {
-        type: data.type,
-        to: data.to,
-      });
-    } catch (error) {
-      logger.error("Failed to send notification", error);
-      throw error;
-    }
-  },
-  { concurrency: 5 }
-);
+  notificationWorker.on("completed", (job) => {
+    logger.info("Notification job completed", { jobId: job.id });
+  });
 
-notificationWorker.on("completed", (job) => {
-  logger.info("Notification job completed", { jobId: job.id });
-});
+  notificationWorker.on("failed", (job, error) => {
+    logger.error("Notification job failed", error, { jobId: job?.id });
+  });
 
-notificationWorker.on("failed", (job, error) => {
-  logger.error("Notification job failed", error, { jobId: job?.id });
-});
+  logger.info("Notification worker started");
+}
 
 export const notificationQueue = new NotificationQueue();

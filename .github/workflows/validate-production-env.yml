@@ -1,0 +1,155 @@
+name: Validate Backend Production Environment
+
+on:
+  workflow_call:
+    secrets:
+      UNCLOUD_CONNECT:
+        required: true
+      UNCLOUD_SSH_PRIVATE_KEY:
+        required: true
+      DATABASE_URL:
+        required: true
+      JWT_ACCESS_SECRET:
+        required: true
+      TOKEN_HASH_PEPPER:
+        required: true
+      CORS_ORIGINS:
+        required: true
+      FRONTEND_URL:
+        required: true
+      RESEND_API_KEY:
+        required: true
+      RESEND_FROM_EMAIL:
+        required: true
+      TEMPORAL_DB_PASSWORD:
+        required: true
+      MEILISEARCH_API_KEY:
+        required: true
+      MINIO_ROOT_USER:
+        required: true
+      MINIO_ROOT_PASSWORD:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-production-env:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+
+    env:
+      UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
+      CORS_ORIGINS: ${{ secrets.CORS_ORIGINS }}
+      FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+      RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+      RESEND_FROM_EMAIL: ${{ secrets.RESEND_FROM_EMAIL }}
+      TEMPORAL_DB_PASSWORD: ${{ secrets.TEMPORAL_DB_PASSWORD }}
+      MEILISEARCH_API_KEY: ${{ secrets.MEILISEARCH_API_KEY }}
+      MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
+      MINIO_ROOT_PASSWORD: ${{ secrets.MINIO_ROOT_PASSWORD }}
+      STORAGE_BUCKET: ${{ vars.STORAGE_BUCKET || 'atlasmed-production' }}
+      STORAGE_REGION: ${{ vars.STORAGE_REGION || 'us-east-1' }}
+      CNES_ARCHIVE_S3_BUCKET: ${{ vars.CNES_ARCHIVE_S3_BUCKET || 'cnes-raw' }}
+      CNES_FTP_MODE: ${{ vars.CNES_FTP_MODE || 'mock' }}
+      CNES_LOAD_MODE: ${{ vars.CNES_LOAD_MODE || 'dev' }}
+      CNES_LOAD_CONCURRENCY: ${{ vars.CNES_LOAD_CONCURRENCY || '4' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            UNCLOUD_CONNECT \
+            DATABASE_URL \
+            JWT_ACCESS_SECRET \
+            TOKEN_HASH_PEPPER \
+            CORS_ORIGINS \
+            FRONTEND_URL \
+            RESEND_API_KEY \
+            RESEND_FROM_EMAIL \
+            TEMPORAL_DB_PASSWORD \
+            MEILISEARCH_API_KEY \
+            MINIO_ROOT_USER \
+            MINIO_ROOT_PASSWORD
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required production value: $name" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Validate production value formats
+        run: |
+          set -euo pipefail
+          invalid=0
+
+          require_min_length() {
+            name="$1"
+            min_length="$2"
+            value="${!name:-}"
+            if [ "${#value}" -lt "$min_length" ]; then
+              echo "$name must be at least $min_length characters" >&2
+              invalid=1
+            fi
+          }
+
+          require_https_url() {
+            name="$1"
+            value="${!name:-}"
+            case "$value" in
+              https://*) ;;
+              *)
+                echo "$name must be an https:// URL" >&2
+                invalid=1
+                ;;
+            esac
+          }
+
+          case "$UNCLOUD_CONNECT" in
+            ssh://*@*|ssh+cli://*@*) ;;
+            *)
+              echo "UNCLOUD_CONNECT must be an ssh:// or ssh+cli:// target" >&2
+              invalid=1
+              ;;
+          esac
+
+          case "$DATABASE_URL" in
+            postgres://*|postgresql://*) ;;
+            *)
+              echo "DATABASE_URL must be a postgres:// or postgresql:// URL" >&2
+              invalid=1
+              ;;
+          esac
+
+          require_min_length JWT_ACCESS_SECRET 32
+          require_min_length TOKEN_HASH_PEPPER 32
+          require_min_length TEMPORAL_DB_PASSWORD 16
+          require_min_length MEILISEARCH_API_KEY 16
+          require_min_length MINIO_ROOT_PASSWORD 16
+          require_https_url FRONTEND_URL
+
+          IFS=',' read -ra origins <<< "$CORS_ORIGINS"
+          for origin in "${origins[@]}"; do
+            case "$origin" in
+              https://*) ;;
+              *)
+                echo "CORS_ORIGINS entries must be https:// origins" >&2
+                invalid=1
+                ;;
+            esac
+          done
+
+          exit "$invalid"
+
+      - name: Validate compose file
+        run: docker compose -f deploy/uncloud.compose.yml config --quiet
