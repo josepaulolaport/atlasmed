@@ -21,6 +21,8 @@ import 'features/orders/presentation/screens/new_order_products_screen.dart';
 import 'features/orders/presentation/screens/cart_screen.dart';
 import 'features/orders/presentation/screens/checkout_screen.dart';
 import 'features/orders/presentation/screens/order_success_screen.dart';
+import 'features/catalog/presentation/screens/price_table_screen.dart';
+import 'features/catalog/presentation/screens/products_screen.dart';
 import 'features/presentations/presentation/screens/presentations_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'shared/theme/app_theme.dart';
@@ -230,6 +232,16 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                   ],
                 ),
               ],
+            ),
+            // Produtos
+            GoRoute(
+              path: '/produtos',
+              builder: (_, _) => const ProductsScreen(),
+            ),
+            // Tabela de preços (Brasíndice/Simpro)
+            GoRoute(
+              path: '/tabela-precos',
+              builder: (_, _) => const PriceTableScreen(),
             ),
             // Apresentações
             GoRoute(

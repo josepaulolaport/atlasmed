@@ -53,6 +53,8 @@ class AppShellScreenState extends State<AppShellScreen> {
     if (location.startsWith('/perfil')) return 'perfil';
     if (location.startsWith('/bi')) return 'desempenho';
     if (location.startsWith('/pedidos')) return 'pedidos';
+    if (location.startsWith('/produtos')) return 'produtos';
+    if (location.startsWith('/tabela-precos')) return 'tabela';
     if (location.startsWith('/apresentacoes')) return 'apresentacoes';
     if (location.startsWith('/mapa')) return 'mapa';
     return '';
@@ -73,7 +75,15 @@ class AtlasTopBar extends StatelessWidget {
   final String page;
   final bool compact;
 
-  const AtlasTopBar({super.key, this.page = '', this.compact = false});
+  /// When provided, a back button is shown instead of the drawer hamburger.
+  final VoidCallback? onBack;
+
+  const AtlasTopBar({
+    super.key,
+    this.page = '',
+    this.compact = false,
+    this.onBack,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +100,9 @@ class AtlasTopBar extends StatelessWidget {
             height: 40,
             child: Row(
               children: [
-                _hamburgerButton(context),
+                onBack != null
+                    ? _iconButton(Icons.arrow_back_rounded, onBack!)
+                    : _hamburgerButton(context),
                 if (!compact) ...[
                   const SizedBox(width: 8),
                   _breadcrumb(context),
@@ -100,6 +112,34 @@ class AtlasTopBar extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _iconButton(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: const Color(0xFFeef0f3)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A0f1729),
+              blurRadius: 2,
+              offset: Offset(0, 1),
+            ),
+            BoxShadow(
+              color: Color(0x0D0f1729),
+              blurRadius: 14,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Icon(icon, color: const Color(0xFF0a2f7f), size: 17),
       ),
     );
   }
@@ -239,6 +279,18 @@ const _drawerItems = <_DrawerItem>[
     label: 'Pedidos',
     route: '/pedidos',
     icon: Icons.inventory_2_outlined,
+  ),
+  _DrawerItem(
+    key: 'produtos',
+    label: 'Produtos',
+    route: '/produtos',
+    icon: Icons.vaccines_outlined,
+  ),
+  _DrawerItem(
+    key: 'tabela',
+    label: 'Tabela de preços',
+    route: '/tabela-precos',
+    icon: Icons.table_chart_outlined,
   ),
   _DrawerItem(
     key: 'apresentacoes',
@@ -413,14 +465,12 @@ class _NavItems extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
-      child: Column(
-        children: _drawerItems.map((item) {
-          final isActive = item.key == activeSection;
-          return _buildNavRow(item, isActive, context);
-        }).toList(),
-      ),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(10, 12, 10, 12),
+      children: _drawerItems.map((item) {
+        final isActive = item.key == activeSection;
+        return _buildNavRow(item, isActive, context);
+      }).toList(),
     );
   }
 
