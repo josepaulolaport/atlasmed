@@ -25,6 +25,15 @@ function mapProduct(row: {
   };
 }
 
+const productColumns = {
+  id: products.id,
+  code: products.code,
+  name: products.name,
+  isActive: products.isActive,
+  createdAt: products.createdAt,
+  updatedAt: products.updatedAt,
+};
+
 async function fetchSectorIds(productIds: string[]): Promise<Map<string, string[]>> {
   if (productIds.length === 0) return new Map();
   const rows = await db
@@ -63,17 +72,8 @@ export class DrizzleProductRepository implements ProductRepository {
     }
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const selectedCols = {
-      id: products.id,
-      code: products.code,
-      name: products.name,
-      isActive: products.isActive,
-      createdAt: products.createdAt,
-      updatedAt: products.updatedAt,
-    };
-
     const [rows, countRows] = await Promise.all([
-      db.select(selectedCols).from(products).where(where).orderBy(asc(products.name)).offset(skip).limit(params.limit),
+      db.select(productColumns).from(products).where(where).orderBy(asc(products.name)).offset(skip).limit(params.limit),
       db.select({ count: sql<number>`count(*)` }).from(products).where(where),
     ]);
 
@@ -87,14 +87,7 @@ export class DrizzleProductRepository implements ProductRepository {
   }
 
   async findById(id: string): Promise<ProductRecord | null> {
-    const rows = await db.select({
-      id: products.id,
-      code: products.code,
-      name: products.name,
-      isActive: products.isActive,
-      createdAt: products.createdAt,
-      updatedAt: products.updatedAt,
-    }).from(products).where(eq(products.id, id));
+    const rows = await db.select(productColumns).from(products).where(eq(products.id, id));
     if (!rows[0]) return null;
     const sectorMap = await fetchSectorIds([id]);
     return mapProduct(rows[0], sectorMap.get(id) ?? []);
@@ -114,14 +107,7 @@ export class DrizzleProductRepository implements ProductRepository {
           name: data.name,
           isActive: data.isActive ?? true,
         })
-        .returning({
-          id: products.id,
-          code: products.code,
-          name: products.name,
-          isActive: products.isActive,
-          createdAt: products.createdAt,
-          updatedAt: products.updatedAt,
-        });
+        .returning(productColumns);
       if (!product) throw new Error("Failed to insert product");
 
       const uniqueSectorIds = [...new Set(data.sectorIds)];
@@ -142,22 +128,16 @@ export class DrizzleProductRepository implements ProductRepository {
     const cleanData = Object.fromEntries(
       Object.entries(productData).filter(([, v]) => v !== undefined)
     );
-    const [product] = await db
-      .update(products)
-      .set({ ...cleanData, updatedAt: new Date() })
-      .where(eq(products.id, id))
-      .returning({
-        id: products.id,
-        code: products.code,
-        name: products.name,
-        isActive: products.isActive,
-        createdAt: products.createdAt,
-        updatedAt: products.updatedAt,
-      });
-    if (!product) throw new Error("Product not found");
 
-    if (sectorIds !== undefined) {
-      return db.transaction(async (tx) => {
+    return db.transaction(async (tx) => {
+      const [product] = await tx
+        .update(products)
+        .set({ ...cleanData, updatedAt: new Date() })
+        .where(eq(products.id, id))
+        .returning(productColumns);
+      if (!product) throw new Error("Product not found");
+
+      if (sectorIds !== undefined) {
         const uniqueSectorIds = [...new Set(sectorIds)];
         await tx.delete(productSectors).where(eq(productSectors.productId, id));
         if (uniqueSectorIds.length > 0) {
@@ -166,10 +146,10 @@ export class DrizzleProductRepository implements ProductRepository {
           );
         }
         return mapProduct(product, uniqueSectorIds);
-      });
-    }
+      }
 
-    const sectorMap = await fetchSectorIds([id]);
-    return mapProduct(product, sectorMap.get(id) ?? []);
+      const sectorMap = await fetchSectorIds([id]);
+      return mapProduct(product, sectorMap.get(id) ?? []);
+    });
   }
 }

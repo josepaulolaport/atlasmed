@@ -9,15 +9,15 @@ ALTER TABLE "products" ADD COLUMN "brand" text;--> statement-breakpoint
 ALTER TABLE "products" ADD COLUMN "unit" text;--> statement-breakpoint
 
 -- 2. Migrate existing sector_id data to product_sectors, then drop the FK column
-CREATE TABLE IF NOT EXISTS "product_sectors" (
+CREATE TABLE "product_sectors" (
   "id" text PRIMARY KEY NOT NULL,
   "product_id" text NOT NULL REFERENCES "products"("id") ON DELETE CASCADE,
   "sector_id" text NOT NULL REFERENCES "sectors"("id") ON DELETE CASCADE,
   "created_at" timestamp NOT NULL DEFAULT now()
 );--> statement-breakpoint
 
-INSERT INTO "product_sectors" ("product_id", "sector_id", "created_at")
-SELECT "id", "sector_id", now() FROM "products" WHERE "sector_id" IS NOT NULL;--> statement-breakpoint
+INSERT INTO "product_sectors" ("id", "product_id", "sector_id", "created_at")
+SELECT gen_random_uuid()::text, "id", "sector_id", now() FROM "products" WHERE "sector_id" IS NOT NULL;--> statement-breakpoint
 
 ALTER TABLE "products" DROP COLUMN "sector_id";--> statement-breakpoint
 
