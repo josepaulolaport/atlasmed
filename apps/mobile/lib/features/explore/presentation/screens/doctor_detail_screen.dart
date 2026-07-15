@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
 // ======================================================================
@@ -416,19 +417,31 @@ class _DoctorQuickActions extends StatelessWidget {
             label: 'Ligar',
             icon: Icons.phone_rounded,
             hue: detail.hue,
-            onTap: detail.phone != null ? () {} : null,
+            onTap: () => launchContactUrl(
+              context,
+              url: callUrl(detail.phone),
+              contactLabel: 'telefone',
+            ),
           ),
           _QuickAction(
             label: 'WhatsApp',
             icon: Icons.chat_rounded,
             hue: detail.hue,
-            onTap: detail.whatsapp != null ? () {} : null,
+            onTap: () => launchContactUrl(
+              context,
+              url: whatsappUrl(detail.whatsapp),
+              contactLabel: 'WhatsApp',
+            ),
           ),
           _QuickAction(
             label: 'E-mail',
             icon: Icons.email_rounded,
             hue: detail.hue,
-            onTap: detail.email != null ? () {} : null,
+            onTap: () => launchContactUrl(
+              context,
+              url: emailUrl(detail.email),
+              contactLabel: 'e-mail',
+            ),
           ),
           _QuickAction(
             label: 'Nova visita',

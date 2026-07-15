@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
 // ======================================================================
@@ -540,12 +541,20 @@ class _QuickActions extends StatelessWidget {
           _ActionButton(
             icon: Icons.phone_rounded,
             label: 'Ligar',
-            onTap: () {},
+            onTap: () => launchContactUrl(
+              context,
+              url: callUrl(detail.phone),
+              contactLabel: 'telefone',
+            ),
           ),
           _ActionButton(
             icon: Icons.chat_rounded,
             label: 'WhatsApp',
-            onTap: () {},
+            onTap: () => launchContactUrl(
+              context,
+              url: whatsappUrl(detail.whatsapp),
+              contactLabel: 'WhatsApp',
+            ),
           ),
           _ActionButton(
             icon: Icons.directions_rounded,
