@@ -7,6 +7,7 @@ export * from "./ftp/mock-cnes-ftp.adapter";
 export * from "./ftp/cnes-ftp.adapter";
 export * from "./ftp/create-cnes-ftp-adapter";
 export * from "./archive/archive-storage.port";
+export * from "./archive/bucket-provisioning";
 export * from "./archive/local-archive.adapter";
 export * from "./archive/s3-archive.adapter";
 export * from "./archive/create-archive-adapter";
