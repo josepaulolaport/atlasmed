@@ -42,7 +42,14 @@ async function isWorkerDatabaseReady(): Promise<boolean> {
         WHERE table_schema = 'registry_staging' AND table_name = 'facilities'
       ) AS exists
     `);
-    return Boolean(rows[0]?.exists);
+    if (!rows[0]?.exists) {
+      // Staging schema is a runtime clone of registry — create it so tests can run.
+      const { recreateRegistryStagingSchema } = await import(
+        "../src/infrastructure/registry-schemas"
+      );
+      await recreateRegistryStagingSchema();
+    }
+    return true;
   } catch {
     return false;
   }
