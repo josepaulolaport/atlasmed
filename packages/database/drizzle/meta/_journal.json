@@ -61,8 +61,15 @@
     {
       "idx": 9,
       "version": "7",
-      "when": 1753047000000,
+      "when": 1784180557887,
       "tag": "0009_competitor_products_pricing",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784266957887,
+      "tag": "0010_schema_db_reconciliation",
       "breakpoints": true
     }
   ]
