@@ -13,6 +13,7 @@ const EnvironmentSchema = Type.Object({
     { default: "development" },
   ),
   PORT: Type.Number({ default: 3000, minimum: 1, maximum: 65535 }),
+  APP_TIMEZONE: Type.String({ default: "America/Sao_Paulo", minLength: 1 }),
 
   DATABASE_URL: Type.String({ default: "postgresql://postgres:postgres@localhost:5432/atlasmed" }),
   DATABASE_POOL_MIN: Type.Number({ default: 2, minimum: 1 }),
@@ -146,6 +147,7 @@ function normalizeEnvironment(env: EnvInput) {
     ...env,
     NODE_ENV: env.NODE_ENV ?? "development",
     PORT: numberFromEnv(env.PORT, 3000),
+    APP_TIMEZONE: env.APP_TIMEZONE ?? "America/Sao_Paulo",
     DATABASE_URL: env.DATABASE_URL ?? "postgresql://postgres:postgres@localhost:5432/atlasmed",
     DATABASE_POOL_MIN: numberFromEnv(env.DATABASE_POOL_MIN, 2),
     DATABASE_POOL_MAX: numberFromEnv(env.DATABASE_POOL_MAX, 10),
