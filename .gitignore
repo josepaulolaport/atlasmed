@@ -145,3 +145,6 @@ dist
 .next
 coverage
 .env
+
+# CodeDB index (AI tooling)
+codedb.snapshot
