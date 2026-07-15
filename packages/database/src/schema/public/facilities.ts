@@ -67,6 +67,8 @@ export const facilities = pgTable(
 
     // --- Classification ---
     primarySectorId: text("primary_sector_id").references(() => sectors.id, { onDelete: "set null" }),
+    unitType: text("unit_type"),
+    unitSubtype: text("unit_subtype"),
     conformityStatus: conformityStatusEnum("conformity_status").notNull().default("INCOMPLETE"),
     commercialStatus: commercialStatusEnum("commercial_status"),
     purchaseStatus: purchaseStatusEnum("purchase_status"),
