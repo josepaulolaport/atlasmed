@@ -63,7 +63,9 @@ export async function ensureBucketExists(
   }
 
   const input: CreateBucketCommandInput = { Bucket: bucket };
-  if (region && region !== "us-east-1") {
+// AWS S3: us-east-1 is the default region and does not require LocationConstraint.
+// For S3-compatible services, this behavior may differ.
+if (region && region !== "us-east-1") {
     input.CreateBucketConfiguration = {
       LocationConstraint: region as BucketLocationConstraint,
     };
