@@ -2,6 +2,7 @@ import { createQueue, createWorker, type JobOptions } from "./queue.client";
 import { sendInviteEmail, sendPasswordResetEmail } from "../external-services/resend/send-invite-email";
 import { sendPasswordResetWhatsApp } from "../external-services/twilio/send-whatsapp";
 import { logger } from "../logging/logger";
+import type { Worker } from "bullmq";
 
 export interface EmailNotification {
   type: "email";
@@ -20,6 +21,7 @@ export interface SmsNotification {
 export type NotificationJob = EmailNotification | SmsNotification;
 
 const queue = createQueue<NotificationJob>("notifications");
+let notificationWorker: Worker<NotificationJob> | undefined;
 
 const defaultJobOptions: JobOptions = {
   attempts: 3,
@@ -124,7 +126,12 @@ export class NotificationQueue {
 }
 
 export function startNotificationWorker(): void {
-  const notificationWorker = createWorker<NotificationJob>(
+  if (notificationWorker) {
+    logger.info("Notification worker already started");
+    return;
+  }
+
+  notificationWorker = createWorker<NotificationJob>(
     "notifications",
     async (job) => {
       const { data } = job;

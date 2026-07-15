@@ -10,10 +10,13 @@ import {
 } from "../audit/siem-export.helper";
 import { metricsService } from "../monitoring/metrics.service";
 import { logger } from "../logging/logger";
+import type { Worker } from "bullmq";
 
 const SIEM_CURSOR_KEY = "siem:lastExportAt";
 
 const cleanupQueue = createQueue("cleanup");
+type CleanupJobData = { retentionDays?: number };
+let cleanupWorker: Worker<CleanupJobData> | undefined;
 
 const defaultJobOptions: JobOptions = {
   attempts: 2,
@@ -139,10 +142,15 @@ export class CleanupJobs {
 }
 
 export function startCleanupWorker(): void {
-  const cleanupWorker = createWorker<any>(
+  if (cleanupWorker) {
+    logger.info("Cleanup worker already started");
+    return;
+  }
+
+  cleanupWorker = createWorker<CleanupJobData>(
     "cleanup",
     async (job) => {
-      const { data, name } = job as { data: any; name?: string };
+      const { data, name } = job as { data: CleanupJobData; name?: string };
 
       logger.info("Running cleanup job", { jobName: name });
 

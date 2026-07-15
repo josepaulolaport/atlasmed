@@ -41,7 +41,6 @@ jobs:
 
     env:
       UNCLOUD_CONNECT: ${{ secrets.UNCLOUD_CONNECT }}
-      UNCLOUD_SSH_PRIVATE_KEY: ${{ secrets.UNCLOUD_SSH_PRIVATE_KEY }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
       TOKEN_HASH_PEPPER: ${{ secrets.TOKEN_HASH_PEPPER }}
@@ -70,7 +69,6 @@ jobs:
           missing=0
           for name in \
             UNCLOUD_CONNECT \
-            UNCLOUD_SSH_PRIVATE_KEY \
             DATABASE_URL \
             JWT_ACCESS_SECRET \
             TOKEN_HASH_PEPPER \
@@ -89,6 +87,69 @@ jobs:
             fi
           done
           exit "$missing"
+
+      - name: Validate production value formats
+        run: |
+          set -euo pipefail
+          invalid=0
+
+          require_min_length() {
+            name="$1"
+            min_length="$2"
+            value="${!name:-}"
+            if [ "${#value}" -lt "$min_length" ]; then
+              echo "$name must be at least $min_length characters" >&2
+              invalid=1
+            fi
+          }
+
+          require_https_url() {
+            name="$1"
+            value="${!name:-}"
+            case "$value" in
+              https://*) ;;
+              *)
+                echo "$name must be an https:// URL" >&2
+                invalid=1
+                ;;
+            esac
+          }
+
+          case "$UNCLOUD_CONNECT" in
+            ssh://*@*|ssh+cli://*@*) ;;
+            *)
+              echo "UNCLOUD_CONNECT must be an ssh:// or ssh+cli:// target" >&2
+              invalid=1
+              ;;
+          esac
+
+          case "$DATABASE_URL" in
+            postgres://*|postgresql://*) ;;
+            *)
+              echo "DATABASE_URL must be a postgres:// or postgresql:// URL" >&2
+              invalid=1
+              ;;
+          esac
+
+          require_min_length JWT_ACCESS_SECRET 32
+          require_min_length TOKEN_HASH_PEPPER 32
+          require_min_length TEMPORAL_DB_PASSWORD 16
+          require_min_length MEILISEARCH_API_KEY 16
+          require_min_length MINIO_ROOT_PASSWORD 16
+          require_https_url FRONTEND_URL
+
+          IFS=',' read -ra origins <<< "$CORS_ORIGINS"
+          for origin in "${origins[@]}"; do
+            case "$origin" in
+              https://*) ;;
+              *)
+                echo "CORS_ORIGINS entries must be https:// origins" >&2
+                invalid=1
+                ;;
+            esac
+          done
+
+          exit "$invalid"
 
       - name: Validate compose file
         run: docker compose -f deploy/uncloud.compose.yml config --quiet
