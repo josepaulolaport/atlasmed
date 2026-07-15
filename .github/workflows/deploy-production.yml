@@ -25,24 +25,44 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Configurar Flutter
-        uses: subosito/flutter-action@v2
+      - name: Configurar Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          flutter-version: '3.44.6'
-          channel: 'stable'
-          cache: true
+          bun-version: '1.3.14'
+
+      - name: Configurar Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Instalar FVM
+        run: |
+          dart pub global activate fvm
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Flutter via FVM
+        run: fvm install
+        working-directory: ./apps/mobile
+
+      - name: Instalar dependências do monorepo
+        run: bun install --frozen-lockfile
+
+      - name: Restaurar cache do Turbo
+        uses: actions/cache@v5
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-
+            ${{ runner.os }}-turbo-${{ github.job }}-
 
       - name: Instalar dependências
-        run: flutter pub get
+        run: fvm flutter pub get
         working-directory: ./apps/mobile
 
       - name: Analisar código
-        run: flutter analyze
-        working-directory: ./apps/mobile
+        run: bun run mobile:lint
 
       - name: Executar testes
-        run: flutter test
-        working-directory: ./apps/mobile
+        run: bun run mobile:test
 
   deploy_web_production:
     name: Deploy Web (Produção)
@@ -57,19 +77,24 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Configurar Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.6'
-          channel: 'stable'
-          cache: true
+      - name: Configurar Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Instalar FVM
+        run: |
+          dart pub global activate fvm
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Flutter via FVM
+        run: fvm install
+        working-directory: ./apps/mobile
 
       - name: Instalar dependências
-        run: flutter pub get
+        run: fvm flutter pub get
         working-directory: ./apps/mobile
 
       - name: Build Flutter Web (Release)
-        run: flutter build web --release
+        run: fvm flutter build web --release
         working-directory: ./apps/mobile
 
       - name: Instalar Firebase CLI

@@ -6,7 +6,7 @@ PostgreSQL + PostGIS runs **locally on your machine** — it is intentionally no
 
 ```bash
 # 1. Start supporting services (Redis, MinIO, Meilisearch)
-bun run dev:up
+bun run infra:up
 
 # 2. Apply migrations and seed (requires local Postgres with PostGIS)
 bun run db:migrate
@@ -19,7 +19,7 @@ bun run temporal:up
 bun run observability:up
 
 # 5. Start apps
-bun run dev
+bun run web:dev
 ```
 
 ## Service access

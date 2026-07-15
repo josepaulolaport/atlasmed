@@ -72,16 +72,25 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Restore Turbo cache
+        uses: actions/cache@v5
+        with:
+          path: .turbo/cache
+          key: ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-
+            ${{ runner.os }}-turbo-${{ github.job }}-
+
       - name: Typecheck API
-        run: bun run --filter @atlasmed/api typecheck
+        run: bun run api:typecheck
 
       - name: Typecheck CNES worker
-        run: bun run --filter @atlasmed/cnes-ingestion-worker typecheck
+        run: bun run workers:cnes:typecheck
 
       - name: Build web
         env:
           NEXT_PUBLIC_API_URL: https://atlasmed-api.b1ixob.uncld.dev/api/v1
-        run: bun run --filter @atlasmed/web build
+        run: bun run web:build
 
       - name: Run database migrations
         env:
@@ -129,9 +138,9 @@ jobs:
       - name: Check remote Docker storage
         run: $UNCLOUD_SSH_CMD 'df -h / && docker system df'
 
-      - name: Prune unused Docker data
+      - name: Prune dangling Docker images
         run: |
-          $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+          $UNCLOUD_SSH_CMD 'docker image prune -f'
           $UNCLOUD_SSH_CMD 'docker system df'
 
       - name: Deploy services to cluster
@@ -166,7 +175,7 @@ jobs:
               exit 0
             fi
             if [ "$attempt" -lt 2 ]; then
-              $UNCLOUD_SSH_CMD 'docker image prune -af && docker builder prune -af'
+              $UNCLOUD_SSH_CMD 'docker image prune -f'
               sleep 5
             fi
           done
