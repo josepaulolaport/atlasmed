@@ -7,6 +7,16 @@ import {
 } from '@opentelemetry/sdk-trace-base'
 import { OpenTelemetryTracer } from './open-telemetry-tracer'
 
+type FinishedSpan = ReturnType<InMemorySpanExporter['getFinishedSpans']>[number]
+
+function firstSpan(spans: FinishedSpan[]): FinishedSpan {
+  const span = spans[0]
+  if (!span) {
+    throw new Error('Expected at least one exported span')
+  }
+  return span
+}
+
 describe('OpenTelemetryTracer', () => {
   let exporter: InMemorySpanExporter
   let provider: BasicTracerProvider
@@ -32,18 +42,19 @@ describe('OpenTelemetryTracer', () => {
     tracer.end(span)
     const spans = exporter.getFinishedSpans()
     expect(spans).toHaveLength(1)
-    expect(spans[0].name).toBe('match-order')
-    expect(spans[0].attributes.marketId).toBe('m1')
-    expect(spans[0].attributes.ok).toBe(true)
-    expect(spans[0].instrumentationLibrary.name).toBe('matching')
-    expect(spans[0].instrumentationLibrary.version).toBe('2.0.0')
+    const finishedSpan = firstSpan(spans)
+    expect(finishedSpan.name).toBe('match-order')
+    expect(finishedSpan.attributes.marketId).toBe('m1')
+    expect(finishedSpan.attributes.ok).toBe(true)
+    expect(finishedSpan.instrumentationLibrary.name).toBe('matching')
+    expect(finishedSpan.instrumentationLibrary.version).toBe('2.0.0')
   })
 
   it('skips null and undefined attribute values on start', () => {
     const tracer = new OpenTelemetryTracer('svc')
     const span = tracer.start('x', { a: '1', b: undefined, c: null })
     span.end()
-    const attrs = exporter.getFinishedSpans()[0].attributes
+    const attrs = firstSpan(exporter.getFinishedSpans()).attributes
     expect(attrs.a).toBe('1')
     expect(attrs.b).toBeUndefined()
     expect(attrs.c).toBeUndefined()
@@ -55,15 +66,16 @@ describe('OpenTelemetryTracer', () => {
     expect(out).toBe('ok')
     const spans = exporter.getFinishedSpans()
     expect(spans).toHaveLength(1)
-    expect(spans[0].status.code).toBe(SpanStatusCode.OK)
-    expect(spans[0].attributes.k).toBe('v')
+    const finishedSpan = firstSpan(spans)
+    expect(finishedSpan.status.code).toBe(SpanStatusCode.OK)
+    expect(finishedSpan.attributes.k).toBe('v')
   })
 
   it('with wraps synchronous callback', async () => {
     const tracer = new OpenTelemetryTracer('svc')
     const out = await tracer.with('op', () => 42)
     expect(out).toBe(42)
-    expect(exporter.getFinishedSpans()[0].status.code).toBe(SpanStatusCode.OK)
+    expect(firstSpan(exporter.getFinishedSpans()).status.code).toBe(SpanStatusCode.OK)
   })
 
   it('with propagates errors and marks span as error', async () => {
@@ -75,7 +87,8 @@ describe('OpenTelemetryTracer', () => {
     ).rejects.toThrow('nope')
     const spans = exporter.getFinishedSpans()
     expect(spans).toHaveLength(1)
-    expect(spans[0].status.code).toBe(SpanStatusCode.ERROR)
-    expect(spans[0].status.message).toBe('nope')
+    const finishedSpan = firstSpan(spans)
+    expect(finishedSpan.status.code).toBe(SpanStatusCode.ERROR)
+    expect(finishedSpan.status.message).toBe('nope')
   })
 })
