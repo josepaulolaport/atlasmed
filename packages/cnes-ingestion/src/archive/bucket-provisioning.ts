@@ -93,7 +93,7 @@ export async function ensureArchiveBucket(input: EnsureArchiveBucketInput, clien
     return;
   }
 
-  const region = input.region ?? "us-east-1";
+const region = input.region || "us-east-1";
   const s3Client = client ?? new S3Client({
     region,
     endpoint: input.endpoint,
