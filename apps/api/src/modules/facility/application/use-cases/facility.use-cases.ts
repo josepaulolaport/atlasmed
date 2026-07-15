@@ -6,6 +6,9 @@ import type { FacilityRepository } from "../interfaces/facility.repository.inter
 function serializeClinic(clinic: {
   id: string;
   name: string;
+  taxIdType?: "PJ" | "PF" | null;
+  cnpj?: string | null;
+  cpf?: string | null;
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
@@ -14,16 +17,21 @@ function serializeClinic(clinic: {
   updatedAt: Date;
   professionalCount?: number;
   consultantName?: string | null;
+  services?: Array<{ serviceCode: string; classificationCode: string }>;
 }) {
   return {
     id: clinic.id,
     name: clinic.name,
+    taxIdType: clinic.taxIdType ?? null,
+    cnpj: clinic.cnpj ?? null,
+    cpf: clinic.cpf ?? null,
     lat: clinic.lat ?? undefined,
     lng: clinic.lng ?? undefined,
     territoryId: clinic.territoryId ?? undefined,
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
     professionalCount: clinic.professionalCount ?? 0,
     consultantName: clinic.consultantName ?? null,
+    services: clinic.services ?? [],
     createdAt: clinic.createdAt.toISOString(),
     updatedAt: clinic.updatedAt.toISOString(),
   };

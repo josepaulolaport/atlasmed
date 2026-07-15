@@ -20,6 +20,7 @@ import {
   reconcileCrmDiffActivity as reconcileCrmDiffActivityImpl,
   reconcileWarehouseDiffActivity as reconcileWarehouseDiffActivityImpl,
   syncCrmMetadataActivity as syncCrmMetadataActivityImpl,
+  syncFacilityServicesActivity as syncFacilityServicesActivityImpl,
   finalizeIngestionRunActivity as finalizeIngestionRunActivityImpl,
 } from "./reconcile-sync.activities";
 
@@ -73,6 +74,10 @@ export const reconcileWarehouseDiffActivity = wrapActivity(
 export const syncCrmMetadataActivity = wrapActivity(
   "syncCrmMetadata",
   syncCrmMetadataActivityImpl
+);
+export const syncFacilityServicesActivity = wrapActivity(
+  "syncFacilityServices",
+  syncFacilityServicesActivityImpl
 );
 export const finalizeIngestionRunActivity = wrapActivity(
   "finalizeIngestionRun",
