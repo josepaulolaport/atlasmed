@@ -33,11 +33,7 @@ class LoginSuccessScreen extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 48,
-                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 48),
                 ),
                 const SizedBox(height: 24),
                 Text(

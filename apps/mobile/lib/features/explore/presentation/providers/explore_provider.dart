@@ -11,15 +11,19 @@ final exploreRepositoryProvider = Provider<ExploreRepository>((ref) {
 });
 
 // ── Clinic detail provider ──────────────────────────────────
-final clinicDetailProvider =
-    FutureProvider.family<ClinicDetail, String>((ref, id) {
+final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
+  ref,
+  id,
+) {
   final repo = ref.watch(exploreRepositoryProvider);
   return repo.getClinicDetail(id);
 });
 
 // ── Doctor detail provider ──────────────────────────────────
-final doctorDetailProvider =
-    FutureProvider.family<DoctorDetail, String>((ref, id) {
+final doctorDetailProvider = FutureProvider.family<DoctorDetail, String>((
+  ref,
+  id,
+) {
   final repo = ref.watch(exploreRepositoryProvider);
   return repo.getDoctorDetail(id);
 });
@@ -31,7 +35,8 @@ class ExploreState {
   final bool loading;
   final String activeTab; // 'clinic' | 'doctor'
   final String query;
-  final Map<String, List<String>> filters; // {status: [...], products: [...], specialties: [...]}
+  final Map<String, List<String>>
+  filters; // {status: [...], products: [...], specialties: [...]}
   final String sort;
   final int visibleCount;
 
@@ -78,26 +83,27 @@ class ExploreState {
     // Search
     final q = query.trim().toLowerCase();
     if (q.isNotEmpty) {
-      list = list.where((c) =>
-        c.name.toLowerCase().contains(q) ||
-        c.neighborhood.toLowerCase().contains(q)
-      ).toList();
+      list = list
+          .where(
+            (c) =>
+                c.name.toLowerCase().contains(q) ||
+                c.neighborhood.toLowerCase().contains(q),
+          )
+          .toList();
     }
 
     // Status filter
     final statusFilter = filters['status'] ?? [];
     if (statusFilter.isNotEmpty) {
-      list = list.where((c) =>
-        statusFilter.contains(c.status.name)
-      ).toList();
+      list = list.where((c) => statusFilter.contains(c.status.name)).toList();
     }
 
     // Product filter
     final productFilter = filters['products'] ?? [];
     if (productFilter.isNotEmpty) {
-      list = list.where((c) =>
-        c.products.any((p) => productFilter.contains(p))
-      ).toList();
+      list = list
+          .where((c) => c.products.any((p) => productFilter.contains(p)))
+          .toList();
     }
 
     // Sort
@@ -127,19 +133,20 @@ class ExploreState {
     // Search
     final q = query.trim().toLowerCase();
     if (q.isNotEmpty) {
-      list = list.where((d) =>
-        d.name.toLowerCase().contains(q) ||
-        d.specialty.toLowerCase().contains(q) ||
-        d.primaryClinic.toLowerCase().contains(q)
-      ).toList();
+      list = list
+          .where(
+            (d) =>
+                d.name.toLowerCase().contains(q) ||
+                d.specialty.toLowerCase().contains(q) ||
+                d.primaryClinic.toLowerCase().contains(q),
+          )
+          .toList();
     }
 
     // Specialty filter
     final specFilter = filters['specialties'] ?? [];
     if (specFilter.isNotEmpty) {
-      list = list.where((d) =>
-        specFilter.contains(d.specialty)
-      ).toList();
+      list = list.where((d) => specFilter.contains(d.specialty)).toList();
     }
 
     // Sort
@@ -200,7 +207,9 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
 }
 
 // ── Provider ────────────────────────────────────────────────
-final exploreProvider = StateNotifierProvider<ExploreNotifier, ExploreState>((ref) {
+final exploreProvider = StateNotifierProvider<ExploreNotifier, ExploreState>((
+  ref,
+) {
   final repo = ref.watch(exploreRepositoryProvider);
   return ExploreNotifier(repo);
 });

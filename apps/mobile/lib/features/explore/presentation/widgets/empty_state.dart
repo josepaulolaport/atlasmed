@@ -4,11 +4,7 @@ class EmptyState extends StatelessWidget {
   final String query;
   final String kind; // 'clinic' or 'doctor'
 
-  const EmptyState({
-    super.key,
-    required this.query,
-    required this.kind,
-  });
+  const EmptyState({super.key, required this.query, required this.kind});
 
   @override
   Widget build(BuildContext context) {

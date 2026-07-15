@@ -50,26 +50,22 @@ class OrderDetailScreen extends ConsumerWidget {
               const SizedBox(height: 14),
               _DeliveryBanner(detail: detail),
               const SizedBox(height: 14),
-              _CardShell(
-                child: _TimelineCard(detail: detail),
-              ),
+              _CardShell(child: _TimelineCard(detail: detail)),
               if (hasTracking) ...[
                 const SizedBox(height: 14),
-                _CardShell(
-                  child: _TrackingCard(tracking: detail.tracking),
-                ),
+                _CardShell(child: _TrackingCard(tracking: detail.tracking)),
               ],
               const SizedBox(height: 14),
-              _CardShell(
-                child: _DestinationCard(detail: detail),
-              ),
+              _CardShell(child: _DestinationCard(detail: detail)),
+              const SizedBox(height: 14),
+              _CardShell(child: _ItemsCard(items: resolvedItems)),
               const SizedBox(height: 14),
               _CardShell(
-                child: _ItemsCard(items: resolvedItems),
-              ),
-              const SizedBox(height: 14),
-              _CardShell(
-                child: _PaymentCard(detail: detail, subtotal: subtotal, total: total),
+                child: _PaymentCard(
+                  detail: detail,
+                  subtotal: subtotal,
+                  total: total,
+                ),
               ),
               const SizedBox(height: 18),
               Row(
@@ -119,11 +115,32 @@ class _Header extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('PEDIDO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.1, color: Color(0xFF9ca3af))),
+                const Text(
+                  'PEDIDO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.1,
+                    color: Color(0xFF9ca3af),
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(detail.id, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))),
+                Text(
+                  detail.id,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0a2f7f),
+                  ),
+                ),
                 const SizedBox(height: 2),
-                Text('· ${detail.placedAt}', style: const TextStyle(fontSize: 12.5, color: Color(0xFF9ca3af))),
+                Text(
+                  '· ${detail.placedAt}',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Color(0xFF9ca3af),
+                  ),
+                ),
               ],
             ),
           ),
@@ -138,7 +155,14 @@ class _CardShell extends StatelessWidget {
   final Widget child;
   const _CardShell({required this.child});
   @override
-  Widget build(BuildContext context) => Container(decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: const Color(0xFFeef0f3))), child: child);
+  Widget build(BuildContext context) => Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: const Color(0xFFeef0f3)),
+    ),
+    child: child,
+  );
 }
 
 class _TimelineCard extends StatelessWidget {
@@ -148,38 +172,121 @@ class _TimelineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('Acompanhamento', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
-        const SizedBox(height: 14),
-        ...detail.timeline.asMap().entries.map((entry) {
-          final i = entry.key; final step = entry.value; final last = i == detail.timeline.length - 1;
-          return _TimelineRow(step: step, last: last);
-        }),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Acompanhamento',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...detail.timeline.asMap().entries.map((entry) {
+            final i = entry.key;
+            final step = entry.value;
+            final last = i == detail.timeline.length - 1;
+            return _TimelineRow(step: step, last: last);
+          }),
+        ],
+      ),
     );
   }
 }
 
 class _TimelineRow extends StatelessWidget {
-  final TimelineStep step; final bool last;
+  final TimelineStep step;
+  final bool last;
   const _TimelineRow({required this.step, required this.last});
   @override
   Widget build(BuildContext context) {
-    final circleColor = step.done ? const Color(0xFF16a373) : (step.current ? const Color(0xFF0a2f7f) : Colors.white);
-    final borderColor = step.done || step.current ? circleColor : const Color(0xFFe5e7eb);
+    final circleColor = step.done
+        ? const Color(0xFF16a373)
+        : (step.current ? const Color(0xFF0a2f7f) : Colors.white);
+    final borderColor = step.done || step.current
+        ? circleColor
+        : const Color(0xFFe5e7eb);
     return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        SizedBox(width: 24, child: Column(children: [
-          Container(width: 14, height: 14, decoration: BoxDecoration(color: circleColor, shape: BoxShape.circle, border: Border.all(color: borderColor, width: step.current ? 2 : 1.2), boxShadow: step.current ? const [BoxShadow(color: Color(0x330a2f7f), blurRadius: 10, spreadRadius: 2)] : null), child: step.done ? const Icon(Icons.check, size: 9, color: Colors.white) : (step.current ? Center(child: Container(width: 5, height: 5, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))) : null)),
-          if (!last) Expanded(child: Container(width: 2, color: const Color(0xFFeef0f3))),
-        ])),
-        const SizedBox(width: 10),
-        Expanded(child: Padding(padding: const EdgeInsets.only(bottom: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(step.step, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF1f2937))),
-          const SizedBox(height: 2),
-          Text(step.date, style: const TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af))),
-        ]))),
-      ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 24,
+            child: Column(
+              children: [
+                Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: borderColor,
+                      width: step.current ? 2 : 1.2,
+                    ),
+                    boxShadow: step.current
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x330a2f7f),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: step.done
+                      ? const Icon(Icons.check, size: 9, color: Colors.white)
+                      : (step.current
+                            ? Center(
+                                child: Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              )
+                            : null),
+                ),
+                if (!last)
+                  Expanded(
+                    child: Container(width: 2, color: const Color(0xFFeef0f3)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    step.step,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1f2937),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    step.date,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF9ca3af),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -191,16 +298,48 @@ class _TrackingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Row(children: [
-        _MiniIcon(icon: Icons.local_shipping_outlined, bg: const Color(0x1A0a2f7f), fg: const Color(0xFF0a2f7f)),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('CÓDIGO DE RASTREIO', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF9ca3af), letterSpacing: 0.8)),
-          const SizedBox(height: 4),
-          Text(tracking, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 1.2, fontFamily: 'monospace', color: Color(0xFF0f1729))),
-        ])),
-        TextButton(onPressed: () async => Clipboard.setData(ClipboardData(text: tracking)), child: const Text('Copiar')),
-      ]),
+      child: Row(
+        children: [
+          _MiniIcon(
+            icon: Icons.local_shipping_outlined,
+            bg: const Color(0x1A0a2f7f),
+            fg: const Color(0xFF0a2f7f),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'CÓDIGO DE RASTREIO',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF9ca3af),
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  tracking,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                    fontFamily: 'monospace',
+                    color: Color(0xFF0f1729),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () async =>
+                Clipboard.setData(ClipboardData(text: tracking)),
+            child: const Text('Copiar'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -212,27 +351,72 @@ class _DestinationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          _MiniIcon(icon: Icons.local_hospital_outlined, bg: const Color(0x1A1e40af), fg: const Color(0xFF1e40af)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(detail.clinic, style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
-            const SizedBox(height: 2),
-            Text(detail.clinicAddress, style: const TextStyle(fontSize: 12, color: Color(0xFF6b7280))),
-          ])),
-        ]),
-        const SizedBox(height: 14),
-        Row(children: [
-          _AvatarInitials(name: detail.doctor),
-          const SizedBox(width: 12),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(detail.doctor, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF1f2937))),
-            const SizedBox(height: 2),
-            Text(detail.doctorCrm, style: const TextStyle(fontSize: 12, color: Color(0xFF9ca3af))),
-          ]),
-        ]),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _MiniIcon(
+                icon: Icons.local_hospital_outlined,
+                bg: const Color(0x1A1e40af),
+                fg: const Color(0xFF1e40af),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      detail.clinic,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0f1729),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detail.clinicAddress,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF6b7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              _AvatarInitials(name: detail.doctor),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    detail.doctor,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1f2937),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    detail.doctorCrm,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF9ca3af),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -244,57 +428,149 @@ class _ItemsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('ITENS (${items.length} produtos)', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
-        const SizedBox(height: 14),
-        ...items.map((entry) {
-          final p = entry.key; final qty = entry.value;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Row(children: [
-              ProductIcon(name: p.name, size: 38),
-              const SizedBox(width: 10),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(p.name, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Color(0xFF1f2937))),
-                const SizedBox(height: 2),
-                Text(p.sub, style: const TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af))),
-              ])),
-              Text('R\$ ${p.unit.toStringAsFixed(2).replaceAll('.', ',')} · × $qty', style: const TextStyle(fontSize: 11, color: Color(0xFF9ca3af))),
-              const SizedBox(width: 10),
-              Text(brl(p.unit * qty), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))),
-            ]),
-          );
-        }),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'ITENS (${items.length} produtos)',
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          const SizedBox(height: 14),
+          ...items.map((entry) {
+            final p = entry.key;
+            final qty = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                children: [
+                  ProductIcon(name: p.name, size: 38),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          p.name,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1f2937),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          p.sub,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF9ca3af),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'R\$ ${p.unit.toStringAsFixed(2).replaceAll('.', ',')} · × $qty',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9ca3af),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    brl(p.unit * qty),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0a2f7f),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
 
 class _PaymentCard extends StatelessWidget {
-  final OrderDetail detail; final double subtotal; final double total;
-  const _PaymentCard({required this.detail, required this.subtotal, required this.total});
+  final OrderDetail detail;
+  final double subtotal;
+  final double total;
+  const _PaymentCard({
+    required this.detail,
+    required this.subtotal,
+    required this.total,
+  });
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          const Text('Pagamento', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0f1729))),
-          Text(detail.invoice, style: const TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af))),
-        ]),
-        const SizedBox(height: 12),
-        _moneyRow('Método', detail.paymentMethod),
-        const SizedBox(height: 8),
-        _moneyRow('Subtotal', brl(subtotal)),
-        const SizedBox(height: 8),
-        _moneyRow('Frete', detail.shipping == 0 ? 'Grátis' : brl(detail.shipping)),
-        const Divider(height: 24),
-        _moneyRow('Total', brl(total), bold: true),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Pagamento',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0f1729),
+                ),
+              ),
+              Text(
+                detail.invoice,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF9ca3af),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          _moneyRow('Método', detail.paymentMethod),
+          const SizedBox(height: 8),
+          _moneyRow('Subtotal', brl(subtotal)),
+          const SizedBox(height: 8),
+          _moneyRow(
+            'Frete',
+            detail.shipping == 0 ? 'Grátis' : brl(detail.shipping),
+          ),
+          const Divider(height: 24),
+          _moneyRow('Total', brl(total), bold: true),
+        ],
+      ),
     );
   }
 
-  Widget _moneyRow(String label, String value, {bool bold = false}) => Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(label, style: TextStyle(fontSize: 12.5, color: bold ? const Color(0xFF0f1729) : const Color(0xFF6b7280), fontWeight: bold ? FontWeight.w700 : FontWeight.w500)), Text(value, style: TextStyle(fontSize: 12.5, color: bold ? const Color(0xFF0a2f7f) : const Color(0xFF374151), fontWeight: bold ? FontWeight.w700 : FontWeight.w500))]);
+  Widget _moneyRow(String label, String value, {bool bold = false}) => Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        label,
+        style: TextStyle(
+          fontSize: 12.5,
+          color: bold ? const Color(0xFF0f1729) : const Color(0xFF6b7280),
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+      Text(
+        value,
+        style: TextStyle(
+          fontSize: 12.5,
+          color: bold ? const Color(0xFF0a2f7f) : const Color(0xFF374151),
+          fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+    ],
+  );
 }
 
 class _DeliveryBanner extends StatelessWidget {
@@ -307,21 +583,43 @@ class _DeliveryBanner extends StatelessWidget {
     final fg = delivered ? const Color(0xFF0f8a5f) : const Color(0xFF0a2f7f);
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(14), border: Border.all(color: bg)),
-      child: Row(children: [
-        Icon(Icons.schedule_outlined, size: 18, color: fg),
-        const SizedBox(width: 10),
-        Expanded(child: Text(detail.estimate, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: fg))),
-      ]),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: bg),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.schedule_outlined, size: 18, color: fg),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              detail.estimate,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: fg,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
 class _MiniIcon extends StatelessWidget {
-  final IconData icon; final Color bg; final Color fg;
+  final IconData icon;
+  final Color bg;
+  final Color fg;
   const _MiniIcon({required this.icon, required this.bg, required this.fg});
   @override
-  Widget build(BuildContext context) => Container(width: 34, height: 34, decoration: BoxDecoration(color: bg, shape: BoxShape.circle), child: Icon(icon, size: 18, color: fg));
+  Widget build(BuildContext context) => Container(
+    width: 34,
+    height: 34,
+    decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+    child: Icon(icon, size: 18, color: fg),
+  );
 }
 
 class _AvatarInitials extends StatelessWidget {
@@ -330,14 +628,59 @@ class _AvatarInitials extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final parts = name.trim().split(RegExp(r'\s+'));
-    final initials = parts.length >= 2 ? '${parts.first[0]}${parts.last[0]}' : parts.first.substring(0, 1);
-    return Container(width: 34, height: 34, decoration: const BoxDecoration(color: Color(0xFFe8eefc), shape: BoxShape.circle), alignment: Alignment.center, child: Text(initials.toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0a2f7f))));
+    final initials = parts.length >= 2
+        ? '${parts.first[0]}${parts.last[0]}'
+        : parts.first.substring(0, 1);
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: const BoxDecoration(
+        color: Color(0xFFe8eefc),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF0a2f7f),
+        ),
+      ),
+    );
   }
 }
 
 class _ActionButton extends StatelessWidget {
-  final String label; final bool filled; final VoidCallback onTap;
-  const _ActionButton({required this.label, required this.filled, required this.onTap});
+  final String label;
+  final bool filled;
+  final VoidCallback onTap;
+  const _ActionButton({
+    required this.label,
+    required this.filled,
+    required this.onTap,
+  });
   @override
-  Widget build(BuildContext context) => SizedBox(height: 46, child: OutlinedButton(onPressed: onTap, style: OutlinedButton.styleFrom(backgroundColor: filled ? Colors.white : Colors.white, foregroundColor: filled ? const Color(0xFF111827) : const Color(0xFF0a2f7f), side: const BorderSide(color: Color(0xFFeef0f3)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))), child: Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: filled ? const Color(0xFF111827) : const Color(0xFF0a2f7f)))));
+  Widget build(BuildContext context) => SizedBox(
+    height: 46,
+    child: OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: filled ? Colors.white : Colors.white,
+        foregroundColor: filled
+            ? const Color(0xFF111827)
+            : const Color(0xFF0a2f7f),
+        side: const BorderSide(color: Color(0xFFeef0f3)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: filled ? const Color(0xFF111827) : const Color(0xFF0a2f7f),
+        ),
+      ),
+    ),
+  );
 }

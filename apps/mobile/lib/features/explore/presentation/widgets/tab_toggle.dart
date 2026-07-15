@@ -71,7 +71,9 @@ class _Tab extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: selected ? const Color(0xFF0a2f7f) : const Color(0xFF9ca3af),
+                    color: selected
+                        ? const Color(0xFF0a2f7f)
+                        : const Color(0xFF9ca3af),
                   ),
                 ),
                 const SizedBox(width: 7),
@@ -79,7 +81,9 @@ class _Tab extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 6),
                   height: 18,
                   decoration: BoxDecoration(
-                    color: selected ? const Color(0xFFeef2ff) : const Color(0xFFf3f4f6),
+                    color: selected
+                        ? const Color(0xFFeef2ff)
+                        : const Color(0xFFf3f4f6),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Center(
@@ -88,7 +92,9 @@ class _Tab extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10.5,
                         fontWeight: FontWeight.w600,
-                        color: selected ? const Color(0xFF0a2f7f) : const Color(0xFF9ca3af),
+                        color: selected
+                            ? const Color(0xFF0a2f7f)
+                            : const Color(0xFF9ca3af),
                       ),
                     ),
                   ),
@@ -104,7 +110,9 @@ class _Tab extends StatelessWidget {
                   height: 2,
                   decoration: BoxDecoration(
                     color: const Color(0xFF0a2f7f),
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(2)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(2),
+                    ),
                   ),
                 ),
               ),
