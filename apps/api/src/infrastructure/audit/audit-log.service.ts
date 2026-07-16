@@ -415,6 +415,54 @@ export class AuditLogService {
     });
   }
 
+  async log2FARequired(params: {
+    userId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    await this.log({
+      userId: params.userId,
+      eventType: "USER_LOGIN",
+      severity: "INFO",
+      action: "2fa_required",
+      resource: "user",
+      resourceId: params.userId,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+      outcome: "PENDING",
+    });
+  }
+
+  async log2FAEnable(params: {
+    userId: string;
+    ipAddress?: string;
+  }): Promise<void> {
+    await this.log({
+      userId: params.userId,
+      eventType: "TWO_FACTOR_ENABLE",
+      severity: "WARNING",
+      action: "enable_2fa",
+      resource: "user",
+      resourceId: params.userId,
+      ipAddress: params.ipAddress,
+    });
+  }
+
+  async log2FADisable(params: {
+    userId: string;
+    ipAddress?: string;
+  }): Promise<void> {
+    await this.log({
+      userId: params.userId,
+      eventType: "TWO_FACTOR_DISABLE",
+      severity: "WARNING",
+      action: "disable_2fa",
+      resource: "user",
+      resourceId: params.userId,
+      ipAddress: params.ipAddress,
+    });
+  }
+
   async logDataAccess(params: {
     userId: string;
     resource: string;

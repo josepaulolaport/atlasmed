@@ -8,7 +8,7 @@ import { TooManyLoginAttemptsError } from "../../../../shared/errors";
 /**
  * Business-aware rate limiting for access module routes.
  *
- * Login uses two layers (see modules/sessions/infrastructure/routes/sessions.route.ts):
+ * Login uses two layers (see login.route.ts):
  * - Route middleware below: total request volume per identifier/IP (credential stuffing)
  * - Use-case RateLimiterService: failed attempts only, account lockout, clears on success
  */
@@ -46,6 +46,25 @@ export const loginRateLimit = asRateLimitPlugin("login", {
   keyGenerator: getLoginRateLimitKey,
   failClosed: true,
   createError: (retryAfterMs) => new TooManyLoginAttemptsError(retryAfterMs),
+});
+
+export function getTwoFactorVerifyRateLimitKey(context: {
+  body?: { pendingToken?: string };
+  request: Request;
+}): string {
+  const ip = getClientIp(context);
+  const pendingToken = context.body?.pendingToken;
+  if (pendingToken && pendingToken.length >= 8) {
+    return `${ip}:${pendingToken.slice(0, 16)}`;
+  }
+  return ip;
+}
+
+export const twoFactorVerifyRateLimit = asRateLimitPlugin("two-factor-verify", {
+  maxAttempts: 10,
+  windowMs: 15 * 60 * 1000,
+  keyGenerator: getTwoFactorVerifyRateLimitKey,
+  failClosed: true,
 });
 
 export const passwordResetRateLimit = asRateLimitPlugin("password-reset", {
@@ -141,6 +160,18 @@ export const passwordResetConfirmRateLimit = asRateLimitPlugin(
 
 export const passwordChangeRateLimit = asRateLimitPlugin("password-change", {
   maxAttempts: 5,
+  windowMs: 15 * 60 * 1000,
+  keyGenerator: async (context) => {
+    if (context.getUserId) {
+      return await context.getUserId();
+    }
+    return getClientIp(context);
+  },
+  failClosed: true,
+});
+
+export const twoFactorRateLimit = asRateLimitPlugin("two-factor", {
+  maxAttempts: 10,
   windowMs: 15 * 60 * 1000,
   keyGenerator: async (context) => {
     if (context.getUserId) {

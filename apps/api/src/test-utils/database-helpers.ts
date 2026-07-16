@@ -1,12 +1,5 @@
 import { createDatabase, type Database } from "@atlasmed/database";
-import {
-  sessions,
-  invitations,
-  passwordResets,
-  users,
-  visits,
-  territoryApprovalRequests,
-} from "@atlasmed/database";
+import { sessions, invitations, passwordResets, users } from "@atlasmed/database";
 import { ne } from "drizzle-orm";
 
 /**
@@ -25,10 +18,6 @@ export async function cleanTestData(db: Database): Promise<void> {
   await db.delete(sessions);
   await db.delete(invitations);
   await db.delete(passwordResets);
-  // These reference users.id with onDelete: "restrict" — any row left behind by a
-  // test that threw before its own cleanup would otherwise block deleting test users.
-  await db.delete(visits);
-  await db.delete(territoryApprovalRequests);
   await db.delete(users).where(ne(users.email, "test@example.com"));
 }
 
