@@ -70,14 +70,8 @@ import {
   UpdateUserPreferencesUseCase,
 } from "./application/use-cases/user-preferences.use-case";
 import { ChangePasswordUseCase } from "./application/use-cases/change-password.use-case";
-import { Setup2FAUseCase } from "./application/use-cases/setup-2fa.use-case";
-import { Confirm2FASetupUseCase } from "./application/use-cases/confirm-2fa-setup.use-case";
-import { Verify2FALoginUseCase } from "./application/use-cases/verify-2fa-login.use-case";
-import { Disable2FAUseCase } from "./application/use-cases/disable-2fa.use-case";
 import { GetCapabilitiesUseCase } from "./application/use-cases/get-capabilities.use-case";
 import { VerificationService } from "./application/services/verification.service";
-import { TwoFactorService } from "./application/services/two-factor.service";
-import { Pending2FALoginService } from "./application/services/pending-2fa-login.service";
 
 import { DrizzleScopeRepository } from "./infrastructure/repositories/drizzle/drizzle-scope.repository";
 import { DrizzleAccessGrantRepository } from "./infrastructure/repositories/drizzle/drizzle-access-grant.repository";
@@ -161,8 +155,6 @@ export const accessServices = {
     userRepository: accessRepositories.user,
     auditLog: accessInfrastructure.auditLog,
   }),
-  twoFactor: new TwoFactorService({ redis }),
-  pending2faLogin: new Pending2FALoginService({ redis }),
 };
 
 // Use Case Factories
@@ -178,7 +170,6 @@ export const accessUseCases = {
       rateLimiterService: accessServices.rateLimiter,
       auditLog: accessInfrastructure.auditLog,
       metrics: accessInfrastructure.metrics,
-      pending2faLoginService: accessServices.pending2faLogin,
     }),
 
   logout: () =>
@@ -269,45 +260,6 @@ export const accessUseCases = {
     new ChangePasswordUseCase({
       userRepository: accessRepositories.user,
       authCache: accessCaches.auth,
-      sessionCache: accessCaches.session,
-      passwordService: accessServices.password,
-      auditLog: accessInfrastructure.auditLog,
-    }),
-
-  setup2fa: () =>
-    new Setup2FAUseCase({
-      userRepository: accessRepositories.user,
-      twoFactorService: accessServices.twoFactor,
-    }),
-
-  confirm2faSetup: () =>
-    new Confirm2FASetupUseCase({
-      userRepository: accessRepositories.user,
-      twoFactorService: accessServices.twoFactor,
-      authCache: accessCaches.auth,
-      sessionService: accessServices.session,
-      sessionCache: accessCaches.session,
-      auditLog: accessInfrastructure.auditLog,
-    }),
-
-  verify2faLogin: () =>
-    new Verify2FALoginUseCase({
-      userRepository: accessRepositories.user,
-      sessionCache: accessCaches.session,
-      twoFactorService: accessServices.twoFactor,
-      pending2faLoginService: accessServices.pending2faLogin,
-      tokenService: accessServices.token,
-      sessionService: accessServices.session,
-      auditLog: accessInfrastructure.auditLog,
-      metrics: accessInfrastructure.metrics,
-    }),
-
-  disable2fa: () =>
-    new Disable2FAUseCase({
-      userRepository: accessRepositories.user,
-      twoFactorService: accessServices.twoFactor,
-      authCache: accessCaches.auth,
-      sessionService: accessServices.session,
       sessionCache: accessCaches.session,
       passwordService: accessServices.password,
       auditLog: accessInfrastructure.auditLog,

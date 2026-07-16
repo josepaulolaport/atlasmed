@@ -82,10 +82,6 @@ const EnvironmentSchema = Type.Object({
   }),
   TRUST_PROXY: Type.Boolean({ default: false }),
   REQUIRE_EMAIL_VERIFIED_FOR_LOGIN: Type.Boolean({ default: false }),
-  TWO_FACTOR_ENABLED: Type.Boolean({ default: false }),
-  TWO_FACTOR_ENCRYPTION_KEY: Type.Optional(
-    Type.String({ minLength: 64, maxLength: 64, pattern: "^[0-9a-fA-F]{64}$" }),
-  ),
   SIEM_EXPORT_ENABLED: Type.Boolean({ default: false }),
   SIEM_WEBHOOK_URL: OptionalString(),
   SIEM_WEBHOOK_SECRET: Type.Optional(Type.String({ minLength: 8 })),
@@ -183,7 +179,6 @@ function normalizeEnvironment(env: EnvInput) {
     SESSION_SECURITY_MODE: env.SESSION_SECURITY_MODE === "audit_only" ? "audit_only" : "strict",
     TRUST_PROXY: booleanFromEnv(env.TRUST_PROXY, false),
     REQUIRE_EMAIL_VERIFIED_FOR_LOGIN: booleanFromEnv(env.REQUIRE_EMAIL_VERIFIED_FOR_LOGIN, false),
-    TWO_FACTOR_ENABLED: booleanFromEnv(env.TWO_FACTOR_ENABLED, false),
     SIEM_EXPORT_ENABLED: booleanFromEnv(env.SIEM_EXPORT_ENABLED, false),
     AUDIT_LOG_RETENTION_DAYS: numberFromEnv(env.AUDIT_LOG_RETENTION_DAYS, 90),
     REGISTRY_SOURCE: env.REGISTRY_SOURCE === "mock" ? "mock" : "temporal",
@@ -279,10 +274,6 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
 
   if (env.MINIO_ROOT_PASSWORD && env.MINIO_ROOT_PASSWORD.length < 16) {
     issues.push("/MINIO_ROOT_PASSWORD: must be at least 16 characters");
-  }
-
-  if (env.TWO_FACTOR_ENABLED && !env.TWO_FACTOR_ENCRYPTION_KEY) {
-    issues.push("/TWO_FACTOR_ENCRYPTION_KEY: required when TWO_FACTOR_ENABLED=true");
   }
 
   if (env.CNES_FTP_MODE === "ftp" && !env.CNES_FTP_HOST) {

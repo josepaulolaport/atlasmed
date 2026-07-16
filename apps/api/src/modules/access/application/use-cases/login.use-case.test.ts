@@ -90,9 +90,6 @@ describe("LoginUseCase", () => {
       rateLimiterService: new RateLimiterService({ redis: mockRedis }),
       auditLog: mockAuditLog,
       metrics: createMockMetricsService(),
-      pending2faLoginService: {
-        store: mock(async () => "pending-token"),
-      } as any,
     });
   });
 

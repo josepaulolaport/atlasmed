@@ -8,19 +8,14 @@ export const ROUTE_SECURITY_MANIFEST: Record<string, RouteSecurityLevel> = {
   "infrastructure/health/health.route.ts": "public",
 
   "modules/access/infrastructure/routes/accept-invite.route.ts": "public",
-  "modules/access/infrastructure/routes/login.route.ts": "public",
-  "modules/access/infrastructure/routes/refresh-session.route.ts": "public",
   "modules/access/infrastructure/routes/request-password-reset.route.ts": "public",
   "modules/access/infrastructure/routes/reset-password.route.ts": "public",
-  "modules/access/infrastructure/routes/verify-2fa-login.route.ts": "public",
 
   "modules/access/infrastructure/routes/capabilities.route.ts": "auth",
   "modules/access/infrastructure/routes/change-password.route.ts": "auth",
-  "modules/access/infrastructure/routes/logout.route.ts": "auth",
-  "modules/access/infrastructure/routes/profile.route.ts": "auth",
-  "modules/access/infrastructure/routes/sessions.route.ts": "auth",
-  "modules/access/infrastructure/routes/two-factor.route.ts": "auth",
+  "modules/access/infrastructure/routes/user.route.ts": "auth",
   "modules/access/infrastructure/routes/verification.route.ts": "auth",
+  "modules/sessions/infrastructure/routes/sessions.route.ts": "auth",
 
   "modules/access/infrastructure/routes/invite-user.route.ts": "auth+permission",
   "modules/access/infrastructure/routes/list-invitations.route.ts": "auth+permission",

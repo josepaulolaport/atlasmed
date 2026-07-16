@@ -6,7 +6,10 @@ import { ResourceNotFoundError } from "../../../../shared/errors";
 
 const listSectorsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "CATALOG"))
+  // Sectors are an admin-managed taxonomy (distinct from products/providers,
+  // which MANAGER/REP can read for visit logging) — restrict to ADMIN via the
+  // "manage" action, which only the ADMIN role grants for CATALOG.
+  .use(requirePermission("manage", "CATALOG"))
   .get(
     "/sectors",
     async ({ query }) =>
@@ -27,7 +30,7 @@ const listSectorsRoute = new Elysia()
 
 const createSectorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("create", "CATALOG"))
+  .use(requirePermission("manage", "CATALOG"))
   .post(
     "/sectors",
     async ({ body }) => catalogUseCases.createSector().execute(body),
@@ -43,7 +46,7 @@ const createSectorRoute = new Elysia()
 
 const updateSectorRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "CATALOG"))
+  .use(requirePermission("manage", "CATALOG"))
   .patch(
     "/sectors/:id",
     async ({ params, body }) => {
