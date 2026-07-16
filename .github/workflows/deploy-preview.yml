@@ -15,11 +15,11 @@ on:
   workflow_dispatch:
     inputs:
       channel_id:
-        description: Nome do canal de preview
+        description: Preview channel name
         required: true
         type: string
       expires:
-        description: "Tempo de vida do canal (ex: 7d)"
+        description: "Channel lifetime (e.g. 7d)"
         required: false
         default: "7d"
         type: string
@@ -44,7 +44,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Resolver canal de preview
+      - name: Resolve preview channel
         id: preview
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -71,19 +71,19 @@ jobs:
           echo "channel_id=$channel_id" >> "$GITHUB_OUTPUT"
           echo "expires=$expires" >> "$GITHUB_OUTPUT"
 
-      - name: Configurar Dart
+      - name: Setup Dart
         uses: dart-lang/setup-dart@v1
 
-      - name: Instalar FVM
+      - name: Install FVM
         run: |
           dart pub global activate fvm
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
 
-      - name: Instalar Flutter via FVM
+      - name: Install Flutter via FVM
         run: fvm install
         working-directory: ./apps/mobile
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: fvm flutter pub get
         working-directory: ./apps/mobile
 
@@ -91,10 +91,10 @@ jobs:
         run: fvm flutter build web --release --dart-define-from-file=config.production.json
         working-directory: ./apps/mobile
 
-      - name: Instalar Firebase CLI
+      - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.23.0
 
-      - name: Deploy para Firebase Hosting (Preview)
+      - name: Deploy to Firebase Hosting (Preview)
         id: deploy
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
@@ -157,10 +157,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Instalar Firebase CLI
+      - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.23.0
 
-      - name: Deletar canal de preview
+      - name: Delete preview channel
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           CHANNEL_ID: pr-${{ github.event.pull_request.number }}

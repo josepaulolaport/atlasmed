@@ -1,4 +1,4 @@
-name: 🚀 Flutter Web — Produção
+name: 🚀 Flutter Web — Production
 
 on:
   push:
@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   test:
-    name: Testar
+    name: Test
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -25,27 +25,27 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Configurar Bun
+      - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.3.14'
 
-      - name: Configurar Dart
+      - name: Setup Dart
         uses: dart-lang/setup-dart@v1
 
-      - name: Instalar FVM
+      - name: Install FVM
         run: |
           dart pub global activate fvm
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
 
-      - name: Instalar Flutter via FVM
+      - name: Install Flutter via FVM
         run: fvm install
         working-directory: ./apps/mobile
 
-      - name: Instalar dependências do monorepo
+      - name: Install monorepo dependencies
         run: bun install --frozen-lockfile
 
-      - name: Restaurar cache do Turbo
+      - name: Restore Turbo cache
         uses: actions/cache@v5
         with:
           path: .turbo/cache
@@ -54,18 +54,18 @@ jobs:
             ${{ runner.os }}-turbo-${{ github.job }}-${{ hashFiles('bun.lock', 'turbo.json', 'package.json', 'apps/**/package.json', 'packages/**/package.json') }}-
             ${{ runner.os }}-turbo-${{ github.job }}-
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: fvm flutter pub get
         working-directory: ./apps/mobile
 
-      - name: Analisar código
+      - name: Analyze code
         run: bun run mobile:lint
 
-      - name: Executar testes
+      - name: Run tests
         run: bun run mobile:test
 
   deploy_web_production:
-    name: Deploy Web (Produção)
+    name: Deploy Web (Production)
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -77,19 +77,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Configurar Dart
+      - name: Setup Dart
         uses: dart-lang/setup-dart@v1
 
-      - name: Instalar FVM
+      - name: Install FVM
         run: |
           dart pub global activate fvm
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
 
-      - name: Instalar Flutter via FVM
+      - name: Install Flutter via FVM
         run: fvm install
         working-directory: ./apps/mobile
 
-      - name: Instalar dependências
+      - name: Install dependencies
         run: fvm flutter pub get
         working-directory: ./apps/mobile
 
@@ -97,10 +97,10 @@ jobs:
         run: fvm flutter build web --release --dart-define-from-file=config.production.json
         working-directory: ./apps/mobile
 
-      - name: Instalar Firebase CLI
+      - name: Install Firebase CLI
         run: npm install --global firebase-tools@15.23.0
 
-      - name: Deploy para Firebase Hosting (Produção)
+      - name: Deploy to Firebase Hosting (Production)
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
