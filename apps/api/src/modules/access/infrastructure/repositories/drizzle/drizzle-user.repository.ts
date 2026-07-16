@@ -248,30 +248,6 @@ export class DrizzleUserRepository implements UserRepository {
     });
   }
 
-  async enableTwoFactor(params: { userId: string; encryptedSecret: string }) {
-    await db
-      .update(users)
-      .set({
-        twoFactorEnabled: true,
-        twoFactorSecret: params.encryptedSecret,
-        tokenVersion: sql`${users.tokenVersion} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, params.userId));
-  }
-
-  async disableTwoFactor(userId: string) {
-    await db
-      .update(users)
-      .set({
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-        tokenVersion: sql`${users.tokenVersion} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId));
-  }
-
   /**
    * Increments tokenVersion to invalidate all outstanding JWTs.
    * Intended for privilege changes (e.g. role change) — call alongside session revocation and cache invalidation.

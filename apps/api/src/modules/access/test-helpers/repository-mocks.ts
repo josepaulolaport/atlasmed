@@ -113,8 +113,6 @@ export function createMockUserRepository(
     updateRole: mock(() => Promise.resolve()),
     changeRoleTransaction: mock(() => Promise.resolve()),
     changePasswordTransaction: mock(() => Promise.resolve({ user: {} } as any)),
-    enableTwoFactor: mock(() => Promise.resolve()),
-    disableTwoFactor: mock(() => Promise.resolve()),
     incrementTokenVersion: mock(() => Promise.resolve(1)),
     resetPasswordTransaction: mock(() =>
       Promise.resolve({ user: {}, passwordReset: {} } as any),

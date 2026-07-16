@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { hash } from "argon2";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
 import { access } from "./index";
+import { sessions as sessionsModule } from "../sessions";
 import { AppError } from "../../shared/errors";
 import { eq, inArray, isNull, and } from "drizzle-orm";
 import { roles, users, sessions, invitations, passwordResets } from "@atlasmed/database";
@@ -32,6 +33,7 @@ function createAuthIntegrationApp() {
         },
       };
     })
+    .use(sessionsModule)
     .use(access);
 }
 
@@ -122,7 +124,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
 
   async function login(identifier: string, password = TEST_PASSWORD) {
     const response = await app.handle(
-      new Request("http://localhost/access/login", {
+      new Request("http://localhost/session/", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ identifier, password }),
@@ -165,8 +167,8 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(resetResponse.status).toBe(200);
 
     const oldRefreshResponse = await app.handle(
-      new Request("http://localhost/access/refresh", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       })
@@ -175,7 +177,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(oldRefreshResponse.status).toBe(401);
 
     const loginResponse = await app.handle(
-      new Request("http://localhost/access/login", {
+      new Request("http://localhost/session/", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -198,8 +200,8 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(initialRefreshToken).toBeTruthy();
 
     const refreshResponse = await app.handle(
-      new Request("http://localhost/access/refresh", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken: initialRefreshToken }),
       })
@@ -224,8 +226,8 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(changeResponse.status).toBe(200);
 
     const oldRefreshResponse = await app.handle(
-      new Request("http://localhost/access/refresh", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken: initialRefreshToken }),
       })
@@ -241,8 +243,8 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(refreshToken).toBeTruthy();
 
     const firstRefresh = await app.handle(
-      new Request("http://localhost/access/refresh", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       })
@@ -266,8 +268,8 @@ describe("Access Auth Security HTTP Integration Tests", () => {
       .where(eq(sessions.id, activeSession!.id));
 
     const reuseResponse = await app.handle(
-      new Request("http://localhost/access/refresh", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       })
@@ -298,6 +300,8 @@ describe("Access Auth Security HTTP Integration Tests", () => {
         },
         body: JSON.stringify({
           email: "invited.user@example.com",
+          firstName: "Invited",
+          lastName: "User",
           roleId: userRoleId,
         }),
       })
@@ -338,7 +342,7 @@ describe("Access Auth Security HTTP Integration Tests", () => {
     expect(registerResponse.status).toBe(200);
 
     const loginResponse = await app.handle(
-      new Request("http://localhost/access/login", {
+      new Request("http://localhost/session/", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
