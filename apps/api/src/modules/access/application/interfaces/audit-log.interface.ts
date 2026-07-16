@@ -98,16 +98,9 @@ export interface IAuditLog {
     userId: string;
     phoneNumber: string;
   }): Promise<void>;
-  log2FAEnable(params: { userId: string; ipAddress?: string }): Promise<void>;
-  log2FADisable(params: { userId: string; ipAddress?: string }): Promise<void>;
   logSessionCreate(params: {
     userId: string;
     sessionId: string;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<void>;
-  log2FARequired(params: {
-    userId: string;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void>;

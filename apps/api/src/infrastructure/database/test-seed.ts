@@ -1,5 +1,14 @@
 import { createDatabase } from "@atlasmed/database";
-import { roles, users, sessions, invitations, passwordResets } from "@atlasmed/database";
+import {
+  roles,
+  users,
+  sessions,
+  invitations,
+  passwordResets,
+  territoryTypes,
+  visits,
+  territoryApprovalRequests,
+} from "@atlasmed/database";
 import { eq, like } from "drizzle-orm";
 import { hash } from "argon2";
 import { ROLE_PRIORITY_BY_NAME } from "../../modules/access/application/constants/role-priority.constants";
@@ -58,6 +67,44 @@ export async function seedTestDatabase() {
         });
     }
 
+    // Fixed IDs referenced literally by scope-integration test fixtures and by
+    // seed-demo-data.ts — must exist with these exact ids, not generated ones.
+    const territoryTypeDefs = [
+      {
+        id: "tt_country",
+        slug: "country",
+        name: "Country",
+        isCountryLevel: true,
+        assignableToManagers: true,
+      },
+      {
+        id: "tt_region",
+        slug: "region",
+        name: "Region",
+        assignsClinics: true,
+        assignableToUsers: true,
+        assignableToManagers: true,
+      },
+      {
+        id: "tt_patch",
+        slug: "patch",
+        name: "Patch",
+        assignsClinics: true,
+        assignableToUsers: true,
+        assignableToManagers: true,
+      },
+    ];
+
+    for (const territoryType of territoryTypeDefs) {
+      await db
+        .insert(territoryTypes)
+        .values(territoryType)
+        .onConflictDoUpdate({
+          target: territoryTypes.id,
+          set: { name: territoryType.name, updatedAt: new Date() },
+        });
+    }
+
     const userRole = await db.query.roles.findFirst({
       where: eq(roles.name, "REP"),
     });
@@ -112,6 +159,10 @@ export async function cleanupTestDatabase() {
     await db.delete(sessions);
     await db.delete(invitations);
     await db.delete(passwordResets);
+    // These reference users.id with onDelete: "restrict" — any row left behind by a
+    // test that threw before its own cleanup would otherwise block deleting test users.
+    await db.delete(visits);
+    await db.delete(territoryApprovalRequests);
     await db.delete(users).where(like(users.email, "%test%"));
   } finally {
     await db.$client.end();

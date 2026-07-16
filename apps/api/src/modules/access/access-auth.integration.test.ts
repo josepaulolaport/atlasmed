@@ -2,10 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from "bun:test";
 import { Elysia } from "elysia";
 import { hash } from "argon2";
 import { REFRESH_TOKEN_COOKIE_NAME } from "@atlasmed/access";
-import { access } from "./index";
+import { access, user as profileUser } from "./index";
+import { sessions } from "../sessions";
 import { AppError } from "../../shared/errors";
 import { eq } from "drizzle-orm";
-import { roles, users, sessions } from "@atlasmed/database";
+import { roles, users, sessions as sessionsTable } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -29,6 +30,8 @@ function createAuthIntegrationApp() {
         },
       };
     })
+    .use(sessions)
+    .use(profileUser)
     .use(access);
 }
 
@@ -76,13 +79,13 @@ describe("Access Auth HTTP Integration Tests", () => {
 
   afterAll(async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
-    await db.delete(sessions).where(eq(sessions.userId, userId));
+    await db.delete(sessionsTable).where(eq(sessionsTable.userId, userId));
     await db.delete(users).where(eq(users.id, userId)).catch(() => {});
   });
 
   async function loginViaHttp() {
     const response = await app.handle(
-      new Request("http://localhost/access/login", {
+      new Request("http://localhost/session/", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -123,7 +126,7 @@ describe("Access Auth HTTP Integration Tests", () => {
     const { accessToken } = await loginViaHttp();
 
     const response = await app.handle(
-      new Request("http://localhost/access/profile", {
+      new Request("http://localhost/user", {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
     );
@@ -137,7 +140,7 @@ describe("Access Auth HTTP Integration Tests", () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const response = await app.handle(
-      new Request("http://localhost/access/profile")
+      new Request("http://localhost/user")
     );
 
     expect(response.status).toBe(401);
@@ -150,8 +153,8 @@ describe("Access Auth HTTP Integration Tests", () => {
     expect(refreshToken).toBeTruthy();
 
     const response = await app.handle(
-      new Request("http://localhost/access/refresh", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ refreshToken }),
       })
@@ -168,8 +171,8 @@ describe("Access Auth HTTP Integration Tests", () => {
     const { accessToken } = await loginViaHttp();
 
     const logoutResponse = await app.handle(
-      new Request("http://localhost/access/logout", {
-        method: "POST",
+      new Request("http://localhost/session/", {
+        method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` },
       })
     );
@@ -177,7 +180,7 @@ describe("Access Auth HTTP Integration Tests", () => {
     expect(logoutResponse.status).toBe(200);
 
     const profileResponse = await app.handle(
-      new Request("http://localhost/access/profile", {
+      new Request("http://localhost/user", {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
     );
