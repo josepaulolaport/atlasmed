@@ -202,6 +202,68 @@ void main() {
     expect(state.isDirty, isTrue);
   });
 
+  test('add area tool unions a drawn shape into the target', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+
+    controller.setMode(EditorMode.addArea);
+    expect(controller.addDrawingPoint(_c(1, 0)), isTrue);
+    expect(controller.addDrawingPoint(_c(4, 0)), isTrue);
+    expect(controller.addDrawingPoint(_c(4, 2)), isTrue);
+    expect(controller.addDrawingPoint(_c(1, 2)), isTrue);
+
+    expect(controller.finishDrawing(), isTrue);
+    final state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.mode, EditorMode.select);
+    // Merged into a single, larger part rather than appended separately.
+    expect(state.working!.length, 1);
+    expect(state.isDirty, isTrue);
+  });
+
+  test('remove area tool cuts a hole when the drawn ring is interior', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+
+    controller.setMode(EditorMode.removeArea);
+    expect(controller.addDrawingPoint(_c(0.5, 0.5)), isTrue);
+    expect(controller.addDrawingPoint(_c(1.5, 0.5)), isTrue);
+    expect(controller.addDrawingPoint(_c(1.5, 1.5)), isTrue);
+    expect(controller.addDrawingPoint(_c(0.5, 1.5)), isTrue);
+
+    expect(controller.finishDrawing(), isTrue);
+    final state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.mode, EditorMode.select);
+    expect(state.working!.length, 1);
+    expect(state.working![0].length, 2); // exterior ring + hole
+    expect(state.isDirty, isTrue);
+  });
+
+  test('remove area tool refuses a cut that would eliminate the territory', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+
+    controller.setMode(EditorMode.removeArea);
+    expect(controller.addDrawingPoint(_c(-1, -1)), isTrue);
+    expect(controller.addDrawingPoint(_c(3, -1)), isTrue);
+    expect(controller.addDrawingPoint(_c(3, 3)), isTrue);
+    expect(controller.addDrawingPoint(_c(-1, 3)), isTrue);
+
+    expect(controller.finishDrawing(), isFalse);
+    final state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.mode, EditorMode.removeArea);
+    expect(state.working, [
+      [square],
+    ]);
+    expect(state.isDirty, isFalse);
+    expect(state.validation.isValid, isFalse);
+  });
+
   test('save persists the working geometry and clears the undo stack', () async {
     await loadController();
     final controller = container.read(

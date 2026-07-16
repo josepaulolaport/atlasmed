@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_ops.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territory_geometry_editor.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
@@ -197,13 +198,22 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
-  // ---- draw new area (stage 2) -------------------------------------------
+  // ---- draw new area / add area / remove area (stage 2 + 3) --------------
+  //
+  // All three tools share the same tap-to-place-points + auto-close
+  // interaction; they only differ in what happens to [state.working] once
+  // the ring is finished (see [finishDrawing]).
+
+  static bool _isDrawingMode(EditorMode mode) =>
+      mode == EditorMode.drawArea ||
+      mode == EditorMode.addArea ||
+      mode == EditorMode.removeArea;
 
   /// Adds a point to the in-progress ring. Rejects (returns `false`)
   /// points whose new segment would cross an existing one, so an invalid
   /// self-intersecting shape can never even be drawn in the first place.
   bool addDrawingPoint(MapCoordinate point) {
-    if (state.mode != EditorMode.drawArea) return false;
+    if (!_isDrawingMode(state.mode)) return false;
     final points = state.drawingPoints;
     if (points.length >= 2) {
       final last = points.last;
@@ -233,16 +243,38 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     state = state.copyWith(drawingPoints: const []);
   }
 
-  /// Commits the in-progress ring as a new disconnected polygon part and
-  /// selects it. Returns `false` (and leaves the drawing untouched) if the
-  /// shape isn't valid yet.
+  /// Commits the in-progress ring — as a new disconnected part (Draw), a
+  /// union into whatever it overlaps (Add area), or a subtraction from
+  /// whatever it overlaps (Remove area) — and selects the result. Returns
+  /// `false` (and leaves the drawing untouched) if the shape isn't valid
+  /// yet, or if a Remove area cut would eliminate the whole territory.
   bool finishDrawing() {
     final working = state.working;
     if (working == null || !state.canFinishDrawing) return false;
     if (GeometryMath.ringSelfIntersects(state.drawingPoints)) return false;
 
+    if (!_isDrawingMode(state.mode)) return false;
+    final next = switch (state.mode) {
+      EditorMode.drawArea =>
+        TerritoryGeometryEditor.appendPart(working, state.drawingPoints),
+      EditorMode.addArea => GeometryOps.union(working, state.drawingPoints),
+      EditorMode.removeArea =>
+        GeometryOps.difference(working, state.drawingPoints),
+      EditorMode.navigate || EditorMode.select => const <List<List<MapCoordinate>>>[],
+    };
+
+    if (next.isEmpty) {
+      state = state.copyWith(
+        drawingPoints: const [],
+        validation: const GeometryValidation(
+          tooFewPoints: true,
+          message: 'Essa remoção eliminaria todo o território.',
+        ),
+      );
+      return false;
+    }
+
     _pushUndo();
-    final next = TerritoryGeometryEditor.appendPart(working, state.drawingPoints);
     state = state.copyWith(
       working: next,
       drawingPoints: const [],
@@ -256,7 +288,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   // ---- undo / redo -------------------------------------------------------
 
   void undo() {
-    if (state.mode == EditorMode.drawArea && state.drawingPoints.isNotEmpty) {
+    if (_isDrawingMode(state.mode) && state.drawingPoints.isNotEmpty) {
       removeLastDrawingPoint();
       return;
     }

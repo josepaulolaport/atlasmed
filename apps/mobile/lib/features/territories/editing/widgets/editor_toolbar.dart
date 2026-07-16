@@ -59,6 +59,20 @@ class EditorToolbar extends StatelessWidget {
             selected: mode == EditorMode.drawArea,
             onTap: () => onModeChanged(EditorMode.drawArea),
           ),
+          const SizedBox(width: 4),
+          _ModeButton(
+            icon: Icons.add_circle_outline_rounded,
+            label: 'Adicionar',
+            selected: mode == EditorMode.addArea,
+            onTap: () => onModeChanged(EditorMode.addArea),
+          ),
+          const SizedBox(width: 4),
+          _ModeButton(
+            icon: Icons.remove_circle_outline_rounded,
+            label: 'Remover',
+            selected: mode == EditorMode.removeArea,
+            onTap: () => onModeChanged(EditorMode.removeArea),
+          ),
           Container(
             width: 1,
             height: 26,
@@ -96,6 +110,9 @@ class _ModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Labels only render for the selected tool — with five modes now
+    // sharing the bar, showing every label at once would overflow a
+    // typical phone width.
     return Material(
       color: selected ? const Color(0xFFEEF2FF) : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
@@ -103,7 +120,10 @@ class _ModeButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          padding: EdgeInsets.symmetric(
+            horizontal: selected ? 10 : 8,
+            vertical: 8,
+          ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -114,17 +134,17 @@ class _ModeButton extends StatelessWidget {
                     ? const Color(0xFF0A2F7F)
                     : const Color(0xFF6B7280),
               ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected
-                      ? const Color(0xFF0A2F7F)
-                      : const Color(0xFF6B7280),
+              if (selected) ...[
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0A2F7F),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

@@ -38,7 +38,20 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   static const _edgeSelectedColor = 0xFFEF4444;
   static const _moveHandleColor = 0xFF0A2F7F;
   static const _drawColor = 0xFFF59E0B;
+  static const _addColor = 0xFF10B981;
+  static const _removeColor = 0xFFEF4444;
   static const _snapThresholdPixels = 24.0;
+
+  static bool _isDrawingMode(EditorMode mode) =>
+      mode == EditorMode.drawArea ||
+      mode == EditorMode.addArea ||
+      mode == EditorMode.removeArea;
+
+  static int _drawingColorFor(EditorMode mode) => switch (mode) {
+    EditorMode.addArea => _addColor,
+    EditorMode.removeArea => _removeColor,
+    _ => _drawColor,
+  };
 
   MapboxMap? _mapboxMap;
   PolygonAnnotationManager? _fillManager;
@@ -316,7 +329,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     final previewManager = _drawPreviewManager;
     if (previewManager == null) return;
     await previewManager.deleteAll();
-    if (state.mode != EditorMode.drawArea || state.drawingPoints.length < 2) {
+    if (!_isDrawingMode(state.mode) || state.drawingPoints.length < 2) {
       return;
     }
     await previewManager.create(
@@ -324,7 +337,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         geometry: LineString.fromPoints(
           points: _ringToPoints(state.drawingPoints),
         ),
-        lineColor: _drawColor,
+        lineColor: _drawingColorFor(state.mode),
         lineWidth: 2.6,
         lineJoin: LineJoin.ROUND,
       ),
@@ -341,14 +354,15 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     _moveHandleAnnotationId = null;
     _moveHandlePartIndex = null;
 
-    if (state.mode == EditorMode.drawArea) {
+    if (_isDrawingMode(state.mode)) {
       if (state.drawingPoints.isEmpty) return;
+      final color = _drawingColorFor(state.mode);
       await handleManager.createMulti([
         for (var i = 0; i < state.drawingPoints.length; i++)
           CircleAnnotationOptions(
             geometry: _point(state.drawingPoints[i]),
             circleRadius: i == 0 ? 7 : 5,
-            circleColor: _drawColor,
+            circleColor: color,
             circleStrokeColor: _haloColor,
             circleStrokeWidth: 2,
           ),
@@ -454,7 +468,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       return;
     }
 
-    if (_state.mode == EditorMode.drawArea) {
+    if (_isDrawingMode(_state.mode)) {
       _handleDrawTap(_fromPoint(context.point));
       return;
     }
@@ -633,24 +647,36 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
             EditorValidationBanner(message: state.validation.message!),
           ],
           const Spacer(),
-          if (state.mode == EditorMode.drawArea) ...[
+          if (_isDrawingMode(state.mode)) ...[
             Center(
               child: _DrawAreaBar(
+                hint: switch (state.mode) {
+                  EditorMode.addArea => 'Desenhe a área a adicionar',
+                  EditorMode.removeArea => 'Desenhe a área a remover',
+                  _ => 'Toque no mapa para começar',
+                },
+                finishLabel: switch (state.mode) {
+                  EditorMode.addArea => 'Adicionar área',
+                  EditorMode.removeArea => 'Remover área',
+                  _ => 'Finalizar área',
+                },
+                color: Color(_drawingColorFor(state.mode)),
                 pointCount: state.drawingPoints.length,
                 canFinish: state.canFinishDrawing,
                 onFinish: () {
                   if (notifier.finishDrawing()) {
                     HapticFeedback.mediumImpact();
-                  } else {
-                    HapticFeedback.vibrate();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'O contorno fechado cruza sobre si mesmo.',
-                        ),
-                      ),
-                    );
+                    return;
                   }
+                  HapticFeedback.vibrate();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        _state.validation.message ??
+                            'O contorno fechado cruza sobre si mesmo.',
+                      ),
+                    ),
+                  );
                 },
               ),
             ),
@@ -783,11 +809,17 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 }
 
 class _DrawAreaBar extends StatelessWidget {
+  final String hint;
+  final String finishLabel;
+  final Color color;
   final int pointCount;
   final bool canFinish;
   final VoidCallback onFinish;
 
   const _DrawAreaBar({
+    required this.hint,
+    required this.finishLabel,
+    required this.color,
     required this.pointCount,
     required this.canFinish,
     required this.onFinish,
@@ -813,7 +845,7 @@ class _DrawAreaBar extends StatelessWidget {
         children: [
           Text(
             pointCount == 0
-                ? 'Toque no mapa para começar'
+                ? hint
                 : '$pointCount ponto${pointCount == 1 ? '' : 's'}',
             style: const TextStyle(
               fontSize: 12.5,
@@ -825,15 +857,18 @@ class _DrawAreaBar extends StatelessWidget {
           FilledButton(
             onPressed: canFinish ? onFinish : null,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFFF59E0B),
+              backgroundColor: color,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
-            child: const Text(
-              'Finalizar área',
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+            child: Text(
+              finishLabel,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 12.5,
+              ),
             ),
           ),
         ],
