@@ -63,7 +63,6 @@ export class TerritoryAssignmentPolicyService {
     const conflictingAssignments = await db
       .select({
         territoryId: userTerritoryAssignments.territoryId,
-        userId: userTerritoryAssignments.userId,
       })
       .from(userTerritoryAssignments)
       .innerJoin(users, eq(userTerritoryAssignments.userId, users.id))
@@ -75,17 +74,22 @@ export class TerritoryAssignmentPolicyService {
         )
       );
 
-    for (const assignment of conflictingAssignments) {
-      const overlaps = await this.deps.closureRepository.hasAncestorDescendantRelation(
-        assignment.territoryId,
-        params.territoryId
+    if (conflictingAssignments.length === 0) {
+      return;
+    }
+
+    // One batched closure check instead of one query per conflicting
+    // assignment — this used to be an N+1 (a query per other user's
+    // territory) on every single assignment call.
+    const overlaps = await this.deps.closureRepository.hasAnyAncestorDescendantRelation(
+      params.territoryId,
+      conflictingAssignments.map((assignment) => assignment.territoryId)
+    );
+    if (overlaps) {
+      throw new OperationNotAllowedError(
+        "assign_territory",
+        "Territory overlaps with an assignment held by another user in the same role group"
       );
-      if (overlaps) {
-        throw new OperationNotAllowedError(
-          "assign_territory",
-          "Territory overlaps with an assignment held by another user in the same role group"
-        );
-      }
     }
   }
 }

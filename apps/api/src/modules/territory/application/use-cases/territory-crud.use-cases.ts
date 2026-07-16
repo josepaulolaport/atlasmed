@@ -17,6 +17,7 @@ import {
   assertBoundaryProvidedForType,
 } from "../services/territory-boundary.application";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
+import { assertSinglePolygonForEditableTerritory } from "../utils/territory-boundary.utils";
 import { normalizeCountryCode } from "../constants/territory-geo.constants";
 import {
   legacyNodeTypeForTypeSlug,
@@ -187,6 +188,9 @@ export class TerritoryCrudUseCases {
     });
 
     const boundary = assertBoundaryProvidedForType(type.canHaveBoundary, input.boundary);
+    if (boundary) {
+      assertSinglePolygonForEditableTerritory(type, boundary, "create_territory");
+    }
 
     let resolvedParentId: string | null = null;
     if (isGroupingHierarchyType(type) && !type.isCountryLevel) {

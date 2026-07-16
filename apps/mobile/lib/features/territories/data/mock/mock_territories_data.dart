@@ -12,10 +12,13 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/territory_t
 // zones split into 3 rep patches (Norte/Centro/Sul), laid out around
 // São Paulo as irregular, hand-picked-looking blobs rather than perfect
 // rectangles — closer to how real district/territory boundaries read on
-// a map. One patch is deliberately a MultiPolygon (a detached exclave)
-// so multi-part territories get exercised too. Not real geometry; only
-// meant to exercise the viewing UI before the screen is wired to the
-// real territories API.
+// a map. One patch is deliberately a MultiPolygon (a detached exclave) —
+// rep patches/manager zones must be a single connected polygon going
+// forward, so this doubles as a fixture for the "pre-existing multi-part
+// boundary" case: opening it in the geometry editor should show it as
+// invalid (blocks save) until the parts are merged or one is deleted.
+// Not real geometry; only meant to exercise the viewing/editing UI before
+// the screen is wired to the real territories API.
 // ======================================================================
 
 const managerZoneType = TerritoryType(
@@ -217,7 +220,9 @@ List<Territory> _buildMockTerritories() {
       );
 
       // One patch is deliberately made of two disjoint parts (an exclave)
-      // to exercise multi-polygon rendering/label-anchoring.
+      // to exercise multi-polygon rendering/label-anchoring, and — since
+      // this is no longer an allowed shape for a rep patch — the editor's
+      // "must be a single connected polygon" validation banner.
       final isExclaveDemo = zoneSpec.idSuffix == 'onco-oeste' && i == 2;
       final boundary = isExclaveDemo
           ? TerritoryGeometry.multiPolygon([

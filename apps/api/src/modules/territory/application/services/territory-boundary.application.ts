@@ -9,7 +9,10 @@ import {
   isManagerZoneType,
   isRepPatchType,
 } from "../constants/territory-roles.constants";
-import { normalizeTerritoryBoundary } from "../utils/territory-boundary.utils";
+import {
+  assertSinglePolygonForEditableTerritory,
+  normalizeTerritoryBoundary,
+} from "../utils/territory-boundary.utils";
 import { OperationNotAllowedError } from "../../../../shared/errors";
 
 export type { GeoJsonGeometry };
@@ -51,6 +54,8 @@ export async function applyTerritoryBoundary(
   if (!type) {
     throw new OperationNotAllowedError("save_boundary", "Territory type not found");
   }
+
+  assertSinglePolygonForEditableTerritory(type, boundary, "save_boundary");
 
   await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
 

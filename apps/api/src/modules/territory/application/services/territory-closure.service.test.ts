@@ -105,6 +105,7 @@ describe("TerritoryClosureService", () => {
       findDescendantIds: mock(async () => []),
       findAncestorIds: mock(async () => []),
       hasAncestorDescendantRelation: mock(async () => false),
+      hasAnyAncestorDescendantRelation: mock(async () => false),
     };
 
     const { TerritoryClosureService } = await import("./territory-closure.service");

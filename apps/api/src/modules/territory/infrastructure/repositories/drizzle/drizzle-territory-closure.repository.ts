@@ -88,4 +88,39 @@ export class DrizzleTerritoryClosureRepository implements TerritoryClosureReposi
 
     return rows.length > 0;
   }
+
+  async hasAnyAncestorDescendantRelation(
+    territoryId: string,
+    otherTerritoryIds: string[]
+  ): Promise<boolean> {
+    const distinctOthers = [...new Set(otherTerritoryIds)];
+    if (distinctOthers.length === 0) {
+      return false;
+    }
+    // Same-territory "conflicts" (another user already holds this exact
+    // territory) are trivially true, same as the single-pair check, and
+    // don't need a query.
+    if (distinctOthers.includes(territoryId)) {
+      return true;
+    }
+
+    const rows = await db
+      .select({ ancestorId: territoryClosure.ancestorId })
+      .from(territoryClosure)
+      .where(
+        or(
+          and(
+            eq(territoryClosure.ancestorId, territoryId),
+            inArray(territoryClosure.descendantId, distinctOthers)
+          ),
+          and(
+            eq(territoryClosure.descendantId, territoryId),
+            inArray(territoryClosure.ancestorId, distinctOthers)
+          )
+        )
+      )
+      .limit(1);
+
+    return rows.length > 0;
+  }
 }

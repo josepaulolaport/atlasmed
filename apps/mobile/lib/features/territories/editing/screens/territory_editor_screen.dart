@@ -39,23 +39,24 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   static const _midpointFill = 0xFFFDE68A;
   static const _edgeSelectedColor = 0xFFEF4444;
   static const _moveHandleColor = 0xFF0A2F7F;
-  static const _drawColor = 0xFFF59E0B;
   static const _addColor = 0xFF10B981;
   static const _removeColor = 0xFFEF4444;
   static const _snapThresholdPixels = 24.0;
   static const _vertexSnapThresholdPixels = 16.0;
   static const _snapIndicatorColor = 0xFF7C3AED;
+  // Generous tap target for grabbing a handle — bigger than the 5-7px
+  // circle it's drawn as, since a fingertip is much wider than that.
+  static const _handleHitRadiusPixels = 28.0;
+  // A touch has to move at least this many logical pixels from where it
+  // landed on a handle before it's treated as a drag rather than a tap —
+  // see `_handlePointerMove`'s "arming" step for why.
+  static const _dragArmDistancePixels = 6.0;
 
   static bool _isDrawingMode(EditorMode mode) =>
-      mode == EditorMode.drawArea ||
-      mode == EditorMode.addArea ||
-      mode == EditorMode.removeArea;
+      mode == EditorMode.addArea || mode == EditorMode.removeArea;
 
-  static int _drawingColorFor(EditorMode mode) => switch (mode) {
-    EditorMode.addArea => _addColor,
-    EditorMode.removeArea => _removeColor,
-    _ => _drawColor,
-  };
+  static int _drawingColorFor(EditorMode mode) =>
+      mode == EditorMode.removeArea ? _removeColor : _addColor;
 
   MapboxMap? _mapboxMap;
   PolygonAnnotationManager? _fillManager;
@@ -76,20 +77,49 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   bool _mapUnavailable = false;
   bool _viewportApplied = false;
   bool _initialFitDone = false;
-  bool _dragging = false;
   bool _suppressNextMapTapDeselect = false;
 
+  // `_render` is fired off (unawaited) from `ref.listen` on every state
+  // change, so a burst of quick changes — e.g. placing several drawing
+  // points, or a point placement immediately followed by `finishDrawing`
+  // — can have multiple overlapping `_render` calls in flight at once,
+  // all mutating the same annotation managers. Without this, whichever
+  // call's `deleteAll`/`create` awaits happen to resolve *last* wins,
+  // which is not necessarily the most recent one — leaving stale
+  // annotations (e.g. a mid-drawing preview) on screen until some later
+  // render happens to land in the right order. Every `_render` call grabs
+  // its own token and checks it's still current before each manager
+  // mutation, so a call superseded by a newer one bails out instead of
+  // overwriting that newer call's result.
+  int _renderToken = 0;
+
+  // Tap-to-act (delete a vertex, toggle an edge's selection) stays on
+  // Mapbox's own native tap recognizer — these two maps are only used to
+  // turn a tapped annotation's id back into the ref it represents.
   final Map<String, VertexRef> _vertexByAnnotationId = {};
   final Map<String, EdgeRef> _midpointByAnnotationId = {};
-  String? _moveHandleAnnotationId;
-  int? _moveHandlePartIndex;
+
+  // Dragging (moving a vertex/edge/whole polygon) and placing a drawing
+  // point (Add/Remove area) are both driven entirely by hand here — see
+  // the "gestures: pointer handling" section below for why Mapbox's own
+  // annotation-drag and map-tap listeners aren't used for either.
+  _DragKind _dragKind = _DragKind.none;
+  VertexRef? _draggingVertex;
+  EdgeRef? _draggingEdge;
+  int? _draggingPartIndex;
   MapCoordinate? _lastDragPosition;
+  _PendingHandleHit? _pendingHit;
+  Offset? _pointerDownPosition;
+  // Only ever the *first* finger currently on the map is tracked above —
+  // a second, concurrent touch (e.g. the other finger of a pinch-zoom)
+  // is ignored outright rather than clobbering it.
+  int? _activePointerId;
 
   /// Magnetic snap targets for the vertex currently being dragged — screen
-  /// pixel positions are cached once at drag-begin (see
-  /// `_prepareSnapCandidates`) so each drag-changed frame only needs a
-  /// single `pixelForCoordinate` call (for the finger's own position),
-  /// not one per candidate.
+  /// pixel positions are cached once a drag arms (see
+  /// `_prepareSnapCandidates`) so each move only needs a single
+  /// `pixelForCoordinate` call (for the finger's own position), not one
+  /// per candidate.
   List<_SnapCandidate> _snapCandidates = const [];
   String? _snapIndicatorAnnotationId;
   int _dragSession = 0;
@@ -108,12 +138,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     ref.listen(provider, (previous, next) {
       if (next.loading || next.original == null) return;
-      if (previous == null ||
-          previous.mode != next.mode ||
-          previous.selectionAction != next.selectionAction) {
-        _applyGestureLock(next);
-      }
-      _render(next, includeHandles: !_dragging);
+      _render(next);
     });
 
     return PopScope(
@@ -133,7 +158,20 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
                 message: 'Não foi possível carregar o mapa agora.',
               )
             else if (state.original != null)
-              Positioned.fill(child: _buildMap(state)),
+              Positioned.fill(
+                // A plain `Listener` — it only observes pointer events
+                // (it never claims/consumes the gesture), so the map
+                // widget underneath still receives every touch normally.
+                // This is what drives dragging a handle by hand — see
+                // `_handlePointerDown`.
+                child: Listener(
+                  onPointerDown: _handlePointerDown,
+                  onPointerMove: _handlePointerMove,
+                  onPointerUp: _handlePointerUp,
+                  onPointerCancel: _handlePointerUp,
+                  child: _buildMap(state),
+                ),
+              ),
             if (state.loading) const _CenteredMessage(loading: true),
             if (state.loadError != null)
               _CenteredMessage(
@@ -194,17 +232,11 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
       _fillManager!.tapEvents(onTap: _handleFillTap);
       _handleManager!.tapEvents(onTap: _handleHandleTap);
-      _handleManager!.dragEvents(
-        onBegin: _handleDragBegin,
-        onChanged: _handleDragChanged,
-        onEnd: _handleDragEnd,
-      );
 
       _mapReady = true;
       final state = ref.read(
         territoryEditorControllerProvider(widget.territoryId),
       );
-      await _applyGestureLock(state);
       await _render(state);
       if (!_initialFitDone) {
         _initialFitDone = true;
@@ -212,32 +244,6 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       }
     } catch (_) {
       if (mounted) setState(() => _mapUnavailable = true);
-    }
-  }
-
-  /// Panning is enabled everywhere *except* while draggable vertex/
-  /// midpoint/move handles are actually on screen (Select mode with an
-  /// action chosen) — in practice the map's own pan gesture wins the race
-  /// against a handle's drag gesture when both are active on the same
-  /// touch, so a one-finger drag that should move a vertex ends up
-  /// panning the map instead. Everywhere else (Navigate, Select before
-  /// choosing an action, Draw/Add/Remove point placement) nothing
-  /// draggable is on screen, so panning is safe and lets the user
-  /// reposition the map mid-edit without it fighting for the same
-  /// gesture.
-  static bool _handlesDraggable(TerritoryEditorState state) =>
-      state.mode == EditorMode.select &&
-      state.selectionAction != SelectionAction.none;
-
-  Future<void> _applyGestureLock(TerritoryEditorState state) async {
-    final mapboxMap = _mapboxMap;
-    if (mapboxMap == null) return;
-    try {
-      await mapboxMap.gestures.updateSettings(
-        GesturesSettings(scrollEnabled: !_handlesDraggable(state)),
-      );
-    } catch (_) {
-      // Best-effort — editing still works even if this fails to apply.
     }
   }
 
@@ -269,10 +275,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
   // ---- rendering -----------------------------------------------------------
 
-  Future<void> _render(
-    TerritoryEditorState state, {
-    bool includeHandles = true,
-  }) async {
+  Future<void> _render(TerritoryEditorState state) async {
+    final token = ++_renderToken;
     final fillManager = _fillManager;
     final borderManager = _borderManager;
     final neighborFillManager = _neighborFillManager;
@@ -311,10 +315,15 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         }
       }
     }
+    if (token != _renderToken) return;
     await neighborFillManager.deleteAll();
+    if (token != _renderToken) return;
     await neighborBorderManager.deleteAll();
+    if (token != _renderToken) return;
     await neighborFillManager.createMulti(neighborFillOptions);
+    if (token != _renderToken) return;
     await neighborBorderManager.createMulti(neighborBorderOptions);
+    if (token != _renderToken) return;
 
     final fillOptions = <PolygonAnnotationOptions>[];
     final haloOptions = <PolylineAnnotationOptions>[];
@@ -383,19 +392,24 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
 
     await fillManager.deleteAll();
+    if (token != _renderToken) return;
     await borderManager.deleteAll();
+    if (token != _renderToken) return;
     await fillManager.createMulti(fillOptions);
+    if (token != _renderToken) return;
     await borderManager.createMulti([...haloOptions, ...borderOptions]);
+    if (token != _renderToken) return;
 
-    await _renderDrawPreview(state);
-
-    if (includeHandles) await _renderHandles(state);
+    await _renderDrawPreview(state, token);
+    if (token != _renderToken) return;
+    await _renderHandles(state, token);
   }
 
-  Future<void> _renderDrawPreview(TerritoryEditorState state) async {
+  Future<void> _renderDrawPreview(TerritoryEditorState state, int token) async {
     final previewManager = _drawPreviewManager;
     if (previewManager == null) return;
     await previewManager.deleteAll();
+    if (token != _renderToken) return;
     if (!_isDrawingMode(state.mode) || state.drawingPoints.length < 2) {
       return;
     }
@@ -411,15 +425,14 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     );
   }
 
-  Future<void> _renderHandles(TerritoryEditorState state) async {
+  Future<void> _renderHandles(TerritoryEditorState state, int token) async {
     final handleManager = _handleManager;
     if (handleManager == null) return;
 
     await handleManager.deleteAll();
+    if (token != _renderToken) return;
     _vertexByAnnotationId.clear();
     _midpointByAnnotationId.clear();
-    _moveHandleAnnotationId = null;
-    _moveHandlePartIndex = null;
 
     if (_isDrawingMode(state.mode)) {
       if (state.drawingPoints.isEmpty) return;
@@ -443,20 +456,19 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       return;
     }
 
+    if (token != _renderToken) return;
+
     if (state.selectionAction == SelectionAction.move) {
       final centroid = _averagePoint(working[partIndex].first);
-      final created = await handleManager.create(
+      await handleManager.create(
         CircleAnnotationOptions(
           geometry: _point(centroid),
           circleRadius: 13,
           circleColor: _moveHandleColor,
           circleStrokeColor: _haloColor,
           circleStrokeWidth: 2.5,
-          isDraggable: true,
         ),
       );
-      _moveHandleAnnotationId = created.id;
-      _moveHandlePartIndex = partIndex;
       return;
     }
 
@@ -479,7 +491,6 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           circleColor: _vertexFill,
           circleStrokeColor: _handleStroke,
           circleStrokeWidth: 2.5,
-          isDraggable: true,
         ),
       );
       vertexRefs.add(VertexRef(partIndex: partIndex, ringIndex: 0, pointIndex: i));
@@ -495,18 +506,19 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           circleColor: isEdgeSelected ? _edgeSelectedColor : _midpointFill,
           circleStrokeColor: _handleStroke,
           circleStrokeWidth: 1.5,
-          isDraggable: true,
         ),
       );
       midpointRefs.add(EdgeRef(partIndex: partIndex, ringIndex: 0, startIndex: i));
     }
 
     final createdVertices = await handleManager.createMulti(vertexOptions);
+    if (token != _renderToken) return;
     for (var i = 0; i < createdVertices.length; i++) {
       final annotation = createdVertices[i];
       if (annotation != null) _vertexByAnnotationId[annotation.id] = vertexRefs[i];
     }
     final createdMidpoints = await handleManager.createMulti(midpointOptions);
+    if (token != _renderToken) return;
     for (var i = 0; i < createdMidpoints.length; i++) {
       final annotation = createdMidpoints[i];
       if (annotation != null) {
@@ -537,14 +549,16 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     _controller.selectPart(partIndex);
   }
 
+  // Placing a drawing point is handled entirely from raw pointer events
+  // (see `_handlePointerUp`) rather than from this native tap listener —
+  // a tap landing on the target territory's own fill gets claimed by
+  // `_handleFillTap`'s annotation-click listener first, so it would
+  // never even reach here. That matters a lot for Add/Remove area: a
+  // Remove cut is almost always mostly *inside* the existing shape, so
+  // this listener alone would make it near-impossible to draw one.
   void _handleMapTap(MapContentGestureContext context) {
     if (_suppressNextMapTapDeselect) {
       _suppressNextMapTapDeselect = false;
-      return;
-    }
-
-    if (_isDrawingMode(_state.mode)) {
-      _handleDrawTap(_fromPoint(context.point));
       return;
     }
 
@@ -606,79 +620,237 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
   }
 
-  void _handleDragBegin(CircleAnnotation annotation) {
-    _dragging = true;
+  // ---- gestures: pointer handling ----------------------------------------
+  //
+  // Two things are driven entirely by hand here, from raw `Listener`
+  // pointer events, rather than through Mapbox's own tap/drag listeners:
+  //
+  // 1. Dragging a handle, instead of `CircleAnnotationManager.dragEvents`.
+  //    On iOS, an annotation only starts dragging after a deliberate
+  //    press-and-hold (mapbox/mapbox-maps-flutter#1003, "intentional"),
+  //    which always loses the race against the map's own pan gesture on
+  //    a normal quick drag — and there's no supported way to disable
+  //    *just* the map's pan *only* while a touch is actually on a
+  //    handle, short of doing the hit test ourselves anyway.
+  //
+  // 2. Placing an Add/Remove area drawing point, instead of the map's
+  //    generic tap listener (`_handleMapTap`). A tap landing on the
+  //    target territory's own fill gets claimed by `_handleFillTap`'s
+  //    annotation-click listener first and never reaches the generic
+  //    one — and a Remove cut in particular is almost always mostly
+  //    *inside* the existing shape, so relying on it would make Remove
+  //    near-unusable.
+  //
+  // Both convert the pointer's position to a map coordinate by hand and
+  // feed it to the same controller methods the native paths used to
+  // call. Neither "commits" on pointer-down, though: a handle drag would
+  // otherwise push an undo snapshot for a plain tap meant for
+  // `_handleHandleTap` (delete-vertex / select-edge), and a drawing tap
+  // would place a point even when the touch turns out to be a pan. Both
+  // are instead kept "pending" until released — armed as a drag only
+  // once the touch has moved past `_dragArmDistancePixels`; otherwise,
+  // on release, treated as the tap it was.
 
-    if (annotation.id == _moveHandleAnnotationId && _moveHandlePartIndex != null) {
-      _controller.beginPolygonMove(_moveHandlePartIndex!);
-      _lastDragPosition = _fromPoint(annotation.geometry);
+  Future<void> _handlePointerDown(PointerDownEvent event) async {
+    if (_activePointerId != null) return; // a different finger is already tracked
+    final state = _state;
+
+    if (_isDrawingMode(state.mode)) {
+      _activePointerId = event.pointer;
+      _pointerDownPosition = event.localPosition;
       return;
     }
 
-    final vertexRef = _vertexByAnnotationId[annotation.id];
-    if (vertexRef != null) {
-      _controller.beginVertexDrag(vertexRef);
-      _snapCandidates = const [];
-      final session = ++_dragSession;
-      unawaited(_prepareSnapCandidates(vertexRef, session));
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null || state.mode != EditorMode.select) return;
+    final working = state.working;
+    final partIndex = state.selectedPart;
+    if (working == null || partIndex == null || partIndex >= working.length) {
       return;
     }
 
-    final edgeRef = _midpointByAnnotationId[annotation.id];
-    if (edgeRef == null) return;
+    final hit = await _hitTestHandle(mapboxMap, state, working, partIndex, event.localPosition);
+    if (hit == null) return;
+    // The touch may already have ended (or a new one begun) by the time
+    // the hit test above resolves.
+    if (!mounted || _activePointerId != null || _dragKind != _DragKind.none) {
+      return;
+    }
+    _activePointerId = event.pointer;
+    _pendingHit = hit;
+    _pointerDownPosition = event.localPosition;
+  }
 
-    if (_state.selectedEdge == edgeRef) {
-      _controller.beginEdgeDrag(edgeRef);
-      _lastDragPosition = _fromPoint(annotation.geometry);
-    } else {
-      final promoted = _controller.beginMidpointDrag(
-        edgeRef,
-        _fromPoint(annotation.geometry),
-      );
-      if (promoted != null) {
-        _midpointByAnnotationId.remove(annotation.id);
-        _vertexByAnnotationId[annotation.id] = promoted;
-        _snapCandidates = const [];
-        final session = ++_dragSession;
-        unawaited(_prepareSnapCandidates(promoted, session));
+  Future<_PendingHandleHit?> _hitTestHandle(
+    MapboxMap mapboxMap,
+    TerritoryEditorState state,
+    GeometryParts working,
+    int partIndex,
+    Offset touch,
+  ) async {
+    if (state.selectionAction == SelectionAction.move) {
+      final centroid = _averagePoint(working[partIndex].first);
+      final pixels = await mapboxMap.pixelsForCoordinates([_point(centroid)]);
+      final pixel = pixels.isEmpty ? null : pixels.first;
+      if (pixel == null || _distSq(pixel, touch) > _handleHitRadiusPixels * _handleHitRadiusPixels) {
+        return null;
       }
+      return _PendingHandleHit.move(partIndex: partIndex, at: centroid);
+    }
+
+    if (state.selectionAction != SelectionAction.boundary) return null;
+
+    final ring = working[partIndex].first;
+    final n = ring.length;
+    if (n == 0) return null;
+    final midpoints = [
+      for (var i = 0; i < n; i++) GeometryMath.midpoint(ring[i], ring[(i + 1) % n]),
+    ];
+    final pixels = await mapboxMap.pixelsForCoordinates([
+      ...ring.map(_point),
+      ...midpoints.map(_point),
+    ]);
+
+    var bestDistSq = _handleHitRadiusPixels * _handleHitRadiusPixels;
+    int? bestVertex;
+    int? bestMidpoint;
+    for (var i = 0; i < n; i++) {
+      final pixel = pixels[i];
+      if (pixel == null) continue;
+      final d = _distSq(pixel, touch);
+      if (d <= bestDistSq) {
+        bestDistSq = d;
+        bestVertex = i;
+        bestMidpoint = null;
+      }
+    }
+    for (var i = 0; i < n; i++) {
+      final pixel = pixels[n + i];
+      if (pixel == null) continue;
+      final d = _distSq(pixel, touch);
+      if (d <= bestDistSq) {
+        bestDistSq = d;
+        bestMidpoint = i;
+        bestVertex = null;
+      }
+    }
+
+    if (bestVertex != null) {
+      return _PendingHandleHit.vertex(
+        VertexRef(partIndex: partIndex, ringIndex: 0, pointIndex: bestVertex),
+      );
+    }
+    if (bestMidpoint != null) {
+      final edgeRef = EdgeRef(partIndex: partIndex, ringIndex: 0, startIndex: bestMidpoint);
+      return state.selectedEdge == edgeRef
+          ? _PendingHandleHit.edge(edgeRef, at: midpoints[bestMidpoint])
+          : _PendingHandleHit.midpoint(edgeRef, at: midpoints[bestMidpoint]);
+    }
+    return null;
+  }
+
+  double _distSq(ScreenCoordinate pixel, Offset touch) {
+    final dx = pixel.x - touch.dx;
+    final dy = pixel.y - touch.dy;
+    return dx * dx + dy * dy;
+  }
+
+  Future<void> _handlePointerMove(PointerMoveEvent event) async {
+    if (event.pointer != _activePointerId) return;
+    // Drawing-mode taps aren't "armed" mid-move — see `_handlePointerUp`,
+    // which decides tap-vs-pan once the touch is released.
+    if (_pendingHit == null && _dragKind == _DragKind.none) return;
+
+    if (_dragKind == _DragKind.none) {
+      await _maybeArmPendingDrag(event.localPosition);
+      if (_dragKind == _DragKind.none) return;
+    }
+
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    MapCoordinate position;
+    try {
+      final point = await mapboxMap.coordinateForPixel(
+        ScreenCoordinate(x: event.localPosition.dx, y: event.localPosition.dy),
+      );
+      position = _fromPoint(point);
+    } catch (_) {
+      return;
+    }
+
+    switch (_dragKind) {
+      case _DragKind.vertex:
+        await _applyVertexDrag(_draggingVertex!, position);
+      case _DragKind.edge:
+        final last = _lastDragPosition;
+        if (last != null) {
+          _controller.updateEdgeDrag(
+            _draggingEdge!,
+            position.longitude - last.longitude,
+            position.latitude - last.latitude,
+          );
+        }
+        _lastDragPosition = position;
+      case _DragKind.move:
+        final last = _lastDragPosition;
+        if (last != null) {
+          _controller.updatePolygonMove(
+            _draggingPartIndex!,
+            position.longitude - last.longitude,
+            position.latitude - last.latitude,
+          );
+        }
+        _lastDragPosition = position;
+      case _DragKind.none:
+        break;
     }
   }
 
-  void _handleDragChanged(CircleAnnotation annotation) {
-    final position = _fromPoint(annotation.geometry);
-
-    if (annotation.id == _moveHandleAnnotationId && _moveHandlePartIndex != null) {
-      final last = _lastDragPosition;
-      if (last != null) {
-        _controller.updatePolygonMove(
-          _moveHandlePartIndex!,
-          position.longitude - last.longitude,
-          position.latitude - last.latitude,
-        );
-      }
-      _lastDragPosition = position;
+  /// Turns a pending hit into an active drag once the touch has moved far
+  /// enough from where it landed — see the section doc comment above for
+  /// why this can't just happen on pointer-down.
+  Future<void> _maybeArmPendingDrag(Offset current) async {
+    final pending = _pendingHit;
+    final downAt = _pointerDownPosition;
+    if (pending == null || downAt == null) return;
+    final dx = current.dx - downAt.dx;
+    final dy = current.dy - downAt.dy;
+    if (dx * dx + dy * dy < _dragArmDistancePixels * _dragArmDistancePixels) {
       return;
     }
 
-    final vertexRef = _vertexByAnnotationId[annotation.id];
-    if (vertexRef != null) {
-      unawaited(_applyVertexDrag(vertexRef, position));
-      return;
-    }
+    _pendingHit = null;
+    _pointerDownPosition = null;
 
-    final edgeRef = _midpointByAnnotationId[annotation.id];
-    if (edgeRef != null) {
-      final last = _lastDragPosition;
-      if (last != null) {
-        _controller.updateEdgeDrag(
-          edgeRef,
-          position.longitude - last.longitude,
-          position.latitude - last.latitude,
-        );
-      }
-      _lastDragPosition = position;
+    switch (pending.kind) {
+      case _PendingKind.vertex:
+        _controller.beginVertexDrag(pending.vertexRef!);
+        _armVertexDrag(pending.vertexRef!);
+      case _PendingKind.edgeSelected:
+        _controller.beginEdgeDrag(pending.edgeRef!);
+        _dragKind = _DragKind.edge;
+        _draggingEdge = pending.edgeRef;
+        _lastDragPosition = pending.at;
+        await _lockScroll(true);
+      case _PendingKind.midpointUnselected:
+        final promoted = _controller.beginMidpointDrag(pending.edgeRef!, pending.at!);
+        if (promoted != null) _armVertexDrag(promoted);
+      case _PendingKind.move:
+        _controller.beginPolygonMove(pending.partIndex!);
+        _dragKind = _DragKind.move;
+        _draggingPartIndex = pending.partIndex;
+        _lastDragPosition = pending.at;
+        await _lockScroll(true);
     }
+  }
+
+  void _armVertexDrag(VertexRef ref) {
+    _dragKind = _DragKind.vertex;
+    _draggingVertex = ref;
+    _snapCandidates = const [];
+    final session = ++_dragSession;
+    unawaited(_prepareSnapCandidates(ref, session));
+    unawaited(_lockScroll(true));
   }
 
   /// Feeds a vertex drag through the magnetic snap check before handing
@@ -703,22 +875,67 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
   }
 
-  void _handleDragEnd(CircleAnnotation annotation) {
-    if (annotation.id == _moveHandleAnnotationId) {
-      _controller.endPolygonMove();
-    } else if (_vertexByAnnotationId.containsKey(annotation.id)) {
-      _controller.endVertexDrag();
-    } else if (_midpointByAnnotationId.containsKey(annotation.id)) {
-      _controller.endEdgeDrag();
-      _controller.clearEdgeSelection();
+  Future<void> _handlePointerUp(PointerEvent event) async {
+    if (event.pointer != _activePointerId) return;
+    _activePointerId = null;
+
+    if (_isDrawingMode(_state.mode) && _dragKind == _DragKind.none) {
+      final downAt = _pointerDownPosition;
+      _pointerDownPosition = null;
+      // Moved too far to be a tap — it was a pan instead, leave it alone.
+      if (downAt == null ||
+          (event.localPosition - downAt).distanceSquared >
+              _dragArmDistancePixels * _dragArmDistancePixels) {
+        return;
+      }
+      final mapboxMap = _mapboxMap;
+      if (mapboxMap == null) return;
+      try {
+        final point = await mapboxMap.coordinateForPixel(
+          ScreenCoordinate(x: event.localPosition.dx, y: event.localPosition.dy),
+        );
+        await _handleDrawTap(_fromPoint(point));
+      } catch (_) {
+        // Best-effort — worst case this one tap is silently dropped.
+      }
+      return;
     }
 
+    // Never armed — this was just a tap; leave it for `_handleHandleTap`.
+    _pendingHit = null;
+    _pointerDownPosition = null;
+
+    switch (_dragKind) {
+      case _DragKind.vertex:
+        _controller.endVertexDrag();
+      case _DragKind.edge:
+        _controller.endEdgeDrag();
+        _controller.clearEdgeSelection();
+      case _DragKind.move:
+        _controller.endPolygonMove();
+      case _DragKind.none:
+        return;
+    }
+
+    _dragKind = _DragKind.none;
+    _draggingVertex = null;
+    _draggingEdge = null;
+    _draggingPartIndex = null;
     _lastDragPosition = null;
-    _dragging = false;
     _snapCandidates = const [];
     _dragSession++;
     unawaited(_updateSnapIndicator(null));
-    _render(_state);
+    await _lockScroll(false);
+  }
+
+  Future<void> _lockScroll(bool locked) async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return;
+    try {
+      await mapboxMap.gestures.updateSettings(GesturesSettings(scrollEnabled: !locked));
+    } catch (_) {
+      // Best-effort — worst case this one drag fights the map's own pan.
+    }
   }
 
   // ---- boundary snapping -------------------------------------------------
@@ -895,16 +1112,12 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           if (_isDrawingMode(state.mode)) ...[
             Center(
               child: _DrawAreaBar(
-                hint: switch (state.mode) {
-                  EditorMode.addArea => 'Desenhe a área a adicionar',
-                  EditorMode.removeArea => 'Desenhe a área a remover',
-                  _ => 'Toque no mapa para começar',
-                },
-                finishLabel: switch (state.mode) {
-                  EditorMode.addArea => 'Adicionar área',
-                  EditorMode.removeArea => 'Remover área',
-                  _ => 'Finalizar área',
-                },
+                hint: state.mode == EditorMode.removeArea
+                    ? 'Desenhe a área a remover'
+                    : 'Desenhe a área a adicionar',
+                finishLabel: state.mode == EditorMode.removeArea
+                    ? 'Remover área'
+                    : 'Adicionar área',
                 color: Color(_drawingColorFor(state.mode)),
                 pointCount: state.drawingPoints.length,
                 canFinish: state.canFinishDrawing,
@@ -1213,6 +1426,37 @@ class _CenteredMessage extends StatelessWidget {
 /// interpolating along its original lng/lat endpoints using the same `t`
 /// found by projecting onto the *pixel*-space segment, an excellent
 /// approximation at the small scale a single territory spans.
+/// What's actually being dragged right now — see the "gestures: pointer
+/// handling" section of `_TerritoryEditorScreenState` for why dragging is
+/// driven by hand instead of Mapbox's own annotation-drag events.
+enum _DragKind { none, vertex, edge, move }
+
+enum _PendingKind { vertex, edgeSelected, midpointUnselected, move }
+
+/// A touch landed on a handle, but hasn't moved far enough yet to count
+/// as a drag rather than a tap — see `_maybeArmPendingDrag`.
+class _PendingHandleHit {
+  final _PendingKind kind;
+  final VertexRef? vertexRef;
+  final EdgeRef? edgeRef;
+  final int? partIndex;
+  final MapCoordinate? at;
+
+  const _PendingHandleHit._(this.kind, {this.vertexRef, this.edgeRef, this.partIndex, this.at});
+
+  factory _PendingHandleHit.vertex(VertexRef ref) =>
+      _PendingHandleHit._(_PendingKind.vertex, vertexRef: ref);
+
+  factory _PendingHandleHit.edge(EdgeRef ref, {required MapCoordinate at}) =>
+      _PendingHandleHit._(_PendingKind.edgeSelected, edgeRef: ref, at: at);
+
+  factory _PendingHandleHit.midpoint(EdgeRef ref, {required MapCoordinate at}) =>
+      _PendingHandleHit._(_PendingKind.midpointUnselected, edgeRef: ref, at: at);
+
+  factory _PendingHandleHit.move({required int partIndex, required MapCoordinate at}) =>
+      _PendingHandleHit._(_PendingKind.move, partIndex: partIndex, at: at);
+}
+
 class _SnapCandidate {
   final MapCoordinate a;
   final MapCoordinate b;

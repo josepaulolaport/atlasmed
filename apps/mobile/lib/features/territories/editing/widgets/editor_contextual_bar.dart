@@ -1,8 +1,13 @@
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:flutter/material.dart';
 
-/// Shown once a polygon part is selected — offers the four choices the
-/// user can make about that part. Also fixed chrome, not map-tracked.
+/// Shown once a polygon part is selected — offers what the user can do
+/// with that part. "Excluir" (delete this part) only ever renders when
+/// [canDelete] is true: a valid, single-polygon territory has exactly one
+/// part, and deleting the only part isn't a meaningful action, so the
+/// button would otherwise sit permanently disabled. It only actually shows
+/// up while cleaning up a legacy territory that still has more than one
+/// disconnected part.
 class EditorContextualBar extends StatelessWidget {
   final SelectionAction action;
   final bool canDelete;
@@ -55,13 +60,14 @@ class EditorContextualBar extends StatelessWidget {
             selected: action == SelectionAction.move,
             onTap: onMoveArea,
           ),
-          _ActionChip(
-            icon: Icons.delete_outline_rounded,
-            label: 'Excluir',
-            selected: false,
-            color: const Color(0xFFDC2626),
-            onTap: canDelete ? onDeleteArea : null,
-          ),
+          if (canDelete)
+            _ActionChip(
+              icon: Icons.delete_outline_rounded,
+              label: 'Excluir',
+              selected: false,
+              color: const Color(0xFFDC2626),
+              onTap: onDeleteArea,
+            ),
         ],
       ),
     );

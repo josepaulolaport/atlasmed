@@ -208,9 +208,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   // the ring is finished (see [finishDrawing]).
 
   static bool _isDrawingMode(EditorMode mode) =>
-      mode == EditorMode.drawArea ||
-      mode == EditorMode.addArea ||
-      mode == EditorMode.removeArea;
+      mode == EditorMode.addArea || mode == EditorMode.removeArea;
 
   /// Adds a point to the in-progress ring. Rejects (returns `false`)
   /// points whose new segment would cross an existing one, so an invalid
@@ -246,11 +244,12 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     state = state.copyWith(drawingPoints: const []);
   }
 
-  /// Commits the in-progress ring — as a new disconnected part (Draw), a
-  /// union into whatever it overlaps (Add area), or a subtraction from
-  /// whatever it overlaps (Remove area) — and selects the result. Returns
-  /// `false` (and leaves the drawing untouched) if the shape isn't valid
-  /// yet, or if a Remove area cut would eliminate the whole territory.
+  /// Commits the in-progress ring — a union into whatever it overlaps
+  /// (Add area) or a subtraction from whatever it overlaps (Remove area)
+  /// — and selects the result. Returns `false` (and leaves the drawing
+  /// untouched) if the shape isn't valid yet, if it doesn't connect to the
+  /// existing boundary, or if a Remove area cut would eliminate the whole
+  /// territory or split it into two.
   bool finishDrawing() {
     final working = state.working;
     if (working == null || !state.canFinishDrawing) return false;
@@ -258,20 +257,16 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
 
     if (!_isDrawingMode(state.mode)) return false;
     final drawn = switch (state.mode) {
-      // Draw and Add area both use a union: if the new ring doesn't touch
-      // any existing part it's simply appended as a new disconnected
-      // part (the original "draw a new area" behavior), but if it does
-      // overlap one of the territory's own parts, it's merged into a
-      // single polygon instead of being left as two invalid, overlapping
-      // shapes.
-      EditorMode.drawArea ||
+      // A union: the new ring is merged into whichever existing part(s)
+      // it overlaps, instead of being left as a separate, invalid,
+      // overlapping shape.
       EditorMode.addArea => GeometryOps.union(working, state.drawingPoints),
       EditorMode.removeArea =>
         GeometryOps.difference(working, state.drawingPoints),
       EditorMode.navigate || EditorMode.select => const <List<List<MapCoordinate>>>[],
     };
-    // Draw/Add area can grow into a neighbor's territory — clip that back
-    // out immediately, same as every other commit (see
+    // Add area can grow into a neighbor's territory — clip that back out
+    // immediately, same as every other commit (see
     // `_resolveNeighborOverlaps`). Remove area only ever shrinks, so this
     // is a no-op for it.
     final next = _resolveNeighborOverlaps(drawn);
@@ -282,6 +277,24 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         validation: const GeometryValidation(
           tooFewPoints: true,
           message: 'Essa remoção eliminaria todo o território.',
+        ),
+      );
+      return false;
+    }
+
+    // A territory must always be a single connected polygon: an Add/Draw
+    // shape that doesn't touch the existing boundary — or a Remove cut
+    // that splits it in two — is rejected instead of being committed as
+    // a disconnected extra part. The drawing points are kept so the user
+    // can adjust the shape (e.g. drag a point to bridge the gap) instead
+    // of losing their work.
+    if (next.length > 1) {
+      state = state.copyWith(
+        validation: GeometryValidation(
+          hasMultipleAreas: true,
+          message: state.mode == EditorMode.removeArea
+              ? 'Essa remoção divide o território em partes separadas. Ajuste a área para não dividir o território.'
+              : 'Essa área precisa tocar o território existente para formar uma única área conectada.',
         ),
       );
       return false;
@@ -440,6 +453,18 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   }
 
   GeometryValidation _validate(GeometryParts working, List<Territory> neighbors) {
+    // A territory must always be a single connected polygon. This also
+    // catches the case where a drag ends up auto-clipped against a
+    // neighbor and splits the shape in two — not just the direct-draw
+    // paths already guarded in `finishDrawing`.
+    if (working.length > 1) {
+      return const GeometryValidation(
+        hasMultipleAreas: true,
+        message:
+            'Este território precisa ser uma única área conectada. Use '
+            '"Adicionar área" para unir as partes ou exclua uma delas antes de salvar.',
+      );
+    }
     for (final part in working) {
       for (final ring in part) {
         if (ring.length < 3) {

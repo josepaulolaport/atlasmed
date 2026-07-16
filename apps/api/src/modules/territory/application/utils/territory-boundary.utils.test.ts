@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { normalizeTerritoryBoundary } from "./territory-boundary.utils";
+import {
+  assertSinglePolygonForEditableTerritory,
+  normalizeTerritoryBoundary,
+} from "./territory-boundary.utils";
 import { OperationNotAllowedError } from "../../../../shared/errors";
 
 describe("normalizeTerritoryBoundary", () => {
@@ -55,5 +58,62 @@ describe("normalizeTerritoryBoundary", () => {
     expect(() =>
       normalizeTerritoryBoundary({ type: "Polygon", coordinates: [] })
     ).toThrow(OperationNotAllowedError);
+  });
+});
+
+describe("assertSinglePolygonForEditableTerritory", () => {
+  const singlePolygon = {
+    type: "Polygon" as const,
+    coordinates: [
+      [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 0],
+      ],
+    ],
+  };
+
+  const multiPolygon = {
+    type: "MultiPolygon" as const,
+    coordinates: [
+      singlePolygon.coordinates,
+      [
+        [
+          [2, 2],
+          [3, 2],
+          [3, 3],
+          [2, 2],
+        ],
+      ],
+    ],
+  };
+
+  const repPatchType = { slug: "patch", assignsClinics: true };
+  const managerZoneType = { slug: "manager_zone", assignsClinics: false };
+  const groupingType = { slug: "municipality", assignsClinics: false };
+
+  it("rejects a MultiPolygon for a rep patch", () => {
+    expect(() =>
+      assertSinglePolygonForEditableTerritory(repPatchType, multiPolygon, "save_boundary")
+    ).toThrow(OperationNotAllowedError);
+  });
+
+  it("rejects a MultiPolygon for a manager zone", () => {
+    expect(() =>
+      assertSinglePolygonForEditableTerritory(managerZoneType, multiPolygon, "save_boundary")
+    ).toThrow(OperationNotAllowedError);
+  });
+
+  it("allows a single Polygon for a rep patch", () => {
+    expect(() =>
+      assertSinglePolygonForEditableTerritory(repPatchType, singlePolygon, "save_boundary")
+    ).not.toThrow();
+  });
+
+  it("allows a MultiPolygon for grouping-hierarchy territories (e.g. ingested geography)", () => {
+    expect(() =>
+      assertSinglePolygonForEditableTerritory(groupingType, multiPolygon, "save_boundary")
+    ).not.toThrow();
   });
 });

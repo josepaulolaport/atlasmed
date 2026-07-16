@@ -7,18 +7,26 @@ class GeometryValidation {
   final bool tooFewPoints;
   final bool selfIntersects;
   final bool overlapsNeighbor;
+
+  /// A territory must always be a single connected polygon — this flags
+  /// the (now invalid) state of having more than one disconnected part,
+  /// whether from legacy/mock data or from a neighbor auto-clip splitting
+  /// a part in two.
+  final bool hasMultipleAreas;
   final String? message;
 
   const GeometryValidation({
     this.tooFewPoints = false,
     this.selfIntersects = false,
     this.overlapsNeighbor = false,
+    this.hasMultipleAreas = false,
     this.message,
   });
 
   static const valid = GeometryValidation();
 
-  bool get isValid => !tooFewPoints && !selfIntersects && !overlapsNeighbor;
+  bool get isValid =>
+      !tooFewPoints && !selfIntersects && !overlapsNeighbor && !hasMultipleAreas;
 }
 
 /// Sentinel used by [TerritoryEditorState.copyWith] so nullable fields can
@@ -48,9 +56,8 @@ class TerritoryEditorState {
   final SelectionAction selectionAction;
   final EdgeRef? selectedEdge;
 
-  /// Points placed so far by the draw-new-area tool — not yet committed
-  /// to [working]. Cleared whenever the mode changes away from
-  /// [EditorMode.drawArea].
+  /// Points placed so far by the Add/Remove area tool — not yet committed
+  /// to [working]. Cleared whenever the mode changes.
   final List<MapCoordinate> drawingPoints;
 
   final GeometryValidation validation;

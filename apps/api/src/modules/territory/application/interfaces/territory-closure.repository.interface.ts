@@ -13,4 +13,15 @@ export interface TerritoryClosureRepository {
     territoryIdA: string,
     territoryIdB: string
   ): Promise<boolean>;
+
+  /**
+   * Batched form of [hasAncestorDescendantRelation] — checks whether
+   * [territoryId] is an ancestor, descendant, or exact match of *any* of
+   * [otherTerritoryIds] in a single round trip, instead of one call per
+   * candidate.
+   */
+  hasAnyAncestorDescendantRelation(
+    territoryId: string,
+    otherTerritoryIds: string[]
+  ): Promise<boolean>;
 }

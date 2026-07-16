@@ -30,6 +30,16 @@
 	<string>O AtlasMed usa sua localização uma vez para mostrar clínicas próximas no seu território.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>O AtlasMed precisa acessar suas fotos para atualizar sua foto de perfil.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- Allows plain http:// to localhost / unqualified hosts so the app
+		     can hit a local backend during development (config.development.json
+		     points API_BASE_URL at http://localhost:3000/). Does not relax ATS
+		     for any other host — production (https://api.tdomains.uk) is
+		     unaffected. -->
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

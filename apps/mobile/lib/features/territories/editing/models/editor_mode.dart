@@ -1,8 +1,12 @@
-/// Top-level editing tool. `navigate` is the only mode where the map's own
-/// pan gesture stays enabled — every other mode hands single-finger drag
-/// gestures to editing handles instead (see `TerritoryEditorScreen`'s
-/// gesture-lock wiring).
-enum EditorMode { navigate, select, drawArea, addArea, removeArea }
+/// Top-level editing tool.
+///
+/// There's no separate "draw a new area" tool: a territory being edited
+/// here always already has a boundary (you can't open the editor on one
+/// that doesn't), and — since rep patches / manager zones must stay a
+/// single connected polygon — any shape drawn while editing has to touch
+/// and merge into that existing boundary anyway. That's exactly what
+/// [addArea] does, so it's the only "extend the shape" tool.
+enum EditorMode { navigate, select, addArea, removeArea }
 
 /// Once a polygon is selected (in [EditorMode.select]), the contextual bar
 /// lets the user choose what a drag on the map should do next.

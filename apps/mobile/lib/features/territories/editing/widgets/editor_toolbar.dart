@@ -36,7 +36,7 @@ class EditorToolbar extends StatelessWidget {
           ),
         ],
       ),
-      // Five modes + undo/redo can be wider than a narrow phone screen,
+      // Four modes + undo/redo can be wider than a narrow phone screen,
       // especially once the selected tool's label is showing. Scrolling
       // horizontally (instead of shrinking icons/labels further) keeps
       // every tool reachable without ever overflowing the row.
@@ -57,13 +57,6 @@ class EditorToolbar extends StatelessWidget {
               label: 'Selecionar',
               selected: mode == EditorMode.select,
               onTap: () => onModeChanged(EditorMode.select),
-            ),
-            const SizedBox(width: 4),
-            _ModeButton(
-              icon: Icons.edit_outlined,
-              label: 'Desenhar',
-              selected: mode == EditorMode.drawArea,
-              onTap: () => onModeChanged(EditorMode.drawArea),
             ),
             const SizedBox(width: 4),
             _ModeButton(
@@ -117,9 +110,9 @@ class _ModeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Labels only render for the selected tool — with five modes now
-    // sharing the bar, showing every label at once would overflow a
-    // typical phone width.
+    // Labels only render for the selected tool — with four modes sharing
+    // the bar, showing every label at once would overflow a typical
+    // phone width.
     return Material(
       color: selected ? const Color(0xFFEEF2FF) : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
