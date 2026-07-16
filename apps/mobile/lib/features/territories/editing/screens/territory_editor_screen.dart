@@ -60,6 +60,14 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   MapboxMap? _mapboxMap;
   PolygonAnnotationManager? _fillManager;
   PolylineAnnotationManager? _borderManager;
+  // Neighbor territories are purely decorative context — greyed-out shapes
+  // that exist only so overlap/snap can be seen while editing. They live
+  // on their own managers, with no tap/drag listeners attached at all, so
+  // they never intercept a tap meant for drawing or selecting the
+  // territory actually being edited (e.g. a Remove-area cut that has to
+  // pass over a neighbor's shape to close its loop).
+  PolygonAnnotationManager? _neighborFillManager;
+  PolylineAnnotationManager? _neighborBorderManager;
   PolylineAnnotationManager? _drawPreviewManager;
   CircleAnnotationManager? _handleManager;
   CircleAnnotationManager? _snapIndicatorManager;
@@ -100,7 +108,6 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     ref.listen(provider, (previous, next) {
       if (next.loading || next.original == null) return;
-      if (previous?.mode != next.mode) _applyGestureLock(next.mode);
       _render(next, includeHandles: !_dragging);
     });
 
@@ -161,6 +168,13 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     final mapboxMap = _mapboxMap;
     if (mapboxMap == null || !mounted) return;
     try {
+      // Created first so their map layers sit *below* the target's own
+      // fill/border layers created next — neighbors are background
+      // context, the target territory is always drawn on top of them.
+      _neighborFillManager = await mapboxMap.annotations
+          .createPolygonAnnotationManager();
+      _neighborBorderManager = await mapboxMap.annotations
+          .createPolylineAnnotationManager();
       _fillManager = await mapboxMap.annotations
           .createPolygonAnnotationManager();
       _borderManager = await mapboxMap.annotations
@@ -185,7 +199,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       final state = ref.read(
         territoryEditorControllerProvider(widget.territoryId),
       );
-      await _applyGestureLock(state.mode);
+      await _applyGestureLock();
       await _render(state);
       if (!_initialFitDone) {
         _initialFitDone = true;
@@ -196,15 +210,21 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
   }
 
-  Future<void> _applyGestureLock(EditorMode mode) async {
+  /// Panning stays enabled in every editor mode (not just Navigate): a
+  /// one-finger drag that starts exactly on a draggable handle is
+  /// captured by that handle's own annotation-drag gesture regardless, so
+  /// letting the map itself pan doesn't interfere with vertex/edge/
+  /// polygon editing — it just means the user isn't forced to switch back
+  /// to Navigate every time they want to reposition the map mid-edit.
+  Future<void> _applyGestureLock() async {
     final mapboxMap = _mapboxMap;
     if (mapboxMap == null) return;
     try {
       await mapboxMap.gestures.updateSettings(
-        GesturesSettings(scrollEnabled: mode == EditorMode.navigate),
+        GesturesSettings(scrollEnabled: true),
       );
     } catch (_) {
-      // Best-effort — editing still works even if the lock fails to apply.
+      // Best-effort — editing still works even if this fails to apply.
     }
   }
 
@@ -242,19 +262,24 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   }) async {
     final fillManager = _fillManager;
     final borderManager = _borderManager;
+    final neighborFillManager = _neighborFillManager;
+    final neighborBorderManager = _neighborBorderManager;
     final working = state.working;
-    if (fillManager == null || borderManager == null || !_mapReady || working == null) {
+    if (fillManager == null ||
+        borderManager == null ||
+        neighborFillManager == null ||
+        neighborBorderManager == null ||
+        !_mapReady ||
+        working == null) {
       return;
     }
 
-    final fillOptions = <PolygonAnnotationOptions>[];
-    final haloOptions = <PolylineAnnotationOptions>[];
-    final borderOptions = <PolylineAnnotationOptions>[];
-
+    final neighborFillOptions = <PolygonAnnotationOptions>[];
+    final neighborBorderOptions = <PolylineAnnotationOptions>[];
     for (final neighbor in state.neighbors) {
       for (final part in neighbor.boundary.coordinates) {
         if (part.isEmpty) continue;
-        fillOptions.add(
+        neighborFillOptions.add(
           PolygonAnnotationOptions(
             geometry: Polygon.fromPoints(points: part.map(_ringToPoints).toList()),
             fillColor: _neighborColor,
@@ -262,7 +287,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           ),
         );
         for (final ring in part) {
-          borderOptions.add(
+          neighborBorderOptions.add(
             PolylineAnnotationOptions(
               geometry: LineString.fromPoints(points: _ringToPoints(ring)),
               lineColor: _neighborColor,
@@ -273,6 +298,14 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         }
       }
     }
+    await neighborFillManager.deleteAll();
+    await neighborBorderManager.deleteAll();
+    await neighborFillManager.createMulti(neighborFillOptions);
+    await neighborBorderManager.createMulti(neighborBorderOptions);
+
+    final fillOptions = <PolygonAnnotationOptions>[];
+    final haloOptions = <PolylineAnnotationOptions>[];
+    final borderOptions = <PolylineAnnotationOptions>[];
 
     final kindColor = state.original?.kind == TerritoryKind.managerZone
         ? _managerZoneColor
@@ -316,7 +349,12 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       }
 
       final selectedEdge = state.selectedEdge;
-      if (selected && selectedEdge != null && selectedEdge.partIndex == partIndex) {
+      final openRings = working[partIndex];
+      if (selected &&
+          selectedEdge != null &&
+          selectedEdge.partIndex == partIndex &&
+          selectedEdge.ringIndex < openRings.length &&
+          selectedEdge.startIndex < openRings[selectedEdge.ringIndex].length) {
         final ring = working[partIndex][selectedEdge.ringIndex];
         final a = ring[selectedEdge.startIndex];
         final b = ring[(selectedEdge.startIndex + 1) % ring.length];
@@ -388,7 +426,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     final working = state.working;
     final partIndex = state.selectedPart;
-    if (working == null || partIndex == null) return;
+    if (working == null || partIndex == null || partIndex >= working.length) {
+      return;
+    }
 
     if (state.selectionAction == SelectionAction.move) {
       final centroid = _averagePoint(working[partIndex].first);
@@ -470,9 +510,15 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   TerritoryEditorState get _state =>
       ref.read(territoryEditorControllerProvider(widget.territoryId));
 
+  // Only the target territory's own parts are ever on `_fillManager` (see
+  // `_neighborFillManager`), so a tap here always belongs to the
+  // territory actually being edited.
   void _handleFillTap(PolygonAnnotation annotation) {
     if (_state.mode != EditorMode.select) return;
-    final partIndex = annotation.customData?['partIndex'] as int?;
+    // `customData` round-trips through a platform channel that encodes
+    // numbers as `double`, not `int` — cast through `num` rather than
+    // straight to `int` or this throws at runtime.
+    final partIndex = (annotation.customData?['partIndex'] as num?)?.toInt();
     if (partIndex == null) return;
     _suppressNextMapTapDeselect = true;
     _controller.selectPart(partIndex);
@@ -803,14 +849,21 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // `Wrap`, not `Row`: on most screens the back button sits at the
+          // start and the toolbar at the end of a single line, but if the
+          // toolbar (five modes + undo/redo) doesn't fit next to it on a
+          // narrow phone, it drops to its own line below instead of
+          // overflowing.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _RoundIconButton(
                 icon: Icons.arrow_back_rounded,
                 onTap: () => _requestExit(context, state),
               ),
-              const Spacer(),
               EditorToolbar(
                 mode: state.mode,
                 canUndo: state.canUndo,
@@ -1022,14 +1075,18 @@ class _DrawAreaBar extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            pointCount == 0
-                ? hint
-                : '$pointCount ponto${pointCount == 1 ? '' : 's'}',
-            style: const TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6B7280),
+          Flexible(
+            child: Text(
+              pointCount == 0
+                  ? hint
+                  : '$pointCount ponto${pointCount == 1 ? '' : 's'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7280),
+              ),
             ),
           ),
           const SizedBox(width: 10),

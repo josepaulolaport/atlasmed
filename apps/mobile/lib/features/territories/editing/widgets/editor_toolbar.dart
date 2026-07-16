@@ -36,60 +36,67 @@ class EditorToolbar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ModeButton(
-            icon: Icons.open_with_rounded,
-            label: 'Navegar',
-            selected: mode == EditorMode.navigate,
-            onTap: () => onModeChanged(EditorMode.navigate),
-          ),
-          const SizedBox(width: 4),
-          _ModeButton(
-            icon: Icons.touch_app_outlined,
-            label: 'Selecionar',
-            selected: mode == EditorMode.select,
-            onTap: () => onModeChanged(EditorMode.select),
-          ),
-          const SizedBox(width: 4),
-          _ModeButton(
-            icon: Icons.edit_outlined,
-            label: 'Desenhar',
-            selected: mode == EditorMode.drawArea,
-            onTap: () => onModeChanged(EditorMode.drawArea),
-          ),
-          const SizedBox(width: 4),
-          _ModeButton(
-            icon: Icons.add_circle_outline_rounded,
-            label: 'Adicionar',
-            selected: mode == EditorMode.addArea,
-            onTap: () => onModeChanged(EditorMode.addArea),
-          ),
-          const SizedBox(width: 4),
-          _ModeButton(
-            icon: Icons.remove_circle_outline_rounded,
-            label: 'Remover',
-            selected: mode == EditorMode.removeArea,
-            onTap: () => onModeChanged(EditorMode.removeArea),
-          ),
-          Container(
-            width: 1,
-            height: 26,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            color: const Color(0xFFE5E7EB),
-          ),
-          _IconButton(
-            icon: Icons.undo_rounded,
-            enabled: canUndo,
-            onTap: onUndo,
-          ),
-          _IconButton(
-            icon: Icons.redo_rounded,
-            enabled: canRedo,
-            onTap: onRedo,
-          ),
-        ],
+      // Five modes + undo/redo can be wider than a narrow phone screen,
+      // especially once the selected tool's label is showing. Scrolling
+      // horizontally (instead of shrinking icons/labels further) keeps
+      // every tool reachable without ever overflowing the row.
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ModeButton(
+              icon: Icons.open_with_rounded,
+              label: 'Navegar',
+              selected: mode == EditorMode.navigate,
+              onTap: () => onModeChanged(EditorMode.navigate),
+            ),
+            const SizedBox(width: 4),
+            _ModeButton(
+              icon: Icons.touch_app_outlined,
+              label: 'Selecionar',
+              selected: mode == EditorMode.select,
+              onTap: () => onModeChanged(EditorMode.select),
+            ),
+            const SizedBox(width: 4),
+            _ModeButton(
+              icon: Icons.edit_outlined,
+              label: 'Desenhar',
+              selected: mode == EditorMode.drawArea,
+              onTap: () => onModeChanged(EditorMode.drawArea),
+            ),
+            const SizedBox(width: 4),
+            _ModeButton(
+              icon: Icons.add_circle_outline_rounded,
+              label: 'Adicionar',
+              selected: mode == EditorMode.addArea,
+              onTap: () => onModeChanged(EditorMode.addArea),
+            ),
+            const SizedBox(width: 4),
+            _ModeButton(
+              icon: Icons.remove_circle_outline_rounded,
+              label: 'Remover',
+              selected: mode == EditorMode.removeArea,
+              onTap: () => onModeChanged(EditorMode.removeArea),
+            ),
+            Container(
+              width: 1,
+              height: 26,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              color: const Color(0xFFE5E7EB),
+            ),
+            _IconButton(
+              icon: Icons.undo_rounded,
+              enabled: canUndo,
+              onTap: onUndo,
+            ),
+            _IconButton(
+              icon: Icons.redo_rounded,
+              enabled: canRedo,
+              onTap: onRedo,
+            ),
+          ],
+        ),
       ),
     );
   }

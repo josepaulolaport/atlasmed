@@ -185,7 +185,10 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   void deleteSelectedPart() {
     final working = state.working;
     final partIndex = state.selectedPart;
-    if (working == null || partIndex == null || !state.canDeleteSelectedPart) {
+    if (working == null ||
+        partIndex == null ||
+        partIndex >= working.length ||
+        !state.canDeleteSelectedPart) {
       return;
     }
     _pushUndo();
@@ -255,8 +258,13 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
 
     if (!_isDrawingMode(state.mode)) return false;
     final drawn = switch (state.mode) {
-      EditorMode.drawArea =>
-        TerritoryGeometryEditor.appendPart(working, state.drawingPoints),
+      // Draw and Add area both use a union: if the new ring doesn't touch
+      // any existing part it's simply appended as a new disconnected
+      // part (the original "draw a new area" behavior), but if it does
+      // overlap one of the territory's own parts, it's merged into a
+      // single polygon instead of being left as two invalid, overlapping
+      // shapes.
+      EditorMode.drawArea ||
       EditorMode.addArea => GeometryOps.union(working, state.drawingPoints),
       EditorMode.removeArea =>
         GeometryOps.difference(working, state.drawingPoints),
@@ -387,7 +395,26 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   void _resolveNeighborOverlapsNow() {
     final working = state.working;
     if (working == null) return;
-    _applyWorking(_resolveNeighborOverlaps(working));
+    final resolved = _resolveNeighborOverlaps(working);
+    // `_resolveNeighborOverlaps` returns the very same list instance when
+    // nothing needed clipping — the common case — so this is a cheap way
+    // to tell whether the part count/order could have shifted.
+    if (identical(resolved, working)) {
+      _applyWorking(resolved);
+      return;
+    }
+    // Clipping against a neighbor can split a part in two, delete one
+    // entirely, or reorder the list — any of which can leave
+    // `selectedPart`/`selectedEdge` pointing at the wrong part (or out of
+    // range). Drop the selection rather than risk acting on stale state;
+    // the user just re-taps the shape if they want to keep editing it.
+    state = state.copyWith(
+      working: resolved,
+      validation: _validate(resolved, state.neighbors),
+      selectedPart: null,
+      selectedEdge: null,
+      selectionAction: SelectionAction.none,
+    );
   }
 
   /// Stage 3's upgrade from "flag-only" to "auto-resolved": wherever

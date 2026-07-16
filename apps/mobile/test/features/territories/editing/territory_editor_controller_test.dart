@@ -195,6 +195,29 @@ void main() {
     },
   );
 
+  test(
+    'drops a stale selection when auto-clip-to-neighbor reshapes the '
+    'working geometry, instead of leaving it pointing at the wrong part',
+    () async {
+      await loadController();
+      final controller = container.read(
+        territoryEditorControllerProvider('target').notifier,
+      );
+      controller.setMode(EditorMode.select);
+      controller.selectPart(0);
+      controller.chooseSelectionAction(SelectionAction.boundary);
+
+      const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 2);
+      controller.beginVertexDrag(vertexRef);
+      controller.updateVertexDrag(vertexRef, _c(11, 11));
+      controller.endVertexDrag(); // auto-clips against the neighbor
+
+      final state = container.read(territoryEditorControllerProvider('target'));
+      expect(state.selectedPart, isNull);
+      expect(state.selectionAction, SelectionAction.none);
+    },
+  );
+
   test('draw tool rejects a self-crossing point and commits a valid shape', () async {
     await loadController();
     final controller = container.read(
@@ -217,6 +240,31 @@ void main() {
     expect(state.selectedPart, 1);
     expect(state.isDirty, isTrue);
   });
+
+  test(
+    'draw tool merges into the target\'s own part instead of leaving an '
+    'invalid overlap, when the new shape intersects it',
+    () async {
+      await loadController();
+      final controller = container.read(
+        territoryEditorControllerProvider('target').notifier,
+      );
+
+      controller.setMode(EditorMode.drawArea);
+      // Overlaps the target square ((0,0)-(2,2)) rather than sitting
+      // fully outside it.
+      expect(controller.addDrawingPoint(_c(1, 0)), isTrue);
+      expect(controller.addDrawingPoint(_c(4, 0)), isTrue);
+      expect(controller.addDrawingPoint(_c(4, 2)), isTrue);
+      expect(controller.addDrawingPoint(_c(1, 2)), isTrue);
+
+      expect(controller.finishDrawing(), isTrue);
+      final state = container.read(territoryEditorControllerProvider('target'));
+      // Merged into one polygon — not left as two overlapping parts.
+      expect(state.working!.length, 1);
+      expect(state.validation.isValid, isTrue);
+    },
+  );
 
   test('add area tool unions a drawn shape into the target', () async {
     await loadController();

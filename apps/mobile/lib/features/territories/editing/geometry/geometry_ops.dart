@@ -1,4 +1,5 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
 import 'package:clipper2/clipper2.dart';
 
@@ -15,9 +16,10 @@ class GeometryOps {
   static const double _scale = 1e7;
 
   /// `evenOdd` is used everywhere in this adapter on purpose: it decides
-  /// inside/outside purely by a ray-crossing count, so a nested ring
-  /// behaves like a hole no matter which way it winds — this editor never
-  /// has to track or normalize ring orientation.
+  /// inside/outside purely by a ray-crossing count, so which way an
+  /// *input* ring winds never changes how the boolean op itself resolves.
+  /// clipper2's *output* winding is another matter — see
+  /// [_normalizeExteriorWinding] / [_normalizeHoleWinding] below.
   static const FillRule _fillRule = FillRule.evenOdd;
 
   static Path64 toClipperPath(List<MapCoordinate> ring) {
@@ -147,14 +149,33 @@ class GeometryOps {
   ) {
     final polygon = node.polygon;
     if (polygon == null) return;
-    final rings = [fromClipperPath(polygon)];
+    final rings = [_normalizeExteriorWinding(fromClipperPath(polygon))];
     for (final hole in node.children) {
       final holePolygon = hole.polygon;
-      if (holePolygon != null) rings.add(fromClipperPath(holePolygon));
+      if (holePolygon != null) {
+        rings.add(_normalizeHoleWinding(fromClipperPath(holePolygon)));
+      }
       for (final island in hole.children) {
         _collectPart(island, parts);
       }
     }
     parts.add(rings);
   }
+
+  /// clipper2 was built assuming a y-axis-down display convention; fed
+  /// (longitude, latitude) directly, its "positive"/outer orientation
+  /// comes out flipped relative to GeoJSON's y-up (north-up) convention.
+  /// The boolean op itself doesn't care (see [_fillRule]) but Mapbox's
+  /// polygon renderer does — it only paints a nested ring as a hole
+  /// (rather than as more filled area) when the exterior is
+  /// counter-clockwise and holes are clockwise. Force that here so every
+  /// hole created by Add/Remove area or auto-clip-to-neighbor actually
+  /// renders as a hole instead of silently looking like nothing changed.
+  static List<MapCoordinate> _normalizeExteriorWinding(
+    List<MapCoordinate> ring,
+  ) => GeometryMath.isClockwise(ring) ? ring.reversed.toList() : ring;
+
+  static List<MapCoordinate> _normalizeHoleWinding(
+    List<MapCoordinate> ring,
+  ) => GeometryMath.isClockwise(ring) ? ring : ring.reversed.toList();
 }

@@ -84,7 +84,10 @@ class TerritoryEditorState {
   bool get canUndo => undoStack.isNotEmpty;
   bool get canRedo => redoStack.isNotEmpty;
   bool get canDeleteSelectedPart =>
-      working != null && working!.length > 1 && selectedPart != null;
+      working != null &&
+      working!.length > 1 &&
+      selectedPart != null &&
+      selectedPart! < working!.length;
   bool get canFinishDrawing => drawingPoints.length >= 3;
 
   TerritoryEditorState copyWith({

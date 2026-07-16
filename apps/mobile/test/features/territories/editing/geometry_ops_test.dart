@@ -118,6 +118,22 @@ void main() {
       expect(_covered(result.first, _c(8, 8)), isTrue);
     });
 
+    test(
+      'normalizes winding so Mapbox renders the cut as an actual hole '
+      '(exterior CCW, hole CW — GeoJSON convention)',
+      () {
+        final parts = [
+          [_square(0, 0, 10, 10)],
+        ];
+        final result = GeometryOps.difference(parts, _square(3, 3, 6, 6));
+
+        final exterior = result.first.first;
+        final hole = result.first[1];
+        expect(GeometryMath.isClockwise(exterior), isFalse);
+        expect(GeometryMath.isClockwise(hole), isTrue);
+      },
+    );
+
     test('splits a part into two when the cut crosses end-to-end', () {
       final parts = [
         [_square(0, 0, 10, 10)],

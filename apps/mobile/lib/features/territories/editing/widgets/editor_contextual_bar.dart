@@ -34,26 +34,30 @@ class EditorContextualBar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      // `Wrap` instead of `Row`: keeps the three chips on one centered
+      // line normally, but lets them fall onto a second line instead of
+      // overflowing on narrow screens or larger accessibility text sizes.
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 4,
+        runSpacing: 4,
         children: [
           _ActionChip(
             icon: Icons.gesture_rounded,
-            label: 'Editar contorno',
+            label: 'Editar',
             selected: action == SelectionAction.boundary,
             onTap: onEditBoundary,
           ),
-          const SizedBox(width: 4),
           _ActionChip(
             icon: Icons.open_with_rounded,
-            label: 'Mover área',
+            label: 'Mover',
             selected: action == SelectionAction.move,
             onTap: onMoveArea,
           ),
-          const SizedBox(width: 4),
           _ActionChip(
             icon: Icons.delete_outline_rounded,
-            label: 'Excluir área',
+            label: 'Excluir',
             selected: false,
             color: const Color(0xFFDC2626),
             onTap: canDelete ? onDeleteArea : null,
