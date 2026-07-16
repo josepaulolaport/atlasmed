@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
@@ -133,8 +132,8 @@ class _ClinicDetailContent extends StatelessWidget {
           _SectionHeader(title: 'Clínicas próximas'),
           _NearbyClinics(items: detail.nearbyClinics),
         ],
-        _SectionHeader(title: 'Histórico de visitas'),
-        _ClinicVisits(facilityId: detail.id),
+        _SectionHeader(title: 'Histórico de interações'),
+        _ClinicInteractions(facilityId: detail.id),
         if (detail.clinicDoctors.isNotEmpty) ...[
           _SectionHeader(title: 'Médicos'),
           _ClinicDoctors(doctors: detail.clinicDoctors),
@@ -459,19 +458,25 @@ class _QuickActions extends ConsumerWidget {
             onTap: () {},
           ),
           _ActionButton(
-            icon: Icons.calendar_month_rounded,
-            label: 'Visita',
+            icon: Icons.forum_rounded,
+            label: 'Interação',
             onTap: () async {
+              final draft = await _showInteractionForm(context);
+              if (draft == null || draft.summary.trim().isEmpty) return;
+
               try {
                 final repo = ref.read(
-                  clinicVisitsRepositoryProvider(detail.id),
+                  clinicInteractionsRepositoryProvider(detail.id),
                 );
-                await repo.createVisit();
-                ref.invalidate(clinicVisitsProvider(detail.id));
+                await repo.createInteraction(
+                  type: draft.type,
+                  summary: draft.summary.trim(),
+                );
+                ref.invalidate(clinicInteractionsProvider(detail.id));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Visita registrada com sucesso'),
+                      content: Text('Interação registrada com sucesso'),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -480,7 +485,7 @@ class _QuickActions extends ConsumerWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Erro ao registrar visita'),
+                      content: Text('Erro ao registrar interação'),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -497,6 +502,67 @@ class _QuickActions extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _InteractionDraft {
+  const _InteractionDraft({required this.type, required this.summary});
+
+  final InteractionType type;
+  final String summary;
+}
+
+Future<_InteractionDraft?> _showInteractionForm(BuildContext context) {
+  final controller = TextEditingController();
+  var type = InteractionType.followup;
+  return showDialog<_InteractionDraft>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text('Registrar interação'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<InteractionType>(
+              initialValue: type,
+              decoration: const InputDecoration(labelText: 'Tipo'),
+              items: InteractionType.values
+                  .map(
+                    (value) => DropdownMenuItem(
+                      value: value,
+                      child: Text(value.label),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => type = value!),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Resumo',
+                hintText: 'Descreva a interação',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).pop(_InteractionDraft(type: type, summary: controller.text)),
+            child: const Text('Registrar'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _ActionButton extends StatelessWidget {
@@ -1222,27 +1288,30 @@ class _NearbyClinics extends StatelessWidget {
   }
 }
 
-// ===============================================================// 12. ClinicVisits — visit history with filter pills
+// ===============================================================// 12. Interactions — interaction history with filter pills
 // ===============================================================
-class _ClinicVisits extends ConsumerStatefulWidget {
+class _ClinicInteractions extends ConsumerStatefulWidget {
   final String facilityId;
-  const _ClinicVisits({required this.facilityId});
+  const _ClinicInteractions({required this.facilityId});
 
   @override
-  ConsumerState<_ClinicVisits> createState() => _ClinicVisitsState();
+  ConsumerState<_ClinicInteractions> createState() =>
+      _ClinicInteractionsState();
 }
 
-class _ClinicVisitsState extends ConsumerState<_ClinicVisits> {
+class _ClinicInteractionsState extends ConsumerState<_ClinicInteractions> {
   String _filter = 'todas';
 
   @override
   Widget build(BuildContext context) {
-    final visitsAsync = ref.watch(clinicVisitsProvider(widget.facilityId));
-    final isLoading = visitsAsync.isLoading;
-    final visits = visitsAsync.valueOrNull ?? const <ClinicVisit>[];
+    final interactionsAsync = ref.watch(
+      clinicInteractionsProvider(widget.facilityId),
+    );
+    final isLoading = interactionsAsync.isLoading;
+    final interactions = interactionsAsync.valueOrNull ?? const <Interaction>[];
     final filtered = _filter == 'todas'
-        ? visits
-        : visits.where((v) => v.type.name == _filter).toList();
+        ? interactions
+        : interactions.where((v) => v.type.name == _filter).toList();
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -1274,24 +1343,17 @@ class _ClinicVisitsState extends ConsumerState<_ClinicVisits> {
                 ),
                 const SizedBox(width: 8),
                 _FilterPill(
-                  label: 'Visitas',
-                  value: 'visit',
-                  selected: _filter == 'visit',
-                  onTap: () => setState(() => _filter = 'visit'),
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: 'Entregas',
-                  value: 'order',
-                  selected: _filter == 'order',
-                  onTap: () => setState(() => _filter = 'order'),
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
                   label: 'Retornos',
                   value: 'followup',
                   selected: _filter == 'followup',
                   onTap: () => setState(() => _filter = 'followup'),
+                ),
+                const SizedBox(width: 8),
+                _FilterPill(
+                  label: 'Apresentações',
+                  value: 'presentation',
+                  selected: _filter == 'presentation',
+                  onTap: () => setState(() => _filter = 'presentation'),
                 ),
               ],
             ),
@@ -1314,13 +1376,13 @@ class _ClinicVisitsState extends ConsumerState<_ClinicVisits> {
               padding: EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Text(
-                  'Nenhum registro encontrado',
+                  'Nenhuma interação encontrada',
                   style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
                 ),
               ),
             )
           else
-            ...filtered.map((v) => _VisitItem(visit: v)),
+            ...filtered.map((v) => _InteractionItem(interaction: v)),
         ],
       ),
     );
@@ -1362,17 +1424,13 @@ class _FilterPill extends StatelessWidget {
   }
 }
 
-class _VisitItem extends StatelessWidget {
-  final ClinicVisit visit;
-  const _VisitItem({required this.visit});
+class _InteractionItem extends StatelessWidget {
+  final Interaction interaction;
+  const _InteractionItem({required this.interaction});
 
   @override
   Widget build(BuildContext context) {
-    final color = visit.type == VisitType.visit
-        ? const Color(0xFF1e40af)
-        : visit.type == VisitType.order
-        ? const Color(0xFF16a373)
-        : visit.type == VisitType.followup
+    final color = interaction.type == InteractionType.followup
         ? const Color(0xFFc6861b)
         : const Color(0xFF7c3aed);
     final monthNames = [
@@ -1402,7 +1460,7 @@ class _VisitItem extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    '${visit.date.day}',
+                    '${interaction.interactedAt.day}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -1410,7 +1468,7 @@ class _VisitItem extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    monthNames[visit.date.month - 1],
+                    monthNames[interaction.interactedAt.month - 1],
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.w600,
@@ -1456,7 +1514,7 @@ class _VisitItem extends StatelessWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(
-                          visit.type.label,
+                          interaction.type.label,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
@@ -1467,18 +1525,24 @@ class _VisitItem extends StatelessWidget {
                       // consultantName and hasPendingOrder removed from model
                     ],
                   ),
-                  if (visit.summary != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      visit.summary!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Color(0xFF4b5563),
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                  const SizedBox(height: 4),
+                  Text(
+                    interaction.summary,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF4b5563),
                     ),
-                  ],
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    interaction.agentName,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF6b7280),
+                    ),
+                  ),
                 ],
               ),
             ),

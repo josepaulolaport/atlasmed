@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart
 import 'package:atlasmed_mobile_app/core/user/repositories/user_preferences_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
-import 'package:atlasmed_mobile_app/features/visits/presentation/providers/visit_summary_provider.dart';
+import 'package:atlasmed_mobile_app/features/interactions/presentation/providers/interaction_summary_provider.dart';
 
 // ── Individual data providers ───────────────────────────────
 final profileProvider = FutureProvider<UserProfile>((ref) async {
@@ -59,7 +59,7 @@ String _initials(String name) {
 
 final territoryStatsProvider = FutureProvider<TerritoryStats>((ref) async {
   // Reactive dependency on weekly summary
-  ref.watch(weeklyVisitSummaryProvider);
+  ref.watch(weeklyInteractionSummaryProvider);
 
   // Fetch clinics total
   final clinicsRepo = ClinicsRepository(page: 1, limit: 1);
@@ -74,7 +74,7 @@ final territoryStatsProvider = FutureProvider<TerritoryStats>((ref) async {
   final totalDoctors = doctorsResult?.pagination.total ?? 0;
 
   // Compute coverage from weekly visit summary
-  final summary = await ref.read(weeklyVisitSummaryProvider.future);
+  final summary = await ref.read(weeklyInteractionSummaryProvider.future);
   final visitedThisWeek = summary.distinctClinicsVisited;
   final coveragePct = totalClinics > 0
       ? (visitedThisWeek / totalClinics * 100).round().clamp(0, 100)
@@ -93,8 +93,8 @@ final territoryStatsProvider = FutureProvider<TerritoryStats>((ref) async {
 final quickSummaryProvider = FutureProvider<List<QuickSummaryItem>>((
   ref,
 ) async {
-  ref.watch(weeklyVisitSummaryProvider);
-  final summary = await ref.read(weeklyVisitSummaryProvider.future);
+  ref.watch(weeklyInteractionSummaryProvider);
+  final summary = await ref.read(weeklyInteractionSummaryProvider.future);
   final visits = summary.distinctClinicsVisited;
 
   return [

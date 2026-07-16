@@ -1,5 +1,5 @@
-class WeeklyVisitSummary {
-  const WeeklyVisitSummary({
+class WeeklyInteractionSummary {
+  const WeeklyInteractionSummary({
     required this.distinctClinicsVisited,
     required this.totalClinics,
     required this.coveragePercentage,
@@ -15,8 +15,8 @@ class WeeklyVisitSummary {
   final DateTime weekEnd;
   final String timeZone;
 
-  factory WeeklyVisitSummary.fromJson(Map<String, dynamic> json) {
-    return WeeklyVisitSummary(
+  factory WeeklyInteractionSummary.fromJson(Map<String, dynamic> json) {
+    return WeeklyInteractionSummary(
       distinctClinicsVisited: json['distinctClinicsVisited'] as int,
       totalClinics: json['totalClinics'] as int,
       coveragePercentage: (json['coveragePercentage'] as num).toDouble(),

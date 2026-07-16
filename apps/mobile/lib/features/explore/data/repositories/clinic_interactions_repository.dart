@@ -6,20 +6,20 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
-class ClinicVisitsException implements Exception {
-  const ClinicVisitsException();
+class ClinicInteractionsException implements Exception {
+  const ClinicInteractionsException();
 }
 
-class ClinicVisitsRepository extends Repository<List<ClinicVisit>>
-    with SessionEnvironmentMixin<List<ClinicVisit>> {
-  ClinicVisitsRepository(this.facilityId, {RepositoryHttpClient? client})
+class ClinicInteractionsRepository extends Repository<List<Interaction>>
+    with SessionEnvironmentMixin<List<Interaction>> {
+  ClinicInteractionsRepository(this.facilityId, {RepositoryHttpClient? client})
     : _client = client,
       super(
         endpoint: Uri.parse(
-          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/visits',
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/interactions',
         ),
         resolveOnCreate: false,
-        name: 'ClinicVisitsRepository',
+        name: 'ClinicInteractionsRepository',
       );
 
   final String facilityId;
@@ -29,18 +29,22 @@ class ClinicVisitsRepository extends Repository<List<ClinicVisit>>
   RepositoryHttpClient get client => _client ?? super.client;
 
   @override
-  List<ClinicVisit> fromJson(String json) {
+  List<Interaction> fromJson(String json) {
     final decoded = jsonDecode(json) as Map<String, dynamic>;
     final data = decoded['data'] as List<dynamic>;
     return data
-        .map((item) => ClinicVisit.fromJson(item as Map<String, dynamic>))
+        .map((item) => Interaction.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<ClinicVisit> createVisit({String? visitedAt}) async {
-    final body = <String, dynamic>{};
-    if (visitedAt != null) {
-      body['visitedAt'] = visitedAt;
+  Future<Interaction> createInteraction({
+    required InteractionType type,
+    required String summary,
+    String? interactedAt,
+  }) async {
+    final body = <String, dynamic>{'type': type.toJson(), 'summary': summary};
+    if (interactedAt != null) {
+      body['interactedAt'] = interactedAt;
     }
 
     final response = await client.call(
@@ -55,11 +59,11 @@ class ClinicVisitsRepository extends Repository<List<ClinicVisit>>
     if (!successfulCondition(response.statusCode, response.body)) {
       final shouldThrow = await onErrorStatusCode(response.statusCode);
       if (shouldThrow) {
-        throw const ClinicVisitsException();
+        throw const ClinicInteractionsException();
       }
     }
 
-    final created = ClinicVisit.fromJson(
+    final created = Interaction.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,
     );
     await refresh();

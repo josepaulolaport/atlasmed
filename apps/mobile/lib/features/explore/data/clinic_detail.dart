@@ -1,5 +1,33 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/interaction_type.dart';
+
+export 'package:atlasmed_mobile_app/features/explore/data/models/interaction_type.dart';
+
+class Interaction {
+  final String id;
+  final DateTime interactedAt;
+  final InteractionType type;
+  final String summary;
+  final String agentName;
+
+  const Interaction({
+    required this.id,
+    required this.interactedAt,
+    required this.type,
+    required this.summary,
+    required this.agentName,
+  });
+
+  factory Interaction.fromJson(Map<String, dynamic> json) {
+    return Interaction(
+      id: json['id'] as String,
+      interactedAt: DateTime.parse(json['interactedAt'] as String),
+      type: interactionTypeFromJson(json['type'] as String),
+      summary: json['summary'] as String,
+      agentName: json['agentName'] as String,
+    );
+  }
+}
 
 // ── Clinic detail model ───────────────────────────────────────
 
@@ -31,8 +59,8 @@ class ClinicDetail {
   // Payers
   final List<PayerInfo> payers;
 
-  // Visit history
-  final List<ClinicVisit> visits;
+  // Interaction history
+  final List<Interaction> interactions;
 
   // Doctors at this clinic
   final List<DoctorInfo> clinicDoctors;
@@ -79,7 +107,7 @@ class ClinicDetail {
     this.avgTicket,
     this.avgPurchaseDays,
     this.payers = const [],
-    this.visits = const [],
+    this.interactions = const [],
     this.clinicDoctors = const [],
     this.fieldNotes,
     this.cnpj,
@@ -102,29 +130,6 @@ class PayerInfo {
   final double percentage;
 
   const PayerInfo({required this.name, required this.percentage});
-}
-
-class ClinicVisit {
-  final String id;
-  final DateTime date;
-  final VisitType type;
-  final String? summary;
-
-  const ClinicVisit({
-    required this.id,
-    required this.date,
-    required this.type,
-    this.summary,
-  });
-
-  factory ClinicVisit.fromJson(Map<String, dynamic> json) {
-    return ClinicVisit(
-      id: json['id'] as String,
-      date: DateTime.parse(json['visitedAt'] as String),
-      type: visitTypeFromJson(json['type'] as String? ?? 'visit'),
-      summary: json['summary'] as String?,
-    );
-  }
 }
 
 class DoctorInfo {
