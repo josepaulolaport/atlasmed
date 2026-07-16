@@ -52,6 +52,13 @@ class EditorToolbar extends StatelessWidget {
             selected: mode == EditorMode.select,
             onTap: () => onModeChanged(EditorMode.select),
           ),
+          const SizedBox(width: 4),
+          _ModeButton(
+            icon: Icons.edit_outlined,
+            label: 'Desenhar',
+            selected: mode == EditorMode.drawArea,
+            onTap: () => onModeChanged(EditorMode.drawArea),
+          ),
           Container(
             width: 1,
             height: 26,

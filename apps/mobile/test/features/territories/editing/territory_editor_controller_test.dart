@@ -1,0 +1,224 @@
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
+    show TerritoryGeometry;
+import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_controller.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+MapCoordinate _c(double lng, double lat) =>
+    MapCoordinate(longitude: lng, latitude: lat);
+
+const _managerZoneType = TerritoryType(
+  id: 'type-1',
+  slug: 'manager_zone',
+  name: 'Zona de gerente',
+  assignsClinics: false,
+  assignableToManagers: true,
+);
+
+Territory _territory({
+  required String id,
+  required List<MapCoordinate> ring,
+}) {
+  final geometry = TerritoryGeometry.polygon([
+    [...ring, ring.first],
+  ]);
+  return Territory(
+    id: id,
+    name: 'Território $id',
+    slug: id,
+    code: id,
+    territoryType: _managerZoneType,
+    sectorId: 'sector-1',
+    boundary: geometry,
+    centroid: ring.first,
+  );
+}
+
+class _FakeTerritoryRepository implements TerritoryRepository {
+  _FakeTerritoryRepository(List<Territory> seed)
+    : territories = List<Territory>.of(seed);
+
+  final List<Territory> territories;
+  TerritoryGeometry? lastSavedGeometry;
+  String? lastSavedId;
+
+  @override
+  Future<List<Sector>> getSectors() async => const [];
+
+  @override
+  Future<Territory?> getTerritoryById(String id) async {
+    for (final territory in territories) {
+      if (territory.id == id) return territory;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<Territory>> getTerritories({
+    required String territoryTypeSlug,
+    required String sectorId,
+  }) async {
+    return territories
+        .where(
+          (t) =>
+              t.territoryType.slug == territoryTypeSlug &&
+              t.sectorId == sectorId,
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> updateTerritoryGeometry(
+    String id,
+    TerritoryGeometry geometry,
+  ) async {
+    lastSavedId = id;
+    lastSavedGeometry = geometry;
+    final index = territories.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      territories[index] = territories[index].copyWith(boundary: geometry);
+    }
+  }
+}
+
+void main() {
+  late _FakeTerritoryRepository repository;
+  late ProviderContainer container;
+
+  final square = [_c(0, 0), _c(2, 0), _c(2, 2), _c(0, 2)];
+  final neighborSquare = [_c(10, 10), _c(12, 10), _c(12, 12), _c(10, 12)];
+
+  setUp(() {
+    repository = _FakeTerritoryRepository([
+      _territory(id: 'target', ring: square),
+      _territory(id: 'neighbor', ring: neighborSquare),
+    ]);
+    container = ProviderContainer(
+      overrides: [territoryRepositoryProvider.overrideWithValue(repository)],
+    );
+  });
+
+  tearDown(() => container.dispose());
+
+  Future<TerritoryEditorController> loadController() async {
+    // `autoDispose` providers are torn down once their listener count hits
+    // zero — keep one alive for the life of the test so repeated `read`s
+    // all see the same controller instance.
+    container.listen(
+      territoryEditorControllerProvider('target'),
+      (previous, next) {},
+    );
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+    await Future.doWhile(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      return container.read(territoryEditorControllerProvider('target')).loading;
+    });
+    return controller;
+  }
+
+  test('loads the target territory and excludes it from its own neighbors', () async {
+    await loadController();
+    final state = container.read(territoryEditorControllerProvider('target'));
+
+    expect(state.loadError, isNull);
+    expect(state.original?.id, 'target');
+    expect(state.neighbors.map((t) => t.id), ['neighbor']);
+    expect(state.working, [
+      [square],
+    ]);
+    expect(state.isDirty, isFalse);
+    expect(state.canSave, isFalse);
+  });
+
+  test('dragging a vertex is undo-able and marks the state dirty', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+    const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
+
+    controller.beginVertexDrag(vertexRef);
+    controller.updateVertexDrag(vertexRef, _c(-1, -1));
+    controller.endVertexDrag();
+
+    var state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.working![0][0][0], _c(-1, -1));
+    expect(state.isDirty, isTrue);
+    expect(state.canSave, isTrue);
+
+    controller.undo();
+    state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.working![0][0][0], _c(0, 0));
+    expect(state.isDirty, isFalse);
+  });
+
+  test('flags overlap with a same-kind/sector neighbor', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+    const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 2);
+
+    controller.beginVertexDrag(vertexRef);
+    // Drags the (2,2) corner into the neighbor square at (10..12, 10..12).
+    controller.updateVertexDrag(vertexRef, _c(11, 11));
+    controller.endVertexDrag();
+
+    final state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.validation.overlapsNeighbor, isTrue);
+    expect(state.canSave, isFalse);
+  });
+
+  test('draw tool rejects a self-crossing point and commits a valid shape', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+
+    controller.setMode(EditorMode.drawArea);
+    expect(controller.addDrawingPoint(_c(20, 0)), isTrue);
+    expect(controller.addDrawingPoint(_c(21, 0)), isTrue);
+    expect(controller.addDrawingPoint(_c(21, 1)), isTrue);
+    expect(controller.addDrawingPoint(_c(20, 1)), isTrue);
+
+    var state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.canFinishDrawing, isTrue);
+
+    expect(controller.finishDrawing(), isTrue);
+    state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.mode, EditorMode.select);
+    expect(state.working!.length, 2);
+    expect(state.selectedPart, 1);
+    expect(state.isDirty, isTrue);
+  });
+
+  test('save persists the working geometry and clears the undo stack', () async {
+    await loadController();
+    final controller = container.read(
+      territoryEditorControllerProvider('target').notifier,
+    );
+    const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
+    controller.beginVertexDrag(vertexRef);
+    controller.updateVertexDrag(vertexRef, _c(-1, -1));
+    controller.endVertexDrag();
+
+    final saved = await controller.save();
+    expect(saved, isTrue);
+    expect(repository.lastSavedId, 'target');
+    expect(repository.lastSavedGeometry!.coordinates[0][0][0], _c(-1, -1));
+
+    final state = container.read(territoryEditorControllerProvider('target'));
+    expect(state.isDirty, isFalse);
+    expect(state.saved, isTrue);
+  });
+}

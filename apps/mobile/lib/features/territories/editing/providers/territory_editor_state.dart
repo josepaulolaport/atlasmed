@@ -1,3 +1,4 @@
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
@@ -47,6 +48,11 @@ class TerritoryEditorState {
   final SelectionAction selectionAction;
   final EdgeRef? selectedEdge;
 
+  /// Points placed so far by the draw-new-area tool — not yet committed
+  /// to [working]. Cleared whenever the mode changes away from
+  /// [EditorMode.drawArea].
+  final List<MapCoordinate> drawingPoints;
+
   final GeometryValidation validation;
   final bool saving;
   final bool saved;
@@ -63,6 +69,7 @@ class TerritoryEditorState {
     this.selectedPart,
     this.selectionAction = SelectionAction.none,
     this.selectedEdge,
+    this.drawingPoints = const [],
     this.validation = GeometryValidation.valid,
     this.saving = false,
     this.saved = false,
@@ -78,6 +85,7 @@ class TerritoryEditorState {
   bool get canRedo => redoStack.isNotEmpty;
   bool get canDeleteSelectedPart =>
       working != null && working!.length > 1 && selectedPart != null;
+  bool get canFinishDrawing => drawingPoints.length >= 3;
 
   TerritoryEditorState copyWith({
     bool? loading,
@@ -91,6 +99,7 @@ class TerritoryEditorState {
     Object? selectedPart = _unset,
     SelectionAction? selectionAction,
     Object? selectedEdge = _unset,
+    List<MapCoordinate>? drawingPoints,
     GeometryValidation? validation,
     bool? saving,
     bool? saved,
@@ -115,6 +124,7 @@ class TerritoryEditorState {
       selectedEdge: identical(selectedEdge, _unset)
           ? this.selectedEdge
           : selectedEdge as EdgeRef?,
+      drawingPoints: drawingPoints ?? this.drawingPoints,
       validation: validation ?? this.validation,
       saving: saving ?? this.saving,
       saved: saved ?? this.saved,

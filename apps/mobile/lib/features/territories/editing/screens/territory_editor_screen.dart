@@ -12,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_toolbar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_validation_banner.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
@@ -36,10 +37,13 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   static const _midpointFill = 0xFFFDE68A;
   static const _edgeSelectedColor = 0xFFEF4444;
   static const _moveHandleColor = 0xFF0A2F7F;
+  static const _drawColor = 0xFFF59E0B;
+  static const _snapThresholdPixels = 24.0;
 
   MapboxMap? _mapboxMap;
   PolygonAnnotationManager? _fillManager;
   PolylineAnnotationManager? _borderManager;
+  PolylineAnnotationManager? _drawPreviewManager;
   CircleAnnotationManager? _handleManager;
 
   bool _mapReady = false;
@@ -134,6 +138,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           .createPolygonAnnotationManager();
       _borderManager = await mapboxMap.annotations
           .createPolylineAnnotationManager();
+      _drawPreviewManager = await mapboxMap.annotations
+          .createPolylineAnnotationManager();
+      await _drawPreviewManager!.setLineDasharray([2, 2]);
       _handleManager = await mapboxMap.annotations
           .createCircleAnnotationManager();
 
@@ -300,7 +307,28 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     await fillManager.createMulti(fillOptions);
     await borderManager.createMulti([...haloOptions, ...borderOptions]);
 
+    await _renderDrawPreview(state);
+
     if (includeHandles) await _renderHandles(state);
+  }
+
+  Future<void> _renderDrawPreview(TerritoryEditorState state) async {
+    final previewManager = _drawPreviewManager;
+    if (previewManager == null) return;
+    await previewManager.deleteAll();
+    if (state.mode != EditorMode.drawArea || state.drawingPoints.length < 2) {
+      return;
+    }
+    await previewManager.create(
+      PolylineAnnotationOptions(
+        geometry: LineString.fromPoints(
+          points: _ringToPoints(state.drawingPoints),
+        ),
+        lineColor: _drawColor,
+        lineWidth: 2.6,
+        lineJoin: LineJoin.ROUND,
+      ),
+    );
   }
 
   Future<void> _renderHandles(TerritoryEditorState state) async {
@@ -312,6 +340,21 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     _midpointByAnnotationId.clear();
     _moveHandleAnnotationId = null;
     _moveHandlePartIndex = null;
+
+    if (state.mode == EditorMode.drawArea) {
+      if (state.drawingPoints.isEmpty) return;
+      await handleManager.createMulti([
+        for (var i = 0; i < state.drawingPoints.length; i++)
+          CircleAnnotationOptions(
+            geometry: _point(state.drawingPoints[i]),
+            circleRadius: i == 0 ? 7 : 5,
+            circleColor: _drawColor,
+            circleStrokeColor: _haloColor,
+            circleStrokeWidth: 2,
+          ),
+      ]);
+      return;
+    }
 
     final working = state.working;
     final partIndex = state.selectedPart;
@@ -410,8 +453,48 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       _suppressNextMapTapDeselect = false;
       return;
     }
+
+    if (_state.mode == EditorMode.drawArea) {
+      _handleDrawTap(_fromPoint(context.point));
+      return;
+    }
+
     if (_state.mode == EditorMode.select && _state.selectedPart != null) {
       _controller.clearSelection();
+    }
+  }
+
+  Future<void> _handleDrawTap(MapCoordinate tapped) async {
+    final points = _state.drawingPoints;
+    if (points.length >= 3 && await _isNearScreen(tapped, points.first)) {
+      final finished = _controller.finishDrawing();
+      if (finished) {
+        HapticFeedback.mediumImpact();
+      } else {
+        HapticFeedback.vibrate();
+      }
+      return;
+    }
+
+    final added = _controller.addDrawingPoint(tapped);
+    if (added) {
+      HapticFeedback.selectionClick();
+    } else {
+      HapticFeedback.vibrate();
+    }
+  }
+
+  Future<bool> _isNearScreen(MapCoordinate a, MapCoordinate b) async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null) return false;
+    try {
+      final pixelA = await mapboxMap.pixelForCoordinate(_point(a));
+      final pixelB = await mapboxMap.pixelForCoordinate(_point(b));
+      final dx = pixelA.x - pixelB.x;
+      final dy = pixelA.y - pixelB.y;
+      return (dx * dx + dy * dy) <= _snapThresholdPixels * _snapThresholdPixels;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -550,6 +633,29 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
             EditorValidationBanner(message: state.validation.message!),
           ],
           const Spacer(),
+          if (state.mode == EditorMode.drawArea) ...[
+            Center(
+              child: _DrawAreaBar(
+                pointCount: state.drawingPoints.length,
+                canFinish: state.canFinishDrawing,
+                onFinish: () {
+                  if (notifier.finishDrawing()) {
+                    HapticFeedback.mediumImpact();
+                  } else {
+                    HapticFeedback.vibrate();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'O contorno fechado cruza sobre si mesmo.',
+                        ),
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           if (state.mode == EditorMode.select && state.selectedPart != null) ...[
             Center(
               child: EditorContextualBar(
@@ -674,6 +780,66 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     longitude: point.coordinates.lng.toDouble(),
     latitude: point.coordinates.lat.toDouble(),
   );
+}
+
+class _DrawAreaBar extends StatelessWidget {
+  final int pointCount;
+  final bool canFinish;
+  final VoidCallback onFinish;
+
+  const _DrawAreaBar({
+    required this.pointCount,
+    required this.canFinish,
+    required this.onFinish,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x3A111827),
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            pointCount == 0
+                ? 'Toque no mapa para começar'
+                : '$pointCount ponto${pointCount == 1 ? '' : 's'}',
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+          const SizedBox(width: 10),
+          FilledButton(
+            onPressed: canFinish ? onFinish : null,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFF59E0B),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Finalizar área',
+              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RoundIconButton extends StatelessWidget {

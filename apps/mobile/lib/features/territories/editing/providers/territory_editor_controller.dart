@@ -70,6 +70,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       selectedPart: null,
       selectedEdge: null,
       selectionAction: SelectionAction.none,
+      drawingPoints: const [],
     );
   }
 
@@ -196,9 +197,69 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
+  // ---- draw new area (stage 2) -------------------------------------------
+
+  /// Adds a point to the in-progress ring. Rejects (returns `false`)
+  /// points whose new segment would cross an existing one, so an invalid
+  /// self-intersecting shape can never even be drawn in the first place.
+  bool addDrawingPoint(MapCoordinate point) {
+    if (state.mode != EditorMode.drawArea) return false;
+    final points = state.drawingPoints;
+    if (points.length >= 2) {
+      final last = points.last;
+      // Stop one edge short of the end: the segment right before `last`
+      // shares that exact point with the new segment by construction, so
+      // testing it would always look like a "touching" intersection.
+      for (var i = 0; i < points.length - 2; i++) {
+        if (GeometryMath.segmentsIntersect(points[i], points[i + 1], last, point)) {
+          return false;
+        }
+      }
+    }
+    state = state.copyWith(drawingPoints: [...points, point]);
+    return true;
+  }
+
+  /// Undo/redo's meaning while a shape is being drawn: pull back the last
+  /// placed point instead of touching the committed geometry stack.
+  void removeLastDrawingPoint() {
+    final points = state.drawingPoints;
+    if (points.isEmpty) return;
+    state = state.copyWith(drawingPoints: points.sublist(0, points.length - 1));
+  }
+
+  void cancelDrawing() {
+    if (state.drawingPoints.isEmpty) return;
+    state = state.copyWith(drawingPoints: const []);
+  }
+
+  /// Commits the in-progress ring as a new disconnected polygon part and
+  /// selects it. Returns `false` (and leaves the drawing untouched) if the
+  /// shape isn't valid yet.
+  bool finishDrawing() {
+    final working = state.working;
+    if (working == null || !state.canFinishDrawing) return false;
+    if (GeometryMath.ringSelfIntersects(state.drawingPoints)) return false;
+
+    _pushUndo();
+    final next = TerritoryGeometryEditor.appendPart(working, state.drawingPoints);
+    state = state.copyWith(
+      working: next,
+      drawingPoints: const [],
+      mode: EditorMode.select,
+      selectedPart: next.length - 1,
+      validation: _validate(next, state.neighbors),
+    );
+    return true;
+  }
+
   // ---- undo / redo -------------------------------------------------------
 
   void undo() {
+    if (state.mode == EditorMode.drawArea && state.drawingPoints.isNotEmpty) {
+      removeLastDrawingPoint();
+      return;
+    }
     final working = state.working;
     if (working == null || state.undoStack.isEmpty) return;
     final previous = state.undoStack.last;
@@ -238,6 +299,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       selectedPart: null,
       selectedEdge: null,
       selectionAction: SelectionAction.none,
+      drawingPoints: const [],
       validation: _validate(working, state.neighbors),
     );
   }
