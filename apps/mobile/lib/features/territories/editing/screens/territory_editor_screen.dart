@@ -108,6 +108,11 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     ref.listen(provider, (previous, next) {
       if (next.loading || next.original == null) return;
+      if (previous == null ||
+          previous.mode != next.mode ||
+          previous.selectionAction != next.selectionAction) {
+        _applyGestureLock(next);
+      }
       _render(next, includeHandles: !_dragging);
     });
 
@@ -199,7 +204,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       final state = ref.read(
         territoryEditorControllerProvider(widget.territoryId),
       );
-      await _applyGestureLock();
+      await _applyGestureLock(state);
       await _render(state);
       if (!_initialFitDone) {
         _initialFitDone = true;
@@ -210,18 +215,26 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
   }
 
-  /// Panning stays enabled in every editor mode (not just Navigate): a
-  /// one-finger drag that starts exactly on a draggable handle is
-  /// captured by that handle's own annotation-drag gesture regardless, so
-  /// letting the map itself pan doesn't interfere with vertex/edge/
-  /// polygon editing — it just means the user isn't forced to switch back
-  /// to Navigate every time they want to reposition the map mid-edit.
-  Future<void> _applyGestureLock() async {
+  /// Panning is enabled everywhere *except* while draggable vertex/
+  /// midpoint/move handles are actually on screen (Select mode with an
+  /// action chosen) — in practice the map's own pan gesture wins the race
+  /// against a handle's drag gesture when both are active on the same
+  /// touch, so a one-finger drag that should move a vertex ends up
+  /// panning the map instead. Everywhere else (Navigate, Select before
+  /// choosing an action, Draw/Add/Remove point placement) nothing
+  /// draggable is on screen, so panning is safe and lets the user
+  /// reposition the map mid-edit without it fighting for the same
+  /// gesture.
+  static bool _handlesDraggable(TerritoryEditorState state) =>
+      state.mode == EditorMode.select &&
+      state.selectionAction != SelectionAction.none;
+
+  Future<void> _applyGestureLock(TerritoryEditorState state) async {
     final mapboxMap = _mapboxMap;
     if (mapboxMap == null) return;
     try {
       await mapboxMap.gestures.updateSettings(
-        GesturesSettings(scrollEnabled: true),
+        GesturesSettings(scrollEnabled: !_handlesDraggable(state)),
       );
     } catch (_) {
       // Best-effort — editing still works even if this fails to apply.
