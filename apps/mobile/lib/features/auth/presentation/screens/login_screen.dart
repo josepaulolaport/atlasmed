@@ -251,10 +251,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                     PrimaryButton(
                                       label: 'Entrar',
                                       loading: _isLoading,
-                                      disabled:
-                                          _emailController.text.isEmpty ||
-                                          _passwordController.text.isEmpty ||
-                                          isBlocked,
+                                      disabled: _isLoading,
                                       trailingIcon: Icons.arrow_forward,
                                       onPressed: () => _login(repository),
                                     ),
