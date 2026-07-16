@@ -12,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/te
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
 class TerritoriesScreen extends ConsumerWidget {
@@ -264,7 +265,9 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
               child: _TerritoryActionBar(
                 territory: selectedTerritory,
                 onViewDetails: () => _openDetails(selectedTerritory),
-                onEdit: () => _showComingSoon('A edição de territórios'),
+                onEdit: () => context.push(
+                  '/territorios/${selectedTerritory.id}/editar',
+                ),
                 onDelete: () => _showComingSoon('A exclusão de territórios'),
                 onClose: _deselectTerritory,
               ),

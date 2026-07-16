@@ -44,4 +44,23 @@ class Territory {
   });
 
   TerritoryKind get kind => territoryType.kind;
+
+  Territory copyWith({TerritoryGeometry? boundary, MapCoordinate? centroid}) {
+    return Territory(
+      id: id,
+      name: name,
+      slug: slug,
+      code: code,
+      territoryType: territoryType,
+      sectorId: sectorId,
+      managerTerritoryId: managerTerritoryId,
+      isActive: isActive,
+      clinicCount: clinicCount,
+      assignedUserCount: assignedUserCount,
+      repPatchCount: repPatchCount,
+      boundary: boundary ?? this.boundary,
+      centroid: centroid ?? this.centroid,
+      assignedUserName: assignedUserName,
+    );
+  }
 }
