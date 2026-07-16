@@ -23,6 +23,7 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/screens/checkou
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_success_screen.dart';
 import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/session_listenable.dart';
@@ -171,6 +172,12 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
             GoRoute(
               path: '/mapa',
               pageBuilder: (_, _) => const NoTransitionPage(child: MapScreen()),
+            ),
+            // Territórios
+            GoRoute(
+              path: '/territorios',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: TerritoriesScreen()),
             ),
             // Pedidos
             GoRoute(

@@ -39,6 +39,50 @@ class TerritoryGeometry {
     );
   }
 
+  /// A single representative point to anchor a label/callout — the centroid
+  /// of the largest polygon part. A territory can be made of multiple
+  /// disjoint polygons (e.g. an exclave), so a naive average of every
+  /// vertex could land outside all of them; anchoring to the biggest part
+  /// keeps the label inside actual territory.
+  MapCoordinate? get labelAnchor {
+    List<MapCoordinate>? largestRing;
+    var largestArea = -1.0;
+
+    for (final polygon in coordinates) {
+      if (polygon.isEmpty) continue;
+      final outerRing = polygon.first;
+      final area = _ringArea(outerRing).abs();
+      if (area > largestArea) {
+        largestArea = area;
+        largestRing = outerRing;
+      }
+    }
+
+    if (largestRing == null || largestRing.isEmpty) return null;
+    return _ringCentroid(largestRing);
+  }
+
+  double _ringArea(List<MapCoordinate> ring) {
+    var sum = 0.0;
+    for (var i = 0; i < ring.length - 1; i++) {
+      sum +=
+          ring[i].longitude * ring[i + 1].latitude -
+          ring[i + 1].longitude * ring[i].latitude;
+    }
+    return sum / 2;
+  }
+
+  MapCoordinate _ringCentroid(List<MapCoordinate> ring) {
+    final points = ring.length > 1 && ring.first == ring.last
+        ? ring.sublist(0, ring.length - 1)
+        : ring;
+    final lat =
+        points.map((p) => p.latitude).reduce((a, b) => a + b) / points.length;
+    final lng =
+        points.map((p) => p.longitude).reduce((a, b) => a + b) / points.length;
+    return MapCoordinate(latitude: lat, longitude: lng);
+  }
+
   Map<String, Object?> toFeatureCollection() {
     final geometryCoordinates = type == 'Polygon'
         ? coordinates.single
