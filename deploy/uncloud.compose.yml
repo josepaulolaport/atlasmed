@@ -44,7 +44,7 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev,https://app.tdomains.uk}
       - FRONTEND_URL=${FRONTEND_URL:-https://app.tdomains.uk}
       - TRUST_PROXY=true
-      - SESSION_SECURITY_MODE=strict
+      - SESSION_SECURITY_MODE=audit_only
       - RESEND_API_KEY=${RESEND_API_KEY}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
@@ -93,7 +93,7 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS:-https://atlasmed-web.b1ixob.uncld.dev}
       - FRONTEND_URL=${FRONTEND_URL}
       - TRUST_PROXY=true
-      - SESSION_SECURITY_MODE=strict
+      - SESSION_SECURITY_MODE=audit_only
       - RESEND_API_KEY=${RESEND_API_KEY}
       - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL}
       - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
