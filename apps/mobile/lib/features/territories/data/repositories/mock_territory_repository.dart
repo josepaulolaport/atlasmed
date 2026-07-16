@@ -1,9 +1,14 @@
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/mock/mock_territories_data.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/user_repository.dart';
 
 /// In-memory [TerritoryRepository] backed by the static mock dataset.
 ///
@@ -12,7 +17,13 @@ import 'package:atlasmed_mobile_app/features/territories/data/repositories/terri
 /// the seed data so edits made in the territory editor persist for the
 /// app's session (the repository is a `Provider`, so one instance lives
 /// as long as the app does) without touching the real backend yet.
+///
+/// Takes a [UserRepository] so [getAssignableManagers] can resolve each
+/// manager zone's `assignedUserId` into a display-ready [AssignableManager].
 class MockTerritoryRepository implements TerritoryRepository {
+  MockTerritoryRepository(this._userRepository);
+
+  final UserRepository _userRepository;
   final List<Territory> _territories = List<Territory>.of(mockTerritories);
 
   @override
@@ -58,5 +69,129 @@ class MockTerritoryRepository implements TerritoryRepository {
       boundary: geometry,
       centroid: centroid,
     );
+  }
+
+  @override
+  Future<Territory> createTerritory(
+    TerritoryDraft draft,
+    TerritoryGeometry boundary,
+    MapCoordinate centroid,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final territoryType = draft.kind == TerritoryKind.managerZone
+        ? managerZoneType
+        : repPatchType;
+    final suffix = DateTime.now().microsecondsSinceEpoch.toRadixString(36);
+    final slug = '${_slugify(draft.name)}-$suffix';
+    final prefix = draft.kind == TerritoryKind.managerZone ? 'zone' : 'patch';
+    final id = 'territory-$prefix-$slug';
+
+    final territory = Territory(
+      id: id,
+      name: draft.name,
+      slug: slug,
+      code: id.toUpperCase(),
+      territoryType: territoryType,
+      sectorId: draft.sectorId,
+      managerTerritoryId: draft.managerTerritoryId,
+      repPatchCount: draft.kind == TerritoryKind.managerZone ? 0 : null,
+      boundary: boundary,
+      centroid: centroid,
+    );
+
+    _territories.add(territory);
+
+    final managerId = draft.managerTerritoryId;
+    if (managerId != null) {
+      final zoneIndex = _territories.indexWhere((t) => t.id == managerId);
+      if (zoneIndex != -1) {
+        final zone = _territories[zoneIndex];
+        _territories[zoneIndex] = zone.copyWith(
+          repPatchCount: (zone.repPatchCount ?? 0) + 1,
+        );
+      }
+    }
+
+    return territory;
+  }
+
+  @override
+  Future<void> deleteTerritory(String id) async {
+    await Future.delayed(const Duration(milliseconds: 250));
+
+    for (var i = 0; i < _territories.length; i++) {
+      final territory = _territories[i];
+      if (territory.managerTerritoryId == id) {
+        _territories[i] = territory.copyWith(managerTerritoryId: null);
+      }
+    }
+
+    _territories.removeWhere((territory) => territory.id == id);
+  }
+
+  @override
+  Future<void> assignUser(String territoryId, String? userId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final index = _territories.indexWhere((t) => t.id == territoryId);
+    if (index == -1) return;
+    _territories[index] = _territories[index].copyWith(
+      assignedUserId: userId,
+    );
+  }
+
+  @override
+  Future<void> updateTerritoryInfo(
+    String territoryId, {
+    required String name,
+    required String sectorId,
+    required bool isActive,
+    String? managerTerritoryId,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 250));
+    final index = _territories.indexWhere((t) => t.id == territoryId);
+    if (index == -1) return;
+    _territories[index] = _territories[index].copyWith(
+      name: name,
+      sectorId: sectorId,
+      isActive: isActive,
+      managerTerritoryId: managerTerritoryId,
+    );
+  }
+
+  @override
+  Future<List<AssignableManager>> getAssignableManagers(
+    String sectorId,
+  ) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final zones = _territories.where(
+      (t) =>
+          t.kind == TerritoryKind.managerZone &&
+          t.isActive &&
+          t.sectorId == sectorId &&
+          t.assignedUserId != null,
+    );
+
+    final result = <AssignableManager>[];
+    for (final zone in zones) {
+      final manager = await _userRepository.getUserById(zone.assignedUserId!);
+      if (manager == null) continue;
+      result.add(
+        AssignableManager(
+          manager: manager,
+          zoneTerritoryId: zone.id,
+          zoneName: zone.name,
+        ),
+      );
+    }
+    return result;
+  }
+
+  static String _slugify(String name) {
+    final slug = name
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+    return slug.isEmpty ? 'territorio' : slug;
   }
 }

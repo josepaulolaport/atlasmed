@@ -2,26 +2,29 @@ import 'dart:async';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territory_geometry_editor.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_controller.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_state.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_contextual_bar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_save_bar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_toolbar.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/editor_validation_banner.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/widgets/territory_metadata_form.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
 class TerritoryEditorScreen extends ConsumerStatefulWidget {
-  final String territoryId;
+  final TerritoryEditorTarget target;
 
-  const TerritoryEditorScreen({super.key, required this.territoryId});
+  const TerritoryEditorScreen({super.key, required this.target});
 
   @override
   ConsumerState<TerritoryEditorScreen> createState() =>
@@ -44,6 +47,13 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   static const _snapThresholdPixels = 24.0;
   static const _vertexSnapThresholdPixels = 16.0;
   static const _snapIndicatorColor = 0xFF7C3AED;
+  // Fallback map center for a brand-new territory with no neighbors yet
+  // to average a position from — same reference point the viewer screen
+  // starts its own camera at.
+  static const _defaultCenter = MapCoordinate(
+    longitude: -46.6333,
+    latitude: -23.5505,
+  );
   // Generous tap target for grabbing a handle — bigger than the 5-7px
   // circle it's drawn as, since a fingertip is much wider than that.
   static const _handleHitRadiusPixels = 28.0;
@@ -78,6 +88,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   bool _viewportApplied = false;
   bool _initialFitDone = false;
   bool _suppressNextMapTapDeselect = false;
+  // The metadata form is pushed as its own route (not built inline) so it
+  // gets its own back-swipe/keyboard behavior — this just makes sure it's
+  // only launched once per creating session, right after the first frame.
+  bool _metadataFormLaunched = false;
 
   // `_render` is fired off (unawaited) from `ref.listen` on every state
   // change, so a burst of quick changes — e.g. placing several drawing
@@ -131,15 +145,29 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     if (token.isNotEmpty) MapboxOptions.setAccessToken(token);
   }
 
+  /// The map (and everything drawn on it) only ever gets built once
+  /// there's real geometry context to show — an existing territory's own
+  /// boundary, or (for a new one) the draft the metadata form produced.
+  static bool _readyForMap(TerritoryEditorState state) =>
+      !state.loading &&
+      (state.original != null || (state.isCreating && state.draft != null));
+
   @override
   Widget build(BuildContext context) {
-    final provider = territoryEditorControllerProvider(widget.territoryId);
+    final provider = territoryEditorControllerProvider(widget.target);
     final state = ref.watch(provider);
 
     ref.listen(provider, (previous, next) {
-      if (next.loading || next.original == null) return;
+      if (!_readyForMap(next)) return;
       _render(next);
     });
+
+    if (state.isCreating && state.draft == null && !_metadataFormLaunched) {
+      _metadataFormLaunched = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showMetadataForm(context);
+      });
+    }
 
     return PopScope(
       canPop: !state.isDirty,
@@ -151,13 +179,15 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            if (AppConfig.mapboxAccessToken.isEmpty || _mapUnavailable)
+            if (state.isCreating && state.draft == null)
+              const _CenteredMessage(loading: true)
+            else if (AppConfig.mapboxAccessToken.isEmpty || _mapUnavailable)
               const _CenteredMessage(
                 icon: Icons.map_outlined,
                 title: 'Mapa indisponível',
                 message: 'Não foi possível carregar o mapa agora.',
               )
-            else if (state.original != null)
+            else if (_readyForMap(state))
               Positioned.fill(
                 // A plain `Listener` — it only observes pointer events
                 // (it never claims/consumes the gesture), so the map
@@ -179,7 +209,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
                 title: 'Não foi possível abrir o editor',
                 message: state.loadError!,
               ),
-            if (!state.loading && state.loadError == null)
+            if (!state.loading &&
+                state.loadError == null &&
+                _readyForMap(state))
               SafeArea(child: _buildChrome(context, state)),
           ],
         ),
@@ -187,8 +219,30 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     );
   }
 
+  Future<void> _showMetadataForm(
+    BuildContext context, {
+    TerritoryDraft? initial,
+  }) async {
+    final target = widget.target;
+    final draft = await TerritoryMetadataForm.show(
+      context,
+      initial: initial,
+      initialKind:
+          initial?.kind ?? target.initialKind ?? TerritoryKind.managerZone,
+      initialSectorId: initial?.sectorId ?? target.initialSectorId,
+    );
+    if (!mounted) return;
+    if (draft == null) {
+      // Backing out of the very first form leaves nothing to edit — close
+      // the editor entirely instead of leaving it stuck on a blank state.
+      if (initial == null && context.mounted) Navigator.of(context).pop();
+      return;
+    }
+    await _controller.setDraft(draft);
+  }
+
   Widget _buildMap(TerritoryEditorState state) {
-    final centroid = state.original!.centroid;
+    final centroid = _initialMapCenter(state);
     return MapWidget(
       key: const ValueKey('mapa-editor-territorio'),
       styleUri: MapboxStyles.STANDARD,
@@ -235,7 +289,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
       _mapReady = true;
       final state = ref.read(
-        territoryEditorControllerProvider(widget.territoryId),
+        territoryEditorControllerProvider(widget.target),
       );
       await _render(state);
       if (!_initialFitDone) {
@@ -245,6 +299,27 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     } catch (_) {
       if (mounted) setState(() => _mapUnavailable = true);
     }
+  }
+
+  /// A new territory has no boundary of its own to center on yet — this
+  /// falls back to the average of same-kind/sector neighbors (so the map
+  /// opens somewhere relevant to the sector being drawn in), and finally
+  /// to a fixed default if there's no other context at all.
+  MapCoordinate _initialMapCenter(TerritoryEditorState state) {
+    final original = state.original;
+    if (original != null) return original.centroid;
+    final neighbors = state.neighbors;
+    if (neighbors.isEmpty) return _defaultCenter;
+    var lng = 0.0;
+    var lat = 0.0;
+    for (final neighbor in neighbors) {
+      lng += neighbor.centroid.longitude;
+      lat += neighbor.centroid.latitude;
+    }
+    return MapCoordinate(
+      longitude: lng / neighbors.length,
+      latitude: lat / neighbors.length,
+    );
   }
 
   Future<void> _fitToTerritory(TerritoryEditorState state) async {
@@ -331,7 +406,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     final haloOptions = <PolylineAnnotationOptions>[];
     final borderOptions = <PolylineAnnotationOptions>[];
 
-    final kindColor = state.original?.kind == TerritoryKind.managerZone
+    final kind = state.original?.kind ?? state.draft?.kind;
+    final kindColor = kind == TerritoryKind.managerZone
         ? _managerZoneColor
         : _repPatchColor;
 
@@ -540,10 +616,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   // ---- gestures --------------------------------------------------------
 
   TerritoryEditorController get _controller =>
-      ref.read(territoryEditorControllerProvider(widget.territoryId).notifier);
+      ref.read(territoryEditorControllerProvider(widget.target).notifier);
 
   TerritoryEditorState get _state =>
-      ref.read(territoryEditorControllerProvider(widget.territoryId));
+      ref.read(territoryEditorControllerProvider(widget.target));
 
   // Only the target territory's own parts are ever on `_fillManager` (see
   // `_neighborFillManager`), so a tap here always belongs to the
@@ -1123,14 +1199,28 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _RoundIconButton(
-                icon: Icons.arrow_back_rounded,
-                onTap: () => _requestExit(context, state),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _RoundIconButton(
+                    icon: Icons.arrow_back_rounded,
+                    onTap: () => _requestExit(context, state),
+                  ),
+                  if (state.isCreating) ...[
+                    const SizedBox(width: 8),
+                    _RoundIconButton(
+                      icon: Icons.edit_note_rounded,
+                      onTap: () =>
+                          _showMetadataForm(context, initial: state.draft),
+                    ),
+                  ],
+                ],
               ),
               EditorToolbar(
                 mode: state.mode,
                 canUndo: state.canUndo,
                 canRedo: state.canRedo,
+                hasArea: state.working?.isNotEmpty ?? false,
                 onModeChanged: notifier.setMode,
                 onUndo: notifier.undo,
                 onRedo: notifier.redo,

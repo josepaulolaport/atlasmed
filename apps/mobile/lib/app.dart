@@ -23,6 +23,8 @@ import 'package:atlasmed_mobile_app/features/orders/presentation/screens/checkou
 import 'package:atlasmed_mobile_app/features/orders/presentation/screens/order_success_screen.dart';
 import 'package:atlasmed_mobile_app/features/presentations/presentation/screens/presentations_screen.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/screens/profile_screen.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/screens/territory_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
@@ -236,8 +238,24 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
         // Editor de território — full screen, no shared drawer/shell chrome.
         GoRoute(
           path: '/territorios/:id/editar',
-          builder: (_, state) =>
-              TerritoryEditorScreen(territoryId: state.pathParameters['id']!),
+          builder: (_, state) => TerritoryEditorScreen(
+            target: TerritoryEditorTarget.existing(
+              state.pathParameters['id']!,
+            ),
+          ),
+        ),
+        // Criação de território — same full-screen editor, started from
+        // an empty boundary; `extra` carries the kind/sector hints from
+        // whatever the viewer had filtered to.
+        GoRoute(
+          path: '/territorios/criar',
+          builder: (_, state) => TerritoryEditorScreen(
+            target: state.extra is TerritoryEditorTarget
+                ? state.extra as TerritoryEditorTarget
+                : const TerritoryEditorTarget.creating(
+                    initialKind: TerritoryKind.managerZone,
+                  ),
+          ),
         ),
       ],
     );

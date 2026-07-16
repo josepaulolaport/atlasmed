@@ -2,6 +2,7 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -87,12 +88,20 @@ class TerritoryDetailSheet extends ConsumerWidget {
             const SizedBox(height: 18),
             _DetailRow(label: 'Código', value: territory.code),
             _DetailRow(label: 'Setor', value: sectorName),
-            _DetailRow(
-              label: isManagerZone
-                  ? 'Gerente responsável'
-                  : 'Representante responsável',
-              value: territory.assignedUserName ?? 'Não atribuído',
-            ),
+            if (territory.assignedUserId != null)
+              _AssignedUserRow(
+                label: isManagerZone
+                    ? 'Gerente responsável'
+                    : 'Representante responsável',
+                userId: territory.assignedUserId!,
+              )
+            else
+              _DetailRow(
+                label: isManagerZone
+                    ? 'Gerente responsável'
+                    : 'Representante responsável',
+                value: 'Não atribuído',
+              ),
             _DetailRow(label: 'Clínicas', value: '${territory.clinicCount}'),
             _DetailRow(
               label: 'Usuários atribuídos',
@@ -111,6 +120,24 @@ class TerritoryDetailSheet extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+class _AssignedUserRow extends ConsumerWidget {
+  final String label;
+  final String userId;
+
+  const _AssignedUserRow({required this.label, required this.userId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userAsync = ref.watch(userByIdProvider(userId));
+    final value = userAsync.when(
+      data: (user) => user?.name ?? '—',
+      loading: () => '…',
+      error: (_, _) => '—',
+    );
+    return _DetailRow(label: label, value: value);
   }
 }
 

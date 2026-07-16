@@ -56,8 +56,15 @@ class _ManagerZoneSpec {
   final double halfHeightLat;
   final int baseClinicCount;
   final int baseUserCount;
-  final String? managerName;
-  final List<String?> repNames;
+
+  /// The manager zone's `assignedUserId` — must be a [UserRole.manager]
+  /// entry in `mockUsers`.
+  final String? managerUserId;
+
+  /// Per-patch `assignedUserId` (index-aligned with `_patchNames`) — each
+  /// must be a [UserRole.rep] entry in `mockUsers`, or `null` if that
+  /// patch starts unassigned.
+  final List<String?> repUserIds;
 
   const _ManagerZoneSpec({
     required this.idSuffix,
@@ -69,8 +76,8 @@ class _ManagerZoneSpec {
     required this.halfHeightLat,
     required this.baseClinicCount,
     required this.baseUserCount,
-    required this.managerName,
-    required this.repNames,
+    required this.managerUserId,
+    required this.repUserIds,
   });
 }
 
@@ -85,8 +92,8 @@ const _zoneSpecs = <_ManagerZoneSpec>[
     halfHeightLat: 0.035,
     baseClinicCount: 18,
     baseUserCount: 3,
-    managerName: 'Fernanda Duarte',
-    repNames: ['Bruno Castro', 'Camila Rocha', null],
+    managerUserId: 'user-fernanda-duarte',
+    repUserIds: ['user-bruno-castro', 'user-camila-rocha', null],
   ),
   _ManagerZoneSpec(
     idSuffix: 'onco-sudeste',
@@ -98,8 +105,8 @@ const _zoneSpecs = <_ManagerZoneSpec>[
     halfHeightLat: 0.035,
     baseClinicCount: 22,
     baseUserCount: 4,
-    managerName: 'Marcos Lima',
-    repNames: ['Diego Farias', 'Juliana Pires', 'Lucas Tavares'],
+    managerUserId: 'user-marcos-lima',
+    repUserIds: ['user-diego-farias', 'user-juliana-pires', 'user-lucas-tavares'],
   ),
   _ManagerZoneSpec(
     idSuffix: 'cardio-nordeste',
@@ -111,8 +118,8 @@ const _zoneSpecs = <_ManagerZoneSpec>[
     halfHeightLat: 0.035,
     baseClinicCount: 15,
     baseUserCount: 3,
-    managerName: 'Renata Souza',
-    repNames: [null, 'Patrícia Gomes', 'Rafael Nogueira'],
+    managerUserId: 'user-renata-souza',
+    repUserIds: [null, 'user-patricia-gomes', 'user-rafael-nogueira'],
   ),
   _ManagerZoneSpec(
     idSuffix: 'cardio-sudoeste',
@@ -124,8 +131,8 @@ const _zoneSpecs = <_ManagerZoneSpec>[
     halfHeightLat: 0.035,
     baseClinicCount: 20,
     baseUserCount: 4,
-    managerName: 'Eduardo Alves',
-    repNames: ['Talita Ramos', 'Vinícius Prado', null],
+    managerUserId: 'user-eduardo-alves',
+    repUserIds: ['user-talita-ramos', 'user-vinicius-prado', null],
   ),
 ];
 
@@ -203,7 +210,7 @@ List<Territory> _buildMockTerritories() {
         repPatchCount: _patchNames.length,
         boundary: TerritoryGeometry.polygon([zoneRing]),
         centroid: _ringCentroid(zoneRing),
-        assignedUserName: zoneSpec.managerName,
+        assignedUserId: zoneSpec.managerUserId,
       ),
     );
 
@@ -250,10 +257,10 @@ List<Territory> _buildMockTerritories() {
           sectorId: zoneSpec.sectorId,
           managerTerritoryId: zoneId,
           clinicCount: (zoneSpec.baseClinicCount / _patchNames.length).round(),
-          assignedUserCount: zoneSpec.repNames[i] == null ? 0 : 1,
+          assignedUserCount: zoneSpec.repUserIds[i] == null ? 0 : 1,
           boundary: boundary,
           centroid: boundary.labelAnchor ?? _ringCentroid(patchRing),
-          assignedUserName: zoneSpec.repNames[i],
+          assignedUserId: zoneSpec.repUserIds[i],
         ),
       );
     }

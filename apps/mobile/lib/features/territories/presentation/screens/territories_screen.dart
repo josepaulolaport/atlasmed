@@ -3,12 +3,18 @@ import 'dart:math' as math;
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/widgets/territory_info_form.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/sector_selector.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_detail_sheet.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/territory_kind_switch.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_avatar.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/user_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,19 +36,27 @@ class TerritoriesScreen extends ConsumerWidget {
         ),
       );
     }
-    return _TerritoriesPage(child: _TerritoriesBody(accessToken: token));
+    // Hidden while a territory is selected — it would otherwise sit right
+    // on top of the fixed action bar the selection shows at the bottom.
+    final hasSelection = ref.watch(selectedTerritoryIdProvider) != null;
+    return _TerritoriesPage(
+      floatingActionButton: hasSelection ? null : const _NewTerritoryButton(),
+      child: _TerritoriesBody(accessToken: token),
+    );
   }
 }
 
 class _TerritoriesPage extends StatelessWidget {
   final Widget child;
+  final Widget? floatingActionButton;
 
-  const _TerritoriesPage({required this.child});
+  const _TerritoriesPage({required this.child, this.floatingActionButton});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FB),
+      floatingActionButton: floatingActionButton,
       body: SafeArea(
         // The map should bleed all the way to the bottom edge — only the
         // top inset (status bar) is reserved, via AtlasTopBar itself.
@@ -54,6 +68,32 @@ class _TerritoriesPage extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Opens the territory creation flow, pre-matched to whatever kind/sector
+/// the viewer is currently filtered to.
+class _NewTerritoryButton extends ConsumerWidget {
+  const _NewTerritoryButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FloatingActionButton.extended(
+      backgroundColor: const Color(0xFF0a2f7f),
+      icon: const Icon(Icons.add_rounded),
+      label: const Text('Novo território'),
+      onPressed: () {
+        final kind = ref.read(selectedTerritoryKindProvider);
+        final sectorId = ref.read(effectiveSectorIdProvider).valueOrNull;
+        context.push(
+          '/territorios/criar',
+          extra: TerritoryEditorTarget.creating(
+            initialKind: kind,
+            initialSectorId: sectorId,
+          ),
+        );
+      },
     );
   }
 }
@@ -265,9 +305,11 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
               child: _TerritoryActionBar(
                 territory: selectedTerritory,
                 onViewDetails: () => _openDetails(selectedTerritory),
-                onEdit: () =>
+                onEditInfo: () => _editInfo(selectedTerritory),
+                onAssign: () => _assignUser(selectedTerritory),
+                onEditArea: () =>
                     context.push('/territorios/${selectedTerritory.id}/editar'),
-                onDelete: () => _showComingSoon('A exclusão de territórios'),
+                onDelete: () => _confirmAndDelete(selectedTerritory),
                 onClose: _deselectTerritory,
               ),
             ),
@@ -397,10 +439,83 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
     TerritoryDetailSheet.show(context, territory);
   }
 
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature estará disponível em breve.')),
+  Future<void> _editInfo(Territory territory) async {
+    await TerritoryInfoForm.show(context, territory);
+  }
+
+  Future<void> _assignUser(Territory territory) async {
+    final role = territory.kind == TerritoryKind.managerZone
+        ? UserRole.manager
+        : UserRole.rep;
+    final result = await UserPickerSheet.pickAssignee(
+      context,
+      role: role,
+      sectorId: territory.sectorId,
+      currentUserId: territory.assignedUserId,
     );
+    if (result == null) return;
+
+    final userId = result == clearAssignee ? null : result;
+    try {
+      await ref
+          .read(territoryRepositoryProvider)
+          .assignUser(territory.id, userId);
+      ref.invalidate(territoriesProvider);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível atualizar o responsável.'),
+        ),
+      );
+    }
+  }
+
+  /// Confirms, then deletes [territory]. For a manager zone, the copy
+  /// warns that its rep patches will be left unassigned rather than
+  /// cascade-deleted (see `MockTerritoryRepository.deleteTerritory`).
+  Future<void> _confirmAndDelete(Territory territory) async {
+    final isZone = territory.kind == TerritoryKind.managerZone;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Excluir "${territory.name}"?'),
+        content: Text(
+          isZone
+              ? 'Esta zona de gerente será excluída. As áreas de representante '
+                    'vinculadas a ela ficarão sem uma zona associada.'
+              : 'Esta área de representante será excluída permanentemente.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(territoryRepositoryProvider).deleteTerritory(territory.id);
+      if (!mounted) return;
+      _deselectTerritory();
+      ref.invalidate(territoriesProvider);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('"${territory.name}" foi excluído.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível excluir. Tente novamente.'),
+        ),
+      );
+    }
   }
 
   /// Eases the camera so the *entire* territory is visible, with extra
@@ -577,26 +692,35 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
 /// Mapbox annotation) already shows where the territory is; this just
 /// offers "ver detalhes" / "editar" / "excluir" and a way to dismiss
 /// the selection.
-class _TerritoryActionBar extends StatelessWidget {
+class _TerritoryActionBar extends ConsumerWidget {
   final Territory territory;
   final VoidCallback onViewDetails;
-  final VoidCallback onEdit;
+  final VoidCallback onEditInfo;
+  final VoidCallback onAssign;
+  final VoidCallback onEditArea;
   final VoidCallback onDelete;
   final VoidCallback onClose;
 
   const _TerritoryActionBar({
     required this.territory,
     required this.onViewDetails,
-    required this.onEdit,
+    required this.onEditInfo,
+    required this.onAssign,
+    required this.onEditArea,
     required this.onDelete,
     required this.onClose,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final roleLabel = territory.kind == TerritoryKind.managerZone
         ? 'Gerente'
         : 'Representante';
+    final assignedUserId = territory.assignedUserId;
+    final assignedUserAsync = assignedUserId == null
+        ? null
+        : ref.watch(userByIdProvider(assignedUserId));
+    final assignedUser = assignedUserAsync?.valueOrNull;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -638,12 +762,18 @@ class _TerritoryActionBar extends StatelessWidget {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.person_rounded,
-                          size: 14,
-                          color: Color(0xFF9CA3AF),
-                        ),
-                        const SizedBox(width: 4),
+                        if (assignedUser != null) ...[
+                          UserAvatar.forUser(assignedUser, size: 16),
+                          const SizedBox(width: 5),
+                        ] else
+                          const Padding(
+                            padding: EdgeInsets.only(right: 4),
+                            child: Icon(
+                              Icons.person_rounded,
+                              size: 14,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ),
                         Expanded(
                           child: Text.rich(
                             TextSpan(
@@ -657,7 +787,7 @@ class _TerritoryActionBar extends StatelessWidget {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: territory.assignedUserName ?? 'Nenhum',
+                                  text: assignedUser?.name ?? 'Nenhum',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
@@ -692,8 +822,9 @@ class _TerritoryActionBar extends StatelessWidget {
           const SizedBox(height: 10),
           const Divider(height: 1, color: Color(0xFFE5E7EB)),
           const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            spacing: 4,
+            runSpacing: 2,
             children: [
               _ActionButton(
                 icon: Icons.visibility_outlined,
@@ -701,9 +832,19 @@ class _TerritoryActionBar extends StatelessWidget {
                 onTap: onViewDetails,
               ),
               _ActionButton(
+                icon: Icons.info_outline,
+                label: 'Informações',
+                onTap: onEditInfo,
+              ),
+              _ActionButton(
+                icon: Icons.person_outline,
+                label: 'Responsável',
+                onTap: onAssign,
+              ),
+              _ActionButton(
                 icon: Icons.edit_outlined,
-                label: 'Editar',
-                onTap: onEdit,
+                label: 'Área',
+                onTap: onEditArea,
               ),
               _ActionButton(
                 icon: Icons.delete_outline,

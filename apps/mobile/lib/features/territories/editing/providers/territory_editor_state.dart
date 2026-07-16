@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
 
@@ -45,6 +46,17 @@ class TerritoryEditorState {
   final String? loadError;
   final Territory? original;
 
+  /// `true` when the editor was opened to create a brand-new territory
+  /// rather than edit an existing one — [original] then stays `null` for
+  /// the whole session (there's nothing to load or revert to) and
+  /// [draft] carries the metadata a real `Territory` needs instead.
+  final bool isCreating;
+
+  /// The name/kind/sector/parent/assignee collected by the metadata form.
+  /// `null` until the form is first confirmed — the map/drawing tools
+  /// aren't shown while this is `null` and [isCreating] is `true`.
+  final TerritoryDraft? draft;
+
   /// Other territories of the same kind + sector, target excluded — the
   /// set that overlap checks and (in stage 3) auto-clip-snapping run
   /// against.
@@ -71,6 +83,8 @@ class TerritoryEditorState {
     this.loading = true,
     this.loadError,
     this.original,
+    this.isCreating = false,
+    this.draft,
     this.neighbors = const [],
     this.working,
     this.undoStack = const [],
@@ -90,7 +104,12 @@ class TerritoryEditorState {
   /// there anything to undo".
   bool get isDirty => undoStack.isNotEmpty;
 
-  bool get canSave => !loading && !saving && isDirty && validation.isValid;
+  bool get canSave =>
+      !loading &&
+      !saving &&
+      isDirty &&
+      validation.isValid &&
+      (!isCreating || draft != null);
   bool get canUndo => undoStack.isNotEmpty;
   bool get canRedo => redoStack.isNotEmpty;
   bool get canDeleteSelectedPart =>
@@ -104,6 +123,8 @@ class TerritoryEditorState {
     bool? loading,
     Object? loadError = _unset,
     Territory? original,
+    bool? isCreating,
+    Object? draft = _unset,
     List<Territory>? neighbors,
     Object? working = _unset,
     List<GeometryParts>? undoStack,
@@ -123,6 +144,8 @@ class TerritoryEditorState {
           ? this.loadError
           : loadError as String?,
       original: original ?? this.original,
+      isCreating: isCreating ?? this.isCreating,
+      draft: identical(draft, _unset) ? this.draft : draft as TerritoryDraft?,
       neighbors: neighbors ?? this.neighbors,
       working: identical(working, _unset)
           ? this.working

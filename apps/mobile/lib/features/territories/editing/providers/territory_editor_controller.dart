@@ -1,36 +1,54 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_ops.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territory_geometry_editor.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_state.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final territoryEditorControllerProvider = StateNotifierProvider.autoDispose
-    .family<TerritoryEditorController, TerritoryEditorState, String>((
-      ref,
-      territoryId,
-    ) {
-      return TerritoryEditorController(ref, territoryId);
+    .family<
+      TerritoryEditorController,
+      TerritoryEditorState,
+      TerritoryEditorTarget
+    >((ref, target) {
+      return TerritoryEditorController(ref, target);
     });
 
 class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
-  TerritoryEditorController(this._ref, this.territoryId)
-    : super(const TerritoryEditorState()) {
+  TerritoryEditorController(this._ref, this.target)
+    : super(TerritoryEditorState(isCreating: target.isCreating)) {
     _load();
   }
 
   final Ref _ref;
-  final String territoryId;
+  final TerritoryEditorTarget target;
 
   Future<void> _load() async {
+    if (target.isCreating) {
+      // Nothing to fetch yet — the metadata form hasn't been confirmed,
+      // so kind/sector aren't known and there's no boundary to load.
+      // `setDraft` does the equivalent neighbor fetch once they are.
+      const GeometryParts empty = [];
+      state = state.copyWith(
+        loading: false,
+        working: empty,
+        validation: _validate(empty, const []),
+      );
+      return;
+    }
+
     state = state.copyWith(loading: true, loadError: null);
     try {
       final repository = _ref.read(territoryRepositoryProvider);
-      final territory = await repository.getTerritoryById(territoryId);
+      final territory = await repository.getTerritoryById(
+        target.territoryId!,
+      );
       if (territory == null) {
         state = state.copyWith(
           loading: false,
@@ -58,6 +76,41 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         loading: false,
         loadError: 'Não foi possível carregar o território.',
       );
+    }
+  }
+
+  /// Stores the metadata form's result. On the very first call, also
+  /// defaults [TerritoryEditorState.mode] to [EditorMode.addArea] so the
+  /// user can start drawing right away. Whenever the kind/sector differ
+  /// from what they were, re-fetches [TerritoryEditorState.neighbors] for
+  /// the new kind+sector and re-validates the current shape against them.
+  Future<void> setDraft(TerritoryDraft draft) async {
+    final previousDraft = state.draft;
+    final isFirst = previousDraft == null;
+    final kindOrSectorChanged =
+        isFirst ||
+        previousDraft.kind != draft.kind ||
+        previousDraft.sectorId != draft.sectorId;
+
+    state = state.copyWith(
+      draft: draft,
+      mode: isFirst ? EditorMode.addArea : state.mode,
+    );
+
+    if (!kindOrSectorChanged) return;
+    try {
+      final repository = _ref.read(territoryRepositoryProvider);
+      final sameKindAndSector = await repository.getTerritories(
+        territoryTypeSlug: draft.kind.slug,
+        sectorId: draft.sectorId,
+      );
+      state = state.copyWith(
+        neighbors: sameKindAndSector,
+        validation: _validate(state.working ?? const [], sameKindAndSector),
+      );
+    } catch (_) {
+      // Best-effort — overlap checks just won't run against real
+      // neighbor data if the sector switch failed to load.
     }
   }
 
@@ -370,19 +423,41 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   }
 
   Future<bool> save() async {
-    final original = state.original;
     final working = state.working;
-    if (original == null || working == null || !state.canSave) return false;
+    if (working == null || !state.canSave) return false;
 
     state = state.copyWith(saving: true);
     try {
       final geometry = TerritoryGeometryEditor.toGeometry(working);
-      await _ref
-          .read(territoryRepositoryProvider)
-          .updateTerritoryGeometry(original.id, geometry);
-      _ref.invalidate(territoriesProvider);
-      _ref.invalidate(territoryByIdProvider(original.id));
-      state = state.copyWith(saving: false, saved: true, undoStack: const []);
+      final repository = _ref.read(territoryRepositoryProvider);
+
+      if (state.isCreating) {
+        final draft = state.draft!;
+        final centroid =
+            geometry.labelAnchor ?? const MapCoordinate(longitude: 0, latitude: 0);
+        final created = await repository.createTerritory(
+          draft,
+          geometry,
+          centroid,
+        );
+        _ref.invalidate(territoriesProvider);
+        state = state.copyWith(
+          saving: false,
+          saved: true,
+          undoStack: const [],
+          original: created,
+        );
+      } else {
+        final original = state.original!;
+        await repository.updateTerritoryGeometry(original.id, geometry);
+        _ref.invalidate(territoriesProvider);
+        _ref.invalidate(territoryByIdProvider(original.id));
+        state = state.copyWith(
+          saving: false,
+          saved: true,
+          undoStack: const [],
+        );
+      }
       return true;
     } catch (_) {
       state = state.copyWith(saving: false);
@@ -463,6 +538,14 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     GeometryParts working,
     List<Territory> neighbors,
   ) {
+    // A brand-new territory starts with nothing drawn — that's not a
+    // valid shape to save yet, just the editor's starting point.
+    if (working.isEmpty) {
+      return const GeometryValidation(
+        tooFewPoints: true,
+        message: 'Desenhe ao menos uma área para o território.',
+      );
+    }
     // A territory must always be a single connected polygon. This also
     // catches the case where a drag ends up auto-clipped against a
     // neighbor and splits the shape in two — not just the direct-draw

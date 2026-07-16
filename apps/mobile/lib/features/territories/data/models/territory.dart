@@ -3,6 +3,14 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 
+/// Sentinel used by [Territory.copyWith] so nullable fields can be
+/// explicitly reset to `null` (vs. "leave unchanged", the default).
+class _Unset {
+  const _Unset();
+}
+
+const _unset = _Unset();
+
 /// Mirrors the `Territory` DTO from `apps/web/types/territory.ts`, with an
 /// added `boundary`/`centroid` pair — on the real API those are fetched
 /// separately via `GET /territories/:id/boundary`, but for this map-first
@@ -22,9 +30,12 @@ class Territory {
   final TerritoryGeometry boundary;
   final MapCoordinate centroid;
 
-  /// Name of the manager/rep currently assigned to this territory, if any.
-  /// `null` means unassigned.
-  final String? assignedUserName;
+  /// Id of the manager/rep currently assigned to this territory, if any —
+  /// resolve via `UserRepository.getUserById` (or `userByIdProvider`) to
+  /// display a name/avatar. `null` means unassigned. On the real API this
+  /// is a many-to-many join table; the mock model simplifies it to one
+  /// assignee per territory.
+  final String? assignedUserId;
 
   const Territory({
     required this.id,
@@ -40,27 +51,40 @@ class Territory {
     this.repPatchCount,
     required this.boundary,
     required this.centroid,
-    this.assignedUserName,
+    this.assignedUserId,
   });
 
   TerritoryKind get kind => territoryType.kind;
 
-  Territory copyWith({TerritoryGeometry? boundary, MapCoordinate? centroid}) {
+  Territory copyWith({
+    String? name,
+    String? sectorId,
+    bool? isActive,
+    TerritoryGeometry? boundary,
+    MapCoordinate? centroid,
+    Object? managerTerritoryId = _unset,
+    Object? assignedUserId = _unset,
+    int? repPatchCount,
+  }) {
     return Territory(
       id: id,
-      name: name,
+      name: name ?? this.name,
       slug: slug,
       code: code,
       territoryType: territoryType,
-      sectorId: sectorId,
-      managerTerritoryId: managerTerritoryId,
-      isActive: isActive,
+      sectorId: sectorId ?? this.sectorId,
+      managerTerritoryId: identical(managerTerritoryId, _unset)
+          ? this.managerTerritoryId
+          : managerTerritoryId as String?,
+      isActive: isActive ?? this.isActive,
       clinicCount: clinicCount,
       assignedUserCount: assignedUserCount,
-      repPatchCount: repPatchCount,
+      repPatchCount: repPatchCount ?? this.repPatchCount,
       boundary: boundary ?? this.boundary,
       centroid: centroid ?? this.centroid,
-      assignedUserName: assignedUserName,
+      assignedUserId: identical(assignedUserId, _unset)
+          ? this.assignedUserId
+          : assignedUserId as String?,
     );
   }
 }

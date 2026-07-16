@@ -7,6 +7,11 @@ class EditorToolbar extends StatelessWidget {
   final EditorMode mode;
   final bool canUndo;
   final bool canRedo;
+
+  /// `false` for a brand-new territory before its first shape has been
+  /// drawn — there's nothing yet to select or remove from, so those two
+  /// tools are disabled until "Adicionar" creates the first area.
+  final bool hasArea;
   final ValueChanged<EditorMode> onModeChanged;
   final VoidCallback onUndo;
   final VoidCallback onRedo;
@@ -16,6 +21,7 @@ class EditorToolbar extends StatelessWidget {
     required this.mode,
     required this.canUndo,
     required this.canRedo,
+    this.hasArea = true,
     required this.onModeChanged,
     required this.onUndo,
     required this.onRedo,
@@ -56,7 +62,10 @@ class EditorToolbar extends StatelessWidget {
               icon: Icons.touch_app_outlined,
               label: 'Selecionar',
               selected: mode == EditorMode.select,
-              onTap: () => onModeChanged(EditorMode.select),
+              enabled: hasArea,
+              onTap: hasArea
+                  ? () => onModeChanged(EditorMode.select)
+                  : null,
             ),
             const SizedBox(width: 4),
             _ModeButton(
@@ -70,7 +79,10 @@ class EditorToolbar extends StatelessWidget {
               icon: Icons.remove_circle_outline_rounded,
               label: 'Remover',
               selected: mode == EditorMode.removeArea,
-              onTap: () => onModeChanged(EditorMode.removeArea),
+              enabled: hasArea,
+              onTap: hasArea
+                  ? () => onModeChanged(EditorMode.removeArea)
+                  : null,
             ),
             Container(
               width: 1,
@@ -99,12 +111,14 @@ class _ModeButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final bool enabled;
+  final VoidCallback? onTap;
 
   const _ModeButton({
     required this.icon,
     required this.label,
     required this.selected,
+    this.enabled = true,
     required this.onTap,
   });
 
@@ -113,8 +127,15 @@ class _ModeButton extends StatelessWidget {
     // Labels only render for the selected tool — with four modes sharing
     // the bar, showing every label at once would overflow a typical
     // phone width.
+    final iconColor = !enabled
+        ? const Color(0xFFD1D5DB)
+        : selected
+        ? const Color(0xFF0A2F7F)
+        : const Color(0xFF6B7280);
     return Material(
-      color: selected ? const Color(0xFFEEF2FF) : Colors.transparent,
+      color: selected && enabled
+          ? const Color(0xFFEEF2FF)
+          : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -127,21 +148,15 @@ class _ModeButton extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 18,
-                color: selected
-                    ? const Color(0xFF0A2F7F)
-                    : const Color(0xFF6B7280),
-              ),
+              Icon(icon, size: 18, color: iconColor),
               if (selected) ...[
                 const SizedBox(width: 6),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0A2F7F),
+                    color: iconColor,
                   ),
                 ),
               ],

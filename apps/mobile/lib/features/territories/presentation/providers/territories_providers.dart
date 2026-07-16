@@ -3,10 +3,11 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/territory.d
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/mock_territory_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
-  return MockTerritoryRepository();
+  return MockTerritoryRepository(ref.watch(userRepositoryProvider));
 });
 
 final sectorsProvider = FutureProvider<List<Sector>>((ref) {
