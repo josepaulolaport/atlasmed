@@ -56,7 +56,7 @@ class GeometryOps {
   /// clipper) so unrelated undo history keeps working. A drawn ring that
   /// touches nothing is simply appended as a new disconnected part.
   static GeometryParts union(GeometryParts parts, List<MapCoordinate> drawn) {
-    return _applyBooleanOp(parts, drawn, ClipType.union);
+    return _applyBooleanOp(parts, [drawn], ClipType.union);
   }
 
   /// Subtracts [drawn] from [parts] — producing a hole where the cut is
@@ -67,15 +67,27 @@ class GeometryOps {
     GeometryParts parts,
     List<MapCoordinate> drawn,
   ) {
-    return _applyBooleanOp(parts, drawn, ClipType.difference);
+    return _applyBooleanOp(parts, [drawn], ClipType.difference);
+  }
+
+  /// Subtracts a full, possibly-holed shape (a neighbor's own
+  /// exterior-plus-holes rings) from [parts] — the auto-clip-to-neighbor
+  /// behind live "boundary snapping": passing every ring (not just the
+  /// exterior) means a neighbor's own hole still leaves room for this
+  /// territory to extend into it, rather than being carved out too.
+  static GeometryParts subtractShape(
+    GeometryParts parts,
+    List<List<MapCoordinate>> clipRings,
+  ) {
+    return _applyBooleanOp(parts, clipRings, ClipType.difference);
   }
 
   static GeometryParts _applyBooleanOp(
     GeometryParts parts,
-    List<MapCoordinate> drawn,
+    List<List<MapCoordinate>> clipRings,
     ClipType clipType,
   ) {
-    final drawnPath = toClipperPath(drawn);
+    final clipPaths = clipRings.map(toClipperPath).toList();
     final untouched = <List<List<MapCoordinate>>>[];
     final affectedSubject = <Path64>[];
     var anyAffected = false;
@@ -84,7 +96,7 @@ class GeometryOps {
       final exterior = toClipperPath(part.first);
       final overlaps = Clipper.intersect(
         subject: [exterior],
-        clip: [drawnPath],
+        clip: clipPaths,
         fillRule: _fillRule,
       ).isNotEmpty;
       if (overlaps) {
@@ -99,7 +111,7 @@ class GeometryOps {
       if (clipType == ClipType.union) {
         return [
           ...untouched,
-          [List<MapCoordinate>.of(drawn)],
+          [List<MapCoordinate>.of(clipRings.first)],
         ];
       }
       return untouched;
@@ -108,7 +120,7 @@ class GeometryOps {
     final tree = Clipper.booleanOpPolyTree(
       clipType: clipType,
       subject: affectedSubject,
-      clip: [drawnPath],
+      clip: clipPaths,
       fillRule: _fillRule,
     );
 

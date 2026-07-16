@@ -116,7 +116,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     _applyWorking(TerritoryGeometryEditor.moveVertex(working, ref, position));
   }
 
-  void endVertexDrag() {}
+  void endVertexDrag() => _resolveNeighborOverlapsNow();
 
   /// Promotes a midpoint into a real vertex and immediately starts
   /// dragging it — the caller (the map screen) keeps the same live
@@ -161,7 +161,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
-  void endEdgeDrag() {}
+  void endEdgeDrag() => _resolveNeighborOverlapsNow();
 
   // ---- whole polygon -----------------------------------------------------
 
@@ -180,7 +180,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
-  void endPolygonMove() {}
+  void endPolygonMove() => _resolveNeighborOverlapsNow();
 
   void deleteSelectedPart() {
     final working = state.working;
@@ -254,7 +254,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     if (GeometryMath.ringSelfIntersects(state.drawingPoints)) return false;
 
     if (!_isDrawingMode(state.mode)) return false;
-    final next = switch (state.mode) {
+    final drawn = switch (state.mode) {
       EditorMode.drawArea =>
         TerritoryGeometryEditor.appendPart(working, state.drawingPoints),
       EditorMode.addArea => GeometryOps.union(working, state.drawingPoints),
@@ -262,6 +262,11 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         GeometryOps.difference(working, state.drawingPoints),
       EditorMode.navigate || EditorMode.select => const <List<List<MapCoordinate>>>[],
     };
+    // Draw/Add area can grow into a neighbor's territory — clip that back
+    // out immediately, same as every other commit (see
+    // `_resolveNeighborOverlaps`). Remove area only ever shrinks, so this
+    // is a no-op for it.
+    final next = _resolveNeighborOverlaps(drawn);
 
     if (next.isEmpty) {
       state = state.copyWith(
@@ -375,6 +380,38 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
+  /// Called at the end of every drag (vertex, edge, whole-polygon move) —
+  /// folds the auto-clip-to-neighbor resolution into the same undo/redo
+  /// action as the drag itself, so "one continuous drag = one action"
+  /// still holds even though this can further reshape the geometry.
+  void _resolveNeighborOverlapsNow() {
+    final working = state.working;
+    if (working == null) return;
+    _applyWorking(_resolveNeighborOverlaps(working));
+  }
+
+  /// Stage 3's upgrade from "flag-only" to "auto-resolved": wherever
+  /// [parts] overlaps a same-kind/sector neighbor, that overlap is cut
+  /// away — this *is* the "boundary snaps to the neighbor's border"
+  /// behavior described in the spec, with no separate bespoke snapping
+  /// algorithm needed. A neighbor's own hole is passed through whole (not
+  /// just its exterior), so it still leaves room for this territory to
+  /// grow into it.
+  GeometryParts _resolveNeighborOverlaps(GeometryParts parts) {
+    var next = parts;
+    for (final neighbor in state.neighbors) {
+      for (final neighborPart in neighbor.boundary.coordinates) {
+        if (neighborPart.isEmpty || next.isEmpty) continue;
+        final overlaps = next.any(
+          (part) => GeometryOps.intersects(part.first, neighborPart.first),
+        );
+        if (!overlaps) continue;
+        next = GeometryOps.subtractShape(next, neighborPart);
+      }
+    }
+    return next;
+  }
+
   GeometryValidation _validate(GeometryParts working, List<Territory> neighbors) {
     for (final part in working) {
       for (final ring in part) {
@@ -395,7 +432,12 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       for (final neighbor in neighbors) {
         for (final neighborPart in neighbor.boundary.coordinates) {
           if (neighborPart.isEmpty) continue;
-          if (GeometryMath.ringsOverlap(exterior, neighborPart.first)) {
+          // A boolean-op-based check on purpose (not the coarse
+          // `GeometryMath.ringsOverlap`): after a drag ends, the boundary
+          // is auto-clipped to exactly touch a neighbor's border (see
+          // `_resolveNeighborOverlaps`), and a shared border must not
+          // itself keep re-triggering this same flag.
+          if (GeometryOps.intersects(exterior, neighborPart.first)) {
             return GeometryValidation(
               overlapsNeighbor: true,
               message: 'Essa área sobrepõe o território "${neighbor.name}".',

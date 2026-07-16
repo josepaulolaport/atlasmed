@@ -158,4 +158,29 @@ void main() {
       expect(identical(result.first, parts.first), isTrue);
     });
   });
+
+  group('subtractShape', () {
+    test('a hole in the clip shape still leaves room for the subject', () {
+      final parts = [
+        [_square(0, 0, 20, 20)],
+      ];
+      // A neighbor shaped like a ring: a square with a smaller square
+      // hole in its middle. Subtracting it should only remove the donut
+      // body, not the hole in its middle — that hole is free space this
+      // territory can keep (or grow into).
+      final neighborShape = [
+        _square(5, -5, 25, 15),
+        _square(10, 0, 20, 10),
+      ];
+
+      final result = GeometryOps.subtractShape(parts, neighborShape);
+
+      bool coveredByAny(MapCoordinate point) =>
+          result.any((part) => _covered(part, point));
+
+      expect(coveredByAny(_c(1, 1)), isTrue); // untouched corner
+      expect(coveredByAny(_c(15, 5)), isTrue); // neighbor's hole
+      expect(coveredByAny(_c(7, 7)), isFalse); // neighbor's body
+    });
+  });
 }

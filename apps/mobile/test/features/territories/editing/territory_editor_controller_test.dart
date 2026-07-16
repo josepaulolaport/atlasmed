@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_ops.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_controller.dart';
@@ -162,22 +163,37 @@ void main() {
     expect(state.isDirty, isFalse);
   });
 
-  test('flags overlap with a same-kind/sector neighbor', () async {
-    await loadController();
-    final controller = container.read(
-      territoryEditorControllerProvider('target').notifier,
-    );
-    const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 2);
+  test(
+    'flags overlap with a same-kind/sector neighbor live, then auto-clips it on release',
+    () async {
+      await loadController();
+      final controller = container.read(
+        territoryEditorControllerProvider('target').notifier,
+      );
+      const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 2);
 
-    controller.beginVertexDrag(vertexRef);
-    // Drags the (2,2) corner into the neighbor square at (10..12, 10..12).
-    controller.updateVertexDrag(vertexRef, _c(11, 11));
-    controller.endVertexDrag();
+      controller.beginVertexDrag(vertexRef);
+      // Drags the (2,2) corner into the neighbor square at (10..12, 10..12).
+      controller.updateVertexDrag(vertexRef, _c(11, 11));
 
-    final state = container.read(territoryEditorControllerProvider('target'));
-    expect(state.validation.overlapsNeighbor, isTrue);
-    expect(state.canSave, isFalse);
-  });
+      var state = container.read(territoryEditorControllerProvider('target'));
+      expect(state.validation.overlapsNeighbor, isTrue);
+      expect(state.canSave, isFalse);
+
+      // Stage 3: releasing the drag auto-clips the overlap away instead
+      // of just leaving it flagged — the boundary "snaps" to the
+      // neighbor's border.
+      controller.endVertexDrag();
+      state = container.read(territoryEditorControllerProvider('target'));
+      expect(state.validation.overlapsNeighbor, isFalse);
+      expect(
+        state.working!.any(
+          (part) => GeometryOps.intersects(part.first, neighborSquare),
+        ),
+        isFalse,
+      );
+    },
+  );
 
   test('draw tool rejects a self-crossing point and commits a valid shape', () async {
     await loadController();

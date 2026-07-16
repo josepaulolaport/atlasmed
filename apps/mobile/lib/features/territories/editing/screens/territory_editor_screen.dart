@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
@@ -41,6 +43,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   static const _addColor = 0xFF10B981;
   static const _removeColor = 0xFFEF4444;
   static const _snapThresholdPixels = 24.0;
+  static const _vertexSnapThresholdPixels = 16.0;
+  static const _snapIndicatorColor = 0xFF7C3AED;
 
   static bool _isDrawingMode(EditorMode mode) =>
       mode == EditorMode.drawArea ||
@@ -58,6 +62,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   PolylineAnnotationManager? _borderManager;
   PolylineAnnotationManager? _drawPreviewManager;
   CircleAnnotationManager? _handleManager;
+  CircleAnnotationManager? _snapIndicatorManager;
 
   bool _mapReady = false;
   bool _mapUnavailable = false;
@@ -71,6 +76,15 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   String? _moveHandleAnnotationId;
   int? _moveHandlePartIndex;
   MapCoordinate? _lastDragPosition;
+
+  /// Magnetic snap targets for the vertex currently being dragged — screen
+  /// pixel positions are cached once at drag-begin (see
+  /// `_prepareSnapCandidates`) so each drag-changed frame only needs a
+  /// single `pixelForCoordinate` call (for the finger's own position),
+  /// not one per candidate.
+  List<_SnapCandidate> _snapCandidates = const [];
+  String? _snapIndicatorAnnotationId;
+  int _dragSession = 0;
 
   @override
   void initState() {
@@ -155,6 +169,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           .createPolylineAnnotationManager();
       await _drawPreviewManager!.setLineDasharray([2, 2]);
       _handleManager = await mapboxMap.annotations
+          .createCircleAnnotationManager();
+      _snapIndicatorManager = await mapboxMap.annotations
           .createCircleAnnotationManager();
 
       _fillManager!.tapEvents(onTap: _handleFillTap);
@@ -543,6 +559,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     final vertexRef = _vertexByAnnotationId[annotation.id];
     if (vertexRef != null) {
       _controller.beginVertexDrag(vertexRef);
+      _snapCandidates = const [];
+      final session = ++_dragSession;
+      unawaited(_prepareSnapCandidates(vertexRef, session));
       return;
     }
 
@@ -560,6 +579,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       if (promoted != null) {
         _midpointByAnnotationId.remove(annotation.id);
         _vertexByAnnotationId[annotation.id] = promoted;
+        _snapCandidates = const [];
+        final session = ++_dragSession;
+        unawaited(_prepareSnapCandidates(promoted, session));
       }
     }
   }
@@ -582,7 +604,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     final vertexRef = _vertexByAnnotationId[annotation.id];
     if (vertexRef != null) {
-      _controller.updateVertexDrag(vertexRef, position);
+      unawaited(_applyVertexDrag(vertexRef, position));
       return;
     }
 
@@ -600,6 +622,28 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
   }
 
+  /// Feeds a vertex drag through the magnetic snap check before handing
+  /// the position to the controller — see [_prepareSnapCandidates] for
+  /// why only one `pixelForCoordinate` call is needed per frame here.
+  Future<void> _applyVertexDrag(
+    VertexRef vertexRef,
+    MapCoordinate rawPosition,
+  ) async {
+    final mapboxMap = _mapboxMap;
+    if (mapboxMap == null || _snapCandidates.isEmpty) {
+      _controller.updateVertexDrag(vertexRef, rawPosition);
+      return;
+    }
+    try {
+      final pixel = await mapboxMap.pixelForCoordinate(_point(rawPosition));
+      final snapped = _findSnap(pixel.x, pixel.y);
+      _controller.updateVertexDrag(vertexRef, snapped ?? rawPosition);
+      await _updateSnapIndicator(snapped);
+    } catch (_) {
+      _controller.updateVertexDrag(vertexRef, rawPosition);
+    }
+  }
+
   void _handleDragEnd(CircleAnnotation annotation) {
     if (annotation.id == _moveHandleAnnotationId) {
       _controller.endPolygonMove();
@@ -612,7 +656,142 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
     _lastDragPosition = null;
     _dragging = false;
+    _snapCandidates = const [];
+    _dragSession++;
+    unawaited(_updateSnapIndicator(null));
     _render(_state);
+  }
+
+  // ---- boundary snapping -------------------------------------------------
+
+  /// Caches every candidate snap target — every other vertex/edge of this
+  /// territory's own working geometry, plus every vertex/edge of same-
+  /// kind/sector neighbors — as *screen pixels*, once, right as a vertex
+  /// drag starts. Each drag-changed frame then only has to convert the
+  /// dragged position itself, keeping the live magnetic feel cheap.
+  Future<void> _prepareSnapCandidates(VertexRef dragging, int session) async {
+    final mapboxMap = _mapboxMap;
+    final state = _state;
+    final working = state.working;
+    if (mapboxMap == null || working == null) return;
+
+    final candidates = <_SnapCandidate>[];
+    try {
+      for (var p = 0; p < working.length; p++) {
+        final isDraggedPart = p == dragging.partIndex;
+        for (var r = 0; r < working[p].length; r++) {
+          final isDraggedRing = isDraggedPart && r == dragging.ringIndex;
+          await _addRingSnapCandidates(
+            mapboxMap,
+            candidates,
+            working[p][r],
+            skipIndex: isDraggedRing ? dragging.pointIndex : null,
+          );
+        }
+      }
+      for (final neighbor in state.neighbors) {
+        for (final part in neighbor.boundary.coordinates) {
+          for (final ring in part) {
+            await _addRingSnapCandidates(mapboxMap, candidates, ring);
+          }
+        }
+      }
+    } catch (_) {
+      // Best-effort — dragging still works without magnetic snapping.
+    }
+
+    // The drag this was building candidates for may have already ended
+    // (or a new one begun) by the time every `pixelForCoordinate` call
+    // above resolves — don't clobber whatever is current in that case.
+    if (!mounted || session != _dragSession) return;
+    _snapCandidates = candidates;
+  }
+
+  /// Adds every vertex of [ring] (skipping [skipIndex], the vertex
+  /// actually being dragged) and every edge whose both endpoints aren't
+  /// that same vertex (an edge touching the dragged point collapses
+  /// towards the finger and isn't a meaningful snap target).
+  Future<void> _addRingSnapCandidates(
+    MapboxMap mapboxMap,
+    List<_SnapCandidate> candidates,
+    List<MapCoordinate> ring, {
+    int? skipIndex,
+  }) async {
+    final n = ring.length;
+    if (n < 2) return;
+    final pixels = <ScreenCoordinate>[];
+    for (final point in ring) {
+      pixels.add(await mapboxMap.pixelForCoordinate(_point(point)));
+    }
+    for (var i = 0; i < n; i++) {
+      if (i != skipIndex) {
+        candidates.add(_SnapCandidate.vertex(ring[i], pixels[i]));
+      }
+      final next = (i + 1) % n;
+      final touchesDragged = i == skipIndex || next == skipIndex;
+      if (!touchesDragged) {
+        candidates.add(
+          _SnapCandidate.edge(ring[i], ring[next], pixels[i], pixels[next]),
+        );
+      }
+    }
+  }
+
+  /// Nearest candidate within [_vertexSnapThresholdPixels] of ([px], [py]),
+  /// or `null` if nothing is close enough.
+  MapCoordinate? _findSnap(double px, double py) {
+    MapCoordinate? best;
+    var bestDistSq = _vertexSnapThresholdPixels * _vertexSnapThresholdPixels;
+    for (final candidate in _snapCandidates) {
+      final result = candidate.nearestTo(px, py);
+      if (result.distSq <= bestDistSq) {
+        bestDistSq = result.distSq;
+        best = result.coordinate;
+      }
+    }
+    return best;
+  }
+
+  /// Shows, moves, or hides the small ring that indicates a live magnetic
+  /// snap — the visual feedback for boundary snapping while dragging.
+  Future<void> _updateSnapIndicator(MapCoordinate? at) async {
+    final manager = _snapIndicatorManager;
+    if (manager == null) return;
+    final existingId = _snapIndicatorAnnotationId;
+
+    if (at == null) {
+      if (existingId != null) {
+        await manager.deleteAll();
+        _snapIndicatorAnnotationId = null;
+      }
+      return;
+    }
+
+    if (existingId == null) {
+      final created = await manager.create(
+        CircleAnnotationOptions(
+          geometry: _point(at),
+          circleRadius: 12,
+          circleColor: _snapIndicatorColor,
+          circleOpacity: 0.16,
+          circleStrokeColor: _snapIndicatorColor,
+          circleStrokeWidth: 2.5,
+        ),
+      );
+      _snapIndicatorAnnotationId = created.id;
+    } else {
+      await manager.update(
+        CircleAnnotation(
+          id: existingId,
+          geometry: _point(at),
+          circleRadius: 12,
+          circleColor: _snapIndicatorColor,
+          circleOpacity: 0.16,
+          circleStrokeColor: _snapIndicatorColor,
+          circleStrokeWidth: 2.5,
+        ),
+      );
+    }
   }
 
   // ---- chrome ------------------------------------------------------------
@@ -953,6 +1132,54 @@ class _CenteredMessage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A single magnetic snap target, cached in screen-pixel space at drag
+/// begin. A vertex candidate is a single point; an edge candidate is a
+/// segment — the snapped map coordinate for an edge is found by linearly
+/// interpolating along its original lng/lat endpoints using the same `t`
+/// found by projecting onto the *pixel*-space segment, an excellent
+/// approximation at the small scale a single territory spans.
+class _SnapCandidate {
+  final MapCoordinate a;
+  final MapCoordinate b;
+  final ScreenCoordinate pixelA;
+  final ScreenCoordinate pixelB;
+  final bool isVertex;
+
+  _SnapCandidate.vertex(this.a, this.pixelA)
+    : b = a,
+      pixelB = pixelA,
+      isVertex = true;
+
+  _SnapCandidate.edge(this.a, this.b, this.pixelA, this.pixelB)
+    : isVertex = false;
+
+  ({double distSq, MapCoordinate coordinate}) nearestTo(double px, double py) {
+    if (isVertex) {
+      final dx = pixelA.x - px;
+      final dy = pixelA.y - py;
+      return (distSq: dx * dx + dy * dy, coordinate: a);
+    }
+    final dx = pixelB.x - pixelA.x;
+    final dy = pixelB.y - pixelA.y;
+    final lengthSq = dx * dx + dy * dy;
+    var t = lengthSq == 0
+        ? 0.0
+        : ((px - pixelA.x) * dx + (py - pixelA.y) * dy) / lengthSq;
+    t = t.clamp(0.0, 1.0);
+    final nearestX = pixelA.x + t * dx;
+    final nearestY = pixelA.y + t * dy;
+    final ddx = nearestX - px;
+    final ddy = nearestY - py;
+    return (
+      distSq: ddx * ddx + ddy * ddy,
+      coordinate: MapCoordinate(
+        longitude: a.longitude + t * (b.longitude - a.longitude),
+        latitude: a.latitude + t * (b.latitude - a.latitude),
       ),
     );
   }
