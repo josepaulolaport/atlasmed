@@ -238,10 +238,6 @@ function productionIssues(env: Environment, rawEnv: EnvInput): string[] {
     .filter((key) => !rawEnv[key])
     .map((key) => `/${key}: required in production`);
 
-  if (env.SESSION_SECURITY_MODE !== "strict") {
-    issues.push("/SESSION_SECURITY_MODE: must be strict in production");
-  }
-
   if (rawEnv.UNCLOUD_CONNECT && !/^ssh(\+cli)?:\/\/[^@]+@.+/.test(rawEnv.UNCLOUD_CONNECT)) {
     issues.push("/UNCLOUD_CONNECT: must be an ssh:// or ssh+cli:// target");
   }
