@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
@@ -446,12 +447,29 @@ class _QuickActions extends ConsumerWidget {
           _ActionButton(
             icon: Icons.phone_rounded,
             label: 'Ligar',
-            onTap: () {},
+            onTap: () => launchContactUrl(
+              context,
+              url: callUrl(detail.phone),
+              contactLabel: 'telefone',
+            ),
           ),
           _ActionButton(
             icon: Icons.chat_rounded,
             label: 'WhatsApp',
-            onTap: () {},
+            onTap: () => launchContactUrl(
+              context,
+              url: whatsappUrl(detail.whatsapp ?? detail.phone),
+              contactLabel: 'WhatsApp',
+            ),
+          ),
+          _ActionButton(
+            icon: Icons.email_rounded,
+            label: 'E-mail',
+            onTap: () => launchContactUrl(
+              context,
+              url: emailUrl(detail.email),
+              contactLabel: 'e-mail',
+            ),
           ),
           _ActionButton(
             icon: Icons.directions_rounded,
