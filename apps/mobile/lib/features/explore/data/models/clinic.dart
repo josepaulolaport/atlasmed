@@ -28,19 +28,30 @@ class Clinic {
     required this.products,
   });
 
+  String? get locationLabel {
+    final normalizedNeighborhood = neighborhood.trim();
+    final normalizedCity = city.trim();
+
+    if (normalizedNeighborhood.isEmpty) {
+      return normalizedCity.isEmpty ? null : normalizedCity;
+    }
+    if (normalizedCity.isEmpty) return normalizedNeighborhood;
+
+    return '$normalizedNeighborhood · $normalizedCity';
+  }
+
   /// Maps a [Clinic] from the paginated API response to a [Clinic] model.
   /// Fields not present in the API response use sensible defaults.
   factory Clinic.fromApi(api.Clinic clinicDto) {
     final cityParts = <String>[
-      if (clinicDto.city != null && clinicDto.city!.isNotEmpty) clinicDto.city!,
-      if (clinicDto.state != null && clinicDto.state!.isNotEmpty)
-        clinicDto.state!,
+      if (clinicDto.city?.trim().isNotEmpty ?? false) clinicDto.city!.trim(),
+      if (clinicDto.state?.trim().isNotEmpty ?? false) clinicDto.state!.trim(),
     ];
     return Clinic(
       id: clinicDto.id,
       name: clinicDto.name,
       city: cityParts.isNotEmpty ? cityParts.join(', ') : '',
-      neighborhood: '',
+      neighborhood: clinicDto.neighborhood ?? '',
       distanceKm: clinicDto.distanceKm ?? 0,
       status: ClinicStatus.active,
       lastVisitDays: null,

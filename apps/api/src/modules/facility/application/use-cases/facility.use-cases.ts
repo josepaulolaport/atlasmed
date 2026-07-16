@@ -6,6 +6,9 @@ import type { FacilityRepository } from "../interfaces/facility.repository.inter
 function serializeClinic(clinic: {
   id: string;
   name: string;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
   taxIdType?: "PJ" | "PF" | null;
   cnpj?: string | null;
   cpf?: string | null;
@@ -23,6 +26,9 @@ function serializeClinic(clinic: {
   return {
     id: clinic.id,
     name: clinic.name,
+    neighborhood: clinic.neighborhood,
+    city: clinic.city,
+    state: clinic.state,
     taxIdType: clinic.taxIdType ?? null,
     cnpj: clinic.cnpj ?? null,
     cpf: clinic.cpf ?? null,
