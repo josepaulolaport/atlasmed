@@ -23,7 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Search, Users, MapPin, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Users, MapPin, Pencil, Trash2, MessageSquare } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 function territoryStatusBadge(status?: Facility["territoryAssignmentStatus"]) {
   if (!status || status === "assigned") return null;
@@ -430,6 +431,23 @@ export default function FacilitiesPage() {
                         <p className="text-xs text-zinc-500">Sem território atribuído</p>
                       )}
                     </div>
+
+                    {facility.lastInteraction && (
+                      <div className="pt-2 border-t border-zinc-100">
+                        <div className="flex items-start gap-1.5">
+                          <MessageSquare className="h-3.5 w-3.5 text-blue-500 mt-0.5 flex-shrink-0" />
+                          <div className="min-w-0">
+                            <p className="text-xs text-zinc-500">
+                              Última interação ({facility.lastInteraction.type === "followup" ? "Follow-up" : "Apresentação"})
+                            </p>
+                            <p className="text-sm text-zinc-700 line-clamp-2">{facility.lastInteraction.summary}</p>
+                            <p className="text-xs text-zinc-400 mt-0.5">
+                              {facility.lastInteraction.agentName} · {formatDateTime(facility.lastInteraction.interactedAt)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {facility.purchaseStatus && (
                       <div className="pt-2">

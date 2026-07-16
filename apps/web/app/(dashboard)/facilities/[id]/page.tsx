@@ -15,6 +15,7 @@ import type {
   Professional,
   FacilityProfessionalView,
   RegistrySuggestion,
+  Interaction,
 } from "@/types/facility";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,10 +36,13 @@ import {
 } from "@/components/ui/select";
 import { TabBar as Tabs, type TabItem } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 
 type TabKey =
   | "overview"
+  | "interactions"
   | "professionals"
   | "registry"
   | "territory";
@@ -220,6 +224,7 @@ export default function FacilityDetailPage() {
   const tabs = useMemo<TabItem[]>(
     () => [
       { value: "overview", label: "Visão geral" },
+      { value: "interactions", label: "Interações" },
       {
         value: "professionals",
         label: "Profissionais",
@@ -365,6 +370,8 @@ export default function FacilityDetailPage() {
           onReject={handleRejectSuggestion}
         />
       )}
+
+      {activeTab === "interactions" && <InteractionsTab facilityId={facilityId} />}
 
       {activeTab === "territory" && <TerritoryTab facility={facility} />}
     </>
@@ -742,6 +749,140 @@ function SuggestionCard({
         </Button>
         <Button onClick={onApprove}>Aplicar sugestão</Button>
       </div>
+    </div>
+  );
+}
+
+function InteractionsTab({ facilityId }: { facilityId: string }) {
+  const [interactions, setInteractions] = useState<Interaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [showForm, setShowForm] = useState(false);
+  const [newType, setNewType] = useState<"followup" | "presentation">("followup");
+  const [newSummary, setNewSummary] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const loadInteractions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await facilitiesApi.listInteractions(facilityId, { page, limit: 10 });
+      setInteractions(res.data);
+      setTotalPages(res.pagination.totalPages);
+    } catch {
+      toast({ title: "Erro ao carregar interações", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [facilityId, page, toast]);
+
+  useEffect(() => {
+    loadInteractions();
+  }, [loadInteractions]);
+
+  const handleSubmit = async () => {
+    if (!newSummary.trim()) return;
+    setSubmitting(true);
+    try {
+      await facilitiesApi.createInteraction(facilityId, {
+        type: newType,
+        summary: newSummary,
+      });
+      setNewSummary("");
+      setShowForm(false);
+      setPage(1);
+      await loadInteractions();
+      toast({ title: "Interação registrada com sucesso" });
+    } catch {
+      toast({ title: "Erro ao registrar interação", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto w-full space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-zinc-900">Interações com a unidade</h3>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancelar" : "Nova interação"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-4 shadow-sm">
+          <div>
+            <Label htmlFor="interaction-type">Tipo</Label>
+            <select
+              id="interaction-type"
+              className="mt-1 w-full rounded-md border border-zinc-300 px-3 py-2 text-sm"
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as "followup" | "presentation")}
+            >
+              <option value="followup">Follow-up</option>
+              <option value="presentation">Apresentação</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="interaction-summary">Resumo</Label>
+            <Textarea
+              id="interaction-summary"
+              placeholder="Descreva o que foi tratado na interação..."
+              value={newSummary}
+              onChange={(e) => setNewSummary(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <Button onClick={handleSubmit} disabled={submitting || !newSummary.trim()}>
+            {submitting ? "Registrando..." : "Registrar interação"}
+          </Button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>
+      ) : interactions.length === 0 ? (
+        <div className="py-10 text-center text-sm text-zinc-500">
+          Nenhuma interação registrada.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {interactions.map((interaction) => (
+            <div
+              key={interaction.id}
+              className="bg-white border border-zinc-200 rounded-xl p-5 shadow-sm"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                  interaction.type === "followup"
+                    ? "bg-blue-50 text-blue-700"
+                    : "bg-green-50 text-green-700"
+                }`}>
+                  {interaction.type === "followup" ? "Follow-up" : "Apresentação"}
+                </span>
+                <span className="text-xs text-zinc-500">
+                  {formatDateTime(interaction.interactedAt)}
+                </span>
+              </div>
+              <p className="text-sm text-zinc-900 mb-2">{interaction.summary}</p>
+              <p className="text-xs text-zinc-500">{interaction.agentName}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between">
+          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+            Anterior
+          </Button>
+          <span className="text-xs text-zinc-500">Página {page} de {totalPages}</span>
+          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+            Próxima
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

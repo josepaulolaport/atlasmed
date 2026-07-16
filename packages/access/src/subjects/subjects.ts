@@ -15,7 +15,7 @@ export const Subjects = {
 
   CATALOG: "CATALOG",
 
-  VISIT: "VISIT",
+  INTERACTION: "INTERACTION",
 } as const;
 
 export type Subject = (typeof Subjects)[keyof typeof Subjects];

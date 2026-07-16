@@ -583,17 +583,15 @@ const createFacilityConformityRecordRoute = new Elysia()
     }
   );
 
-const listFacilityVisitsRoute = new Elysia()
+const listFacilityInteractionsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
-    "/facilities/:id/visits",
-    async ({ params, query, getUserId, getScope }) => {
+    "/facilities/:id/interactions",
+    async ({ params, query, getScope }) => {
       const scope = await getScope();
-      const userId = await getUserId();
-      return facilityUseCases.listFacilityVisits().execute({
+      return facilityUseCases.listFacilityInteractions().execute({
         facilityId: params.id,
-        userId,
         scope,
         page: query.page ? Number(query.page) : 1,
         limit: query.limit ? Number(query.limit) : 20,
@@ -601,7 +599,7 @@ const listFacilityVisitsRoute = new Elysia()
     },
     {
       detail: {
-        summary: "List visits for the authenticated user at a facility",
+        summary: "List interactions at a facility",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
@@ -612,29 +610,33 @@ const listFacilityVisitsRoute = new Elysia()
     }
   );
 
-const createFacilityVisitRoute = new Elysia()
+const createFacilityInteractionRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "FACILITY", { resourceIdParam: "id" }))
   .post(
-    "/facilities/:id/visits",
+    "/facilities/:id/interactions",
     async ({ params, body, getUserId, getScope }) => {
       const scope = await getScope();
       const userId = await getUserId();
-      return facilityUseCases.createFacilityVisit().execute({
+      return facilityUseCases.createFacilityInteraction().execute({
         facilityId: params.id,
         userId,
         scope,
-        visitedAt: body.visitedAt,
+        type: body.type,
+        summary: body.summary,
+        interactedAt: body.interactedAt,
       });
     },
     {
       detail: {
-        summary: "Create a visit for the authenticated user at a facility",
+        summary: "Create an interaction at a facility",
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
       body: t.Object({
-        visitedAt: t.Optional(t.String()),
+        type: t.Union([t.Literal("followup"), t.Literal("presentation")]),
+        summary: t.String({ minLength: 1 }),
+        interactedAt: t.Optional(t.String()),
       }),
     }
   );
@@ -661,5 +663,5 @@ export const facilitiesRoute = new Elysia()
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
   .use(createFacilityConformityRecordRoute)
-  .use(listFacilityVisitsRoute)
-  .use(createFacilityVisitRoute);
+  .use(listFacilityInteractionsRoute)
+  .use(createFacilityInteractionRoute);

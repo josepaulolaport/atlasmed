@@ -19,6 +19,16 @@ export interface FacilityServiceItem {
   classificationCode: string;
 }
 
+export type InteractionType = "followup" | "presentation";
+
+export interface Interaction {
+  id: string;
+  type: InteractionType;
+  summary: string;
+  agentName: string;
+  interactedAt: string;
+}
+
 export interface Facility {
   id: string;
   name: string;
@@ -36,8 +46,15 @@ export interface Facility {
   professionalCount?: number;
   consultantName?: string | null;
   services?: FacilityServiceItem[];
+  lastInteraction?: Interaction | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateInteractionInput {
+  type: InteractionType;
+  summary: string;
+  interactedAt?: string;
 }
 
 export type {

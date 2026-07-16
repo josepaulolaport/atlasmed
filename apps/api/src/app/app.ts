@@ -12,7 +12,7 @@ import { registryIngestion } from "../modules/registry-ingestion";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
 import { orders } from "../modules/orders";
-import { visits } from "../modules/visits";
+import { interactions } from "../modules/interactions";
 import { user as avatarUser } from "../modules/user";
 import { HttpError } from "@atlasmed/access";
 import { AppError } from "../shared/errors";
@@ -128,7 +128,7 @@ const app = new Elysia()
       .use(territory)
       .use(maps)
       .use(orders)
-      .use(visits),
+      .use(interactions),
   );
 
 export default app;

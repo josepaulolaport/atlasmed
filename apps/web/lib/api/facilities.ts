@@ -1,6 +1,6 @@
 import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
-import type { Facility, CreateClinicRequest, UpdateClinicRequest } from "@/types/facility";
+import type { Facility, CreateClinicRequest, UpdateClinicRequest, Interaction, CreateInteractionInput } from "@/types/facility";
 
 export const facilitiesApi = {
   getFacilities: async (params?: {
@@ -31,6 +31,28 @@ export const facilitiesApi = {
 
   deleteFacility: async (id: string): Promise<void> => {
     await apiClient.delete(`/facilities/${id}`);
+  },
+
+  listInteractions: async (
+    facilityId: string,
+    params?: { page?: number; limit?: number },
+  ): Promise<PaginatedResponse<Interaction>> => {
+    const response = await apiClient.get<PaginatedResponse<Interaction>>(
+      `/facilities/${facilityId}/interactions`,
+      { params },
+    );
+    return response.data;
+  },
+
+  createInteraction: async (
+    facilityId: string,
+    data: CreateInteractionInput,
+  ): Promise<Interaction> => {
+    const response = await apiClient.post<Interaction>(
+      `/facilities/${facilityId}/interactions`,
+      data,
+    );
+    return response.data;
   },
 };
 

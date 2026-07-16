@@ -22,12 +22,12 @@ export function applyRoleAbilities(
       can("manage", "REGISTRY_INGESTION");
       can("manage", "REGISTRY_SUGGESTION");
       can("manage", "CATALOG");
-      can("manage", "VISIT");
+      can("manage", "INTERACTION");
       break;
 
     case "MANAGER":
-      can("create", "VISIT");
-      can("read", "VISIT");
+      can("create", "INTERACTION");
+      can("read", "INTERACTION");
       can("read", "USER");
       can("update", "USER");
       can("create", "USER");
@@ -48,8 +48,8 @@ export function applyRoleAbilities(
       break;
 
     case "REP":
-      can("create", "VISIT");
-      can("read", "VISIT");
+      can("create", "INTERACTION");
+      can("read", "INTERACTION");
       can("read", "FACILITY");
       can("update", "FACILITY");
       can("read", "PROFESSIONAL");

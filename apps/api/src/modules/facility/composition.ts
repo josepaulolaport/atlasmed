@@ -3,7 +3,7 @@ import { DrizzleFacilityProfessionalRepository } from "./infrastructure/reposito
 import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
 import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
 import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
-import { DrizzleVisitRepository } from "./infrastructure/repositories/drizzle/drizzle-visit.repository";
+import { DrizzleFacilityInteractionRepository } from "./infrastructure/repositories/drizzle/drizzle-interaction.repository";
 import { DrizzleTerritoryScopePort } from "./infrastructure/scope/drizzle-territory-scope.port";
 import {
   CreateFacilityUseCase,
@@ -32,9 +32,9 @@ import {
   ListFacilityConformityRecordsUseCase,
 } from "./application/use-cases/conformity.use-cases";
 import {
-  ListFacilityVisitsUseCase,
-  CreateFacilityVisitUseCase,
-} from "./application/use-cases/visit.use-cases";
+  ListFacilityInteractionsUseCase,
+  CreateFacilityInteractionUseCase,
+} from "./application/use-cases/interaction.use-cases";
 import {
   territoryMembershipService,
 } from "../territory/composition";
@@ -51,7 +51,7 @@ export const facilityRepositories = {
   representative: new DrizzleFacilityRepresentativeRepository(),
   consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
   conformity: new DrizzleConformityRepository(),
-  visit: new DrizzleVisitRepository(),
+  interaction: new DrizzleFacilityInteractionRepository(),
 };
 
 export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
@@ -72,6 +72,7 @@ const facilityMembershipDeps = {
   facilityRepository: facilityRepositories.facility,
   facilityGeocodingService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
+  interactionRepository: facilityRepositories.interaction,
 };
 
 export const facilityUseCases = {
@@ -137,13 +138,13 @@ export const facilityUseCases = {
     new CreateFacilityConformityRecordUseCase({
       conformityRepository: facilityRepositories.conformity,
     }),
-  listFacilityVisits: () =>
-    new ListFacilityVisitsUseCase({
-      visitRepository: facilityRepositories.visit,
+  listFacilityInteractions: () =>
+    new ListFacilityInteractionsUseCase({
+      interactionRepository: facilityRepositories.interaction,
     }),
-  createFacilityVisit: () =>
-    new CreateFacilityVisitUseCase({
-      visitRepository: facilityRepositories.visit,
+  createFacilityInteraction: () =>
+    new CreateFacilityInteractionUseCase({
+      interactionRepository: facilityRepositories.interaction,
     }),
 };
 

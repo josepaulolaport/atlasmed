@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
 import { ForbiddenError } from "../../../../shared/errors";
-import { GetWeeklyVisitSummaryUseCase, RecordVisitUseCase } from "./visit.use-cases";
+import { GetWeeklyInteractionSummaryUseCase, RecordInteractionUseCase } from "./interaction.use-cases";
 
 const scopedScope: ScopeContext = {
   isGlobal: false,
@@ -17,26 +17,26 @@ const scopedScope: ScopeContext = {
   isOperationallyActive: true,
 };
 
-describe("RecordVisitUseCase", () => {
-  test("denies visits outside the current scope", async () => {
-    const useCase = new RecordVisitUseCase({
-      visitRepository: { create: async () => { throw new Error("must not create"); }, countDistinctFacilitiesForUserInPeriod: async () => 0, countFacilities: async () => 0 },
+describe("RecordInteractionUseCase", () => {
+  test("denies interactions outside the current scope", async () => {
+    const useCase = new RecordInteractionUseCase({
+      interactionRepository: { create: async () => { throw new Error("must not create"); }, countDistinctFacilitiesForUserInPeriod: async () => 0, countFacilities: async () => 0 },
     });
 
     await expect(
-      useCase.execute({ userId: "rep-1", facilityId: "other-clinic", scope: scopedScope })
+      useCase.execute({ userId: "rep-1", facilityId: "other-clinic", type: "followup", summary: "Test", scope: scopedScope })
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
 
-describe("GetWeeklyVisitSummaryUseCase", () => {
+describe("GetWeeklyInteractionSummaryUseCase", () => {
   test("returns distinct clinics and total clinics in the current scope", async () => {
     let receivedScope: string[] | undefined;
-    const useCase = new GetWeeklyVisitSummaryUseCase({
+    const useCase = new GetWeeklyInteractionSummaryUseCase({
       now: () => new Date("2026-03-11T15:00:00.000Z"),
       timeZone: "America/Sao_Paulo",
-      visitRepository: {
-        create: async () => ({ id: "visit-1", userId: "rep-1", facilityId: "clinic-1", visitedAt: new Date(), createdAt: new Date() }),
+      interactionRepository: {
+        create: async () => ({ id: "int-1", type: "followup" as const, summary: "test", userId: "rep-1", facilityId: "clinic-1", interactedAt: new Date(), createdAt: new Date() }),
         countDistinctFacilitiesForUserInPeriod: async ({ facilityIds }) => { receivedScope = facilityIds; return 2; },
         countFacilities: async ({ facilityIds }) => { receivedScope = facilityIds; return 4; },
       },

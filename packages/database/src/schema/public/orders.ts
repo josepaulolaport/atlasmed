@@ -14,6 +14,7 @@ import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { facilities, professionals } from "./facilities";
 import { products } from "./catalog";
 import { users } from "./users";
+import { interactions } from "./interactions";
 
 export const orders = pgTable(
   "orders",
@@ -43,6 +44,7 @@ export const orders = pgTable(
     noBillingNotes: text("no_billing_notes"),
     expenseAuthorizedById: text("expense_authorized_by_id").references(() => users.id),
     expenseAuthorizedAt: timestamp("expense_authorized_at"),
+    interactionId: text("interaction_id").references(() => interactions.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

@@ -142,3 +142,8 @@ export const orderTypeEnum = pgEnum("order_type", [
   "DONATION",
   "OTHER",
 ]);
+
+export const interactionTypeEnum = pgEnum("interaction_type", [
+  "followup",
+  "presentation",
+]);

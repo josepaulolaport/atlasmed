@@ -2,24 +2,36 @@ import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
+import type { DrizzleFacilityInteractionRepository } from "../../infrastructure/repositories/drizzle/drizzle-interaction.repository";
 
-function serializeClinic(clinic: {
+interface LastInteraction {
   id: string;
-  name: string;
-  taxIdType?: "PJ" | "PF" | null;
-  cnpj?: string | null;
-  cpf?: string | null;
-  lat: number | null;
-  lng: number | null;
-  territoryId: string | null;
-  territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
-  createdAt: Date;
-  updatedAt: Date;
-  professionalCount?: number;
-  consultantName?: string | null;
-  services?: Array<{ serviceCode: string; classificationCode: string }>;
-  distanceKm?: number | null;
-}) {
+  type: "followup" | "presentation";
+  summary: string;
+  agentName: string;
+  interactedAt: string;
+}
+
+function serializeClinic(
+  clinic: {
+    id: string;
+    name: string;
+    taxIdType?: "PJ" | "PF" | null;
+    cnpj?: string | null;
+    cpf?: string | null;
+    lat: number | null;
+    lng: number | null;
+    territoryId: string | null;
+    territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
+    createdAt: Date;
+    updatedAt: Date;
+    professionalCount?: number;
+    consultantName?: string | null;
+    services?: Array<{ serviceCode: string; classificationCode: string }>;
+    distanceKm?: number | null;
+  },
+  lastInteraction?: LastInteraction | null,
+) {
   return {
     id: clinic.id,
     name: clinic.name,
@@ -34,6 +46,7 @@ function serializeClinic(clinic: {
     consultantName: clinic.consultantName ?? null,
     distanceKm: clinic.distanceKm ?? undefined,
     services: clinic.services ?? [],
+    lastInteraction: lastInteraction ?? null,
     createdAt: clinic.createdAt.toISOString(),
     updatedAt: clinic.updatedAt.toISOString(),
   };
@@ -43,6 +56,7 @@ interface Dependencies {
   facilityRepository: FacilityRepository;
   facilityGeocodingService?: FacilityGeocodingService;
   onFacilityLocationChanged?: (facilityId: string) => Promise<void>;
+  interactionRepository?: DrizzleFacilityInteractionRepository;
 }
 
 export class ListFacilitiesUseCase {
@@ -76,8 +90,26 @@ export class ListFacilitiesUseCase {
         : { isGlobal: false, facilityIds: input.scope.facilityIds },
     });
 
+    // Fetch latest interactions for all facilities in this page
+    const facilityIds = facilities.map((f) => f.id);
+    const lastInteractionsMap = this.deps.interactionRepository
+      ? await this.deps.interactionRepository.findLatestByFacilityIds(facilityIds)
+      : new Map<string, { id: string; type: "followup" | "presentation"; summary: string; agentName: string; interactedAt: Date }>();
+
     return {
-      data: facilities.map(serializeClinic),
+      data: facilities.map((f) => {
+        const last = lastInteractionsMap.get(f.id);
+        const lastInteraction: LastInteraction | null = last
+          ? {
+              id: last.id,
+              type: last.type,
+              summary: last.summary,
+              agentName: last.agentName,
+              interactedAt: last.interactedAt.toISOString(),
+            }
+          : null;
+        return serializeClinic(f, lastInteraction);
+      }),
       pagination: {
         page,
         limit,

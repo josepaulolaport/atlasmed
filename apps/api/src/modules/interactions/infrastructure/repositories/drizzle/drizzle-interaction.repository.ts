@@ -1,21 +1,27 @@
-import { facilities, visits } from "@atlasmed/database";
+import { facilities, interactions } from "@atlasmed/database";
 import { and, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import { DatabaseError } from "../../../../../shared/errors";
-import type { VisitRecord, VisitRepository } from "../../../application/interfaces/visit.repository.interface";
+import type { InteractionRecord, InteractionRepository } from "../../../application/interfaces/interaction.repository.interface";
 
 function facilityScopeCondition(facilityIds?: string[]) {
   if (facilityIds === undefined) return undefined;
   return inArray(facilities.id, facilityIds.length ? facilityIds : ["__none__"]);
 }
 
-export class DrizzleVisitRepository implements VisitRepository {
-  async create(input: { userId: string; facilityId: string; visitedAt: Date }): Promise<VisitRecord> {
-    const [visit] = await db.insert(visits).values(input).returning();
-    if (!visit) {
-      throw new DatabaseError("create visit");
+export class DrizzleInteractionRepository implements InteractionRepository {
+  async create(input: {
+    type: "followup" | "presentation";
+    summary: string;
+    userId: string;
+    facilityId: string;
+    interactedAt: Date;
+  }): Promise<InteractionRecord> {
+    const [interaction] = await db.insert(interactions).values(input).returning();
+    if (!interaction) {
+      throw new DatabaseError("create interaction");
     }
-    return visit;
+    return interaction;
   }
 
   async countDistinctFacilitiesForUserInPeriod(input: {
@@ -26,15 +32,15 @@ export class DrizzleVisitRepository implements VisitRepository {
   }): Promise<number> {
     const scope = facilityScopeCondition(input.facilityIds);
     const conditions = [
-      eq(visits.userId, input.userId),
-      gte(visits.visitedAt, input.start),
-      lt(visits.visitedAt, input.end),
+      eq(interactions.userId, input.userId),
+      gte(interactions.interactedAt, input.start),
+      lt(interactions.interactedAt, input.end),
     ];
     if (scope) conditions.push(scope);
     const [row] = await db
-      .select({ count: sql<number>`count(distinct ${visits.facilityId})::int` })
-      .from(visits)
-      .innerJoin(facilities, eq(facilities.id, visits.facilityId))
+      .select({ count: sql<number>`count(distinct ${interactions.facilityId})::int` })
+      .from(interactions)
+      .innerJoin(facilities, eq(facilities.id, interactions.facilityId))
       .where(and(...conditions));
     return row?.count ?? 0;
   }

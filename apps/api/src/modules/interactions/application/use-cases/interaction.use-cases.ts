@@ -1,34 +1,45 @@
 import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
-import type { VisitRepository } from "../interfaces/visit.repository.interface";
+import type { InteractionRepository } from "../interfaces/interaction.repository.interface";
 import { DEFAULT_APPLICATION_TIMEZONE, getMondayToMondayWeek } from "../services/week-boundary.service";
 
 interface Dependencies {
-  visitRepository: VisitRepository;
+  interactionRepository: InteractionRepository;
   now?: () => Date;
   timeZone?: string;
 }
 
-export class RecordVisitUseCase {
+export class RecordInteractionUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { userId: string; facilityId: string; visitedAt?: Date; scope: ScopeContext }) {
+  async execute(input: {
+    userId: string;
+    facilityId: string;
+    type: "followup" | "presentation";
+    summary: string;
+    interactedAt?: Date;
+    scope: ScopeContext;
+  }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
-    const visit = await this.deps.visitRepository.create({
+    const interaction = await this.deps.interactionRepository.create({
+      type: input.type,
+      summary: input.summary,
       userId: input.userId,
       facilityId: input.facilityId,
-      visitedAt: input.visitedAt ?? this.deps.now?.() ?? new Date(),
+      interactedAt: input.interactedAt ?? this.deps.now?.() ?? new Date(),
     });
 
     return {
-      id: visit.id,
-      facilityId: visit.facilityId,
-      visitedAt: visit.visitedAt.toISOString(),
-      createdAt: visit.createdAt.toISOString(),
+      id: interaction.id,
+      type: interaction.type,
+      summary: interaction.summary,
+      facilityId: interaction.facilityId,
+      interactedAt: interaction.interactedAt.toISOString(),
+      createdAt: interaction.createdAt.toISOString(),
     };
   }
 }
 
-export class GetWeeklyVisitSummaryUseCase {
+export class GetWeeklyInteractionSummaryUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(input: { userId: string; scope: ScopeContext }) {
@@ -38,13 +49,13 @@ export class GetWeeklyVisitSummaryUseCase {
     );
     const facilityIds = input.scope.isGlobal ? undefined : input.scope.facilityIds;
     const [distinctClinicsVisited, totalClinics] = await Promise.all([
-      this.deps.visitRepository.countDistinctFacilitiesForUserInPeriod({
+      this.deps.interactionRepository.countDistinctFacilitiesForUserInPeriod({
         userId: input.userId,
         start,
         end,
         facilityIds,
       }),
-      this.deps.visitRepository.countFacilities({ facilityIds }),
+      this.deps.interactionRepository.countFacilities({ facilityIds }),
     ]);
 
     return {
