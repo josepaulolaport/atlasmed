@@ -7,6 +7,7 @@ import { TokenService } from "../services/token.service";
 import { RateLimiterService } from "../services/rate-limiter.service";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
 import type { IMetrics } from "../interfaces/metrics.interface";
+import type { Pending2FALoginService } from "../services/pending-2fa-login.service";
 import {
   InvalidCredentialsError,
   TooManyLoginAttemptsError,
@@ -25,6 +26,7 @@ interface Dependencies {
   rateLimiterService: RateLimiterService;
   auditLog: IAuditLog;
   metrics: IMetrics;
+  pending2faLoginService: Pending2FALoginService;
 }
 
 interface LoginParams {
@@ -134,6 +136,26 @@ export class LoginUseCase {
     }
 
     await this.deps.rateLimiterService.clearAttempts(params.identifier);
+
+    if (user.twoFactorEnabled && environment.TWO_FACTOR_ENABLED) {
+      const pendingToken = await this.deps.pending2faLoginService.store({
+        userId: user.id,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+        acceptLanguage: params.acceptLanguage,
+      });
+
+      await this.deps.auditLog.log2FARequired({
+        userId: user.id,
+        ipAddress: params.ipAddress,
+        userAgent: params.userAgent,
+      });
+
+      return {
+        requires2FA: true as const,
+        pendingToken,
+      };
+    }
 
     await this.deps.userRepository.updateLastLogin(user.id);
 

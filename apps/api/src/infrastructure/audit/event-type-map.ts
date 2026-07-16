@@ -19,11 +19,17 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "POST /api/v1/auth/login": { eventType: "USER.LOGIN" },
   "POST /api/v1/auth/logout": { eventType: "USER.LOGOUT" },
   "POST /api/v1/auth/refresh": { eventType: "USER.SESSION_REFRESH" },
+  "POST /api/v1/auth/login/2fa": { eventType: "USER.LOGIN_2FA" },
 
   // --- Password ---
   "POST /api/v1/auth/password-reset": { eventType: "USER.PASSWORD_RESET_REQUEST", severity: "WARNING" },
   "POST /api/v1/auth/password-reset/confirm": { eventType: "USER.PASSWORD_RESET_COMPLETE", severity: "WARNING" },
   "POST /api/v1/users/:id/change-password": { eventType: "USER.PASSWORD_CHANGE", severity: "WARNING" },
+
+  // --- 2FA ---
+  "POST /api/v1/users/:id/2fa/setup": { eventType: "USER.2FA_SETUP" },
+  "POST /api/v1/users/:id/2fa/confirm": { eventType: "USER.2FA_ENABLE", severity: "WARNING" },
+  "DELETE /api/v1/users/:id/2fa": { eventType: "USER.2FA_DISABLE", severity: "WARNING" },
 
   // --- Sessions ---
   "DELETE /api/v1/sessions/:id": { eventType: "USER.SESSION_REVOKE" },

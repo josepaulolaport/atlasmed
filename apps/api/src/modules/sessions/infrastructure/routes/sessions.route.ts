@@ -31,7 +31,7 @@ export const sessionsRoute = new Elysia({
   .use(loginRateLimit)
   .post(
     "/",
-    async ({ body, request, cookie }) => {
+    async ({ body, request, cookie, set }) => {
       const parsed = loginSchema.parse(body);
 
       const result = await accessUseCases.login().execute({
@@ -41,6 +41,16 @@ export const sessionsRoute = new Elysia({
         userAgent: request.headers.get("user-agent") || undefined,
         acceptLanguage: request.headers.get("accept-language") || undefined,
       });
+
+      if ("requires2FA" in result && result.requires2FA) {
+        set.status = 400;
+        return {
+          error: {
+            code: "TWO_FACTOR_REQUIRED",
+            message: "Two-factor authentication is not supported at this time.",
+          },
+        };
+      }
 
       // Set httpOnly cookie for web clients
       cookie[REFRESH_TOKEN_COOKIE_NAME]?.set(
@@ -90,6 +100,12 @@ export const sessionsRoute = new Elysia({
               name: t.String(),
               description: t.Optional(t.String()),
             }),
+          }),
+        }),
+        400: t.Object({
+          error: t.Object({
+            code: t.String(),
+            message: t.String(),
           }),
         }),
         401: t.Object({

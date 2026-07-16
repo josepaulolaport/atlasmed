@@ -129,6 +129,11 @@ export interface ChangePasswordTransactionResult {
   user: UserRecord;
 }
 
+export interface EnableTwoFactorParams {
+  userId: string;
+  encryptedSecret: string;
+}
+
 export interface UserRepository {
   findByIdentifier(
     params: FindUserByIdentifierParams,
@@ -159,6 +164,10 @@ export interface UserRepository {
   changePasswordTransaction(
     params: ChangePasswordTransactionParams,
   ): Promise<ChangePasswordTransactionResult>;
+
+  enableTwoFactor(params: EnableTwoFactorParams): Promise<void>;
+
+  disableTwoFactor(userId: string): Promise<void>;
 
   incrementTokenVersion(userId: string): Promise<number>;
 
