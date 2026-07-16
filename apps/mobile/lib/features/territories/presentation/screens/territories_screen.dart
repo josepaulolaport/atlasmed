@@ -265,9 +265,8 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
               child: _TerritoryActionBar(
                 territory: selectedTerritory,
                 onViewDetails: () => _openDetails(selectedTerritory),
-                onEdit: () => context.push(
-                  '/territorios/${selectedTerritory.id}/editar',
-                ),
+                onEdit: () =>
+                    context.push('/territorios/${selectedTerritory.id}/editar'),
                 onDelete: () => _showComingSoon('A exclusão de territórios'),
                 onClose: _deselectTerritory,
               ),

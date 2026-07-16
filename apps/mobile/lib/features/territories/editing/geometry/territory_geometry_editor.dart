@@ -89,7 +89,11 @@ class TerritoryGeometryEditor {
     final next = copy(parts);
     final ring = next[edge.partIndex][edge.ringIndex];
     final endIndex = (edge.startIndex + 1) % ring.length;
-    ring[edge.startIndex] = _translate(ring[edge.startIndex], deltaLng, deltaLat);
+    ring[edge.startIndex] = _translate(
+      ring[edge.startIndex],
+      deltaLng,
+      deltaLat,
+    );
     ring[endIndex] = _translate(ring[endIndex], deltaLng, deltaLat);
     return next;
   }

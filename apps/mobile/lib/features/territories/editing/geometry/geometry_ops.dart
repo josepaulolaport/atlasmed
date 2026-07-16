@@ -27,17 +27,14 @@ class GeometryOps {
         ? ring.sublist(0, ring.length - 1)
         : ring;
     return open
-        .map(
-          (p) => Point64.fromDouble(p.longitude, p.latitude, scale: _scale),
-        )
+        .map((p) => Point64.fromDouble(p.longitude, p.latitude, scale: _scale))
         .toList();
   }
 
   static List<MapCoordinate> fromClipperPath(Path64 path) {
     return path
         .map(
-          (p) =>
-              MapCoordinate(longitude: p.x / _scale, latitude: p.y / _scale),
+          (p) => MapCoordinate(longitude: p.x / _scale, latitude: p.y / _scale),
         )
         .toList();
   }
@@ -175,7 +172,6 @@ class GeometryOps {
     List<MapCoordinate> ring,
   ) => GeometryMath.isClockwise(ring) ? ring.reversed.toList() : ring;
 
-  static List<MapCoordinate> _normalizeHoleWinding(
-    List<MapCoordinate> ring,
-  ) => GeometryMath.isClockwise(ring) ? ring : ring.reversed.toList();
+  static List<MapCoordinate> _normalizeHoleWinding(List<MapCoordinate> ring) =>
+      GeometryMath.isClockwise(ring) ? ring : ring.reversed.toList();
 }

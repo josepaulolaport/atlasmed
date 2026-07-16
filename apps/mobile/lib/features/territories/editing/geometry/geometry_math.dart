@@ -38,8 +38,7 @@ class GeometryMath {
       final a1 = points[i];
       final a2 = points[(i + 1) % n];
       for (var j = i + 1; j < n; j++) {
-        final sharesVertex =
-            j == i || (j + 1) % n == i || (i + 1) % n == j;
+        final sharesVertex = j == i || (j + 1) % n == i || (i + 1) % n == j;
         if (sharesVertex) continue;
         final b1 = points[j];
         final b2 = points[(j + 1) % n];

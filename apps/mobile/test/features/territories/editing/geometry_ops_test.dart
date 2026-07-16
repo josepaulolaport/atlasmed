@@ -45,10 +45,7 @@ void main() {
   group('intersects', () {
     test('true for overlapping shapes', () {
       expect(
-        GeometryOps.intersects(
-          _square(0, 0, 10, 10),
-          _square(5, 5, 15, 15),
-        ),
+        GeometryOps.intersects(_square(0, 0, 10, 10), _square(5, 5, 15, 15)),
         isTrue,
       );
     });
@@ -118,21 +115,18 @@ void main() {
       expect(_covered(result.first, _c(8, 8)), isTrue);
     });
 
-    test(
-      'normalizes winding so Mapbox renders the cut as an actual hole '
-      '(exterior CCW, hole CW — GeoJSON convention)',
-      () {
-        final parts = [
-          [_square(0, 0, 10, 10)],
-        ];
-        final result = GeometryOps.difference(parts, _square(3, 3, 6, 6));
+    test('normalizes winding so Mapbox renders the cut as an actual hole '
+        '(exterior CCW, hole CW — GeoJSON convention)', () {
+      final parts = [
+        [_square(0, 0, 10, 10)],
+      ];
+      final result = GeometryOps.difference(parts, _square(3, 3, 6, 6));
 
-        final exterior = result.first.first;
-        final hole = result.first[1];
-        expect(GeometryMath.isClockwise(exterior), isFalse);
-        expect(GeometryMath.isClockwise(hole), isTrue);
-      },
-    );
+      final exterior = result.first.first;
+      final hole = result.first[1];
+      expect(GeometryMath.isClockwise(exterior), isFalse);
+      expect(GeometryMath.isClockwise(hole), isTrue);
+    });
 
     test('splits a part into two when the cut crosses end-to-end', () {
       final parts = [
@@ -146,8 +140,14 @@ void main() {
         (sum, part) => sum + _area(part.first),
       );
       expect(totalArea, closeTo(80, 0.001));
-      expect(_covered(result[0], _c(1, 5)) || _covered(result[1], _c(1, 5)), isTrue);
-      expect(_covered(result[0], _c(9, 5)) || _covered(result[1], _c(9, 5)), isTrue);
+      expect(
+        _covered(result[0], _c(1, 5)) || _covered(result[1], _c(1, 5)),
+        isTrue,
+      );
+      expect(
+        _covered(result[0], _c(9, 5)) || _covered(result[1], _c(9, 5)),
+        isTrue,
+      );
       expect(_covered(result[0], _c(5, 5)), isFalse);
       expect(_covered(result[1], _c(5, 5)), isFalse);
     });
@@ -165,10 +165,7 @@ void main() {
       final parts = [
         [_square(0, 0, 10, 10)],
       ];
-      final result = GeometryOps.difference(
-        parts,
-        _square(100, 100, 110, 110),
-      );
+      final result = GeometryOps.difference(parts, _square(100, 100, 110, 110));
 
       expect(result.length, 1);
       expect(identical(result.first, parts.first), isTrue);
@@ -184,10 +181,7 @@ void main() {
       // hole in its middle. Subtracting it should only remove the donut
       // body, not the hole in its middle — that hole is free space this
       // territory can keep (or grow into).
-      final neighborShape = [
-        _square(5, -5, 25, 15),
-        _square(10, 0, 20, 10),
-      ];
+      final neighborShape = [_square(5, -5, 25, 15), _square(10, 0, 20, 10)];
 
       final result = GeometryOps.subtractShape(parts, neighborShape);
 

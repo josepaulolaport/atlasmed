@@ -24,10 +24,7 @@ const _managerZoneType = TerritoryType(
   assignableToManagers: true,
 );
 
-Territory _territory({
-  required String id,
-  required List<MapCoordinate> ring,
-}) {
+Territory _territory({required String id, required List<MapCoordinate> ring}) {
   final geometry = TerritoryGeometry.polygon([
     [...ring, ring.first],
   ]);
@@ -122,24 +119,29 @@ void main() {
     );
     await Future.doWhile(() async {
       await Future<void>.delayed(const Duration(milliseconds: 10));
-      return container.read(territoryEditorControllerProvider('target')).loading;
+      return container
+          .read(territoryEditorControllerProvider('target'))
+          .loading;
     });
     return controller;
   }
 
-  test('loads the target territory and excludes it from its own neighbors', () async {
-    await loadController();
-    final state = container.read(territoryEditorControllerProvider('target'));
+  test(
+    'loads the target territory and excludes it from its own neighbors',
+    () async {
+      await loadController();
+      final state = container.read(territoryEditorControllerProvider('target'));
 
-    expect(state.loadError, isNull);
-    expect(state.original?.id, 'target');
-    expect(state.neighbors.map((t) => t.id), ['neighbor']);
-    expect(state.working, [
-      [square],
-    ]);
-    expect(state.isDirty, isFalse);
-    expect(state.canSave, isFalse);
-  });
+      expect(state.loadError, isNull);
+      expect(state.original?.id, 'target');
+      expect(state.neighbors.map((t) => t.id), ['neighbor']);
+      expect(state.working, [
+        [square],
+      ]);
+      expect(state.isDirty, isFalse);
+      expect(state.canSave, isFalse);
+    },
+  );
 
   test('dragging a vertex is undo-able and marks the state dirty', () async {
     await loadController();
@@ -238,25 +240,28 @@ void main() {
     expect(state.isDirty, isTrue);
   });
 
-  test('remove area tool cuts a hole when the drawn ring is interior', () async {
-    await loadController();
-    final controller = container.read(
-      territoryEditorControllerProvider('target').notifier,
-    );
+  test(
+    'remove area tool cuts a hole when the drawn ring is interior',
+    () async {
+      await loadController();
+      final controller = container.read(
+        territoryEditorControllerProvider('target').notifier,
+      );
 
-    controller.setMode(EditorMode.removeArea);
-    expect(controller.addDrawingPoint(_c(0.5, 0.5)), isTrue);
-    expect(controller.addDrawingPoint(_c(1.5, 0.5)), isTrue);
-    expect(controller.addDrawingPoint(_c(1.5, 1.5)), isTrue);
-    expect(controller.addDrawingPoint(_c(0.5, 1.5)), isTrue);
+      controller.setMode(EditorMode.removeArea);
+      expect(controller.addDrawingPoint(_c(0.5, 0.5)), isTrue);
+      expect(controller.addDrawingPoint(_c(1.5, 0.5)), isTrue);
+      expect(controller.addDrawingPoint(_c(1.5, 1.5)), isTrue);
+      expect(controller.addDrawingPoint(_c(0.5, 1.5)), isTrue);
 
-    expect(controller.finishDrawing(), isTrue);
-    final state = container.read(territoryEditorControllerProvider('target'));
-    expect(state.mode, EditorMode.select);
-    expect(state.working!.length, 1);
-    expect(state.working![0].length, 2); // exterior ring + hole
-    expect(state.isDirty, isTrue);
-  });
+      expect(controller.finishDrawing(), isTrue);
+      final state = container.read(territoryEditorControllerProvider('target'));
+      expect(state.mode, EditorMode.select);
+      expect(state.working!.length, 1);
+      expect(state.working![0].length, 2); // exterior ring + hole
+      expect(state.isDirty, isTrue);
+    },
+  );
 
   test(
     'add area tool rejects a shape that does not touch the existing territory',
@@ -283,109 +288,21 @@ void main() {
     },
   );
 
-  test(
-    'remove area tool rejects a cut that would split the territory into '
-    'two disconnected parts',
-    () async {
-      await loadController();
-      final controller = container.read(
-        territoryEditorControllerProvider('target').notifier,
-      );
-
-      controller.setMode(EditorMode.removeArea);
-      // A thin vertical strip through the middle of the target square
-      // ((0,0)-(2,2)), extending past both edges — bisects it into a left
-      // and a right piece instead of just cutting a hole.
-      expect(controller.addDrawingPoint(_c(0.9, -1)), isTrue);
-      expect(controller.addDrawingPoint(_c(1.1, -1)), isTrue);
-      expect(controller.addDrawingPoint(_c(1.1, 3)), isTrue);
-      expect(controller.addDrawingPoint(_c(0.9, 3)), isTrue);
-
-      expect(controller.finishDrawing(), isFalse);
-      final state = container.read(territoryEditorControllerProvider('target'));
-      expect(state.mode, EditorMode.removeArea);
-      expect(state.working, [
-        [square],
-      ]);
-      expect(state.isDirty, isFalse);
-      expect(state.validation.hasMultipleAreas, isTrue);
-    },
-  );
-
-  test(
-    'flags a pre-existing multi-part boundary as invalid and blocks save '
-    'until merged back into one polygon',
-    () async {
-      final legacySquareA = [_c(0, 0), _c(2, 0), _c(2, 2), _c(0, 2)];
-      final legacySquareB = [_c(5, 5), _c(7, 5), _c(7, 7), _c(5, 7)];
-      final legacyRepository = _FakeTerritoryRepository([
-        Territory(
-          id: 'legacy',
-          name: 'Território legado',
-          slug: 'legacy',
-          code: 'legacy',
-          territoryType: _managerZoneType,
-          sectorId: 'sector-1',
-          boundary: TerritoryGeometry.multiPolygon([
-            [
-              [...legacySquareA, legacySquareA.first],
-            ],
-            [
-              [...legacySquareB, legacySquareB.first],
-            ],
-          ]),
-          centroid: legacySquareA.first,
-        ),
-      ]);
-      final legacyContainer = ProviderContainer(
-        overrides: [
-          territoryRepositoryProvider.overrideWithValue(legacyRepository),
-        ],
-      );
-      addTearDown(legacyContainer.dispose);
-      legacyContainer.listen(
-        territoryEditorControllerProvider('legacy'),
-        (previous, next) {},
-      );
-      final controller = legacyContainer.read(
-        territoryEditorControllerProvider('legacy').notifier,
-      );
-      await Future.doWhile(() async {
-        await Future<void>.delayed(const Duration(milliseconds: 10));
-        return legacyContainer
-            .read(territoryEditorControllerProvider('legacy'))
-            .loading;
-      });
-
-      var state = legacyContainer.read(territoryEditorControllerProvider('legacy'));
-      expect(state.working!.length, 2);
-      expect(state.validation.hasMultipleAreas, isTrue);
-
-      // Dirty the state (drag a vertex) to confirm the multi-area flag —
-      // not just "nothing changed yet" — is what's blocking save.
-      const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
-      controller.beginVertexDrag(vertexRef);
-      controller.updateVertexDrag(vertexRef, _c(-1, -1));
-      controller.endVertexDrag();
-
-      state = legacyContainer.read(territoryEditorControllerProvider('legacy'));
-      expect(state.isDirty, isTrue);
-      expect(state.validation.hasMultipleAreas, isTrue);
-      expect(state.canSave, isFalse);
-    },
-  );
-
-  test('remove area tool refuses a cut that would eliminate the territory', () async {
+  test('remove area tool rejects a cut that would split the territory into '
+      'two disconnected parts', () async {
     await loadController();
     final controller = container.read(
       territoryEditorControllerProvider('target').notifier,
     );
 
     controller.setMode(EditorMode.removeArea);
-    expect(controller.addDrawingPoint(_c(-1, -1)), isTrue);
-    expect(controller.addDrawingPoint(_c(3, -1)), isTrue);
-    expect(controller.addDrawingPoint(_c(3, 3)), isTrue);
-    expect(controller.addDrawingPoint(_c(-1, 3)), isTrue);
+    // A thin vertical strip through the middle of the target square
+    // ((0,0)-(2,2)), extending past both edges — bisects it into a left
+    // and a right piece instead of just cutting a hole.
+    expect(controller.addDrawingPoint(_c(0.9, -1)), isTrue);
+    expect(controller.addDrawingPoint(_c(1.1, -1)), isTrue);
+    expect(controller.addDrawingPoint(_c(1.1, 3)), isTrue);
+    expect(controller.addDrawingPoint(_c(0.9, 3)), isTrue);
 
     expect(controller.finishDrawing(), isFalse);
     final state = container.read(territoryEditorControllerProvider('target'));
@@ -394,26 +311,116 @@ void main() {
       [square],
     ]);
     expect(state.isDirty, isFalse);
-    expect(state.validation.isValid, isFalse);
+    expect(state.validation.hasMultipleAreas, isTrue);
   });
 
-  test('save persists the working geometry and clears the undo stack', () async {
-    await loadController();
-    final controller = container.read(
-      territoryEditorControllerProvider('target').notifier,
+  test('flags a pre-existing multi-part boundary as invalid and blocks save '
+      'until merged back into one polygon', () async {
+    final legacySquareA = [_c(0, 0), _c(2, 0), _c(2, 2), _c(0, 2)];
+    final legacySquareB = [_c(5, 5), _c(7, 5), _c(7, 7), _c(5, 7)];
+    final legacyRepository = _FakeTerritoryRepository([
+      Territory(
+        id: 'legacy',
+        name: 'Território legado',
+        slug: 'legacy',
+        code: 'legacy',
+        territoryType: _managerZoneType,
+        sectorId: 'sector-1',
+        boundary: TerritoryGeometry.multiPolygon([
+          [
+            [...legacySquareA, legacySquareA.first],
+          ],
+          [
+            [...legacySquareB, legacySquareB.first],
+          ],
+        ]),
+        centroid: legacySquareA.first,
+      ),
+    ]);
+    final legacyContainer = ProviderContainer(
+      overrides: [
+        territoryRepositoryProvider.overrideWithValue(legacyRepository),
+      ],
     );
+    addTearDown(legacyContainer.dispose);
+    legacyContainer.listen(
+      territoryEditorControllerProvider('legacy'),
+      (previous, next) {},
+    );
+    final controller = legacyContainer.read(
+      territoryEditorControllerProvider('legacy').notifier,
+    );
+    await Future.doWhile(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      return legacyContainer
+          .read(territoryEditorControllerProvider('legacy'))
+          .loading;
+    });
+
+    var state = legacyContainer.read(
+      territoryEditorControllerProvider('legacy'),
+    );
+    expect(state.working!.length, 2);
+    expect(state.validation.hasMultipleAreas, isTrue);
+
+    // Dirty the state (drag a vertex) to confirm the multi-area flag —
+    // not just "nothing changed yet" — is what's blocking save.
     const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
     controller.beginVertexDrag(vertexRef);
     controller.updateVertexDrag(vertexRef, _c(-1, -1));
     controller.endVertexDrag();
 
-    final saved = await controller.save();
-    expect(saved, isTrue);
-    expect(repository.lastSavedId, 'target');
-    expect(repository.lastSavedGeometry!.coordinates[0][0][0], _c(-1, -1));
-
-    final state = container.read(territoryEditorControllerProvider('target'));
-    expect(state.isDirty, isFalse);
-    expect(state.saved, isTrue);
+    state = legacyContainer.read(territoryEditorControllerProvider('legacy'));
+    expect(state.isDirty, isTrue);
+    expect(state.validation.hasMultipleAreas, isTrue);
+    expect(state.canSave, isFalse);
   });
+
+  test(
+    'remove area tool refuses a cut that would eliminate the territory',
+    () async {
+      await loadController();
+      final controller = container.read(
+        territoryEditorControllerProvider('target').notifier,
+      );
+
+      controller.setMode(EditorMode.removeArea);
+      expect(controller.addDrawingPoint(_c(-1, -1)), isTrue);
+      expect(controller.addDrawingPoint(_c(3, -1)), isTrue);
+      expect(controller.addDrawingPoint(_c(3, 3)), isTrue);
+      expect(controller.addDrawingPoint(_c(-1, 3)), isTrue);
+
+      expect(controller.finishDrawing(), isFalse);
+      final state = container.read(territoryEditorControllerProvider('target'));
+      expect(state.mode, EditorMode.removeArea);
+      expect(state.working, [
+        [square],
+      ]);
+      expect(state.isDirty, isFalse);
+      expect(state.validation.isValid, isFalse);
+    },
+  );
+
+  test(
+    'save persists the working geometry and clears the undo stack',
+    () async {
+      await loadController();
+      final controller = container.read(
+        territoryEditorControllerProvider('target').notifier,
+      );
+      const vertexRef = VertexRef(partIndex: 0, ringIndex: 0, pointIndex: 0);
+      controller.beginVertexDrag(vertexRef);
+      controller.updateVertexDrag(vertexRef, _c(-1, -1));
+      controller.endVertexDrag();
+
+      final saved = await controller.save();
+      expect(saved, isTrue);
+      expect(repository.lastSavedId, 'target');
+      expect(repository.lastSavedGeometry!.coordinates[0][0][0], _c(-1, -1));
+
+      final state = container.read(territoryEditorControllerProvider('target'));
+      expect(state.isDirty, isFalse);
+      expect(state.saved, isTrue);
+    },
+  );
 }

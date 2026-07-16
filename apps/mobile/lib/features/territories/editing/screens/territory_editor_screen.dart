@@ -298,7 +298,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         if (part.isEmpty) continue;
         neighborFillOptions.add(
           PolygonAnnotationOptions(
-            geometry: Polygon.fromPoints(points: part.map(_ringToPoints).toList()),
+            geometry: Polygon.fromPoints(
+              points: part.map(_ringToPoints).toList(),
+            ),
             fillColor: _neighborColor,
             fillOpacity: 0.32,
           ),
@@ -342,7 +344,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
 
       fillOptions.add(
         PolygonAnnotationOptions(
-          geometry: Polygon.fromPoints(points: part.map(_ringToPoints).toList()),
+          geometry: Polygon.fromPoints(
+            points: part.map(_ringToPoints).toList(),
+          ),
           fillColor: kindColor,
           fillOpacity: selected ? 0.40 : 0.22,
           fillOutlineColor: lineColor,
@@ -493,7 +497,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           circleStrokeWidth: 2.5,
         ),
       );
-      vertexRefs.add(VertexRef(partIndex: partIndex, ringIndex: 0, pointIndex: i));
+      vertexRefs.add(
+        VertexRef(partIndex: partIndex, ringIndex: 0, pointIndex: i),
+      );
 
       final next = ring[(i + 1) % ringLength];
       final isEdgeSelected =
@@ -508,14 +514,18 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           circleStrokeWidth: 1.5,
         ),
       );
-      midpointRefs.add(EdgeRef(partIndex: partIndex, ringIndex: 0, startIndex: i));
+      midpointRefs.add(
+        EdgeRef(partIndex: partIndex, ringIndex: 0, startIndex: i),
+      );
     }
 
     final createdVertices = await handleManager.createMulti(vertexOptions);
     if (token != _renderToken) return;
     for (var i = 0; i < createdVertices.length; i++) {
       final annotation = createdVertices[i];
-      if (annotation != null) _vertexByAnnotationId[annotation.id] = vertexRefs[i];
+      if (annotation != null) {
+        _vertexByAnnotationId[annotation.id] = vertexRefs[i];
+      }
     }
     final createdMidpoints = await handleManager.createMulti(midpointOptions);
     if (token != _renderToken) return;
@@ -652,7 +662,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   // on release, treated as the tap it was.
 
   Future<void> _handlePointerDown(PointerDownEvent event) async {
-    if (_activePointerId != null) return; // a different finger is already tracked
+    if (_activePointerId != null) {
+      return; // a different finger is already tracked
+    }
     final state = _state;
 
     if (_isDrawingMode(state.mode)) {
@@ -669,7 +681,13 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       return;
     }
 
-    final hit = await _hitTestHandle(mapboxMap, state, working, partIndex, event.localPosition);
+    final hit = await _hitTestHandle(
+      mapboxMap,
+      state,
+      working,
+      partIndex,
+      event.localPosition,
+    );
     if (hit == null) return;
     // The touch may already have ended (or a new one begun) by the time
     // the hit test above resolves.
@@ -692,7 +710,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       final centroid = _averagePoint(working[partIndex].first);
       final pixels = await mapboxMap.pixelsForCoordinates([_point(centroid)]);
       final pixel = pixels.isEmpty ? null : pixels.first;
-      if (pixel == null || _distSq(pixel, touch) > _handleHitRadiusPixels * _handleHitRadiusPixels) {
+      if (pixel == null ||
+          _distSq(pixel, touch) >
+              _handleHitRadiusPixels * _handleHitRadiusPixels) {
         return null;
       }
       return _PendingHandleHit.move(partIndex: partIndex, at: centroid);
@@ -704,7 +724,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     final n = ring.length;
     if (n == 0) return null;
     final midpoints = [
-      for (var i = 0; i < n; i++) GeometryMath.midpoint(ring[i], ring[(i + 1) % n]),
+      for (var i = 0; i < n; i++)
+        GeometryMath.midpoint(ring[i], ring[(i + 1) % n]),
     ];
     final pixels = await mapboxMap.pixelsForCoordinates([
       ...ring.map(_point),
@@ -741,7 +762,11 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       );
     }
     if (bestMidpoint != null) {
-      final edgeRef = EdgeRef(partIndex: partIndex, ringIndex: 0, startIndex: bestMidpoint);
+      final edgeRef = EdgeRef(
+        partIndex: partIndex,
+        ringIndex: 0,
+        startIndex: bestMidpoint,
+      );
       return state.selectedEdge == edgeRef
           ? _PendingHandleHit.edge(edgeRef, at: midpoints[bestMidpoint])
           : _PendingHandleHit.midpoint(edgeRef, at: midpoints[bestMidpoint]);
@@ -833,7 +858,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
         _lastDragPosition = pending.at;
         await _lockScroll(true);
       case _PendingKind.midpointUnselected:
-        final promoted = _controller.beginMidpointDrag(pending.edgeRef!, pending.at!);
+        final promoted = _controller.beginMidpointDrag(
+          pending.edgeRef!,
+          pending.at!,
+        );
         if (promoted != null) _armVertexDrag(promoted);
       case _PendingKind.move:
         _controller.beginPolygonMove(pending.partIndex!);
@@ -892,7 +920,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       if (mapboxMap == null) return;
       try {
         final point = await mapboxMap.coordinateForPixel(
-          ScreenCoordinate(x: event.localPosition.dx, y: event.localPosition.dy),
+          ScreenCoordinate(
+            x: event.localPosition.dx,
+            y: event.localPosition.dy,
+          ),
         );
         await _handleDrawTap(_fromPoint(point));
       } catch (_) {
@@ -932,7 +963,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     final mapboxMap = _mapboxMap;
     if (mapboxMap == null) return;
     try {
-      await mapboxMap.gestures.updateSettings(GesturesSettings(scrollEnabled: !locked));
+      await mapboxMap.gestures.updateSettings(
+        GesturesSettings(scrollEnabled: !locked),
+      );
     } catch (_) {
       // Best-effort — worst case this one drag fights the map's own pan.
     }
@@ -1104,7 +1137,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
               ),
             ],
           ),
-          if (!state.validation.isValid && state.validation.message != null) ...[
+          if (!state.validation.isValid &&
+              state.validation.message != null) ...[
             const SizedBox(height: 10),
             EditorValidationBanner(message: state.validation.message!),
           ],
@@ -1140,7 +1174,8 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
             ),
             const SizedBox(height: 10),
           ],
-          if (state.mode == EditorMode.select && state.selectedPart != null) ...[
+          if (state.mode == EditorMode.select &&
+              state.selectedPart != null) ...[
             Center(
               child: EditorContextualBar(
                 action: state.selectionAction,
@@ -1252,10 +1287,14 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       lng += point.longitude;
       lat += point.latitude;
     }
-    return MapCoordinate(longitude: lng / ring.length, latitude: lat / ring.length);
+    return MapCoordinate(
+      longitude: lng / ring.length,
+      latitude: lat / ring.length,
+    );
   }
 
-  List<Point> _ringToPoints(List<MapCoordinate> ring) => ring.map(_point).toList();
+  List<Point> _ringToPoints(List<MapCoordinate> ring) =>
+      ring.map(_point).toList();
 
   Point _point(MapCoordinate coordinate) =>
       Point(coordinates: Position(coordinate.longitude, coordinate.latitude));
@@ -1409,7 +1448,10 @@ class _CenteredMessage extends StatelessWidget {
                 Text(
                   message!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF6B7280),
+                  ),
                 ),
               ],
             ],
@@ -1442,7 +1484,13 @@ class _PendingHandleHit {
   final int? partIndex;
   final MapCoordinate? at;
 
-  const _PendingHandleHit._(this.kind, {this.vertexRef, this.edgeRef, this.partIndex, this.at});
+  const _PendingHandleHit._(
+    this.kind, {
+    this.vertexRef,
+    this.edgeRef,
+    this.partIndex,
+    this.at,
+  });
 
   factory _PendingHandleHit.vertex(VertexRef ref) =>
       _PendingHandleHit._(_PendingKind.vertex, vertexRef: ref);
@@ -1450,11 +1498,19 @@ class _PendingHandleHit {
   factory _PendingHandleHit.edge(EdgeRef ref, {required MapCoordinate at}) =>
       _PendingHandleHit._(_PendingKind.edgeSelected, edgeRef: ref, at: at);
 
-  factory _PendingHandleHit.midpoint(EdgeRef ref, {required MapCoordinate at}) =>
-      _PendingHandleHit._(_PendingKind.midpointUnselected, edgeRef: ref, at: at);
+  factory _PendingHandleHit.midpoint(
+    EdgeRef ref, {
+    required MapCoordinate at,
+  }) => _PendingHandleHit._(
+    _PendingKind.midpointUnselected,
+    edgeRef: ref,
+    at: at,
+  );
 
-  factory _PendingHandleHit.move({required int partIndex, required MapCoordinate at}) =>
-      _PendingHandleHit._(_PendingKind.move, partIndex: partIndex, at: at);
+  factory _PendingHandleHit.move({
+    required int partIndex,
+    required MapCoordinate at,
+  }) => _PendingHandleHit._(_PendingKind.move, partIndex: partIndex, at: at);
 }
 
 class _SnapCandidate {

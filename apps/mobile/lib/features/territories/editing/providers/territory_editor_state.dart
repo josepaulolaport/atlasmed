@@ -26,7 +26,10 @@ class GeometryValidation {
   static const valid = GeometryValidation();
 
   bool get isValid =>
-      !tooFewPoints && !selfIntersects && !overlapsNeighbor && !hasMultipleAreas;
+      !tooFewPoints &&
+      !selfIntersects &&
+      !overlapsNeighbor &&
+      !hasMultipleAreas;
 }
 
 /// Sentinel used by [TerritoryEditorState.copyWith] so nullable fields can

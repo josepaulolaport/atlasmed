@@ -9,14 +9,13 @@ import 'package:atlasmed_mobile_app/features/territories/editing/providers/terri
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final territoryEditorControllerProvider =
-    StateNotifierProvider.autoDispose
-        .family<TerritoryEditorController, TerritoryEditorState, String>((
-          ref,
-          territoryId,
-        ) {
-          return TerritoryEditorController(ref, territoryId);
-        });
+final territoryEditorControllerProvider = StateNotifierProvider.autoDispose
+    .family<TerritoryEditorController, TerritoryEditorState, String>((
+      ref,
+      territoryId,
+    ) {
+      return TerritoryEditorController(ref, territoryId);
+    });
 
 class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   TerritoryEditorController(this._ref, this.territoryId)
@@ -222,7 +221,12 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       // shares that exact point with the new segment by construction, so
       // testing it would always look like a "touching" intersection.
       for (var i = 0; i < points.length - 2; i++) {
-        if (GeometryMath.segmentsIntersect(points[i], points[i + 1], last, point)) {
+        if (GeometryMath.segmentsIntersect(
+          points[i],
+          points[i + 1],
+          last,
+          point,
+        )) {
           return false;
         }
       }
@@ -261,9 +265,12 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       // it overlaps, instead of being left as a separate, invalid,
       // overlapping shape.
       EditorMode.addArea => GeometryOps.union(working, state.drawingPoints),
-      EditorMode.removeArea =>
-        GeometryOps.difference(working, state.drawingPoints),
-      EditorMode.navigate || EditorMode.select => const <List<List<MapCoordinate>>>[],
+      EditorMode.removeArea => GeometryOps.difference(
+        working,
+        state.drawingPoints,
+      ),
+      EditorMode.navigate ||
+      EditorMode.select => const <List<List<MapCoordinate>>>[],
     };
     // Add area can grow into a neighbor's territory — clip that back out
     // immediately, same as every other commit (see
@@ -452,7 +459,10 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     return next;
   }
 
-  GeometryValidation _validate(GeometryParts working, List<Territory> neighbors) {
+  GeometryValidation _validate(
+    GeometryParts working,
+    List<Territory> neighbors,
+  ) {
     // A territory must always be a single connected polygon. This also
     // catches the case where a drag ends up auto-clipped against a
     // neighbor and splits the shape in two — not just the direct-draw
