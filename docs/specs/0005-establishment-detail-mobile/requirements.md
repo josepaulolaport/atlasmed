@@ -1,6 +1,6 @@
 # Spec 0005: Mobile Establishment Detail (Estabelecimento / Clínica)
 
-**Status:** Approved for implementation — redesign addendum (v6)  
+**Status:** Approved for implementation — redesign addendum (v7)  
 **Last Updated:** 2026-07-17  
 **Domains:** `apps/mobile`, `apps/api` (additive contract changes)  
 **Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
@@ -14,6 +14,8 @@
 > **v5 note:** fixed a real layout bug in `ClinicSectionHeader` (the title and the trailing `Spacer` shared flex equally instead of the spacer claiming all leftover space, which could strand "Ver todos"/"Editar" away from the right edge) and hardened two new header widgets against overflow at narrow widths/long text. "Fotos da clínica" is retired as a standalone scrollable section — tapping the header avatar now opens a full-screen, swipeable `ClinicPhotoViewerScreen` instead. The Sinais chips in the header gained an inline category legend ("Comercial:", "Compra:", "Conformidade:") so each pill's meaning is clear without a separate key, and the header now also shows the clinic's phone/e-mail (tap-to-call/e-mail). "Pedidos recentes" cards moved their status badge inline next to the date and added a new order-type badge there too, dropped both the redundant item-count row and the separate `R$ total` row, and gained a full-width item-preview table (product name first, `qty×` right-aligned, "+N itens" beyond 2 lines) with a computed "Subtotal:" as the card's only monetary figure — the `PageView` height was also retuned so the tallest card has ~0px of dead space above "Ver detalhes".
 
 > **v6 note:** the v5 header phone/e-mail and legend work landed in code but the live network-backed `ClinicDetail.phone`/`.email` were null for the test facility, so nothing rendered — `EstablishmentDetailSections` now carries its own mocked `phone`/`email` (with `ClinicDetail`'s as fallback) so the header reliably shows contact info in Phase 1. The "Comercial" chip category label is renamed to "Status" (clearer than "Comercial" for what's really an overall standing signal), and the "Conformidade" chip is dropped from the header entirely (still tracked on `FacilityStatusSignals`, just not surfaced there). The header also gains an "Estabelecimento PF"/"Estabelecimento PJ" line under the specialties line, from the existing `taxIdType` mock field. Finally, the "Toque nos ícones…" edit-suggestion banner moved from the top of the scrollable content (above "Mapa e clínicas próximas") to the very bottom, below "Dados administrativos".
+
+> **v7 note:** the full-screen nearby map (`ClinicNearbyMapScreen`) gets two interaction upgrades. The horizontal strip of plain `ActionChip`s below the radius slider is replaced with proper clinic cards (`_NearbyEstablishmentCard`: status dot, name, specialty, distance, chevron) — same tap-to-navigate behavior, now visually consistent with the rest of the screen's card language and highlighted when that establishment's pin callout is open. Tapping a **pin** (not the center establishment's own pin) now opens a floating callout/"info window" (`_PinCallout`) anchored above the pin with the clinic's name, status, specialty and distance, plus a "Ver detalhes" action and a close button; tapping empty map area or a different pin dismisses/replaces it. The callout re-anchors on `onMapIdleListener` (after pan/zoom settles) and is cleared whenever the radius slider changes (the previously-selected establishment may no longer be in range). Both features are frontend-only against the existing mocked `NearbyEstablishment` list — no API changes.
 
 ## User Story
 
@@ -89,6 +91,13 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 |---|----------|
 | 31 | **Header shows "Estabelecimento PF"/"Estabelecimento PJ"** directly under the specialties line, derived from the existing `EstablishmentDetailSections.taxIdType` mock field — reinforces the same PF/PJ signal already shown as a badge on the avatar, in text form for scanability. |
 | 32 | **The "Toque nos ícones…" edit-suggestion banner moves to the bottom of the screen**, below "Dados administrativos" (was above "Mapa e clínicas próximas"). It's a footnote about how per-field suggestions work, not something users need before they've seen any editable fields. |
+
+## Locked product decisions (v7 — expanded-map cards + pin callout)
+
+| # | Decision |
+|---|----------|
+| 33 | **The expanded (full-screen) nearby map shows a card per clinic**, not a chip strip. `_NearbyEstablishmentCard` (168×92) shows the status dot, name, specialty and distance, and highlights (blue border/tint) when that establishment's pin callout is currently open. Tapping a card still navigates straight to that establishment's detail (unchanged behavior — only the visual treatment changed). |
+| 34 | **Tapping a pin on the expanded map opens a floating callout** with the establishment's name, status, specialty and distance, a "Ver detalhes" action, and a close (×) button. The current establishment's own (blue) pin is not tappable for a callout — only nearby (green) pins are. Tapping empty map area, tapping a different pin, or changing the radius slider dismisses/replaces the open callout. |
 
 ## Current baseline (audit summary)
 
@@ -233,8 +242,9 @@ WHEN the user taps **“Ver estabelecimentos próximos”** on the mini-map THEN
 - Radius slider: **1–50 km**, default **50 km**, step 1 km
 - On slider change: `GET /facilities?latitude={facilityLat}&longitude={facilityLng}&radiusKm={r}&limit=100`
 - Pins for every in-scope facility returned; current establishment styled distinctly
-- Pin tap → navigate to that establishment's detail
+- Pin tap → floating callout with name/status/specialty/distance + "Ver detalhes" (see decision #34); the callout's own "Ver detalhes" (or the card strip's card tap) navigates to that establishment's detail
 - Exclude current establishment from pin list (client-side or `excludeId` query param)
+- Establishments within radius also render as a horizontal strip of cards (see decision #33) beneath the radius slider, not plain chips
 
 **Important:** distance shown on pins is distance **from the establishment**, not from the user. The API already computes distance from the query reference point — pass establishment coords as the reference.
 
