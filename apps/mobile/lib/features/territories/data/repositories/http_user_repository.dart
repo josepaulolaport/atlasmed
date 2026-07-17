@@ -20,9 +20,8 @@ class HttpUserRepository implements UserRepository {
     tokenBuilder: SessionEnvironment.instance.tokenBuilder,
   );
 
-  Uri _accessUri(String path, [Map<String, String>? query]) => Uri.parse(
-    '$_baseUrl/api/v1/access$path',
-  ).replace(queryParameters: query);
+  Uri _accessUri(String path, [Map<String, String>? query]) =>
+      Uri.parse('$_baseUrl/api/v1/access$path').replace(queryParameters: query);
 
   @override
   Future<AppUser?> getUserById(String id) async {
@@ -56,7 +55,8 @@ class HttpUserRepository implements UserRepository {
       throw TerritoryApiException.fromResponse(response);
     }
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final rows = (decoded['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final rows = (decoded['data'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     return rows.map(AppUser.fromJson).toList();
   }
 }

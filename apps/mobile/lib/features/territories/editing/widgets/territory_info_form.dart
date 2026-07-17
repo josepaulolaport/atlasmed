@@ -113,9 +113,8 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
       body: sectorsAsync.when(
         data: (sectors) => _buildForm(sectors),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(
-          child: Text('Não foi possível carregar os setores.'),
-        ),
+        error: (_, _) =>
+            const Center(child: Text('Não foi possível carregar os setores.')),
       ),
     );
   }
@@ -195,8 +194,7 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
                       Switch(
                         value: _isActive,
                         activeThumbColor: const Color(0xFF0a2f7f),
-                        onChanged: (value) =>
-                            setState(() => _isActive = value),
+                        onChanged: (value) => setState(() => _isActive = value),
                       ),
                     ],
                   ),

@@ -48,9 +48,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     state = state.copyWith(loading: true, loadError: null);
     try {
       final repository = _ref.read(territoryRepositoryProvider);
-      final territory = await repository.getTerritoryById(
-        target.territoryId!,
-      );
+      final territory = await repository.getTerritoryById(target.territoryId!);
       if (territory == null) {
         state = state.copyWith(
           loading: false,
@@ -107,7 +105,10 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
 
     if (managerZoneChanged) {
-      final fenceZone = await _loadFenceZone(draft.kind, draft.managerTerritoryId);
+      final fenceZone = await _loadFenceZone(
+        draft.kind,
+        draft.managerTerritoryId,
+      );
       final clipped = fenceZone == null || state.working == null
           ? state.working
           : GeometryOps.intersectShape(
@@ -484,7 +485,8 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       if (state.isCreating) {
         final draft = state.draft!;
         final centroid =
-            geometry.labelAnchor ?? const MapCoordinate(longitude: 0, latitude: 0);
+            geometry.labelAnchor ??
+            const MapCoordinate(longitude: 0, latitude: 0);
         final created = await repository.createTerritory(
           draft,
           geometry,
@@ -502,11 +504,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         await repository.updateTerritoryGeometry(original.id, geometry);
         _ref.invalidate(territoriesProvider);
         _ref.invalidate(territoryByIdProvider(original.id));
-        state = state.copyWith(
-          saving: false,
-          saved: true,
-          undoStack: const [],
-        );
+        state = state.copyWith(saving: false, saved: true, undoStack: const []);
       }
       return true;
     } catch (error) {

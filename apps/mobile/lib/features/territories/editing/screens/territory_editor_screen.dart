@@ -300,9 +300,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       _handleManager!.tapEvents(onTap: _handleHandleTap);
 
       _mapReady = true;
-      final state = ref.read(
-        territoryEditorControllerProvider(widget.target),
-      );
+      final state = ref.read(territoryEditorControllerProvider(widget.target));
       await _render(state);
       if (!_initialFitDone) {
         _initialFitDone = true;
@@ -1427,9 +1425,13 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       Navigator.of(context).pop();
     } else {
       final message =
-          ref.read(territoryEditorControllerProvider(widget.target)).saveError ??
+          ref
+              .read(territoryEditorControllerProvider(widget.target))
+              .saveError ??
           'Não foi possível salvar. Tente novamente.';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

@@ -135,9 +135,7 @@ class MockTerritoryRepository implements TerritoryRepository {
     await Future.delayed(const Duration(milliseconds: 200));
     final index = _territories.indexWhere((t) => t.id == territoryId);
     if (index == -1) return;
-    _territories[index] = _territories[index].copyWith(
-      assignedUserId: userId,
-    );
+    _territories[index] = _territories[index].copyWith(assignedUserId: userId);
   }
 
   @override
@@ -160,9 +158,7 @@ class MockTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers(
-    String sectorId,
-  ) async {
+  Future<List<AssignableManager>> getAssignableManagers(String sectorId) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final zones = _territories.where(
       (t) =>

@@ -32,6 +32,5 @@ class TerritoryEditorTarget {
       other.initialSectorId == initialSectorId;
 
   @override
-  int get hashCode =>
-      Object.hash(territoryId, initialKind, initialSectorId);
+  int get hashCode => Object.hash(territoryId, initialKind, initialSectorId);
 }

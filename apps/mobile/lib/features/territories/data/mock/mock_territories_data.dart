@@ -106,7 +106,11 @@ const _zoneSpecs = <_ManagerZoneSpec>[
     baseClinicCount: 22,
     baseUserCount: 4,
     managerUserId: 'user-marcos-lima',
-    repUserIds: ['user-diego-farias', 'user-juliana-pires', 'user-lucas-tavares'],
+    repUserIds: [
+      'user-diego-farias',
+      'user-juliana-pires',
+      'user-lucas-tavares',
+    ],
   ),
   _ManagerZoneSpec(
     idSuffix: 'cardio-nordeste',

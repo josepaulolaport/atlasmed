@@ -63,9 +63,7 @@ class EditorToolbar extends StatelessWidget {
               label: 'Selecionar',
               selected: mode == EditorMode.select,
               enabled: hasArea,
-              onTap: hasArea
-                  ? () => onModeChanged(EditorMode.select)
-                  : null,
+              onTap: hasArea ? () => onModeChanged(EditorMode.select) : null,
             ),
             const SizedBox(width: 4),
             _ModeButton(
@@ -133,9 +131,7 @@ class _ModeButton extends StatelessWidget {
         ? const Color(0xFF0A2F7F)
         : const Color(0xFF6B7280);
     return Material(
-      color: selected && enabled
-          ? const Color(0xFFEEF2FF)
-          : Colors.transparent,
+      color: selected && enabled ? const Color(0xFFEEF2FF) : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

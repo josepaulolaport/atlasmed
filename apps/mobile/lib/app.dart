@@ -239,9 +239,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
         GoRoute(
           path: '/territorios/:id/editar',
           builder: (_, state) => TerritoryEditorScreen(
-            target: TerritoryEditorTarget.existing(
-              state.pathParameters['id']!,
-            ),
+            target: TerritoryEditorTarget.existing(state.pathParameters['id']!),
           ),
         ),
         // Criação de território — same full-screen editor, started from

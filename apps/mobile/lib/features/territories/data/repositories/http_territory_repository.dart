@@ -76,7 +76,8 @@ class HttpTerritoryRepository implements TerritoryRepository {
     final response = await _get(_accessUri('/sectors'));
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final rows = (decoded['sectors'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final rows = (decoded['sectors'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     return rows
         .map(
           (row) => Sector(
@@ -102,7 +103,8 @@ class HttpTerritoryRepository implements TerritoryRepository {
     );
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final rows = (decoded['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final rows = (decoded['data'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
 
     final hydrated = await Future.wait(rows.map(_hydrateTerritory));
     return hydrated.whereType<Territory>().toList();
@@ -143,14 +145,17 @@ class HttpTerritoryRepository implements TerritoryRepository {
     if (assignmentsResponse != null && assignmentsResponse.statusCode == 200) {
       final entries = jsonDecode(assignmentsResponse.body) as List<dynamic>;
       if (entries.isNotEmpty) {
-        assignedUserId = (entries.first as Map<String, dynamic>)['userId'] as String?;
+        assignedUserId =
+            (entries.first as Map<String, dynamic>)['userId'] as String?;
       }
     }
 
     return Territory.fromApiRow(
       row,
       boundary: boundary,
-      centroid: boundary.labelAnchor ?? const MapCoordinate(longitude: 0, latitude: 0),
+      centroid:
+          boundary.labelAnchor ??
+          const MapCoordinate(longitude: 0, latitude: 0),
       assignedUserId: assignedUserId,
     );
   }
@@ -174,17 +179,14 @@ class HttpTerritoryRepository implements TerritoryRepository {
     TerritoryGeometry boundary,
     MapCoordinate centroid,
   ) async {
-    final response = await _send(
-      _territoryUri('/territories'),
-      RepositoryHttpMethod.post,
-      {
-        'name': draft.name,
-        'slug': _generateSlug(draft.name),
-        'typeSlug': draft.kind.slug,
-        'sectorId': draft.sectorId,
-        'boundary': boundary.toGeoJson(),
-      },
-    );
+    final response =
+        await _send(_territoryUri('/territories'), RepositoryHttpMethod.post, {
+          'name': draft.name,
+          'slug': _generateSlug(draft.name),
+          'typeSlug': draft.kind.slug,
+          'sectorId': draft.sectorId,
+          'boundary': boundary.toGeoJson(),
+        });
     _throwIfError(response);
     final row = jsonDecode(response.body) as Map<String, dynamic>;
     return Territory.fromApiRow(row, boundary: boundary, centroid: centroid);
@@ -205,7 +207,8 @@ class HttpTerritoryRepository implements TerritoryRepository {
       _accessUri('/territories/$territoryId/assignments'),
     );
     _throwIfError(assignmentsResponse);
-    final currentEntries = jsonDecode(assignmentsResponse.body) as List<dynamic>;
+    final currentEntries =
+        jsonDecode(assignmentsResponse.body) as List<dynamic>;
 
     for (final entry in currentEntries) {
       final currentUserId = (entry as Map<String, dynamic>)['userId'] as String;
@@ -263,7 +266,8 @@ class HttpTerritoryRepository implements TerritoryRepository {
     );
     _throwIfError(zonesResponse);
     final decoded = jsonDecode(zonesResponse.body) as Map<String, dynamic>;
-    final zones = (decoded['data'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final zones = (decoded['data'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
 
     final candidates = await Future.wait(zones.map(_assignableManagerForZone));
     return candidates.whereType<AssignableManager>().toList();
@@ -294,8 +298,8 @@ class HttpTerritoryRepository implements TerritoryRepository {
         name: combinedName.isNotEmpty
             ? combinedName
             : (username?.isNotEmpty ?? false)
-                ? username!
-                : (entry['email'] as String? ?? ''),
+            ? username!
+            : (entry['email'] as String? ?? ''),
         role: UserRole.manager,
       ),
       zoneTerritoryId: zoneId,

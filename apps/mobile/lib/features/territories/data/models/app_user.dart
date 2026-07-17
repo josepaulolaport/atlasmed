@@ -50,17 +50,17 @@ class AppUser {
     final username = json['username'] as String?;
     final email = json['email'] as String?;
 
-    final roleName = ((json['role'] as Map<String, dynamic>?)?['name']
-            as String?)
-        ?.toUpperCase();
+    final roleName =
+        ((json['role'] as Map<String, dynamic>?)?['name'] as String?)
+            ?.toUpperCase();
 
     return AppUser(
       id: json['id'] as String,
       name: combinedName.isNotEmpty
           ? combinedName
           : (username?.isNotEmpty ?? false)
-              ? username!
-              : (email ?? ''),
+          ? username!
+          : (email ?? ''),
       role: roleName == 'MANAGER' ? UserRole.manager : UserRole.rep,
       isActive: (json['status'] as String?)?.toUpperCase() == 'ACTIVE',
     );

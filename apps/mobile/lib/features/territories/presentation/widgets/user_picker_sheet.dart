@@ -166,9 +166,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(
-                        widget.pickingManagerZone ? null : clearAssignee,
-                      ),
+                      onPressed: () => Navigator.of(
+                        context,
+                      ).pop(widget.pickingManagerZone ? null : clearAssignee),
                       style: TextButton.styleFrom(
                         foregroundColor: const Color(0xFFB91C1C),
                         padding: EdgeInsets.zero,
@@ -214,9 +214,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
         }
         final users = snapshot.data ?? const <AppUser>[];
         if (users.isEmpty) {
-          return const _EmptyState(
-            message: 'Nenhum usuário encontrado.',
-          );
+          return const _EmptyState(message: 'Nenhum usuário encontrado.');
         }
         return ListView.builder(
           controller: scrollController,
@@ -279,8 +277,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
               title: candidate.manager.name,
               subtitle: candidate.zoneName,
               selected: selected,
-              onTap: () =>
-                  Navigator.of(context).pop(candidate.zoneTerritoryId),
+              onTap: () => Navigator.of(context).pop(candidate.zoneTerritoryId),
             );
           },
         );

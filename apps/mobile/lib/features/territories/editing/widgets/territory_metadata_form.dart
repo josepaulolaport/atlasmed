@@ -51,8 +51,7 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
       _TerritoryMetadataFormState();
 }
 
-class _TerritoryMetadataFormState
-    extends ConsumerState<TerritoryMetadataForm> {
+class _TerritoryMetadataFormState extends ConsumerState<TerritoryMetadataForm> {
   late final TextEditingController _nameController;
   late TerritoryKind _kind;
   String? _sectorId;
@@ -112,9 +111,8 @@ class _TerritoryMetadataFormState
       body: sectorsAsync.when(
         data: (sectors) => _buildForm(sectors),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, _) => const Center(
-          child: Text('Não foi possível carregar os setores.'),
-        ),
+        error: (_, _) =>
+            const Center(child: Text('Não foi possível carregar os setores.')),
       ),
     );
   }

@@ -22,8 +22,7 @@ class ManagerPickerField extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ManagerPickerField> createState() =>
-      _ManagerPickerFieldState();
+  ConsumerState<ManagerPickerField> createState() => _ManagerPickerFieldState();
 }
 
 class _ManagerPickerFieldState extends ConsumerState<ManagerPickerField> {
