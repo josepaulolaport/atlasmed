@@ -24,6 +24,13 @@ import {
   finalizeIngestionRunActivity as finalizeIngestionRunActivityImpl,
 } from "./reconcile-sync.activities";
 
+import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./search-rebuild.activities";
+
+export const rebuildSearchIndexActivity = wrapActivity(
+  "rebuildSearchIndex",
+  rebuildSearchIndexActivityImpl
+);
+
 export const discoverLatestReferenceActivity = wrapActivity(
   "discoverLatestReference",
   discoverLatestReferenceActivityImpl

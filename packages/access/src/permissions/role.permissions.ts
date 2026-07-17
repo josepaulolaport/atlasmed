@@ -21,6 +21,7 @@ export function applyRoleAbilities(
       can("manage", "INVITATION");
       can("manage", "REGISTRY_INGESTION");
       can("manage", "REGISTRY_SUGGESTION");
+      can("manage", "SEARCH_SYNC");
       can("manage", "CATALOG");
       can("manage", "VISIT");
       break;
