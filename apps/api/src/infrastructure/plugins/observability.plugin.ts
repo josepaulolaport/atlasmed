@@ -27,6 +27,12 @@ interface RequestObservation {
 // Store request observations using WeakMap for automatic garbage collection
 const requestObservations = new WeakMap<Request, RequestObservation>();
 const loggedRequests = new WeakSet<Request>();
+// Errors are recorded by `onError` and consumed later by `onAfterResponse`,
+// once `set.status` reflects the status the central app-level error handler
+// actually assigned — `onError` hooks run in registration order, so this
+// plugin's `onError` fires before that handler and would otherwise only
+// ever see the pre-handler default (500), even for a plain 401/403/404.
+const requestErrors = new WeakMap<Request, unknown>();
 
 /**
  * Determine request namespace from path
@@ -249,45 +255,44 @@ export const observabilityPlugin = new Elysia({ name: 'observability' })
     markRequestAsLogged(context.request);
   })
   
-  // Log errors
-  .onError({ as: 'global' }, async (context) => {
+  // Record the error for later — do NOT log or read `set.status` here.
+  // This hook runs before the central app-level `.onError` (registration
+  // order), so `set.status` is still whatever Elysia defaults it to on an
+  // unhandled throw, not the real 401/403/404/etc. the app assigns
+  // afterward. Logging here would misreport a normal auth rejection as a
+  // 500, both misleading anyone reading logs and triggering error-level
+  // alerts for routine 4xx traffic.
+  .onError({ as: 'global' }, ({ request, error }) => {
+    requestErrors.set(request, error);
+  })
+
+  // Log every request exactly once, after the response is fully finalized
+  // — by this point `set.status` is guaranteed to reflect whatever the
+  // central error handler (or the route handler) actually decided, so
+  // errors are reported with their real status code instead of a
+  // premature default.
+  .onAfterResponse({ as: 'global' }, async (context) => {
+    if (hasLoggedRequest(context.request)) return;
+
     const observation = getOrCreateObservation(context.request);
-    const statusCode = resolveErrorStatusCode(context.set.status);
+    const error = requestErrors.get(context.request);
+    const statusCode = error
+      ? resolveErrorStatusCode(context.set.status)
+      : resolveStatusCode(context.set.status, 200);
     const durationMs = Date.now() - observation.startedAt;
     const userId = await resolveUserId(context as unknown as Record<string, unknown>);
 
     context.set.headers['x-request-id'] = observation.requestId;
-    
     applySpanAttributes(observation, statusCode);
-    
+
     logRequestOutcome({
       observation,
       statusCode,
       durationMs,
       userId,
-      error: context.error
+      error
     });
-    
-    markRequestAsLogged(context.request);
-  })
-  
-  // Fallback logging (if not logged by above hooks)
-  .onAfterResponse({ as: 'global' }, async (context) => {
-    if (hasLoggedRequest(context.request)) return;
 
-    const observation = getOrCreateObservation(context.request);
-    const statusCode = resolveStatusCode(context.set.status, 200);
-    const durationMs = Date.now() - observation.startedAt;
-    const userId = await resolveUserId(context as unknown as Record<string, unknown>);
-
-    applySpanAttributes(observation, statusCode);
-    
-    logRequestOutcome({
-      observation,
-      statusCode,
-      durationMs,
-      userId
-    });
-    
+    requestErrors.delete(context.request);
     markRequestAsLogged(context.request);
   });

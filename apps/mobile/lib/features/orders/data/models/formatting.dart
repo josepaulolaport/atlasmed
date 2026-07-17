@@ -1,5 +1,7 @@
 // ── BRL formatter ───────────────────────────────────────────
-String brl(double value) {
+
+/// Formats [value] as a plain BRL number, e.g. "1.840,00" — no "R$" prefix.
+String brlNumber(double value) {
   final parts = value.toStringAsFixed(2).split('.');
   final intPart = parts[0];
   final decPart = parts[1];
@@ -10,5 +12,8 @@ String brl(double value) {
     buf.write(intPart[i]);
     count++;
   }
-  return 'R\$${buf.toString().split('').reversed.join()},$decPart';
+  return '${buf.toString().split('').reversed.join()},$decPart';
 }
+
+/// Formats [value] as a BRL currency string, e.g. "R$1.840,00".
+String brl(double value) => 'R\$${brlNumber(value)}';
