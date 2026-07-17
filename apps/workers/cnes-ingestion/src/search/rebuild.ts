@@ -33,6 +33,7 @@ export type ProfessionalSearchDocument = {
 type EnqueuedTask = { taskUid: number };
 export type SearchIndexClient = {
   createIndex(uid: string, options?: { primaryKey?: string }): Promise<EnqueuedTask>;
+  getIndex(uid: string): Promise<unknown>;
   updateSettings(uid: string, settings: Record<string, unknown>): Promise<EnqueuedTask>;
   addDocuments(uid: string, documents: unknown[], options?: { primaryKey?: string }): Promise<EnqueuedTask>;
   waitForTask(task: number): Promise<unknown>;
@@ -60,7 +61,7 @@ export function mapFacilitySearchDocument(row: {
   deactivatedAt: Date | null;
   isActiveInRegistry: boolean;
 }): FacilitySearchDocument | null {
-  if (row.deactivatedAt || !row.isActiveInRegistry) return null;
+  if (row.deactivatedAt) return null;
 
   return {
     id: row.id,
@@ -130,10 +131,47 @@ export async function rebuildSearchIndex(input: {
     }
   }
 
-  await input.search.waitForTask(
-    (await input.search.swapIndexes([{ indexes: [input.target, input.temporaryIndex] }])).taskUid
-  );
+  const hasStableIndex = await indexExists(input.search, input.target);
+  if (!hasStableIndex) {
+    // Meilisearch 1.13 swaps require both indexes to exist. Create the stable
+    // placeholder only after the temporary index has been fully built, so a
+    // failed first rebuild never exposes a partial active index.
+    await input.search.waitForTask(
+      (await input.search.createIndex(input.target, { primaryKey: "id" })).taskUid
+    );
+  }
+
+  try {
+    await input.search.waitForTask(
+      (await input.search.swapIndexes([{ indexes: [input.target, input.temporaryIndex] }])).taskUid
+    );
+  } catch (error) {
+    if (!hasStableIndex) {
+      await input.search.waitForTask((await input.search.deleteIndex(input.target)).taskUid);
+    }
+    throw error;
+  }
+
   await input.search.waitForTask((await input.search.deleteIndex(input.temporaryIndex)).taskUid);
+}
+
+function isIndexNotFound(error: unknown): boolean {
+  return typeof error === "object" && error !== null
+    && "cause" in error
+    && typeof error.cause === "object"
+    && error.cause !== null
+    && "code" in error.cause
+    && error.cause.code === "index_not_found";
+}
+
+async function indexExists(search: SearchIndexClient, index: string): Promise<boolean> {
+  try {
+    await search.getIndex(index);
+    return true;
+  } catch (error) {
+    if (isIndexNotFound(error)) return false;
+    throw error;
+  }
 }
 
 function createSearchClient(): SearchIndexClient {
@@ -148,6 +186,7 @@ function createSearchClient(): SearchIndexClient {
 
   return {
     createIndex: (uid, options) => client.createIndex(uid, options),
+    getIndex: (uid) => client.getIndex(uid),
     updateSettings: (uid, settings) => client.index(uid).updateSettings(settings),
     addDocuments: (uid, documents, options) => client.index(uid).addDocuments(documents as Record<string, unknown>[], options),
     waitForTask: (taskUid) => client.tasks.waitForTask(taskUid),
