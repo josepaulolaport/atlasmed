@@ -278,8 +278,54 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
       avgDurationMinutes: 39,
       periodLabel: 'últimos 4 meses',
     ),
+    documents: _mockDocuments(now),
   );
 }
+
+/// "Cadastro" mock — one of each review state so all card variants are
+/// visible without needing to submit anything first.
+List<EstablishmentDocument> _mockDocuments(DateTime now) => [
+  EstablishmentDocument(
+    id: 'doc-alvara',
+    title: 'Alvará de funcionamento',
+    description: 'Autorização municipal para operação do estabelecimento.',
+    status: EstablishmentDocumentStatus.approved,
+    submittedAt: now.subtract(const Duration(days: 210)),
+    fileName: 'alvara_funcionamento.pdf',
+  ),
+  EstablishmentDocument(
+    id: 'doc-vigilancia',
+    title: 'Licença sanitária',
+    description: 'Emitida pela Vigilância Sanitária local, renovação anual.',
+    status: EstablishmentDocumentStatus.pending,
+    submittedAt: now.subtract(const Duration(days: 3)),
+    fileName: 'licenca_sanitaria_2026.jpg',
+  ),
+  EstablishmentDocument(
+    id: 'doc-contrato-social',
+    title: 'CNPJ / Contrato social',
+    description: 'Comprovante de inscrição e ato constitutivo da empresa.',
+    status: EstablishmentDocumentStatus.rejected,
+    submittedAt: now.subtract(const Duration(days: 12)),
+    fileName: 'contrato_social_ilegivel.jpg',
+    mimeType: 'image/jpeg',
+    reviewerNote: 'Documento ilegível — envie uma foto com melhor iluminação.',
+  ),
+  const EstablishmentDocument(
+    id: 'doc-resp-tecnica',
+    title: 'Responsabilidade técnica',
+    description: 'Registro (CRM/CRF) do responsável técnico pela clínica.',
+  ),
+  EstablishmentDocument(
+    id: 'doc-cnes',
+    title: 'Certificado CNES',
+    description:
+        'Comprovante de cadastro no Cadastro Nacional de Estabelecimentos de Saúde.',
+    status: EstablishmentDocumentStatus.approved,
+    submittedAt: now.subtract(const Duration(days: 400)),
+    fileName: 'certificado_cnes.pdf',
+  ),
+];
 
 List<NearbyEstablishment> _mockNearby(
   double centerLat,

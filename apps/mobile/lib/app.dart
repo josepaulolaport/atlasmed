@@ -9,6 +9,8 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_em
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_code_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_success_screen.dart';
+import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastro_review_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastros_review_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
@@ -218,6 +220,20 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                       ),
                     ),
                   ],
+                ),
+              ],
+            ),
+            // Cadastros — ops approval queue for facility registration docs
+            GoRoute(
+              path: '/cadastros',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: CadastrosReviewListScreen()),
+              routes: [
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => CadastroReviewDetailScreen(
+                    submissionId: state.pathParameters['id']!,
+                  ),
                 ),
               ],
             ),

@@ -508,6 +508,152 @@ class FacilityServiceChip {
   String get label => '$serviceCode · $classificationCode';
 }
 
+// ── Registration documents ("Cadastro") ───────────────────────
+
+/// Review status of a submitted registration document. No `facility_
+/// documents` table exists yet — this mirrors the vocabulary already used
+/// for `ingestion.cnes_suggestions.status` (`PENDING`/`APPROVED`/`REJECTED`)
+/// plus a `missing` state for a requirement that hasn't been submitted.
+enum EstablishmentDocumentStatus { missing, pending, approved, rejected }
+
+extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
+  String get label {
+    switch (this) {
+      case EstablishmentDocumentStatus.missing:
+        return 'Não enviado';
+      case EstablishmentDocumentStatus.pending:
+        return 'Em análise';
+      case EstablishmentDocumentStatus.approved:
+        return 'Aprovado';
+      case EstablishmentDocumentStatus.rejected:
+        return 'Rejeitado';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case EstablishmentDocumentStatus.missing:
+        return const Color(0xFF9ca3af);
+      case EstablishmentDocumentStatus.pending:
+        return const Color(0xFFc6861b);
+      case EstablishmentDocumentStatus.approved:
+        return const Color(0xFF1f9254);
+      case EstablishmentDocumentStatus.rejected:
+        return const Color(0xFFb84545);
+    }
+  }
+
+  Color get backgroundColor {
+    switch (this) {
+      case EstablishmentDocumentStatus.missing:
+        return const Color(0xFFf3f4f6);
+      case EstablishmentDocumentStatus.pending:
+        return const Color(0xFFfef3d5);
+      case EstablishmentDocumentStatus.approved:
+        return const Color(0xFFe7f6ec);
+      case EstablishmentDocumentStatus.rejected:
+        return const Color(0xFFfde8e8);
+    }
+  }
+
+  /// Whether this document still needs rep action (submit or resubmit).
+  bool get needsAction =>
+      this != EstablishmentDocumentStatus.approved &&
+      this != EstablishmentDocumentStatus.pending;
+}
+
+/// One registration document requirement (e.g. "Alvará de funcionamento")
+/// and its current review state — the "Cadastro" section.
+class EstablishmentDocument {
+  const EstablishmentDocument({
+    required this.id,
+    required this.title,
+    required this.description,
+    this.status = EstablishmentDocumentStatus.missing,
+    this.submittedAt,
+    this.fileName,
+    this.localPath,
+    this.mimeType,
+    this.reviewerNote,
+  });
+
+  final String id;
+  final String title;
+
+  /// One-line explanation of what the document is / why it's required.
+  final String description;
+  final EstablishmentDocumentStatus status;
+  final DateTime? submittedAt;
+
+  /// Attached file name — mocked for seeded docs, real after a local pick.
+  final String? fileName;
+
+  /// Device path of a file the user just picked this session. Enables
+  /// in-app image preview; PDFs/other types still open a full-screen
+  /// file viewer sheet (no remote storage yet).
+  final String? localPath;
+
+  /// Optional MIME (e.g. `application/pdf`, `image/jpeg`) from the picker.
+  final String? mimeType;
+
+  /// Shown when [status] is `rejected`, explaining what needs fixing.
+  final String? reviewerNote;
+
+  bool get hasAttachment =>
+      (fileName != null && fileName!.isNotEmpty) ||
+      (localPath != null && localPath!.isNotEmpty);
+
+  /// True when we can render a real bitmap preview from [localPath].
+  bool get canPreviewImage {
+    if (localPath == null || localPath!.isEmpty) return false;
+    return _looksLikeImage(fileName: fileName, mimeType: mimeType);
+  }
+
+  bool get isPdf => _looksLikePdf(fileName: fileName, mimeType: mimeType);
+
+  EstablishmentDocument copyWith({
+    EstablishmentDocumentStatus? status,
+    DateTime? submittedAt,
+    String? fileName,
+    String? localPath,
+    String? mimeType,
+    String? reviewerNote,
+    bool clearReviewerNote = false,
+  }) {
+    return EstablishmentDocument(
+      id: id,
+      title: title,
+      description: description,
+      status: status ?? this.status,
+      submittedAt: submittedAt ?? this.submittedAt,
+      fileName: fileName ?? this.fileName,
+      localPath: localPath ?? this.localPath,
+      mimeType: mimeType ?? this.mimeType,
+      reviewerNote: clearReviewerNote
+          ? null
+          : (reviewerNote ?? this.reviewerNote),
+    );
+  }
+}
+
+bool _looksLikeImage({String? fileName, String? mimeType}) {
+  final mime = mimeType?.toLowerCase() ?? '';
+  if (mime.startsWith('image/')) return true;
+  final name = (fileName ?? '').toLowerCase();
+  return name.endsWith('.jpg') ||
+      name.endsWith('.jpeg') ||
+      name.endsWith('.png') ||
+      name.endsWith('.webp') ||
+      name.endsWith('.heic') ||
+      name.endsWith('.gif');
+}
+
+bool _looksLikePdf({String? fileName, String? mimeType}) {
+  final mime = mimeType?.toLowerCase() ?? '';
+  if (mime == 'application/pdf') return true;
+  return (fileName ?? '').toLowerCase().endsWith('.pdf');
+}
+
 /// Mock bundle for all establishment detail sections (Phase 1).
 class EstablishmentDetailSections {
   const EstablishmentDetailSections({
@@ -532,6 +678,7 @@ class EstablishmentDetailSections {
     this.visitStats,
     this.phone,
     this.email,
+    this.documents = const [],
   });
 
   final EstablishmentLocation? location;
@@ -562,6 +709,9 @@ class EstablishmentDetailSections {
   /// (network-backed) doesn't reliably carry these for every facility yet.
   final String? phone;
   final String? email;
+
+  /// "Cadastro" — registration document requirements and their review status.
+  final List<EstablishmentDocument> documents;
 
   /// Unique, ordered specialties across confirmed doctors — drives the header specialty line.
   String? get specialtiesLabel {

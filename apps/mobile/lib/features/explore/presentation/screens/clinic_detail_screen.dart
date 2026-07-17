@@ -6,7 +6,6 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/contact_action
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/administrative_professionals_list_screen.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_context_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_crm_doctors_section.dart';
@@ -17,6 +16,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_payers_bar_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_top_shortcuts_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/doctors_list_screen.dart';
 
 // ===============================================================
@@ -172,6 +172,13 @@ class _ClinicDetailContent extends ConsumerWidget {
       padding: const EdgeInsets.only(top: 16, bottom: 32),
       children: [
         _QuickActions(detail: detail),
+        ClinicTopShortcutsSection(
+          facilityName: detail.name,
+          detail: detail,
+          // null while sections are still loading — badge stays neutral
+          // instead of flashing a false "Completo".
+          documents: sectionsAsync.valueOrNull?.documents,
+        ),
         const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
@@ -329,8 +336,6 @@ class _ClinicDetailContent extends ConsumerWidget {
             city: detail.city.isNotEmpty ? detail.city : null,
           ),
         ),
-        const ClinicSectionHeader(title: 'Dados administrativos'),
-        ClinicAdminInfoSection(detail: detail),
         const _SuggestEditBanner(),
       ],
     );

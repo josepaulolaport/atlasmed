@@ -1,0 +1,736 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_models.dart';
+import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_document_viewer_screen.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
+
+/// Review one Cadastro submission: clinic snapshot + document + decide.
+class CadastroReviewDetailScreen extends ConsumerWidget {
+  const CadastroReviewDetailScreen({super.key, required this.submissionId});
+
+  final String submissionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final submission = ref.watch(cadastroReviewByIdProvider(submissionId));
+
+    if (submission == null) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFf7f8fb),
+        body: SafeArea(
+          child: Column(
+            children: [
+              const AtlasTopBar(page: 'Cadastros', compact: true),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Submissão não encontrada',
+                    style: TextStyle(color: Color(0xFF6b7280)),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.pop(),
+                child: const Text('Voltar'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final status = submission.status;
+    final pending = submission.isPending;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFf7f8fb),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const AtlasTopBar(page: 'Cadastros', compact: true),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton.icon(
+                      onPressed: () => context.pop(),
+                      icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                      label: const Text('Fila'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF1e40af),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          submission.documentTitle,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0a2f7f),
+                          ),
+                        ),
+                      ),
+                      _StatusPill(status: status),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Enviado por ${submission.submittedByName} · '
+                    '${_formatDateTime(submission.submittedAt)}',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF6b7280),
+                    ),
+                  ),
+                  if (submission.reviewedAt != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      '${status == EstablishmentDocumentStatus.approved ? 'Aprovado' : 'Rejeitado'}'
+                      ' por ${submission.reviewedByName ?? '—'} · '
+                      '${_formatDateTime(submission.reviewedAt!)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9ca3af),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 18),
+                  const _SectionLabel('ESTABELECIMENTO'),
+                  const SizedBox(height: 8),
+                  _ClinicSnapshotCard(submission: submission),
+                  if (status == EstablishmentDocumentStatus.rejected &&
+                      submission.reviewerNote != null) ...[
+                    const SizedBox(height: 14),
+                    _RejectNoteBanner(note: submission.reviewerNote!),
+                  ],
+                  const SizedBox(height: 18),
+                  const _SectionLabel('DOCUMENTO PARA ANÁLISE'),
+                  const SizedBox(height: 8),
+                  Text(
+                    submission.documentDescription,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.35,
+                      color: Color(0xFF4b5563),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  _DocumentPreviewCard(
+                    submission: submission,
+                    onOpen: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => ClinicDocumentViewerScreen(
+                            document: submission.asDocument,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            if (pending)
+              _DecisionBar(
+                onApprove: () => _approve(context, ref, submission),
+                onReject: () => _reject(context, ref, submission),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _approve(
+    BuildContext context,
+    WidgetRef ref,
+    CadastroReviewSubmission submission,
+  ) async {
+    final queue = ref.read(cadastroReviewQueueProvider.notifier);
+    final reviewer = _reviewerName(ref);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Aprovar documento?'),
+        content: Text(
+          'Confirmar aprovação de "${submission.documentTitle}" '
+          'para ${submission.facilityName}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF1f9254),
+            ),
+            child: const Text('Aprovar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    queue.approve(submission.id, reviewerName: reviewer);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Documento aprovado'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  Future<void> _reject(
+    BuildContext context,
+    WidgetRef ref,
+    CadastroReviewSubmission submission,
+  ) async {
+    final queue = ref.read(cadastroReviewQueueProvider.notifier);
+    final reviewer = _reviewerName(ref);
+
+    final note = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      // Owns its TextEditingController so it is disposed only after
+      // the TextField is unmounted — disposing earlier trips
+      // InheritedElement '_dependents.isEmpty'.
+      builder: (_) => const _RejectNoteSheet(),
+    );
+    if (note == null || note.isEmpty || !context.mounted) return;
+
+    queue.reject(submission.id, reviewerName: reviewer, note: note);
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Documento rejeitado'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _reviewerName(WidgetRef ref) {
+    return ref.read(currentUserProvider).valueOrNull?.displayName ?? 'Revisor';
+  }
+
+  String _formatDateTime(DateTime d) {
+    final dd = d.day.toString().padLeft(2, '0');
+    final mm = d.month.toString().padLeft(2, '0');
+    final hh = d.hour.toString().padLeft(2, '0');
+    final min = d.minute.toString().padLeft(2, '0');
+    return '$dd/$mm/${d.year} · $hh:$min';
+  }
+}
+
+/// Bottom sheet body that owns the reject-note controller for its full
+/// lifetime (including the dismiss animation).
+class _RejectNoteSheet extends StatefulWidget {
+  const _RejectNoteSheet();
+
+  @override
+  State<_RejectNoteSheet> createState() => _RejectNoteSheetState();
+}
+
+class _RejectNoteSheetState extends State<_RejectNoteSheet> {
+  late final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFe5e7eb),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+          const Text(
+            'Rejeitar documento',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Explique o motivo para o representante poder corrigir '
+            'e reenviar.',
+            style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _noteController,
+            maxLines: 4,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'Ex.: Documento ilegível, envie nova foto…',
+              filled: true,
+              fillColor: const Color(0xFFf8f9fb),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFe5e7eb)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () {
+                    final text = _noteController.text.trim();
+                    if (text.isEmpty) return;
+                    Navigator.of(context).pop(text);
+                  },
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFb84545),
+                  ),
+                  child: const Text('Rejeitar'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.4,
+        color: Color(0xFF9ca3af),
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  const _StatusPill({required this.status});
+
+  final EstablishmentDocumentStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: status.backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: status.color,
+        ),
+      ),
+    );
+  }
+}
+
+class _ClinicSnapshotCard extends StatelessWidget {
+  const _ClinicSnapshotCard({required this.submission});
+
+  final CadastroReviewSubmission submission;
+
+  @override
+  Widget build(BuildContext context) {
+    final taxLabel = submission.taxIdType == FacilityTaxIdType.pf
+        ? 'CPF'
+        : 'CNPJ';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFeef0f3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            submission.facilityName,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          if (submission.specialtyLabel != null) ...[
+            const SizedBox(height: 2),
+            Text(
+              submission.specialtyLabel!,
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+            ),
+          ],
+          const SizedBox(height: 12),
+          _InfoRow(
+            icon: Icons.badge_outlined,
+            label: taxLabel,
+            value: submission.taxId ?? '—',
+          ),
+          _InfoRow(
+            icon: Icons.location_on_outlined,
+            label: 'Endereço',
+            value: [
+              if (submission.address != null) submission.address!,
+              if (submission.city != null) submission.city!,
+            ].join(' · ').ifEmpty('—'),
+          ),
+          _InfoRow(
+            icon: Icons.phone_outlined,
+            label: 'Telefone',
+            value: submission.phone ?? '—',
+          ),
+          _InfoRow(
+            icon: Icons.email_outlined,
+            label: 'E-mail',
+            value: submission.email ?? '—',
+          ),
+          _InfoRow(
+            icon: Icons.person_outline_rounded,
+            label: 'Consultor',
+            value: submission.consultantName ?? '—',
+            isLast: true,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+extension on String {
+  String ifEmpty(String fallback) => trim().isEmpty ? fallback : this;
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.isLast = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF9ca3af)),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 78,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6b7280),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF0f1729)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RejectNoteBanner extends StatelessWidget {
+  const _RejectNoteBanner({required this.note});
+
+  final String note;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFfde8e8),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: Color(0xFFb84545),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              note,
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: Color(0xFFb84545),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentPreviewCard extends StatelessWidget {
+  const _DocumentPreviewCard({required this.submission, required this.onOpen});
+
+  final CadastroReviewSubmission submission;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onOpen,
+        borderRadius: BorderRadius.circular(16),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFeef0f3)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(15),
+                ),
+                child: SizedBox(
+                  height: 200,
+                  child: submission.canPreviewImage
+                      ? Image.file(
+                          File(submission.documentLocalPath!),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          errorBuilder: (_, _, _) =>
+                              _FileBanner(submission: submission),
+                        )
+                      : _FileBanner(submission: submission),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+                child: Row(
+                  children: [
+                    Icon(
+                      submission.isPdf
+                          ? Icons.picture_as_pdf_rounded
+                          : Icons.attach_file_rounded,
+                      size: 18,
+                      color: submission.isPdf
+                          ? const Color(0xFFb84545)
+                          : const Color(0xFF1e40af),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        submission.documentFileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0f1729),
+                        ),
+                      ),
+                    ),
+                    const Text(
+                      'Ver completo',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1e40af),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: 18,
+                      color: Color(0xFF1e40af),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FileBanner extends StatelessWidget {
+  const _FileBanner({required this.submission});
+
+  final CadastroReviewSubmission submission;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: const Color(0xFFf1f5f9),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              submission.isPdf
+                  ? Icons.picture_as_pdf_rounded
+                  : Icons.insert_drive_file_rounded,
+              size: 48,
+              color: submission.isPdf
+                  ? const Color(0xFFb84545)
+                  : const Color(0xFF1e40af),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              submission.isPdf ? 'Documento PDF' : 'Arquivo anexado',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF4b5563),
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Toque para abrir em tela cheia',
+              style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DecisionBar extends StatelessWidget {
+  const _DecisionBar({required this.onApprove, required this.onReject});
+
+  final VoidCallback onApprove;
+  final VoidCallback onReject;
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Container(
+      padding: EdgeInsets.fromLTRB(16, 12, 16, 12 + bottom),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton(
+              onPressed: onReject,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFb84545),
+                side: const BorderSide(color: Color(0xFFf5c2c2)),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Rejeitar'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: FilledButton(
+              onPressed: onApprove,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1f9254),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Aprovar'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
