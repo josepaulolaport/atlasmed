@@ -26,6 +26,7 @@ function mapFacility(
   return {
     id: facility.id,
     name: facility.displayName,
+    neighborhood: facility.neighborhood,
     city: facility.city,
     state: facility.state,
     taxIdType: facility.taxIdType ?? null,

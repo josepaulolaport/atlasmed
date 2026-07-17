@@ -9,6 +9,7 @@ class Clinic {
     required this.id,
     required this.name,
     required this.professionalCount,
+    this.neighborhood,
     this.city,
     this.state,
     this.territoryId,
@@ -20,6 +21,7 @@ class Clinic {
     this.email,
     this.website,
     this.streetAddress,
+    this.taxIdType,
     this.cnpj,
     this.cpf,
     this.createdAt,
@@ -30,6 +32,7 @@ class Clinic {
     return Clinic(
       id: readString(map['id']),
       name: readString(map['name']),
+      neighborhood: readNullableString(map['neighborhood']),
       city: readNullableString(map['city']),
       state: readNullableString(map['state']),
       territoryId: readNullableString(map['territoryId']),
@@ -46,6 +49,7 @@ class Clinic {
       email: readNullableString(map['email']),
       website: readNullableString(map['website']),
       streetAddress: readNullableString(map['streetAddress']),
+      taxIdType: readNullableString(map['taxIdType']),
       cnpj: readNullableString(map['cnpj']),
       cpf: readNullableString(map['cpf']),
       createdAt: readNullableDateTime(map['createdAt']),
@@ -55,6 +59,7 @@ class Clinic {
 
   final String id;
   final String name;
+  final String? neighborhood;
   final String? city;
   final String? state;
   final String? territoryId;
@@ -71,6 +76,7 @@ class Clinic {
   final String? email;
   final String? website;
   final String? streetAddress;
+  final String? taxIdType;
   final String? cnpj;
   final String? cpf;
 }

@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 
@@ -1684,6 +1685,12 @@ class _ClinicAdmin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final taxIdentifier = displayTaxIdentifier(
+      taxIdType: detail.taxIdType,
+      cnpj: detail.cnpj,
+      cpf: detail.cpf,
+    );
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
@@ -1702,8 +1709,8 @@ class _ClinicAdmin extends StatelessWidget {
         children: [
           _AdminRow(
             icon: Icons.badge_outlined,
-            label: 'CNPJ',
-            value: detail.cnpj ?? '—',
+            label: taxIdentifier.label,
+            value: taxIdentifier.value,
           ),
           _AdminRow(
             icon: Icons.phone_outlined,
