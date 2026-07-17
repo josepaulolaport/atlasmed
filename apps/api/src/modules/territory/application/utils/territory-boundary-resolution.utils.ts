@@ -21,6 +21,6 @@ export function serializeBoundaryResolution(resolution: TerritoryBoundaryResolut
 
   return {
     success: true as const,
-    mode: "grouping" as const,
+    mode: "other" as const,
   };
 }

@@ -5,7 +5,6 @@ import type { TerritorySpatialRepository } from "../interfaces/territory-spatial
 import type { TerritoryContainmentService } from "./territory-containment.service";
 import type { TerritoryRecord } from "../interfaces/territory.repository.interface";
 import {
-  isGroupingHierarchyType,
   isManagerZoneType,
   isRepPatchType,
 } from "../constants/territory-roles.constants";
@@ -38,7 +37,7 @@ export type TerritoryBoundaryResolution =
       repPatchCount: number;
     }
   | {
-      mode: "grouping";
+      mode: "other";
     };
 
 export async function applyTerritoryBoundary(
@@ -60,10 +59,7 @@ export async function applyTerritoryBoundary(
   await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
 
   if (isRepPatchType(type)) {
-    const resolution = await deps.containmentService.resolveRepPatchManagerZone(
-      boundary,
-      territory.countryCode ?? "BR"
-    );
+    const resolution = await deps.containmentService.resolveRepPatchManagerZone(boundary);
 
     await deps.spatialRepository.saveBoundary(territory.id, boundary);
     await deps.spatialRepository.updateBoundaryMetadata(territory.id);
@@ -104,15 +100,6 @@ export async function applyTerritoryBoundary(
     };
   }
 
-  if (isGroupingHierarchyType(type)) {
-    await deps.spatialRepository.saveBoundary(territory.id, boundary, {
-      repairInvalid: true,
-    });
-    await deps.spatialRepository.updateBoundaryMetadata(territory.id);
-
-    return { mode: "grouping" };
-  }
-
   if (!type.canHaveBoundary) {
     throw new OperationNotAllowedError(
       "save_boundary",
@@ -120,10 +107,12 @@ export async function applyTerritoryBoundary(
     );
   }
 
-  await deps.spatialRepository.saveBoundary(territory.id, boundary);
+  await deps.spatialRepository.saveBoundary(territory.id, boundary, {
+    repairInvalid: true,
+  });
   await deps.spatialRepository.updateBoundaryMetadata(territory.id);
 
-  return { mode: "grouping" };
+  return { mode: "other" };
 }
 
 export function assertBoundaryProvidedForType(

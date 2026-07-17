@@ -27,16 +27,6 @@ export interface ManagerZoneCandidate {
   name: string;
 }
 
-export interface FacilityInGroupingTerritory {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  territoryId: string;
-  repPatchCode: string;
-  repPatchName: string;
-}
-
 export interface TerritorySpatialRepository {
   getBoundaryAsGeoJson(territoryId: string): Promise<GeoJsonGeometry | null>;
 
@@ -66,13 +56,11 @@ export interface TerritorySpatialRepository {
   findOverlappingSiblingTerritories(input: {
     territoryId: string;
     territoryTypeId: string;
-    countryCode: string;
     geoJson: GeoJsonGeometry;
   }): Promise<SiblingOverlapConflict[]>;
 
   findContainingManagerZones(input: {
     geoJson: GeoJsonGeometry;
-    countryCode: string;
   }): Promise<ManagerZoneCandidate[]>;
 
   findRepPatchesOutsideManagerZone(input: {
@@ -81,9 +69,4 @@ export interface TerritorySpatialRepository {
   }): Promise<Array<{ id: string; code: string }>>;
 
   updateBoundaryMetadata(territoryId: string): Promise<void>;
-
-  findAssignedClinicsInGroupingTerritory(input: {
-    groupingTerritoryId: string;
-    scopedPatchIds: string[];
-  }): Promise<FacilityInGroupingTerritory[]>;
 }

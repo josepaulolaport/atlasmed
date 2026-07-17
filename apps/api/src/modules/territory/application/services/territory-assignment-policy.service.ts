@@ -2,7 +2,6 @@ import { Role } from "@atlasmed/access";
 import { db } from "../../../../infrastructure/database/db";
 import { userTerritoryAssignments, users, roles } from "@atlasmed/database";
 import { and, ne, inArray, eq } from "drizzle-orm";
-import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import { OperationNotAllowedError } from "../../../../shared/errors";
@@ -10,7 +9,6 @@ import { OperationNotAllowedError } from "../../../../shared/errors";
 interface Dependencies {
   territoryRepository: TerritoryRepository;
   territoryTypeRepository: TerritoryTypeRepository;
-  closureRepository: TerritoryClosureRepository;
 }
 
 export class TerritoryAssignmentPolicyService {
@@ -61,34 +59,22 @@ export class TerritoryAssignmentPolicyService {
       params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.REP];
 
     const conflictingAssignments = await db
-      .select({
-        territoryId: userTerritoryAssignments.territoryId,
-      })
+      .select({ userId: userTerritoryAssignments.userId })
       .from(userTerritoryAssignments)
       .innerJoin(users, eq(userTerritoryAssignments.userId, users.id))
       .innerJoin(roles, eq(users.roleId, roles.id))
       .where(
         and(
+          eq(userTerritoryAssignments.territoryId, params.territoryId),
           ne(userTerritoryAssignments.userId, params.targetUserId),
           inArray(roles.name, exclusionRoles)
         )
       );
 
-    if (conflictingAssignments.length === 0) {
-      return;
-    }
-
-    // One batched closure check instead of one query per conflicting
-    // assignment — this used to be an N+1 (a query per other user's
-    // territory) on every single assignment call.
-    const overlaps = await this.deps.closureRepository.hasAnyAncestorDescendantRelation(
-      params.territoryId,
-      conflictingAssignments.map((assignment) => assignment.territoryId)
-    );
-    if (overlaps) {
+    if (conflictingAssignments.length > 0) {
       throw new OperationNotAllowedError(
         "assign_territory",
-        "Territory overlaps with an assignment held by another user in the same role group"
+        "Territory is already assigned to another user in the same role group"
       );
     }
   }

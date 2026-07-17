@@ -1,11 +1,9 @@
 import { DrizzleTerritoryRepository } from "./infrastructure/repositories/drizzle/drizzle-territory.repository";
 import { DrizzleTerritoryTypeRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-type.repository";
-import { DrizzleTerritoryClosureRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
 import { DrizzleTerritorySpatialRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-spatial.repository";
 import { DrizzleTerritoryApprovalRepository } from "./infrastructure/repositories/drizzle/drizzle-territory-approval.repository";
 import { DrizzleTerritoryHierarchyPort } from "./infrastructure/ports/drizzle-territory-hierarchy.port";
 import { DrizzleClinicMembershipWriter } from "./infrastructure/adapters/drizzle-facility-membership.writer";
-import { TerritoryClosureService } from "./application/services/territory-closure.service";
 import { TerritoryMembershipService } from "./application/services/territory-membership.service";
 import { TerritoryAssignmentPolicyService } from "./application/services/territory-assignment-policy.service";
 import { TerritoryContainmentService } from "./application/services/territory-containment.service";
@@ -14,7 +12,6 @@ import { TerritoryTypeUseCases } from "./application/use-cases/territory-type.us
 import { TerritoryBoundaryUseCases } from "./application/use-cases/territory-boundary.use-cases";
 import { TerritoryMembershipUseCases } from "./application/use-cases/territory-membership.use-cases";
 import { TerritoryApprovalUseCases } from "./application/use-cases/territory-approval.use-cases";
-import { TerritoryCoverageUseCases } from "./application/use-cases/territory-coverage.use-cases";
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
@@ -23,7 +20,6 @@ import { catalogRepositories } from "../catalog/composition";
 export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
   territoryType: new DrizzleTerritoryTypeRepository(),
-  closure: new DrizzleTerritoryClosureRepository(),
   spatial: new DrizzleTerritorySpatialRepository(),
   approval: new DrizzleTerritoryApprovalRepository(),
 };
@@ -31,14 +27,8 @@ export const territoryRepositories = {
 export const facilityMembershipWriter = new DrizzleClinicMembershipWriter();
 
 export const territoryHierarchyPort = new DrizzleTerritoryHierarchyPort(
-  territoryRepositories.closure,
   territoryRepositories.territory
 );
-
-const territoryClosureService = new TerritoryClosureService({
-  territoryRepository: territoryRepositories.territory,
-  closureRepository: territoryRepositories.closure,
-});
 
 const territoryMembershipService = new TerritoryMembershipService({
   spatialRepository: territoryRepositories.spatial,
@@ -77,7 +67,7 @@ async function enqueueClinicMembershipUpdate(facilityId: string): Promise<void> 
 
 async function invalidateScopeForTerritories(territoryIds: string[]): Promise<void> {
   const userIds =
-    await territoryHierarchyPort.findUsersAssignedToTerritoryAncestors(territoryIds);
+    await territoryHierarchyPort.findUsersAssignedToRelatedTerritories(territoryIds);
   await scopeCacheService.invalidateMany(userIds);
 }
 
@@ -101,12 +91,10 @@ export function registerTerritoryMembershipWorker(): void {
 const territoryCrud = new TerritoryCrudUseCases({
   territoryRepository: territoryRepositories.territory,
   territoryTypeRepository: territoryRepositories.territoryType,
-  closureRepository: territoryRepositories.closure,
   spatialRepository: territoryRepositories.spatial,
   containmentService: territoryContainmentService,
   sectorRepository: catalogRepositories.sector,
   membershipService: territoryMembershipService,
-  closureService: territoryClosureService,
   onTerritoryDeactivated: enqueueMembershipRecompute,
   onBoundaryChanged: onTerritoryBoundaryChanged,
   onManagerTerritoryChanged: onManagerTerritoryChanged,
@@ -119,7 +107,6 @@ function createBoundaryUseCases() {
     territoryRepository: territoryRepositories.territory,
     territoryTypeRepository: territoryRepositories.territoryType,
     spatialRepository: territoryRepositories.spatial,
-    closureRepository: territoryRepositories.closure,
     containmentService: territoryContainmentService,
     onBoundaryChanged: onTerritoryBoundaryChanged,
     onManagerTerritoryChanged: onManagerTerritoryChanged,
@@ -131,7 +118,6 @@ export { territoryMembershipService, enqueueClinicMembershipUpdate };
 export const territoryAssignmentPolicy = new TerritoryAssignmentPolicyService({
   territoryRepository: territoryRepositories.territory,
   territoryTypeRepository: territoryRepositories.territoryType,
-  closureRepository: territoryRepositories.closure,
 });
 
 export const territoryUseCases = {
@@ -141,8 +127,6 @@ export const territoryUseCases = {
   updateTerritory: () => territoryCrud,
   deactivateTerritory: () => territoryCrud,
   deleteTerritory: () => territoryCrud,
-  getDescendants: () => territoryCrud,
-  listGroupingTree: () => territoryCrud,
   listTerritoryTypes: () => territoryTypeCrud,
   createTerritoryType: () => territoryTypeCrud,
   getTerritoryType: () => territoryTypeCrud,
@@ -178,7 +162,6 @@ export const territoryUseCases = {
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
-      closureRepository: territoryRepositories.closure,
       territoryCrud,
       clinicWriter: facilityMembershipWriter,
       invalidateScopeForTerritories,
@@ -189,7 +172,6 @@ export const territoryUseCases = {
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
-      closureRepository: territoryRepositories.closure,
       territoryCrud,
       clinicWriter: facilityMembershipWriter,
     }),
@@ -197,7 +179,6 @@ export const territoryUseCases = {
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
-      closureRepository: territoryRepositories.closure,
       territoryCrud,
       clinicWriter: facilityMembershipWriter,
       invalidateScopeForTerritories,
@@ -208,16 +189,7 @@ export const territoryUseCases = {
     new TerritoryApprovalUseCases({
       approvalRepository: territoryRepositories.approval,
       territoryRepository: territoryRepositories.territory,
-      closureRepository: territoryRepositories.closure,
       territoryCrud,
       clinicWriter: facilityMembershipWriter,
-    }),
-  getAnalyticsView: () =>
-    new TerritoryCoverageUseCases({
-      territoryRepository: territoryRepositories.territory,
-      territoryTypeRepository: territoryRepositories.territoryType,
-      spatialRepository: territoryRepositories.spatial,
-      closureRepository: territoryRepositories.closure,
-      hierarchyPort: territoryHierarchyPort,
     }),
 };

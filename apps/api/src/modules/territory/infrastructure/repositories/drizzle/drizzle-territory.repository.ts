@@ -22,9 +22,7 @@ function mapType(record: {
   assignsClinics: boolean;
   assignableToUsers: boolean;
   assignableToManagers: boolean;
-  isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
-  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -38,13 +36,8 @@ function mapTerritory(territory: {
   name: string;
   slug: string;
   code: string;
-  nodeType: TerritoryRecord["nodeType"];
   territoryTypeId: string;
   territoryType?: Parameters<typeof mapType>[0];
-  countryCode: string | null;
-  regionSlug: string | null;
-  stateCode: string | null;
-  parentId: string | null;
   managerTerritoryId: string | null;
   isActive: boolean;
   sectorId: string | null;
@@ -56,13 +49,8 @@ function mapTerritory(territory: {
     name: territory.name,
     slug: territory.slug,
     code: territory.code,
-    nodeType: territory.nodeType,
     territoryTypeId: territory.territoryTypeId,
     territoryType: territory.territoryType ? mapType(territory.territoryType) : undefined,
-    countryCode: territory.countryCode,
-    regionSlug: territory.regionSlug,
-    stateCode: territory.stateCode,
-    parentId: territory.parentId,
     managerTerritoryId: territory.managerTerritoryId,
     isActive: territory.isActive,
     sectorId: territory.sectorId,
@@ -147,28 +135,6 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     return rows.map(fromJoinedRow);
   }
 
-  async findChildren(parentId: string, activeOnly = true): Promise<TerritoryRecord[]> {
-    const rows = await db
-      .select({ territories, territoryTypes })
-      .from(territories)
-      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(
-        activeOnly
-          ? and(eq(territories.parentId, parentId), eq(territories.isActive, true))
-          : eq(territories.parentId, parentId)
-      )
-      .orderBy(asc(territories.name));
-    return rows.map(fromJoinedRow);
-  }
-
-  async countActiveChildren(parentId: string): Promise<number> {
-    const [result] = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(territories)
-      .where(and(eq(territories.parentId, parentId), eq(territories.isActive, true)));
-    return Number(result?.count ?? 0);
-  }
-
   async countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)` })
@@ -207,12 +173,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
         name: input.name,
         slug: input.slug,
         code: input.code ?? input.slug.toUpperCase(),
-        nodeType: input.nodeType,
         territoryTypeId: input.territoryTypeId,
-        countryCode: input.countryCode ?? null,
-        regionSlug: input.regionSlug ?? null,
-        stateCode: input.stateCode ?? null,
-        parentId: input.parentId ?? null,
         managerTerritoryId: input.managerTerritoryId ?? null,
         sectorId: input.sectorId ?? null,
       })
@@ -224,10 +185,8 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
     id: string,
     data: {
       name?: string;
-      parentId?: string | null;
       managerTerritoryId?: string | null;
       isActive?: boolean;
-      countryCode?: string | null;
       sectorId?: string | null;
     }
   ): Promise<TerritoryRecord> {
@@ -236,22 +195,6 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       .set({ ...data, updatedAt: new Date() })
       .where(eq(territories.id, id));
     return (await this.findOneWithType(id))!;
-  }
-
-  async findActiveCountryByCode(countryCode: string): Promise<TerritoryRecord | null> {
-    const rows = await db
-      .select({ territories, territoryTypes })
-      .from(territories)
-      .leftJoin(territoryTypes, eq(territories.territoryTypeId, territoryTypes.id))
-      .where(
-        and(
-          eq(territories.isActive, true),
-          eq(territories.countryCode, countryCode),
-          eq(territoryTypes.isCountryLevel, true)
-        )
-      )
-      .limit(1);
-    return rows[0] ? fromJoinedRow(rows[0]) : null;
   }
 
   async findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]> {

@@ -137,7 +137,6 @@ export default function TerritoryTypesPage() {
       assignsClinics: type.assignsClinics,
       assignableToUsers: type.assignableToUsers,
       assignableToManagers: type.assignableToManagers,
-      isCountryLevel: type.isCountryLevel,
       blockSiblingOverlap: type.blockSiblingOverlap,
     });
     setEditActive(type.isActive);
@@ -306,9 +305,6 @@ export default function TerritoryTypesPage() {
                             <p className="text-sm text-gray-500">{type.description}</p>
                           ) : null}
                           <div className="mt-2 flex flex-wrap gap-1">
-                            {type.isCountryLevel && (
-                              <Badge variant="outline">nível de país</Badge>
-                            )}
                             {type.canHaveBoundary && (
                               <Badge variant="outline">com limite</Badge>
                             )}

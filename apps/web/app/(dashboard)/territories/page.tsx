@@ -17,20 +17,14 @@ import { TerritorySubnav } from "@/components/territory/territory-subnav";
 import { TerritoryTree } from "@/components/territory/territory-tree";
 import { TerritoryDetailPanel } from "@/components/territory/territory-detail-panel";
 import { CreateTerritoryDialog } from "@/components/territory/create-territory-dialog";
-import { ReparentTerritoryDialog } from "@/components/territory/reparent-territory-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import type { Territory, TerritoryTreeNode } from "@/types/territory";
+import type { Territory } from "@/types/territory";
 
-type TerritoryView = "grouping" | "manager-zones" | "rep-patches";
+type TerritoryView = "manager-zones" | "rep-patches";
 
 const VIEW_OPTIONS: Array<{ id: TerritoryView; label: string; description: string }> = [
-  {
-    id: "grouping",
-    label: "Agrupamento",
-    description: "Árvore de região, estado e município para filtros e análises.",
-  },
   {
     id: "manager-zones",
     label: "Zonas de gerente",
@@ -43,25 +37,6 @@ const VIEW_OPTIONS: Array<{ id: TerritoryView; label: string; description: strin
   },
 ];
 
-function findTerritoryInTree(
-  nodes: TerritoryTreeNode[],
-  id: string
-): Territory | null {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    const found = findTerritoryInTree(node.children, id);
-    if (found) return found;
-  }
-  return null;
-}
-
-function toFlatTreeNodes(territories: Territory[]): TerritoryTreeNode[] {
-  return territories.map((territory) => ({
-    ...territory,
-    children: [],
-  }));
-}
-
 export default function TerritoriesPage() {
   const { user } = useAuth();
   const router = useRouter();
@@ -71,13 +46,12 @@ export default function TerritoriesPage() {
   const [view, setView] = useState<TerritoryView>(
     requestedView && VIEW_OPTIONS.some((option) => option.id === requestedView)
       ? requestedView
-      : "grouping"
+      : "manager-zones"
   );
-  const [tree, setTree] = useState<TerritoryTreeNode[]>([]);
+  const [territories, setTerritories] = useState<Territory[]>([]);
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
-  const [reparentOpen, setReparentOpen] = useState(false);
   const [recomputing, setRecomputing] = useState(false);
 
   const canRead = user ? canReadTerritories(user.role.name) : false;
@@ -87,30 +61,19 @@ export default function TerritoriesPage() {
   const canAssignUsers = user ? canManageUsers(user.role.name) : false;
   const userIsAdmin = user ? isAdmin(user.role.name) : false;
 
-  const loadTree = useCallback(async () => {
+  const loadTerritories = useCallback(async () => {
     setLoading(true);
     try {
-      let nodes: TerritoryTreeNode[] = [];
+      const typeSlug = view === "manager-zones" ? "manager_zone" : "patch";
+      const response = await territoriesApi.listTerritories(typeSlug);
+      const list = response.data;
 
-      if (view === "grouping") {
-        const response = await territoriesApi.listGroupingTree();
-        nodes = response.data;
-      } else {
-        const response = await territoriesApi.listTerritories("flat");
-        const territories = response.data as Territory[];
-        const filtered =
-          view === "manager-zones"
-            ? territories.filter((territory) => territory.territoryType.assignableToManagers)
-            : territories.filter((territory) => territory.territoryType.assignsClinics);
-        nodes = toFlatTreeNodes(filtered);
-      }
-
-      setTree(nodes);
+      setTerritories(list);
       setSelectedId((current) => {
-        if (current && nodes.some((node) => node.id === current)) {
+        if (current && list.some((territory) => territory.id === current)) {
           return current;
         }
-        return requestedSelection ?? nodes[0]?.id;
+        return requestedSelection ?? list[0]?.id;
       });
     } catch {
       toast({
@@ -137,11 +100,11 @@ export default function TerritoriesPage() {
 
   useEffect(() => {
     if (canRead) {
-      void loadTree();
+      void loadTerritories();
     }
-  }, [canRead, loadTree]);
+  }, [canRead, loadTerritories]);
 
-  const selectedTerritory = selectedId ? findTerritoryInTree(tree, selectedId) : null;
+  const selectedTerritory = territories.find((t) => t.id === selectedId) ?? null;
   const activeView = VIEW_OPTIONS.find((option) => option.id === view)!;
 
   const handleRecompute = async () => {
@@ -155,7 +118,7 @@ export default function TerritoriesPage() {
         description: `Processed ${result.processed}, updated ${result.updated}`,
         variant: "success",
       });
-      await loadTree();
+      await loadTerritories();
     } catch (err) {
       toast({
         title: "Erro",
@@ -181,12 +144,11 @@ export default function TerritoriesPage() {
             </h1>
             <p className="text-sm text-zinc-500 mt-1">
               Zonas de gerente e áreas de representante definem o escopo de
-              atribuição. As áreas de agrupamento são usadas apenas para filtros
-              e análises.
+              atribuição das clínicas.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => loadTree()}>
+            <Button variant="outline" size="sm" onClick={() => loadTerritories()}>
               <iconify-icon
                 icon="solar:refresh-linear"
                 stroke-width="1.5"
@@ -258,13 +220,13 @@ export default function TerritoriesPage() {
                 <div className="py-10 text-center text-sm text-zinc-500">
                   Carregando…
                 </div>
-              ) : tree.length === 0 ? (
+              ) : territories.length === 0 ? (
                 <p className="py-10 text-center text-sm text-zinc-500">
                   Nenhum registro encontrado para {activeView.label.toLowerCase()}.
                 </p>
               ) : (
                 <TerritoryTree
-                  nodes={tree}
+                  nodes={territories}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                 />
@@ -277,8 +239,7 @@ export default function TerritoriesPage() {
             canManage={canAssignUsers}
             canUpdate={canUpdate}
             isAdmin={userIsAdmin}
-            onRefresh={loadTree}
-            onReparent={() => setReparentOpen(true)}
+            onRefresh={loadTerritories}
           />
         </div>
       </div>
@@ -286,17 +247,8 @@ export default function TerritoriesPage() {
       <CreateTerritoryDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
-        parentId={view === "grouping" ? selectedId : undefined}
         isAdmin={userIsAdmin}
-        onSuccess={loadTree}
-      />
-
-      <ReparentTerritoryDialog
-        territory={selectedTerritory}
-        open={reparentOpen}
-        onOpenChange={setReparentOpen}
-        isAdmin={userIsAdmin}
-        onSuccess={loadTree}
+        onSuccess={loadTerritories}
       />
     </>
   );

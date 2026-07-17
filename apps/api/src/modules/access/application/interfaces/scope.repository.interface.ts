@@ -71,6 +71,4 @@ export interface TerritoryHierarchyPort {
     assignedTerritoryIds: string[],
     activeOnly?: boolean
   ): Promise<string[]>;
-
-  resolveDescendantIds(ancestorIds: string[], activeOnly?: boolean): Promise<string[]>;
 }

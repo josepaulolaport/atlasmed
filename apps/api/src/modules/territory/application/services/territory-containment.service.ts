@@ -46,7 +46,6 @@ export class TerritoryContainmentService {
     const conflicts = await this.deps.spatialRepository.findOverlappingSiblingTerritories({
       territoryId: territory.id,
       territoryTypeId: territory.territoryTypeId,
-      countryCode: territory.countryCode ?? "BR",
       geoJson,
     });
 
@@ -64,12 +63,10 @@ export class TerritoryContainmentService {
   }
 
   async resolveRepPatchManagerZone(
-    geoJson: GeoJsonGeometry,
-    countryCode: string
+    geoJson: GeoJsonGeometry
   ): Promise<RepPatchContainmentResolution> {
     const candidates = await this.deps.spatialRepository.findContainingManagerZones({
       geoJson,
-      countryCode,
     });
 
     if (candidates.length === 0) {

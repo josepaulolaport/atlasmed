@@ -91,7 +91,7 @@ describe("assertSinglePolygonForEditableTerritory", () => {
 
   const repPatchType = { slug: "patch", assignsClinics: true };
   const managerZoneType = { slug: "manager_zone", assignsClinics: false };
-  const groupingType = { slug: "municipality", assignsClinics: false };
+  const otherType = { slug: "other", assignsClinics: false };
 
   it("rejects a MultiPolygon for a rep patch", () => {
     expect(() =>
@@ -111,9 +111,9 @@ describe("assertSinglePolygonForEditableTerritory", () => {
     ).not.toThrow();
   });
 
-  it("allows a MultiPolygon for grouping-hierarchy territories (e.g. ingested geography)", () => {
+  it("allows a MultiPolygon for other territory types", () => {
     expect(() =>
-      assertSinglePolygonForEditableTerritory(groupingType, multiPolygon, "save_boundary")
+      assertSinglePolygonForEditableTerritory(otherType, multiPolygon, "save_boundary")
     ).not.toThrow();
   });
 });

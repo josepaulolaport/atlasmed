@@ -32,9 +32,8 @@ export function normalizeTerritoryBoundary(geoJson: GeoJsonGeometry): GeoJsonGeo
 /**
  * Rep patches and manager zones are manually drawn/edited (mobile territory
  * editor) and must always be a single connected polygon — disconnected areas
- * are rejected rather than persisted as a MultiPolygon. Grouping-hierarchy
- * territories (ingested reference geography, e.g. IBGE municipalities) are
- * exempt: real-world shapes there can legitimately be multi-part.
+ * are rejected rather than persisted as a MultiPolygon. Any other territory
+ * type is exempt: real-world shapes there can legitimately be multi-part.
  */
 export function assertSinglePolygonForEditableTerritory(
   type: { slug: string; assignsClinics: boolean },

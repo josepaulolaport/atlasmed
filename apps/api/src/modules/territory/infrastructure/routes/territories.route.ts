@@ -2,7 +2,7 @@ import { Elysia, t } from "elysia";
 import { Role } from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
-import { territoryRepositories, territoryUseCases } from "../../composition";
+import { territoryUseCases } from "../../composition";
 import {
   InsufficientPermissionsError,
   ResourceNotFoundError,
@@ -62,9 +62,7 @@ export const territoriesRoute = new Elysia()
         assignsClinics: t.Optional(t.Boolean()),
         assignableToUsers: t.Optional(t.Boolean()),
         assignableToManagers: t.Optional(t.Boolean()),
-        isCountryLevel: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
-        participatesInGroupingHierarchy: t.Optional(t.Boolean()),
         sortOrder: t.Optional(t.Number()),
       }),
     }
@@ -87,19 +85,12 @@ export const territoriesRoute = new Elysia()
         assignsClinics: t.Optional(t.Boolean()),
         assignableToUsers: t.Optional(t.Boolean()),
         assignableToManagers: t.Optional(t.Boolean()),
-        isCountryLevel: t.Optional(t.Boolean()),
         blockSiblingOverlap: t.Optional(t.Boolean()),
-        participatesInGroupingHierarchy: t.Optional(t.Boolean()),
         sortOrder: t.Optional(t.Number()),
         isActive: t.Optional(t.Boolean()),
       }),
     }
   )
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/grouping-tree", async ({ getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.listGroupingTree().listGroupingTree(scope);
-  })
   .use(requirePermission("read", "TERRITORY"))
   .get("/territories/:id", async ({ params, getScope }) => {
     const scope = await getScope();
@@ -107,42 +98,18 @@ export const territoriesRoute = new Elysia()
     if (!territory) {
       throw new ResourceNotFoundError("Territory", params.id);
     }
-    if (!scope.isGlobal) {
-      await assertManagerReadableTerritory(
-        scope,
-        params.id,
-        territoryRepositories.closure
-      );
-    }
+    assertManagerReadableTerritory(scope, params.id);
     return territory;
-  })
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/descendants", async ({ params, getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.getDescendants().getDescendants(params.id, scope);
   })
   .use(requirePermission("create", "TERRITORY"))
   .post(
     "/territories",
-    async ({ body, getUser, getScope }) => {
+    async ({ body, getUser }) => {
       const user = await getUser();
-      if (isAdminRole(user.role.name as Role)) {
-        return territoryUseCases.createTerritory().createTerritory(body);
+      if (!isAdminRole(user.role.name as Role)) {
+        throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
       }
-
-      if (isManagerRole(user.role.name as Role)) {
-        const scope = await getScope();
-        return territoryUseCases.submitApproval().submitRequest({
-          requesterId: user.id,
-          requesterRole: user.role.name as Role,
-          scope,
-          type: "create_territory",
-          entityPayload: body,
-          reason: body.reason,
-        });
-      }
-
-      throw new InsufficientPermissionsError(["territory:create"], [`role:${user.role.name}`]);
+      return territoryUseCases.createTerritory().createTerritory(body);
     },
     {
       body: t.Object({
@@ -150,10 +117,7 @@ export const territoriesRoute = new Elysia()
         slug: t.String(),
         territoryTypeId: t.Optional(t.String()),
         typeSlug: t.Optional(t.String()),
-        parentId: t.Optional(t.String()),
-        countryCode: t.Optional(t.String()),
         sectorId: t.Optional(t.String()),
-        reason: t.Optional(t.String()),
         boundary: t.Optional(
           t.Object({
             type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),
@@ -172,14 +136,13 @@ export const territoriesRoute = new Elysia()
         return territoryUseCases.updateTerritory().updateTerritory(params.id, body);
       }
 
-      if (isManagerRole(user.role.name as Role)) {
+      if (isManagerRole(user.role.name as Role) && body.isActive === false) {
         const scope = await getScope();
-        const type = body.isActive === false ? "deactivate_territory" : "reparent_territory";
         return territoryUseCases.submitApproval().submitRequest({
           requesterId: user.id,
           requesterRole: user.role.name as Role,
           scope,
-          type,
+          type: "deactivate_territory",
           targetTerritoryId: params.id,
           entityPayload: body,
           reason: body.reason,
@@ -191,7 +154,6 @@ export const territoriesRoute = new Elysia()
     {
       body: t.Object({
         name: t.Optional(t.String()),
-        parentId: t.Optional(t.Union([t.String(), t.Null()])),
         isActive: t.Optional(t.Boolean()),
         sectorId: t.Optional(t.String()),
         reason: t.Optional(t.String()),
@@ -318,8 +280,6 @@ export const territoriesRoute = new Elysia()
     {
       body: t.Object({
         type: t.Union([
-          t.Literal("create_territory"),
-          t.Literal("reparent_territory"),
           t.Literal("deactivate_territory"),
           t.Literal("clinic_territory_change"),
         ]),
@@ -386,12 +346,4 @@ export const territoriesRoute = new Elysia()
     {
       body: t.Object({ note: t.Optional(t.String()) }),
     }
-  )
-  .use(requirePermission("read", "TERRITORY"))
-  .get("/territories/:id/analytics-view", async ({ params, getScope }) => {
-    const scope = await getScope();
-    return territoryUseCases.getAnalyticsView().getAnalyticsView({
-      groupingTerritoryId: params.id,
-      scope,
-    });
-  });
+  );

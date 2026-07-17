@@ -32,10 +32,10 @@ describe("serializeBoundaryResolution", () => {
     });
   });
 
-  it("serializes grouping resolution", () => {
-    expect(serializeBoundaryResolution({ mode: "grouping" })).toEqual({
+  it("serializes other-mode resolution", () => {
+    expect(serializeBoundaryResolution({ mode: "other" })).toEqual({
       success: true,
-      mode: "grouping",
+      mode: "other",
     });
   });
 });

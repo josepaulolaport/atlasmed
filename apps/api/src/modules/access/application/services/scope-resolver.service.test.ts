@@ -15,7 +15,6 @@ describe("ScopeResolver", () => {
       ...assignedTerritoryIds,
       ...assignedTerritoryIds.map((id) => `${id}-patch`),
     ]),
-    resolveDescendantIds: mock(async (ancestorIds: string[]) => ancestorIds),
   };
 
   it("returns global scope for ADMIN", async () => {

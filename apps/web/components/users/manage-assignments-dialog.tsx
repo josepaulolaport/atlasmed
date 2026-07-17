@@ -328,7 +328,6 @@ export function ManageAssignmentsDialog({
                   onChange={setSelectedTerritoryId}
                   disabled={territoryBusy !== null}
                   pickerConfig={territoryPickerConfig}
-                  excludeCountry={territoryPickerConfig.excludeCountry}
                   placeholder="Selecione um território elegível"
                 />
                 <Button

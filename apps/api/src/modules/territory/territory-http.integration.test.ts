@@ -139,21 +139,12 @@ describe("Territory HTTP scope integration", () => {
     expect(response.status).toBe(422);
   });
 
-  it("manager cannot deactivate a non-leaf territory in jurisdiction", async () => {
+  it("manager cannot deactivate a territory outside their jurisdiction", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
-
-    const region = await db
-      .select({ parentId: territories.parentId })
-      .from(territories)
-      .where(eq(territories.id, fixtures.territoryId))
-      .limit(1)
-      .then((r) => r[0] ?? null);
-
-    expect(region?.parentId).toBeTruthy();
 
     const managerToken = await loginToken(fixtures.manager.email);
     const response = await authRequest(
-      `http://localhost/api/v1/territory/territories/${region!.parentId}`,
+      `http://localhost/api/v1/territory/territories/${fixtures.outOfScopeTerritoryId}`,
       managerToken,
       {
         method: "PATCH",
@@ -223,11 +214,22 @@ describe("Territory HTTP scope integration", () => {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
-            name: `Sectorized Patch ${fixtures.uniqueId}`,
-            slug: `sectorized-patch-${fixtures.uniqueId}`,
-            typeSlug: "patch",
-            parentId: fixtures.territoryId,
+            name: `Sectorized Zone ${fixtures.uniqueId}`,
+            slug: `sectorized-zone-${fixtures.uniqueId}`,
+            typeSlug: "manager_zone",
             sectorId: sector!.id,
+            boundary: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [-47.95, -15.85],
+                  [-47.9, -15.85],
+                  [-47.9, -15.8],
+                  [-47.95, -15.8],
+                  [-47.95, -15.85],
+                ],
+              ],
+            },
           }),
         }
       );
