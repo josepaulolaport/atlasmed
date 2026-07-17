@@ -1,4 +1,5 @@
 import { DrizzleProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-professional.repository";
+import { searchService } from "../../infrastructure/search/search.service";
 import {
   CreateDoctorUseCase,
   CreateProfessionalNoteUseCase,
@@ -15,7 +16,10 @@ export const professionalRepositories = {
 
 export const professionalUseCases = {
   listProfessionals: () =>
-    new ListProfessionalsUseCase({ doctorRepository: professionalRepositories.professional }),
+    new ListProfessionalsUseCase({
+      doctorRepository: professionalRepositories.professional,
+      searchService,
+    }),
   getProfessional: () =>
     new GetProfessionalUseCase({ doctorRepository: professionalRepositories.professional }),
   listProfessionalNotes: () =>

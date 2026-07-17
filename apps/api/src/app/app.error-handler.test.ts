@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { Elysia } from "elysia";
 import {
   ForbiddenError,
+  ServiceUnavailableError,
   UnauthorizedError,
 } from "../shared/errors";
 import { AppError } from "../shared/errors";
@@ -60,6 +61,23 @@ describe("global error handler", () => {
       error: {
         code: "FORBIDDEN",
         message: "Insufficient permissions",
+      },
+    });
+  });
+
+  it("returns 503 with structured body for ServiceUnavailableError", async () => {
+    const app = createErrorHandlerApp().get("/test", () => {
+      throw new ServiceUnavailableError("Search");
+    });
+
+    const response = await app.handle(new Request("http://localhost/test"));
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body).toEqual({
+      error: {
+        code: "SERVICE_UNAVAILABLE",
+        message: "Search is temporarily unavailable",
       },
     });
   });
