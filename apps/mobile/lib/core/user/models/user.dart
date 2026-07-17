@@ -47,6 +47,10 @@ class User extends Equatable {
     required this.role,
     required this.createdAt,
     required this.updatedAt,
+    this.lastLoginAt,
+    this.suspendedAt,
+    this.deactivatedAt,
+    this.birthDate,
   });
 
   final String id;
@@ -65,6 +69,20 @@ class User extends Equatable {
   final UserRole role;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Mirrors `users.last_login_at` — `null` when the user has never signed
+  /// in (e.g. a still-`PENDING` invitee).
+  final DateTime? lastLoginAt;
+
+  /// Mirrors `users.suspended_at` / `users.deactivated_at` — only ever set
+  /// while [status] is [UserStatus.suspended] / [UserStatus.inactive]
+  /// respectively, kept so the profile can show "since when".
+  final DateTime? suspendedAt;
+  final DateTime? deactivatedAt;
+
+  /// Not part of the `users` table yet — seeded here ahead of a future
+  /// backend column so the basic-info card has something to show.
+  final DateTime? birthDate;
 
   String get displayName {
     final parts = [
@@ -104,6 +122,10 @@ class User extends Equatable {
       role: UserRole.fromJson(userJson['role'] as Map<String, dynamic>),
       createdAt: DateTime.parse(userJson['createdAt'] as String),
       updatedAt: DateTime.parse(userJson['updatedAt'] as String),
+      lastLoginAt: _dateTimeOrNull(userJson['lastLoginAt']),
+      suspendedAt: _dateTimeOrNull(userJson['suspendedAt']),
+      deactivatedAt: _dateTimeOrNull(userJson['deactivatedAt']),
+      birthDate: _dateTimeOrNull(userJson['birthDate']),
     );
   }
 
@@ -126,6 +148,11 @@ class User extends Equatable {
     'role': role.toJson(),
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
+    if (lastLoginAt != null) 'lastLoginAt': lastLoginAt!.toIso8601String(),
+    if (suspendedAt != null) 'suspendedAt': suspendedAt!.toIso8601String(),
+    if (deactivatedAt != null)
+      'deactivatedAt': deactivatedAt!.toIso8601String(),
+    if (birthDate != null) 'birthDate': birthDate!.toIso8601String(),
   };
 
   @override
@@ -146,6 +173,10 @@ class User extends Equatable {
     role,
     createdAt,
     updatedAt,
+    lastLoginAt,
+    suspendedAt,
+    deactivatedAt,
+    birthDate,
   ];
 }
 
