@@ -251,6 +251,7 @@ describe("Suggestion use cases", () => {
     facilityRepository.reactivate = mock(async () => ({
       id: "clinic-1",
       name: "Clinic",
+      neighborhood: null,
       city: null,
       state: null,
       taxIdType: null,

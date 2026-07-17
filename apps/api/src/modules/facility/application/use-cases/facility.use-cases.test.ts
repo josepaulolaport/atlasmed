@@ -12,6 +12,7 @@ function facilityRecord(id: string): FacilityListRecord {
   return {
     id,
     name: `Facility ${id}`,
+    neighborhood: null,
     city: null,
     state: null,
     taxIdType: null,
@@ -96,6 +97,43 @@ describe("ListFacilitiesUseCase", () => {
       limit: 10,
       total: 27,
       totalPages: 3,
+    });
+  });
+
+  it("serializes neighborhood, city, and state in list DTOs", async () => {
+    const facility = {
+      ...facilityRecord("facility-location"),
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+    };
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({
+        facilities: [facility],
+        total: 1,
+      })),
+    });
+
+    const result = await useCase.execute({
+      scope: {
+        isGlobal: true,
+        assignedTerritoryIds: [],
+        effectiveTerritoryIds: [],
+        analyticsEffectiveTerritoryIds: [],
+        territoryIds: [],
+        facilityIds: [],
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true,
+      },
+    });
+
+    expect(result.data[0]).toMatchObject({
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
     });
   });
 

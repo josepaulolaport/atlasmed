@@ -6,6 +6,7 @@ export interface FacilityService {
 export interface FacilityRecord {
   id: string;
   name: string;
+  neighborhood: string | null;
   city: string | null;
   state: string | null;
   taxIdType: "PJ" | "PF" | null;

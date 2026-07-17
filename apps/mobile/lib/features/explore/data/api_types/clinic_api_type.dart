@@ -9,6 +9,7 @@ class Clinic {
     required this.id,
     required this.name,
     required this.professionalCount,
+    this.neighborhood,
     this.city,
     this.state,
     this.territoryId,
@@ -30,6 +31,7 @@ class Clinic {
     return Clinic(
       id: readString(map['id']),
       name: readString(map['name']),
+      neighborhood: readNullableString(map['neighborhood']),
       city: readNullableString(map['city']),
       state: readNullableString(map['state']),
       territoryId: readNullableString(map['territoryId']),
@@ -55,6 +57,7 @@ class Clinic {
 
   final String id;
   final String name;
+  final String? neighborhood;
   final String? city;
   final String? state;
   final String? territoryId;
