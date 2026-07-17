@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 
-/// Full list of confirmed CRM doctors at an establishment — pushed from the
-/// "Ver todos" affordance on the Médicos section, so users can scan every
-/// doctor quickly instead of swiping through the card carousel.
-class DoctorsListScreen extends StatelessWidget {
+/// Full list of CRM doctors at an establishment — same table chrome as
+/// Explorar (search + filter + sort chips + [DoctorRow]).
+class DoctorsListScreen extends StatefulWidget {
   const DoctorsListScreen({
     super.key,
     required this.doctors,
@@ -17,187 +23,261 @@ class DoctorsListScreen extends StatelessWidget {
   final String facilityName;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
-        elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
-        title: Text('Médicos · ${doctors.length}'),
-      ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: doctors.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => _DoctorRow(doctor: doctors[i]),
-      ),
-    );
-  }
+  State<DoctorsListScreen> createState() => _DoctorsListScreenState();
 }
 
-class _DoctorRow extends StatelessWidget {
-  const _DoctorRow({required this.doctor});
+class _DoctorsListScreenState extends State<DoctorsListScreen> {
+  late List<FacilityCrmDoctor> _doctors = List.of(widget.doctors);
+  String _query = '';
+  String _sort = 'name-asc';
+  Map<String, List<String>> _filters = {};
+  bool _sortOpen = false;
 
-  final FacilityCrmDoctor doctor;
+  @override
+  void didUpdateWidget(covariant DoctorsListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.doctors != widget.doctors) {
+      _doctors = List.of(widget.doctors);
+    }
+  }
+
+  List<String> get _specialtyOptions {
+    final set = <String>{};
+    for (final d in _doctors) {
+      final s = d.specialty?.trim();
+      if (s != null && s.isNotEmpty) set.add(s);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  Map<String, List<String>> get _filterSections => {
+    if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
+    'Papel': const ['Prescritor', 'Decisor', 'Comprador'],
+  };
+
+  int get _filterCount =>
+      _filters.values.fold<int>(0, (sum, list) => sum + list.length);
+
+  List<FacilityCrmDoctor> get _filtered {
+    var list = List<FacilityCrmDoctor>.from(_doctors);
+    final q = _query.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list
+          .where(
+            (d) =>
+                d.name.toLowerCase().contains(q) ||
+                (d.specialty?.toLowerCase().contains(q) ?? false) ||
+                (d.crm?.toLowerCase().contains(q) ?? false),
+          )
+          .toList();
+    }
+
+    final specialties = _filters['Especialidade'] ?? const <String>[];
+    if (specialties.isNotEmpty) {
+      list = list
+          .where((d) => specialties.contains(d.specialty?.trim()))
+          .toList();
+    }
+
+    final roles = _filters['Papel'] ?? const <String>[];
+    if (roles.isNotEmpty) {
+      list = list.where((d) {
+        if (roles.contains('Prescritor') && d.isPrescriber) return true;
+        if (roles.contains('Decisor') && d.isDecisionMaker) return true;
+        if (roles.contains('Comprador') && d.isBuyer) return true;
+        return false;
+      }).toList();
+    }
+
+    switch (_sort) {
+      case 'name-asc':
+        list.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+      default:
+        list.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        );
+    }
+    return list;
+  }
+
+  List<FilterChipData> get _filterChips {
+    final chips = <FilterChipData>[];
+    for (final entry in _filters.entries) {
+      for (final value in entry.value) {
+        chips.add(
+          FilterChipData(
+            label: value,
+            onRemove: () {
+              setState(() {
+                final next = Map<String, List<String>>.from(_filters);
+                next[entry.key] = (next[entry.key] ?? [])
+                    .where((x) => x != value)
+                    .toList();
+                if (next[entry.key]!.isEmpty) next.remove(entry.key);
+                _filters = next;
+              });
+            },
+          ),
+        );
+      }
+    }
+    return chips;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: () => context.push('/workspace/doctor/${doctor.id}'),
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+    final filtered = _filtered;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: const Color(0xFF0f1729),
+        title: Text(
+          'Médicos · ${_doctors.length}',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: HSLColor.fromAHSL(1, doctor.hue, 0.2, 0.9).toColor(),
-                borderRadius: BorderRadius.circular(10),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAssociate,
+        backgroundColor: const Color(0xFF1e40af),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add_rounded),
+      ),
+      body: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                child: SearchBarWidget(
+                  value: _query,
+                  onChanged: (q) => setState(() => _query = q),
+                  onFilter: _showFilterSheet,
+                  filterCount: _filterCount,
+                  hintText: 'Buscar médico, especialidade…',
+                ),
               ),
-              child: Center(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                child: SortRow(
+                  sort: _sort,
+                  onSortTap: () => setState(() => _sortOpen = true),
+                  filterChips: _filterChips,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
                 child: Text(
-                  doctor.initials,
-                  style: TextStyle(
+                  filtered.length == 1
+                      ? '1 médico'
+                      : '${filtered.length} médicos',
+                  style: const TextStyle(
                     fontSize: 12.5,
-                    fontWeight: FontWeight.w700,
-                    color: HSLColor.fromAHSL(
-                      1,
-                      doctor.hue,
-                      0.6,
-                      0.35,
-                    ).toColor(),
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6b7280),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    doctor.name,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (doctor.specialty != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      doctor.specialty!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF6b7280),
+              Expanded(
+                child: filtered.isEmpty
+                    ? EmptyState(query: _query, kind: 'doctor')
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) {
+                          final d = filtered[i];
+                          return DoctorRow(
+                            showDistance: false,
+                            showRelationship: true,
+                            phone: d.phone,
+                            relationshipScore: d.relationshipScore,
+                            badges: _badgesFor(d),
+                            doctor: Doctor(
+                              id: d.id,
+                              name: d.name,
+                              initials: d.initials,
+                              hue: d.hue,
+                              specialty: d.specialty ?? '',
+                              primaryClinic: '',
+                              crm: d.crm ?? '',
+                              distanceKm: 0,
+                              isPriority: d.isDecisionMaker || d.isPrescriber,
+                            ),
+                            onTap: () =>
+                                context.push('/workspace/doctor/${d.id}'),
+                          );
+                        },
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  if (doctor.crm != null) ...[
-                    const SizedBox(height: 1),
-                    Text(
-                      doctor.crm!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF9ca3af),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  if (_badges.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Wrap(spacing: 4, runSpacing: 4, children: _badges),
-                  ],
-                ],
               ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (doctor.phone != null)
-                  IconButton(
-                    icon: const Icon(Icons.phone_outlined, size: 18),
-                    color: const Color(0xFF1e40af),
-                    onPressed: () => launchContactUrl(
-                      context,
-                      url: callUrl(doctor.phone),
-                      contactLabel: 'telefone',
-                    ),
-                  ),
-                if (doctor.email != null)
-                  IconButton(
-                    icon: const Icon(Icons.email_outlined, size: 18),
-                    color: const Color(0xFF1e40af),
-                    onPressed: () => launchContactUrl(
-                      context,
-                      url: emailUrl(doctor.email),
-                      contactLabel: 'e-mail',
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+          SortSheet(
+            open: _sortOpen,
+            onClose: () => setState(() => _sortOpen = false),
+            kind: 'facility-people',
+            sort: _sort,
+            onApply: (s) {
+              setState(() {
+                _sort = s;
+                _sortOpen = false;
+              });
+            },
+          ),
+        ],
       ),
     );
   }
 
-  List<Widget> get _badges {
-    final badges = <Widget>[];
-    if (doctor.roleBadge != null) {
-      badges.add(_MiniBadge(label: doctor.roleBadge!, emphasized: true));
+  Future<void> _showFilterSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FacilityRosterFilterSheet(
+        sections: _filterSections,
+        filters: _filters,
+        onApply: (next) {
+          setState(() => _filters = next);
+          Navigator.pop(ctx);
+        },
+      ),
+    );
+  }
+
+  List<String> _badgesFor(FacilityCrmDoctor d) {
+    final badges = <String>[];
+    if (d.roleBadge != null && d.roleBadge!.trim().isNotEmpty) {
+      badges.add(d.roleBadge!);
     }
-    if (doctor.isPrescriber) badges.add(const _MiniBadge(label: 'Prescritor'));
-    if (doctor.isBuyer) badges.add(const _MiniBadge(label: 'Comprador'));
-    if (doctor.isDecisionMaker) badges.add(const _MiniBadge(label: 'Decisor'));
+    if (d.isPrescriber) badges.add('Prescritor');
+    if (d.isBuyer) badges.add('Comprador');
+    if (d.isDecisionMaker) badges.add('Decisor');
     return badges;
   }
-}
 
-class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({required this.label, this.emphasized = false});
-
-  final String label;
-  final bool emphasized;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = emphasized
-        ? const Color(0xFF7c3aed)
-        : const Color(0xFF1e40af);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 9,
-          fontWeight: FontWeight.w600,
-          color: color,
+  Future<void> _openAssociate() async {
+    final added = await showAssociateDoctorsSheet(
+      context,
+      alreadyAssociatedIds: _doctors.map((d) => d.id).toSet(),
+    );
+    if (added == null || added.isEmpty || !mounted) return;
+    setState(() {
+      _doctors = [..._doctors, ...added];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          added.length == 1
+              ? '${added.first.name} associado à clínica'
+              : '${added.length} médicos associados à clínica',
         ),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

@@ -1,6 +1,6 @@
 # Spec 0005: Mobile Establishment Detail (Estabelecimento / Clínica)
 
-**Status:** Approved for implementation — redesign addendum (v17)  
+**Status:** Approved for implementation — redesign addendum (v19)  
 **Last Updated:** 2026-07-17  
 **Domains:** `apps/mobile`, `apps/api` (additive contract changes)  
 **Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
@@ -36,6 +36,10 @@
 > **v16 note:** Cadastro UX deepened around preview + non-image uploads. The list is now a compact summary (icon, title, file name / "nenhum arquivo", status pill, chevron) — tapping a row opens a dedicated `ClinicRegistrationDocumentDetailScreen` with status, reviewer note, a tappable attachment preview ("Ver completo"), and send/resend/replace actions. Preview opens `ClinicDocumentViewerScreen`: real pinch-zoom for images with a local path, and a full-screen file-type canvas for PDFs/mock attachments (native PDF render deferred until storage backend). Upload bottom sheet gains **Escolher arquivo** via `file_picker` (^8.1) alongside camera/gallery — PDF/DOC/images allowed; `EstablishmentDocument` stores `localPath` + `mimeType` for session preview. Substitute ("Substituir documento") is allowed only when the document is already `approved`; `pending` (em análise) is view-only; `rejected` can be resent after viewing the refused file.
 
 > **v17 note:** ops-facing **Cadastros** approval queue. New drawer item + routes `/cadastros` (list) and `/cadastros/:id` (review). List filters Em análise / Aprovados / Rejeitados / Todos over a mocked in-memory queue (`cadastroReviewQueueProvider`). Review detail shows a clinic snapshot (name, specialty, CNPJ/CPF, address, phone, e-mail, consultor) beside the submitted document preview (reuse of `ClinicDocumentViewerScreen`) and a sticky **Rejeitar** / **Aprovar** bar for pending items — reject collects a mandatory reviewer note in a bottom sheet; approve confirms via dialog. Decisions mutate local mock state only (no API / `facility_documents` table yet).
+
+> **v18 note:** "Ver todos" list screens for Médicos and Profissionais administrativos now reuse the Explorar table chrome: `SearchBarWidget` + tune filter button, `SortRow` with removable filter chips, result count, and hairline `DoctorRow`-style rows (distance hidden in facility context). Doctors filter by specialty (from the facility roster) + papel (Prescritor/Decisor/Comprador); administrativos by tipo (Decisor/Comprador/Profissional). Sort sheet uses a facility-people option set (Nome A–Z). Rows also show phone, relationship stars, and role badges beside specialty/cargo.
+
+> **v19 note:** both Ver todos tables gain a lower-right **+** FAB that opens an associate modal (search bar + multi-select checklist of CRM candidates not yet on the facility). Footer actions: **Criar perfil…** (nested form sheet; on success the new profile is inserted into the modal pool and auto-selected) and **Associar (N)** (merges selection into the local facility list). Doctors and administrativos each have their own pool/form fields (CRM/specialty/papel vs cargo/contact type). Phase 1 mock only — no association API yet.
 
 ## User Story
 

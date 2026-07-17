@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_professionals_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 
-/// Full list of administrative professionals at an establishment — pushed
-/// from the "Ver todos" affordance on the Profissionais administrativos
-/// section, so users can scan every contact quickly instead of swiping
-/// through the card carousel.
-class AdministrativeProfessionalsListScreen extends StatelessWidget {
+/// Full list of administrative professionals — same Explorar table chrome
+/// (search + filter + sort + hairline rows) as [DoctorsListScreen].
+class AdministrativeProfessionalsListScreen extends StatefulWidget {
   const AdministrativeProfessionalsListScreen({
     super.key,
     required this.professionals,
@@ -18,79 +22,263 @@ class AdministrativeProfessionalsListScreen extends StatelessWidget {
   final String facilityName;
 
   @override
+  State<AdministrativeProfessionalsListScreen> createState() =>
+      _AdministrativeProfessionalsListScreenState();
+}
+
+class _AdministrativeProfessionalsListScreenState
+    extends State<AdministrativeProfessionalsListScreen> {
+  late List<AdministrativeProfessional> _professionals = List.of(
+    widget.professionals,
+  );
+  String _query = '';
+  String _sort = 'name-asc';
+  Map<String, List<String>> _filters = {};
+  bool _sortOpen = false;
+
+  static const _typeSection = 'Tipo';
+
+  @override
+  void didUpdateWidget(
+    covariant AdministrativeProfessionalsListScreen oldWidget,
+  ) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.professionals != widget.professionals) {
+      _professionals = List.of(widget.professionals);
+    }
+  }
+
+  Map<String, List<String>> get _filterSections => {
+    _typeSection: const ['Decisor', 'Comprador', 'Profissional'],
+  };
+
+  int get _filterCount =>
+      _filters.values.fold<int>(0, (sum, list) => sum + list.length);
+
+  List<AdministrativeProfessional> get _filtered {
+    var list = List<AdministrativeProfessional>.from(_professionals);
+    final q = _query.trim().toLowerCase();
+    if (q.isNotEmpty) {
+      list = list
+          .where(
+            (p) =>
+                p.name.toLowerCase().contains(q) ||
+                (p.roleTitle?.toLowerCase().contains(q) ?? false) ||
+                p.contactTypeLabel.toLowerCase().contains(q) ||
+                (p.phone?.toLowerCase().contains(q) ?? false) ||
+                (p.email?.toLowerCase().contains(q) ?? false),
+          )
+          .toList();
+    }
+
+    final types = _filters[_typeSection] ?? const <String>[];
+    if (types.isNotEmpty) {
+      list = list.where((p) => types.contains(p.contactTypeLabel)).toList();
+    }
+
+    list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    return list;
+  }
+
+  List<FilterChipData> get _filterChips {
+    final chips = <FilterChipData>[];
+    for (final entry in _filters.entries) {
+      for (final value in entry.value) {
+        chips.add(
+          FilterChipData(
+            label: value,
+            onRemove: () {
+              setState(() {
+                final next = Map<String, List<String>>.from(_filters);
+                next[entry.key] = (next[entry.key] ?? [])
+                    .where((x) => x != value)
+                    .toList();
+                if (next[entry.key]!.isEmpty) next.remove(entry.key);
+                _filters = next;
+              });
+            },
+          ),
+        );
+      }
+    }
+    return chips;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final filtered = _filtered;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: const Color(0xFFf8f9fb),
+        backgroundColor: Colors.white,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         foregroundColor: const Color(0xFF0f1729),
-        title: Text('Profissionais administrativos · ${professionals.length}'),
-      ),
-      body: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: professionals.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 10),
-        itemBuilder: (_, i) => _ProfessionalRow(
-          professional: professionals[i],
-          facilityName: facilityName,
+        title: Text(
+          'Profissionais administrativos · ${_professionals.length}',
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openAssociate,
+        backgroundColor: const Color(0xFF1e40af),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add_rounded),
+      ),
+      body: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 2, 20, 12),
+                child: SearchBarWidget(
+                  value: _query,
+                  onChanged: (q) => setState(() => _query = q),
+                  onFilter: _showFilterSheet,
+                  filterCount: _filterCount,
+                  hintText: 'Buscar nome, cargo…',
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(0, 0, 0, 4),
+                child: SortRow(
+                  sort: _sort,
+                  onSortTap: () => setState(() => _sortOpen = true),
+                  filterChips: _filterChips,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Text(
+                  filtered.length == 1
+                      ? '1 profissional'
+                      : '${filtered.length} profissionais',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6b7280),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? EmptyState(query: _query, kind: 'doctor')
+                    : ListView.builder(
+                        itemCount: filtered.length,
+                        itemBuilder: (_, i) => _AdminProfessionalRow(
+                          professional: filtered[i],
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => RepresentativeDetailScreen(
+                                professional: filtered[i],
+                                facilityName: widget.facilityName,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+          SortSheet(
+            open: _sortOpen,
+            onClose: () => setState(() => _sortOpen = false),
+            kind: 'facility-people',
+            sort: _sort,
+            onApply: (s) {
+              setState(() {
+                _sort = s;
+                _sortOpen = false;
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showFilterSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => FacilityRosterFilterSheet(
+        sections: _filterSections,
+        filters: _filters,
+        onApply: (next) {
+          setState(() => _filters = next);
+          Navigator.pop(ctx);
+        },
+      ),
+    );
+  }
+
+  Future<void> _openAssociate() async {
+    final added = await showAssociateProfessionalsSheet(
+      context,
+      alreadyAssociatedIds: _professionals.map((p) => p.id).toSet(),
+    );
+    if (added == null || added.isEmpty || !mounted) return;
+    setState(() {
+      _professionals = [..._professionals, ...added];
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          added.length == 1
+              ? '${added.first.name} associado à clínica'
+              : '${added.length} profissionais associados à clínica',
+        ),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
 }
 
-class _ProfessionalRow extends StatelessWidget {
-  const _ProfessionalRow({
+/// Same visual language as [DoctorRow] (Explorar table), adapted for
+/// administrative contacts.
+class _AdminProfessionalRow extends StatelessWidget {
+  const _AdminProfessionalRow({
     required this.professional,
-    required this.facilityName,
+    required this.onTap,
   });
 
   final AdministrativeProfessional professional;
-  final String facilityName;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final initials = _initials(professional.name);
+    final role = professional.roleTitle?.trim() ?? '';
+    final phoneLabel = professional.phone?.trim();
+    final hasPhone = phoneLabel != null && phoneLabel.isNotEmpty;
+
     return InkWell(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => RepresentativeDetailScreen(
-            professional: professional,
-            facilityName: facilityName,
-          ),
-        ),
-      ),
-      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFeef0f3))),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: const Color(0xFFeef4ff),
-                borderRadius: BorderRadius.circular(10),
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFFdbeafe),
               ),
               child: Center(
                 child: Text(
-                  _initials(professional.name),
+                  initials,
                   style: const TextStyle(
-                    fontSize: 12.5,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF1e40af),
+                    color: Color(0xFF1e3a8a),
                   ),
                 ),
               ),
@@ -102,61 +290,62 @@ class _ProfessionalRow extends StatelessWidget {
                 children: [
                   Text(
                     professional.name,
-                    style: const TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
-                    ),
-                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                  ),
-                  if (professional.roleTitle != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      professional.roleTitle!,
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF6b7280),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0f1729),
+                      letterSpacing: -0.15,
                     ),
-                  ],
-                  const SizedBox(height: 6),
+                  ),
+                  const SizedBox(height: 2),
                   Wrap(
-                    spacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
                     runSpacing: 4,
                     children: [
-                      _MiniBadge(label: professional.contactTypeLabel),
+                      if (role.isNotEmpty)
+                        Text(
+                          role,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF1e40af),
+                          ),
+                        ),
+                      _RowBadge(label: professional.contactTypeLabel),
                     ],
                   ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.phone_outlined,
+                        size: 13,
+                        color: hasPhone
+                            ? const Color(0xFF6b7280)
+                            : const Color(0xFFc4c9d2),
+                      ),
+                      const SizedBox(width: 5),
+                      Expanded(
+                        child: Text(
+                          hasPhone ? phoneLabel : 'Sem telefone',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: hasPhone
+                                ? const Color(0xFF4b5563)
+                                : const Color(0xFF9ca3af),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  RelationshipStars(score: professional.relationshipScore),
                 ],
               ),
-            ),
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (professional.phone != null)
-                  IconButton(
-                    icon: const Icon(Icons.phone_outlined, size: 18),
-                    color: const Color(0xFF1e40af),
-                    onPressed: () => launchContactUrl(
-                      context,
-                      url: callUrl(professional.phone),
-                      contactLabel: 'telefone',
-                    ),
-                  ),
-                if (professional.email != null)
-                  IconButton(
-                    icon: const Icon(Icons.email_outlined, size: 18),
-                    color: const Color(0xFF1e40af),
-                    onPressed: () => launchContactUrl(
-                      context,
-                      url: emailUrl(professional.email),
-                      contactLabel: 'e-mail',
-                    ),
-                  ),
-              ],
             ),
           ],
         ),
@@ -173,25 +362,29 @@ class _ProfessionalRow extends StatelessWidget {
   }
 }
 
-class _MiniBadge extends StatelessWidget {
-  const _MiniBadge({required this.label});
+class _RowBadge extends StatelessWidget {
+  const _RowBadge({required this.label});
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
+    final emphasized = label.toUpperCase().contains('DECISOR');
+    final color = emphasized
+        ? const Color(0xFF7c3aed)
+        : const Color(0xFF1e40af);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: const Color(0xFF1e40af).withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 9,
+        style: TextStyle(
+          fontSize: 10,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF1e40af),
+          color: color,
         ),
       ),
     );
