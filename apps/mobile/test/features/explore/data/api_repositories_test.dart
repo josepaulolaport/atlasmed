@@ -50,6 +50,23 @@ void main() {
     });
   });
 
+  group('Clinic location mapping', () {
+    test('maps neighborhood, city, and state from list responses', () {
+      final clinic = Clinic.fromMap({
+        'id': 'clinic-1',
+        'name': 'Clínica Central',
+        'professionalCount': 7,
+        'neighborhood': 'Centro',
+        'city': 'Rio de Janeiro',
+        'state': 'RJ',
+      });
+
+      expect(clinic.neighborhood, 'Centro');
+      expect(clinic.city, 'Rio de Janeiro');
+      expect(clinic.state, 'RJ');
+    });
+  });
+
   group('DoctorsRepository', () {
     test(
       'builds a paginated search endpoint for doctors scoped to a facility',
