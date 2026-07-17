@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_map_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_nearby_map_screen.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 
-/// Inline map preview + scrollable "Clínicas no raio" list. Tapping the map
-/// (or the expand affordance) pushes the full-screen radius-slider map.
+/// Inline map preview + horizontal "Clínicas no raio" card strip.
+///
+/// The map preview (tap or "Expandir") only ever shows *this*
+/// establishment's own location, full-screen — the richer radius-slider
+/// experience with nearby pins and cards lives behind the dedicated
+/// "Ver estabelecimentos próximos" entry point (`ClinicNearbyMapScreen`).
 class ClinicLocationSection extends StatelessWidget {
   const ClinicLocationSection({
     super.key,
@@ -39,22 +43,12 @@ class ClinicLocationSection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${nearby.length} dentro de ${establishmentNearbyPreviewRadiusKm.toStringAsFixed(1)} km',
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF6b7280),
-                  ),
-                ),
-                _ExpandButton(onTap: () => _openFullScreen(context)),
-              ],
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [_ExpandButton(onTap: () => _openLocationMap(context))],
             ),
           ),
           GestureDetector(
-            onTap: () => _openFullScreen(context),
+            onTap: () => _openLocationMap(context),
             child: ClipRRect(
               borderRadius: BorderRadius.zero,
               child: SizedBox(
@@ -63,19 +57,13 @@ class ClinicLocationSection extends StatelessWidget {
               ),
             ),
           ),
-          if (location.formattedAddress != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(
-                location.formattedAddress!,
-                style: const TextStyle(fontSize: 13, color: Color(0xFF4b5563)),
-              ),
-            ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
             child: Text(
-              'CLÍNICAS NO RAIO',
-              style: TextStyle(
+              'CLÍNICAS NO RAIO DE '
+              '${establishmentNearbyPreviewRadiusKm.toStringAsFixed(0)} KM: '
+              '${nearby.length}',
+              style: const TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.4,
@@ -92,23 +80,26 @@ class ClinicLocationSection extends StatelessWidget {
               ),
             )
           else
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220),
+            SizedBox(
+              height: 132,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                shrinkWrap: true,
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                scrollDirection: Axis.horizontal,
                 itemCount: nearby.length,
-                separatorBuilder: (_, _) =>
-                    const Divider(height: 1, color: Color(0xFFf3f4f6)),
-                itemBuilder: (_, i) => _NearbyRow(establishment: nearby[i]),
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (_, i) => _NearbyClinicCard(
+                  establishment: nearby[i],
+                  onViewMore: () =>
+                      _openNearbyMap(context, focusId: nearby[i].id),
+                ),
               ),
             ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _openFullScreen(context),
+                onPressed: () => _openNearbyMap(context),
                 icon: const Icon(Icons.map_rounded, size: 18),
                 label: const Text('Ver estabelecimentos próximos'),
                 style: OutlinedButton.styleFrom(
@@ -127,7 +118,24 @@ class ClinicLocationSection extends StatelessWidget {
     );
   }
 
-  void _openFullScreen(BuildContext context) {
+  /// "Expandir" and tapping the mini preview both just show this
+  /// establishment's own pin, full-screen — no nearby pins, no radius
+  /// controls. That richer view is `_openNearbyMap` below.
+  void _openLocationMap(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ClinicLocationMapScreen(
+          facilityName: facilityName,
+          location: location,
+        ),
+      ),
+    );
+  }
+
+  /// Opens the radius-slider nearby-clinics map. When [focusId] is given
+  /// (from a card's "Ver mais"), that establishment is centered/zoomed in
+  /// on with its callout already open, instead of showing the overview.
+  void _openNearbyMap(BuildContext context, {String? focusId}) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ClinicNearbyMapScreen(
@@ -135,6 +143,7 @@ class ClinicLocationSection extends StatelessWidget {
           facilityName: facilityName,
           center: location,
           allNearby: nearbyEstablishments,
+          initialFocusId: focusId,
         ),
       ),
     );
@@ -181,48 +190,114 @@ class _ExpandButton extends StatelessWidget {
   }
 }
 
-class _NearbyRow extends StatelessWidget {
-  const _NearbyRow({required this.establishment});
+/// Compact card for one nearby establishment, shown in the inline
+/// "Clínicas no raio" horizontal strip — same card language as the radius
+/// map's own nearby-clinic strip. Tapping it (the "Ver mais" affordance)
+/// opens the full radius map centered/zoomed on this clinic with its
+/// callout already active and its card highlighted in that screen's strip.
+class _NearbyClinicCard extends StatelessWidget {
+  const _NearbyClinicCard({
+    required this.establishment,
+    required this.onViewMore,
+  });
 
   final NearbyEstablishment establishment;
+  final VoidCallback onViewMore;
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      dense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-      leading: Container(
-        width: 10,
-        height: 10,
-        margin: const EdgeInsets.only(top: 4),
+    return InkWell(
+      onTap: onViewMore,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        width: 168,
+        padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
-          color: establishment.status.color,
-          shape: BoxShape.circle,
+          color: const Color(0xFFf8f9fb),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFFe5e7eb)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(top: 3),
+                  decoration: BoxDecoration(
+                    color: establishment.status.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    establishment.name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0f1729),
+                      height: 1.15,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (establishment.specialtyLabel != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                establishment.specialtyLabel!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280)),
+              ),
+            ],
+            if (establishment.shortAddress != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                establishment.shortAddress!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: Color(0xFF9ca3af),
+                ),
+              ),
+            ],
+            const Spacer(),
+            Row(
+              children: [
+                const Icon(
+                  Icons.near_me_rounded,
+                  size: 11,
+                  color: Color(0xFF6b7280),
+                ),
+                const SizedBox(width: 3),
+                Text(
+                  '${establishment.distanceKm.toStringAsFixed(1)} km',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6b7280),
+                  ),
+                ),
+                const Spacer(),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 15,
+                  color: Color(0xFF1e40af),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      title: Text(
-        establishment.name,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF0f1729),
-        ),
-      ),
-      subtitle: establishment.specialtyLabel != null
-          ? Text(
-              '${establishment.specialtyLabel} · ${establishment.status.label}',
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
-            )
-          : null,
-      trailing: Text(
-        '${establishment.distanceKm.toStringAsFixed(1)} km',
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF4b5563),
-        ),
-      ),
-      onTap: () => context.push('/workspace/clinic/${establishment.id}'),
     );
   }
 }
@@ -258,7 +333,10 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
         center: _point(widget.location),
         zoom: 13.5,
       ),
-      onMapCreated: (map) => _mapboxMap = map,
+      onMapCreated: (map) {
+        _mapboxMap = map;
+        map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+      },
       onMapLoadErrorListener: (_) => setState(() => _unavailable = true),
       onStyleLoadedListener: (_) => _addPins(),
     );

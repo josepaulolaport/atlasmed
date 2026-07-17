@@ -187,6 +187,10 @@ class NearbyEstablishment {
     required this.distanceKm,
     this.specialtyLabel,
     this.status = ClinicStatus.active,
+    this.neighborhood,
+    this.streetAddress,
+    this.streetNumber,
+    this.addressComplement,
   });
 
   final String id;
@@ -198,6 +202,32 @@ class NearbyEstablishment {
   /// e.g. "Ortopedia", "Multi", "Derm · Ped".
   final String? specialtyLabel;
   final ClinicStatus status;
+
+  // Mirrors `neighborhood` / `street_address` / `street_number` /
+  // `address_complement` on `facilities`.
+  final String? neighborhood;
+  final String? streetAddress;
+  final String? streetNumber;
+  final String? addressComplement;
+
+  /// Short single-line address for compact cards, e.g.
+  /// "Rua Augusta, 320 — Consolação". Falls back gracefully when parts
+  /// are missing, and is `null` when nothing is available at all.
+  String? get shortAddress {
+    String? streetLine;
+    if (streetAddress != null && streetAddress!.isNotEmpty) {
+      final hasNumber = streetNumber != null && streetNumber!.isNotEmpty;
+      streetLine = hasNumber ? '$streetAddress, $streetNumber' : streetAddress;
+      if (addressComplement != null && addressComplement!.isNotEmpty) {
+        streetLine = '$streetLine - ${addressComplement!}';
+      }
+    }
+    final hasNeighborhood = neighborhood != null && neighborhood!.isNotEmpty;
+    if (streetLine != null && hasNeighborhood) {
+      return '$streetLine — ${neighborhood!}';
+    }
+    return streetLine ?? (hasNeighborhood ? neighborhood : null);
+  }
 }
 
 // ── Facility status signals (commercial/purchase/conformity — real DB enums) ──
@@ -569,5 +599,6 @@ class EstablishmentDetailSections {
 /// Default nearby search radius — matches Explorar proximity (full-screen map).
 const double establishmentNearbyDefaultRadiusKm = 50;
 
-/// Default radius for the inline map preview on the detail screen.
-const double establishmentNearbyPreviewRadiusKm = 2.5;
+/// Default radius for the inline map preview on the detail screen. Anything
+/// beyond this is only reachable via "Ver estabelecimentos próximos".
+const double establishmentNearbyPreviewRadiusKm = 5;

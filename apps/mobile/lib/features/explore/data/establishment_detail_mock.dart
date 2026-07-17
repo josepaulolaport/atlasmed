@@ -287,7 +287,21 @@ List<NearbyEstablishment> _mockNearby(
   String excludeId,
 ) {
   final offsets =
-      <(String, String, double, double, double, String, ClinicStatus)>[
+      <
+        (
+          String,
+          String,
+          double,
+          double,
+          double,
+          String,
+          ClinicStatus,
+          String,
+          String,
+          String,
+          String?,
+        )
+      >[
         (
           'near-1',
           'Centro Médico OrtoVita',
@@ -296,6 +310,10 @@ List<NearbyEstablishment> _mockNearby(
           0.6,
           'Ortopedia',
           ClinicStatus.active,
+          'Jardim Paulista',
+          'Rua Augusta',
+          '2200',
+          'Conjunto 12',
         ),
         (
           'near-2',
@@ -305,6 +323,10 @@ List<NearbyEstablishment> _mockNearby(
           0.9,
           'Cardio',
           ClinicStatus.negotiation,
+          'Bela Vista',
+          'Alameda Santos',
+          '890',
+          null,
         ),
         (
           'near-3',
@@ -314,6 +336,10 @@ List<NearbyEstablishment> _mockNearby(
           1.4,
           'Multi',
           ClinicStatus.active,
+          'Itaim Bibi',
+          'Rua Joaquim Floriano',
+          '454',
+          'Sala 302',
         ),
         (
           'near-4',
@@ -323,6 +349,10 @@ List<NearbyEstablishment> _mockNearby(
           1.8,
           'Derm · Ped',
           ClinicStatus.inactive,
+          'Pinheiros',
+          'Rua dos Pinheiros',
+          '621',
+          null,
         ),
         (
           'near-5',
@@ -332,6 +362,10 @@ List<NearbyEstablishment> _mockNearby(
           1.2,
           'Multi',
           ClinicStatus.active,
+          'Moema',
+          'Av. Ibirapuera',
+          '2500',
+          'Bloco B',
         ),
         (
           'near-6',
@@ -341,6 +375,10 @@ List<NearbyEstablishment> _mockNearby(
           2.4,
           'Multi',
           ClinicStatus.active,
+          'Vila Mariana',
+          'Rua Vergueiro',
+          '1300',
+          null,
         ),
         (
           'near-7',
@@ -350,6 +388,10 @@ List<NearbyEstablishment> _mockNearby(
           3.8,
           'Clínica geral',
           ClinicStatus.negotiation,
+          'Consolação',
+          'Av. Paulista',
+          '1578',
+          'Cj. 91',
         ),
         (
           'near-8',
@@ -359,6 +401,10 @@ List<NearbyEstablishment> _mockNearby(
           5.1,
           'Diagnóstico',
           ClinicStatus.active,
+          'Higienópolis',
+          'Rua Maranhão',
+          '210',
+          null,
         ),
         (
           'near-9',
@@ -368,6 +414,10 @@ List<NearbyEstablishment> _mockNearby(
           8.6,
           'Multi',
           ClinicStatus.active,
+          'Perdizes',
+          'Rua Cardoso de Almeida',
+          '900',
+          null,
         ),
         (
           'near-10',
@@ -377,6 +427,10 @@ List<NearbyEstablishment> _mockNearby(
           12.3,
           'Ortopedia',
           ClinicStatus.active,
+          'Santana',
+          'Av. Cruzeiro do Sul',
+          '1750',
+          'Torre 2',
         ),
         (
           'near-11',
@@ -386,6 +440,10 @@ List<NearbyEstablishment> _mockNearby(
           22.0,
           'Diagnóstico',
           ClinicStatus.active,
+          'Tucuruvi',
+          'Av. Tucuruvi',
+          '640',
+          null,
         ),
         (
           'near-12',
@@ -395,6 +453,10 @@ List<NearbyEstablishment> _mockNearby(
           35.5,
           'Multi',
           ClinicStatus.active,
+          'Santo Amaro',
+          'Av. Santo Amaro',
+          '3200',
+          null,
         ),
       ];
 
@@ -409,6 +471,10 @@ List<NearbyEstablishment> _mockNearby(
           distanceKm: o.$5,
           specialtyLabel: o.$6,
           status: o.$7,
+          neighborhood: o.$8,
+          streetAddress: o.$9,
+          streetNumber: o.$10,
+          addressComplement: o.$11,
         ),
       )
       .toList(growable: false);

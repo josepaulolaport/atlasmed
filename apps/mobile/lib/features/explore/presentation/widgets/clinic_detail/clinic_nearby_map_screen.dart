@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ class ClinicNearbyMapScreen extends StatefulWidget {
     required this.facilityName,
     required this.center,
     required this.allNearby,
+    this.initialFocusId,
   });
 
   final String facilityId;
@@ -26,17 +28,37 @@ class ClinicNearbyMapScreen extends StatefulWidget {
   final EstablishmentLocation center;
   final List<NearbyEstablishment> allNearby;
 
+  /// When set (e.g. opened from a "Ver mais" on one of the inline nearby
+  /// cards), the map centers/zooms on this establishment and opens its
+  /// callout as soon as it's ready, instead of just showing the overview.
+  final String? initialFocusId;
+
   @override
   State<ClinicNearbyMapScreen> createState() => _ClinicNearbyMapScreenState();
 }
 
 class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   late double _radiusKm = establishmentNearbyDefaultRadiusKm;
+  // Only fed to `MapWidget.viewport` up until the map is created (see
+  // `_viewportApplied`) — after that all camera movement goes through
+  // imperative `MapboxMap` calls instead.
+  late final double _initialZoom = _initialZoomGuess(_radiusKm);
+
+  // `MapWidget.viewport` isn't just an "initial" camera position — its
+  // `CameraViewportState` has no `==` override, so a fresh instance built
+  // every rebuild (identical values or not) reads as "changed" to the
+  // package's `didUpdateWidget` and re-triggers a camera transition. That
+  // silently snapped the map back to its starting center/zoom on *every*
+  // setState (e.g. dismissing a callout), undoing any pan/zoom the user had
+  // done. Passing it only once — then `null` forever after — avoids that;
+  // every camera change past this point is driven imperatively instead.
+  bool _viewportApplied = false;
   MapboxMap? _mapboxMap;
   CircleAnnotationManager? _pinAnnotationManager;
   PolygonAnnotationManager? _radiusCircleManager;
   PointAnnotationManager? _calloutManager;
   PointAnnotation? _calloutAnnotation;
+  PointAnnotation? _calloutCloseAnnotation;
   bool _mapUnavailable = false;
   bool _pinTapListenerRegistered = false;
   bool _calloutTapListenerRegistered = false;
@@ -56,6 +78,21 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   NearbyEstablishment? _pendingCapture;
   final GlobalKey _calloutCaptureKey = GlobalKey();
 
+  /// The close ("X") badge is identical every time, so it's rasterized
+  /// once (off the permanently-mounted [_closeButtonCaptureKey] boundary)
+  /// and its bytes reused for every callout instead of re-rendering it.
+  final GlobalKey _closeButtonCaptureKey = GlobalKey();
+  Uint8List? _closeButtonImageBytes;
+
+  /// Drives the horizontal nearby-clinic card strip so it can be
+  /// re-centered on whichever establishment's pin/callout is active.
+  final ScrollController _cardScrollController = ScrollController();
+
+  /// Guards [widget.initialFocusId] handling so it only runs once, even
+  /// though the stable `MapWidget` key means `onStyleLoadedListener` could
+  /// in theory fire again later (e.g. a style reload).
+  bool _initialFocusHandled = false;
+
   List<NearbyEstablishment> get _visible =>
       filterNearbyByRadius(widget.allNearby, _radiusKm);
 
@@ -71,6 +108,7 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   @override
   void dispose() {
     _pinResyncDebounce?.cancel();
+    _cardScrollController.dispose();
     super.dispose();
   }
 
@@ -130,28 +168,28 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
                       MapWidget(
                         key: const ValueKey('nearby-map'),
                         styleUri: MapboxStyles.STANDARD,
-                        viewport: CameraViewportState(
-                          center: _point(widget.center),
-                          zoom: _zoomForRadius(_radiusKm),
-                        ),
+                        viewport: _viewportApplied
+                            ? null
+                            : CameraViewportState(
+                                center: _point(widget.center),
+                                zoom: _initialZoom,
+                              ),
                         onMapCreated: _onMapCreated,
                         onMapLoadErrorListener: (_) =>
                             setState(() => _mapUnavailable = true),
-                        onStyleLoadedListener: (_) => _syncAnnotations(),
-                        onTapListener: _onMapBackgroundTapped,
-                      ),
-                      Positioned(
-                        left: 16,
-                        right: 16,
-                        bottom: 16,
-                        child: _RadiusPanel(
-                          radiusKm: _radiusKm,
-                          count: _visible.length,
-                          establishments: _visible,
-                          selectedId: _selected?.id,
-                          onEstablishmentTap: _openEstablishment,
-                          onChanged: _onRadiusChanged,
-                        ),
+                        onStyleLoadedListener: (_) async {
+                          await _syncAnnotations();
+                          final focusId = widget.initialFocusId;
+                          if (focusId != null && !_initialFocusHandled) {
+                            _initialFocusHandled = true;
+                            await _focusOnEstablishment(focusId);
+                          } else {
+                            // Corrects the coarse bootstrap zoom used for
+                            // the declarative initial viewport now that a
+                            // real `MapboxMap` exists to fit accurately.
+                            _fitCameraToRadius(_radiusKm);
+                          }
+                        },
                       ),
                       // Rendered off-screen purely so its RepaintBoundary can
                       // be captured into a bitmap for the real map annotation
@@ -167,9 +205,32 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
                             ),
                           ),
                         ),
+                      // Same idea, but the close badge never changes, so it
+                      // stays mounted permanently and is only rasterized once.
+                      Positioned(
+                        left: -1000,
+                        top: 0,
+                        child: RepaintBoundary(
+                          key: _closeButtonCaptureKey,
+                          child: const _CalloutCloseButtonContent(),
+                        ),
+                      ),
                     ],
                   ),
           ),
+          // A dedicated section below the map — not a floating card over it —
+          // so the map's own visible area (and therefore the auto-fit zoom
+          // calculation) never has to account for this UI occluding it.
+          if (!_mapUnavailable && AppConfig.mapboxAccessToken.isNotEmpty)
+            _RadiusPanel(
+              radiusKm: _radiusKm,
+              count: _visible.length,
+              establishments: _visible,
+              selectedId: _selected?.id,
+              scrollController: _cardScrollController,
+              onEstablishmentTap: (id) => _onCardTapped(id),
+              onChanged: _onRadiusChanged,
+            ),
         ],
       ),
     );
@@ -177,21 +238,28 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
 
   void _onMapCreated(MapboxMap map) {
     _mapboxMap = map;
+    _viewportApplied = true;
     _pinAnnotationManager = null;
     _radiusCircleManager = null;
     _calloutManager = null;
     _calloutAnnotation = null;
+    _calloutCloseAnnotation = null;
     _pinTapListenerRegistered = false;
     _calloutTapListenerRegistered = false;
+    map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
+    // Non-deprecated replacement for `MapWidget.onTapListener`: taps that
+    // don't land on a pin/callout annotation bubble up here and dismiss
+    // whatever callout is open.
+    map.addInteraction(TapInteraction.onMap(_onMapBackgroundTapped));
   }
 
   void _onRadiusChanged(double value) {
     setState(() => _radiusKm = value);
     _updateRadiusCircle();
-    _mapboxMap?.easeTo(
-      CameraOptions(zoom: _zoomForRadius(value)),
-      MapAnimationOptions(duration: 200),
-    );
+    // Always snap back to the establishment the page is about (not
+    // wherever the user may have panned/zoomed to) and auto-fit the zoom
+    // so the whole search radius stays visible as it grows/shrinks.
+    _fitCameraToRadius(value);
     // Re-syncing pins on every slider tick (and tearing down/rebuilding the
     // whole MapWidget, as this screen used to) raced the annotation manager
     // against an in-flight native map teardown and could leave the map
@@ -206,12 +274,50 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     });
   }
 
-  double _zoomForRadius(double km) {
-    if (km <= 2) return 14;
-    if (km <= 5) return 13;
-    if (km <= 10) return 12;
-    if (km <= 25) return 11;
-    return 10;
+  /// Re-centers the camera on the establishment this screen belongs to and
+  /// eases the zoom so a circle of [radiusKm] fits comfortably in view.
+  ///
+  /// Uses Mapbox's own [MapboxMap.cameraForCoordinatesPadding] — fed the
+  /// circle's actual boundary points — instead of hand-rolled Web-Mercator
+  /// math. The native call already knows the real device viewport size and
+  /// the SDK's own tile/zoom conventions, which a hand-rolled formula easily
+  /// gets subtly wrong (an earlier version rendered the circle much larger
+  /// on screen than the zoom it picked implied). Since the boundary is a
+  /// perfect circle around [EstablishmentLocation.latitude]/`longitude`,
+  /// the fitted center comes back equal to that point with no extra work.
+  Future<void> _fitCameraToRadius(double radiusKm) async {
+    final map = _mapboxMap;
+    if (map == null) return;
+    try {
+      final boundary = _circlePositions(
+        widget.center,
+        radiusKm,
+      ).map((position) => Point(coordinates: position)).toList();
+      final fitted = await map.cameraForCoordinatesPadding(
+        boundary,
+        CameraOptions(),
+        MbxEdgeInsets(top: 32, left: 32, bottom: 32, right: 32),
+        null,
+        null,
+      );
+      if (!mounted) return;
+      await map.easeTo(fitted, MapAnimationOptions(duration: 250));
+    } catch (_) {
+      // Cosmetic only — never trips the offline-placeholder fallback.
+    }
+  }
+
+  /// Rough starting zoom for the *declarative* initial viewport, before the
+  /// map/style exists and [_fitCameraToRadius] can be queried against a
+  /// real `MapboxMap`. Corrected immediately once the style loads (see
+  /// `onStyleLoadedListener`), so this only needs to be in the right
+  /// ballpark to avoid a jarring jump on first paint.
+  double _initialZoomGuess(double radiusKm) {
+    if (radiusKm <= 2) return 13;
+    if (radiusKm <= 5) return 12;
+    if (radiusKm <= 10) return 11;
+    if (radiusKm <= 25) return 10;
+    return 9;
   }
 
   Future<void> _syncAnnotations() async {
@@ -342,6 +448,73 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     }
     if (match == null) return;
     await _showCallout(match);
+    _scrollToCard(match.id);
+  }
+
+  /// Tapping a card centers the map on that clinic and opens its callout —
+  /// the reverse of tapping a pin, which centers the card strip on it.
+  Future<void> _onCardTapped(String id) async {
+    NearbyEstablishment? match;
+    for (final e in _visible) {
+      if (e.id == id) {
+        match = e;
+        break;
+      }
+    }
+    if (match == null) return;
+
+    await _mapboxMap?.easeTo(
+      CameraOptions(
+        center: Point(coordinates: Position(match.longitude, match.latitude)),
+      ),
+      MapAnimationOptions(duration: 300),
+    );
+    await _showCallout(match);
+  }
+
+  /// Used when the screen is opened via a "Ver mais" on one of the inline
+  /// nearby-clinic cards (see [ClinicNearbyMapScreen.initialFocusId]).
+  /// Zooms in tighter on that specific establishment — rather than fitting
+  /// the whole radius, like the slider does — opens its callout, and
+  /// centers its card in the strip below.
+  Future<void> _focusOnEstablishment(String id) async {
+    NearbyEstablishment? match;
+    for (final e in _visible) {
+      if (e.id == id) {
+        match = e;
+        break;
+      }
+    }
+    if (match == null) return;
+
+    await _mapboxMap?.easeTo(
+      CameraOptions(
+        center: Point(coordinates: Position(match.longitude, match.latitude)),
+        zoom: 15,
+      ),
+      MapAnimationOptions(duration: 300),
+    );
+    await _showCallout(match);
+    _scrollToCard(match.id);
+  }
+
+  /// Scrolls the horizontal card strip so [id]'s card is centered in the
+  /// visible viewport, mirroring the map's own center-on-tap behavior.
+  void _scrollToCard(String id) {
+    if (!_cardScrollController.hasClients) return;
+    final index = _visible.indexWhere((e) => e.id == id);
+    if (index == -1) return;
+
+    const itemWidth = _NearbyEstablishmentCard.width;
+    const itemExtent = itemWidth + 8;
+    final position = _cardScrollController.position;
+    final target =
+        (index * itemExtent) - (position.viewportDimension - itemWidth) / 2;
+    _cardScrollController.animateTo(
+      target.clamp(0.0, position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   void _onMapBackgroundTapped(MapContentGestureContext gestureContext) {
@@ -373,7 +546,15 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
 
     final boundary = _calloutCaptureKey.currentContext?.findRenderObject();
     if (boundary is! RenderRepaintBoundary) return;
-    final image = await boundary.toImage(pixelRatio: 1.0);
+    // Mapbox renders point-annotation images 1 raw pixel : 1 device pixel
+    // (it has no notion of the Flutter widget's logical density). Capturing
+    // at pixelRatio 1.0 handed it an image sized for logical pixels, so on
+    // any retina device (devicePixelRatio 2-3x) it came out a third the
+    // intended size. Matching the device's pixel ratio here makes the
+    // bubble appear on the map at the same physical size it was designed
+    // at (and stay crisp, since we're not upscaling a low-res raster).
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final image = await boundary.toImage(pixelRatio: devicePixelRatio);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     image.dispose();
     if (byteData == null ||
@@ -382,6 +563,13 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       return;
     }
     final bytes = byteData.buffer.asUint8List();
+    final logicalHeight = image.height / devicePixelRatio;
+    final closeBytes = await _ensureCloseButtonImage();
+    if (!mounted || _pendingCapture?.id != establishment.id) return;
+
+    final geometry = Point(
+      coordinates: Position(establishment.longitude, establishment.latitude),
+    );
 
     try {
       final manager = _calloutManager ??= await map.annotations
@@ -393,20 +581,38 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       final previous = _calloutAnnotation;
       _calloutAnnotation = await manager.create(
         PointAnnotationOptions(
-          geometry: Point(
-            coordinates: Position(
-              establishment.longitude,
-              establishment.latitude,
-            ),
-          ),
+          geometry: geometry,
           image: bytes,
           iconAnchor: IconAnchor.BOTTOM,
           iconOffset: [0, -16],
           symbolSortKey: 3,
-          customData: {'facilityId': establishment.id},
+          customData: {'action': 'open', 'facilityId': establishment.id},
         ),
       );
       if (previous != null) await manager.delete(previous);
+
+      final previousClose = _calloutCloseAnnotation;
+      if (closeBytes != null) {
+        // Anchored to the same point as the bubble (so it tracks it
+        // through pans/zooms) but offset to sit right on the bubble's
+        // top-right corner, straddling the edge like a badge.
+        _calloutCloseAnnotation = await manager.create(
+          PointAnnotationOptions(
+            geometry: geometry,
+            image: closeBytes,
+            iconAnchor: IconAnchor.CENTER,
+            iconOffset: [
+              _PinCalloutContent.cardWidth / 2,
+              -(logicalHeight + 16),
+            ],
+            symbolSortKey: 4,
+            customData: {'action': 'close'},
+          ),
+        );
+      } else {
+        _calloutCloseAnnotation = null;
+      }
+      if (previousClose != null) await manager.delete(previousClose);
     } catch (_) {
       // Leave _selected as-is so the highlighted card still reflects intent;
       // just skip showing a callout bubble if the native call failed.
@@ -415,11 +621,37 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     if (mounted) setState(() => _pendingCapture = null);
   }
 
+  /// Rasterizes the close ("X") badge once and caches the bytes — its
+  /// appearance never changes, so there's no need to re-render it per
+  /// callout the way the bubble itself is (which has per-clinic content).
+  Future<Uint8List?> _ensureCloseButtonImage() async {
+    final cached = _closeButtonImageBytes;
+    if (cached != null) return cached;
+
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return null;
+    final boundary = _closeButtonCaptureKey.currentContext?.findRenderObject();
+    if (boundary is! RenderRepaintBoundary) return null;
+    final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
+    final image = await boundary.toImage(pixelRatio: devicePixelRatio);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (byteData == null) return null;
+    return _closeButtonImageBytes = byteData.buffer.asUint8List();
+  }
+
   Future<void> _dismissCallout() async {
-    if (_selected == null && _calloutAnnotation == null) return;
+    if (_selected == null &&
+        _calloutAnnotation == null &&
+        _calloutCloseAnnotation == null) {
+      return;
+    }
     final annotation = _calloutAnnotation;
+    final closeAnnotation = _calloutCloseAnnotation;
     final manager = _calloutManager;
     _calloutAnnotation = null;
+    _calloutCloseAnnotation = null;
     if (mounted) {
       setState(() {
         _selected = null;
@@ -429,9 +661,10 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       _selected = null;
       _pendingCapture = null;
     }
-    if (annotation != null && manager != null) {
+    if (manager != null) {
       try {
-        await manager.delete(annotation);
+        if (annotation != null) await manager.delete(annotation);
+        if (closeAnnotation != null) await manager.delete(closeAnnotation);
       } catch (_) {
         // Manager may already be gone (e.g. map was disposed) — ignore.
       }
@@ -439,6 +672,11 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   }
 
   void _onCalloutTapped(PointAnnotation annotation) {
+    final action = annotation.customData?['action'] as String?;
+    if (action == 'close') {
+      _dismissCallout();
+      return;
+    }
     final id = annotation.customData?['facilityId'] as String?;
     if (id != null) _openEstablishment(id);
   }
@@ -459,6 +697,7 @@ class _RadiusPanel extends StatelessWidget {
     required this.establishments,
     required this.onEstablishmentTap,
     required this.onChanged,
+    required this.scrollController,
     this.selectedId,
   });
 
@@ -466,25 +705,22 @@ class _RadiusPanel extends StatelessWidget {
   final int count;
   final List<NearbyEstablishment> establishments;
   final String? selectedId;
+  final ScrollController scrollController;
   final ValueChanged<String> onEstablishmentTap;
   final ValueChanged<double> onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    // A plain section of the screen (below the map, not floating over it),
+    // separated only by a hairline — not a card, so no elevation/rounding.
     return DecoratedBox(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A111827),
-            blurRadius: 12,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border(top: BorderSide(color: Color(0xFFe5e7eb))),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+        padding: EdgeInsets.fromLTRB(16, 14, 16, 14 + bottomInset),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -536,8 +772,9 @@ class _RadiusPanel extends StatelessWidget {
             if (establishments.isNotEmpty) ...[
               const SizedBox(height: 10),
               SizedBox(
-                height: 92,
+                height: 128,
                 child: ListView.separated(
+                  controller: scrollController,
                   scrollDirection: Axis.horizontal,
                   itemCount: establishments.length,
                   separatorBuilder: (_, _) => const SizedBox(width: 8),
@@ -572,13 +809,15 @@ class _NearbyEstablishmentCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
+  static const double width = 168;
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(14),
       child: Container(
-        width: 168,
+        width: width,
         padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFeef4ff) : const Color(0xFFf8f9fb),
@@ -629,6 +868,18 @@ class _NearbyEstablishmentCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 11, color: Color(0xFF6b7280)),
+              ),
+            ],
+            if (establishment.shortAddress != null) ...[
+              const SizedBox(height: 3),
+              Text(
+                establishment.shortAddress!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  color: Color(0xFF9ca3af),
+                ),
               ),
             ],
             const Spacer(),
@@ -774,7 +1025,7 @@ class _PinCalloutContent extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    'Toque para ver detalhes',
+                    'Ir para página da clínica',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -797,6 +1048,41 @@ class _PinCalloutContent extends StatelessWidget {
           child: CustomPaint(size: Size(16, 8), painter: _CalloutTailPainter()),
         ),
       ],
+    );
+  }
+}
+
+/// Content of the callout's close ("X") badge. Same rasterize-off-screen
+/// treatment as [_PinCalloutContent], but rendered once and cached (see
+/// [_ClinicNearbyMapScreenState._ensureCloseButtonImage]) since it never
+/// changes in appearance across establishments.
+class _CalloutCloseButtonContent extends StatelessWidget {
+  const _CalloutCloseButtonContent();
+
+  static const double size = 26;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFe5e7eb)),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x40111827),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.close_rounded,
+        size: 15,
+        color: Color(0xFF4b5563),
+      ),
     );
   }
 }
