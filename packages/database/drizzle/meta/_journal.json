@@ -29,6 +29,20 @@
       "when": 1784119483841,
       "tag": "0003_glamorous_echo",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784227095964,
+      "tag": "0004_clever_blonde_phantom",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784261098857,
+      "tag": "0005_remove_territory_hierarchy",
+      "breakpoints": true
     }
   ]
 }

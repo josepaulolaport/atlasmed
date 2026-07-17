@@ -18,24 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TerritoryPicker } from "@/components/territory/territory-picker";
 import { TerritoryMapEditor } from "@/components/territory/map/territory-map-editor";
 import { territoriesApi } from "@/lib/api/territories";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { isValidGeoJsonPolygon, normalizeTerritoryBoundary, parseGeoJsonPolygon } from "@/lib/territory/geojson";
-import {
-  formatCountryCode,
-  isIsoCountryCode,
-  slugifyTerritoryIdentifier,
-} from "@/lib/territory/territory-identifier";
+import { slugifyTerritoryIdentifier } from "@/lib/territory/territory-identifier";
 import { toast } from "@/hooks/use-toast";
 import { isApprovalRequest } from "@/components/territory/territory-utils";
-import type { GeoJsonPolygon, Territory, TerritoryType } from "@/types/territory";
+import type { GeoJsonPolygon, TerritoryType } from "@/types/territory";
 
 interface CreateTerritoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  parentId?: string;
   isAdmin: boolean;
   onSuccess: () => void;
 }
@@ -43,20 +37,16 @@ interface CreateTerritoryDialogProps {
 export function CreateTerritoryDialog({
   open,
   onOpenChange,
-  parentId,
   isAdmin,
   onSuccess,
 }: CreateTerritoryDialogProps) {
   const [name, setName] = useState("");
   const [identifier, setIdentifier] = useState("");
   const [identifierTouched, setIdentifierTouched] = useState(false);
-  const [marketCountryCode, setMarketCountryCode] = useState("BR");
   const [territoryTypeId, setTerritoryTypeId] = useState("");
-  const [selectedParentId, setSelectedParentId] = useState(parentId ?? "");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [types, setTypes] = useState<TerritoryType[]>([]);
-  const [territories, setTerritories] = useState<Territory[]>([]);
   const [boundaryMode, setBoundaryMode] = useState<"map" | "json">("map");
   const [boundaryDraft, setBoundaryDraft] = useState<GeoJsonPolygon | null>(null);
   const [boundaryJson, setBoundaryJson] = useState("");
@@ -67,43 +57,12 @@ export function CreateTerritoryDialog({
   );
 
   const requiresBoundary = selectedType?.canHaveBoundary ?? true;
-  const isCountryType = selectedType?.isCountryLevel ?? false;
-
-  const countryMarkets = useMemo(
-    () => territories.filter((territory) => territory.territoryType.isCountryLevel),
-    [territories]
-  );
-
-  const selectedParent = useMemo(
-    () => territories.find((territory) => territory.id === selectedParentId),
-    [territories, selectedParentId]
-  );
-
-  const effectiveMarketCountryCode = useMemo(() => {
-    if (isCountryType) {
-      return formatCountryCode(marketCountryCode);
-    }
-    if (selectedParent?.countryCode) {
-      return selectedParent.countryCode;
-    }
-    return formatCountryCode(marketCountryCode);
-  }, [isCountryType, marketCountryCode, selectedParent?.countryCode]);
+  const isRepPatchType = selectedType?.slug === "patch";
 
   const loadFormData = useCallback(async () => {
-    const [typesResponse, territoriesResponse] = await Promise.all([
-      territoriesApi.listTerritoryTypes(),
-      territoriesApi.listTerritories("flat"),
-    ]);
+    const typesResponse = await territoriesApi.listTerritoryTypes();
     setTypes(typesResponse.data);
-    setTerritories(territoriesResponse.data as Territory[]);
     setTerritoryTypeId((current) => current || typesResponse.data[0]?.id || "");
-
-    const countries = (territoriesResponse.data as Territory[]).filter(
-      (territory) => territory.territoryType.isCountryLevel
-    );
-    if (countries[0]?.countryCode) {
-      setMarketCountryCode(countries[0].countryCode);
-    }
   }, []);
 
   useEffect(() => {
@@ -111,18 +70,11 @@ export function CreateTerritoryDialog({
     void loadFormData();
   }, [open, loadFormData]);
 
-  useEffect(() => {
-    if (!open || !parentId) return;
-    setSelectedParentId(parentId);
-  }, [open, parentId]);
-
   const resetForm = () => {
     setName("");
     setIdentifier("");
     setIdentifierTouched(false);
-    setMarketCountryCode(countryMarkets[0]?.countryCode ?? "BR");
     setTerritoryTypeId(types[0]?.id ?? "");
-    setSelectedParentId(parentId ?? "");
     setReason("");
     setBoundaryMode("map");
     setBoundaryDraft(null);
@@ -138,7 +90,7 @@ export function CreateTerritoryDialog({
 
   const handleNameChange = (value: string) => {
     setName(value);
-    if (!isCountryType && !identifierTouched) {
+    if (!identifierTouched) {
       setIdentifier(slugifyTerritoryIdentifier(value));
     }
   };
@@ -152,28 +104,10 @@ export function CreateTerritoryDialog({
   };
 
   const handleSave = async () => {
-    if (!name.trim() || !territoryTypeId) {
+    if (!name.trim() || !territoryTypeId || !identifier.trim()) {
       toast({
         title: "Validation",
-        description: "Name and type are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isCountryType) {
-      if (!isIsoCountryCode(marketCountryCode)) {
-        toast({
-          title: "Validation",
-          description: "Enter a valid two-letter ISO country code (e.g. BR)",
-          variant: "destructive",
-        });
-        return;
-      }
-    } else if (!identifier.trim()) {
-      toast({
-        title: "Validation",
-        description: "Territory identifier is required",
+        description: "Name, type and identifier are required",
         variant: "destructive",
       });
       return;
@@ -193,12 +127,8 @@ export function CreateTerritoryDialog({
     try {
       const result = await territoriesApi.createTerritory({
         name: name.trim(),
-        slug: isCountryType
-          ? formatCountryCode(marketCountryCode).toLowerCase()
-          : identifier.trim().toLowerCase(),
+        slug: identifier.trim().toLowerCase(),
         territoryTypeId,
-        countryCode: effectiveMarketCountryCode,
-        parentId: isCountryType ? undefined : selectedParentId || undefined,
         reason: reason.trim() || undefined,
         boundary: boundary ?? undefined,
       });
@@ -247,9 +177,9 @@ export function CreateTerritoryDialog({
         </DialogHeader>
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <p className="text-sm text-gray-500">
-            Um <strong>mercado</strong> é o país ao qual este território pertence. Um{" "}
-            <strong>identificador</strong> é seu ID único no sistema. A hierarquia de pai vem
-            da sobreposição de limites.
+            Zonas de gerente e áreas de representante são territórios planos. Uma área
+            de representante é automaticamente vinculada à zona de gerente cujo limite a
+            contém.
           </p>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -272,100 +202,38 @@ export function CreateTerritoryDialog({
               ) : null}
             </div>
 
-            {isCountryType ? (
-              <div className="md:col-span-2">
-                <Label htmlFor="country-iso">País (código ISO)</Label>
-                <Input
-                  id="country-iso"
-                  value={marketCountryCode}
-                  onChange={(e) => setMarketCountryCode(formatCountryCode(e.target.value))}
-                  maxLength={2}
-                  placeholder="BR"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Cria o território de país de nível superior. Seu identificador será{" "}
-                  <code>{formatCountryCode(marketCountryCode).toLowerCase() || "br"}</code>.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <Label htmlFor="market-country">Mercado (país)</Label>
-                  {selectedParent ? (
-                    <p className="mt-2 rounded-md border bg-gray-50 px-3 py-2 text-sm">
-                      {selectedParent.countryCode ?? effectiveMarketCountryCode} — herdado do
-                      pai <span className="font-medium">{selectedParent.name}</span>
-                    </p>
-                  ) : countryMarkets.length > 0 ? (
-                    <Select
-                      value={effectiveMarketCountryCode}
-                      onValueChange={setMarketCountryCode}
-                    >
-                      <SelectTrigger id="market-country">
-                        <SelectValue placeholder="Selecionar mercado (país)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countryMarkets.map((country) => (
-                          <SelectItem
-                            key={country.id}
-                            value={country.countryCode ?? country.slug.toUpperCase()}
-                          >
-                            {country.countryCode} — {country.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      id="market-country"
-                      value={marketCountryCode}
-                      onChange={(e) => setMarketCountryCode(formatCountryCode(e.target.value))}
-                      maxLength={2}
-                      placeholder="BR"
-                    />
-                  )}
-                  <p className="mt-1 text-xs text-gray-500">
-                    O geovínculo considera apenas territórios do mesmo mercado.
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="territory-identifier">Identificador</Label>
-                  <Input
-                    id="territory-identifier"
-                    value={identifier}
-                    onChange={(e) => {
-                      setIdentifierTouched(true);
-                      setIdentifier(e.target.value.toLowerCase());
-                    }}
-                    placeholder="sudeste"
-                  />
-                  <p className="mt-1 text-xs text-gray-500">
-                    ID único para este território (minúsculas, ex.: <code>sudeste</code>).
-                  </p>
-                </div>
-              </>
-            )}
+            <div>
+              <Label htmlFor="territory-identifier">Identificador</Label>
+              <Input
+                id="territory-identifier"
+                value={identifier}
+                onChange={(e) => {
+                  setIdentifierTouched(true);
+                  setIdentifier(e.target.value.toLowerCase());
+                }}
+                placeholder="sudeste"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                ID único para este território (minúsculas, ex.: <code>sudeste</code>).
+              </p>
+            </div>
 
-            <div className={isCountryType ? "md:col-span-2" : "md:col-span-2"}>
+            <div>
               <Label htmlFor="territory-name">Nome de exibição</Label>
               <Input
                 id="territory-name"
                 value={name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                placeholder={isCountryType ? "Brasil" : "Sudeste"}
+                placeholder="Sudeste"
               />
             </div>
           </div>
 
-          {!isCountryType && (
-            <div>
-              <Label>Território pai (opcional)</Label>
-              <TerritoryPicker
-                value={selectedParentId}
-                onChange={setSelectedParentId}
-                placeholder="O geovínculo definirá o pai a partir do limite"
-              />
-            </div>
+          {isRepPatchType && (
+            <p className="text-xs text-gray-500">
+              A zona de gerente desta área de representante será resolvida automaticamente
+              a partir do limite desenhado abaixo.
+            </p>
           )}
 
           {requiresBoundary ? (

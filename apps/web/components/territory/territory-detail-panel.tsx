@@ -12,7 +12,6 @@ import { toast } from "@/hooks/use-toast";
 import { TerritoryBoundarySection } from "@/components/territory/territory-boundary-section";
 import { AssignUserToTerritoryDialog } from "@/components/territory/assign-user-to-territory-dialog";
 import { isApprovalRequest } from "@/components/territory/territory-utils";
-import { Loader2 } from "lucide-react";
 import type { Territory } from "@/types/territory";
 import { formatDateTime } from "@/lib/utils";
 
@@ -22,7 +21,6 @@ interface TerritoryDetailPanelProps {
   canUpdate: boolean;
   isAdmin: boolean;
   onRefresh: () => void;
-  onReparent: () => void;
 }
 
 export function TerritoryDetailPanel({
@@ -31,45 +29,23 @@ export function TerritoryDetailPanel({
   canUpdate,
   isAdmin,
   onRefresh,
-  onReparent,
 }: TerritoryDetailPanelProps) {
-  const [descendantIds, setDescendantIds] = useState<string[]>([]);
-  const [loadingDescendants, setLoadingDescendants] = useState(false);
   const [editName, setEditName] = useState("");
   const [savingName, setSavingName] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
   const [deactivating, setDeactivating] = useState(false);
 
   useEffect(() => {
-    if (!territory) {
-      setDescendantIds([]);
-      return;
+    if (territory) {
+      setEditName(territory.name);
     }
-
-    setEditName(territory.name);
-    let cancelled = false;
-    (async () => {
-      setLoadingDescendants(true);
-      try {
-        const data = await territoriesApi.getDescendants(territory.id);
-        if (!cancelled) setDescendantIds(data.descendantIds);
-      } catch {
-        if (!cancelled) setDescendantIds([]);
-      } finally {
-        if (!cancelled) setLoadingDescendants(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
   }, [territory]);
 
   if (!territory) {
     return (
       <Card className="h-full">
         <CardContent className="flex h-64 items-center justify-center text-sm text-gray-500">
-          Selecione um território na árvore para ver os detalhes.
+          Selecione um território na lista para ver os detalhes.
         </CardContent>
       </Card>
     );
@@ -144,28 +120,12 @@ export function TerritoryDetailPanel({
             <div>
               <CardTitle>{territory.name}</CardTitle>
               <p className="mt-1 text-sm text-gray-500">
-                {territory.isCountryLevel ? (
-                  <>
-                    Mercado: <span className="font-medium">{territory.countryCode}</span>
-                  </>
-                ) : (
-                  <>
-                    <span className="font-medium">{territory.slug}</span>
-                    {territory.countryCode ? (
-                      <>
-                        {" "}
-                        · mercado {territory.countryCode}
-                      </>
-                    ) : null}
-                  </>
-                )}
+                <span className="font-medium">{territory.slug}</span>
               </p>
               <div className="mt-2 flex flex-wrap gap-1">
                 <Badge variant="secondary">
                   {territory.territoryType.name}
                 </Badge>
-                {territory.isCountryLevel && <Badge variant="outline">país</Badge>}
-                {territory.isLeaf && <Badge variant="outline">folha</Badge>}
                 {territory.hasBoundary && <Badge variant="outline">com limite</Badge>}
                 {territory.managerTerritoryId && (
                   <Badge variant="outline">zona de gestor vinculada</Badge>
@@ -180,11 +140,6 @@ export function TerritoryDetailPanel({
               {canManage && (
                 <Button size="sm" onClick={() => setAssignOpen(true)}>
                   Atribuir usuário
-                </Button>
-              )}
-              {canUpdate && territory.territoryType.participatesInGroupingHierarchy && (
-                <Button size="sm" variant="outline" onClick={onReparent}>
-                  Alterar pai
                 </Button>
               )}
               {canUpdate && territory.isActive && (
@@ -202,14 +157,8 @@ export function TerritoryDetailPanel({
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-3 text-sm md:grid-cols-2">
-            {!territory.isCountryLevel && (
-              <div>
-                <span className="text-gray-500">Identificador:</span> {territory.slug}
-              </div>
-            )}
             <div>
-              <span className="text-gray-500">Mercado:</span>{" "}
-              {territory.countryCode ?? "—"}
+              <span className="text-gray-500">Identificador:</span> {territory.slug}
             </div>
             <div>
               <span className="text-gray-500">Clínicas:</span> {territory.clinicCount}
@@ -260,20 +209,6 @@ export function TerritoryDetailPanel({
               canEdit={canUpdate}
               onUpdated={onRefresh}
             />
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-sm font-semibold text-gray-900">Descendentes</h3>
-            {loadingDescendants ? (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Carregando...
-              </div>
-            ) : descendantIds.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum descendente.</p>
-            ) : (
-              <p className="text-sm text-gray-700">{descendantIds.length} descendente(s)</p>
-            )}
           </div>
         </CardContent>
       </Card>

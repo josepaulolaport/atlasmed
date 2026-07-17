@@ -32,8 +32,11 @@ export function getTestDatabase(): Database {
     throw new Error("DATABASE_URL not set");
   }
 
-  if (!connectionString.includes("test")) {
-    console.warn("⚠️  DATABASE_URL doesn't contain 'test'");
+  if (!/test/i.test(connectionString)) {
+    throw new Error(
+      "Refusing to use database for tests: DATABASE_URL does not look like a test database. " +
+        "This guard exists to prevent test runs from ever touching a real database.",
+    );
   }
 
   return createDatabase(connectionString);

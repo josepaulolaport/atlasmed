@@ -8,13 +8,11 @@ import {
   json,
   index,
   uniqueIndex,
-  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
-import { geometryMultiPolygon, geometryPoint } from "../../types/geometry";
+import { geometryMultiPolygon } from "../../types/geometry";
 import {
-  territoryNodeTypeEnum,
   territoryApprovalTypeEnum,
   territoryApprovalStatusEnum,
 } from "./enums";
@@ -32,9 +30,7 @@ export const territoryTypes = pgTable(
     assignsClinics: boolean("assigns_clinics").notNull().default(false),
     assignableToUsers: boolean("assignable_to_users").notNull().default(false),
     assignableToManagers: boolean("assignable_to_managers").notNull().default(false),
-    isCountryLevel: boolean("is_country_level").notNull().default(false),
     blockSiblingOverlap: boolean("block_sibling_overlap").notNull().default(false),
-    participatesInGroupingHierarchy: boolean("participates_in_grouping_hierarchy").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -50,17 +46,11 @@ export const territories = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     code: text("code").notNull().unique(),
-    nodeType: territoryNodeTypeEnum("node_type").notNull(),
     territoryTypeId: text("territory_type_id").notNull().references(() => territoryTypes.id, { onDelete: "restrict" }),
-    countryCode: text("country_code"),
-    regionSlug: text("region_slug"),
-    stateCode: text("state_code"),
-    parentId: text("parent_id"),
     managerTerritoryId: text("manager_territory_id"),
     isActive: boolean("is_active").notNull().default(true),
     sectorId: text("sector_id").references(() => sectors.id, { onDelete: "restrict" }),
     boundary: geometryMultiPolygon("boundary"),
-    centroid: geometryPoint("centroid"),
     boundaryMinLng: doublePrecision("boundary_min_lng"),
     boundaryMinLat: doublePrecision("boundary_min_lat"),
     boundaryMaxLng: doublePrecision("boundary_max_lng"),
@@ -71,26 +61,10 @@ export const territories = pgTable(
   },
   (t) => [
     uniqueIndex("territories_slug_uidx").on(t.slug),
-    index("territories_parent_id_idx").on(t.parentId),
     index("territories_manager_territory_id_idx").on(t.managerTerritoryId),
     index("territories_is_active_idx").on(t.isActive),
-    index("territories_node_type_idx").on(t.nodeType),
-    index("territories_country_code_idx").on(t.countryCode),
     index("territories_territory_type_id_idx").on(t.territoryTypeId),
     index("territories_sector_id_idx").on(t.sectorId),
-  ]
-);
-
-export const territoryClosure = pgTable(
-  "territory_closure",
-  {
-    ancestorId: text("ancestor_id").notNull().references(() => territories.id, { onDelete: "cascade" }),
-    descendantId: text("descendant_id").notNull().references(() => territories.id, { onDelete: "cascade" }),
-    depth: integer("depth").notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.ancestorId, t.descendantId] }),
-    index("territory_closure_descendant_id_idx").on(t.descendantId),
   ]
 );
 
@@ -151,12 +125,6 @@ export const territoriesRelations = relations(territories, ({ one, many }) => ({
     fields: [territories.territoryTypeId],
     references: [territoryTypes.id],
   }),
-  parent: one(territories, {
-    fields: [territories.parentId],
-    references: [territories.id],
-    relationName: "TerritoryHierarchy",
-  }),
-  children: many(territories, { relationName: "TerritoryHierarchy" }),
   managerTerritory: one(territories, {
     fields: [territories.managerTerritoryId],
     references: [territories.id],
@@ -165,23 +133,8 @@ export const territoriesRelations = relations(territories, ({ one, many }) => ({
   sector: one(sectors, { fields: [territories.sectorId], references: [sectors.id] }),
   repPatches: many(territories, { relationName: "ManagerZonePatches" }),
   userAssignments: many(userTerritoryAssignments),
-  closureAsAncestor: many(territoryClosure, { relationName: "ClosureAncestor" }),
-  closureAsDescendant: many(territoryClosure, { relationName: "ClosureDescendant" }),
   approvalRequests: many(territoryApprovalRequests, { relationName: "ApprovalTargetTerritory" }),
   facilityApprovalRequests: many(territoryApprovalRequests, { relationName: "ApprovalFacilityTerritory" }),
-}));
-
-export const territoryClosureRelations = relations(territoryClosure, ({ one }) => ({
-  ancestor: one(territories, {
-    fields: [territoryClosure.ancestorId],
-    references: [territories.id],
-    relationName: "ClosureAncestor",
-  }),
-  descendant: one(territories, {
-    fields: [territoryClosure.descendantId],
-    references: [territories.id],
-    relationName: "ClosureDescendant",
-  }),
 }));
 
 export const userTerritoryAssignmentsRelations = relations(userTerritoryAssignments, ({ one }) => ({

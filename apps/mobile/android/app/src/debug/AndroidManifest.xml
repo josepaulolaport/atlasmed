@@ -4,4 +4,11 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Debug builds only: allow plain http:// so the app can reach a local
+         backend (config.development.json points API_BASE_URL at
+         http://10.0.2.2:3000/ on the Android emulator, or http://localhost:3000/
+         on iOS). Android 9+ blocks cleartext traffic by default; release
+         builds keep that default since this override only merges into debug. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

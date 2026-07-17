@@ -1,11 +1,9 @@
 import type { ScopeContext } from "@atlasmed/access";
 import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
-import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
-import { TerritoryHierarchyValidator } from "../services/territory-hierarchy-validator.service";
 import { applyTerritoryBoundary } from "../services/territory-boundary.application";
 import { serializeBoundaryResolution } from "../utils/territory-boundary-resolution.utils";
 import {
@@ -13,26 +11,19 @@ import {
   ResourceNotFoundError,
 } from "../../../../shared/errors";
 import { assertManagerReadableTerritory } from "./territory-crud.use-cases";
-import { assertLeafTerritoryInJurisdiction } from "../services/territory-scope-policy.service";
+import { assertTerritorialJurisdiction } from "../services/territory-scope-policy.service";
 
 interface Dependencies {
   territoryRepository: TerritoryRepository;
   territoryTypeRepository: TerritoryTypeRepository;
   spatialRepository: TerritorySpatialRepository;
-  closureRepository: TerritoryClosureRepository;
   containmentService: TerritoryContainmentService;
-  hierarchyValidator?: TerritoryHierarchyValidator;
   onBoundaryChanged?: (territoryId: string) => Promise<void>;
   onManagerTerritoryChanged?: (managerTerritoryId: string) => Promise<void>;
 }
 
 export class TerritoryBoundaryUseCases {
-  private readonly hierarchyValidator: TerritoryHierarchyValidator;
-
-  constructor(private readonly deps: Dependencies) {
-    this.hierarchyValidator =
-      deps.hierarchyValidator ?? new TerritoryHierarchyValidator();
-  }
+  constructor(private readonly deps: Dependencies) {}
 
   async getBoundary(input: { territoryId: string; scope: ScopeContext }) {
     await this.assertReadable(input.territoryId, input.scope);
@@ -99,11 +90,7 @@ export class TerritoryBoundaryUseCases {
       throw new ResourceNotFoundError("Territory", territoryId);
     }
 
-    await assertManagerReadableTerritory(
-      scope,
-      territoryId,
-      this.deps.closureRepository
-    );
+    assertManagerReadableTerritory(scope, territoryId);
   }
 
   private async assertWritableBoundary(territoryId: string, scope: ScopeContext) {
@@ -119,21 +106,14 @@ export class TerritoryBoundaryUseCases {
     const type =
       territory.territoryType ??
       (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
-    if (!type || !this.hierarchyValidator.canHaveBoundary(type)) {
+    if (!type || !type.canHaveBoundary) {
       throw new OperationNotAllowedError(
         "save_boundary",
         "This territory type cannot have a boundary"
       );
     }
 
-    if (!scope.isGlobal) {
-      await assertLeafTerritoryInJurisdiction({
-        scope,
-        territoryRepository: this.deps.territoryRepository,
-        territoryId,
-        operation: "save_boundary",
-      });
-    }
+    assertTerritorialJurisdiction(scope, territoryId, "save_boundary");
 
     return territory;
   }

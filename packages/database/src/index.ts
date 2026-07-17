@@ -13,7 +13,6 @@ import {
 import {
   userStatusEnum,
   invitationStatusEnum,
-  territoryNodeTypeEnum,
   territoryAssignmentStatusEnum,
   territoryAssignmentSourceEnum,
   territoryApprovalTypeEnum,
@@ -44,7 +43,6 @@ export type CnesRunStatus = (typeof cnesRunStatusEnum.enumValues)[number];
 export type CnesRunPhase = (typeof cnesRunPhaseEnum.enumValues)[number];
 export type CnesSuggestionType = (typeof cnesSuggestionTypeEnum.enumValues)[number];
 export type CnesSuggestionStatus = (typeof cnesSuggestionStatusEnum.enumValues)[number];
-export type TerritoryNodeType = (typeof territoryNodeTypeEnum.enumValues)[number];
 export type TerritoryAssignmentStatus = (typeof territoryAssignmentStatusEnum.enumValues)[number];
 export type TerritoryAssignmentSource = (typeof territoryAssignmentSourceEnum.enumValues)[number];
 export type TerritoryApprovalType = (typeof territoryApprovalTypeEnum.enumValues)[number];

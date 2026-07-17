@@ -23,6 +23,13 @@ export interface ScopeRepository {
     }>
   >;
 
+  findUserIdsByTerritoryId(territoryId: string): Promise<
+    Array<{
+      userId: string;
+      assignedAt: Date;
+    }>
+  >;
+
   findManagerIdByUserId(userId: string): Promise<string | null>;
 
   /** Returns sector IDs assigned to the user. Empty array = no sector filter. */
@@ -64,6 +71,4 @@ export interface TerritoryHierarchyPort {
     assignedTerritoryIds: string[],
     activeOnly?: boolean
   ): Promise<string[]>;
-
-  resolveDescendantIds(ancestorIds: string[], activeOnly?: boolean): Promise<string[]>;
 }

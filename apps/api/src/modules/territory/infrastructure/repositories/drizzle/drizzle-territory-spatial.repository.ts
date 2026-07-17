@@ -141,7 +141,12 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     `) as Promise<Array<{ id: string; code: string }>>;
   }
 
-  async findContainingClinicAssignmentTerritoryIds(lng: number, lat: number): Promise<string[]> {
+  async findContainingClinicAssignmentTerritoryIds(
+    lng: number,
+    lat: number,
+    options?: { excludeTerritoryId?: string }
+  ): Promise<string[]> {
+    const excludeTerritoryId = options?.excludeTerritoryId ?? null;
     const rows = await db.execute(sql`
       SELECT t.id
       FROM territories t
@@ -149,6 +154,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       WHERE t.is_active = true
         AND t.boundary IS NOT NULL
         AND tt.assigns_clinics = true
+        AND (${excludeTerritoryId}::text IS NULL OR t.id != ${excludeTerritoryId})
         AND ST_Covers(
           t.boundary,
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)
@@ -162,7 +168,6 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
   async findOverlappingSiblingTerritories(input: {
     territoryId: string;
     territoryTypeId: string;
-    countryCode: string;
     geoJson: GeoJsonGeometry;
   }): Promise<Array<{ id: string; code: string; overlapRatio: number }>> {
     const geoJsonString = JSON.stringify(input.geoJson);
@@ -185,7 +190,6 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       WHERE t.id != ${input.territoryId}
         AND t.is_active = true
         AND t.boundary IS NOT NULL
-        AND t.country_code = ${input.countryCode}
         AND t.territory_type_id = ${input.territoryTypeId}
         AND tt.block_sibling_overlap = true
         AND ST_Intersects(t.boundary, child.geom)
@@ -201,7 +205,6 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
 
   async findContainingManagerZones(input: {
     geoJson: GeoJsonGeometry;
-    countryCode: string;
   }): Promise<Array<{ id: string; code: string; name: string }>> {
     const geoJsonString = JSON.stringify(input.geoJson);
 
@@ -215,7 +218,6 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       CROSS JOIN patch
       WHERE t.is_active = true
         AND t.boundary IS NOT NULL
-        AND t.country_code = ${input.countryCode}
         AND tt.slug = ${MANAGER_ZONE_TYPE_SLUG}
         AND ST_CoveredBy(patch.geom, t.boundary)
       ORDER BY ST_Area(t.boundary::geography) ASC
@@ -256,13 +258,13 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
         updated_at = NOW()
       FROM (
         SELECT
-          ST_XMin(extent)::float AS min_lng,
-          ST_YMin(extent)::float AS min_lat,
-          ST_XMax(extent)::float AS max_lng,
-          ST_YMax(extent)::float AS max_lat,
+          ST_XMin(envelope)::float AS min_lng,
+          ST_YMin(envelope)::float AS min_lat,
+          ST_XMax(envelope)::float AS max_lng,
+          ST_YMax(envelope)::float AS max_lat,
           ST_Area(boundary::geography) / 1000000 AS area_sq_km
         FROM (
-          SELECT boundary, ST_Extent(boundary) AS extent
+          SELECT boundary, ST_Envelope(boundary) AS envelope
           FROM territories
           WHERE id = ${territoryId}
             AND boundary IS NOT NULL
@@ -270,65 +272,6 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       ) bbox
       WHERE territories.id = ${territoryId}
     `);
-  }
-
-  async findAssignedClinicsInGroupingTerritory(input: {
-    groupingTerritoryId: string;
-    scopedPatchIds: string[];
-  }): Promise<
-    Array<{
-      id: string;
-      name: string;
-      lat: number;
-      lng: number;
-      territoryId: string;
-      repPatchCode: string;
-      repPatchName: string;
-    }>
-  > {
-    if (input.scopedPatchIds.length === 0) {
-      return [];
-    }
-
-    const rows = await db.execute(sql`
-      SELECT
-        c.id,
-        c.name,
-        ST_Y(c.location::geometry) AS lat,
-        ST_X(c.location::geometry) AS lng,
-        c.territory_id,
-        patch.code AS rep_patch_code,
-        patch.name AS rep_patch_name
-      FROM facilities c
-      INNER JOIN territories patch ON patch.id = c.territory_id
-      INNER JOIN territories grp ON grp.id = ${input.groupingTerritoryId}
-      WHERE c.deactivated_at IS NULL
-        AND c.territory_assignment_status = 'assigned'::territory_assignment_status
-        AND c.location IS NOT NULL
-        AND c.territory_id = ANY(${input.scopedPatchIds})
-        AND grp.boundary IS NOT NULL
-        AND ST_X(c.location::geometry) BETWEEN grp.boundary_min_lng AND grp.boundary_max_lng
-        AND ST_Y(c.location::geometry) BETWEEN grp.boundary_min_lat AND grp.boundary_max_lat
-        AND ST_Covers(grp.boundary, ST_SetSRID(ST_MakePoint(ST_X(c.location::geometry), ST_Y(c.location::geometry)), 4326))
-    `) as Array<{
-      id: string;
-      name: string;
-      lat: number;
-      lng: number;
-      territory_id: string;
-      rep_patch_code: string;
-      rep_patch_name: string;
-    }>;
-
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      lat: row.lat,
-      lng: row.lng,
-      territoryId: row.territory_id,
-      repPatchCode: row.rep_patch_code,
-      repPatchName: row.rep_patch_name,
-    }));
   }
 
   private assertValidGeometryType(geoJson: GeoJsonGeometry): void {

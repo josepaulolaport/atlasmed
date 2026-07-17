@@ -61,6 +61,7 @@ class AppShellScreenState extends State<AppShellScreen> {
     if (location.startsWith('/pedidos')) return 'pedidos';
     if (location.startsWith('/apresentacoes')) return 'apresentacoes';
     if (location.startsWith('/mapa')) return 'mapa';
+    if (location.startsWith('/territorios')) return 'territorios';
     return '';
   }
 }
@@ -239,6 +240,12 @@ const _drawerItems = <_DrawerItem>[
     label: 'Mapa',
     route: '/mapa',
     icon: Icons.map_outlined,
+  ),
+  _DrawerItem(
+    key: 'territorios',
+    label: 'Territórios',
+    route: '/territorios',
+    icon: Icons.layers_outlined,
   ),
   _DrawerItem(
     key: 'pedidos',

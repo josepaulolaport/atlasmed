@@ -15,7 +15,6 @@ describe("ScopeResolver", () => {
       ...assignedTerritoryIds,
       ...assignedTerritoryIds.map((id) => `${id}-patch`),
     ]),
-    resolveDescendantIds: mock(async (ancestorIds: string[]) => ancestorIds),
   };
 
   it("returns global scope for ADMIN", async () => {
@@ -54,6 +53,7 @@ describe("ScopeResolver", () => {
       assignTerritory: mock(async () => undefined),
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
+      findUserIdsByTerritoryId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
       findSectorIdsByUserId: mock(async () => []),
       findTerritoryIdsBySectorIds: mock(async () => []),
@@ -85,6 +85,7 @@ describe("ScopeResolver", () => {
       assignTerritory: mock(async () => undefined),
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
+      findUserIdsByTerritoryId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
       findSectorIdsByUserId: mock(async () => []),
       findTerritoryIdsBySectorIds: mock(async () => []),
@@ -115,6 +116,7 @@ describe("ScopeResolver", () => {
       assignTerritory: mock(async () => undefined),
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
+      findUserIdsByTerritoryId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
       findSectorIdsByUserId: mock(async () => ["sector-a"]),
       findTerritoryIdsBySectorIds: mock(async () => ["territory-sector-a"]),
@@ -143,6 +145,7 @@ describe("ScopeResolver", () => {
       assignTerritory: mock(async () => undefined),
       revokeTerritory: mock(async () => undefined),
       findTerritoryAssignmentsByUserId: mock(async () => []),
+      findUserIdsByTerritoryId: mock(async () => []),
       findManagerIdByUserId: mock(async () => null),
       findSectorIdsByUserId: mock(async () => []),
       findTerritoryIdsBySectorIds: mock(async () => []),

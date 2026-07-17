@@ -15,20 +15,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { isApprovalRequest } from "@/components/territory/territory-utils";
 import type { Territory, TerritoryType } from "@/types/territory";
 
 const createTerritorySchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   code: z.string().min(1, "Código é obrigatório"),
-  parentId: z.string().optional(),
 });
 
 type CreateTerritoryFormData = z.infer<typeof createTerritorySchema>;
@@ -50,7 +43,6 @@ export function CreateTerritoryDialog({
   const [error, setError] = useState<string | null>(null);
   const [territoryTypes, setTerritoryTypes] = useState<TerritoryType[]>([]);
   const [loadingTypes, setLoadingTypes] = useState(true);
-  const [groupingTerritories, setGroupingTerritories] = useState<Territory[]>([]);
 
   const {
     register,
@@ -77,18 +69,7 @@ export function CreateTerritoryDialog({
         }
       };
 
-      // Load grouping territories for parent selection
-      const fetchGroupingTerritories = async () => {
-        try {
-          const { data } = await territoriesApi.listGroupingTree();
-          setGroupingTerritories(data as Territory[]);
-        } catch (err) {
-          console.error("Failed to fetch grouping territories:", err);
-        }
-      };
-
       fetchTypes();
-      fetchGroupingTerritories();
     } else {
       // Reset form when closed
       reset();
@@ -126,21 +107,18 @@ export function CreateTerritoryDialog({
 
       const result = await territoriesApi.createTerritory({
         name: data.name,
-        code: data.code,
+        slug: data.code.toLowerCase(),
         territoryTypeId,
-        parentId: data.parentId || undefined,
-        countryCode: "BR",
       });
 
-      // Handle approval request case
-      if ("approvalType" in result) {
+      if (isApprovalRequest(result)) {
         setError(
           "Território criado e aguardando aprovação. Você pode usá-lo assim que for aprovado."
         );
         return;
       }
 
-      onTerritoryCreated(result as Territory);
+      onTerritoryCreated(result);
       onOpenChange(false);
     } catch (err) {
       const error = err as { response?: { data?: { error?: string } } };
@@ -207,30 +185,6 @@ export function CreateTerritoryDialog({
             )}
             <p className="text-xs text-gray-500">
               Código único para identificar este território
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="parentId">Território Pai (Opcional)</Label>
-            <Select
-              value={watch("parentId")}
-              onValueChange={(value) => setValue("parentId", value)}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger id="parentId">
-                <SelectValue placeholder="Selecione um território pai" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="_none">Nenhum</SelectItem>
-                {groupingTerritories.map((territory) => (
-                  <SelectItem key={territory.id} value={territory.id}>
-                    {territory.name} ({territory.code})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-gray-500">
-              Para hierarquia de agrupamento (país, região, estado)
             </p>
           </div>
 

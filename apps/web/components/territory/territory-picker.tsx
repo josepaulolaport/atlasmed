@@ -27,7 +27,6 @@ export interface TerritoryPickerProps {
   filterAssignsClinics?: boolean;
   filterCanHaveBoundary?: boolean;
   pickerConfig?: TerritoryAssignmentPickerConfig;
-  excludeCountry?: boolean;
   excludeTerritoryIds?: string[];
   disabled?: boolean;
   placeholder?: string;
@@ -42,7 +41,6 @@ export function TerritoryPicker({
   filterAssignsClinics = false,
   filterCanHaveBoundary = false,
   pickerConfig,
-  excludeCountry = false,
   excludeTerritoryIds = [],
   disabled = false,
   placeholder = "Selecionar território",
@@ -59,8 +57,8 @@ export function TerritoryPicker({
     setLoading(true);
     setError(null);
     try {
-      const response = await territoriesApi.listTerritories("flat");
-      setTerritories(response.data as Territory[]);
+      const response = await territoriesApi.listTerritories();
+      setTerritories(response.data);
     } catch {
       setError("Falha ao carregar territórios");
     } finally {
@@ -80,7 +78,6 @@ export function TerritoryPicker({
         return false;
       }
       if (!t.isActive) return false;
-      if (excludeCountry && t.territoryType.isCountryLevel) return false;
       if (filterAssignableToUsers && !t.territoryType.assignableToUsers) return false;
       if (filterAssignableToManagers && !t.territoryType.assignableToManagers) {
         return false;
@@ -99,7 +96,6 @@ export function TerritoryPicker({
   }, [
     territories,
     search,
-    excludeCountry,
     filterAssignableToUsers,
     filterAssignableToManagers,
     filterAssignsClinics,
@@ -165,10 +161,10 @@ export function useTerritoryLabels() {
     let cancelled = false;
     (async () => {
       try {
-        const response = await territoriesApi.listTerritories("flat");
+        const response = await territoriesApi.listTerritories();
         if (!cancelled) {
           const next = new Map<string, Territory>();
-          for (const t of response.data as Territory[]) {
+          for (const t of response.data) {
             next.set(t.id, t);
           }
           setMap(next);

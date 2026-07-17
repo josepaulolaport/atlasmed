@@ -7,9 +7,7 @@ export interface TerritoryTypeRecord {
   assignsClinics: boolean;
   assignableToUsers: boolean;
   assignableToManagers: boolean;
-  isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
-  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -24,9 +22,7 @@ export interface CreateTerritoryTypeInput {
   assignsClinics?: boolean;
   assignableToUsers?: boolean;
   assignableToManagers?: boolean;
-  isCountryLevel?: boolean;
   blockSiblingOverlap?: boolean;
-  participatesInGroupingHierarchy?: boolean;
   sortOrder?: number;
 }
 
@@ -37,9 +33,7 @@ export interface UpdateTerritoryTypeInput {
   assignsClinics?: boolean;
   assignableToUsers?: boolean;
   assignableToManagers?: boolean;
-  isCountryLevel?: boolean;
   blockSiblingOverlap?: boolean;
-  participatesInGroupingHierarchy?: boolean;
   sortOrder?: number;
   isActive?: boolean;
 }
