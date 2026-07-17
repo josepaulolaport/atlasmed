@@ -65,6 +65,8 @@ import { AssignUserManagerUseCase } from "./application/use-cases/assign-user-ma
 import { AssignUserTerritoryUseCase } from "./application/use-cases/assign-user-territory.use-case";
 import { RevokeUserTerritoryUseCase } from "./application/use-cases/revoke-user-territory.use-case";
 import { GetUserAssignmentsUseCase } from "./application/use-cases/get-user-assignments.use-case";
+import { GetTerritoryAssignmentsUseCase } from "./application/use-cases/get-territory-assignments.use-case";
+import { GetUserByIdUseCase } from "./application/use-cases/get-user-by-id.use-case";
 import {
   GetUserPreferencesUseCase,
   UpdateUserPreferencesUseCase,
@@ -395,6 +397,11 @@ export const accessUseCases = {
       userRepository: accessRepositories.user,
     }),
 
+  getUserById: () =>
+    new GetUserByIdUseCase({
+      userRepository: accessRepositories.user,
+    }),
+
   updateProfile: () =>
     new UpdateProfileUseCase({
       userRepository: accessRepositories.user,
@@ -437,6 +444,13 @@ export const accessUseCases = {
     new GetUserAssignmentsUseCase({
       userRepository: accessRepositories.user,
       scopeRepository: accessRepositories.scope,
+    }),
+
+  getTerritoryAssignments: () =>
+    new GetTerritoryAssignmentsUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      territoryRepository: territoryRepositories.territory,
     }),
 
   getUserPreferences: () =>

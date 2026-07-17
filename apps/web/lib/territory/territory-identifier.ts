@@ -9,11 +9,3 @@ export function slugifyTerritoryIdentifier(name: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
 }
-
-export function isIsoCountryCode(value: string): boolean {
-  return /^[A-Z]{2}$/.test(value.trim().toUpperCase());
-}
-
-export function formatCountryCode(value: string): string {
-  return value.trim().toUpperCase().slice(0, 2);
-}

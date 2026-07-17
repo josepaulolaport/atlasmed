@@ -1,0 +1,663 @@
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_ops.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territory_geometry_editor.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/providers/territory_editor_state.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+final territoryEditorControllerProvider = StateNotifierProvider.autoDispose
+    .family<
+      TerritoryEditorController,
+      TerritoryEditorState,
+      TerritoryEditorTarget
+    >((ref, target) {
+      return TerritoryEditorController(ref, target);
+    });
+
+class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
+  TerritoryEditorController(this._ref, this.target)
+    : super(TerritoryEditorState(isCreating: target.isCreating)) {
+    _load();
+  }
+
+  final Ref _ref;
+  final TerritoryEditorTarget target;
+
+  Future<void> _load() async {
+    if (target.isCreating) {
+      // Nothing to fetch yet — the metadata form hasn't been confirmed,
+      // so kind/sector aren't known and there's no boundary to load.
+      // `setDraft` does the equivalent neighbor fetch once they are.
+      const GeometryParts empty = [];
+      state = state.copyWith(
+        loading: false,
+        working: empty,
+        validation: _validate(empty, const []),
+      );
+      return;
+    }
+
+    state = state.copyWith(loading: true, loadError: null);
+    try {
+      final repository = _ref.read(territoryRepositoryProvider);
+      final territory = await repository.getTerritoryById(target.territoryId!);
+      if (territory == null) {
+        state = state.copyWith(
+          loading: false,
+          loadError: 'Território não encontrado.',
+        );
+        return;
+      }
+      final sameKindAndSector = await repository.getTerritories(
+        territoryTypeSlug: territory.territoryType.slug,
+        sectorId: territory.sectorId,
+      );
+      final neighbors = sameKindAndSector
+          .where((candidate) => candidate.id != territory.id)
+          .toList();
+      final fenceZone = await _loadFenceZone(
+        territory.kind,
+        territory.managerTerritoryId,
+      );
+      final working = TerritoryGeometryEditor.fromGeometry(territory.boundary);
+      state = state.copyWith(
+        loading: false,
+        original: territory,
+        neighbors: neighbors,
+        fenceZone: fenceZone,
+        working: working,
+        validation: _validate(working, neighbors),
+      );
+    } catch (_) {
+      state = state.copyWith(
+        loading: false,
+        loadError: 'Não foi possível carregar o território.',
+      );
+    }
+  }
+
+  /// Stores the metadata form's result. On the very first call, also
+  /// defaults [TerritoryEditorState.mode] to [EditorMode.addArea] so the
+  /// user can start drawing right away. Whenever the kind/sector differ
+  /// from what they were, re-fetches [TerritoryEditorState.neighbors] for
+  /// the new kind+sector and re-validates the current shape against them.
+  Future<void> setDraft(TerritoryDraft draft) async {
+    final previousDraft = state.draft;
+    final isFirst = previousDraft == null;
+    final kindOrSectorChanged =
+        isFirst ||
+        previousDraft.kind != draft.kind ||
+        previousDraft.sectorId != draft.sectorId;
+    final managerZoneChanged =
+        isFirst || previousDraft.managerTerritoryId != draft.managerTerritoryId;
+
+    state = state.copyWith(
+      draft: draft,
+      mode: isFirst ? EditorMode.addArea : state.mode,
+    );
+
+    if (managerZoneChanged) {
+      final fenceZone = await _loadFenceZone(
+        draft.kind,
+        draft.managerTerritoryId,
+      );
+      final clipped = fenceZone == null || state.working == null
+          ? state.working
+          : GeometryOps.intersectShape(
+              state.working!,
+              fenceZone.boundary.coordinates.expand((part) => part).toList(),
+            );
+      state = state.copyWith(
+        fenceZone: fenceZone,
+        working: clipped,
+        validation: clipped == null
+            ? state.validation
+            : _validate(clipped, state.neighbors),
+      );
+    }
+
+    if (!kindOrSectorChanged) return;
+    try {
+      final repository = _ref.read(territoryRepositoryProvider);
+      final sameKindAndSector = await repository.getTerritories(
+        territoryTypeSlug: draft.kind.slug,
+        sectorId: draft.sectorId,
+      );
+      state = state.copyWith(
+        neighbors: sameKindAndSector,
+        validation: _validate(state.working ?? const [], sameKindAndSector),
+      );
+    } catch (_) {
+      // Best-effort — overlap checks just won't run against real
+      // neighbor data if the sector switch failed to load.
+    }
+  }
+
+  /// Resolves the manager zone a rep patch's drawing should be fenced
+  /// to, or `null` for a manager zone itself (nothing fences a zone) or
+  /// when no zone is selected yet.
+  Future<Territory?> _loadFenceZone(
+    TerritoryKind kind,
+    String? managerTerritoryId,
+  ) async {
+    if (kind != TerritoryKind.repPatch || managerTerritoryId == null) {
+      return null;
+    }
+    try {
+      final repository = _ref.read(territoryRepositoryProvider);
+      return await repository.getTerritoryById(managerTerritoryId);
+    } catch (_) {
+      // Best-effort — drawing still works without a fence to frame/clip
+      // against; the server still validates containment on save.
+      return null;
+    }
+  }
+
+  // ---- modes / selection ----------------------------------------------
+
+  void setMode(EditorMode mode) {
+    if (state.mode == mode) return;
+    state = state.copyWith(
+      mode: mode,
+      selectedPart: null,
+      selectedEdge: null,
+      selectionAction: SelectionAction.none,
+      drawingPoints: const [],
+    );
+  }
+
+  void selectPart(int partIndex) {
+    if (state.mode != EditorMode.select) return;
+    state = state.copyWith(
+      selectedPart: partIndex,
+      selectedEdge: null,
+      selectionAction: SelectionAction.none,
+    );
+  }
+
+  void clearSelection() {
+    state = state.copyWith(
+      selectedPart: null,
+      selectedEdge: null,
+      selectionAction: SelectionAction.none,
+    );
+  }
+
+  void chooseSelectionAction(SelectionAction action) {
+    if (state.selectedPart == null) return;
+    state = state.copyWith(selectionAction: action, selectedEdge: null);
+  }
+
+  void selectEdge(EdgeRef edge) {
+    state = state.copyWith(selectedEdge: edge);
+  }
+
+  void clearEdgeSelection() {
+    if (state.selectedEdge == null) return;
+    state = state.copyWith(selectedEdge: null);
+  }
+
+  // ---- vertex / midpoint --------------------------------------------
+
+  void beginVertexDrag(VertexRef ref) => _pushUndo();
+
+  void updateVertexDrag(VertexRef ref, MapCoordinate position) {
+    final working = state.working;
+    if (working == null) return;
+    _applyWorking(TerritoryGeometryEditor.moveVertex(working, ref, position));
+  }
+
+  void endVertexDrag() => _resolveNeighborOverlapsNow();
+
+  /// Promotes a midpoint into a real vertex and immediately starts
+  /// dragging it — the caller (the map screen) keeps the same live
+  /// gesture going against the returned [VertexRef].
+  VertexRef? beginMidpointDrag(EdgeRef edge, MapCoordinate at) {
+    final working = state.working;
+    if (working == null) return null;
+    _pushUndo();
+    final result = TerritoryGeometryEditor.insertVertex(working, edge, at);
+    _applyWorking(result.parts);
+    return result.ref;
+  }
+
+  /// Tap-to-delete — no confirmation, per spec. No-ops (and surfaces a
+  /// validation message) if the ring would drop below a valid triangle.
+  void deleteVertexAt(VertexRef ref) {
+    final working = state.working;
+    if (working == null) return;
+    final next = TerritoryGeometryEditor.deleteVertex(working, ref);
+    if (next == null) {
+      state = state.copyWith(
+        validation: const GeometryValidation(
+          tooFewPoints: true,
+          message: 'Um território precisa de pelo menos três pontos.',
+        ),
+      );
+      return;
+    }
+    _pushUndo();
+    _applyWorking(next);
+  }
+
+  // ---- edges -----------------------------------------------------------
+
+  void beginEdgeDrag(EdgeRef edge) => _pushUndo();
+
+  void updateEdgeDrag(EdgeRef edge, double deltaLng, double deltaLat) {
+    final working = state.working;
+    if (working == null) return;
+    _applyWorking(
+      TerritoryGeometryEditor.moveEdge(working, edge, deltaLng, deltaLat),
+    );
+  }
+
+  void endEdgeDrag() => _resolveNeighborOverlapsNow();
+
+  // ---- whole polygon -----------------------------------------------------
+
+  void beginPolygonMove(int partIndex) => _pushUndo();
+
+  void updatePolygonMove(int partIndex, double deltaLng, double deltaLat) {
+    final working = state.working;
+    if (working == null) return;
+    _applyWorking(
+      TerritoryGeometryEditor.movePolygon(
+        working,
+        partIndex,
+        deltaLng,
+        deltaLat,
+      ),
+    );
+  }
+
+  void endPolygonMove() => _resolveNeighborOverlapsNow();
+
+  void deleteSelectedPart() {
+    final working = state.working;
+    final partIndex = state.selectedPart;
+    if (working == null ||
+        partIndex == null ||
+        partIndex >= working.length ||
+        !state.canDeleteSelectedPart) {
+      return;
+    }
+    _pushUndo();
+    final next = TerritoryGeometryEditor.deletePart(working, partIndex);
+    state = state.copyWith(
+      working: next,
+      selectedPart: null,
+      selectionAction: SelectionAction.none,
+      validation: _validate(next, state.neighbors),
+    );
+  }
+
+  // ---- draw new area / add area / remove area (stage 2 + 3) --------------
+  //
+  // All three tools share the same tap-to-place-points + auto-close
+  // interaction; they only differ in what happens to [state.working] once
+  // the ring is finished (see [finishDrawing]).
+
+  static bool _isDrawingMode(EditorMode mode) =>
+      mode == EditorMode.addArea || mode == EditorMode.removeArea;
+
+  /// Adds a point to the in-progress ring. Rejects (returns `false`)
+  /// points whose new segment would cross an existing one, so an invalid
+  /// self-intersecting shape can never even be drawn in the first place.
+  bool addDrawingPoint(MapCoordinate point) {
+    if (!_isDrawingMode(state.mode)) return false;
+    final points = state.drawingPoints;
+    if (points.length >= 2) {
+      final last = points.last;
+      // Stop one edge short of the end: the segment right before `last`
+      // shares that exact point with the new segment by construction, so
+      // testing it would always look like a "touching" intersection.
+      for (var i = 0; i < points.length - 2; i++) {
+        if (GeometryMath.segmentsIntersect(
+          points[i],
+          points[i + 1],
+          last,
+          point,
+        )) {
+          return false;
+        }
+      }
+    }
+    state = state.copyWith(drawingPoints: [...points, point]);
+    return true;
+  }
+
+  /// Undo/redo's meaning while a shape is being drawn: pull back the last
+  /// placed point instead of touching the committed geometry stack.
+  void removeLastDrawingPoint() {
+    final points = state.drawingPoints;
+    if (points.isEmpty) return;
+    state = state.copyWith(drawingPoints: points.sublist(0, points.length - 1));
+  }
+
+  void cancelDrawing() {
+    if (state.drawingPoints.isEmpty) return;
+    state = state.copyWith(drawingPoints: const []);
+  }
+
+  /// Commits the in-progress ring — a union into whatever it overlaps
+  /// (Add area) or a subtraction from whatever it overlaps (Remove area)
+  /// — and selects the result. Returns `false` (and leaves the drawing
+  /// untouched) if the shape isn't valid yet, if it doesn't connect to the
+  /// existing boundary, or if a Remove area cut would eliminate the whole
+  /// territory or split it into two.
+  bool finishDrawing() {
+    final working = state.working;
+    if (working == null || !state.canFinishDrawing) return false;
+    if (GeometryMath.ringSelfIntersects(state.drawingPoints)) return false;
+
+    if (!_isDrawingMode(state.mode)) return false;
+    final drawn = switch (state.mode) {
+      // A union: the new ring is merged into whichever existing part(s)
+      // it overlaps, instead of being left as a separate, invalid,
+      // overlapping shape.
+      EditorMode.addArea => GeometryOps.union(working, state.drawingPoints),
+      EditorMode.removeArea => GeometryOps.difference(
+        working,
+        state.drawingPoints,
+      ),
+      EditorMode.navigate ||
+      EditorMode.select => const <List<List<MapCoordinate>>>[],
+    };
+    // Add area can grow into a neighbor's territory — clip that back out
+    // immediately, same as every other commit (see
+    // `_resolveNeighborOverlaps`). Remove area only ever shrinks, so this
+    // is a no-op for it.
+    final next = _resolveNeighborOverlaps(drawn);
+
+    if (next.isEmpty) {
+      final outsideFence =
+          state.mode == EditorMode.addArea && state.fenceZone != null;
+      state = state.copyWith(
+        drawingPoints: const [],
+        validation: GeometryValidation(
+          tooFewPoints: true,
+          message: outsideFence
+              ? 'Essa área precisa estar dentro da zona de gerente selecionada.'
+              : 'Essa remoção eliminaria todo o território.',
+        ),
+      );
+      return false;
+    }
+
+    // A territory must always be a single connected polygon: an Add/Draw
+    // shape that doesn't touch the existing boundary — or a Remove cut
+    // that splits it in two — is rejected instead of being committed as
+    // a disconnected extra part. The drawing points are kept so the user
+    // can adjust the shape (e.g. drag a point to bridge the gap) instead
+    // of losing their work.
+    if (next.length > 1) {
+      state = state.copyWith(
+        validation: GeometryValidation(
+          hasMultipleAreas: true,
+          message: state.mode == EditorMode.removeArea
+              ? 'Essa remoção divide o território em partes separadas. Ajuste a área para não dividir o território.'
+              : 'Essa área precisa tocar o território existente para formar uma única área conectada.',
+        ),
+      );
+      return false;
+    }
+
+    _pushUndo();
+    state = state.copyWith(
+      working: next,
+      drawingPoints: const [],
+      mode: EditorMode.select,
+      selectedPart: next.length - 1,
+      validation: _validate(next, state.neighbors),
+    );
+    return true;
+  }
+
+  // ---- undo / redo -------------------------------------------------------
+
+  void undo() {
+    if (_isDrawingMode(state.mode) && state.drawingPoints.isNotEmpty) {
+      removeLastDrawingPoint();
+      return;
+    }
+    final working = state.working;
+    if (working == null || state.undoStack.isEmpty) return;
+    final previous = state.undoStack.last;
+    state = state.copyWith(
+      working: previous,
+      undoStack: state.undoStack.sublist(0, state.undoStack.length - 1),
+      redoStack: [...state.redoStack, working],
+      validation: _validate(previous, state.neighbors),
+      selectedEdge: null,
+    );
+  }
+
+  void redo() {
+    final working = state.working;
+    if (working == null || state.redoStack.isEmpty) return;
+    final next = state.redoStack.last;
+    state = state.copyWith(
+      working: next,
+      redoStack: state.redoStack.sublist(0, state.redoStack.length - 1),
+      undoStack: [...state.undoStack, working],
+      validation: _validate(next, state.neighbors),
+      selectedEdge: null,
+    );
+  }
+
+  // ---- cancel / save -----------------------------------------------------
+
+  void cancel() {
+    final original = state.original;
+    if (original == null) return;
+    final working = TerritoryGeometryEditor.fromGeometry(original.boundary);
+    state = state.copyWith(
+      working: working,
+      undoStack: const [],
+      redoStack: const [],
+      mode: EditorMode.navigate,
+      selectedPart: null,
+      selectedEdge: null,
+      selectionAction: SelectionAction.none,
+      drawingPoints: const [],
+      validation: _validate(working, state.neighbors),
+    );
+  }
+
+  Future<bool> save() async {
+    final working = state.working;
+    if (working == null || !state.canSave) return false;
+
+    state = state.copyWith(saving: true, saveError: null);
+    try {
+      final geometry = TerritoryGeometryEditor.toGeometry(working);
+      final repository = _ref.read(territoryRepositoryProvider);
+
+      if (state.isCreating) {
+        final draft = state.draft!;
+        final centroid =
+            geometry.labelAnchor ??
+            const MapCoordinate(longitude: 0, latitude: 0);
+        final created = await repository.createTerritory(
+          draft,
+          geometry,
+          centroid,
+        );
+        _ref.invalidate(territoriesProvider);
+        state = state.copyWith(
+          saving: false,
+          saved: true,
+          undoStack: const [],
+          original: created,
+        );
+      } else {
+        final original = state.original!;
+        await repository.updateTerritoryGeometry(original.id, geometry);
+        _ref.invalidate(territoriesProvider);
+        _ref.invalidate(territoryByIdProvider(original.id));
+        state = state.copyWith(saving: false, saved: true, undoStack: const []);
+      }
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        saving: false,
+        saveError: error is TerritoryApiException
+            ? error.message
+            : 'Não foi possível salvar. Tente novamente.',
+      );
+      return false;
+    }
+  }
+
+  // ---- internals ---------------------------------------------------------
+
+  void _pushUndo() {
+    final working = state.working;
+    if (working == null) return;
+    state = state.copyWith(
+      undoStack: [...state.undoStack, working],
+      redoStack: const [],
+    );
+  }
+
+  void _applyWorking(GeometryParts working) {
+    state = state.copyWith(
+      working: working,
+      validation: _validate(working, state.neighbors),
+    );
+  }
+
+  /// Called at the end of every drag (vertex, edge, whole-polygon move) —
+  /// folds the auto-clip-to-neighbor resolution into the same undo/redo
+  /// action as the drag itself, so "one continuous drag = one action"
+  /// still holds even though this can further reshape the geometry.
+  void _resolveNeighborOverlapsNow() {
+    final working = state.working;
+    if (working == null) return;
+    final resolved = _resolveNeighborOverlaps(working);
+    // `_resolveNeighborOverlaps` returns the very same list instance when
+    // nothing needed clipping — the common case — so this is a cheap way
+    // to tell whether the part count/order could have shifted.
+    if (identical(resolved, working)) {
+      _applyWorking(resolved);
+      return;
+    }
+    // Clipping against a neighbor can split a part in two, delete one
+    // entirely, or reorder the list — any of which can leave
+    // `selectedPart`/`selectedEdge` pointing at the wrong part (or out of
+    // range). Drop the selection rather than risk acting on stale state;
+    // the user just re-taps the shape if they want to keep editing it.
+    state = state.copyWith(
+      working: resolved,
+      validation: _validate(resolved, state.neighbors),
+      selectedPart: null,
+      selectedEdge: null,
+      selectionAction: SelectionAction.none,
+    );
+  }
+
+  /// Clips [parts] down to [TerritoryEditorState.fenceZone] when one is
+  /// set — a rep patch being drawn/edited inside a selected manager zone
+  /// can never end up (via drawing, or a drag pulling a vertex/edge/
+  /// whole shape out) outside of it. A no-op when there's no fence (a
+  /// manager zone itself, or a patch with no zone picked yet).
+  GeometryParts _applyFence(GeometryParts parts) {
+    final fenceZone = state.fenceZone;
+    if (fenceZone == null) return parts;
+    final fenceRings = fenceZone.boundary.coordinates
+        .expand((part) => part)
+        .toList();
+    return GeometryOps.intersectShape(parts, fenceRings);
+  }
+
+  /// Stage 3's upgrade from "flag-only" to "auto-resolved": wherever
+  /// [parts] overlaps a same-kind/sector neighbor, that overlap is cut
+  /// away — this *is* the "boundary snaps to the neighbor's border"
+  /// behavior described in the spec, with no separate bespoke snapping
+  /// algorithm needed. A neighbor's own hole is passed through whole (not
+  /// just its exterior), so it still leaves room for this territory to
+  /// grow into it.
+  GeometryParts _resolveNeighborOverlaps(GeometryParts parts) {
+    var next = _applyFence(parts);
+    for (final neighbor in state.neighbors) {
+      for (final neighborPart in neighbor.boundary.coordinates) {
+        if (neighborPart.isEmpty || next.isEmpty) continue;
+        final overlaps = next.any(
+          (part) => GeometryOps.intersects(part.first, neighborPart.first),
+        );
+        if (!overlaps) continue;
+        next = GeometryOps.subtractShape(next, neighborPart);
+      }
+    }
+    return next;
+  }
+
+  GeometryValidation _validate(
+    GeometryParts working,
+    List<Territory> neighbors,
+  ) {
+    // A brand-new territory starts with nothing drawn — that's not a
+    // valid shape to save yet, just the editor's starting point.
+    if (working.isEmpty) {
+      return const GeometryValidation(
+        tooFewPoints: true,
+        message: 'Desenhe ao menos uma área para o território.',
+      );
+    }
+    // A territory must always be a single connected polygon. This also
+    // catches the case where a drag ends up auto-clipped against a
+    // neighbor and splits the shape in two — not just the direct-draw
+    // paths already guarded in `finishDrawing`.
+    if (working.length > 1) {
+      return const GeometryValidation(
+        hasMultipleAreas: true,
+        message:
+            'Este território precisa ser uma única área conectada. Use '
+            '"Adicionar área" para unir as partes ou exclua uma delas antes de salvar.',
+      );
+    }
+    for (final part in working) {
+      for (final ring in part) {
+        if (ring.length < 3) {
+          return const GeometryValidation(
+            tooFewPoints: true,
+            message: 'Um território precisa de pelo menos três pontos.',
+          );
+        }
+      }
+      final exterior = part.first;
+      if (GeometryMath.ringSelfIntersects(exterior)) {
+        return const GeometryValidation(
+          selfIntersects: true,
+          message: 'O contorno cruza sobre si mesmo.',
+        );
+      }
+      for (final neighbor in neighbors) {
+        for (final neighborPart in neighbor.boundary.coordinates) {
+          if (neighborPart.isEmpty) continue;
+          // A boolean-op-based check on purpose (not the coarse
+          // `GeometryMath.ringsOverlap`): after a drag ends, the boundary
+          // is auto-clipped to exactly touch a neighbor's border (see
+          // `_resolveNeighborOverlaps`), and a shared border must not
+          // itself keep re-triggering this same flag.
+          if (GeometryOps.intersects(exterior, neighborPart.first)) {
+            return GeometryValidation(
+              overlapsNeighbor: true,
+              message: 'Essa área sobrepõe o território "${neighbor.name}".',
+            );
+          }
+        }
+      }
+    }
+    return GeometryValidation.valid;
+  }
+}

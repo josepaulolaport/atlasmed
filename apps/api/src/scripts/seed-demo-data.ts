@@ -5,7 +5,7 @@ import {
   roles,
   users,
   territories,
-  territoryClosure,
+  territoryTypes,
   userTerritoryAssignments,
   facilities,
   professionals,
@@ -13,23 +13,21 @@ import {
   cnesRuns,
   cnesSuggestions,
 } from "@atlasmed/database";
-import { eq, and, or, inArray, like, sql } from "drizzle-orm";
+import { eq, or, inArray, like, sql } from "drizzle-orm";
 import { ROLE_PRIORITY_BY_NAME } from "../modules/access/application/constants/role-priority.constants";
-import { TerritoryClosureService } from "../modules/territory/application/services/territory-closure.service";
-import { DrizzleTerritoryRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory.repository";
-import { DrizzleTerritoryClosureRepository } from "../modules/territory/infrastructure/repositories/drizzle/drizzle-territory-closure.repository";
 
 const DEMO_PASSWORD = process.env.DEMO_SEED_PASSWORD || "Password123!";
 const DEMO_DOMAIN = "demo.atlasmed.local";
 const DEMO_TAG = "[Demo]";
 
-const closureService = new TerritoryClosureService({
-  territoryRepository: new DrizzleTerritoryRepository(),
-  closureRepository: new DrizzleTerritoryClosureRepository(),
-});
-
-async function rebuildClosure(territoryId: string): Promise<void> {
-  await closureService.rebuildSubtree(territoryId);
+async function findTerritoryTypeIdBySlug(slug: string): Promise<string> {
+  const type = await db.query.territoryTypes.findFirst({
+    where: eq(territoryTypes.slug, slug),
+  });
+  if (!type) {
+    throw new Error(`Territory type "${slug}" not found — run migrations/seed first`);
+  }
+  return type.id;
 }
 
 function parseArgs(argv: string[]) {
@@ -144,12 +142,6 @@ async function cleanupDemoData() {
   const demoTerritoryIds = demoTerritories.map((t) => t.id);
 
   if (demoTerritoryIds.length > 0) {
-    await db.delete(territoryClosure).where(
-      or(
-        inArray(territoryClosure.ancestorId, demoTerritoryIds),
-        inArray(territoryClosure.descendantId, demoTerritoryIds)
-      )
-    );
     await db.delete(territories).where(inArray(territories.id, demoTerritoryIds));
   }
 
@@ -159,89 +151,50 @@ async function cleanupDemoData() {
 }
 
 async function seedTerritories() {
-  let country = await db.query.territories.findFirst({
-    where: and(
-      eq(territories.territoryTypeId, "tt_country"),
-      eq(territories.countryCode, "BR"),
-      eq(territories.isActive, true)
-    ),
-  });
+  const managerZoneTypeId = await findTerritoryTypeIdBySlug("manager_zone");
+  const patchTypeId = await findTerritoryTypeIdBySlug("patch");
 
-  if (!country) {
-    [country] = await db
-      .insert(territories)
-      .values({
-        name: `Brazil ${DEMO_TAG}`,
-        slug: "demo-br",
-        code: "DEMO-BR",
-        nodeType: "region",
-        territoryTypeId: "tt_country",
-        countryCode: "BR",
-        regionSlug: "BR",
-      })
-      .returning();
-    await rebuildClosure(country!.id);
-  }
-
-  const [region] = await db
+  const [southeastZone] = await db
     .insert(territories)
     .values({
-      name: `Southeast ${DEMO_TAG}`,
-      slug: "demo-se",
-      code: "DEMO-BR-SE",
-      nodeType: "region",
-      territoryTypeId: "tt_region",
-      countryCode: "BR",
-      regionSlug: "SE",
-      parentId: country!.id,
+      name: `Southeast Zone ${DEMO_TAG}`,
+      slug: "demo-se-zone",
+      code: "DEMO-SE",
+      territoryTypeId: managerZoneTypeId,
     })
     .returning();
-  await rebuildClosure(region!.id);
 
   const [inScopePatch] = await db
     .insert(territories)
     .values({
       name: `São Paulo Patch ${DEMO_TAG}`,
       slug: "demo-sp-patch",
-      code: "DEMO-BR-SE-SP",
-      nodeType: "patch",
-      territoryTypeId: "tt_patch",
-      countryCode: "BR",
-      regionSlug: "SE",
-      parentId: region!.id,
+      code: "DEMO-SE-SP",
+      territoryTypeId: patchTypeId,
+      managerTerritoryId: southeastZone!.id,
     })
     .returning();
-  await rebuildClosure(inScopePatch!.id);
 
-  const [northRegion] = await db
+  const [northZone] = await db
     .insert(territories)
     .values({
-      name: `North ${DEMO_TAG}`,
-      slug: "demo-n",
-      code: "DEMO-BR-N",
-      nodeType: "region",
-      territoryTypeId: "tt_region",
-      countryCode: "BR",
-      regionSlug: "N",
-      parentId: country!.id,
+      name: `North Zone ${DEMO_TAG}`,
+      slug: "demo-n-zone",
+      code: "DEMO-N",
+      territoryTypeId: managerZoneTypeId,
     })
     .returning();
-  await rebuildClosure(northRegion!.id);
 
   const [outOfScopePatch] = await db
     .insert(territories)
     .values({
       name: `Manaus Patch ${DEMO_TAG}`,
       slug: "demo-am-patch",
-      code: "DEMO-BR-N-AM",
-      nodeType: "patch",
-      territoryTypeId: "tt_patch",
-      countryCode: "BR",
-      regionSlug: "N",
-      parentId: northRegion!.id,
+      code: "DEMO-N-AM",
+      territoryTypeId: patchTypeId,
+      managerTerritoryId: northZone!.id,
     })
     .returning();
-  await rebuildClosure(outOfScopePatch!.id);
 
   return { inScopePatchId: inScopePatch!.id, outOfScopePatchId: outOfScopePatch!.id };
 }

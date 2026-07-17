@@ -26,7 +26,7 @@ describe("TerritoryContainmentService", () => {
       } as never,
     });
 
-    const resolution = await service.resolveRepPatchManagerZone(polygon, "BR");
+    const resolution = await service.resolveRepPatchManagerZone(polygon);
     expect(resolution.managerTerritoryId).toBe("zone-1");
   });
 
@@ -39,7 +39,7 @@ describe("TerritoryContainmentService", () => {
       } as never,
     });
 
-    await expect(service.resolveRepPatchManagerZone(polygon, "BR")).rejects.toThrow(
+    await expect(service.resolveRepPatchManagerZone(polygon)).rejects.toThrow(
       OperationNotAllowedError
     );
   });
@@ -56,7 +56,7 @@ describe("TerritoryContainmentService", () => {
       } as never,
     });
 
-    await expect(service.resolveRepPatchManagerZone(polygon, "BR")).rejects.toThrow(
+    await expect(service.resolveRepPatchManagerZone(polygon)).rejects.toThrow(
       OperationNotAllowedError
     );
   });

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 
@@ -13,12 +14,21 @@ class ClinicAdminInfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasTaxId =
+        (detail.cnpj?.trim().isNotEmpty ?? false) ||
+        (detail.cpf?.trim().isNotEmpty ?? false);
+    final taxIdentifier = displayTaxIdentifier(
+      taxIdType: detail.taxIdType,
+      cnpj: detail.cnpj,
+      cpf: detail.cpf,
+    );
+
     return ClinicDetailCard(
       child: Column(
         children: [
           EditableFieldRow(
-            label: 'CNPJ',
-            value: detail.cnpj,
+            label: taxIdentifier.label,
+            value: hasTaxId ? taxIdentifier.value : null,
             icon: Icons.badge_outlined,
           ),
           EditableFieldRow(

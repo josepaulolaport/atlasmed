@@ -88,6 +88,24 @@ export class DrizzleScopeRepository implements ScopeRepository {
     }));
   }
 
+  async findUserIdsByTerritoryId(territoryId: string): Promise<
+    Array<{ userId: string; assignedAt: Date }>
+  > {
+    const rows = await db
+      .select({
+        userId: userTerritoryAssignments.userId,
+        createdAt: userTerritoryAssignments.createdAt,
+      })
+      .from(userTerritoryAssignments)
+      .where(eq(userTerritoryAssignments.territoryId, territoryId))
+      .orderBy(desc(userTerritoryAssignments.createdAt));
+
+    return rows.map((row) => ({
+      userId: row.userId,
+      assignedAt: row.createdAt,
+    }));
+  }
+
   async findManagerIdByUserId(userId: string): Promise<string | null> {
     const [row] = await db
       .select({ managerId: users.managerId })

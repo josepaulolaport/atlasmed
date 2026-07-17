@@ -5,9 +5,7 @@ export const territoryTypeFlagSchema = z.object({
   assignsClinics: z.boolean().optional(),
   assignableToUsers: z.boolean().optional(),
   assignableToManagers: z.boolean().optional(),
-  isCountryLevel: z.boolean().optional(),
   blockSiblingOverlap: z.boolean().optional(),
-  participatesInGroupingHierarchy: z.boolean().optional(),
 });
 
 export const createTerritoryTypeSchema = z
@@ -38,26 +36,20 @@ export const createTerritorySchema = z.object({
   slug: z.string().trim().min(3).max(60),
   territoryTypeId: z.string().trim().min(1).optional(),
   typeSlug: z.string().trim().min(1).optional(),
-  countryCode: z.string().trim().length(2).optional(),
-  parentId: z.string().trim().min(1).optional(),
+  sectorId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
   boundary: territoryBoundarySchema.optional(),
 });
 
 export const updateTerritorySchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
-  parentId: z.union([z.string().trim().min(1), z.null()]).optional(),
   isActive: z.boolean().optional(),
+  sectorId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
 });
 
 export const territoryApprovalRequestSchema = z.object({
-  type: z.enum([
-    "create_territory",
-    "reparent_territory",
-    "deactivate_territory",
-    "facility_territory_change",
-  ]),
+  type: z.enum(["deactivate_territory", "clinic_territory_change"]),
   entityPayload: z.record(z.string(), z.unknown()).optional(),
   targetTerritoryId: z.string().trim().min(1).optional(),
   facilityId: z.string().trim().min(1).optional(),

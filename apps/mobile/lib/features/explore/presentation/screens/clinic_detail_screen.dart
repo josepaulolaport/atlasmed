@@ -641,7 +641,15 @@ class _SuggestEditBanner extends StatelessWidget {
 }
 
 // ===============================================================
-// Shimmer block for loading skeleton
+// NOTE: the pre-Spec-0005 detail screen widgets that used to live below
+// this point (_ClinicContextCard, _ClinicSignals, _ClinicHealth,
+// _ClinicProducts, _ClinicPayers, _NearbyClinics, _ClinicVisits,
+// _ClinicDoctors, _ClinicNotes, _ClinicAdmin, and their row helpers) are
+// superseded by the `widgets/clinic_detail/*.dart` section widgets wired
+// into `_ClinicDetailContent` above (ClinicContextSection,
+// ClinicAdminInfoSection, etc.) and have been removed — see git history
+// for the old implementation. `ClinicAdminInfoSection` should use
+// `displayTaxIdentifier` (from `tax_identifier.dart`) for its CNPJ/CPF row.
 // ===============================================================
 class _ShimmerBlock extends StatelessWidget {
   final double height;

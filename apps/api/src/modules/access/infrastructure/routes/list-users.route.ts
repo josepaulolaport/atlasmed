@@ -1,4 +1,5 @@
 import { Elysia, t } from "elysia";
+import { Role } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 
@@ -19,6 +20,7 @@ export const listUsersRoute = new Elysia({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
+        sectorId: query.sectorId,
         scope,
       });
 
@@ -44,6 +46,25 @@ export const listUsersRoute = new Elysia({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
+        sectorId: t.Optional(t.String({ description: "Filter to users assigned to this healthcare sector" })),
       }),
+    }
+  )
+  .get(
+    "/users/:id",
+    async ({ params, getUser }) => {
+      const actor = await getUser();
+      return accessUseCases.getUserById().execute({
+        targetUserId: params.id,
+        actorRole: actor.role.name as Role,
+      });
+    },
+    {
+      detail: {
+        summary: "Get a single user by id",
+        description: "Admin-only single-user lookup, e.g. to resolve a territory's assignee.",
+        tags: ["Users"],
+        security: [{ bearerAuth: [] }],
+      },
     }
   );

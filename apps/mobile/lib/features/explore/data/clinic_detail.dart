@@ -28,7 +28,9 @@ class ClinicDetail {
   final String? streetAddress;
 
   // Admin info
+  final String? taxIdType;
   final String? cnpj;
+  final String? cpf;
   final String? email;
   final String? website;
   final String? responsibleDoctor;
@@ -49,7 +51,9 @@ class ClinicDetail {
     this.phone,
     this.consultantName,
     this.streetAddress,
+    this.taxIdType,
     this.cnpj,
+    this.cpf,
     this.email,
     this.website,
     this.responsibleDoctor,

@@ -18,6 +18,7 @@ export function createMockScopeRepository(
     assignTerritory: mock(() => Promise.resolve()),
     revokeTerritory: mock(() => Promise.resolve()),
     findTerritoryAssignmentsByUserId: mock(() => Promise.resolve([])),
+    findUserIdsByTerritoryId: mock(() => Promise.resolve([])),
     findManagerIdByUserId: mock(() => Promise.resolve(null)),
     findSectorIdsByUserId: mock(() => Promise.resolve([])),
     findTerritoryIdsBySectorIds: mock(() => Promise.resolve([])),

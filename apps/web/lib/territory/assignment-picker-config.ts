@@ -5,7 +5,6 @@ export type AssignableRole = "REP" | "MANAGER";
 export interface TerritoryAssignmentPickerConfig {
   filterAssignableToUsers?: boolean;
   filterAssignableToManagers?: boolean;
-  excludeCountry?: boolean;
   helperText: string;
 }
 
@@ -22,7 +21,6 @@ export function getTerritoryAssignmentPickerConfig(
 
   return {
     filterAssignableToManagers: true,
-    excludeCountry: true,
     helperText:
       "Managers are assigned to territory types configured for manager oversight.",
   };
@@ -35,7 +33,7 @@ export function canAssignUserToTerritoryNode(input: {
   const type = input.territory.territoryType;
 
   if (input.userRole === "MANAGER") {
-    return type.assignableToManagers && !type.isCountryLevel;
+    return type.assignableToManagers;
   }
 
   return type.assignableToUsers;
@@ -47,18 +45,13 @@ export function territoryMatchesPickerFilters(
 ): boolean {
   const type = territory.territoryType;
   if (!territory.isActive) return false;
-  if (config.excludeCountry && type.isCountryLevel) return false;
   if (config.filterAssignableToUsers && !type.assignableToUsers) return false;
   if (config.filterAssignableToManagers && !type.assignableToManagers) return false;
   return true;
 }
 
-export function formatTerritoryLabel(t: Pick<Territory, "code" | "name" | "slug" | "territoryType" | "countryCode" | "isCountryLevel">): string {
-  const market = t.countryCode ? ` · ${t.countryCode}` : "";
-  if (t.isCountryLevel) {
-    return `${t.name}${market}`;
-  }
-  return `${t.name} (${t.slug})${market}`;
+export function formatTerritoryLabel(t: Pick<Territory, "code" | "name" | "slug">): string {
+  return `${t.name} (${t.slug})`;
 }
 
 export type { TerritoryType };
