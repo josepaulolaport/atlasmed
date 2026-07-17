@@ -27,6 +27,7 @@ export function createMockSessionCache(overrides?: Partial<ISessionCache>): ISes
     updateLastSeen: mock(() => Promise.resolve()),
     updateAfterRefresh: mock(() => Promise.resolve()),
     isMarkedRevoked: mock(() => Promise.resolve(false)),
+    clearRevoked: mock(() => Promise.resolve()),
     isRecentlyValidated: mock(() => Promise.resolve(false)),
     markValidated: mock(() => Promise.resolve()),
     ...overrides,

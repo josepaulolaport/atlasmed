@@ -287,6 +287,19 @@ export class SessionCacheService implements ISessionCache {
     }
   }
 
+  /**
+   * Clears a revoked marker after DB revalidation confirms the session is
+   * actually still healthy (self-heals stale/false-positive markers left
+   * behind by a transient error instead of letting them persist forever).
+   */
+  async clearRevoked(sessionId: string): Promise<void> {
+    await withRedisRetry(() => this.redis.del(this.getRevokedKey(sessionId)), {
+      attempts: REDIS_CACHE_RETRY_ATTEMPTS,
+      delayMs: REDIS_CACHE_RETRY_DELAY_MS,
+      operationName: "session cache clearRevoked",
+    });
+  }
+
   /** Fail-open to false forces DB revalidation when Redis is unavailable. */
   async isRecentlyValidated(sessionId: string): Promise<boolean> {
     try {

@@ -74,11 +74,21 @@ mixin SessionEnvironmentMixin<T> on Repository<T> {
         // SessionEnvironment itself got rejected → full logout
         await SessionEnvironment.instance.delete();
         return false;
-      } else {
-        // Another repo got rejected → try refreshing the session
-        await SessionEnvironment.instance.refresh();
-        throw const SessionExpiredException();
       }
+
+      // Another repo got rejected → try refreshing the session first.
+      await SessionEnvironment.instance.refresh();
+
+      if (SessionEnvironment.instance.currentValue == null) {
+        // The refresh could not restore a valid session — it has been
+        // revoked or expired server-side. Retrying with a dead token would
+        // just loop forever, so clear local credentials and log the user
+        // out instead.
+        await SessionEnvironment.instance.delete();
+        return true;
+      }
+
+      throw const SessionExpiredException();
     }
     return super.onErrorStatusCode(statusCode);
   }

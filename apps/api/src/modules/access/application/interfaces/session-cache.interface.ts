@@ -41,6 +41,13 @@ export interface ISessionCache {
     previousRefreshTokenHash: string
   ): Promise<void>;
   isMarkedRevoked(sessionId: string): Promise<boolean>;
+  /**
+   * Clears a (possibly stale/false-positive) revoked marker for a session
+   * that DB revalidation has confirmed is still healthy. Without this, a
+   * marker set by a transient error can never self-heal — it just keeps
+   * renewing its own TTL every time `invalidate` runs again.
+   */
+  clearRevoked(sessionId: string): Promise<void>;
   isRecentlyValidated(sessionId: string): Promise<boolean>;
   markValidated(sessionId: string): Promise<void>;
 }
