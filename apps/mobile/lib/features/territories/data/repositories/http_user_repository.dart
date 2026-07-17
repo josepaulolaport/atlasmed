@@ -47,7 +47,7 @@ class HttpUserRepository implements UserRepository {
           'role': role == UserRole.manager ? 'MANAGER' : 'REP',
           'limit': '50',
           if (query.trim().isNotEmpty) 'search': query.trim(),
-          if (sectorId != null) 'sectorId': sectorId,
+          'sectorId': ?sectorId,
         }),
       ),
     );
