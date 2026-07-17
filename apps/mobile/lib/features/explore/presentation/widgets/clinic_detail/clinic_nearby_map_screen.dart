@@ -1,4 +1,9 @@
+import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
@@ -28,18 +33,28 @@ class ClinicNearbyMapScreen extends StatefulWidget {
 class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   late double _radiusKm = establishmentNearbyDefaultRadiusKm;
   MapboxMap? _mapboxMap;
-  CircleAnnotationManager? _annotationManager;
+  CircleAnnotationManager? _pinAnnotationManager;
+  PolygonAnnotationManager? _radiusCircleManager;
+  PointAnnotationManager? _calloutManager;
+  PointAnnotation? _calloutAnnotation;
   bool _mapUnavailable = false;
-  bool _tapListenerRegistered = false;
+  bool _pinTapListenerRegistered = false;
+  bool _calloutTapListenerRegistered = false;
+  Timer? _pinResyncDebounce;
 
   /// Guards against the native map's generic tap listener firing right
   /// after an annotation tap for the same gesture and immediately
   /// dismissing the callout that annotation tap just opened.
   bool _suppressNextMapTap = false;
 
+  /// The establishment whose pin callout is open (also highlights its card
+  /// in the strip below). Kept even while the callout image is captured.
   NearbyEstablishment? _selected;
-  Offset? _selectedScreenPosition;
-  Size _mapAreaSize = Size.zero;
+
+  /// Rendered off-screen (see [_showCallout]) so its `RepaintBoundary` can
+  /// be rasterized into a real Mapbox `PointAnnotation` image.
+  NearbyEstablishment? _pendingCapture;
+  final GlobalKey _calloutCaptureKey = GlobalKey();
 
   List<NearbyEstablishment> get _visible =>
       filterNearbyByRadius(widget.allNearby, _radiusKm);
@@ -51,6 +66,12 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     if (token.isNotEmpty) {
       MapboxOptions.setAccessToken(token);
     }
+  }
+
+  @override
+  void dispose() {
+    _pinResyncDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -104,62 +125,49 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
                     facilityId: widget.facilityId,
                     onTapEstablishment: _openEstablishment,
                   )
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      _mapAreaSize = constraints.biggest;
-                      return Stack(
-                        children: [
-                          MapWidget(
-                            key: ValueKey('nearby-map-$_radiusKm'),
-                            styleUri: MapboxStyles.STANDARD,
-                            viewport: CameraViewportState(
-                              center: _point(widget.center),
-                              zoom: _zoomForRadius(_radiusKm),
+                : Stack(
+                    children: [
+                      MapWidget(
+                        key: const ValueKey('nearby-map'),
+                        styleUri: MapboxStyles.STANDARD,
+                        viewport: CameraViewportState(
+                          center: _point(widget.center),
+                          zoom: _zoomForRadius(_radiusKm),
+                        ),
+                        onMapCreated: _onMapCreated,
+                        onMapLoadErrorListener: (_) =>
+                            setState(() => _mapUnavailable = true),
+                        onStyleLoadedListener: (_) => _syncAnnotations(),
+                        onTapListener: _onMapBackgroundTapped,
+                      ),
+                      Positioned(
+                        left: 16,
+                        right: 16,
+                        bottom: 16,
+                        child: _RadiusPanel(
+                          radiusKm: _radiusKm,
+                          count: _visible.length,
+                          establishments: _visible,
+                          selectedId: _selected?.id,
+                          onEstablishmentTap: _openEstablishment,
+                          onChanged: _onRadiusChanged,
+                        ),
+                      ),
+                      // Rendered off-screen purely so its RepaintBoundary can
+                      // be captured into a bitmap for the real map annotation
+                      // in _showCallout — never actually visible to the user.
+                      if (_pendingCapture != null)
+                        Positioned(
+                          left: -1000,
+                          top: 0,
+                          child: RepaintBoundary(
+                            key: _calloutCaptureKey,
+                            child: _PinCalloutContent(
+                              establishment: _pendingCapture!,
                             ),
-                            onMapCreated: (map) => _onMapCreated(map),
-                            onMapLoadErrorListener: (_) =>
-                                setState(() => _mapUnavailable = true),
-                            onStyleLoadedListener: (_) => _syncAnnotations(),
-                            onTapListener: _onMapBackgroundTapped,
-                            onMapIdleListener: (_) =>
-                                _refreshSelectedPinPosition(),
                           ),
-                          Positioned(
-                            left: 16,
-                            right: 16,
-                            bottom: 16,
-                            child: _RadiusPanel(
-                              radiusKm: _radiusKm,
-                              count: _visible.length,
-                              establishments: _visible,
-                              selectedId: _selected?.id,
-                              onEstablishmentTap: _openEstablishment,
-                              onChanged: (value) {
-                                setState(() {
-                                  _radiusKm = value;
-                                  _selected = null;
-                                  _selectedScreenPosition = null;
-                                });
-                                _syncAnnotations();
-                              },
-                            ),
-                          ),
-                          if (_selected != null &&
-                              _selectedScreenPosition != null)
-                            _PinCallout(
-                              establishment: _selected!,
-                              anchor: _selectedScreenPosition!,
-                              areaSize: _mapAreaSize,
-                              onClose: () => setState(() {
-                                _selected = null;
-                                _selectedScreenPosition = null;
-                              }),
-                              onViewDetails: () =>
-                                  _openEstablishment(_selected!.id),
-                            ),
-                        ],
-                      );
-                    },
+                        ),
+                    ],
                   ),
           ),
         ],
@@ -168,13 +176,34 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   }
 
   void _onMapCreated(MapboxMap map) {
-    // A remount (radius change forces a new MapWidget key) spins up a brand
-    // new native map/annotation manager — drop the stale references so the
-    // next sync creates a fresh manager and re-registers the tap listener
-    // instead of touching a manager tied to a destroyed native view.
     _mapboxMap = map;
-    _annotationManager = null;
-    _tapListenerRegistered = false;
+    _pinAnnotationManager = null;
+    _radiusCircleManager = null;
+    _calloutManager = null;
+    _calloutAnnotation = null;
+    _pinTapListenerRegistered = false;
+    _calloutTapListenerRegistered = false;
+  }
+
+  void _onRadiusChanged(double value) {
+    setState(() => _radiusKm = value);
+    _updateRadiusCircle();
+    _mapboxMap?.easeTo(
+      CameraOptions(zoom: _zoomForRadius(value)),
+      MapAnimationOptions(duration: 200),
+    );
+    // Re-syncing pins on every slider tick (and tearing down/rebuilding the
+    // whole MapWidget, as this screen used to) raced the annotation manager
+    // against an in-flight native map teardown and could leave the map
+    // permanently stuck on the offline placeholder — debounce it instead so
+    // it only runs once the user stops dragging.
+    _pinResyncDebounce?.cancel();
+    _pinResyncDebounce = Timer(const Duration(milliseconds: 200), () {
+      _syncAnnotations();
+      if (_selected != null && !_visible.any((e) => e.id == _selected!.id)) {
+        _dismissCallout();
+      }
+    });
   }
 
   double _zoomForRadius(double km) {
@@ -190,15 +219,20 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     if (map == null || !mounted) return;
 
     try {
-      _annotationManager ??= await map.annotations
-          .createCircleAnnotationManager();
-      if (!_tapListenerRegistered) {
-        _annotationManager!.tapEvents(onTap: _onPinTapped);
-        _tapListenerRegistered = true;
-      }
-      await _annotationManager!.deleteAll();
+      // Creation order matters: layers created later render on top, so the
+      // radius circle (bottom), then pins, then the callout (created lazily
+      // in _showCallout) always end up correctly stacked.
+      await _updateRadiusCircle();
 
-      await _annotationManager!.create(
+      _pinAnnotationManager ??= await map.annotations
+          .createCircleAnnotationManager();
+      if (!_pinTapListenerRegistered) {
+        _pinAnnotationManager!.tapEvents(onTap: _onPinTapped);
+        _pinTapListenerRegistered = true;
+      }
+      await _pinAnnotationManager!.deleteAll();
+
+      await _pinAnnotationManager!.create(
         CircleAnnotationOptions(
           geometry: _point(widget.center),
           circleColor: const Color(0xFF1e40af).toARGB32(),
@@ -210,7 +244,7 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       );
 
       if (_visible.isNotEmpty) {
-        await _annotationManager!.createMulti(
+        await _pinAnnotationManager!.createMulti(
           _visible
               .map(
                 (e) => CircleAnnotationOptions(
@@ -233,10 +267,71 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     }
   }
 
+  /// Draws (or redraws) a lightly-shaded circle over the current search
+  /// radius. Cheap enough to call on every slider tick — unlike the pins,
+  /// it doesn't need debouncing to look smooth as the slider moves.
+  Future<void> _updateRadiusCircle() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted) return;
+    try {
+      _radiusCircleManager ??= await map.annotations
+          .createPolygonAnnotationManager();
+      await _radiusCircleManager!.deleteAll();
+      await _radiusCircleManager!.create(
+        PolygonAnnotationOptions(
+          geometry: Polygon(
+            coordinates: [_circlePositions(widget.center, _radiusKm)],
+          ),
+          fillColor: const Color(0x1A1e40af).toARGB32(),
+          fillOutlineColor: const Color(0x662563eb).toARGB32(),
+        ),
+      );
+    } catch (_) {
+      // Cosmetic only — never trips the offline-placeholder fallback.
+    }
+  }
+
+  /// Points (closed ring) approximating a circle of [radiusKm] around
+  /// [center] using the spherical-earth destination-point formula.
+  List<Position> _circlePositions(
+    EstablishmentLocation center,
+    double radiusKm, {
+    int steps = 72,
+  }) {
+    const earthRadiusKm = 6371.0088;
+    final latRad = center.latitude * math.pi / 180;
+    final lngRad = center.longitude * math.pi / 180;
+    final angularDistance = radiusKm / earthRadiusKm;
+    return List<Position>.generate(steps + 1, (i) {
+      final bearing = (i * 2 * math.pi) / steps;
+      final destLatRad = math.asin(
+        math.sin(latRad) * math.cos(angularDistance) +
+            math.cos(latRad) * math.sin(angularDistance) * math.cos(bearing),
+      );
+      final destLngRad =
+          lngRad +
+          math.atan2(
+            math.sin(bearing) * math.sin(angularDistance) * math.cos(latRad),
+            math.cos(angularDistance) - math.sin(latRad) * math.sin(destLatRad),
+          );
+      return Position(destLngRad * 180 / math.pi, destLatRad * 180 / math.pi);
+    });
+  }
+
   Future<void> _onPinTapped(CircleAnnotation annotation) async {
     final id = annotation.customData?['facilityId'];
-    final map = _mapboxMap;
-    if (id == null || id == widget.facilityId || map == null) return;
+    if (id == null || id == widget.facilityId) return;
+
+    _suppressNextMapTap = true;
+    Future.delayed(
+      const Duration(milliseconds: 300),
+      () => _suppressNextMapTap = false,
+    );
+
+    if (_selected?.id == id) {
+      await _dismissCallout();
+      return;
+    }
 
     NearbyEstablishment? match;
     for (final e in _visible) {
@@ -246,18 +341,7 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       }
     }
     if (match == null) return;
-
-    _suppressNextMapTap = true;
-    final pixel = await map.pixelForCoordinate(annotation.geometry);
-    if (!mounted) return;
-    setState(() {
-      _selected = match;
-      _selectedScreenPosition = Offset(pixel.x, pixel.y);
-    });
-    Future.delayed(
-      const Duration(milliseconds: 300),
-      () => _suppressNextMapTap = false,
-    );
+    await _showCallout(match);
   }
 
   void _onMapBackgroundTapped(MapContentGestureContext gestureContext) {
@@ -265,23 +349,98 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       _suppressNextMapTap = false;
       return;
     }
-    if (_selected != null) {
+    _dismissCallout();
+  }
+
+  /// Renders [establishment]'s callout off-screen, rasterizes it, and adds
+  /// it to the map as a real `PointAnnotation` (anchored to its bottom tip)
+  /// so it stays perfectly attached to the pin through pans/zooms — a
+  /// Flutter-side overlay re-anchored on a timer always lagged behind.
+  Future<void> _showCallout(NearbyEstablishment establishment) async {
+    final map = _mapboxMap;
+    if (map == null) return;
+
+    setState(() {
+      _selected = establishment;
+      _pendingCapture = establishment;
+    });
+
+    // Two frames: the first mounts the off-screen widget, the second
+    // guarantees it has been laid out and painted before we capture it.
+    await WidgetsBinding.instance.endOfFrame;
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || _pendingCapture?.id != establishment.id) return;
+
+    final boundary = _calloutCaptureKey.currentContext?.findRenderObject();
+    if (boundary is! RenderRepaintBoundary) return;
+    final image = await boundary.toImage(pixelRatio: 1.0);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    if (byteData == null ||
+        !mounted ||
+        _pendingCapture?.id != establishment.id) {
+      return;
+    }
+    final bytes = byteData.buffer.asUint8List();
+
+    try {
+      final manager = _calloutManager ??= await map.annotations
+          .createPointAnnotationManager();
+      if (!_calloutTapListenerRegistered) {
+        manager.tapEvents(onTap: _onCalloutTapped);
+        _calloutTapListenerRegistered = true;
+      }
+      final previous = _calloutAnnotation;
+      _calloutAnnotation = await manager.create(
+        PointAnnotationOptions(
+          geometry: Point(
+            coordinates: Position(
+              establishment.longitude,
+              establishment.latitude,
+            ),
+          ),
+          image: bytes,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconOffset: [0, -16],
+          symbolSortKey: 3,
+          customData: {'facilityId': establishment.id},
+        ),
+      );
+      if (previous != null) await manager.delete(previous);
+    } catch (_) {
+      // Leave _selected as-is so the highlighted card still reflects intent;
+      // just skip showing a callout bubble if the native call failed.
+    }
+
+    if (mounted) setState(() => _pendingCapture = null);
+  }
+
+  Future<void> _dismissCallout() async {
+    if (_selected == null && _calloutAnnotation == null) return;
+    final annotation = _calloutAnnotation;
+    final manager = _calloutManager;
+    _calloutAnnotation = null;
+    if (mounted) {
       setState(() {
         _selected = null;
-        _selectedScreenPosition = null;
+        _pendingCapture = null;
       });
+    } else {
+      _selected = null;
+      _pendingCapture = null;
+    }
+    if (annotation != null && manager != null) {
+      try {
+        await manager.delete(annotation);
+      } catch (_) {
+        // Manager may already be gone (e.g. map was disposed) — ignore.
+      }
     }
   }
 
-  Future<void> _refreshSelectedPinPosition() async {
-    final selected = _selected;
-    final map = _mapboxMap;
-    if (selected == null || map == null) return;
-    final pixel = await map.pixelForCoordinate(
-      Point(coordinates: Position(selected.longitude, selected.latitude)),
-    );
-    if (!mounted || _selected?.id != selected.id) return;
-    setState(() => _selectedScreenPosition = Offset(pixel.x, pixel.y));
+  void _onCalloutTapped(PointAnnotation annotation) {
+    final id = annotation.customData?['facilityId'] as String?;
+    if (id != null) _openEstablishment(id);
   }
 
   void _openEstablishment(String id) {
@@ -351,14 +510,28 @@ class _RadiusPanel extends StatelessWidget {
                 ),
               ],
             ),
-            Slider(
-              value: radiusKm,
-              min: 1,
-              max: establishmentNearbyDefaultRadiusKm,
-              divisions: (establishmentNearbyDefaultRadiusKm - 1).round(),
-              label: '${radiusKm.round()} km',
-              activeColor: const Color(0xFF1e40af),
-              onChanged: onChanged,
+            SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                trackHeight: 5,
+                activeTrackColor: const Color(0xFF1e40af),
+                inactiveTrackColor: const Color(0xFFe5e7eb),
+                thumbColor: const Color(0xFF1e40af),
+                overlayColor: const Color(0x1F1e40af),
+                thumbShape: const RoundSliderThumbShape(
+                  enabledThumbRadius: 9,
+                  elevation: 2,
+                ),
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+                trackShape: const RoundedRectSliderTrackShape(),
+              ),
+              // Continuous (no divisions/label snapping) so it moves freely,
+              // like a volume slider, instead of stepping in whole km.
+              child: Slider(
+                value: radiusKm,
+                min: 1,
+                max: establishmentNearbyDefaultRadiusKm,
+                onChanged: onChanged,
+              ),
             ),
             if (establishments.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -490,192 +663,142 @@ class _NearbyEstablishmentCard extends StatelessWidget {
   }
 }
 
-/// Floating "info window" shown above a tapped pin with basic clinic info.
-/// Positioned near [anchor] (the pin's on-screen pixel), clamped to
-/// [areaSize] so it never renders off the visible map area.
-class _PinCallout extends StatelessWidget {
-  const _PinCallout({
-    required this.establishment,
-    required this.anchor,
-    required this.areaSize,
-    required this.onClose,
-    required this.onViewDetails,
-  });
+/// Content of the pin callout/"info window". Never actually shown on
+/// screen directly — [_ClinicNearbyMapScreenState._showCallout] renders
+/// this off-screen, rasterizes it, and adds the bitmap to the map as a
+/// real `PointAnnotation` so it stays attached to its pin natively.
+///
+/// Since it becomes a static image, the whole bubble is one tappable unit
+/// (handled by the annotation's tap event, not by widgets in here) — no
+/// individually-tappable close/detail buttons.
+class _PinCalloutContent extends StatelessWidget {
+  const _PinCalloutContent({required this.establishment});
 
   final NearbyEstablishment establishment;
-  final Offset anchor;
-  final Size areaSize;
-  final VoidCallback onClose;
-  final VoidCallback onViewDetails;
 
-  static const double _cardWidth = 224;
-  static const double _cardHeight = 128;
+  static const double cardWidth = 216;
 
   @override
   Widget build(BuildContext context) {
-    final maxWidth = areaSize.width > 0 ? areaSize.width : 320.0;
-    final maxHeight = areaSize.height > 0 ? areaSize.height : 480.0;
-    final left = _clamp(
-      anchor.dx - _cardWidth / 2,
-      8,
-      maxWidth - _cardWidth - 8,
-    );
-    final top = _clamp(
-      anchor.dy - _cardHeight - 4,
-      8,
-      maxHeight - _cardHeight - 8,
-    );
-
-    return Positioned(
-      left: left,
-      top: top,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: _cardWidth,
-            padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x40111827),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: cardWidth,
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x40111827),
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                establishment.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0f1729),
+                  height: 1.15,
                 ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        establishment.name,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0f1729),
-                          height: 1.15,
+              ),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 3,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: establishment.status.color,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                    ),
-                    InkWell(
-                      onTap: onClose,
-                      borderRadius: BorderRadius.circular(12),
-                      child: const Padding(
-                        padding: EdgeInsets.all(2),
-                        child: Icon(
-                          Icons.close_rounded,
-                          size: 16,
-                          color: Color(0xFF9ca3af),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 3,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 7,
-                          height: 7,
-                          decoration: BoxDecoration(
-                            color: establishment.status.color,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          establishment.status.label,
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: establishment.status.color,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (establishment.specialtyLabel != null)
+                      const SizedBox(width: 5),
                       Text(
-                        '· ${establishment.specialtyLabel}',
-                        style: const TextStyle(
+                        establishment.status.label,
+                        style: TextStyle(
                           fontSize: 11.5,
-                          color: Color(0xFF6b7280),
+                          fontWeight: FontWeight.w600,
+                          color: establishment.status.color,
                         ),
                       ),
-                  ],
-                ),
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.near_me_rounded,
-                      size: 12,
-                      color: Color(0xFF6b7280),
-                    ),
-                    const SizedBox(width: 4),
+                    ],
+                  ),
+                  if (establishment.specialtyLabel != null)
                     Text(
-                      '${establishment.distanceKm.toStringAsFixed(1)} km de distância',
+                      '· ${establishment.specialtyLabel}',
                       style: const TextStyle(
                         fontSize: 11.5,
                         color: Color(0xFF6b7280),
                       ),
                     ),
-                  ],
-                ),
-                const Divider(height: 16, color: Color(0xFFf3f4f6)),
-                InkWell(
-                  onTap: onViewDetails,
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Ver detalhes',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF1e40af),
-                        ),
-                      ),
-                      SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_rounded,
-                        size: 13,
-                        color: Color(0xFF1e40af),
-                      ),
-                    ],
+                ],
+              ),
+              const SizedBox(height: 3),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.near_me_rounded,
+                    size: 12,
+                    color: Color(0xFF6b7280),
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${establishment.distanceKm.toStringAsFixed(1)} km de distância',
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Color(0xFF6b7280),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 16, color: Color(0xFFf3f4f6)),
+              const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Toque para ver detalhes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1e40af),
+                    ),
+                  ),
+                  SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    size: 13,
+                    color: Color(0xFF1e40af),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const Align(
-            alignment: Alignment.center,
-            child: CustomPaint(
-              size: Size(16, 8),
-              painter: _CalloutTailPainter(),
-            ),
-          ),
-        ],
-      ),
+        ),
+        const Align(
+          alignment: Alignment.center,
+          child: CustomPaint(size: Size(16, 8), painter: _CalloutTailPainter()),
+        ),
+      ],
     );
   }
-
-  static double _clamp(double value, double min, double max) =>
-      max < min ? min : value.clamp(min, max);
 }
 
 class _CalloutTailPainter extends CustomPainter {

@@ -1,6 +1,6 @@
 # Spec 0005: Mobile Establishment Detail (Estabelecimento / Clínica)
 
-**Status:** Approved for implementation — redesign addendum (v7)  
+**Status:** Approved for implementation — redesign addendum (v8)  
 **Last Updated:** 2026-07-17  
 **Domains:** `apps/mobile`, `apps/api` (additive contract changes)  
 **Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
@@ -16,6 +16,8 @@
 > **v6 note:** the v5 header phone/e-mail and legend work landed in code but the live network-backed `ClinicDetail.phone`/`.email` were null for the test facility, so nothing rendered — `EstablishmentDetailSections` now carries its own mocked `phone`/`email` (with `ClinicDetail`'s as fallback) so the header reliably shows contact info in Phase 1. The "Comercial" chip category label is renamed to "Status" (clearer than "Comercial" for what's really an overall standing signal), and the "Conformidade" chip is dropped from the header entirely (still tracked on `FacilityStatusSignals`, just not surfaced there). The header also gains an "Estabelecimento PF"/"Estabelecimento PJ" line under the specialties line, from the existing `taxIdType` mock field. Finally, the "Toque nos ícones…" edit-suggestion banner moved from the top of the scrollable content (above "Mapa e clínicas próximas") to the very bottom, below "Dados administrativos".
 
 > **v7 note:** the full-screen nearby map (`ClinicNearbyMapScreen`) gets two interaction upgrades. The horizontal strip of plain `ActionChip`s below the radius slider is replaced with proper clinic cards (`_NearbyEstablishmentCard`: status dot, name, specialty, distance, chevron) — same tap-to-navigate behavior, now visually consistent with the rest of the screen's card language and highlighted when that establishment's pin callout is open. Tapping a **pin** (not the center establishment's own pin) now opens a floating callout/"info window" (`_PinCallout`) anchored above the pin with the clinic's name, status, specialty and distance, plus a "Ver detalhes" action and a close button; tapping empty map area or a different pin dismisses/replaces it. The callout re-anchors on `onMapIdleListener` (after pan/zoom settles) and is cleared whenever the radius slider changes (the previously-selected establishment may no longer be in range). Both features are frontend-only against the existing mocked `NearbyEstablishment` list — no API changes.
+
+> **v8 note:** the v7 callout was a Flutter overlay manually re-anchored on map-idle, which visibly lagged behind its pin during pans/zooms and wasn't "really" attached to the map. It's now rasterized off-screen (`RepaintBoundary.toImage`) and added as a genuine Mapbox `PointAnnotation` (image + `IconAnchor.BOTTOM`), so it tracks the pin natively with zero Flutter-side re-positioning code — trade-off: the bubble is one tappable unit now (navigates to the establishment) instead of having separately-tappable close/"Ver detalhes" sub-widgets, since a rasterized image can't hit-test sub-regions; dismissal still works via tapping empty map, a different pin, or the same pin again (toggle), or the radius slider moving the establishment out of range. Separately, changing the radius slider used to key/remount the whole `MapWidget` (`ValueKey('nearby-map-$_radiusKm')`), which could race an in-flight annotation-manager call against the native view being torn down mid-drag and permanently strand the screen on the offline-placeholder fallback — the map now has a stable key and radius changes instead call `MapboxMap.easeTo` (zoom) plus a **debounced** pin resync (200 ms) so rapid dragging can't crash it. The radius slider itself is now continuous (no `divisions`/snapping — "moves freely" like a volume control) and uses a custom `SliderTheme` (thicker track, larger thumb) for that look. A lightly-shaded `PolygonAnnotation` circle (computed via the spherical destination-point formula, no new dependency) now renders under the pins and grows/shrinks live with every slider tick, showing the radius being searched.
 
 ## User Story
 
@@ -97,7 +99,15 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 | # | Decision |
 |---|----------|
 | 33 | **The expanded (full-screen) nearby map shows a card per clinic**, not a chip strip. `_NearbyEstablishmentCard` (168×92) shows the status dot, name, specialty and distance, and highlights (blue border/tint) when that establishment's pin callout is currently open. Tapping a card still navigates straight to that establishment's detail (unchanged behavior — only the visual treatment changed). |
-| 34 | **Tapping a pin on the expanded map opens a floating callout** with the establishment's name, status, specialty and distance, a "Ver detalhes" action, and a close (×) button. The current establishment's own (blue) pin is not tappable for a callout — only nearby (green) pins are. Tapping empty map area, tapping a different pin, or changing the radius slider dismisses/replaces the open callout. |
+| 34 | **Tapping a pin on the expanded map opens a floating callout** with the establishment's name, status, specialty and distance, a "Ver detalhes" action, and a close (×) button. The current establishment's own (blue) pin is not tappable for a callout — only nearby (green) pins are. Tapping empty map area, tapping a different pin, or changing the radius slider dismisses/replaces the open callout. **Superseded by v8 #36** — the callout is now a real map annotation and the close/detail sub-widgets are gone in favor of one tappable bubble. |
+
+## Locked product decisions (v8 — annotation-based callout, slider/radius-circle fixes)
+
+| # | Decision |
+|---|----------|
+| 35 | **The radius slider is continuous** (no `divisions`, no value-label popup) and restyled via `SliderTheme` (5px track, 9px thumb) to read as a free-moving "volume slider" rather than a stepped one. **A lightly-shaded circle** (`PolygonAnnotation`, ~10% opacity blue fill + faint outline) renders under the pins showing the exact search radius, and its geometry updates on every slider tick (not debounced) so it visibly grows/shrinks as the user drags — this is what makes the radius tangible now that the map itself no longer re-centers/re-zooms jarringly on every tick. |
+| 36 | **The pin callout is a real Mapbox `PointAnnotation`, not a Flutter overlay.** The callout content is rendered off-screen, captured via `RepaintBoundary.toImage`, and added to the map as an image-backed point annotation anchored to its bottom tip — it now tracks its pin through pans/zooms with zero Flutter-side re-positioning code (v7's `onMapIdleListener` re-anchoring hack is gone). Because a rasterized image can't hit-test sub-regions, the whole bubble is one tap target that navigates to the establishment; the standalone close (×) and "Ver detalhes" affordances from v7 are dropped — dismissal is tap-empty-map, tap-a-different-pin, tap-the-same-pin-again (toggle), or the establishment falling outside a changed radius. |
+| 37 | **Changing the radius no longer remounts the map.** `MapWidget` now has a stable key; radius changes call `MapboxMap.easeTo` for the zoom and a **200 ms debounced** re-sync of the green pins, instead of the old `ValueKey('nearby-map-$_radiusKm')` scheme that tore down and recreated the whole native map/annotation-manager stack on every slider tick. That remount-per-tick was racing an in-flight annotation call against the native view being destroyed mid-drag, which could permanently strand the screen on the offline-placeholder fallback — this was a real, reproducible crash, not just a performance concern. |
 
 ## Current baseline (audit summary)
 
@@ -242,9 +252,10 @@ WHEN the user taps **“Ver estabelecimentos próximos”** on the mini-map THEN
 - Radius slider: **1–50 km**, default **50 km**, step 1 km
 - On slider change: `GET /facilities?latitude={facilityLat}&longitude={facilityLng}&radiusKm={r}&limit=100`
 - Pins for every in-scope facility returned; current establishment styled distinctly
-- Pin tap → floating callout with name/status/specialty/distance + "Ver detalhes" (see decision #34); the callout's own "Ver detalhes" (or the card strip's card tap) navigates to that establishment's detail
+- Pin tap → floating callout (a real `PointAnnotation`, see decision #36) with name/status/specialty/distance; tapping the callout (or the card strip's card) navigates to that establishment's detail
 - Exclude current establishment from pin list (client-side or `excludeId` query param)
 - Establishments within radius also render as a horizontal strip of cards (see decision #33) beneath the radius slider, not plain chips
+- A lightly-shaded circle (see decision #35) renders under the pins showing the current search radius, live-updating as the slider moves
 
 **Important:** distance shown on pins is distance **from the establishment**, not from the user. The API already computes distance from the query reference point — pass establishment coords as the reference.
 
