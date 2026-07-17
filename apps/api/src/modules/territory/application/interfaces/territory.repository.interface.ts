@@ -1,3 +1,4 @@
+import type { Role } from "@atlasmed/access";
 import type { TerritoryTypeRecord } from "./territory-type.repository.interface";
 
 export interface TerritoryRecord {
@@ -59,4 +60,15 @@ export interface TerritoryRepository {
   findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]>;
 
   findByIds(ids: string[]): Promise<TerritoryRecord[]>;
+
+  /**
+   * Finds other users (excluding `excludeUserId`) whose role is in `roles`
+   * and who already hold an assignment on `territoryId`. Used to enforce
+   * "one user per role-group per territory" assignment conflicts.
+   */
+  findConflictingAssignments(params: {
+    territoryId: string;
+    excludeUserId: string;
+    roles: Role[];
+  }): Promise<Array<{ userId: string }>>;
 }

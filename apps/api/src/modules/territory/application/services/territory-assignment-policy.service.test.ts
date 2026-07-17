@@ -1,158 +1,182 @@
-import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
-import { hash } from "argon2";
-import { eq, inArray } from "drizzle-orm";
+import { describe, expect, it, mock } from "bun:test";
 import { Role } from "@atlasmed/access";
-import { roles, territories, territoryTypes, userTerritoryAssignments, users } from "@atlasmed/database";
-import { db } from "../../../../infrastructure/database/db";
 import { OperationNotAllowedError } from "../../../../shared/errors";
 import { TerritoryAssignmentPolicyService } from "./territory-assignment-policy.service";
+import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
+import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 
-describe("TerritoryAssignmentPolicyService", () => {
-  const suffix = `polcy${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+const TERRITORY_ID = "territory-1";
+const TARGET_USER_ID = "user-target";
 
-  let typeId: string;
-  let territoryAId: string;
-  let territoryBId: string;
-  let userAId: string;
-  let userBId: string;
-  let repRoleId: string;
-
-  function fakeTerritoryFor(territoryId: string) {
-    return {
-      territoryRepository: {
-        findById: mock(async () => ({
-          id: territoryId,
-          isActive: true,
-          territoryTypeId: typeId,
-          territoryType: {
-            slug: `${suffix}-type`,
-            assignsClinics: true,
-            assignableToUsers: true,
-            assignableToManagers: false,
-          },
-        })),
-      } as never,
-      territoryTypeRepository: {} as never,
-    };
-  }
-
-  beforeAll(async () => {
-    let repRole = await db.query.roles.findFirst({ where: eq(roles.name, "REP") });
-    if (!repRole) {
-      [repRole] = await db.insert(roles).values({ name: "REP", priority: 10 }).returning();
-    }
-    repRoleId = repRole!.id;
-
-    const [type] = await db
-      .insert(territoryTypes)
-      .values({
-        slug: `${suffix}-type`,
-        name: "Assignment policy test patch",
+function buildService(options: {
+  territoryTypeOverrides?: Partial<{
+    assignsClinics: boolean;
+    assignableToUsers: boolean;
+    assignableToManagers: boolean;
+  }>;
+  territoryOverrides?: Partial<{ isActive: boolean }>;
+  conflictingAssignments?: Array<{ userId: string }>;
+} = {}) {
+  const territoryRepository: Pick<TerritoryRepository, "findById" | "findConflictingAssignments"> = {
+    findById: mock(async () => ({
+      id: TERRITORY_ID,
+      name: "Territory 1",
+      slug: "territory-1",
+      code: "T1",
+      territoryTypeId: "type-1",
+      isActive: true,
+      sectorId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      managerTerritoryId: null,
+      territoryType: {
+        id: "type-1",
+        slug: "patch",
+        name: "Patch",
+        description: null,
+        canHaveBoundary: true,
         assignsClinics: true,
         assignableToUsers: true,
         assignableToManagers: false,
+        blockSiblingOverlap: false,
+        sortOrder: 0,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        ...options.territoryTypeOverrides,
+      },
+      ...options.territoryOverrides,
+    })),
+    findConflictingAssignments: mock(async () => options.conflictingAssignments ?? []),
+  };
+
+  const territoryTypeRepository: Pick<TerritoryTypeRepository, "findById"> = {
+    findById: mock(async () => null),
+  };
+
+  const service = new TerritoryAssignmentPolicyService({
+    territoryRepository: territoryRepository as TerritoryRepository,
+    territoryTypeRepository: territoryTypeRepository as TerritoryTypeRepository,
+  });
+
+  return { service, territoryRepository };
+}
+
+describe("TerritoryAssignmentPolicyService", () => {
+  it("allows assigning a REP when no conflicting REP assignment exists", async () => {
+    const { service } = buildService({ conflictingAssignments: [] });
+
+    await expect(
+      service.validateAssignment({
+        targetUserId: TARGET_USER_ID,
+        targetRole: Role.REP,
+        territoryId: TERRITORY_ID,
       })
-      .returning();
-    typeId = type!.id;
+    ).resolves.toBeUndefined();
+  });
 
-    const [tA, tB] = await db
-      .insert(territories)
-      .values([
-        {
-          name: `Territory A ${suffix}`,
-          slug: `${suffix}-a`,
-          code: `${suffix}-A`,
-          territoryTypeId: typeId,
-        },
-        {
-          name: `Territory B ${suffix}`,
-          slug: `${suffix}-b`,
-          code: `${suffix}-B`,
-          territoryTypeId: typeId,
-        },
-      ])
-      .returning();
-    territoryAId = tA!.id;
-    territoryBId = tB!.id;
+  it("rejects assigning a REP when another REP already holds the territory", async () => {
+    const { service, territoryRepository } = buildService({
+      conflictingAssignments: [{ userId: "other-user" }],
+    });
 
-    const passwordHash = await hash("Password123!");
-    const [userA, userB] = await db
-      .insert(users)
-      .values(
-        ["a", "b"].map((letter) => ({
-          email: `${letter}.${suffix}@test.example.com`,
-          username: `${letter}_${suffix}`,
-          passwordHash,
-          roleId: repRoleId,
-          status: "ACTIVE" as const,
-          emailVerified: true,
-        }))
-      )
-      .returning();
-    userAId = userA!.id;
-    userBId = userB!.id;
+    await expect(
+      service.validateAssignment({
+        targetUserId: TARGET_USER_ID,
+        targetRole: Role.REP,
+        territoryId: TERRITORY_ID,
+      })
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
 
-    // User A already holds territory A.
-    await db.insert(userTerritoryAssignments).values({
-      userId: userAId,
-      territoryId: territoryAId,
+    expect(territoryRepository.findConflictingAssignments).toHaveBeenCalledWith({
+      territoryId: TERRITORY_ID,
+      excludeUserId: TARGET_USER_ID,
+      roles: [Role.REP],
     });
   });
 
-  afterAll(async () => {
-    await db
-      .delete(userTerritoryAssignments)
-      .where(inArray(userTerritoryAssignments.territoryId, [territoryAId, territoryBId]));
-    await db.delete(users).where(inArray(users.id, [userAId, userBId]));
-    await db.delete(territories).where(inArray(territories.id, [territoryAId, territoryBId]));
-    await db.delete(territoryTypes).where(eq(territoryTypes.id, typeId));
-  });
-
-  it("allows the same user to be assigned a second, unrelated territory (multi-territory ownership)", async () => {
-    const service = new TerritoryAssignmentPolicyService(fakeTerritoryFor(territoryBId));
+  it("allows the same user to re-take a territory they already hold — self-overlap is not blocked", async () => {
+    const { service } = buildService({ conflictingAssignments: [] });
 
     await expect(
       service.validateAssignment({
-        targetUserId: userAId,
+        targetUserId: TARGET_USER_ID,
         targetRole: Role.REP,
-        territoryId: territoryBId,
+        territoryId: TERRITORY_ID,
       })
     ).resolves.toBeUndefined();
   });
 
-  it("allows a different user to take an unrelated territory", async () => {
-    const service = new TerritoryAssignmentPolicyService(fakeTerritoryFor(territoryBId));
+  it("checks for MANAGER conflicts (not REP) when assigning a manager", async () => {
+    const { service, territoryRepository } = buildService({
+      territoryTypeOverrides: { assignableToManagers: true },
+      conflictingAssignments: [],
+    });
 
-    await expect(
-      service.validateAssignment({
-        targetUserId: userBId,
-        targetRole: Role.REP,
-        territoryId: territoryBId,
-      })
-    ).resolves.toBeUndefined();
+    await service.validateAssignment({
+      targetUserId: TARGET_USER_ID,
+      targetRole: Role.MANAGER,
+      territoryId: TERRITORY_ID,
+    });
+
+    expect(territoryRepository.findConflictingAssignments).toHaveBeenCalledWith({
+      territoryId: TERRITORY_ID,
+      excludeUserId: TARGET_USER_ID,
+      roles: [Role.MANAGER],
+    });
   });
 
-  it("rejects a different user taking the exact same territory already held by another REP", async () => {
-    const service = new TerritoryAssignmentPolicyService(fakeTerritoryFor(territoryAId));
+  it("rejects when the territory does not exist or is inactive", async () => {
+    const { service } = buildService();
+    (service as unknown as { deps: { territoryRepository: TerritoryRepository } }).deps.territoryRepository.findById =
+      mock(async () => null);
 
     await expect(
       service.validateAssignment({
-        targetUserId: userBId,
+        targetUserId: TARGET_USER_ID,
         targetRole: Role.REP,
-        territoryId: territoryAId,
+        territoryId: TERRITORY_ID,
       })
     ).rejects.toBeInstanceOf(OperationNotAllowedError);
   });
 
-  it("allows the SAME user to re-take a territory they already hold — self-overlap is not blocked", async () => {
-    const service = new TerritoryAssignmentPolicyService(fakeTerritoryFor(territoryAId));
+  it("rejects assigning a REP to a type that is not assignable to users", async () => {
+    const { service } = buildService({
+      territoryTypeOverrides: { assignableToUsers: false },
+    });
 
     await expect(
       service.validateAssignment({
-        targetUserId: userAId,
+        targetUserId: TARGET_USER_ID,
         targetRole: Role.REP,
-        territoryId: territoryAId,
+        territoryId: TERRITORY_ID,
       })
-    ).resolves.toBeUndefined();
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+  });
+
+  it("rejects assigning a manager to a type that is not assignable to managers", async () => {
+    const { service } = buildService({
+      territoryTypeOverrides: { assignableToManagers: false },
+    });
+
+    await expect(
+      service.validateAssignment({
+        targetUserId: TARGET_USER_ID,
+        targetRole: Role.MANAGER,
+        territoryId: TERRITORY_ID,
+      })
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
+  });
+
+  it("rejects roles other than REP or MANAGER", async () => {
+    const { service } = buildService();
+
+    await expect(
+      service.validateAssignment({
+        targetUserId: TARGET_USER_ID,
+        targetRole: Role.ADMIN,
+        territoryId: TERRITORY_ID,
+      })
+    ).rejects.toBeInstanceOf(OperationNotAllowedError);
   });
 });

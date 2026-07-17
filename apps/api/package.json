@@ -24,7 +24,6 @@
     "db:seed:demo:clean": "bun src/scripts/seed-demo-data.ts --clean",
     "db:import:mcp-test": "bun src/scripts/import-mcp-test-data.ts",
     "db:import:mcp-test:all": "bun src/scripts/import-mcp-test-data.ts --all --admin-email=admin@demo.atlasmed.local",
-    "db:seed:test": "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bun src/infrastructure/database/test-seed.ts",
     "db:reset:test": "cd ../../packages/database && DATABASE_URL=postgresql://postgres:postgres@localhost:5432/atlasmed_test bunx drizzle-kit push --force"
   },
   "dependencies": {

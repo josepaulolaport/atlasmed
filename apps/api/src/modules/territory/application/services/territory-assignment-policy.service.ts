@@ -1,7 +1,4 @@
 import { Role } from "@atlasmed/access";
-import { db } from "../../../../infrastructure/database/db";
-import { userTerritoryAssignments, users, roles } from "@atlasmed/database";
-import { and, ne, inArray, eq } from "drizzle-orm";
 import type { TerritoryRepository } from "../interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../interfaces/territory-type.repository.interface";
 import { OperationNotAllowedError } from "../../../../shared/errors";
@@ -58,18 +55,11 @@ export class TerritoryAssignmentPolicyService {
     const exclusionRoles =
       params.targetRole === Role.MANAGER ? [Role.MANAGER] : [Role.REP];
 
-    const conflictingAssignments = await db
-      .select({ userId: userTerritoryAssignments.userId })
-      .from(userTerritoryAssignments)
-      .innerJoin(users, eq(userTerritoryAssignments.userId, users.id))
-      .innerJoin(roles, eq(users.roleId, roles.id))
-      .where(
-        and(
-          eq(userTerritoryAssignments.territoryId, params.territoryId),
-          ne(userTerritoryAssignments.userId, params.targetUserId),
-          inArray(roles.name, exclusionRoles)
-        )
-      );
+    const conflictingAssignments = await this.deps.territoryRepository.findConflictingAssignments({
+      territoryId: params.territoryId,
+      excludeUserId: params.targetUserId,
+      roles: exclusionRoles,
+    });
 
     if (conflictingAssignments.length > 0) {
       throw new OperationNotAllowedError(

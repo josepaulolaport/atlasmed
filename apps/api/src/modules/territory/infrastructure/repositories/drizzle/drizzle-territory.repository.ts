@@ -1,11 +1,14 @@
+import type { Role } from "@atlasmed/access";
 import { db } from "../../../../../infrastructure/database/db";
 import {
   territories,
   territoryTypes,
   userTerritoryAssignments,
   facilities,
+  users,
+  roles,
 } from "@atlasmed/database";
-import { eq, and, inArray, asc, isNull, sql } from "drizzle-orm";
+import { eq, and, ne, inArray, asc, isNull, sql } from "drizzle-orm";
 import type {
   CreateTerritoryInput,
   TerritoryRecord,
@@ -215,5 +218,24 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       );
 
     return rows.map((r) => r.id);
+  }
+
+  async findConflictingAssignments(params: {
+    territoryId: string;
+    excludeUserId: string;
+    roles: Role[];
+  }): Promise<Array<{ userId: string }>> {
+    return db
+      .select({ userId: userTerritoryAssignments.userId })
+      .from(userTerritoryAssignments)
+      .innerJoin(users, eq(userTerritoryAssignments.userId, users.id))
+      .innerJoin(roles, eq(users.roleId, roles.id))
+      .where(
+        and(
+          eq(userTerritoryAssignments.territoryId, params.territoryId),
+          ne(userTerritoryAssignments.userId, params.excludeUserId),
+          inArray(roles.name, params.roles)
+        )
+      );
   }
 }
