@@ -81,6 +81,29 @@ class GeometryOps {
     return _applyBooleanOp(parts, clipRings, ClipType.difference);
   }
 
+  /// Clips [parts] down to whatever falls inside [clipRings] — the "stay
+  /// inside the fence" half of manager-zone fencing for rep patches. Any
+  /// part (or part of a part) outside the clip shape simply disappears;
+  /// unlike [union]/[difference] there's no "untouched" fast path here,
+  /// since intersection makes every part's fate depend on the clip.
+  static GeometryParts intersectShape(
+    GeometryParts parts,
+    List<List<MapCoordinate>> clipRings,
+  ) {
+    if (parts.isEmpty || clipRings.isEmpty) return const [];
+    final subjectPaths = parts
+        .expand((part) => part.map(toClipperPath))
+        .toList();
+    final clipPaths = clipRings.map(toClipperPath).toList();
+    final tree = Clipper.booleanOpPolyTree(
+      clipType: ClipType.intersection,
+      subject: subjectPaths,
+      clip: clipPaths,
+      fillRule: _fillRule,
+    );
+    return _treeToParts(tree);
+  }
+
   static GeometryParts _applyBooleanOp(
     GeometryParts parts,
     List<List<MapCoordinate>> clipRings,

@@ -72,6 +72,7 @@ export interface TerritoryRepository {
       managerTerritoryId?: string | null;
       isActive?: boolean;
       countryCode?: string | null;
+      sectorId?: string | null;
     }
   ): Promise<TerritoryRecord>;
 

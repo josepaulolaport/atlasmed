@@ -7,6 +7,7 @@ interface ListUsersInput {
   status?: string;
   role?: string;
   search?: string;
+  sectorId?: string;
   scope: ScopeContext;
 }
 
@@ -14,7 +15,7 @@ interface ListUsersDependencies {
   userRepository: UserRepository;
 }
 
-function serializeUser(user: {
+export function serializeUser(user: {
   id: string;
   email: string | null;
   username: string;
@@ -71,6 +72,7 @@ export class ListUsersUseCase {
       status: input.status,
       role: input.role,
       search: input.search,
+      sectorId: input.sectorId,
       scope: input.scope.isGlobal
         ? { isGlobal: true, territoryIds: [] }
         : {

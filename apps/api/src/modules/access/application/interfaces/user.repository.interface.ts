@@ -96,6 +96,7 @@ export interface FindAllUsersParams {
   status?: string;
   role?: string;
   search?: string;
+  sectorId?: string;
   scope?: UserListScopeFilter;
 }
 

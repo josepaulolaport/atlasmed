@@ -6,6 +6,7 @@ import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/widgets/territory_info_form.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
@@ -39,8 +40,11 @@ class TerritoriesScreen extends ConsumerWidget {
     // Hidden while a territory is selected — it would otherwise sit right
     // on top of the fixed action bar the selection shows at the bottom.
     final hasSelection = ref.watch(selectedTerritoryIdProvider) != null;
+    final isAdmin = ref.watch(isAdminProvider);
     return _TerritoriesPage(
-      floatingActionButton: hasSelection ? null : const _NewTerritoryButton(),
+      floatingActionButton: !isAdmin || hasSelection
+          ? null
+          : const _NewTerritoryButton(),
       child: _TerritoriesBody(accessToken: token),
     );
   }
@@ -461,11 +465,15 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
           .read(territoryRepositoryProvider)
           .assignUser(territory.id, userId);
       ref.invalidate(territoriesProvider);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível atualizar o responsável.'),
+        SnackBar(
+          content: Text(
+            error is TerritoryApiException
+                ? error.message
+                : 'Não foi possível atualizar o responsável.',
+          ),
         ),
       );
     }
@@ -508,11 +516,15 @@ class _TerritoriesMapState extends ConsumerState<_TerritoriesMap> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('"${territory.name}" foi excluído.')),
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível excluir. Tente novamente.'),
+        SnackBar(
+          content: Text(
+            error is TerritoryApiException
+                ? error.message
+                : 'Não foi possível excluir. Tente novamente.',
+          ),
         ),
       );
     }
@@ -713,6 +725,7 @@ class _TerritoryActionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = ref.watch(isAdminProvider);
     final roleLabel = territory.kind == TerritoryKind.managerZone
         ? 'Gerente'
         : 'Representante';
@@ -831,27 +844,29 @@ class _TerritoryActionBar extends ConsumerWidget {
                 label: 'Detalhes',
                 onTap: onViewDetails,
               ),
-              _ActionButton(
-                icon: Icons.info_outline,
-                label: 'Informações',
-                onTap: onEditInfo,
-              ),
-              _ActionButton(
-                icon: Icons.person_outline,
-                label: 'Responsável',
-                onTap: onAssign,
-              ),
-              _ActionButton(
-                icon: Icons.edit_outlined,
-                label: 'Área',
-                onTap: onEditArea,
-              ),
-              _ActionButton(
-                icon: Icons.delete_outline,
-                label: 'Excluir',
-                onTap: onDelete,
-                color: const Color(0xFFDC2626),
-              ),
+              if (isAdmin) ...[
+                _ActionButton(
+                  icon: Icons.info_outline,
+                  label: 'Informações',
+                  onTap: onEditInfo,
+                ),
+                _ActionButton(
+                  icon: Icons.person_outline,
+                  label: 'Responsável',
+                  onTap: onAssign,
+                ),
+                _ActionButton(
+                  icon: Icons.edit_outlined,
+                  label: 'Área',
+                  onTap: onEditArea,
+                ),
+                _ActionButton(
+                  icon: Icons.delete_outline,
+                  label: 'Excluir',
+                  onTap: onDelete,
+                  color: const Color(0xFFDC2626),
+                ),
+              ],
             ],
           ),
         ],

@@ -152,6 +152,7 @@ export const territoriesRoute = new Elysia()
         typeSlug: t.Optional(t.String()),
         parentId: t.Optional(t.String()),
         countryCode: t.Optional(t.String()),
+        sectorId: t.Optional(t.String()),
         reason: t.Optional(t.String()),
         boundary: t.Optional(
           t.Object({
@@ -192,6 +193,7 @@ export const territoriesRoute = new Elysia()
         name: t.Optional(t.String()),
         parentId: t.Optional(t.Union([t.String(), t.Null()])),
         isActive: t.Optional(t.Boolean()),
+        sectorId: t.Optional(t.String()),
         reason: t.Optional(t.String()),
       }),
     }
@@ -202,7 +204,7 @@ export const territoriesRoute = new Elysia()
     if (!isAdminRole(user.role.name as Role)) {
       throw new InsufficientPermissionsError(["territory:delete"], [`role:${user.role.name}`]);
     }
-    return territoryUseCases.deactivateTerritory().deactivateTerritory(params.id);
+    return territoryUseCases.deleteTerritory().deleteTerritory(params.id);
   })
   .use(requirePermission("read", "TERRITORY"))
   .get("/territories/:id/boundary", async ({ params, getScope }) => {

@@ -17,6 +17,41 @@ class TerritoryGeometry {
     return TerritoryGeometry._(type: 'MultiPolygon', coordinates: multiPolygon);
   }
 
+  /// Parses the raw `{type, coordinates}` GeoJSON the API returns from
+  /// `GET/PUT /territories/:id/boundary` — nesting depth differs between
+  /// `Polygon` (rings of points) and `MultiPolygon` (polygons of rings of
+  /// points), so both are normalized into this model's uniform
+  /// "polygons of rings of points" shape.
+  factory TerritoryGeometry.fromGeoJson(Map<String, dynamic> json) {
+    final type = json['type'] as String;
+    final raw = json['coordinates'] as List<dynamic>;
+
+    List<MapCoordinate> parseRing(List<dynamic> ring) => ring
+        .map(
+          (point) => MapCoordinate(
+            longitude: (point[0] as num).toDouble(),
+            latitude: (point[1] as num).toDouble(),
+          ),
+        )
+        .toList();
+
+    List<List<MapCoordinate>> parsePolygon(List<dynamic> polygon) =>
+        polygon.map((ring) => parseRing(ring as List<dynamic>)).toList();
+
+    if (type == 'MultiPolygon') {
+      return TerritoryGeometry._(
+        type: 'MultiPolygon',
+        coordinates: raw
+            .map((polygon) => parsePolygon(polygon as List<dynamic>))
+            .toList(),
+      );
+    }
+    return TerritoryGeometry._(
+      type: 'Polygon',
+      coordinates: [parsePolygon(raw)],
+    );
+  }
+
   MapBounds? get bounds {
     final points = coordinates
         .expand((polygon) => polygon)
@@ -84,6 +119,22 @@ class TerritoryGeometry {
   }
 
   Map<String, Object?> toFeatureCollection() {
+    return {
+      'type': 'FeatureCollection',
+      'features': [
+        {
+          'type': 'Feature',
+          'properties': <String, Object?>{},
+          'geometry': toGeoJson(),
+        },
+      ],
+    };
+  }
+
+  /// Raw `{type, coordinates}` GeoJSON, the shape the API expects for
+  /// `POST /territories` (`boundary`) and `PUT /territories/:id/boundary` —
+  /// the inverse of [TerritoryGeometry.fromGeoJson].
+  Map<String, Object?> toGeoJson() {
     final geometryCoordinates = type == 'Polygon'
         ? coordinates.single
               .map(
@@ -103,15 +154,6 @@ class TerritoryGeometry {
                     .toList(),
               )
               .toList();
-    return {
-      'type': 'FeatureCollection',
-      'features': [
-        {
-          'type': 'Feature',
-          'properties': <String, Object?>{},
-          'geometry': {'type': type, 'coordinates': geometryCoordinates},
-        },
-      ],
-    };
+    return {'type': type, 'coordinates': geometryCoordinates};
   }
 }

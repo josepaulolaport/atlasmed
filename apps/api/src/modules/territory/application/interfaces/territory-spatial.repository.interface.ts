@@ -57,7 +57,11 @@ export interface TerritorySpatialRepository {
     geoJson: GeoJsonGeometry
   ): Promise<OverlappingTerritory[]>;
 
-  findContainingClinicAssignmentTerritoryIds(lng: number, lat: number): Promise<string[]>;
+  findContainingClinicAssignmentTerritoryIds(
+    lng: number,
+    lat: number,
+    options?: { excludeTerritoryId?: string }
+  ): Promise<string[]>;
 
   findOverlappingSiblingTerritories(input: {
     territoryId: string;

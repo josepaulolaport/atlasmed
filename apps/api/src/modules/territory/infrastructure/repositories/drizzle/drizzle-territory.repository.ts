@@ -228,6 +228,7 @@ export class DrizzleTerritoryRepository implements TerritoryRepository {
       managerTerritoryId?: string | null;
       isActive?: boolean;
       countryCode?: string | null;
+      sectorId?: string | null;
     }
   ): Promise<TerritoryRecord> {
     await db

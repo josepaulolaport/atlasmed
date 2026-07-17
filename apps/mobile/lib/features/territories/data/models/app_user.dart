@@ -22,14 +22,47 @@ class AppUser {
   /// The healthcare sector this person works in — used to keep the
   /// assignment/manager pickers scoped to sensible candidates instead of
   /// listing every user across every sector.
-  final String sectorId;
+  ///
+  /// `null` on the real API: `GET /access/users` doesn't return a
+  /// per-user sector (it's a separate many-to-many assignment), so
+  /// sector-scoping there happens via the `sectorId` query param instead
+  /// of this field.
+  final String? sectorId;
   final bool isActive;
 
   const AppUser({
     required this.id,
     required this.name,
     required this.role,
-    required this.sectorId,
+    this.sectorId,
     this.isActive = true,
   });
+
+  /// Builds an [AppUser] from a `list-users.use-case.ts` `serializeUser`
+  /// row (`GET /access/users`, `GET /access/users/:id`).
+  factory AppUser.fromJson(Map<String, dynamic> json) {
+    final firstName = json['firstName'] as String?;
+    final lastName = json['lastName'] as String?;
+    final combinedName = [
+      firstName,
+      lastName,
+    ].whereType<String>().where((part) => part.trim().isNotEmpty).join(' ');
+    final username = json['username'] as String?;
+    final email = json['email'] as String?;
+
+    final roleName = ((json['role'] as Map<String, dynamic>?)?['name']
+            as String?)
+        ?.toUpperCase();
+
+    return AppUser(
+      id: json['id'] as String,
+      name: combinedName.isNotEmpty
+          ? combinedName
+          : (username?.isNotEmpty ?? false)
+              ? username!
+              : (email ?? ''),
+      role: roleName == 'MANAGER' ? UserRole.manager : UserRole.rep,
+      isActive: (json['status'] as String?)?.toUpperCase() == 'ACTIVE',
+    );
+  }
 }

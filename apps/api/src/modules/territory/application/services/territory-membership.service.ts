@@ -37,8 +37,11 @@ interface Dependencies {
 export class TerritoryMembershipService {
   constructor(private readonly deps: Dependencies) {}
 
-  async assignClinicByGeo(clinic: ClinicMembershipTarget): Promise<void> {
-    if (clinic.territoryAssignmentSource === "manual") {
+  async assignClinicByGeo(
+    clinic: ClinicMembershipTarget,
+    options?: { excludeTerritoryId?: string; force?: boolean }
+  ): Promise<void> {
+    if (clinic.territoryAssignmentSource === "manual" && !options?.force) {
       return;
     }
 
@@ -53,7 +56,8 @@ export class TerritoryMembershipService {
 
     const matches = await this.deps.spatialRepository.findContainingClinicAssignmentTerritoryIds(
       clinic.lng,
-      clinic.lat
+      clinic.lat,
+      { excludeTerritoryId: options?.excludeTerritoryId }
     );
 
     if (matches.length === 1) {
@@ -70,6 +74,25 @@ export class TerritoryMembershipService {
       territoryAssignmentStatus: matches.length > 1 ? "ambiguous" : "unassigned",
       territoryAssignmentSource: "geo",
     });
+  }
+
+  /**
+   * Clears clinic membership for a territory that is about to be deleted.
+   * Re-runs geo matching excluding this territory so clinics land on whatever
+   * other active territory covers them (or become unassigned) instead of
+   * blocking deletion. Manually-pinned clinics are forced through too — a
+   * manual pin to a territory being deleted is no longer a valid override.
+   */
+  async disassociateClinicsForTerritory(territoryId: string): Promise<{ processed: number }> {
+    const clinics = await this.deps.clinicWriter.findClinicsForMembership({
+      territoryIds: [territoryId],
+    });
+
+    for (const clinic of clinics) {
+      await this.assignClinicByGeo(clinic, { excludeTerritoryId: territoryId, force: true });
+    }
+
+    return { processed: clinics.length };
   }
 
   async assignFacilityById(facilityId: string): Promise<void> {

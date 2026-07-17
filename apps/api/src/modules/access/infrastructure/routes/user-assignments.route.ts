@@ -112,4 +112,11 @@ export const userAssignmentsRoute = new Elysia({
 
       return { message: "Sector revoked successfully" };
     },
+  )
+  .use(requirePermission("read", "TERRITORY"))
+  .get(
+    "/territories/:id/assignments",
+    async ({ params }: any) => {
+      return accessUseCases.getTerritoryAssignments().execute(params.id);
+    },
   );

@@ -1,6 +1,8 @@
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_ops.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/territory_geometry_editor.dart';
@@ -63,11 +65,16 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       final neighbors = sameKindAndSector
           .where((candidate) => candidate.id != territory.id)
           .toList();
+      final fenceZone = await _loadFenceZone(
+        territory.kind,
+        territory.managerTerritoryId,
+      );
       final working = TerritoryGeometryEditor.fromGeometry(territory.boundary);
       state = state.copyWith(
         loading: false,
         original: territory,
         neighbors: neighbors,
+        fenceZone: fenceZone,
         working: working,
         validation: _validate(working, neighbors),
       );
@@ -91,11 +98,30 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         isFirst ||
         previousDraft.kind != draft.kind ||
         previousDraft.sectorId != draft.sectorId;
+    final managerZoneChanged =
+        isFirst || previousDraft.managerTerritoryId != draft.managerTerritoryId;
 
     state = state.copyWith(
       draft: draft,
       mode: isFirst ? EditorMode.addArea : state.mode,
     );
+
+    if (managerZoneChanged) {
+      final fenceZone = await _loadFenceZone(draft.kind, draft.managerTerritoryId);
+      final clipped = fenceZone == null || state.working == null
+          ? state.working
+          : GeometryOps.intersectShape(
+              state.working!,
+              fenceZone.boundary.coordinates.expand((part) => part).toList(),
+            );
+      state = state.copyWith(
+        fenceZone: fenceZone,
+        working: clipped,
+        validation: clipped == null
+            ? state.validation
+            : _validate(clipped, state.neighbors),
+      );
+    }
 
     if (!kindOrSectorChanged) return;
     try {
@@ -111,6 +137,26 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     } catch (_) {
       // Best-effort — overlap checks just won't run against real
       // neighbor data if the sector switch failed to load.
+    }
+  }
+
+  /// Resolves the manager zone a rep patch's drawing should be fenced
+  /// to, or `null` for a manager zone itself (nothing fences a zone) or
+  /// when no zone is selected yet.
+  Future<Territory?> _loadFenceZone(
+    TerritoryKind kind,
+    String? managerTerritoryId,
+  ) async {
+    if (kind != TerritoryKind.repPatch || managerTerritoryId == null) {
+      return null;
+    }
+    try {
+      final repository = _ref.read(territoryRepositoryProvider);
+      return await repository.getTerritoryById(managerTerritoryId);
+    } catch (_) {
+      // Best-effort — drawing still works without a fence to frame/clip
+      // against; the server still validates containment on save.
+      return null;
     }
   }
 
@@ -332,11 +378,15 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     final next = _resolveNeighborOverlaps(drawn);
 
     if (next.isEmpty) {
+      final outsideFence =
+          state.mode == EditorMode.addArea && state.fenceZone != null;
       state = state.copyWith(
         drawingPoints: const [],
-        validation: const GeometryValidation(
+        validation: GeometryValidation(
           tooFewPoints: true,
-          message: 'Essa remoção eliminaria todo o território.',
+          message: outsideFence
+              ? 'Essa área precisa estar dentro da zona de gerente selecionada.'
+              : 'Essa remoção eliminaria todo o território.',
         ),
       );
       return false;
@@ -426,7 +476,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     final working = state.working;
     if (working == null || !state.canSave) return false;
 
-    state = state.copyWith(saving: true);
+    state = state.copyWith(saving: true, saveError: null);
     try {
       final geometry = TerritoryGeometryEditor.toGeometry(working);
       final repository = _ref.read(territoryRepositoryProvider);
@@ -459,8 +509,13 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         );
       }
       return true;
-    } catch (_) {
-      state = state.copyWith(saving: false);
+    } catch (error) {
+      state = state.copyWith(
+        saving: false,
+        saveError: error is TerritoryApiException
+            ? error.message
+            : 'Não foi possível salvar. Tente novamente.',
+      );
       return false;
     }
   }
@@ -512,6 +567,20 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     );
   }
 
+  /// Clips [parts] down to [TerritoryEditorState.fenceZone] when one is
+  /// set — a rep patch being drawn/edited inside a selected manager zone
+  /// can never end up (via drawing, or a drag pulling a vertex/edge/
+  /// whole shape out) outside of it. A no-op when there's no fence (a
+  /// manager zone itself, or a patch with no zone picked yet).
+  GeometryParts _applyFence(GeometryParts parts) {
+    final fenceZone = state.fenceZone;
+    if (fenceZone == null) return parts;
+    final fenceRings = fenceZone.boundary.coordinates
+        .expand((part) => part)
+        .toList();
+    return GeometryOps.intersectShape(parts, fenceRings);
+  }
+
   /// Stage 3's upgrade from "flag-only" to "auto-resolved": wherever
   /// [parts] overlaps a same-kind/sector neighbor, that overlap is cut
   /// away — this *is* the "boundary snaps to the neighbor's border"
@@ -520,7 +589,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   /// just its exterior), so it still leaves room for this territory to
   /// grow into it.
   GeometryParts _resolveNeighborOverlaps(GeometryParts parts) {
-    var next = parts;
+    var next = _applyFence(parts);
     for (final neighbor in state.neighbors) {
       for (final neighborPart in neighbor.boundary.coordinates) {
         if (neighborPart.isEmpty || next.isEmpty) continue;

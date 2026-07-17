@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/manager_picker_field.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/widgets/sector_selector.dart';
@@ -78,12 +79,16 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
       ref.invalidate(territoriesProvider);
       if (!mounted) return;
       Navigator.of(context).pop(true);
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar. Tente novamente.'),
+        SnackBar(
+          content: Text(
+            error is TerritoryApiException
+                ? error.message
+                : 'Não foi possível salvar. Tente novamente.',
+          ),
         ),
       );
     }

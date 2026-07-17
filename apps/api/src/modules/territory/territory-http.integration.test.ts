@@ -12,7 +12,7 @@ import { access } from "../access/index";
 import { territory } from "../territory/index";
 import { AppError } from "../../shared/errors";
 import { eq } from "drizzle-orm";
-import { territories } from "@atlasmed/database";
+import { territories, facilities, sectors } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -200,5 +200,108 @@ describe("Territory HTTP scope integration", () => {
 
     expect(ids).toContain(fixtures.territoryId);
     expect(ids).toContain(fixtures.outOfScopeTerritoryId);
+  });
+
+  it("admin can set sectorId on create and update, and it round-trips in responses", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const [sector] = await db
+      .insert(sectors)
+      .values({
+        slug: `sector-${fixtures.uniqueId}`.toLowerCase(),
+        name: `Sector ${fixtures.uniqueId}`,
+      })
+      .returning();
+
+    try {
+      const adminToken = await loginToken(fixtures.admin.email);
+
+      const createResponse = await authRequest(
+        "http://localhost/api/v1/territory/territories",
+        adminToken,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            name: `Sectorized Patch ${fixtures.uniqueId}`,
+            slug: `sectorized-patch-${fixtures.uniqueId}`,
+            typeSlug: "patch",
+            parentId: fixtures.territoryId,
+            sectorId: sector!.id,
+          }),
+        }
+      );
+
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as { id: string; sectorId?: string };
+      expect(created.sectorId).toBe(sector!.id);
+
+      const listResponse = await authRequest(
+        `http://localhost/api/v1/territory/territories?sectorId=${sector!.id}`,
+        adminToken
+      );
+      const listBody = (await listResponse.json()) as { data: Array<{ id: string }> };
+      expect(listBody.data.map((t) => t.id)).toContain(created.id);
+
+      await db.delete(territories).where(eq(territories.id, created.id));
+    } finally {
+      await db.delete(sectors).where(eq(sectors.id, sector!.id));
+    }
+  });
+
+  it("admin delete auto-disassociates clinics but still blocks on assigned users", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const [facility] = await db
+      .insert(facilities)
+      .values({
+        displayName: `Delete Flow Facility ${fixtures.uniqueId}`,
+        territoryId: fixtures.extraTerritoryId,
+      })
+      .returning();
+
+    const adminToken = await loginToken(fixtures.admin.email);
+
+    const deleteResponse = await authRequest(
+      `http://localhost/api/v1/territory/territories/${fixtures.extraTerritoryId}`,
+      adminToken,
+      { method: "DELETE" }
+    );
+
+    expect(deleteResponse.status).toBe(200);
+    const deleted = (await deleteResponse.json()) as { isActive: boolean };
+    expect(deleted.isActive).toBe(false);
+
+    const [updatedFacility] = await db
+      .select({
+        territoryId: facilities.territoryId,
+        territoryAssignmentStatus: facilities.territoryAssignmentStatus,
+      })
+      .from(facilities)
+      .where(eq(facilities.id, facility!.id));
+    expect(updatedFacility?.territoryId).toBeNull();
+    expect(updatedFacility?.territoryAssignmentStatus).toBe("unassigned");
+
+    const blockedResponse = await authRequest(
+      `http://localhost/api/v1/territory/territories/${fixtures.territoryId}`,
+      adminToken,
+      { method: "DELETE" }
+    );
+    expect(blockedResponse.status).toBe(422);
+  });
+
+  it("admin can read who is assigned to a territory via the reverse assignments endpoint", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const adminToken = await loginToken(fixtures.admin.email);
+
+    const response = await authRequest(
+      `http://localhost/api/v1/access/territories/${fixtures.territoryId}/assignments`,
+      adminToken
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as Array<{ userId: string }>;
+    expect(body.map((entry) => entry.userId)).toContain(fixtures.fieldUser.id);
   });
 });

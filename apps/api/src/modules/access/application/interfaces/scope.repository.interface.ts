@@ -23,6 +23,13 @@ export interface ScopeRepository {
     }>
   >;
 
+  findUserIdsByTerritoryId(territoryId: string): Promise<
+    Array<{
+      userId: string;
+      assignedAt: Date;
+    }>
+  >;
+
   findManagerIdByUserId(userId: string): Promise<string | null>;
 
   /** Returns sector IDs assigned to the user. Empty array = no sector filter. */

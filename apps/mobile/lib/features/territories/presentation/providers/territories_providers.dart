@@ -1,13 +1,26 @@
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
-import 'package:atlasmed_mobile_app/features/territories/data/repositories/mock_territory_repository.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/repositories/http_territory_repository.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_repository.dart';
-import 'package:atlasmed_mobile_app/features/territories/presentation/providers/user_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
-  return MockTerritoryRepository(ref.watch(userRepositoryProvider));
+  return HttpTerritoryRepository();
+});
+
+/// Whether the signed-in user can mutate territories (create, edit info,
+/// assign, delete, edit the boundary). Mobile mutations are ADMIN-only for
+/// now — MANAGER/REP get a read-only map; the backend enforces the same
+/// restriction independently, this only controls whether the mutation UI
+/// is shown at all. Defaults to `false` while the session is still
+/// resolving or on error, so mutation controls never flash on before
+/// access is actually confirmed.
+final isAdminProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider).valueOrNull;
+  return user?.role.name == UserRoleName.admin;
 });
 
 final sectorsProvider = FutureProvider<List<Sector>>((ref) {

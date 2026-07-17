@@ -21,6 +21,7 @@ import {
 describe("RevokeUserTerritoryUseCase", () => {
   const fieldUser = { id: "user-field", role: { name: Role.REP } };
   const managerUser = { id: "user-manager", role: { name: Role.MANAGER } };
+  const opsUser = { id: "user-ops", role: { name: Role.OPS } };
 
   let useCase: RevokeUserTerritoryUseCase;
   let userRepository: ReturnType<typeof createMockUserRepository>;
@@ -32,6 +33,7 @@ describe("RevokeUserTerritoryUseCase", () => {
       findById: mock(async (id: string) => {
         if (id === fieldUser.id) return fieldUser;
         if (id === managerUser.id) return managerUser;
+        if (id === opsUser.id) return opsUser;
         return null;
       }) as any,
     });
@@ -63,10 +65,27 @@ describe("RevokeUserTerritoryUseCase", () => {
     );
   });
 
-  it("rejects non-USER target", async () => {
+  it("revokes territory for MANAGER target when actor is ADMIN", async () => {
+    await useCase.execute({
+      targetUserId: managerUser.id,
+      territoryId: "territory-a",
+      revokedBy: "admin-1",
+      actorRole: Role.ADMIN,
+    });
+
+    expect(scopeRepository.revokeTerritory).toHaveBeenCalledWith({
+      userId: managerUser.id,
+      territoryId: "territory-a",
+    });
+    expect(scopeService.invalidateForTerritoryAssignmentChange).toHaveBeenCalledWith(
+      managerUser.id
+    );
+  });
+
+  it("rejects non-REP/MANAGER target", async () => {
     await expect(
       useCase.execute({
-        targetUserId: managerUser.id,
+        targetUserId: opsUser.id,
         territoryId: "territory-a",
         revokedBy: "admin-1",
         actorRole: Role.ADMIN,

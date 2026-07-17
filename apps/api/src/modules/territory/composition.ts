@@ -18,6 +18,7 @@ import { TerritoryCoverageUseCases } from "./application/use-cases/territory-cov
 import { territoryMembershipQueue } from "../../infrastructure/jobs/territory-membership.queue";
 import { scopeCacheService } from "../access/infrastructure/cache/scope-cache.service";
 import { auditLogAdapter } from "../access/infrastructure/adapters/audit-log.adapter";
+import { catalogRepositories } from "../catalog/composition";
 
 export const territoryRepositories = {
   territory: new DrizzleTerritoryRepository(),
@@ -103,6 +104,8 @@ const territoryCrud = new TerritoryCrudUseCases({
   closureRepository: territoryRepositories.closure,
   spatialRepository: territoryRepositories.spatial,
   containmentService: territoryContainmentService,
+  sectorRepository: catalogRepositories.sector,
+  membershipService: territoryMembershipService,
   closureService: territoryClosureService,
   onTerritoryDeactivated: enqueueMembershipRecompute,
   onBoundaryChanged: onTerritoryBoundaryChanged,
@@ -137,6 +140,7 @@ export const territoryUseCases = {
   getTerritory: () => territoryCrud,
   updateTerritory: () => territoryCrud,
   deactivateTerritory: () => territoryCrud,
+  deleteTerritory: () => territoryCrud,
   getDescendants: () => territoryCrud,
   listGroupingTree: () => territoryCrud,
   listTerritoryTypes: () => territoryTypeCrud,

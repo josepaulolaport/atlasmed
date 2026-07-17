@@ -62,6 +62,15 @@ class TerritoryEditorState {
   /// against.
   final List<Territory> neighbors;
 
+  /// The manager zone a rep patch is being drawn/edited inside of — set
+  /// from [draft.managerTerritoryId]/[original.managerTerritoryId] when
+  /// applicable, `null` for manager zones themselves. Every commit
+  /// (drawing, drag) is clipped to stay within it; the screen also
+  /// renders its outline and frames the camera on it. On the real API a
+  /// patch's manager zone is derived from geometry, so this is guidance
+  /// for the user, not something sent back on save.
+  final Territory? fenceZone;
+
   final GeometryParts? working;
   final List<GeometryParts> undoStack;
   final List<GeometryParts> redoStack;
@@ -79,6 +88,12 @@ class TerritoryEditorState {
   final bool saving;
   final bool saved;
 
+  /// Message from the last failed [TerritoryEditorController.save] call —
+  /// e.g. a backend containment/overlap rejection ("Rep patch must be
+  /// fully contained inside exactly one active manager zone"). Cleared on
+  /// the next save attempt.
+  final String? saveError;
+
   const TerritoryEditorState({
     this.loading = true,
     this.loadError,
@@ -86,6 +101,7 @@ class TerritoryEditorState {
     this.isCreating = false,
     this.draft,
     this.neighbors = const [],
+    this.fenceZone,
     this.working,
     this.undoStack = const [],
     this.redoStack = const [],
@@ -97,6 +113,7 @@ class TerritoryEditorState {
     this.validation = GeometryValidation.valid,
     this.saving = false,
     this.saved = false,
+    this.saveError,
   });
 
   /// One committed action (drag-begin, insert, delete, ...) pushes exactly
@@ -126,6 +143,7 @@ class TerritoryEditorState {
     bool? isCreating,
     Object? draft = _unset,
     List<Territory>? neighbors,
+    Object? fenceZone = _unset,
     Object? working = _unset,
     List<GeometryParts>? undoStack,
     List<GeometryParts>? redoStack,
@@ -137,6 +155,7 @@ class TerritoryEditorState {
     GeometryValidation? validation,
     bool? saving,
     bool? saved,
+    Object? saveError = _unset,
   }) {
     return TerritoryEditorState(
       loading: loading ?? this.loading,
@@ -147,6 +166,9 @@ class TerritoryEditorState {
       isCreating: isCreating ?? this.isCreating,
       draft: identical(draft, _unset) ? this.draft : draft as TerritoryDraft?,
       neighbors: neighbors ?? this.neighbors,
+      fenceZone: identical(fenceZone, _unset)
+          ? this.fenceZone
+          : fenceZone as Territory?,
       working: identical(working, _unset)
           ? this.working
           : working as GeometryParts?,
@@ -164,6 +186,9 @@ class TerritoryEditorState {
       validation: validation ?? this.validation,
       saving: saving ?? this.saving,
       saved: saved ?? this.saved,
+      saveError: identical(saveError, _unset)
+          ? this.saveError
+          : saveError as String?,
     );
   }
 }

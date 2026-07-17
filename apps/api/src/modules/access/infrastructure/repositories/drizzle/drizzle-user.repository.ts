@@ -4,6 +4,7 @@ import {
   roles,
   sessions,
   passwordResets,
+  userSectorAssignments,
   type Database,
   type AnyDatabase,
 } from "@atlasmed/database";
@@ -491,6 +492,18 @@ export class DrizzleUserRepository implements UserRepository {
 
     if (params.role) {
       conditions.push(eq(roles.name, params.role as any));
+    }
+
+    if (params.sectorId) {
+      conditions.push(
+        inArray(
+          users.id,
+          db
+            .select({ userId: userSectorAssignments.userId })
+            .from(userSectorAssignments)
+            .where(eq(userSectorAssignments.sectorId, params.sectorId)),
+        ) as any,
+      );
     }
 
     if (params.scope && !params.scope.isGlobal) {

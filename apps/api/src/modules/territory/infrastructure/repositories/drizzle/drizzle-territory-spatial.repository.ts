@@ -141,7 +141,12 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
     `) as Promise<Array<{ id: string; code: string }>>;
   }
 
-  async findContainingClinicAssignmentTerritoryIds(lng: number, lat: number): Promise<string[]> {
+  async findContainingClinicAssignmentTerritoryIds(
+    lng: number,
+    lat: number,
+    options?: { excludeTerritoryId?: string }
+  ): Promise<string[]> {
+    const excludeTerritoryId = options?.excludeTerritoryId ?? null;
     const rows = await db.execute(sql`
       SELECT t.id
       FROM territories t
@@ -149,6 +154,7 @@ export class DrizzleTerritorySpatialRepository implements TerritorySpatialReposi
       WHERE t.is_active = true
         AND t.boundary IS NOT NULL
         AND tt.assigns_clinics = true
+        AND (${excludeTerritoryId}::text IS NULL OR t.id != ${excludeTerritoryId})
         AND ST_Covers(
           t.boundary,
           ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)

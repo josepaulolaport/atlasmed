@@ -54,6 +54,37 @@ class Territory {
     this.assignedUserId,
   });
 
+  /// Builds a [Territory] from a `territory-crud.use-cases.ts`
+  /// `serializeTerritory` row (as returned by
+  /// `GET/POST/PATCH /territory/territories[...]`) plus the boundary/
+  /// centroid/assignee, each fetched separately on the real API — see
+  /// `HttpTerritoryRepository`.
+  factory Territory.fromApiRow(
+    Map<String, dynamic> json, {
+    required TerritoryGeometry boundary,
+    required MapCoordinate centroid,
+    String? assignedUserId,
+  }) {
+    return Territory(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      slug: json['slug'] as String,
+      code: json['code'] as String,
+      territoryType: TerritoryType.fromJson(
+        json['territoryType'] as Map<String, dynamic>,
+      ),
+      sectorId: json['sectorId'] as String? ?? '',
+      managerTerritoryId: json['managerTerritoryId'] as String?,
+      isActive: json['isActive'] as bool? ?? true,
+      clinicCount: (json['clinicCount'] as num?)?.toInt() ?? 0,
+      assignedUserCount: (json['assignedUserCount'] as num?)?.toInt() ?? 0,
+      repPatchCount: (json['repPatchCount'] as num?)?.toInt(),
+      boundary: boundary,
+      centroid: centroid,
+      assignedUserId: assignedUserId,
+    );
+  }
+
   TerritoryKind get kind => territoryType.kind;
 
   Territory copyWith({

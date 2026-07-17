@@ -32,6 +32,14 @@ class TerritoryType {
     required this.assignableToManagers,
   });
 
+  factory TerritoryType.fromJson(Map<String, dynamic> json) => TerritoryType(
+    id: json['id'] as String,
+    slug: json['slug'] as String,
+    name: json['name'] as String,
+    assignsClinics: json['assignsClinics'] as bool? ?? false,
+    assignableToManagers: json['assignableToManagers'] as bool? ?? false,
+  );
+
   TerritoryKind get kind => slug == 'manager_zone'
       ? TerritoryKind.managerZone
       : TerritoryKind.repPatch;

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/geometry/geometry_math.dart';
@@ -47,6 +48,7 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   static const _snapThresholdPixels = 24.0;
   static const _vertexSnapThresholdPixels = 16.0;
   static const _snapIndicatorColor = 0xFF7C3AED;
+  static const _fenceColor = 0xFF7C3AED;
   // Fallback map center for a brand-new territory with no neighbors yet
   // to average a position from — same reference point the viewer screen
   // starts its own camera at.
@@ -79,6 +81,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
   // pass over a neighbor's shape to close its loop).
   PolygonAnnotationManager? _neighborFillManager;
   PolylineAnnotationManager? _neighborBorderManager;
+  // The manager zone a rep patch is being fenced to — a dashed outline
+  // with no fill, so it never gets mistaken for a real neighbor shape.
+  PolylineAnnotationManager? _fenceBorderManager;
   PolylineAnnotationManager? _drawPreviewManager;
   CircleAnnotationManager? _handleManager;
   CircleAnnotationManager? _snapIndicatorManager;
@@ -160,6 +165,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     ref.listen(provider, (previous, next) {
       if (!_readyForMap(next)) return;
       _render(next);
+      if (next.fenceZone?.id != previous?.fenceZone?.id &&
+          next.fenceZone != null) {
+        unawaited(_frameOnFence(next.fenceZone!));
+      }
     });
 
     if (state.isCreating && state.draft == null && !_metadataFormLaunched) {
@@ -272,6 +281,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
           .createPolygonAnnotationManager();
       _neighborBorderManager = await mapboxMap.annotations
           .createPolylineAnnotationManager();
+      _fenceBorderManager = await mapboxMap.annotations
+          .createPolylineAnnotationManager();
+      await _fenceBorderManager!.setLineDasharray([3, 2]);
       _fillManager = await mapboxMap.annotations
           .createPolygonAnnotationManager();
       _borderManager = await mapboxMap.annotations
@@ -348,6 +360,33 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     }
   }
 
+  /// Frames the camera on a manager zone right as it's picked for a rep
+  /// patch being drawn/edited — drawing guidance, since every commit is
+  /// already clipped to stay inside it regardless of what's on screen.
+  Future<void> _frameOnFence(Territory fenceZone) async {
+    final mapboxMap = _mapboxMap;
+    final bounds = fenceZone.boundary.bounds;
+    if (mapboxMap == null || bounds == null) return;
+    try {
+      final coordinateBounds = CoordinateBounds(
+        southwest: _point(bounds.southwest),
+        northeast: _point(bounds.northeast),
+        infiniteBounds: false,
+      );
+      final camera = await mapboxMap.cameraForCoordinateBounds(
+        coordinateBounds,
+        MbxEdgeInsets(top: 130, left: 40, bottom: 190, right: 40),
+        null,
+        null,
+        null,
+        null,
+      );
+      await mapboxMap.easeTo(camera, MapAnimationOptions(duration: 550));
+    } catch (_) {
+      // Best-effort camera fit.
+    }
+  }
+
   // ---- rendering -----------------------------------------------------------
 
   Future<void> _render(TerritoryEditorState state) async {
@@ -400,6 +439,9 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     await neighborFillManager.createMulti(neighborFillOptions);
     if (token != _renderToken) return;
     await neighborBorderManager.createMulti(neighborBorderOptions);
+    if (token != _renderToken) return;
+
+    await _renderFence(state, token);
     if (token != _renderToken) return;
 
     final fillOptions = <PolygonAnnotationOptions>[];
@@ -483,6 +525,30 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     await _renderDrawPreview(state, token);
     if (token != _renderToken) return;
     await _renderHandles(state, token);
+  }
+
+  Future<void> _renderFence(TerritoryEditorState state, int token) async {
+    final fenceManager = _fenceBorderManager;
+    if (fenceManager == null) return;
+    await fenceManager.deleteAll();
+    if (token != _renderToken) return;
+
+    final fenceZone = state.fenceZone;
+    if (fenceZone == null) return;
+
+    final options = <PolylineAnnotationOptions>[
+      for (final part in fenceZone.boundary.coordinates)
+        for (final ring in part)
+          PolylineAnnotationOptions(
+            geometry: LineString.fromPoints(
+              points: _ringToPoints(TerritoryGeometryEditor.closeRing(ring)),
+            ),
+            lineColor: _fenceColor,
+            lineWidth: 2.4,
+            lineJoin: LineJoin.ROUND,
+          ),
+    ];
+    await fenceManager.createMulti(options);
   }
 
   Future<void> _renderDrawPreview(TerritoryEditorState state, int token) async {
@@ -1360,11 +1426,10 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
     if (ok) {
       Navigator.of(context).pop();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível salvar. Tente novamente.'),
-        ),
-      );
+      final message =
+          ref.read(territoryEditorControllerProvider(widget.target)).saveError ??
+          'Não foi possível salvar. Tente novamente.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

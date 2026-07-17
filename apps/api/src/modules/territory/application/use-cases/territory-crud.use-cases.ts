@@ -5,6 +5,7 @@ import type { TerritoryTypeRepository } from "../interfaces/territory-type.repos
 import type { TerritoryClosureRepository } from "../interfaces/territory-closure.repository.interface";
 import type { TerritorySpatialRepository } from "../interfaces/territory-spatial.repository.interface";
 import type { GeoJsonGeometry } from "../interfaces/territory-spatial.repository.interface";
+import type { SectorRepository } from "../../../catalog/application/interfaces/sector.repository.interface";
 import { TerritoryHierarchyValidator } from "../services/territory-hierarchy-validator.service";
 import { TerritoryClosureService } from "../services/territory-closure.service";
 import type { TerritoryContainmentService } from "../services/territory-containment.service";
@@ -32,12 +33,18 @@ import {
   resolveReadableTerritoryIds,
 } from "../services/territory-scope-policy.service";
 
+export interface TerritoryDeletionMembershipPort {
+  disassociateClinicsForTerritory(territoryId: string): Promise<{ processed: number }>;
+}
+
 interface TerritoryCrudDependencies {
   territoryRepository: TerritoryRepository;
   territoryTypeRepository: TerritoryTypeRepository;
   closureRepository: TerritoryClosureRepository;
   spatialRepository: TerritorySpatialRepository;
   containmentService: TerritoryContainmentService;
+  sectorRepository?: SectorRepository;
+  membershipService?: TerritoryDeletionMembershipPort;
   hierarchyValidator?: TerritoryHierarchyValidator;
   closureService?: TerritoryClosureService;
   onTerritoryDeactivated?: (territoryId: string) => Promise<void>;
@@ -74,6 +81,7 @@ function serializeTerritory(territory: {
   parentId: string | null;
   managerTerritoryId: string | null;
   isActive: boolean;
+  sectorId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   activeChildCount?: number;
@@ -97,6 +105,7 @@ function serializeTerritory(territory: {
     parentId: territory.parentId ?? undefined,
     managerTerritoryId: territory.managerTerritoryId ?? undefined,
     isActive: territory.isActive,
+    sectorId: territory.sectorId ?? undefined,
     clinicCount: territory.clinicCount ?? 0,
     assignedUserCount: territory.assignedUserCount ?? 0,
     repPatchCount: territory.repPatchCount ?? 0,
@@ -130,6 +139,7 @@ export class TerritoryCrudUseCases {
     typeSlug?: string;
     countryCode?: string;
     parentId?: string;
+    sectorId?: string;
     boundary?: GeoJsonGeometry;
   }) {
     const type = input.territoryTypeId
@@ -143,6 +153,10 @@ export class TerritoryCrudUseCases {
         "TerritoryType",
         input.territoryTypeId ?? input.typeSlug ?? "unknown"
       );
+    }
+
+    if (input.sectorId) {
+      await this.assertSectorValid(input.sectorId);
     }
 
     let parent = null;
@@ -211,6 +225,7 @@ export class TerritoryCrudUseCases {
       territoryTypeId: type.id,
       countryCode,
       parentId: resolvedParentId,
+      sectorId: input.sectorId ?? null,
     });
 
     if (isGroupingHierarchyType(type)) {
@@ -335,6 +350,7 @@ export class TerritoryCrudUseCases {
       name?: string;
       parentId?: string | null;
       isActive?: boolean;
+      sectorId?: string | null;
     }
   ) {
     const territory = await this.deps.territoryRepository.findById(id);
@@ -351,6 +367,10 @@ export class TerritoryCrudUseCases {
 
     if (input.isActive === false) {
       await this.validateDeactivate(id, territoryType);
+    }
+
+    if (input.sectorId) {
+      await this.assertSectorValid(input.sectorId);
     }
 
     if (input.parentId !== undefined && input.parentId !== territory.parentId) {
@@ -390,6 +410,7 @@ export class TerritoryCrudUseCases {
       name: input.name,
       parentId: input.parentId,
       isActive: input.isActive,
+      sectorId: input.sectorId,
     });
 
     if (input.parentId !== undefined && input.parentId !== territory.parentId) {
@@ -405,6 +426,36 @@ export class TerritoryCrudUseCases {
 
   async deactivateTerritory(id: string) {
     return this.updateTerritory(id, { isActive: false });
+  }
+
+  /**
+   * Deletes (deactivates) a territory, automatically disassociating any
+   * clinics currently assigned to it via a geo re-match against the
+   * remaining active territories (same mechanism used on boundary
+   * create/edit). Rep patches, active children and assigned users still
+   * hard-block deletion — those require a deliberate human decision and
+   * are not auto-resolved.
+   */
+  async deleteTerritory(id: string) {
+    const territory = await this.deps.territoryRepository.findById(id);
+    if (!territory) {
+      throw new ResourceNotFoundError("Territory", id);
+    }
+
+    const territoryType =
+      territory.territoryType ??
+      (await this.deps.territoryTypeRepository.findById(territory.territoryTypeId));
+    if (!territoryType) {
+      throw new ResourceNotFoundError("TerritoryType", territory.territoryTypeId);
+    }
+
+    await this.validateDeactivate(id, territoryType, { skipClinicCheck: true });
+
+    if (territoryType.assignsClinics && this.deps.membershipService) {
+      await this.deps.membershipService.disassociateClinicsForTerritory(id);
+    }
+
+    return this.deactivateTerritory(id);
   }
 
   async getDescendants(id: string, scope?: ScopeContext) {
@@ -443,7 +494,8 @@ export class TerritoryCrudUseCases {
 
   private async validateDeactivate(
     id: string,
-    territoryType: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>
+    territoryType: NonNullable<Awaited<ReturnType<TerritoryTypeRepository["findById"]>>>,
+    options?: { skipClinicCheck?: boolean }
   ): Promise<void> {
     if (isManagerZoneType(territoryType)) {
       const repPatchCount = await this.deps.territoryRepository.countRepPatchesByManagerZone(id);
@@ -465,12 +517,14 @@ export class TerritoryCrudUseCases {
       }
     }
 
-    const clinicCount = await this.deps.territoryRepository.countClinics(id);
-    if (clinicCount > 0) {
-      throw new OperationNotAllowedError(
-        "deactivate_territory",
-        "Territory has assigned clinics"
-      );
+    if (!options?.skipClinicCheck) {
+      const clinicCount = await this.deps.territoryRepository.countClinics(id);
+      if (clinicCount > 0) {
+        throw new OperationNotAllowedError(
+          "deactivate_territory",
+          "Territory has assigned clinics"
+        );
+      }
     }
 
     const assignedUsers = await this.deps.territoryRepository.countAssignedUsers(id);
@@ -479,6 +533,16 @@ export class TerritoryCrudUseCases {
         "deactivate_territory",
         "Territory has assigned users"
       );
+    }
+  }
+
+  private async assertSectorValid(sectorId: string): Promise<void> {
+    if (!this.deps.sectorRepository) {
+      return;
+    }
+    const sector = await this.deps.sectorRepository.findById(sectorId);
+    if (!sector || !sector.isActive) {
+      throw new ResourceNotFoundError("Sector", sectorId);
     }
   }
 
