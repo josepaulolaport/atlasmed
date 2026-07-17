@@ -1,0 +1,147 @@
+import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+
+/// "Fotos da clínica" — mock-only in V1; no `facility_photos` table yet.
+class ClinicPhotosSection extends StatelessWidget {
+  const ClinicPhotosSection({super.key, required this.photos});
+
+  final PhotoGallerySummary? photos;
+
+  @override
+  Widget build(BuildContext context) {
+    final p = photos;
+    if (p == null || p.count == 0) {
+      return ClinicDetailCard(
+        child: Row(
+          children: [
+            const Icon(
+              Icons.photo_library_outlined,
+              size: 20,
+              color: Color(0xFF9ca3af),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Nenhuma foto cadastrada',
+                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              ),
+            ),
+            TextButton(
+              onPressed: () => _showComingSoon(context),
+              child: const Text('Adicionar'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ClinicDetailCard(
+      child: InkWell(
+        onTap: () => _showComingSoon(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            _ThumbnailStack(colors: p.thumbnailColors),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Fotos da clínica · ${p.count}',
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0f1729),
+                    ),
+                  ),
+                  if (p.lastUpdatedAt != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      'Última: ${_formatMonthYear(p.lastUpdatedAt!)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9ca3af),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: Color(0xFF9ca3af),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Galeria de fotos — disponível em breve'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _formatMonthYear(DateTime d) {
+    const months = [
+      'jan',
+      'fev',
+      'mar',
+      'abr',
+      'mai',
+      'jun',
+      'jul',
+      'ago',
+      'set',
+      'out',
+      'nov',
+      'dez',
+    ];
+    return '${months[d.month - 1]}/${d.year}';
+  }
+}
+
+class _ThumbnailStack extends StatelessWidget {
+  const _ThumbnailStack({required this.colors});
+
+  final List<Color> colors;
+
+  @override
+  Widget build(BuildContext context) {
+    if (colors.isEmpty) {
+      return const Icon(
+        Icons.photo_library_outlined,
+        size: 32,
+        color: Color(0xFF9ca3af),
+      );
+    }
+
+    return SizedBox(
+      width: 56,
+      height: 40,
+      child: Stack(
+        children: List.generate(colors.length.clamp(0, 3), (i) {
+          return Positioned(
+            left: i * 14.0,
+            child: Container(
+              width: 32,
+              height: 40,
+              decoration: BoxDecoration(
+                color: colors[i],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 2),
+              ),
+            ),
+          );
+        }).reversed.toList(),
+      ),
+    );
+  }
+}

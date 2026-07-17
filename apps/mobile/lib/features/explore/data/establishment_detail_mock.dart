@@ -1,0 +1,422 @@
+import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+
+/// Phase 1 mock data for establishment detail sections.
+EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
+  final seed = facilityId.hashCode.abs();
+  final baseLat = -23.5505 + (seed % 100) * 0.0001;
+  final baseLng = -46.6333 + (seed % 100) * 0.0001;
+  final now = DateTime.now();
+
+  return EstablishmentDetailSections(
+    location: EstablishmentLocation(
+      latitude: baseLat,
+      longitude: baseLng,
+      formattedAddress: 'Av. Paulista, 1000 — Bela Vista, São Paulo, SP',
+    ),
+    services: const [
+      FacilityServiceChip(serviceCode: '123', classificationCode: '01'),
+      FacilityServiceChip(serviceCode: '145', classificationCode: '03'),
+      FacilityServiceChip(serviceCode: '174', classificationCode: '02'),
+    ],
+    consultantName: 'Ana Silva',
+    consultantSince: DateTime(2023, 3, 1),
+    territoryLabel: 'Patch Centro SP',
+    regionZoneLabel: 'Z. Sul',
+    administrators: const [
+      AdministrativeProfessional(
+        id: 'rep-1',
+        name: 'Carlos Mendes',
+        roleTitle: 'Diretor administrativo',
+        email: 'carlos.mendes@clinica.com.br',
+        phone: '11987654321',
+        contactType: 'DECISOR',
+        relationshipScore: 8,
+      ),
+      AdministrativeProfessional(
+        id: 'rep-2',
+        name: 'Fernanda Lima',
+        roleTitle: 'Gerente de compras',
+        email: 'fernanda.lima@clinica.com.br',
+        phone: '11976543210',
+        contactType: 'COMPRADOR',
+      ),
+    ],
+    doctors: [
+      FacilityCrmDoctor(
+        id: 'doc-1',
+        name: 'Dra. Mariana Silva',
+        initials: 'MS',
+        hue: 340,
+        specialty: 'Ortopedia',
+        crm: 'CRM/SP 142.801',
+        phone: '11987654321',
+        email: 'mariana.silva@exemplo.com',
+        isPrescriber: true,
+        isDecisionMaker: true,
+        roleBadge: 'DECISORA',
+        education: 'USP (Medicina 2008)',
+        birthdayLabel: '14 de junho',
+        favoriteTeam: 'Palmeiras',
+        interests: 'Corrida de rua · vinhos',
+        relationshipScore: 9,
+        noteText: 'Prefere reuniões de manhã. Evita segundas.',
+      ),
+      FacilityCrmDoctor(
+        id: 'doc-2',
+        name: 'Dra. Helena Ferreira',
+        initials: 'HF',
+        hue: 210,
+        specialty: 'Ortopedia',
+        crm: 'CRM/SP 198.442',
+        phone: '11976543210',
+        email: 'helena.ferreira@exemplo.com',
+        isPrescriber: true,
+        roleBadge: 'NOVA',
+        education: 'UNIFESP (Medicina 2019)',
+        birthdayLabel: '02 de setembro',
+        relationshipScore: 5,
+      ),
+      const FacilityCrmDoctor(
+        id: 'doc-3',
+        name: 'Dr. Paulo Ferreira',
+        initials: 'PF',
+        hue: 160,
+        specialty: 'Clínica geral',
+        crm: 'CRM/SP 789012',
+        email: 'paulo.ferreira@exemplo.com',
+        isBuyer: true,
+      ),
+    ],
+    payers: const [
+      PayerShare(id: 'hp-1', name: 'Outras', sharePercent: 50),
+      PayerShare(id: 'hp-2', name: 'Sul América', sharePercent: 20),
+      PayerShare(id: 'hp-3', name: 'Amil', sharePercent: 10),
+      PayerShare(id: 'hp-4', name: 'Bradesco Saúde', sharePercent: 10),
+      PayerShare(id: 'hp-5', name: 'Porto Seguro Saúde', sharePercent: 10),
+    ],
+    payerMixSummary: PayerMixSummary(
+      principalSourceName: 'Outras',
+      principalSourcePercent: 50,
+      registeredSourceCount: 5,
+      updatedAt: now.subtract(const Duration(days: 14)),
+    ),
+    orders: [
+      FacilityOrderSummary(
+        id: 'ord-1',
+        displayId: 'PED-1042',
+        status: 'APPROVED',
+        type: 'SALE',
+        orderedAt: now.subtract(const Duration(days: 3)),
+        total: 4850.00,
+        itemCount: 4,
+        items: const [
+          FacilityOrderItemSummary(
+            productName: 'Placa VLP 4.5mm 8 furos',
+            quantity: 2,
+            unitPrice: 890.00,
+          ),
+          FacilityOrderItemSummary(
+            productName: 'Parafuso cortical 4.5mm',
+            quantity: 12,
+            unitPrice: 45.50,
+          ),
+          FacilityOrderItemSummary(
+            productName: 'Kit instrumental descartável',
+            quantity: 1,
+            unitPrice: 1200.00,
+          ),
+          FacilityOrderItemSummary(
+            productName: 'Fio de sutura 2-0',
+            quantity: 4,
+            unitPrice: 32.00,
+          ),
+        ],
+      ),
+      FacilityOrderSummary(
+        id: 'ord-2',
+        displayId: 'PED-1038',
+        status: 'INVOICED',
+        type: 'CONSIGNMENT',
+        orderedAt: now.subtract(const Duration(days: 18)),
+        total: 2120.50,
+        itemCount: 2,
+        items: const [
+          FacilityOrderItemSummary(
+            productName: 'Haste intramedular 9mm',
+            quantity: 1,
+            unitPrice: 1850.50,
+          ),
+          FacilityOrderItemSummary(
+            productName: 'Parafuso bloqueado 5.0mm',
+            quantity: 6,
+            unitPrice: 45.00,
+          ),
+        ],
+      ),
+      FacilityOrderSummary(
+        id: 'ord-3',
+        displayId: 'PED-1021',
+        status: 'PENDING',
+        type: 'SALE',
+        orderedAt: now.subtract(const Duration(days: 32)),
+        total: 890.00,
+        itemCount: 1,
+        items: const [
+          FacilityOrderItemSummary(
+            productName: 'Cimento ósseo com antibiótico',
+            quantity: 2,
+            unitPrice: 445.00,
+          ),
+        ],
+      ),
+    ],
+    nearbyEstablishments: _mockNearby(baseLat, baseLng, facilityId),
+    statusSignals: FacilityStatusSignals(
+      commercialStatus: FacilityCommercialStatus.active,
+      purchaseStatus: FacilityPurchaseStatus.nonBuyer,
+      conformityStatus: FacilityConformityStatus.complete,
+      lastPurchaseAt: now.subtract(const Duration(days: 68)),
+    ),
+    taxIdType: FacilityTaxIdType.pj,
+    phone: '1130405060',
+    email: 'contato@clinica.com.br',
+    photos: PhotoGallerySummary(
+      count: 5,
+      thumbnailColors: const [
+        Color(0xFF5eead4),
+        Color(0xFFd1d5db),
+        Color(0xFF1f2937),
+        Color(0xFF93c5fd),
+        Color(0xFFfbbf24),
+      ],
+      lastUpdatedAt: DateTime(2026, 2, 10),
+    ),
+    products: const [
+      ProductUsage(
+        name: 'AtlasGel',
+        revenueLast6m: 28420,
+        trendPercent: 12,
+        sharePercent: 68,
+      ),
+      ProductUsage(
+        name: 'CardioFlex',
+        revenueLast6m: 43820,
+        trendPercent: -22,
+        sharePercent: 22,
+      ),
+      ProductUsage(
+        name: 'AtlasVit',
+        revenueLast6m: 15520,
+        trendPercent: 58,
+        sharePercent: 10,
+      ),
+    ],
+    fieldNotes: [
+      FacilityFieldNote(
+        id: 'note-1',
+        text: 'Estacionamento difícil — usar Zona Azul na rua de trás.',
+        createdAt: now.subtract(const Duration(days: 40)),
+      ),
+      FacilityFieldNote(
+        id: 'note-2',
+        text: 'Recepcionista Ana é ótima ponte com Dra. Mariana.',
+        createdAt: now.subtract(const Duration(days: 25)),
+      ),
+      FacilityFieldNote(
+        id: 'note-3',
+        text: 'Pedidos sempre fechados até dia 20 (fechamento contábil).',
+        createdAt: now.subtract(const Duration(days: 10)),
+      ),
+    ],
+    visitTimeline: [
+      VisitTimelineEntry(
+        id: 'visit-1',
+        date: DateTime(now.year, 4, 17, 14, 30),
+        title: 'Reunião agendada',
+        sentiment: VisitSentiment.positive,
+        attendees: 'com Dra. Mariana Silva',
+        sampleGiven: 'AtlasGel 240g · 3un',
+        summary:
+            'Reunião com Dra. Mariana. Demonstração do novo AtlasGel 240g. '
+            'Solicitou material impresso e amostras p/ 5 pacientes. '
+            'Próximo pedido provável em 2 semanas.',
+        durationMinutes: 42,
+        consultantInitials: 'RM',
+      ),
+      VisitTimelineEntry(
+        id: 'visit-2',
+        date: DateTime(now.year, 4, 2, 10, 5),
+        title: 'Passagem rápida, recepção',
+        sentiment: VisitSentiment.mixed,
+        attendees: 'Recepção',
+        sampleGiven: 'CardioFlex · 3un',
+        summary:
+            'Passagem rápida, recepção. Deixei amostras CardioFlex. '
+            'Helena (nova) chega em 15 dias.',
+        durationMinutes: 12,
+        consultantInitials: 'RM',
+      ),
+      VisitTimelineEntry(
+        id: 'visit-3',
+        date: DateTime(now.year, 3, 14, 16, 10),
+        title: 'Fechamento de pedido',
+        sentiment: VisitSentiment.mixed,
+        attendees: 'com Dra. Mariana + Ana (compras)',
+        linkedOrderValue: 4120,
+        summary:
+            'Fechamento de pedido. Pedido fechado R\$ 4.120. Cliente reclamou '
+            'de atraso na entrega anterior. Verificar com logística.',
+        durationMinutes: 55,
+        consultantInitials: 'RM',
+      ),
+    ],
+    visitStats: const VisitStats(
+      visitCount: 8,
+      totalOrdersValue: 7800,
+      avgDurationMinutes: 39,
+      periodLabel: 'últimos 4 meses',
+    ),
+  );
+}
+
+List<NearbyEstablishment> _mockNearby(
+  double centerLat,
+  double centerLng,
+  String excludeId,
+) {
+  final offsets =
+      <(String, String, double, double, double, String, ClinicStatus)>[
+        (
+          'near-1',
+          'Centro Médico OrtoVita',
+          0.004,
+          0.006,
+          0.6,
+          'Ortopedia',
+          ClinicStatus.active,
+        ),
+        (
+          'near-2',
+          'Instituto CardioMed',
+          -0.007,
+          0.005,
+          0.9,
+          'Cardio',
+          ClinicStatus.negotiation,
+        ),
+        (
+          'near-3',
+          'Clínica Vitalis Itaim',
+          0.011,
+          -0.009,
+          1.4,
+          'Multi',
+          ClinicStatus.active,
+        ),
+        (
+          'near-4',
+          'Policlínica Primavera',
+          -0.014,
+          -0.010,
+          1.8,
+          'Derm · Ped',
+          ClinicStatus.inactive,
+        ),
+        (
+          'near-5',
+          'Clínica São Lucas',
+          0.008,
+          0.012,
+          1.2,
+          'Multi',
+          ClinicStatus.active,
+        ),
+        (
+          'near-6',
+          'Hospital Santa Clara',
+          -0.015,
+          0.006,
+          2.4,
+          'Multi',
+          ClinicStatus.active,
+        ),
+        (
+          'near-7',
+          'Centro Médico Paulista',
+          0.022,
+          -0.018,
+          3.8,
+          'Clínica geral',
+          ClinicStatus.negotiation,
+        ),
+        (
+          'near-8',
+          'Lab Diagnóstico Avançado',
+          -0.028,
+          -0.010,
+          5.1,
+          'Diagnóstico',
+          ClinicStatus.active,
+        ),
+        (
+          'near-9',
+          'Clínica Vida Plena',
+          0.045,
+          0.030,
+          8.6,
+          'Multi',
+          ClinicStatus.active,
+        ),
+        (
+          'near-10',
+          'Instituto Ortopédico SP',
+          -0.052,
+          0.040,
+          12.3,
+          'Ortopedia',
+          ClinicStatus.active,
+        ),
+        (
+          'near-11',
+          'Centro de Imagem Norte',
+          0.080,
+          -0.055,
+          22.0,
+          'Diagnóstico',
+          ClinicStatus.active,
+        ),
+        (
+          'near-12',
+          'Clínica Bem Estar',
+          -0.095,
+          -0.070,
+          35.5,
+          'Multi',
+          ClinicStatus.active,
+        ),
+      ];
+
+  return offsets
+      .where((o) => o.$1 != excludeId)
+      .map(
+        (o) => NearbyEstablishment(
+          id: o.$1,
+          name: o.$2,
+          latitude: centerLat + o.$3,
+          longitude: centerLng + o.$4,
+          distanceKm: o.$5,
+          specialtyLabel: o.$6,
+          status: o.$7,
+        ),
+      )
+      .toList(growable: false);
+}
+
+List<NearbyEstablishment> filterNearbyByRadius(
+  List<NearbyEstablishment> all,
+  double radiusKm,
+) {
+  return all.where((e) => e.distanceKm <= radiusKm).toList(growable: false);
+}

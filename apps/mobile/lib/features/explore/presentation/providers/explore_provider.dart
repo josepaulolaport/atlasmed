@@ -87,7 +87,6 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       website: apiClinic.website,
       streetAddress: apiClinic.streetAddress,
       cnpj: apiClinic.cnpj,
-      fieldNotes: null,
     );
   } finally {
     repo.dispose();

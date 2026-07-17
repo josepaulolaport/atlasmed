@@ -2,6 +2,13 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dar
 import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
 
 // ── Clinic detail model ───────────────────────────────────────
+//
+// Identity + contact fields for the establishment. Section-specific data
+// (payers, doctors, signals, products, notes, nearby establishments) lives
+// in `EstablishmentDetailSections` (see establishment_detail_models.dart)
+// instead of here — that model is the single source of truth for the
+// detail screen sections and is what gets wired to real endpoints in
+// Phase 2/3 of Spec 0005.
 
 class ClinicDetail {
   final String id;
@@ -17,28 +24,8 @@ class ClinicDetail {
 
   // Additional detail fields
   final String? phone;
-  final String? whatsapp;
   final String? consultantName;
-  final String? clientType;
-  final String? region;
   final String? streetAddress;
-
-  // Health metrics
-  final double? ltv;
-  final double? avgTicket;
-  final int? avgPurchaseDays;
-
-  // Payers
-  final List<PayerInfo> payers;
-
-  // Visit history
-  final List<ClinicVisit> visits;
-
-  // Doctors at this clinic
-  final List<DoctorInfo> clinicDoctors;
-
-  // Notes
-  final String? fieldNotes;
 
   // Admin info
   final String? cnpj;
@@ -47,16 +34,6 @@ class ClinicDetail {
   final String? responsibleDoctor;
   final String? openingHours;
   final DateTime? registeredSince;
-  final String? segment;
-
-  // Signals
-  final List<ClinicSignal> signals;
-
-  // Nearby clinics
-  final List<NearbyClinic> nearbyClinics;
-
-  // Products with trend info
-  final List<ProductPerformance> productPerformance;
 
   const ClinicDetail({
     required this.id,
@@ -70,39 +47,18 @@ class ClinicDetail {
     required this.isPriority,
     required this.products,
     this.phone,
-    this.whatsapp,
     this.consultantName,
-    this.clientType,
-    this.region,
     this.streetAddress,
-    this.ltv,
-    this.avgTicket,
-    this.avgPurchaseDays,
-    this.payers = const [],
-    this.visits = const [],
-    this.clinicDoctors = const [],
-    this.fieldNotes,
     this.cnpj,
     this.email,
     this.website,
     this.responsibleDoctor,
     this.openingHours,
     this.registeredSince,
-    this.segment,
-    this.signals = const [],
-    this.nearbyClinics = const [],
-    this.productPerformance = const [],
   });
 }
 
 // ── Sub-models ────────────────────────────────────────────────
-
-class PayerInfo {
-  final String name;
-  final double percentage;
-
-  const PayerInfo({required this.name, required this.percentage});
-}
 
 class ClinicVisit {
   final String id;
@@ -125,59 +81,4 @@ class ClinicVisit {
       summary: json['summary'] as String?,
     );
   }
-}
-
-class DoctorInfo {
-  final String id;
-  final String name;
-  final String initials;
-  final double hue;
-  final String? specialty;
-  final String? crm;
-  final bool isKeyOpinionLeader;
-  final bool hasPendingInteraction;
-
-  const DoctorInfo({
-    required this.id,
-    required this.name,
-    required this.initials,
-    required this.hue,
-    this.specialty,
-    this.crm,
-    this.isKeyOpinionLeader = false,
-    this.hasPendingInteraction = false,
-  });
-}
-
-class ClinicSignal {
-  final String type; // 'warning', 'info', 'success'
-  final String message;
-
-  const ClinicSignal({required this.type, required this.message});
-}
-
-class NearbyClinic {
-  final String id;
-  final String name;
-  final double distanceKm;
-
-  const NearbyClinic({
-    required this.id,
-    required this.name,
-    required this.distanceKm,
-  });
-}
-
-class ProductPerformance {
-  final String name;
-  final String trend; // 'up', 'down', 'stable'
-  final double percentageChange;
-  final double share; // 0-100
-
-  const ProductPerformance({
-    required this.name,
-    required this.trend,
-    required this.percentageChange,
-    required this.share,
-  });
 }
