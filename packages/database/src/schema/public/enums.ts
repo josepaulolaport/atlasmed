@@ -87,14 +87,6 @@ export const verificationTokenTypeEnum = pgEnum("verification_token_type", [
   "PHONE_CHANGE",
 ]);
 
-export const territoryNodeTypeEnum = pgEnum("territory_node_type", [
-  "root",
-  "region",
-  "state",
-  "intermediate",
-  "patch",
-]);
-
 export const territoryAssignmentStatusEnum = pgEnum("territory_assignment_status", [
   "assigned",
   "unassigned",
@@ -107,8 +99,6 @@ export const territoryAssignmentSourceEnum = pgEnum("territory_assignment_source
 ]);
 
 export const territoryApprovalTypeEnum = pgEnum("territory_approval_type", [
-  "create_territory",
-  "reparent_territory",
   "deactivate_territory",
   "clinic_territory_change",
 ]);

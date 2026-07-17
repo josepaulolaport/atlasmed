@@ -4,7 +4,5 @@ export interface TerritoryHierarchyPort {
     activeOnly?: boolean
   ): Promise<string[]>;
 
-  resolveDescendantIds(ancestorIds: string[], activeOnly?: boolean): Promise<string[]>;
-
-  findUsersAssignedToTerritoryAncestors(territoryIds: string[]): Promise<string[]>;
+  findUsersAssignedToRelatedTerritories(territoryIds: string[]): Promise<string[]>;
 }

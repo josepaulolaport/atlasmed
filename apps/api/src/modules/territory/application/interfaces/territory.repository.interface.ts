@@ -1,6 +1,4 @@
-import type {
-  TerritoryNodeType,
-} from "@atlasmed/database";
+import type { Role } from "@atlasmed/access";
 import type { TerritoryTypeRecord } from "./territory-type.repository.interface";
 
 export interface TerritoryRecord {
@@ -8,19 +6,13 @@ export interface TerritoryRecord {
   name: string;
   slug: string;
   code: string;
-  nodeType: TerritoryNodeType;
   territoryTypeId: string;
   territoryType?: TerritoryTypeRecord;
-  countryCode: string | null;
-  regionSlug: string | null;
-  stateCode: string | null;
-  parentId: string | null;
   managerTerritoryId: string | null;
   isActive: boolean;
   sectorId: string | null;
   createdAt: Date;
   updatedAt: Date;
-  activeChildCount?: number;
   clinicCount?: number;
   assignedUserCount?: number;
   hasBoundary?: boolean;
@@ -31,12 +23,7 @@ export interface CreateTerritoryInput {
   name: string;
   slug: string;
   code?: string;
-  nodeType: TerritoryNodeType;
   territoryTypeId: string;
-  countryCode?: string | null;
-  regionSlug?: string | null;
-  stateCode?: string | null;
-  parentId?: string | null;
   managerTerritoryId?: string | null;
   sectorId?: string | null;
 }
@@ -52,10 +39,6 @@ export interface TerritoryRepository {
 
   findActiveByTypeSlug(typeSlug: string): Promise<TerritoryRecord[]>;
 
-  findChildren(parentId: string, activeOnly?: boolean): Promise<TerritoryRecord[]>;
-
-  countActiveChildren(parentId: string): Promise<number>;
-
   countRepPatchesByManagerZone(managerTerritoryId: string): Promise<number>;
 
   countClinics(territoryId: string): Promise<number>;
@@ -68,16 +51,24 @@ export interface TerritoryRepository {
     id: string,
     data: {
       name?: string;
-      parentId?: string | null;
       managerTerritoryId?: string | null;
       isActive?: boolean;
-      countryCode?: string | null;
+      sectorId?: string | null;
     }
   ): Promise<TerritoryRecord>;
-
-  findActiveCountryByCode(countryCode: string): Promise<TerritoryRecord | null>;
 
   findRepPatchIdsByManagerTerritoryIds(managerTerritoryIds: string[]): Promise<string[]>;
 
   findByIds(ids: string[]): Promise<TerritoryRecord[]>;
+
+  /**
+   * Finds other users (excluding `excludeUserId`) whose role is in `roles`
+   * and who already hold an assignment on `territoryId`. Used to enforce
+   * "one user per role-group per territory" assignment conflicts.
+   */
+  findConflictingAssignments(params: {
+    territoryId: string;
+    excludeUserId: string;
+    roles: Role[];
+  }): Promise<Array<{ userId: string }>>;
 }

@@ -28,6 +28,8 @@ void main() {
       "id": "clinic-1",
       "name": "Clínica Central",
       "professionalCount": 7,
+      "taxIdType": "PF",
+      "cpf": "12345678909",
       "territoryId": "territory-1",
       "territoryAssignmentStatus": "assigned",
       "createdAt": "2026-01-01T00:00:00.000Z",
@@ -42,6 +44,8 @@ void main() {
       expect(result.items.first.id, 'clinic-1');
       expect(result.items.first.name, 'Clínica Central');
       expect(result.items.first.professionalCount, 7);
+      expect(result.items.first.taxIdType, 'PF');
+      expect(result.items.first.cpf, '12345678909');
       expect(result.pagination.total, 31);
     });
   });

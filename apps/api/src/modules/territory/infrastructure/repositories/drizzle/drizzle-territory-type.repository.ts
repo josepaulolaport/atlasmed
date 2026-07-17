@@ -17,9 +17,7 @@ function mapType(record: {
   assignsClinics: boolean;
   assignableToUsers: boolean;
   assignableToManagers: boolean;
-  isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
-  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
   createdAt: Date;
@@ -65,9 +63,7 @@ export class DrizzleTerritoryTypeRepository implements TerritoryTypeRepository {
         assignsClinics: input.assignsClinics ?? false,
         assignableToUsers: input.assignableToUsers ?? false,
         assignableToManagers: input.assignableToManagers ?? false,
-        isCountryLevel: input.isCountryLevel ?? false,
         blockSiblingOverlap: input.blockSiblingOverlap ?? false,
-        participatesInGroupingHierarchy: input.participatesInGroupingHierarchy ?? false,
         sortOrder: input.sortOrder ?? 0,
       })
       .returning();

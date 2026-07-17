@@ -1,0 +1,194 @@
+import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_mode.dart';
+import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_refs.dart';
+
+class GeometryValidation {
+  final bool tooFewPoints;
+  final bool selfIntersects;
+  final bool overlapsNeighbor;
+
+  /// A territory must always be a single connected polygon — this flags
+  /// the (now invalid) state of having more than one disconnected part,
+  /// whether from legacy/mock data or from a neighbor auto-clip splitting
+  /// a part in two.
+  final bool hasMultipleAreas;
+  final String? message;
+
+  const GeometryValidation({
+    this.tooFewPoints = false,
+    this.selfIntersects = false,
+    this.overlapsNeighbor = false,
+    this.hasMultipleAreas = false,
+    this.message,
+  });
+
+  static const valid = GeometryValidation();
+
+  bool get isValid =>
+      !tooFewPoints &&
+      !selfIntersects &&
+      !overlapsNeighbor &&
+      !hasMultipleAreas;
+}
+
+/// Sentinel used by [TerritoryEditorState.copyWith] so nullable fields can
+/// be explicitly reset to `null` (vs. "leave unchanged", the default).
+class _Unset {
+  const _Unset();
+}
+
+const _unset = _Unset();
+
+class TerritoryEditorState {
+  final bool loading;
+  final String? loadError;
+  final Territory? original;
+
+  /// `true` when the editor was opened to create a brand-new territory
+  /// rather than edit an existing one — [original] then stays `null` for
+  /// the whole session (there's nothing to load or revert to) and
+  /// [draft] carries the metadata a real `Territory` needs instead.
+  final bool isCreating;
+
+  /// The name/kind/sector/parent/assignee collected by the metadata form.
+  /// `null` until the form is first confirmed — the map/drawing tools
+  /// aren't shown while this is `null` and [isCreating] is `true`.
+  final TerritoryDraft? draft;
+
+  /// Other territories of the same kind + sector, target excluded — the
+  /// set that overlap checks and (in stage 3) auto-clip-snapping run
+  /// against.
+  final List<Territory> neighbors;
+
+  /// The manager zone a rep patch is being drawn/edited inside of — set
+  /// from [draft.managerTerritoryId]/[original.managerTerritoryId] when
+  /// applicable, `null` for manager zones themselves. Every commit
+  /// (drawing, drag) is clipped to stay within it; the screen also
+  /// renders its outline and frames the camera on it. On the real API a
+  /// patch's manager zone is derived from geometry, so this is guidance
+  /// for the user, not something sent back on save.
+  final Territory? fenceZone;
+
+  final GeometryParts? working;
+  final List<GeometryParts> undoStack;
+  final List<GeometryParts> redoStack;
+
+  final EditorMode mode;
+  final int? selectedPart;
+  final SelectionAction selectionAction;
+  final EdgeRef? selectedEdge;
+
+  /// Points placed so far by the Add/Remove area tool — not yet committed
+  /// to [working]. Cleared whenever the mode changes.
+  final List<MapCoordinate> drawingPoints;
+
+  final GeometryValidation validation;
+  final bool saving;
+  final bool saved;
+
+  /// Message from the last failed [TerritoryEditorController.save] call —
+  /// e.g. a backend containment/overlap rejection ("Rep patch must be
+  /// fully contained inside exactly one active manager zone"). Cleared on
+  /// the next save attempt.
+  final String? saveError;
+
+  const TerritoryEditorState({
+    this.loading = true,
+    this.loadError,
+    this.original,
+    this.isCreating = false,
+    this.draft,
+    this.neighbors = const [],
+    this.fenceZone,
+    this.working,
+    this.undoStack = const [],
+    this.redoStack = const [],
+    this.mode = EditorMode.navigate,
+    this.selectedPart,
+    this.selectionAction = SelectionAction.none,
+    this.selectedEdge,
+    this.drawingPoints = const [],
+    this.validation = GeometryValidation.valid,
+    this.saving = false,
+    this.saved = false,
+    this.saveError,
+  });
+
+  /// One committed action (drag-begin, insert, delete, ...) pushes exactly
+  /// one snapshot — so "changed since opening the editor" is just "is
+  /// there anything to undo".
+  bool get isDirty => undoStack.isNotEmpty;
+
+  bool get canSave =>
+      !loading &&
+      !saving &&
+      isDirty &&
+      validation.isValid &&
+      (!isCreating || draft != null);
+  bool get canUndo => undoStack.isNotEmpty;
+  bool get canRedo => redoStack.isNotEmpty;
+  bool get canDeleteSelectedPart =>
+      working != null &&
+      working!.length > 1 &&
+      selectedPart != null &&
+      selectedPart! < working!.length;
+  bool get canFinishDrawing => drawingPoints.length >= 3;
+
+  TerritoryEditorState copyWith({
+    bool? loading,
+    Object? loadError = _unset,
+    Territory? original,
+    bool? isCreating,
+    Object? draft = _unset,
+    List<Territory>? neighbors,
+    Object? fenceZone = _unset,
+    Object? working = _unset,
+    List<GeometryParts>? undoStack,
+    List<GeometryParts>? redoStack,
+    EditorMode? mode,
+    Object? selectedPart = _unset,
+    SelectionAction? selectionAction,
+    Object? selectedEdge = _unset,
+    List<MapCoordinate>? drawingPoints,
+    GeometryValidation? validation,
+    bool? saving,
+    bool? saved,
+    Object? saveError = _unset,
+  }) {
+    return TerritoryEditorState(
+      loading: loading ?? this.loading,
+      loadError: identical(loadError, _unset)
+          ? this.loadError
+          : loadError as String?,
+      original: original ?? this.original,
+      isCreating: isCreating ?? this.isCreating,
+      draft: identical(draft, _unset) ? this.draft : draft as TerritoryDraft?,
+      neighbors: neighbors ?? this.neighbors,
+      fenceZone: identical(fenceZone, _unset)
+          ? this.fenceZone
+          : fenceZone as Territory?,
+      working: identical(working, _unset)
+          ? this.working
+          : working as GeometryParts?,
+      undoStack: undoStack ?? this.undoStack,
+      redoStack: redoStack ?? this.redoStack,
+      mode: mode ?? this.mode,
+      selectedPart: identical(selectedPart, _unset)
+          ? this.selectedPart
+          : selectedPart as int?,
+      selectionAction: selectionAction ?? this.selectionAction,
+      selectedEdge: identical(selectedEdge, _unset)
+          ? this.selectedEdge
+          : selectedEdge as EdgeRef?,
+      drawingPoints: drawingPoints ?? this.drawingPoints,
+      validation: validation ?? this.validation,
+      saving: saving ?? this.saving,
+      saved: saved ?? this.saved,
+      saveError: identical(saveError, _unset)
+          ? this.saveError
+          : saveError as String?,
+    );
+  }
+}

@@ -1,6 +1,5 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
 import type { TerritoryTypeFlags } from "@/types/territory";
 
 const FLAG_FIELDS: Array<{
@@ -27,16 +26,6 @@ const FLAG_FIELDS: Array<{
     key: "assignableToManagers",
     label: "Atribuível a gestores",
     description: "Gestores podem ser atribuídos a territórios deste tipo.",
-  },
-  {
-    key: "isCountryLevel",
-    label: "Nível de país",
-    description: "Território de país de nível superior; não pode ter um pai.",
-  },
-  {
-    key: "participatesInGroupingHierarchy",
-    label: "Hierarquia de agrupamento",
-    description: "Territórios deste tipo aparecem na árvore de agrupamento para filtros e análises.",
   },
   {
     key: "blockSiblingOverlap",
@@ -94,6 +83,5 @@ export const DEFAULT_TERRITORY_TYPE_FLAGS: TerritoryTypeFlags = {
   assignsClinics: false,
   assignableToUsers: false,
   assignableToManagers: false,
-  isCountryLevel: false,
   blockSiblingOverlap: false,
 };

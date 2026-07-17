@@ -492,9 +492,6 @@ async function cleanOperationalData(adminUserId: string, dryRun: boolean) {
         if (ids.length === 0) return { count: 0 };
 
         const idList = ids.map((id) => `'${id}'`).join(", ");
-        await db.$client.unsafe(
-          `DELETE FROM public.territory_closure WHERE "ancestorId" IN (${idList}) OR "descendantId" IN (${idList})`
-        );
         const r = await db.$client.unsafe(
           `DELETE FROM public.territories WHERE id IN (${idList})`
         );

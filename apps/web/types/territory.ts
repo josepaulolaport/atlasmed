@@ -7,9 +7,7 @@ export interface TerritoryType {
   assignsClinics: boolean;
   assignableToUsers: boolean;
   assignableToManagers: boolean;
-  isCountryLevel: boolean;
   blockSiblingOverlap: boolean;
-  participatesInGroupingHierarchy: boolean;
   sortOrder: number;
   isActive: boolean;
 }
@@ -21,32 +19,20 @@ export interface Territory {
   code: string;
   territoryTypeId: string;
   territoryType: TerritoryType;
-  countryCode?: string;
-  parentId?: string;
+  sectorId?: string;
   managerTerritoryId?: string;
   isActive: boolean;
   clinicCount: number;
   assignedUserCount: number;
   repPatchCount?: number;
   hasBoundary: boolean;
-  isLeaf: boolean;
-  isCountryLevel?: boolean;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface TerritoryTreeNode extends Territory {
-  children: TerritoryTreeNode[];
 }
 
 export interface GeoJsonPolygon {
   type: "Polygon" | "MultiPolygon";
   coordinates: unknown;
-}
-
-export interface TerritoryDescendantsResponse {
-  territoryId: string;
-  descendantIds: string[];
 }
 
 export interface CreateTerritoryRequest {
@@ -55,8 +41,7 @@ export interface CreateTerritoryRequest {
   slug?: string;
   territoryTypeId?: string;
   typeSlug?: string;
-  countryCode?: string;
-  parentId?: string;
+  sectorId?: string;
   reason?: string;
   boundary?: GeoJsonPolygon;
 }
@@ -70,9 +55,7 @@ export interface TerritoryTypeFlags {
   assignsClinics?: boolean;
   assignableToUsers?: boolean;
   assignableToManagers?: boolean;
-  isCountryLevel?: boolean;
   blockSiblingOverlap?: boolean;
-  participatesInGroupingHierarchy?: boolean;
 }
 
 export interface CreateTerritoryTypeRequest extends TerritoryTypeFlags {
@@ -91,8 +74,8 @@ export interface UpdateTerritoryTypeRequest extends TerritoryTypeFlags {
 
 export interface UpdateTerritoryRequest {
   name?: string;
-  parentId?: string | null;
   isActive?: boolean;
+  sectorId?: string | null;
   reason?: string;
 }
 
@@ -114,11 +97,7 @@ export interface TerritoryApprovalRequest {
   updatedAt: string;
 }
 
-export type TerritoryApprovalType =
-  | "create_territory"
-  | "reparent_territory"
-  | "deactivate_territory"
-  | "facility_territory_change";
+export type TerritoryApprovalType = "deactivate_territory" | "clinic_territory_change";
 
 export type TerritoryApprovalStatus =
   | "pending"
@@ -169,34 +148,12 @@ export interface SaveBoundaryManagerZoneResponse {
   repPatchCount: number;
 }
 
-export interface SaveBoundaryGroupingResponse {
+export interface SaveBoundaryOtherResponse {
   success: boolean;
-  mode: "grouping";
+  mode: "other";
 }
 
 export type SaveBoundaryResponse =
   | SaveBoundaryRepPatchResponse
   | SaveBoundaryManagerZoneResponse
-  | SaveBoundaryGroupingResponse;
-
-export interface AnalyticsViewResponse {
-  grouping: {
-    id: string;
-    name: string;
-    slug: string;
-    code: string;
-    boundary: GeoJsonPolygon | null;
-  };
-  patches: Array<{
-    repPatchId: string;
-    repPatch: {
-      id: string;
-      name: string;
-      code: string;
-      slug: string;
-    } | null;
-    facilities: Array<{ id: string; name: string; lat: number; lng: number }>;
-  }>;
-  clinicCount: number;
-  patchCount: number;
-}
+  | SaveBoundaryOtherResponse;

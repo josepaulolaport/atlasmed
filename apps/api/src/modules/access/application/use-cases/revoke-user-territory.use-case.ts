@@ -38,10 +38,10 @@ export class RevokeUserTerritoryUseCase {
       throw new UserNotFoundError(params.targetUserId);
     }
 
-    if (target.role.name !== Role.REP) {
+    if (target.role.name !== Role.REP && target.role.name !== Role.MANAGER) {
       throw new OperationNotAllowedError(
         "revoke_territory",
-        "Territory assignments are only supported for USER accounts"
+        "Territory assignments are only supported for REP and MANAGER accounts"
       );
     }
 

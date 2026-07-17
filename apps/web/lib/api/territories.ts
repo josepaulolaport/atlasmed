@@ -1,7 +1,6 @@
 import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
 import type {
-  AnalyticsViewResponse,
   ClinicTerritoryOverrideRequest,
   CreateTerritoryRequest,
   CreateTerritoryResult,
@@ -13,21 +12,19 @@ import type {
   TerritoryApprovalRequest,
   TerritoryType,
   UpdateTerritoryTypeRequest,
-  TerritoryDescendantsResponse,
   SaveBoundaryResponse,
-  TerritoryTreeNode,
   UnassignedFacility,
   UpdateTerritoryRequest,
 } from "@/types/territory";
 
 export const territoriesApi = {
   listTerritories: async (
-    format: "tree" | "flat" = "flat",
-    typeSlug?: string
-  ): Promise<{ data: Territory[] | TerritoryTreeNode[] }> => {
-    const response = await apiClient.get<{ data: Territory[] | TerritoryTreeNode[] }>(
+    typeSlug?: string,
+    sectorId?: string
+  ): Promise<{ data: Territory[] }> => {
+    const response = await apiClient.get<{ data: Territory[] }>(
       "/territory/territories",
-      { params: { format, type: typeSlug } }
+      { params: { format: "flat", type: typeSlug, sectorId } }
     );
     return response.data;
   },
@@ -52,13 +49,6 @@ export const territoriesApi = {
     return response.data;
   },
 
-  listGroupingTree: async (): Promise<{ data: TerritoryTreeNode[] }> => {
-    const response = await apiClient.get<{ data: TerritoryTreeNode[] }>(
-      "/territory/territories/grouping-tree"
-    );
-    return response.data;
-  },
-
   listTerritoryTypes: async (): Promise<{ data: TerritoryType[] }> => {
     const response = await apiClient.get<{ data: TerritoryType[] }>("/territory/territory-types");
     return response.data;
@@ -79,13 +69,6 @@ export const territoriesApi = {
 
   getTerritory: async (id: string): Promise<Territory> => {
     const response = await apiClient.get<Territory>(`/territory/territories/${id}`);
-    return response.data;
-  },
-
-  getDescendants: async (id: string): Promise<TerritoryDescendantsResponse> => {
-    const response = await apiClient.get<TerritoryDescendantsResponse>(
-      `/territory/territories/${id}/descendants`
-    );
     return response.data;
   },
 
@@ -140,13 +123,6 @@ export const territoriesApi = {
   deleteBoundary: async (id: string): Promise<{ success: boolean }> => {
     const response = await apiClient.delete<{ success: boolean }>(
       `/territory/territories/${id}/boundary`
-    );
-    return response.data;
-  },
-
-  getAnalyticsView: async (groupingTerritoryId: string): Promise<AnalyticsViewResponse> => {
-    const response = await apiClient.get<AnalyticsViewResponse>(
-      `/territory/territories/${groupingTerritoryId}/analytics-view`
     );
     return response.data;
   },
