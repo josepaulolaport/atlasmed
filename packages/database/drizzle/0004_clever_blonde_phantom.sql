@@ -23,7 +23,7 @@ DROP INDEX "product_equivalences_competitor_product_idx";--> statement-breakpoin
 DROP INDEX "product_sectors_product_sector_uidx";--> statement-breakpoint
 DROP INDEX "products_legacy_id_idx";--> statement-breakpoint
 DROP INDEX "order_items_legacy_product_id_idx";--> statement-breakpoint
-ALTER TABLE "products" ALTER COLUMN "legacy_id" SET DATA TYPE integer;--> statement-breakpoint
+ALTER TABLE "products" ALTER COLUMN "legacy_id" SET DATA TYPE integer USING "legacy_id"::integer;--> statement-breakpoint
 ALTER TABLE "order_items" ALTER COLUMN "quantity" SET DATA TYPE numeric(12, 3);--> statement-breakpoint
 ALTER TABLE "order_items" ALTER COLUMN "quantity" SET DEFAULT '0';--> statement-breakpoint
 ALTER TABLE "order_items" ALTER COLUMN "unit_price" SET DATA TYPE numeric(12, 2);--> statement-breakpoint
@@ -39,13 +39,13 @@ ALTER TABLE "orders" ALTER COLUMN "gross_weight" SET DEFAULT '0';--> statement-b
 ALTER TABLE "orders" ALTER COLUMN "net_weight" SET DATA TYPE numeric(10, 3);--> statement-breakpoint
 ALTER TABLE "orders" ALTER COLUMN "net_weight" SET DEFAULT '0';--> statement-breakpoint
 ALTER TABLE "orders" ALTER COLUMN "usd_exchange_rate" SET DATA TYPE numeric(10, 4);--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "legacy_supplier_id" integer;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "legacy_created_at" timestamp;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "internal_classification" text;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "requires_sterilization" boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "anvisa_registration" text;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "ncm" text;--> statement-breakpoint
-ALTER TABLE "products" ADD COLUMN "image_url" text;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "legacy_supplier_id" integer;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "legacy_created_at" timestamp;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "internal_classification" text;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "requires_sterilization" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "anvisa_registration" text;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "ncm" text;--> statement-breakpoint
+ALTER TABLE "products" ADD COLUMN IF NOT EXISTS "image_url" text;--> statement-breakpoint
 ALTER TABLE "order_items" ADD CONSTRAINT "order_items_product_id_products_id_fk" FOREIGN KEY ("product_id") REFERENCES "public"."products"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_seller_id_users_id_fk" FOREIGN KEY ("seller_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "orders" ADD CONSTRAINT "orders_professional_id_professionals_id_fk" FOREIGN KEY ("professional_id") REFERENCES "public"."professionals"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
