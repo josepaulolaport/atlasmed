@@ -12,6 +12,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       web: ${{ steps.filter.outputs.web }}
       workers: ${{ steps.filter.outputs.workers }}
+      mobile: ${{ steps.filter.outputs.mobile }}
     steps:
       - uses: actions/checkout@v5
       - uses: dorny/paths-filter@v3
@@ -24,6 +25,8 @@ jobs:
               - 'apps/web/**'
             workers:
               - 'apps/workers/**'
+            mobile:
+              - 'apps/mobile/**'
 
   packages:
     name: Packages — typecheck
@@ -183,3 +186,35 @@ jobs:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/atlasmed_test
         run: bun --cwd apps/workers/cnes-ingestion test --test-name-pattern='^((?!Integration Tests).)*$'
+
+  mobile:
+    name: Mobile — typecheck + lint
+    runs-on: ubuntu-latest
+    needs: [changes]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.14'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.1'
+      - name: Setup fvm
+        run: |
+          dart pub global activate fvm 2>&1 | tail -1
+          echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
+          # Symlink system Flutter into fvm's cache so fvm commands work
+          FLUTTER_SDK=$(dirname $(dirname $(which flutter)))
+          mkdir -p ~/fvm/versions
+          ln -sf "$FLUTTER_SDK" ~/fvm/versions/3.44.1
+          mkdir -p apps/mobile/.fvm
+          ln -sf "$FLUTTER_SDK" apps/mobile/.fvm/flutter_sdk
+      - name: Install dependencies
+        run: bun install
+      - name: Typecheck
+        run: bun run mobile:typecheck
+      - name: Lint
+        run: bun run mobile:lint
+      - name: Test (only if apps/mobile changed)
+        if: needs.changes.outputs.mobile == 'true'
+        run: bun run mobile:test
