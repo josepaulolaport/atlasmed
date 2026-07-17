@@ -49,7 +49,16 @@ class HttpTerritoryRepository implements TerritoryRepository {
     RepositoryHttpMethod method, [
     Map<String, dynamic>? body,
   ]) => _client.call(
-    request: RepositoryHttpRequest(url: url, method: method, body: body),
+    request: RepositoryHttpRequest(
+      url: url,
+      method: method,
+      body: body,
+      // Without this, `http` defaults to `text/plain` for a String body
+      // and Elysia silently parses it as an empty object — every field
+      // then fails validation as "undefined" even though the JSON was
+      // sent correctly.
+      headers: const {'Content-Type': 'application/json'},
+    ),
   );
 
   void _throwIfError(RepositoryHttpResponse response) {
@@ -60,7 +69,11 @@ class HttpTerritoryRepository implements TerritoryRepository {
 
   @override
   Future<List<Sector>> getSectors() async {
-    final response = await _get(_uri('/api/v1/sectors'));
+    // `/access/sectors` — the same flat, unpaginated "active sectors for a
+    // picker" endpoint the web admin's user-assignment dialog already
+    // uses — not the catalog module's paginated `/sectors` CRUD endpoint,
+    // which is a heavier admin surface this map-first screen doesn't need.
+    final response = await _get(_accessUri('/sectors'));
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final rows = (decoded['sectors'] as List<dynamic>).cast<Map<String, dynamic>>();
