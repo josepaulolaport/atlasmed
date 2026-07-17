@@ -42,6 +42,11 @@ export type SearchIndexClient = {
 };
 
 const PAGE_SIZE = 500;
+const SEARCH_REBUILD_TASK_WAIT_OPTIONS = {
+  // Leave ten minutes before the 120-minute Temporal activity deadline for cleanup/retry handling.
+  timeout: 110 * 60 * 1_000,
+  interval: 1_000,
+} as const;
 
 export function fullSearchSyncWorkflowId(target: SearchSyncTarget): string {
   return `search-sync-${target}-full`;
@@ -174,25 +179,27 @@ async function indexExists(search: SearchIndexClient, index: string): Promise<bo
   }
 }
 
-function createSearchClient(): SearchIndexClient {
-  if (!environment.MEILISEARCH_URL) {
-    throw new Error("Meilisearch is not configured");
-  }
-
-  const client = new Meilisearch({
-    host: environment.MEILISEARCH_URL,
-    ...(environment.MEILISEARCH_API_KEY ? { apiKey: environment.MEILISEARCH_API_KEY } : {}),
-  });
-
+export function createSearchIndexClient(client: Meilisearch): SearchIndexClient {
   return {
     createIndex: (uid, options) => client.createIndex(uid, options),
     getIndex: (uid) => client.getIndex(uid),
     updateSettings: (uid, settings) => client.index(uid).updateSettings(settings),
     addDocuments: (uid, documents, options) => client.index(uid).addDocuments(documents as Record<string, unknown>[], options),
-    waitForTask: (taskUid) => client.tasks.waitForTask(taskUid),
+    waitForTask: (taskUid) => client.tasks.waitForTask(taskUid, SEARCH_REBUILD_TASK_WAIT_OPTIONS),
     swapIndexes: (swaps) => client.swapIndexes(swaps.map(({ indexes }) => ({ indexes, rename: false }))),
     deleteIndex: (uid) => client.deleteIndex(uid),
   };
+}
+
+function createSearchClient(): SearchIndexClient {
+  if (!environment.MEILISEARCH_URL) {
+    throw new Error("Meilisearch is not configured");
+  }
+
+  return createSearchIndexClient(new Meilisearch({
+    host: environment.MEILISEARCH_URL,
+    ...(environment.MEILISEARCH_API_KEY ? { apiKey: environment.MEILISEARCH_API_KEY } : {}),
+  }));
 }
 
 const FACILITY_SETTINGS = {

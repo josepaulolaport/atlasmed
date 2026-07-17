@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type { Meilisearch } from "meilisearch";
+import * as searchRebuild from "./rebuild";
 import {
   fullSearchSyncWorkflowId,
   mapFacilitySearchDocument,
@@ -7,6 +9,36 @@ import {
 } from "./rebuild";
 
 describe("search rebuild", () => {
+  test("passes explicit full-rebuild timeout and polling interval to every Meilisearch task wait", async () => {
+    const waits: Array<[number, { timeout: number; interval: number } | undefined]> = [];
+    const client = {
+      createIndex: async () => ({ taskUid: 1 }),
+      getIndex: async () => ({}),
+      index: () => ({
+        updateSettings: async () => ({ taskUid: 2 }),
+        addDocuments: async () => ({ taskUid: 3 }),
+      }),
+      tasks: {
+        waitForTask: async (taskUid: number, options?: { timeout: number; interval: number }) => {
+          waits.push([taskUid, options]);
+        },
+      },
+      swapIndexes: async () => ({ taskUid: 4 }),
+      deleteIndex: async () => ({ taskUid: 5 }),
+    } as unknown as Meilisearch;
+
+    const search = searchRebuild.createSearchIndexClient(client);
+    await Promise.all([1, 2, 3, 4, 5].map((taskUid) => search.waitForTask(taskUid)));
+
+    expect(waits).toEqual([
+      [1, { timeout: 6_600_000, interval: 1_000 }],
+      [2, { timeout: 6_600_000, interval: 1_000 }],
+      [3, { timeout: 6_600_000, interval: 1_000 }],
+      [4, { timeout: 6_600_000, interval: 1_000 }],
+      [5, { timeout: 6_600_000, interval: 1_000 }],
+    ]);
+  });
+
   test("uses deterministic workflow ids for one full target rebuild", () => {
     expect(fullSearchSyncWorkflowId("facilities")).toBe("search-sync-facilities-full");
     expect(fullSearchSyncWorkflowId("professionals")).toBe("search-sync-professionals-full");
