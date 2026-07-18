@@ -149,6 +149,16 @@ export class DrizzleProductRepository implements ProductRepository {
     return mapProduct(rows[0], sectorMap.get(id) ?? []);
   }
 
+  async findAllActive(): Promise<ProductRecord[]> {
+    const rows = await db
+      .select(productColumns)
+      .from(products)
+      .where(eq(products.isActive, true))
+      .orderBy(asc(products.name));
+    const sectorMap = await fetchSectorIds(rows.map((r) => r.id));
+    return rows.map((row) => mapProduct(row, sectorMap.get(row.id) ?? []));
+  }
+
   async create(data: {
     code: string;
     name: string;

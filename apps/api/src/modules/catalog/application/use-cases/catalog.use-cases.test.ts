@@ -1,6 +1,24 @@
 import { describe, expect, it, mock } from "bun:test";
-import { GetProductUseCase, ListProductsUseCase } from "./catalog.use-cases";
+import {
+  GetProductUseCase,
+  ListProductsUseCase,
+  ListCompetitorProductsUseCase,
+  GetCompetitorProductUseCase,
+  CreateCompetitorProductUseCase,
+  UpdateCompetitorProductUseCase,
+  GetProductComparisonUseCase,
+  ListUnlinkedCompetitorProductsUseCase,
+  LinkCompetitorProductUseCase,
+  UnlinkCompetitorProductUseCase,
+  GetPriceIndexUseCase,
+} from "./catalog.use-cases";
 import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
+import type {
+  CompetitorProductRecord,
+  CompetitorProductRepository,
+} from "../interfaces/competitor-product.repository.interface";
+import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
+import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
 const product: ProductRecord = {
   id: "product-1",
@@ -33,10 +51,53 @@ function repository(overrides: Partial<ProductRepository> = {}): ProductReposito
   return {
     findAll: mock(() => Promise.resolve({ products: [product], total: 1 })),
     findById: mock(() => Promise.resolve(product)),
+    findAllActive: mock(() => Promise.resolve([product])),
     create: mock(),
     update: mock(),
     ...overrides,
   } as ProductRepository;
+}
+
+const competitor: CompetitorProductRecord = {
+  id: "competitor-1",
+  code: "COMP-001",
+  name: "SingJoint 24mg/2ml",
+  manufacturer: "Hangzhou",
+  brand: "Synvisc",
+  countryOfOrigin: "China",
+  price17: 70,
+  price18: 71,
+  price20: 72,
+  brasindiceUpdatedAt: "2026-01-01",
+  isActive: true,
+  createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+};
+
+function competitorProductRepository(
+  overrides: Partial<CompetitorProductRepository> = {}
+): CompetitorProductRepository {
+  return {
+    findAll: mock(() => Promise.resolve({ competitorProducts: [competitor], total: 1 })),
+    findById: mock(() => Promise.resolve(competitor)),
+    findAllActive: mock(() => Promise.resolve([competitor])),
+    create: mock(() => Promise.resolve(competitor)),
+    update: mock(() => Promise.resolve(competitor)),
+    ...overrides,
+  } as CompetitorProductRepository;
+}
+
+function productEquivalenceRepository(
+  overrides: Partial<ProductEquivalenceRepository> = {}
+): ProductEquivalenceRepository {
+  return {
+    findLinkedByProduct: mock(() => Promise.resolve([competitor])),
+    findUnlinkedByProduct: mock(() => Promise.resolve([competitor])),
+    exists: mock(() => Promise.resolve(false)),
+    link: mock(() => Promise.resolve()),
+    unlink: mock(() => Promise.resolve(true)),
+    ...overrides,
+  } as ProductEquivalenceRepository;
 }
 
 describe("catalog product use cases", () => {
@@ -88,5 +149,162 @@ describe("catalog product use cases", () => {
       productClassification: "Tópico",
       brasindiceUpdatedAt: "2026-01-01",
     }));
+  });
+});
+
+describe("competitor product use cases", () => {
+  it("lists competitor products with pagination and search", async () => {
+    const competitorProductRepo = competitorProductRepository();
+    const result = await new ListCompetitorProductsUseCase({
+      competitorProductRepository: competitorProductRepo,
+    }).execute({ page: 1, limit: 20, search: "sing" });
+
+    expect(competitorProductRepo.findAll).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      search: "sing",
+      isActive: undefined,
+    });
+    expect(result).toEqual({
+      data: [expect.objectContaining({ id: "competitor-1", name: "SingJoint 24mg/2ml" })],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
+  });
+
+  it("returns a serialized competitor product detail", async () => {
+    const result = await new GetCompetitorProductUseCase({
+      competitorProductRepository: competitorProductRepository(),
+    }).execute({ competitorProductId: "competitor-1" });
+
+    expect(result).toEqual(
+      expect.objectContaining({ id: "competitor-1", manufacturer: "Hangzhou", brand: "Synvisc" })
+    );
+  });
+
+  it("throws ResourceNotFoundError when the competitor product doesn't exist", async () => {
+    const competitorProductRepo = competitorProductRepository({
+      findById: mock(() => Promise.resolve(null)),
+    });
+
+    await expect(
+      new GetCompetitorProductUseCase({
+        competitorProductRepository: competitorProductRepo,
+      }).execute({ competitorProductId: "missing" })
+    ).rejects.toThrow(ResourceNotFoundError);
+  });
+
+  it("creates a competitor product", async () => {
+    const competitorProductRepo = competitorProductRepository();
+    await new CreateCompetitorProductUseCase({
+      competitorProductRepository: competitorProductRepo,
+    }).execute({
+      name: "SingJoint 24mg/2ml",
+      manufacturer: "Hangzhou",
+      countryOfOrigin: "China",
+      price17: 70,
+      price18: 71,
+      price20: 72,
+      brasindiceUpdatedAt: "2026-01-01",
+    });
+
+    expect(competitorProductRepo.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("updates a competitor product", async () => {
+    const competitorProductRepo = competitorProductRepository();
+    await new UpdateCompetitorProductUseCase({
+      competitorProductRepository: competitorProductRepo,
+    }).execute({ competitorProductId: "competitor-1", price20: 80 });
+
+    expect(competitorProductRepo.update).toHaveBeenCalledWith("competitor-1", { price20: 80 });
+  });
+});
+
+describe("product comparison and price index use cases", () => {
+  it("builds a comparison group with the AtlasMed product first, sorted by price", async () => {
+    const higherPricedCompetitor: CompetitorProductRecord = {
+      ...competitor,
+      id: "competitor-2",
+      name: "Pricier competitor",
+      price20: 999,
+    };
+    const productEquivalenceRepo = productEquivalenceRepository({
+      findLinkedByProduct: mock(() => Promise.resolve([competitor, higherPricedCompetitor])),
+    });
+
+    const result = await new GetProductComparisonUseCase({
+      productRepository: repository(),
+      productEquivalenceRepository: productEquivalenceRepo,
+    }).execute({ productId: "product-1" });
+
+    expect(result.productId).toBe("product-1");
+    expect(result.rows[0]).toEqual(expect.objectContaining({ id: "competitor-2", isOwn: false }));
+    expect(result.rows.map((row) => row.id)).toContain("product-1");
+  });
+
+  it("throws ResourceNotFoundError when the product doesn't exist", async () => {
+    await expect(
+      new GetProductComparisonUseCase({
+        productRepository: repository({ findById: mock(() => Promise.resolve(null)) }),
+        productEquivalenceRepository: productEquivalenceRepository(),
+      }).execute({ productId: "missing" })
+    ).rejects.toThrow(ResourceNotFoundError);
+  });
+
+  it("lists competitor products not yet linked to the product", async () => {
+    const result = await new ListUnlinkedCompetitorProductsUseCase({
+      productRepository: repository(),
+      productEquivalenceRepository: productEquivalenceRepository(),
+    }).execute({ productId: "product-1" });
+
+    expect(result.data).toEqual([expect.objectContaining({ id: "competitor-1" })]);
+  });
+
+  it("links a competitor product to a product", async () => {
+    const productEquivalenceRepo = productEquivalenceRepository();
+    await new LinkCompetitorProductUseCase({
+      productRepository: repository(),
+      competitorProductRepository: competitorProductRepository(),
+      productEquivalenceRepository: productEquivalenceRepo,
+    }).execute({ productId: "product-1", competitorProductId: "competitor-1" });
+
+    expect(productEquivalenceRepo.link).toHaveBeenCalledWith("product-1", "competitor-1", undefined);
+  });
+
+  it("rejects linking a competitor product that is already linked", async () => {
+    const productEquivalenceRepo = productEquivalenceRepository({
+      exists: mock(() => Promise.resolve(true)),
+    });
+
+    await expect(
+      new LinkCompetitorProductUseCase({
+        productRepository: repository(),
+        competitorProductRepository: competitorProductRepository(),
+        productEquivalenceRepository: productEquivalenceRepo,
+      }).execute({ productId: "product-1", competitorProductId: "competitor-1" })
+    ).rejects.toThrow(ValidationError);
+  });
+
+  it("throws ResourceNotFoundError when unlinking a competitor product that isn't linked", async () => {
+    const productEquivalenceRepo = productEquivalenceRepository({
+      unlink: mock(() => Promise.resolve(false)),
+    });
+
+    await expect(
+      new UnlinkCompetitorProductUseCase({
+        productEquivalenceRepository: productEquivalenceRepo,
+      }).execute({ productId: "product-1", competitorProductId: "competitor-1" })
+    ).rejects.toThrow(ResourceNotFoundError);
+  });
+
+  it("builds the full price index from AtlasMed and competitor products", async () => {
+    const result = await new GetPriceIndexUseCase({
+      productRepository: repository(),
+      competitorProductRepository: competitorProductRepository(),
+    }).execute({});
+
+    expect(result.data).toHaveLength(2);
+    expect(result.data.some((row) => row.isOwn)).toBe(true);
+    expect(result.data.some((row) => !row.isOwn)).toBe(true);
   });
 });

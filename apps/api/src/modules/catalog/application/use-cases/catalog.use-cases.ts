@@ -2,12 +2,17 @@ import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import type { SectorRepository } from "../interfaces/sector.repository.interface";
-import type { ProductRepository } from "../interfaces/product.repository.interface";
+import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
 import type {
   HealthcareProviderRepository,
   HealthcareProviderType,
 } from "../interfaces/healthcare-provider.repository.interface";
 import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
+import type {
+  CompetitorProductRecord,
+  CompetitorProductRepository,
+} from "../interfaces/competitor-product.repository.interface";
+import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
 
 function serializeSector(row: {
   id: string;
@@ -376,5 +381,313 @@ export class CreateFacilityHealthcareProviderShareUseCase {
       healthcareProvider: share.healthcareProvider,
       createdAt: share.createdAt.toISOString(),
     };
+  }
+}
+
+// ============================================================================
+// Competitor products & product equivalences ("comparativo" / price index)
+// ============================================================================
+
+function serializeCompetitorProduct(row: CompetitorProductRecord) {
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    manufacturer: row.manufacturer,
+    brand: row.brand,
+    countryOfOrigin: row.countryOfOrigin,
+    price17: row.price17,
+    price18: row.price18,
+    price20: row.price20,
+    brasindiceUpdatedAt: row.brasindiceUpdatedAt,
+    isActive: row.isActive,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+export type ComparisonSortColumn = "icms17" | "icms18" | "icms20";
+
+export interface ComparisonRow {
+  id: string;
+  label: string;
+  manufacturer: string;
+  countryOfOrigin: string;
+  price17: number;
+  price18: number;
+  price20: number;
+  updatedAt: string;
+  isOwn: boolean;
+}
+
+function priceForColumn(row: ComparisonRow, column: ComparisonSortColumn): number {
+  switch (column) {
+    case "icms17":
+      return row.price17;
+    case "icms18":
+      return row.price18;
+    case "icms20":
+      return row.price20;
+  }
+}
+
+function sortRowsByPrice(rows: ComparisonRow[], column: ComparisonSortColumn): ComparisonRow[] {
+  return [...rows].sort((a, b) => priceForColumn(b, column) - priceForColumn(a, column));
+}
+
+function productToComparisonRow(product: ProductRecord): ComparisonRow {
+  return {
+    id: product.id,
+    label: product.name,
+    manufacturer: product.manufacturer,
+    countryOfOrigin: product.countryOfOrigin,
+    price17: product.price17,
+    price18: product.price18,
+    price20: product.price20,
+    updatedAt: product.brasindiceUpdatedAt,
+    isOwn: true,
+  };
+}
+
+function competitorToComparisonRow(competitor: CompetitorProductRecord): ComparisonRow {
+  return {
+    id: competitor.id,
+    label: competitor.name,
+    manufacturer: competitor.manufacturer ?? "",
+    countryOfOrigin: competitor.countryOfOrigin ?? "",
+    price17: competitor.price17 ?? 0,
+    price18: competitor.price18 ?? 0,
+    price20: competitor.price20 ?? 0,
+    updatedAt: competitor.brasindiceUpdatedAt ?? "",
+    isOwn: false,
+  };
+}
+
+export class ListCompetitorProductsUseCase {
+  constructor(
+    private readonly deps: { competitorProductRepository: CompetitorProductRepository }
+  ) {}
+
+  async execute(input: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    isActive?: boolean;
+  }) {
+    const page = input.page ?? 1;
+    const limit = input.limit ?? 50;
+    const { competitorProducts, total } = await this.deps.competitorProductRepository.findAll({
+      page,
+      limit,
+      search: input.search,
+      isActive: input.isActive,
+    });
+
+    return {
+      data: competitorProducts.map(serializeCompetitorProduct),
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+    };
+  }
+}
+
+export class GetCompetitorProductUseCase {
+  constructor(
+    private readonly deps: { competitorProductRepository: CompetitorProductRepository }
+  ) {}
+
+  async execute(input: { competitorProductId: string }) {
+    const competitor = await this.deps.competitorProductRepository.findById(
+      input.competitorProductId
+    );
+    if (!competitor) {
+      throw new ResourceNotFoundError("CompetitorProduct", input.competitorProductId);
+    }
+    return serializeCompetitorProduct(competitor);
+  }
+}
+
+export class CreateCompetitorProductUseCase {
+  constructor(
+    private readonly deps: { competitorProductRepository: CompetitorProductRepository }
+  ) {}
+
+  async execute(input: {
+    code?: string | null;
+    name: string;
+    manufacturer: string;
+    brand?: string | null;
+    countryOfOrigin: string;
+    price17: number;
+    price18: number;
+    price20: number;
+    brasindiceUpdatedAt: string;
+    isActive?: boolean;
+  }) {
+    const competitor = await this.deps.competitorProductRepository.create(input);
+    return serializeCompetitorProduct(competitor);
+  }
+}
+
+export class UpdateCompetitorProductUseCase {
+  constructor(
+    private readonly deps: { competitorProductRepository: CompetitorProductRepository }
+  ) {}
+
+  async execute(input: {
+    competitorProductId: string;
+    code?: string | null;
+    name?: string;
+    manufacturer?: string;
+    brand?: string | null;
+    countryOfOrigin?: string;
+    price17?: number;
+    price18?: number;
+    price20?: number;
+    brasindiceUpdatedAt?: string;
+    isActive?: boolean;
+  }) {
+    const { competitorProductId, ...rest } = input;
+    const competitor = await this.deps.competitorProductRepository.update(
+      competitorProductId,
+      rest
+    );
+    return serializeCompetitorProduct(competitor);
+  }
+}
+
+export class GetProductComparisonUseCase {
+  constructor(
+    private readonly deps: {
+      productRepository: ProductRepository;
+      productEquivalenceRepository: ProductEquivalenceRepository;
+    }
+  ) {}
+
+  async execute(input: { productId: string; sortBy?: ComparisonSortColumn }) {
+    const product = await this.deps.productRepository.findById(input.productId);
+    if (!product) throw new ResourceNotFoundError("Product", input.productId);
+
+    const competitors = await this.deps.productEquivalenceRepository.findLinkedByProduct(
+      input.productId
+    );
+
+    const rows: ComparisonRow[] = [
+      productToComparisonRow(product),
+      ...competitors.map(competitorToComparisonRow),
+    ];
+
+    return {
+      productId: product.id,
+      productLabel: product.name,
+      rows: sortRowsByPrice(rows, input.sortBy ?? "icms20"),
+    };
+  }
+}
+
+export class ListUnlinkedCompetitorProductsUseCase {
+  constructor(
+    private readonly deps: {
+      productRepository: ProductRepository;
+      productEquivalenceRepository: ProductEquivalenceRepository;
+    }
+  ) {}
+
+  async execute(input: { productId: string }) {
+    const product = await this.deps.productRepository.findById(input.productId);
+    if (!product) throw new ResourceNotFoundError("Product", input.productId);
+
+    const unlinked = await this.deps.productEquivalenceRepository.findUnlinkedByProduct(
+      input.productId
+    );
+    return { data: unlinked.map(serializeCompetitorProduct) };
+  }
+}
+
+export class LinkCompetitorProductUseCase {
+  constructor(
+    private readonly deps: {
+      productRepository: ProductRepository;
+      competitorProductRepository: CompetitorProductRepository;
+      productEquivalenceRepository: ProductEquivalenceRepository;
+    }
+  ) {}
+
+  async execute(input: {
+    productId: string;
+    competitorProductId: string;
+    notes?: string | null;
+  }) {
+    const product = await this.deps.productRepository.findById(input.productId);
+    if (!product) throw new ResourceNotFoundError("Product", input.productId);
+
+    const competitor = await this.deps.competitorProductRepository.findById(
+      input.competitorProductId
+    );
+    if (!competitor) {
+      throw new ResourceNotFoundError("CompetitorProduct", input.competitorProductId);
+    }
+
+    const alreadyLinked = await this.deps.productEquivalenceRepository.exists(
+      input.productId,
+      input.competitorProductId
+    );
+    if (alreadyLinked) {
+      throw new ValidationError([
+        {
+          field: "competitorProductId",
+          message: "This competitor product is already linked to this product",
+        },
+      ]);
+    }
+
+    await this.deps.productEquivalenceRepository.link(
+      input.productId,
+      input.competitorProductId,
+      input.notes
+    );
+
+    return { productId: input.productId, competitorProductId: input.competitorProductId };
+  }
+}
+
+export class UnlinkCompetitorProductUseCase {
+  constructor(
+    private readonly deps: { productEquivalenceRepository: ProductEquivalenceRepository }
+  ) {}
+
+  async execute(input: { productId: string; competitorProductId: string }) {
+    const unlinked = await this.deps.productEquivalenceRepository.unlink(
+      input.productId,
+      input.competitorProductId
+    );
+    if (!unlinked) {
+      throw new ResourceNotFoundError(
+        "ProductEquivalence",
+        `${input.productId}:${input.competitorProductId}`
+      );
+    }
+  }
+}
+
+export class GetPriceIndexUseCase {
+  constructor(
+    private readonly deps: {
+      productRepository: ProductRepository;
+      competitorProductRepository: CompetitorProductRepository;
+    }
+  ) {}
+
+  async execute(input: { sortBy?: ComparisonSortColumn }) {
+    const [products, competitors] = await Promise.all([
+      this.deps.productRepository.findAllActive(),
+      this.deps.competitorProductRepository.findAllActive(),
+    ]);
+
+    const rows: ComparisonRow[] = [
+      ...products.map(productToComparisonRow),
+      ...competitors.map(competitorToComparisonRow),
+    ];
+
+    return { data: sortRowsByPrice(rows, input.sortBy ?? "icms20") };
   }
 }

@@ -7,7 +7,7 @@
     "dev": "bun --watch src/app/server.ts",
     "start": "bun src/app/server.ts",
     "start:worker": "bun src/app/jobs-worker.ts",
-    "predev": "lsof -ti:3000 | xargs kill -9 2>/dev/null || true",
+    "predev": "lsof -ti:3010 -ti:3000 | xargs kill -9 2>/dev/null || true",
     "build": "bun build ./src/app/server.ts --target=bun --outdir dist",
     "test": "NODE_ENV=test bun test",
     "test:unit": "NODE_ENV=test bun test --test-name-pattern='^(?!.*Integration Tests)(?!.*\\(Integration\\))(?!.*integration)(?!.*race-condition).*$'",

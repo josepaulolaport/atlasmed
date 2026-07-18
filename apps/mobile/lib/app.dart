@@ -9,6 +9,9 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_em
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_code_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_success_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_comparison_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_home_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_price_index_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
@@ -225,6 +228,24 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                       ),
                     ),
                   ],
+                ),
+              ],
+            ),
+            // Catálogo
+            GoRoute(
+              path: '/catalogo',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: CatalogHomeScreen()),
+              routes: [
+                GoRoute(
+                  path: 'brasindice',
+                  builder: (_, _) => const CatalogPriceIndexScreen(),
+                ),
+                GoRoute(
+                  path: 'comparativo/:variantId',
+                  builder: (_, state) => CatalogComparisonScreen(
+                    variantId: state.pathParameters['variantId']!,
+                  ),
                 ),
               ],
             ),
