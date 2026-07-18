@@ -163,8 +163,13 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     longitude?: number;
     radiusKm?: number;
     scope: ProfessionalListScopeFilter;
+    candidateIds?: string[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }> {
     const conditions = [isNull(professionals.deletedAt)];
+
+    if (params.candidateIds) {
+      conditions.push(inArray(professionals.id, params.candidateIds));
+    }
 
     if (!params.scope.isGlobal) {
       const facilityIds = params.scope.facilityIds?.length
@@ -274,6 +279,28 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       })),
       total: countRows[0]?.count ?? 0,
     };
+  }
+
+  async findAllByIds(params: {
+    ids: string[];
+    facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    scope: ProfessionalListScopeFilter;
+  }): Promise<ProfessionalRecord[]> {
+    if (params.ids.length === 0) {
+      return [];
+    }
+
+    const { professionals } = await this.findAll({
+      ...params,
+      page: 1,
+      limit: params.ids.length,
+      candidateIds: params.ids,
+    });
+    return professionals;
   }
 
   async findById(id: string): Promise<ProfessionalRecord | null> {

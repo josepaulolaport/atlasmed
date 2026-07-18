@@ -9,6 +9,7 @@ import { facility } from "../modules/facility";
 import { catalog } from "../modules/catalog";
 import { professional } from "../modules/professional";
 import { registryIngestion } from "../modules/registry-ingestion";
+import { searchSync } from "../modules/search-sync";
 import { territory } from "../modules/territory";
 import { maps } from "../modules/maps";
 import { orders } from "../modules/orders";
@@ -125,6 +126,7 @@ const app = new Elysia()
       .use(catalog)
       .use(professional)
       .use(registryIngestion)
+      .use(searchSync)
       .use(territory)
       .use(maps)
       .use(orders)

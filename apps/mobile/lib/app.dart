@@ -30,6 +30,13 @@ import 'package:atlasmed_mobile_app/features/territories/data/models/territory_t
 import 'package:atlasmed_mobile_app/features/territories/editing/models/editor_target.dart';
 import 'package:atlasmed_mobile_app/features/territories/editing/screens/territory_editor_screen.dart';
 import 'package:atlasmed_mobile_app/features/territories/presentation/screens/territories_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_assignments_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/edit_user_profile_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/invitation_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/invitations_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/invite_user_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/user_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/screens/users_screen.dart';
 import 'package:atlasmed_mobile_app/shared/theme/app_theme.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 import 'package:atlasmed_mobile_app/core/session/session_listenable.dart';
@@ -253,6 +260,57 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               path: '/perfil',
               pageBuilder: (_, _) =>
                   const NoTransitionPage(child: ProfileScreen()),
+            ),
+            // Usuários (admin-only — see canManageUsersProvider)
+            GoRoute(
+              path: '/usuarios',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: UsersScreen()),
+              routes: [
+                GoRoute(
+                  path: 'convidar',
+                  builder: (_, _) => const InviteUserScreen(),
+                ),
+                GoRoute(
+                  path: 'convites',
+                  builder: (_, _) => const InvitationsScreen(),
+                  routes: [
+                    GoRoute(
+                      path: ':invitationId',
+                      builder: (_, state) => InvitationDetailScreen(
+                        invitationId: state.pathParameters['invitationId']!,
+                      ),
+                      routes: [
+                        GoRoute(
+                          path: 'editar',
+                          builder: (_, state) => InviteUserScreen(
+                            invitationId: state.pathParameters['invitationId'],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) =>
+                      UserDetailScreen(userId: state.pathParameters['id']!),
+                  routes: [
+                    GoRoute(
+                      path: 'editar',
+                      builder: (_, state) => EditUserProfileScreen(
+                        userId: state.pathParameters['id']!,
+                      ),
+                    ),
+                    GoRoute(
+                      path: 'atribuicoes',
+                      builder: (_, state) => EditUserAssignmentsScreen(
+                        userId: state.pathParameters['id']!,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

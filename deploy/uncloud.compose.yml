@@ -124,6 +124,8 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=${DATABASE_URL}
+      - MEILISEARCH_URL=http://atlasmed-meilisearch:7700
+      - MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
       - TEMPORAL_NAMESPACE=default
       - TEMPORAL_TASK_QUEUE=cnes-ingestion

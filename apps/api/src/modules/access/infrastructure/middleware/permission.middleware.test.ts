@@ -52,6 +52,11 @@ describe("PermissionMiddleware", () => {
       expect(ability.can("manage", "USER")).toBe(true);
     });
 
+    it("should allow ADMIN to manage search sync", () => {
+      expect(defineAbilitiesFor("ADMIN").can("manage", "SEARCH_SYNC")).toBe(true);
+      expect(defineAbilitiesFor("MANAGER").can("manage", "SEARCH_SYNC")).toBe(false);
+    });
+
     it("should allow ADMIN to manage CLINIC", () => {
       const ability = defineAbilitiesFor("ADMIN");
 

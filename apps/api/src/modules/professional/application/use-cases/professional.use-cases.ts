@@ -1,7 +1,28 @@
 import type { ScopeContext } from "@atlasmed/access";
 import type { ProfessionalProfile } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import { ForbiddenError, ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import {
+  ForbiddenError,
+  ResourceNotFoundError,
+  ServiceUnavailableError,
+  ValidationError,
+} from "../../../../shared/errors";
+type SearchService = {
+  isConfigured(): boolean;
+  search<T extends Record<string, unknown>>(
+    indexName: string,
+    query: string,
+    options: { limit: number; offset: number }
+  ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
+};
+
+function orderSearchResultsById<T extends { id: string }>(records: T[], ids: string[]): T[] {
+  const recordsById = new Map(records.map((record) => [record.id, record]));
+  return ids.flatMap((id) => {
+    const record = recordsById.get(id);
+    return record ? [record] : [];
+  });
+}
 import type {
   ProfessionalCreateInput,
   ProfessionalNoteRecord,
@@ -228,6 +249,7 @@ function buildUpdateInput(input: {
 
 interface Dependencies {
   doctorRepository: ProfessionalRepository;
+  searchService?: SearchService;
 }
 
 export class ListProfessionalsUseCase {
@@ -251,28 +273,65 @@ export class ListProfessionalsUseCase {
       assertResourceInScope(input.scope, "facility", input.facilityId);
     }
 
-    const { professionals, total } = await this.deps.doctorRepository.findAll({
-      page,
-      limit,
-      search: input.search,
-      facilityId: input.facilityId,
-      specialty: input.specialty,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      radiusKm: input.radiusKm,
-      scope: input.scope.isGlobal
-        ? { isGlobal: true }
-        : { isGlobal: false, facilityIds: input.scope.facilityIds },
-    });
+    const scope = input.scope.isGlobal
+      ? { isGlobal: true as const }
+      : { isGlobal: false as const, facilityIds: input.scope.facilityIds };
+    const search = input.search?.trim();
+
+    if (!search) {
+      const { professionals, total } = await this.deps.doctorRepository.findAll({
+        page,
+        limit,
+        search: input.search,
+        facilityId: input.facilityId,
+        specialty: input.specialty,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        radiusKm: input.radiusKm,
+        scope,
+      });
+
+      return {
+        data: professionals.map(serializeProfessionalSummary),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      };
+    }
+
+    const searchService = this.deps.searchService;
+    if (!searchService?.isConfigured()) {
+      throw new ServiceUnavailableError("Search");
+    }
+
+    let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
+    try {
+      result = await searchService.search<{ id: string }>("professionals", search, {
+        limit,
+        offset: (page - 1) * limit,
+      });
+    } catch (error) {
+      throw new ServiceUnavailableError("Search", error instanceof Error ? error : undefined);
+    }
+
+    const ids = result.hits.map((hit) => hit.id);
+    const professionals = ids.length
+      ? orderSearchResultsById(
+          await this.deps.doctorRepository.findAllByIds({
+            ids,
+            facilityId: input.facilityId,
+            specialty: input.specialty,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            radiusKm: input.radiusKm,
+            scope,
+          }),
+          ids
+        )
+      : [];
+    const total = result.estimatedTotalHits ?? 0;
 
     return {
       data: professionals.map(serializeProfessionalSummary),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
 }

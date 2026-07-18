@@ -15,6 +15,8 @@ export const Subjects = {
 
   CATALOG: "CATALOG",
 
+  SEARCH_SYNC: "SEARCH_SYNC",
+
   VISIT: "VISIT",
 } as const;
 

@@ -61,6 +61,7 @@ export {
   
   // Server Errors
   DatabaseError,
+  ServiceUnavailableError,
   ExternalServiceError,
   CacheError,
   ConfigurationError,
