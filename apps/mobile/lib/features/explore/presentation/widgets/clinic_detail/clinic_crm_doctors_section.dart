@@ -9,9 +9,16 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 /// essential contact info (phone/email) plus a dedicated badges area. The
 /// "Ver todos" link to the full doctor list lives on the section header.
 class ClinicCrmDoctorsSection extends StatefulWidget {
-  const ClinicCrmDoctorsSection({super.key, required this.doctors});
+  const ClinicCrmDoctorsSection({
+    super.key,
+    required this.doctors,
+    this.onAssociate,
+  });
 
   final List<FacilityCrmDoctor> doctors;
+
+  /// Opens the full list / associate flow when the roster is empty.
+  final VoidCallback? onAssociate;
 
   @override
   State<ClinicCrmDoctorsSection> createState() =>
@@ -30,14 +37,28 @@ class _ClinicCrmDoctorsSectionState extends State<ClinicCrmDoctorsSection> {
   @override
   Widget build(BuildContext context) {
     if (widget.doctors.isEmpty) {
-      return const ClinicDetailCard(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Nenhum médico confirmado neste estabelecimento',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            ),
+      return ClinicDetailCard(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            children: [
+              const Text(
+                'Nenhum médico associado a este estabelecimento',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              ),
+              if (widget.onAssociate != null) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: widget.onAssociate,
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                  label: const Text('Associar médicos'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF1e40af),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       );

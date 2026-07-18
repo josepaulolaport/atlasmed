@@ -35,7 +35,7 @@ class ClinicDetailScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFf8f9fb),
       body: detailAsync.when(
         loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, err.toString()),
+        error: (err, _) => _errorView(context, ref, clinicId, err),
         data: (detail) => _ClinicDetailBody(detail: detail, clinicId: clinicId),
       ),
     );
@@ -80,7 +80,12 @@ class ClinicDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _errorView(BuildContext context, String message) {
+  Widget _errorView(
+    BuildContext context,
+    WidgetRef ref,
+    String clinicId,
+    Object error,
+  ) {
     return SafeArea(
       child: Center(
         child: Padding(
@@ -89,21 +94,36 @@ class ClinicDetailScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.error_outline_rounded,
+                Icons.wifi_off_rounded,
                 size: 48,
                 color: Color(0xFFb84545),
               ),
               const SizedBox(height: 16),
-              Text(
-                message,
+              const Text(
+                'Não foi possível carregar o estabelecimento',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6b7280)),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0f1729),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _friendlyLoadError(error),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF6b7280), height: 1.4),
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
+                onPressed: () => ref.invalidate(clinicDetailProvider(clinicId)),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Tentar novamente'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
                 onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('Voltar'),
+                child: const Text('Voltar'),
               ),
             ],
           ),
@@ -111,6 +131,29 @@ class ClinicDetailScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _friendlyLoadError(Object error) {
+  final raw = error.toString().toLowerCase();
+  if (raw.contains('socket') ||
+      raw.contains('network') ||
+      raw.contains('failed host lookup') ||
+      raw.contains('connection') ||
+      raw.contains('timeout') ||
+      raw.contains('timed out') ||
+      raw.contains('unreachable')) {
+    return 'Verifique sua conexão com a internet e tente novamente.';
+  }
+  if (raw.contains('not found') || raw.contains('404')) {
+    return 'Este estabelecimento não foi encontrado ou não está disponível.';
+  }
+  if (raw.contains('401') ||
+      raw.contains('403') ||
+      raw.contains('unauthorized') ||
+      raw.contains('forbidden')) {
+    return 'Sua sessão expirou ou você não tem permissão. Faça login novamente.';
+  }
+  return 'Algo deu errado ao buscar os dados. Tente novamente em instantes.';
 }
 
 // ===============================================================
@@ -182,7 +225,11 @@ class _ClinicDetailContent extends ConsumerWidget {
         const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
           data: (sections) {
             if (sections.location == null) {
               return const ClinicDetailCard(
@@ -210,28 +257,38 @@ class _ClinicDetailContent extends ConsumerWidget {
             badge: sections.administrators.isEmpty
                 ? null
                 : _CountBadge(count: sections.administrators.length),
-            trailing: sections.administrators.isEmpty
-                ? null
-                : _HeaderLinkButton(
-                    label: 'Ver todos',
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => AdministrativeProfessionalsListScreen(
-                          professionals: sections.administrators,
-                          facilityName: detail.name,
-                        ),
-                      ),
-                    ),
+            trailing: _HeaderLinkButton(
+              label: 'Ver todos',
+              icon: Icons.chevron_right_rounded,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdministrativeProfessionalsListScreen(
+                    professionals: sections.administrators,
+                    facilityName: detail.name,
                   ),
+                ),
+              ),
+            ),
           ),
         ),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
           data: (sections) => ClinicAdminProfessionalsSection(
             professionals: sections.administrators,
             facilityName: detail.name,
+            onAssociate: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AdministrativeProfessionalsListScreen(
+                  professionals: sections.administrators,
+                  facilityName: detail.name,
+                ),
+              ),
+            ),
           ),
         ),
         sectionsAsync.when(
@@ -242,27 +299,38 @@ class _ClinicDetailContent extends ConsumerWidget {
             badge: sections.doctors.isEmpty
                 ? null
                 : _CountBadge(count: sections.doctors.length),
-            trailing: sections.doctors.isEmpty
-                ? null
-                : _HeaderLinkButton(
-                    label: 'Ver todos',
-                    icon: Icons.chevron_right_rounded,
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => DoctorsListScreen(
-                          doctors: sections.doctors,
-                          facilityName: detail.name,
-                        ),
-                      ),
-                    ),
+            trailing: _HeaderLinkButton(
+              label: 'Ver todos',
+              icon: Icons.chevron_right_rounded,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DoctorsListScreen(
+                    doctors: sections.doctors,
+                    facilityName: detail.name,
                   ),
+                ),
+              ),
+            ),
           ),
         ),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
-          data: (sections) =>
-              ClinicCrmDoctorsSection(doctors: sections.doctors),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) => ClinicCrmDoctorsSection(
+            doctors: sections.doctors,
+            onAssociate: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DoctorsListScreen(
+                  doctors: sections.doctors,
+                  facilityName: detail.name,
+                ),
+              ),
+            ),
+          ),
         ),
         sectionsAsync.when(
           loading: () => const ClinicSectionHeader(title: 'Convênios'),
@@ -287,7 +355,11 @@ class _ClinicDetailContent extends ConsumerWidget {
         ),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
           data: (sections) => ClinicPayersBarSection(
             payers: sections.payers,
             summary: sections.payerMixSummary,
@@ -312,7 +384,11 @@ class _ClinicDetailContent extends ConsumerWidget {
         ),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
           data: (sections) => ClinicOrdersSection(
             orders: sections.orders,
             facilityId: clinicId,
@@ -321,14 +397,22 @@ class _ClinicDetailContent extends ConsumerWidget {
         const ClinicSectionHeader(title: 'Notas de campo'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
           data: (sections) =>
               ClinicFieldNotesSection(initialNotes: sections.fieldNotes),
         ),
         const ClinicSectionHeader(title: 'Consultor responsável'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(message: err.toString()),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
           data: (sections) => ClinicContextSection(
             consultantName: sections.consultantName ?? detail.consultantName,
             consultantSince: sections.consultantSince,
@@ -433,9 +517,10 @@ class _SectionLoadingCard extends StatelessWidget {
 }
 
 class _SectionErrorCard extends StatelessWidget {
-  const _SectionErrorCard({required this.message});
+  const _SectionErrorCard({required this.message, this.onRetry});
 
   final String message;
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -446,9 +531,31 @@ class _SectionErrorCard extends StatelessWidget {
         color: const Color(0xFFfde8e8),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Text(
-        message,
-        style: const TextStyle(fontSize: 12, color: Color(0xFFb84545)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: Color(0xFFb84545),
+              height: 1.4,
+            ),
+          ),
+          if (onRetry != null) ...[
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Tentar novamente'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFb84545),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

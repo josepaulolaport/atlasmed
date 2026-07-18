@@ -282,6 +282,35 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
   );
 }
 
+/// Empty-roster fixture for Phase 1 empty/error UI checks.
+/// Triggered when [facilityId] ends with `:empty`.
+EstablishmentDetailSections mockEmptyEstablishmentDetailSections(
+  String facilityId,
+) {
+  final seed = facilityId.hashCode.abs();
+  return EstablishmentDetailSections(
+    location: EstablishmentLocation(
+      latitude: -23.5505 + (seed % 100) * 0.0001,
+      longitude: -46.6333 + (seed % 100) * 0.0001,
+      formattedAddress: 'Endereço não informado',
+    ),
+    consultantName: 'Ana Silva',
+    consultantSince: DateTime(2023, 3, 1),
+    territoryLabel: 'Patch Centro SP',
+    regionZoneLabel: 'Z. Sul',
+    administrators: const [],
+    doctors: const [],
+    payers: const [],
+    payerMixSummary: null,
+    orders: const [],
+    nearbyEstablishments: const [],
+    products: const [],
+    fieldNotes: const [],
+    visitTimeline: const [],
+    documents: const [],
+  );
+}
+
 /// "Cadastro" mock — one of each review state so all card variants are
 /// visible without needing to submit anything first.
 List<EstablishmentDocument> _mockDocuments(DateTime now) => [

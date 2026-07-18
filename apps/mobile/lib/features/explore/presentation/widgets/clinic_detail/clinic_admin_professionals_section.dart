@@ -14,10 +14,14 @@ class ClinicAdminProfessionalsSection extends StatefulWidget {
     super.key,
     required this.professionals,
     required this.facilityName,
+    this.onAssociate,
   });
 
   final List<AdministrativeProfessional> professionals;
   final String facilityName;
+
+  /// Opens the full list / associate flow when the roster is empty.
+  final VoidCallback? onAssociate;
 
   @override
   State<ClinicAdminProfessionalsSection> createState() =>
@@ -37,14 +41,28 @@ class _ClinicAdminProfessionalsSectionState
   @override
   Widget build(BuildContext context) {
     if (widget.professionals.isEmpty) {
-      return const ClinicDetailCard(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Nenhum contato administrativo cadastrado',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            ),
+      return ClinicDetailCard(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            children: [
+              const Text(
+                'Nenhum contato administrativo cadastrado',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              ),
+              if (widget.onAssociate != null) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: widget.onAssociate,
+                  icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
+                  label: const Text('Associar profissionais'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF1e40af),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       );

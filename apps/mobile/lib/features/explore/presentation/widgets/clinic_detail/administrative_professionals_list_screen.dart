@@ -164,7 +164,7 @@ class _AdministrativeProfessionalsListScreenState
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? EmptyState(query: _query, kind: 'doctor')
+                    ? EmptyState(query: _query, kind: 'facility-admin')
                     : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (_, i) => _AdminProfessionalRow(

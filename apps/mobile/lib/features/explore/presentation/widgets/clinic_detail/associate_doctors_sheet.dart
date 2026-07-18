@@ -102,13 +102,18 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
           Expanded(
             child: filtered.isEmpty
                 ? Center(
-                    child: Text(
-                      _query.isEmpty
-                          ? 'Nenhum médico disponível para associar'
-                          : 'Nada encontrado para "$_query"',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Color(0xFF9ca3af),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        _query.isEmpty
+                            ? 'Nenhum médico disponível para associar. Crie um perfil abaixo.'
+                            : 'Nada encontrado para "$_query". Tente outro termo ou crie um perfil.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: Color(0xFF9ca3af),
+                          height: 1.4,
+                        ),
                       ),
                     ),
                   )

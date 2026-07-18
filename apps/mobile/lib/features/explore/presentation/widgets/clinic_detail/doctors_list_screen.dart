@@ -187,7 +187,7 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
               ),
               Expanded(
                 child: filtered.isEmpty
-                    ? EmptyState(query: _query, kind: 'doctor')
+                    ? EmptyState(query: _query, kind: 'facility-doctor')
                     : ListView.builder(
                         itemCount: filtered.length,
                         itemBuilder: (_, i) {
