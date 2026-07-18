@@ -204,6 +204,12 @@ describe("SessionCacheService", () => {
 
       await expect(cache.isMarkedRevoked("session-123")).resolves.toBe(true);
     });
+
+    test("should clear the revoked marker", async () => {
+      await cache.clearRevoked("session-123");
+
+      expect(mockRedis.del).toHaveBeenCalledWith("session:revoked:session-123");
+    });
   });
 
   describe("invalidateByUserId", () => {

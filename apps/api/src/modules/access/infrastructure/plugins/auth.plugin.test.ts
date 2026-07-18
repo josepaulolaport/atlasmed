@@ -120,6 +120,7 @@ describe("Auth Plugin", () => {
       invalidate: mock(async () => {}),
       updateLastSeen: mock(async () => {}),
       isMarkedRevoked: mock(async () => false),
+      clearRevoked: mock(async () => {}),
       isRecentlyValidated: mock(async () => false),
       markValidated: mock(async () => {}),
     } as any;
@@ -536,7 +537,7 @@ describe("Auth Plugin", () => {
       expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith("session-123");
     });
 
-    it("should reject cached session when revoked marker is present without DB lookup", async () => {
+    it("should reject cached session when revoked marker is confirmed by DB", async () => {
       const accessToken = await tokenService.signAccessToken({
         sub: "user-123",
         sid: "session-123",
@@ -562,7 +563,7 @@ describe("Auth Plugin", () => {
 
       const findSessionStatus = mock(async () => ({
         userId: "user-123",
-        revokedAt: null,
+        revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       }));
 
@@ -599,8 +600,77 @@ describe("Auth Plugin", () => {
       );
 
       expect(response.status).toBe(401);
-      expect(findSessionStatus).not.toHaveBeenCalled();
+      expect(findSessionStatus).toHaveBeenCalledWith("session-123");
       expect(mockSessionCacheService.invalidate).toHaveBeenCalledWith("session-123");
+      expect(mockSessionCacheService.clearRevoked).not.toHaveBeenCalled();
+    });
+
+    it("should self-heal and allow request when revoked marker is stale but DB confirms session is healthy", async () => {
+      const accessToken = await tokenService.signAccessToken({
+        sub: "user-123",
+        sid: "session-123",
+        role: "REP",
+        tokenVersion: 1,
+        iat: Math.floor(Date.now() / 1000),
+      });
+
+      const cachedSession = {
+        id: "session-123",
+        userId: "user-123",
+        refreshTokenHash: "hashed-token",
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        revokedAt: null,
+        ipAddress: "192.168.1.1",
+        userAgent: "Mozilla/5.0",
+        lastSeenAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+      };
+
+      mockSessionCacheService.getById = mock(async () => cachedSession);
+      mockSessionCacheService.isMarkedRevoked = mock(async () => true);
+
+      const findSessionStatus = mock(async () => ({
+        userId: "user-123",
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      }));
+
+      const mockSessionRepoWithStaleMarker = {
+        findById: mock(async () => mockSession),
+        findSessionStatus,
+        updateLastSeen: mock(async () => {}),
+      } as any;
+
+      const auth = createAuthPlugin({
+        tokenService,
+        sessionRepository: mockSessionRepoWithStaleMarker,
+        userRepository: mockUserRepository,
+        authCacheService: mockAuthCacheService,
+        sessionCacheService: mockSessionCacheService,
+        scopeService: mockScopeService,
+        accessGrantService: mockAccessGrantService,
+        redis: mockRedis,
+      });
+
+      const testApp = createTestApp()
+        .use(auth)
+        .get("/test", async ({ getUserId }: any) => {
+          const userId = await getUserId();
+          return { userId };
+        });
+
+      const response = await testApp.handle(
+        new Request("http://localhost/test", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+      );
+
+      expect(response.status).toBe(200);
+      expect(findSessionStatus).toHaveBeenCalledWith("session-123");
+      expect(mockSessionCacheService.clearRevoked).toHaveBeenCalledWith("session-123");
+      expect(mockSessionCacheService.invalidate).not.toHaveBeenCalled();
     });
 
     it("should skip session DB revalidation when recently validated", async () => {

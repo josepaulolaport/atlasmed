@@ -28,8 +28,10 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>O AtlasMed usa sua localização uma vez para mostrar clínicas próximas no seu território.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>O AtlasMed usa a câmera para fotografar documentos do cadastro do estabelecimento.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>O AtlasMed precisa acessar suas fotos para atualizar sua foto de perfil.</string>
+	<string>O AtlasMed precisa acessar suas fotos para atualizar sua foto de perfil e enviar documentos do cadastro.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Allows plain http:// to localhost / unqualified hosts so the app

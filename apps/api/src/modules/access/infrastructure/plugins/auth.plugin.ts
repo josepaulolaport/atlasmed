@@ -135,17 +135,46 @@ async function resolveAccessSessionFromToken(
 
     await sessionCacheService.set(session!);
     await sessionCacheService.markValidated(payload.sid);
+
+    // A revoked marker can be left behind by a transient false-positive
+    // (e.g. a DB hiccup during revalidation) while this exact session is
+    // re-fetched here and confirmed healthy. Clear it so it can't outlive
+    // the situation that (incorrectly) set it — otherwise it self-renews
+    // its TTL forever every time a request hits it.
+    if (!session.revokedAt) {
+      await sessionCacheService.clearRevoked(payload.sid);
+    }
   } else {
     if (await sessionCacheService.isMarkedRevoked(payload.sid)) {
+      const dbStatus = await sessionRepository.findSessionStatus(payload.sid);
+
+      const dbConfirmsRevoked =
+        !dbStatus ||
+        dbStatus.revokedAt !== null ||
+        dbStatus.expiresAt < new Date() ||
+        payload.sub !== dbStatus.userId ||
+        payload.sub !== session.userId;
+
+      if (dbConfirmsRevoked) {
+        logger.warn(
+          { sessionId: payload.sid, userId: payload.sub, ipAddress },
+          "Revoked session marker confirmed by DB revalidation"
+        );
+        await sessionCacheService.invalidate(payload.sid);
+        throw new UnauthorizedError();
+      }
+
+      // The marker was stale — DB revalidation says this session is still
+      // healthy. Self-heal instead of rejecting a legitimate session
+      // forever: clear the marker so it doesn't keep renewing itself on
+      // every subsequent request.
       logger.warn(
         { sessionId: payload.sid, userId: payload.sub, ipAddress },
-        "Revoked session marker found for cached session"
+        "Cleared stale revoked marker after DB confirmed session is healthy"
       );
-      await sessionCacheService.invalidate(payload.sid);
-      throw new UnauthorizedError();
-    }
-
-    if (!(await sessionCacheService.isRecentlyValidated(payload.sid))) {
+      await sessionCacheService.clearRevoked(payload.sid);
+      await sessionCacheService.markValidated(payload.sid);
+    } else if (!(await sessionCacheService.isRecentlyValidated(payload.sid))) {
       const dbStatus = await sessionRepository.findSessionStatus(payload.sid);
 
       if (!dbStatus) {

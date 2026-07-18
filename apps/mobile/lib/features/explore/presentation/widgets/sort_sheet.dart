@@ -78,6 +78,10 @@ class _SortSheetState extends State<SortSheet>
         ),
       ];
     }
+    // Facility-scoped people lists (no distance / last-contact).
+    if (widget.kind == 'facility-people') {
+      return [_SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética')];
+    }
     return [
       _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
       _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),

@@ -89,7 +89,6 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       taxIdType: apiClinic.taxIdType,
       cnpj: apiClinic.cnpj,
       cpf: apiClinic.cpf,
-      fieldNotes: null,
     );
   } finally {
     repo.dispose();

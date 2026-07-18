@@ -113,6 +113,7 @@ describe("Auth Plugin Scope", () => {
       invalidate: mock(async () => {}),
       updateLastSeen: mock(async () => {}),
       isMarkedRevoked: mock(async () => false),
+      clearRevoked: mock(async () => {}),
       isRecentlyValidated: mock(async () => false),
       markValidated: mock(async () => {}),
     } as unknown as SessionCacheService;

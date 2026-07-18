@@ -2,13 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
-
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/administrative_professionals_list_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_context_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_crm_doctors_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_location_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_orders_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_payers_bar_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_top_shortcuts_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/doctors_list_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_payer_sources_screen.dart';
 
-// ===============================================================// ClinicDetailScreen — 15+ sections of clinic information
+// ===============================================================
+// ClinicDetailScreen — establishment detail, per Spec 0005 redesign
 // ===============================================================
 class ClinicDetailScreen extends ConsumerWidget {
   final String clinicId;
@@ -23,8 +38,8 @@ class ClinicDetailScreen extends ConsumerWidget {
       backgroundColor: const Color(0xFFf8f9fb),
       body: detailAsync.when(
         loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, err.toString()),
-        data: (detail) => _ClinicDetailContent(detail: detail),
+        error: (err, _) => _errorView(context, ref, clinicId, err),
+        data: (detail) => _ClinicDetailBody(detail: detail, clinicId: clinicId),
       ),
     );
   }
@@ -33,7 +48,7 @@ class ClinicDetailScreen extends ConsumerWidget {
     return SafeArea(
       child: Column(
         children: [
-          _buildHeaderShimmer(),
+          _buildHeaderShimmer(context),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(20),
@@ -51,14 +66,15 @@ class ClinicDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeaderShimmer() {
+  Widget _buildHeaderShimmer(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
     return Container(
-      height: 280,
+      height: 180 + top,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1e40af), Color(0xFF2563eb)],
+        color: Color(0xFF1e40af),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
       ),
       child: const Center(
@@ -67,7 +83,12 @@ class ClinicDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _errorView(BuildContext context, String message) {
+  Widget _errorView(
+    BuildContext context,
+    WidgetRef ref,
+    String clinicId,
+    Object error,
+  ) {
     return SafeArea(
       child: Center(
         child: Padding(
@@ -76,21 +97,36 @@ class ClinicDetailScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(
-                Icons.error_outline_rounded,
+                Icons.wifi_off_rounded,
                 size: 48,
                 color: Color(0xFFb84545),
               ),
               const SizedBox(height: 16),
-              Text(
-                message,
+              const Text(
+                'Não foi possível carregar o estabelecimento',
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF6b7280)),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF0f1729),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _friendlyLoadError(error),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF6b7280), height: 1.4),
               ),
               const SizedBox(height: 24),
               FilledButton.icon(
+                onPressed: () => ref.invalidate(clinicDetailProvider(clinicId)),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Tentar novamente'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
                 onPressed: () => context.pop(),
-                icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('Voltar'),
+                child: const Text('Voltar'),
               ),
             ],
           ),
@@ -100,326 +136,482 @@ class ClinicDetailScreen extends ConsumerWidget {
   }
 }
 
-// ===============================================================// Main content body
-// ===============================================================
-class _ClinicDetailContent extends StatelessWidget {
-  final ClinicDetail detail;
+String _friendlyLoadError(Object error) {
+  final raw = error.toString().toLowerCase();
+  if (raw.contains('socket') ||
+      raw.contains('network') ||
+      raw.contains('failed host lookup') ||
+      raw.contains('connection') ||
+      raw.contains('timeout') ||
+      raw.contains('timed out') ||
+      raw.contains('unreachable')) {
+    return 'Verifique sua conexão com a internet e tente novamente.';
+  }
+  if (raw.contains('not found') || raw.contains('404')) {
+    return 'Este estabelecimento não foi encontrado ou não está disponível.';
+  }
+  if (raw.contains('401') ||
+      raw.contains('403') ||
+      raw.contains('unauthorized') ||
+      raw.contains('forbidden')) {
+    return 'Sua sessão expirou ou você não tem permissão. Faça login novamente.';
+  }
+  return 'Algo deu errado ao buscar os dados. Tente novamente em instantes.';
+}
 
-  const _ClinicDetailContent({required this.detail});
+Future<void> _openPayerSourcesEditor(
+  BuildContext context,
+  WidgetRef ref, {
+  required String clinicId,
+  required String facilityName,
+  required List<PayerShare> payers,
+}) async {
+  final updated = await Navigator.of(context).push<List<PayerShare>>(
+    MaterialPageRoute(
+      builder: (_) => EditPayerSourcesScreen(
+        facilityName: facilityName,
+        initialPayers: payers,
+      ),
+    ),
+  );
+  if (updated == null || !context.mounted) return;
+  ref.read(facilityPayersOverrideProvider(clinicId).notifier).state = updated;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        updated.isEmpty
+            ? 'Fontes pagadoras removidas'
+            : 'Fontes pagadoras atualizadas',
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
+}
+
+// ===============================================================
+// Body — fixed blue header (outside the scroll) + scrollable sections
+// ===============================================================
+class _ClinicDetailBody extends ConsumerWidget {
+  const _ClinicDetailBody({required this.detail, required this.clinicId});
+
+  final ClinicDetail detail;
+  final String clinicId;
 
   @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 32),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sections = ref
+        .watch(establishmentDetailSectionsProvider(clinicId))
+        .valueOrNull;
+
+    return Column(
       children: [
-        _ClinicHeader(detail: detail),
-        _QuickActions(detail: detail),
-        _SuggestEditBanner(),
-        _ClinicContextCard(detail: detail),
-        _AddToRouteButton(),
-        // _PhotosButton(),
-        if (detail.signals.isNotEmpty) _ClinicSignals(signals: detail.signals),
-        _SectionHeader(title: 'Saúde da clínica'),
-        _ClinicHealth(detail: detail),
-        if (detail.productPerformance.isNotEmpty) ...[
-          _SectionHeader(title: 'Produtos'),
-          _ClinicProducts(items: detail.productPerformance),
-        ],
-        if (detail.payers.isNotEmpty) ...[
-          _SectionHeader(title: 'Convênios'),
-          _ClinicPayers(items: detail.payers),
-        ],
-        if (detail.nearbyClinics.isNotEmpty) ...[
-          _SectionHeader(title: 'Clínicas próximas'),
-          _NearbyClinics(items: detail.nearbyClinics),
-        ],
-        _SectionHeader(title: 'Histórico de visitas'),
-        _ClinicVisits(facilityId: detail.id),
-        if (detail.clinicDoctors.isNotEmpty) ...[
-          _SectionHeader(title: 'Médicos'),
-          _ClinicDoctors(doctors: detail.clinicDoctors),
-        ],
-        if (detail.fieldNotes != null && detail.fieldNotes!.isNotEmpty) ...[
-          _SectionHeader(title: 'Observações de campo'),
-          _ClinicNotes(notes: detail.fieldNotes!),
-        ],
-        _SectionHeader(title: 'Dados administrativos'),
-        _ClinicAdmin(detail: detail),
+        ClinicHeaderSection(detail: detail, sections: sections),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(clinicDetailProvider(clinicId));
+              ref.invalidate(establishmentDetailSectionsProvider(clinicId));
+              ref.invalidate(clinicVisitsProvider(clinicId));
+              await Future.wait([
+                ref.read(clinicDetailProvider(clinicId).future),
+                ref.read(establishmentDetailSectionsProvider(clinicId).future),
+              ]);
+            },
+            child: _ClinicDetailContent(detail: detail, clinicId: clinicId),
+          ),
+        ),
       ],
     );
   }
 }
 
-// ===============================================================// Section header
 // ===============================================================
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  const _SectionHeader({required this.title});
+// Scrollable content body — section order per Spec 0005 redesign
+// ===============================================================
+class _ClinicDetailContent extends ConsumerWidget {
+  final ClinicDetail detail;
+  final String clinicId;
+
+  const _ClinicDetailContent({required this.detail, required this.clinicId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final sectionsAsync = ref.watch(
+      establishmentDetailSectionsProvider(clinicId),
+    );
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(
+        parent: BouncingScrollPhysics(),
+      ),
+      padding: const EdgeInsets.only(top: 16, bottom: 32),
+      children: [
+        _QuickActions(detail: detail),
+        ClinicTopShortcutsSection(
+          facilityName: detail.name,
+          detail: detail,
+          // null while sections are still loading — badge stays neutral
+          // instead of flashing a false "Completo".
+          documents: sectionsAsync.valueOrNull?.documents,
+        ),
+        const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) {
+            if (sections.location == null) {
+              return const ClinicDetailCard(
+                child: Text(
+                  'Localização não disponível para este estabelecimento',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                ),
+              );
+            }
+            return ClinicLocationSection(
+              facilityId: clinicId,
+              facilityName: detail.name,
+              location: sections.location!,
+              nearbyEstablishments: sections.nearbyEstablishments,
+            );
+          },
+        ),
+        sectionsAsync.when(
+          loading: () =>
+              const ClinicSectionHeader(title: 'Profissionais administrativos'),
+          error: (_, _) =>
+              const ClinicSectionHeader(title: 'Profissionais administrativos'),
+          data: (sections) => ClinicSectionHeader(
+            title: 'Profissionais administrativos',
+            badge: sections.administrators.isEmpty
+                ? null
+                : _CountBadge(count: sections.administrators.length),
+            trailing: _HeaderLinkButton(
+              label: 'Ver todos',
+              icon: Icons.chevron_right_rounded,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdministrativeProfessionalsListScreen(
+                    professionals: sections.administrators,
+                    facilityName: detail.name,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) => ClinicAdminProfessionalsSection(
+            professionals: sections.administrators,
+            facilityName: detail.name,
+            onAssociate: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AdministrativeProfessionalsListScreen(
+                  professionals: sections.administrators,
+                  facilityName: detail.name,
+                ),
+              ),
+            ),
+          ),
+        ),
+        sectionsAsync.when(
+          loading: () => const ClinicSectionHeader(title: 'Médicos'),
+          error: (_, _) => const ClinicSectionHeader(title: 'Médicos'),
+          data: (sections) => ClinicSectionHeader(
+            title: 'Médicos',
+            badge: sections.doctors.isEmpty
+                ? null
+                : _CountBadge(count: sections.doctors.length),
+            trailing: _HeaderLinkButton(
+              label: 'Ver todos',
+              icon: Icons.chevron_right_rounded,
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DoctorsListScreen(
+                    doctors: sections.doctors,
+                    facilityName: detail.name,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) => ClinicCrmDoctorsSection(
+            doctors: sections.doctors,
+            onAssociate: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => DoctorsListScreen(
+                  doctors: sections.doctors,
+                  facilityName: detail.name,
+                ),
+              ),
+            ),
+          ),
+        ),
+        sectionsAsync.when(
+          loading: () => const ClinicSectionHeader(title: 'Fontes Pagadoras'),
+          error: (_, _) => const ClinicSectionHeader(title: 'Fontes Pagadoras'),
+          data: (sections) {
+            final payers =
+                ref.watch(facilityPayersOverrideProvider(clinicId)) ??
+                sections.payers;
+            return ClinicSectionHeader(
+              title: 'Fontes Pagadoras',
+              trailing: _HeaderLinkButton(
+                label: 'Editar',
+                onTap: () => _openPayerSourcesEditor(
+                  context,
+                  ref,
+                  clinicId: clinicId,
+                  facilityName: detail.name,
+                  payers: payers,
+                ),
+              ),
+            );
+          },
+        ),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) {
+            final override = ref.watch(
+              facilityPayersOverrideProvider(clinicId),
+            );
+            final payers = override ?? sections.payers;
+            final summary = override != null
+                ? buildPayerMixSummary(payers)
+                : sections.payerMixSummary;
+            return ClinicPayersBarSection(
+              payers: payers,
+              summary: summary,
+              onEdit: () => _openPayerSourcesEditor(
+                context,
+                ref,
+                clinicId: clinicId,
+                facilityName: detail.name,
+                payers: payers,
+              ),
+            );
+          },
+        ),
+        sectionsAsync.when(
+          loading: () => const ClinicSectionHeader(title: 'Pedidos recentes'),
+          error: (_, _) => const ClinicSectionHeader(title: 'Pedidos recentes'),
+          data: (sections) => ClinicSectionHeader(
+            title: 'Pedidos recentes',
+            badge: sections.orders.isEmpty
+                ? null
+                : _CountBadge(count: sections.orders.length),
+            trailing: sections.orders.isEmpty
+                ? null
+                : _HeaderLinkButton(
+                    label: 'Ver todos',
+                    icon: Icons.chevron_right_rounded,
+                    onTap: () => context.push('/pedidos'),
+                  ),
+          ),
+        ),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) => ClinicOrdersSection(
+            orders: sections.orders,
+            facilityId: clinicId,
+          ),
+        ),
+        const ClinicSectionHeader(title: 'Notas de campo'),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) =>
+              ClinicFieldNotesSection(initialNotes: sections.fieldNotes),
+        ),
+        const ClinicSectionHeader(title: 'Consultor responsável'),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) => ClinicContextSection(
+            consultantName: sections.consultantName ?? detail.consultantName,
+            consultantSince: sections.consultantSince,
+            regionZoneLabel: sections.regionZoneLabel,
+            city: detail.city.isNotEmpty ? detail.city : null,
+          ),
+        ),
+        const _SuggestEditBanner(),
+      ],
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  const _CountBadge({required this.count});
+
+  final int count;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0xFFeef4ff),
+        borderRadius: BorderRadius.circular(20),
+      ),
       child: Text(
-        title,
+        '$count',
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 12,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF0f1729),
-          letterSpacing: -0.3,
+          color: Color(0xFF1e40af),
         ),
       ),
     );
   }
 }
 
-// ===============================================================// 1. ClinicHeader — gradient hero with avatar, name, status, address
-// ===============================================================
-class _ClinicHeader extends StatelessWidget {
-  final ClinicDetail detail;
-  const _ClinicHeader({required this.detail});
+/// Shared header trailing action — used for every "Ver todos"/"Editar" link
+/// so all section headers position their action identically relative to
+/// the title (single `InkWell` + tight padding, no button min-size/padding
+/// quirks that would shift it out of alignment with the others).
+class _HeaderLinkButton extends StatelessWidget {
+  const _HeaderLinkButton({
+    required this.label,
+    this.icon,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
-
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(4, top + 4, 4, 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF1e40af), Color(0xFF2563eb)],
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: Column(
-        children: [
-          // Top bar — back + kebab menu
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.arrow_back_rounded,
-                    color: Colors.white,
-                  ),
-                  onPressed: () => context.pop(),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(
-                    Icons.more_vert_rounded,
-                    color: Colors.white,
-                  ),
-                  color: Colors.white,
-                  onSelected: (value) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('$value — em breve'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(
-                      value: 'Editar',
-                      child: ListTile(
-                        tileColor: Colors.white,
-                        leading: Icon(Icons.edit_rounded),
-                        title: Text('Editar'),
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'Compartilhar',
-                      child: ListTile(
-                        tileColor: Colors.white,
-                        leading: Icon(Icons.share_rounded),
-                        title: Text('Compartilhar'),
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'Reportar',
-                      child: ListTile(
-                        tileColor: Colors.white,
-                        leading: Icon(Icons.flag_rounded),
-                        title: Text('Reportar problema'),
-                        dense: true,
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Avatar
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.local_hospital_rounded,
-                size: 36,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
                 color: Color(0xFF1e40af),
               ),
             ),
-          ),
-          const SizedBox(height: 14),
-          // Name
-          Text(
-            detail.name,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-          // Status + distance row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _StatusBadge(status: detail.status),
-              const SizedBox(width: 10),
-              Container(
-                width: 4,
-                height: 4,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white38,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.location_on_rounded,
-                    size: 14,
-                    color: Colors.white70,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    '${detail.distanceKm.toStringAsFixed(1)} km',
-                    style: const TextStyle(fontSize: 13, color: Colors.white70),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // Address
-          if (detail.streetAddress != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                '${detail.streetAddress} — ${detail.neighborhood}',
-                style: const TextStyle(fontSize: 12, color: Colors.white60),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          const SizedBox(height: 10),
-          // Last interaction ribbon
-          if (detail.lastVisitDays != null)
-            _InteractionRibbon(days: detail.lastVisitDays!),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  final ClinicStatus status;
-  const _StatusBadge({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-      decoration: BoxDecoration(
-        color: status.color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        status.label,
-        style: TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
+            if (icon != null)
+              Icon(icon, size: 16, color: const Color(0xFF1e40af)),
+          ],
         ),
       ),
     );
   }
 }
 
-class _InteractionRibbon extends StatelessWidget {
-  final int days;
-  const _InteractionRibbon({required this.days});
+class _SectionLoadingCard extends StatelessWidget {
+  const _SectionLoadingCard();
 
   @override
   Widget build(BuildContext context) {
-    final isRecent = days <= 7;
-    final bg = isRecent ? const Color(0xFFea580c) : const Color(0xFFb84545);
-    final text = days == 0 ? 'Hoje' : 'Há $days dia${days > 1 ? 's' : ''}';
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      height: 80,
       decoration: BoxDecoration(
-        color: bg.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionErrorCard extends StatelessWidget {
+  const _SectionErrorCard({required this.message, this.onRetry});
+
+  final String message;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFfde8e8),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.access_time_rounded,
-            size: 14,
-            color: Colors.white.withValues(alpha: 0.9),
-          ),
-          const SizedBox(width: 6),
           Text(
-            'Última interação: $text',
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-              color: Colors.white.withValues(alpha: 0.95),
+            message,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: Color(0xFFb84545),
+              height: 1.4,
             ),
           ),
+          if (onRetry != null) ...[
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Tentar novamente'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFb84545),
+                padding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-// ===============================================================// 2. QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
+// ===============================================================
+// QuickActions — Ligar, WhatsApp, Rota, Nova visita, Novo pedido
 // ===============================================================
 class _QuickActions extends ConsumerWidget {
   final ClinicDetail detail;
@@ -428,7 +620,7 @@ class _QuickActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -447,17 +639,34 @@ class _QuickActions extends ConsumerWidget {
           _ActionButton(
             icon: Icons.phone_rounded,
             label: 'Ligar',
-            onTap: () {},
+            onTap: () => launchContactUrl(
+              context,
+              url: callUrl(detail.phone),
+              contactLabel: 'telefone',
+            ),
           ),
           _ActionButton(
             icon: Icons.chat_rounded,
             label: 'WhatsApp',
-            onTap: () {},
+            onTap: () => launchContactUrl(
+              context,
+              url: whatsappUrl(detail.phone),
+              contactLabel: 'WhatsApp',
+            ),
           ),
           _ActionButton(
             icon: Icons.directions_rounded,
             label: 'Rota',
-            onTap: () {},
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Rota — disponível após integração de coordenadas',
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
           ),
           _ActionButton(
             icon: Icons.calendar_month_rounded,
@@ -492,7 +701,7 @@ class _QuickActions extends ConsumerWidget {
           _ActionButton(
             icon: Icons.note_add_rounded,
             label: 'Pedido',
-            onTap: () {},
+            onTap: () => context.push('/pedidos/novo'),
           ),
         ],
       ),
@@ -515,7 +724,7 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(28),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Column(
@@ -525,8 +734,16 @@ class _ActionButton extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFeef4ff),
-                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFFf3f4f6)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
               ),
               child: Icon(icon, size: 20, color: const Color(0xFF1e40af)),
             ),
@@ -546,7 +763,8 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-// ===============================================================// 3. SuggestEditBanner
+// ===============================================================
+// SuggestEditBanner — explains the per-field pencil pattern
 // ===============================================================
 class _SuggestEditBanner extends StatelessWidget {
   const _SuggestEditBanner();
@@ -554,36 +772,27 @@ class _SuggestEditBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFfef3d5),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFfde68a)),
+        color: const Color(0xFFf8f9fb),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFeef0f3)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(
-            Icons.info_outline_rounded,
+            Icons.edit_note_rounded,
             size: 18,
-            color: Color(0xFFc6861b),
+            color: Color(0xFF9ca3af),
           ),
           const SizedBox(width: 10),
           const Expanded(
             child: Text(
-              'Sabia que você pode sugerir edições nos dados da clínica?',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF92400e)),
-            ),
-          ),
-          InkWell(
-            onTap: () {},
-            child: const Text(
-              'Saiba mais',
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFc6861b),
-              ),
+              'Toque nos ícones em qualquer campo. Sugestões passam por '
+              'revisão administrativa antes de entrar no perfil.',
+              style: TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
             ),
           ),
         ],
@@ -592,1192 +801,16 @@ class _SuggestEditBanner extends StatelessWidget {
   }
 }
 
-// ===============================================================// 4. ClinicContextCard — consultant, client type, region
 // ===============================================================
-class _ClinicContextCard extends StatelessWidget {
-  final ClinicDetail detail;
-  const _ClinicContextCard({required this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _ContextRow(
-            icon: Icons.person_outline_rounded,
-            label: 'Consultor',
-            value: detail.consultantName ?? '—',
-          ),
-          if (detail.clientType != null)
-            _ContextRow(
-              icon: Icons.star_outline_rounded,
-              label: 'Tipo',
-              value: detail.clientType!,
-            ),
-          _ContextRow(
-            icon: Icons.map_outlined,
-            label: 'Região',
-            value: detail.region ?? '—',
-          ),
-          _ContextRow(
-            icon: Icons.business_rounded,
-            label: 'Segmento',
-            value: detail.segment ?? '—',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ContextRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _ContextRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: const Color(0xFF9ca3af)),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 72,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF0f1729),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ===============================================================// 5. AddToRouteButton
-// ===============================================================
-class _AddToRouteButton extends StatelessWidget {
-  const _AddToRouteButton();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      height: 48,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {},
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.add_rounded,
-                  size: 20,
-                  color: Color(0xFF1e40af),
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Adicionar à rota de hoje',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1e40af),
-                  ),
-                ),
-                const Spacer(),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  size: 20,
-                  color: const Color(0xFF9ca3af),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ===============================================================// 7. ClinicSignals
-// ===============================================================
-class _ClinicSignals extends StatelessWidget {
-  final List<ClinicSignal> signals;
-  const _ClinicSignals({required this.signals});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Column(
-        children: signals
-            .map(
-              (s) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _SignalCard(signal: s),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _SignalCard extends StatelessWidget {
-  final ClinicSignal signal;
-  const _SignalCard({required this.signal});
-
-  @override
-  Widget build(BuildContext context) {
-    final isWarning = signal.type == 'warning';
-    final bg = isWarning
-        ? const Color(0xFFfef3d5)
-        : signal.type == 'info'
-        ? const Color(0xFFeef4ff)
-        : const Color(0xFFe6f7f0);
-    final iconColor = isWarning
-        ? const Color(0xFFc6861b)
-        : signal.type == 'info'
-        ? const Color(0xFF1e40af)
-        : const Color(0xFF16a373);
-    final icon = isWarning
-        ? Icons.warning_amber_rounded
-        : signal.type == 'info'
-        ? Icons.info_outline_rounded
-        : Icons.check_circle_outline_rounded;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: bg),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: iconColor),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              signal.message,
-              style: TextStyle(
-                fontSize: 12.5,
-                color: iconColor.withValues(alpha: 0.9),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ===============================================================// 8. ClinicHealth — LTV, Avg Ticket, Frequency
-// ===============================================================
-class _ClinicHealth extends StatelessWidget {
-  final ClinicDetail detail;
-  const _ClinicHealth({required this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _HealthCard(
-              label: 'LTV',
-              value: detail.ltv != null
-                  ? 'R\$ ${_formatNumber(detail.ltv!)}'
-                  : '—',
-              icon: Icons.trending_up_rounded,
-              color: const Color(0xFF1e40af),
-            ),
-          ),
-          _divider(),
-          Expanded(
-            child: _HealthCard(
-              label: 'Ticket médio',
-              value: detail.avgTicket != null
-                  ? 'R\$ ${_formatNumber(detail.avgTicket!)}'
-                  : '—',
-              icon: Icons.attach_money_rounded,
-              color: const Color(0xFF16a373),
-            ),
-          ),
-          _divider(),
-          Expanded(
-            child: _HealthCard(
-              label: 'Frequência',
-              value: detail.avgPurchaseDays != null
-                  ? '${detail.avgPurchaseDays} dias'
-                  : '—',
-              icon: Icons.date_range_rounded,
-              color: const Color(0xFF7c3aed),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _divider() {
-    return Container(width: 1, height: 48, color: const Color(0xFFeef0f3));
-  }
-
-  String _formatNumber(double n) {
-    if (n >= 1000) {
-      return '${(n / 1000).toStringAsFixed(n >= 10000 ? 0 : 1)}k';
-    }
-    return n.toStringAsFixed(0);
-  }
-}
-
-class _HealthCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-  const _HealthCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, size: 20, color: color.withValues(alpha: 0.7)),
-        const SizedBox(height: 6),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(fontSize: 11, color: Color(0xFF9ca3af)),
-        ),
-      ],
-    );
-  }
-}
-
-// ===============================================================// 9. ClinicProducts — product performance with trend bars
-// ===============================================================
-class _ClinicProducts extends StatelessWidget {
-  final List<ProductPerformance> items;
-  const _ClinicProducts({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: items
-            .map(
-              (p) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _ProductRow(item: p),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _ProductRow extends StatelessWidget {
-  final ProductPerformance item;
-  const _ProductRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final trendIcon = item.trend == 'up'
-        ? Icons.trending_up_rounded
-        : item.trend == 'down'
-        ? Icons.trending_down_rounded
-        : Icons.trending_flat_rounded;
-    final trendColor = item.trend == 'up'
-        ? const Color(0xFF16a373)
-        : item.trend == 'down'
-        ? const Color(0xFFb84545)
-        : const Color(0xFF6b7280);
-
-    return Row(
-      children: [
-        SizedBox(
-          width: 90,
-          child: Text(
-            item.name,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF0f1729),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 8,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFeef0f3),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: item.share / 100,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1e40af),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '${item.share.toStringAsFixed(0)}%',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF6b7280),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Icon(trendIcon, size: 16, color: trendColor),
-        const SizedBox(width: 4),
-        Text(
-          '${item.percentageChange >= 0 ? '+' : ''}${item.percentageChange.toStringAsFixed(1)}%',
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            color: trendColor,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ===============================================================// 10. ClinicPayers — payer breakdown (simplified list)
-// ===============================================================
-class _ClinicPayers extends StatelessWidget {
-  final List<PayerInfo> items;
-  const _ClinicPayers({required this.items});
-
-  static const _colors = [
-    Color(0xFF1e40af),
-    Color(0xFF2563eb),
-    Color(0xFF3b82f6),
-    Color(0xFF60a5fa),
-    Color(0xFF93c5fd),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: items
-            .asMap()
-            .entries
-            .map(
-              (e) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _PayerRow(
-                  payer: e.value,
-                  index: e.key,
-                  totalColors: _colors,
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _PayerRow extends StatelessWidget {
-  final PayerInfo payer;
-  final int index;
-  final List<Color> totalColors;
-  const _PayerRow({
-    required this.payer,
-    required this.index,
-    required this.totalColors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = totalColors[index % totalColors.length];
-
-    return Row(
-      children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            payer.name,
-            style: const TextStyle(fontSize: 13, color: Color(0xFF0f1729)),
-          ),
-        ),
-        SizedBox(
-          width: 120,
-          child: Container(
-            height: 8,
-            decoration: BoxDecoration(
-              color: const Color(0xFFeef0f3),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: payer.percentage / 100,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 36,
-          child: Text(
-            '${payer.percentage.toStringAsFixed(0)}%',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6b7280),
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ===============================================================// 11. NearbyClinics — list of nearby clinics
-// ===============================================================
-class _NearbyClinics extends StatelessWidget {
-  final List<NearbyClinic> items;
-  const _NearbyClinics({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: items
-            .map(
-              (n) => ListTile(
-                tileColor: Colors.white,
-                dense: true,
-                leading: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFeef4ff),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.local_hospital_rounded,
-                    size: 18,
-                    color: Color(0xFF1e40af),
-                  ),
-                ),
-                title: Text(
-                  n.name,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                trailing: Text(
-                  '${n.distanceKm.toStringAsFixed(1)} km',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF6b7280),
-                  ),
-                ),
-                onTap: () {},
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-// ===============================================================// 12. ClinicVisits — visit history with filter pills
-// ===============================================================
-class _ClinicVisits extends ConsumerStatefulWidget {
-  final String facilityId;
-  const _ClinicVisits({required this.facilityId});
-
-  @override
-  ConsumerState<_ClinicVisits> createState() => _ClinicVisitsState();
-}
-
-class _ClinicVisitsState extends ConsumerState<_ClinicVisits> {
-  String _filter = 'todas';
-
-  @override
-  Widget build(BuildContext context) {
-    final visitsAsync = ref.watch(clinicVisitsProvider(widget.facilityId));
-    final isLoading = visitsAsync.isLoading;
-    final visits = visitsAsync.valueOrNull ?? const <ClinicVisit>[];
-    final filtered = _filter == 'todas'
-        ? visits
-        : visits.where((v) => v.type.name == _filter).toList();
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Filter pills
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _FilterPill(
-                  label: 'Todas',
-                  value: 'todas',
-                  selected: _filter == 'todas',
-                  onTap: () => setState(() => _filter = 'todas'),
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: 'Visitas',
-                  value: 'visit',
-                  selected: _filter == 'visit',
-                  onTap: () => setState(() => _filter = 'visit'),
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: 'Entregas',
-                  value: 'order',
-                  selected: _filter == 'order',
-                  onTap: () => setState(() => _filter = 'order'),
-                ),
-                const SizedBox(width: 8),
-                _FilterPill(
-                  label: 'Retornos',
-                  value: 'followup',
-                  selected: _filter == 'followup',
-                  onTap: () => setState(() => _filter = 'followup'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // List
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else if (filtered.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'Nenhum registro encontrado',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-                ),
-              ),
-            )
-          else
-            ...filtered.map((v) => _VisitItem(visit: v)),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterPill extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool selected;
-  final VoidCallback onTap;
-  const _FilterPill({
-    required this.label,
-    required this.value,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF1e40af) : const Color(0xFFeef0f3),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: selected ? Colors.white : const Color(0xFF6b7280),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _VisitItem extends StatelessWidget {
-  final ClinicVisit visit;
-  const _VisitItem({required this.visit});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = visit.type == VisitType.visit
-        ? const Color(0xFF1e40af)
-        : visit.type == VisitType.order
-        ? const Color(0xFF16a373)
-        : visit.type == VisitType.followup
-        ? const Color(0xFFc6861b)
-        : const Color(0xFF7c3aed);
-    final monthNames = [
-      'Jan',
-      'Fev',
-      'Mar',
-      'Abr',
-      'Mai',
-      'Jun',
-      'Jul',
-      'Ago',
-      'Set',
-      'Out',
-      'Nov',
-      'Dez',
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Date column
-            SizedBox(
-              width: 44,
-              child: Column(
-                children: [
-                  Text(
-                    '${visit.date.day}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0f1729),
-                    ),
-                  ),
-                  Text(
-                    monthNames[visit.date.month - 1],
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF6b7280),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Timeline indicator
-            SizedBox(
-              width: 24,
-              child: Column(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(width: 1, color: const Color(0xFFeef0f3)),
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          visit.type.label,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600,
-                            color: color,
-                          ),
-                        ),
-                      ),
-                      // consultantName and hasPendingOrder removed from model
-                    ],
-                  ),
-                  if (visit.summary != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      visit.summary!,
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Color(0xFF4b5563),
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ===============================================================// 13. ClinicDoctors — doctor mini-cards
-// ===============================================================
-class _ClinicDoctors extends StatelessWidget {
-  final List<DoctorInfo> doctors;
-  const _ClinicDoctors({required this.doctors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: doctors.map((d) => _DoctorMiniCard(doctor: d)).toList(),
-      ),
-    );
-  }
-}
-
-class _DoctorMiniCard extends StatelessWidget {
-  final DoctorInfo doctor;
-  const _DoctorMiniCard({required this.doctor});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      tileColor: Colors.white,
-      dense: true,
-      leading: Stack(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: HSLColor.fromAHSL(1, doctor.hue, 0.2, 0.9).toColor(),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Center(
-              child: Text(
-                doctor.initials,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: HSLColor.fromAHSL(1, doctor.hue, 0.6, 0.35).toColor(),
-                ),
-              ),
-            ),
-          ),
-          if (doctor.isKeyOpinionLeader)
-            Positioned(
-              top: -2,
-              right: -2,
-              child: Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF7c3aed),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: const Icon(
-                  Icons.star_rounded,
-                  size: 8,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          if (doctor.hasPendingInteraction)
-            Positioned(
-              bottom: -2,
-              right: -2,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFea580c),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-              ),
-            ),
-        ],
-      ),
-      title: Text(
-        doctor.name,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-          color: Color(0xFF0f1729),
-        ),
-      ),
-      subtitle: Text(
-        '${doctor.specialty ?? ''}${doctor.crm != null ? ' • ${doctor.crm}' : ''}',
-        style: const TextStyle(fontSize: 11.5, color: Color(0xFF6b7280)),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        size: 18,
-        color: Color(0xFF9ca3af),
-      ),
-      onTap: () => context.push('/workspace/doctor/${doctor.id}'),
-    );
-  }
-}
-
-// ===============================================================// 14. ClinicNotes — field notes
-// ===============================================================
-class _ClinicNotes extends StatelessWidget {
-  final String notes;
-  const _ClinicNotes({required this.notes});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFeef4ff),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.notes_rounded,
-              size: 18,
-              color: Color(0xFF1e40af),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              notes,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Color(0xFF4b5563),
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ===============================================================// 15. ClinicAdmin — administrative data
-// ===============================================================
-class _ClinicAdmin extends StatelessWidget {
-  final ClinicDetail detail;
-  const _ClinicAdmin({required this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    final taxIdentifier = displayTaxIdentifier(
-      taxIdType: detail.taxIdType,
-      cnpj: detail.cnpj,
-      cpf: detail.cpf,
-    );
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _AdminRow(
-            icon: Icons.badge_outlined,
-            label: taxIdentifier.label,
-            value: taxIdentifier.value,
-          ),
-          _AdminRow(
-            icon: Icons.phone_outlined,
-            label: 'Telefone',
-            value: detail.phone ?? '—',
-          ),
-          _AdminRow(
-            icon: Icons.email_outlined,
-            label: 'E-mail',
-            value: detail.email ?? '—',
-          ),
-          if (detail.website != null)
-            _AdminRow(
-              icon: Icons.language_outlined,
-              label: 'Site',
-              value: detail.website!,
-            ),
-          if (detail.responsibleDoctor != null)
-            _AdminRow(
-              icon: Icons.medical_services_outlined,
-              label: 'Responsável',
-              value: detail.responsibleDoctor!,
-            ),
-          if (detail.openingHours != null)
-            _AdminRow(
-              icon: Icons.schedule_outlined,
-              label: 'Horários',
-              value: detail.openingHours!,
-            ),
-          if (detail.registeredSince != null)
-            _AdminRow(
-              icon: Icons.date_range_outlined,
-              label: 'Cliente desde',
-              value:
-                  '${detail.registeredSince!.day}/${detail.registeredSince!.month}/${detail.registeredSince!.year}',
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AdminRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _AdminRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: const Color(0xFF9ca3af)),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 80,
-            child: Text(
-              label,
-              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF0f1729),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ===============================================================// Shimmer block for loading skeleton
+// NOTE: the pre-Spec-0005 detail screen widgets that used to live below
+// this point (_ClinicContextCard, _ClinicSignals, _ClinicHealth,
+// _ClinicProducts, _ClinicPayers, _NearbyClinics, _ClinicVisits,
+// _ClinicDoctors, _ClinicNotes, _ClinicAdmin, and their row helpers) are
+// superseded by the `widgets/clinic_detail/*.dart` section widgets wired
+// into `_ClinicDetailContent` above (ClinicContextSection,
+// ClinicAdminInfoSection, etc.) and have been removed — see git history
+// for the old implementation. `ClinicAdminInfoSection` should use
+// `displayTaxIdentifier` (from `tax_identifier.dart`) for its CNPJ/CPF row.
 // ===============================================================
 class _ShimmerBlock extends StatelessWidget {
   final double height;
