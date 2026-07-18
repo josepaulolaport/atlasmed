@@ -46,6 +46,7 @@ function fakeRepository(
 ): FacilityRepository {
   return {
     findAll,
+    findAllByIds: async () => [],
     findById: async () => null,
     findByExternalId: async () => null,
     findSourceTrackedByProvider: async () => [],
@@ -166,4 +167,110 @@ describe("ListFacilitiesUseCase", () => {
       facilityIds: ["facility-1"],
     });
   });
+
+  it("hydrates Meilisearch facility candidates in rank order while applying canonical scope and filters", async () => {
+    let hydratedIds: string[] | undefined;
+    let receivedParams: unknown;
+    let searchCalls = 0;
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.findAllByIds = async (params) => {
+      hydratedIds = params.ids;
+      receivedParams = params;
+      return [facilityRecord("facility-1"), facilityRecord("facility-2")];
+    };
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: repository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>() => {
+          searchCalls += 1;
+          return {
+            hits: [{ id: "facility-2" }, { id: "facility-1" }] as unknown as T[],
+            estimatedTotalHits: 8,
+          };
+        },
+      },
+    });
+
+    const result = await useCase.execute({
+      search: "  12345678000199  ",
+      page: 2,
+      limit: 2,
+      commercialStatus: "ACTIVE",
+      productIds: ["product-1"],
+      scope: {
+        isGlobal: false,
+        assignedTerritoryIds: [],
+        effectiveTerritoryIds: [],
+        analyticsEffectiveTerritoryIds: [],
+        territoryIds: [],
+        facilityIds: ["facility-1", "facility-2"],
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true,
+      },
+    });
+
+    expect(searchCalls).toBe(1);
+    expect(hydratedIds).toEqual(["facility-2", "facility-1"]);
+    expect(receivedParams).toMatchObject({
+      commercialStatus: "ACTIVE",
+      productIds: ["product-1"],
+      scope: { isGlobal: false, facilityIds: ["facility-1", "facility-2"] },
+    });
+    expect(result.data.map((facility) => facility.id)).toEqual(["facility-2", "facility-1"]);
+    expect(result.pagination.total).toBe(8);
+  });
+
+  it("returns a short Meilisearch page when canonical hydration rejects stale candidates", async () => {
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.findAllByIds = async () => [facilityRecord("facility-2")];
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: repository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>() => ({
+          hits: [{ id: "facility-1" }, { id: "facility-2" }] as unknown as T[],
+          estimatedTotalHits: 2,
+        }),
+      },
+    });
+
+    const result = await useCase.execute({ search: "CNES", limit: 2, scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } });
+
+    expect(result.data.map((facility) => facility.id)).toEqual(["facility-2"]);
+    expect(result.pagination.total).toBe(2);
+  });
+
+  it("returns a typed 503 error when Meilisearch is unavailable", async () => {
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      searchService: { isConfigured: () => false, search: async () => ({ hits: [] }) },
+    });
+
+    await expect(
+      useCase.execute({ search: "CNPJ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } })
+    ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
+  });
+
+  it("does not call Meilisearch for blank facility searches", async () => {
+    let searchCalls = 0;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async () => {
+          searchCalls += 1;
+          return { hits: [], estimatedTotalHits: 0 };
+        },
+      },
+    });
+
+    await useCase.execute({ search: "   ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } });
+
+    expect(searchCalls).toBe(0);
+  });
+
 });

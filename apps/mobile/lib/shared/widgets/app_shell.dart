@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
+import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
@@ -63,6 +64,7 @@ class AppShellScreenState extends State<AppShellScreen> {
     if (location.startsWith('/apresentacoes')) return 'apresentacoes';
     if (location.startsWith('/mapa')) return 'mapa';
     if (location.startsWith('/territorios')) return 'territorios';
+    if (location.startsWith('/usuarios')) return 'usuarios';
     return '';
   }
 }
@@ -205,6 +207,8 @@ class AtlasTopBar extends StatelessWidget {
   }
 }
 
+bool _isAdmin(UserRoleName role) => role == UserRoleName.admin;
+
 // ======================================================================
 // Navigation items definition
 // ======================================================================
@@ -215,11 +219,18 @@ class _DrawerItem {
   final String route;
   final IconData icon;
 
+  /// When set, the item is hidden from roles for which this returns
+  /// `false`. `null` means visible to everyone (the default for every
+  /// existing section — territories, for instance, is read-only for
+  /// non-admins rather than hidden).
+  final bool Function(UserRoleName role)? visibleFor;
+
   const _DrawerItem({
     required this.key,
     required this.label,
     required this.route,
     required this.icon,
+    this.visibleFor,
   });
 }
 
@@ -247,6 +258,13 @@ const _drawerItems = <_DrawerItem>[
     label: 'Territórios',
     route: '/territorios',
     icon: Icons.layers_outlined,
+  ),
+  _DrawerItem(
+    key: 'usuarios',
+    label: 'Usuários',
+    route: '/usuarios',
+    icon: Icons.people_outline_rounded,
+    visibleFor: _isAdmin,
   ),
   _DrawerItem(
     key: 'pedidos',
@@ -314,7 +332,12 @@ class AtlasDrawer extends ConsumerWidget {
                       avatarUrl: user?.avatarUrl,
                       avatarToken: session.token,
                     ),
-                    Expanded(child: _NavItems(activeSection: activeSection)),
+                    Expanded(
+                      child: _NavItems(
+                        activeSection: activeSection,
+                        role: user?.role.name,
+                      ),
+                    ),
                     _DrawerFooter(
                       onLogout: () {
                         Navigator.of(context).pop();
@@ -466,15 +489,24 @@ class _DrawerHeader extends StatelessWidget {
 
 class _NavItems extends StatelessWidget {
   final String activeSection;
+  final UserRoleName? role;
 
-  const _NavItems({required this.activeSection});
+  const _NavItems({required this.activeSection, this.role});
 
   @override
   Widget build(BuildContext context) {
+    final items = _drawerItems.where((item) {
+      final visibleFor = item.visibleFor;
+      if (visibleFor == null) return true;
+      // Hide role-gated items while the role is still resolving, so they
+      // never flash on before access is confirmed.
+      return role != null && visibleFor(role!);
+    });
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
       child: Column(
-        children: _drawerItems.map((item) {
+        children: items.map((item) {
           final isActive = item.key == activeSection;
           return _buildNavRow(item, isActive, context);
         }).toList(),

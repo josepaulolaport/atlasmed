@@ -1,7 +1,28 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
+import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
+
+export interface SearchService {
+  isConfigured(): boolean;
+  search<T extends Record<string, unknown>>(
+    indexName: string,
+    query: string,
+    options: { limit: number; offset: number }
+  ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
+}
+
+export function orderSearchResultsById<T extends { id: string }>(
+  records: T[],
+  ids: string[]
+): T[] {
+  const recordsById = new Map(records.map((record) => [record.id, record]));
+  return ids.flatMap((id) => {
+    const record = recordsById.get(id);
+    return record ? [record] : [];
+  });
+}
 
 function serializeClinic(clinic: {
   id: string;
@@ -47,6 +68,7 @@ function serializeClinic(clinic: {
 
 interface Dependencies {
   facilityRepository: FacilityRepository;
+  searchService?: SearchService;
   facilityGeocodingService?: FacilityGeocodingService;
   onFacilityLocationChanged?: (facilityId: string) => Promise<void>;
 }
@@ -68,28 +90,65 @@ export class ListFacilitiesUseCase {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
 
-    const { facilities, total } = await this.deps.facilityRepository.findAll({
-      page,
-      limit,
-      search: input.search,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      radiusKm: input.radiusKm,
-      commercialStatus: input.commercialStatus,
-      productIds: input.productIds,
-      scope: input.scope.isGlobal
-        ? { isGlobal: true }
-        : { isGlobal: false, facilityIds: input.scope.facilityIds },
-    });
+    const scope = input.scope.isGlobal
+      ? { isGlobal: true as const }
+      : { isGlobal: false as const, facilityIds: input.scope.facilityIds };
+    const search = input.search?.trim();
+
+    if (!search) {
+      const { facilities, total } = await this.deps.facilityRepository.findAll({
+        page,
+        limit,
+        search: input.search,
+        latitude: input.latitude,
+        longitude: input.longitude,
+        radiusKm: input.radiusKm,
+        commercialStatus: input.commercialStatus,
+        productIds: input.productIds,
+        scope,
+      });
+
+      return {
+        data: facilities.map(serializeClinic),
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
+      };
+    }
+
+    const searchService = this.deps.searchService;
+    if (!searchService?.isConfigured()) {
+      throw new ServiceUnavailableError("Search");
+    }
+
+    let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
+    try {
+      result = await searchService.search<{ id: string }>("facilities", search, {
+        limit,
+        offset: (page - 1) * limit,
+      });
+    } catch (error) {
+      throw new ServiceUnavailableError("Search", error instanceof Error ? error : undefined);
+    }
+
+    const ids = result.hits.map((hit) => hit.id);
+    const facilities = ids.length
+      ? orderSearchResultsById(
+          await this.deps.facilityRepository.findAllByIds({
+            ids,
+            latitude: input.latitude,
+            longitude: input.longitude,
+            radiusKm: input.radiusKm,
+            commercialStatus: input.commercialStatus,
+            productIds: input.productIds,
+            scope,
+          }),
+          ids
+        )
+      : [];
+    const total = result.estimatedTotalHits ?? 0;
 
     return {
       data: facilities.map(serializeClinic),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit) || 1,
-      },
+      pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
 }

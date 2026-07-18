@@ -50,6 +50,7 @@ function fakeRepository(
 ): ProfessionalRepository {
   return {
     findAll,
+    findAllByIds: async () => [],
     findById: async () => null,
     findByExternalId: async () => null,
     findSourceTrackedByProvider: async () => [],
@@ -134,4 +135,69 @@ describe("ListProfessionalsUseCase", () => {
       facilityIds: ["facility-1"],
     });
   });
+
+  it("hydrates Meilisearch professional candidates in rank order with scope and specialty filters", async () => {
+    let receivedParams: unknown;
+    const repository = fakeRepository(async () => ({ professionals: [], total: 0 }));
+    repository.findAllByIds = async (params) => {
+      receivedParams = params;
+      return [professionalRecord("professional-1"), professionalRecord("professional-2")];
+    };
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: repository,
+      searchService: {
+        isConfigured: () => true,
+        search: async <T extends Record<string, unknown>>() => ({
+          hits: [{ id: "professional-2" }, { id: "professional-1" }] as unknown as T[],
+          estimatedTotalHits: 7,
+        }),
+      },
+    });
+
+    const result = await useCase.execute({
+      search: "CRM 123456",
+      facilityId: "facility-1",
+      specialty: "Cardiologia",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+
+    expect(receivedParams).toMatchObject({
+      ids: ["professional-2", "professional-1"],
+      facilityId: "facility-1",
+      specialty: "Cardiologia",
+      scope: { isGlobal: false, facilityIds: ["facility-1"] },
+    });
+    expect(result.data.map((professional) => professional.id)).toEqual(["professional-2", "professional-1"]);
+    expect(result.pagination.total).toBe(7);
+  });
+
+  it("returns a typed 503 error when Meilisearch is unavailable", async () => {
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({ professionals: [], total: 0 })),
+      searchService: { isConfigured: () => false, search: async () => ({ hits: [] }) },
+    });
+
+    await expect(
+      useCase.execute({ search: "CRM", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } })
+    ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
+  });
+
+  it("does not call Meilisearch for blank professional searches", async () => {
+    let searchCalls = 0;
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({ professionals: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async () => {
+          searchCalls += 1;
+          return { hits: [], estimatedTotalHits: 0 };
+        },
+      },
+    });
+
+    await useCase.execute({ search: "   ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } });
+
+    expect(searchCalls).toBe(0);
+  });
+
 });

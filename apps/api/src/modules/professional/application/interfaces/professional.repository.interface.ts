@@ -135,7 +135,20 @@ export interface ProfessionalRepository {
     longitude?: number;
     radiusKm?: number;
     scope: ProfessionalListScopeFilter;
+    /** Internal canonical hydration constraint for a Meilisearch result page. */
+    candidateIds?: string[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;
+
+  /** Hydrates ranked search candidates while enforcing canonical list eligibility. */
+  findAllByIds(params: {
+    ids: string[];
+    facilityId?: string;
+    specialty?: string;
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    scope: ProfessionalListScopeFilter;
+  }): Promise<ProfessionalRecord[]>;
 
   findById(id: string): Promise<ProfessionalRecord | null>;
 

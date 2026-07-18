@@ -438,7 +438,7 @@ export class OperationNotAllowedError extends AppError {
 }
 
 // ============================================================================
-// Server Errors (500)
+// Server Errors (500) and Availability Errors (503)
 // ============================================================================
 
 export class DatabaseError extends AppError {
@@ -452,6 +452,22 @@ export class DatabaseError extends AppError {
         ...(process.env.NODE_ENV === 'development' && originalError && {
           originalMessage: originalError.message
         })
+      }
+    );
+  }
+}
+
+export class ServiceUnavailableError extends AppError {
+  constructor(service: string, originalError?: Error) {
+    super(
+      "SERVICE_UNAVAILABLE",
+      503,
+      `${service} is temporarily unavailable`,
+      {
+        service,
+        ...(process.env.NODE_ENV === "development" && originalError && {
+          originalMessage: originalError.message,
+        }),
       }
     );
   }
