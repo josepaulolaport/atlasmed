@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
@@ -18,6 +20,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_section_header.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_top_shortcuts_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/doctors_list_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_payer_sources_screen.dart';
 
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
@@ -154,6 +157,35 @@ String _friendlyLoadError(Object error) {
     return 'Sua sessão expirou ou você não tem permissão. Faça login novamente.';
   }
   return 'Algo deu errado ao buscar os dados. Tente novamente em instantes.';
+}
+
+Future<void> _openPayerSourcesEditor(
+  BuildContext context,
+  WidgetRef ref, {
+  required String clinicId,
+  required String facilityName,
+  required List<PayerShare> payers,
+}) async {
+  final updated = await Navigator.of(context).push<List<PayerShare>>(
+    MaterialPageRoute(
+      builder: (_) => EditPayerSourcesScreen(
+        facilityName: facilityName,
+        initialPayers: payers,
+      ),
+    ),
+  );
+  if (updated == null || !context.mounted) return;
+  ref.read(facilityPayersOverrideProvider(clinicId).notifier).state = updated;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(
+        updated.isEmpty
+            ? 'Fontes pagadoras removidas'
+            : 'Fontes pagadoras atualizadas',
+      ),
+      behavior: SnackBarBehavior.floating,
+    ),
+  );
 }
 
 // ===============================================================
@@ -333,25 +365,26 @@ class _ClinicDetailContent extends ConsumerWidget {
           ),
         ),
         sectionsAsync.when(
-          loading: () => const ClinicSectionHeader(title: 'Convênios'),
-          error: (_, _) => const ClinicSectionHeader(title: 'Convênios'),
-          data: (sections) => ClinicSectionHeader(
-            title: 'Convênios',
-            trailing:
-                (sections.payers.isEmpty || sections.payerMixSummary == null)
-                ? null
-                : _HeaderLinkButton(
-                    label: 'Editar',
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Editar convênios — em breve'),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                  ),
-          ),
+          loading: () => const ClinicSectionHeader(title: 'Fontes Pagadoras'),
+          error: (_, _) => const ClinicSectionHeader(title: 'Fontes Pagadoras'),
+          data: (sections) {
+            final payers =
+                ref.watch(facilityPayersOverrideProvider(clinicId)) ??
+                sections.payers;
+            return ClinicSectionHeader(
+              title: 'Fontes Pagadoras',
+              trailing: _HeaderLinkButton(
+                label: 'Editar',
+                onTap: () => _openPayerSourcesEditor(
+                  context,
+                  ref,
+                  clinicId: clinicId,
+                  facilityName: detail.name,
+                  payers: payers,
+                ),
+              ),
+            );
+          },
         ),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
@@ -360,10 +393,26 @@ class _ClinicDetailContent extends ConsumerWidget {
             onRetry: () =>
                 ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
           ),
-          data: (sections) => ClinicPayersBarSection(
-            payers: sections.payers,
-            summary: sections.payerMixSummary,
-          ),
+          data: (sections) {
+            final override = ref.watch(
+              facilityPayersOverrideProvider(clinicId),
+            );
+            final payers = override ?? sections.payers;
+            final summary = override != null
+                ? buildPayerMixSummary(payers)
+                : sections.payerMixSummary;
+            return ClinicPayersBarSection(
+              payers: payers,
+              summary: summary,
+              onEdit: () => _openPayerSourcesEditor(
+                context,
+                ref,
+                clinicId: clinicId,
+                facilityName: detail.name,
+                payers: payers,
+              ),
+            );
+          },
         ),
         sectionsAsync.when(
           loading: () => const ClinicSectionHeader(title: 'Pedidos recentes'),

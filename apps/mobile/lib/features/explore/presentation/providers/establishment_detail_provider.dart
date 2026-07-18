@@ -25,3 +25,8 @@ final establishmentDetailSectionsProvider =
         );
       }
     });
+
+/// Local override after editing Fontes Pagadoras (Phase 1 — no API persist).
+/// `null` means “use the sections provider value”.
+final facilityPayersOverrideProvider =
+    StateProvider.family<List<PayerShare>?, String>((ref, facilityId) => null);

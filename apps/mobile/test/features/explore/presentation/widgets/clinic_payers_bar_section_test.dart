@@ -29,6 +29,6 @@ void main() {
       ),
     );
 
-    expect(find.text('Nenhum convênio cadastrado'), findsOneWidget);
+    expect(find.text('Nenhuma fonte pagadora cadastrada'), findsOneWidget);
   });
 }

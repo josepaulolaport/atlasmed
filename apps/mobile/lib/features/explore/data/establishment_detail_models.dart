@@ -410,7 +410,7 @@ class FacilityFieldNote {
   final DateTime createdAt;
 }
 
-/// Metadata for the "Convênios" donut chart callout.
+/// Metadata for the "Fontes Pagadoras" donut chart callout.
 class PayerMixSummary {
   const PayerMixSummary({
     required this.principalSourceName,

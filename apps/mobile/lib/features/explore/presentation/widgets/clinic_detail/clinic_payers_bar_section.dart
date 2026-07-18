@@ -2,36 +2,50 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 
-/// "Fontes pagadoras" — donut chart with a "principal fonte" callout and a
+/// "Fontes Pagadoras" — donut chart with a "principal fonte" callout and a
 /// legend list, replacing the previous stacked bar.
 class ClinicPayersBarSection extends StatelessWidget {
-  const ClinicPayersBarSection({super.key, required this.payers, this.summary});
+  const ClinicPayersBarSection({
+    super.key,
+    required this.payers,
+    this.summary,
+    this.onEdit,
+  });
 
   final List<PayerShare> payers;
   final PayerMixSummary? summary;
 
-  static const _colors = [
-    Color(0xFF0f1729),
-    Color(0xFF16a373),
-    Color(0xFFeab308),
-    Color(0xFF1e40af),
-    Color(0xFF9ca3af),
-    Color(0xFF7c3aed),
-  ];
+  /// Opens the Fontes Pagadoras editor when the roster is empty.
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
     if (payers.isEmpty) {
-      return const ClinicDetailCard(
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Nenhum convênio cadastrado',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            ),
+      return ClinicDetailCard(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          child: Column(
+            children: [
+              const Text(
+                'Nenhuma fonte pagadora cadastrada',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+              ),
+              if (onEdit != null) ...[
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: onEdit,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text('Cadastrar fontes'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF1e40af),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       );
@@ -57,7 +71,7 @@ class ClinicPayersBarSection extends StatelessWidget {
                       painter: _DonutPainter(
                         payers: payers,
                         total: total,
-                        colors: _colors,
+                        colors: payerShareColors,
                       ),
                     ),
                     Column(
@@ -136,7 +150,7 @@ class ClinicPayersBarSection extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: _PayerLegendRow(
                 payer: entry.value,
-                color: _colors[entry.key % _colors.length],
+                color: payerShareColorForIndex(entry.key),
               ),
             ),
           ),

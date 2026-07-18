@@ -1,7 +1,7 @@
 # Spec 0005: Mobile Establishment Detail (Estabelecimento / Clínica)
 
-**Status:** Approved for implementation — redesign addendum (v20)  
-**Last Updated:** 2026-07-17  
+**Status:** Approved for implementation — redesign addendum (v21)  
+**Last Updated:** 2026-07-18  
 **Domains:** `apps/mobile`, `apps/api` (additive contract changes)  
 **Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
 
@@ -42,6 +42,8 @@
 > **v19 note:** both Ver todos tables gain a lower-right **+** FAB that opens an associate modal (search bar + multi-select checklist of CRM candidates not yet on the facility). Footer actions: **Criar perfil…** (nested form sheet; on success the new profile is inserted into the modal pool and auto-selected) and **Associar (N)** (merges selection into the local facility list). Doctors and administrativos each have their own pool/form fields (CRM/specialty/papel vs cargo/contact type). Phase 1 mock only — no association API yet.
 
 > **v20 note:** empty/offline fallbacks — Ver todos stays available with empty rosters; empty Médicos/Admin cards offer Associar CTA into the list+FAB flow; facility EmptyState copy points at +; shell load failure shows friendly offline copy + **Tentar novamente**; section error cards retry via invalidate. Associate modals guide to create-profile when the candidate pool is empty.
+
+> **v21 note:** section formerly labeled **Convênios** is renamed **Fontes Pagadoras**. **Editar** opens a full-screen editor (`EditPayerSourcesScreen`): list of sources with ±5% steppers + numeric %, live sum chip (must total 100% to save, empty list allowed to clear), remove row, and **Adicionar** multi-select sheet over a mocked healthcare-provider catalog (search + exclude already-added). Save updates a local Riverpod override so the donut/legend refresh immediately (Phase 1 — no shares API write yet). Empty section offers **Cadastrar fontes**.
 
 ## User Story
 
