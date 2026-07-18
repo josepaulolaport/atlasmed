@@ -4,6 +4,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_assignment_options_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_users_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
@@ -14,84 +15,101 @@ import 'package:atlasmed_mobile_app/features/users/data/repositories/users_repos
 /// isn't wired to the real API yet. Holds its own mutable copies of the
 /// seed data so admin actions (role change, assignments, permissions,
 /// lifecycle) persist for the app's session.
-/// Builds an enriched [TerritoryAssignment] by looking up the shared
-/// [mockTerritoryOptions] seed, so the seeded assignments below always
-/// carry the same sector/centroid/boundary as the assignment picker.
-TerritoryAssignment _seededTerritoryAssignment(
-  String territoryId,
-  DateTime assignedAt,
-) {
-  final option = mockTerritoryOptions.firstWhere((o) => o.id == territoryId);
-  return TerritoryAssignment(
-    territoryId: option.id,
-    territoryName: option.name,
-    assignedAt: assignedAt,
-    sectorId: option.sectorId,
-    sectorName: option.sectorName,
-    centroid: option.centroid,
-    boundary: option.boundary,
+InviteSectorAssignment _seededSectorAssignment({
+  required String sectorId,
+  required String sectorName,
+  String? managerId,
+  String? managerName,
+  required List<String> territoryIds,
+}) {
+  return InviteSectorAssignment(
+    sectorId: sectorId,
+    sectorName: sectorName,
+    managerId: managerId,
+    managerName: managerName,
+    territories: territoryIds
+        .map(
+          (id) => mockTerritoryOptions.firstWhere((o) => o.id == id),
+        )
+        .toList(),
+  );
+}
+
+UserAssignments _seededAssignments({
+  required String userId,
+  required List<InviteSectorAssignment> sectorAssignments,
+}) {
+  return UserAssignments(
+    userId: userId,
+    sectorAssignments: sectorAssignments,
+    isOperationallyActive: sectorAssignments.any(
+      (a) => a.territories.isNotEmpty,
+    ),
   );
 }
 
 class MockUsersRepository implements UsersRepository {
   final List<User> _users = List<User>.of(mockUsers);
   final Map<String, UserAssignments> _assignments = {
-    'user-bruno-castro': UserAssignments(
+    'user-bruno-castro': _seededAssignments(
       userId: 'user-bruno-castro',
-      managerId: 'user-fernanda-duarte',
-      managerName: 'Fernanda Duarte',
-      territories: [
-        _seededTerritoryAssignment(
-          'territory-zona-sul-onco',
-          DateTime(2026, 3, 2),
-        ),
-      ],
-      sectors: [
-        SectorAssignment(
+      sectorAssignments: [
+        _seededSectorAssignment(
           sectorId: 'sector-oncologia',
           sectorName: 'Oncologia',
-          assignedAt: DateTime(2026, 3, 2),
+          managerId: 'user-fernanda-duarte',
+          managerName: 'Fernanda Duarte',
+          territoryIds: const ['territory-sul-onco-a'],
         ),
       ],
-      isOperationallyActive: true,
     ),
-    'user-camila-rocha': UserAssignments(
+    'user-camila-rocha': _seededAssignments(
       userId: 'user-camila-rocha',
-      managerId: 'user-fernanda-duarte',
-      managerName: 'Fernanda Duarte',
-      territories: [
-        _seededTerritoryAssignment(
-          'territory-zona-norte-onco',
-          DateTime(2026, 4, 10),
-        ),
-      ],
-      sectors: [
-        SectorAssignment(
+      sectorAssignments: [
+        _seededSectorAssignment(
           sectorId: 'sector-oncologia',
           sectorName: 'Oncologia',
-          assignedAt: DateTime(2026, 4, 10),
+          managerId: 'user-marcos-lima',
+          managerName: 'Marcos Lima',
+          territoryIds: const ['territory-norte-onco-a'],
         ),
       ],
-      isOperationallyActive: true,
     ),
-    'user-patricia-gomes': UserAssignments(
-      userId: 'user-patricia-gomes',
-      managerId: 'user-renata-souza',
-      managerName: 'Renata Souza',
-      territories: [
-        _seededTerritoryAssignment(
-          'territory-zona-leste-cardio',
-          DateTime(2026, 5, 1),
-        ),
-      ],
-      sectors: [
-        SectorAssignment(
+    'user-diego-farias': _seededAssignments(
+      userId: 'user-diego-farias',
+      sectorAssignments: [
+        _seededSectorAssignment(
           sectorId: 'sector-cardiologia',
           sectorName: 'Cardiologia',
-          assignedAt: DateTime(2026, 5, 1),
+          managerId: 'user-fernanda-duarte',
+          managerName: 'Fernanda Duarte',
+          territoryIds: const ['territory-sul-cardio-b'],
         ),
       ],
-      isOperationallyActive: true,
+    ),
+    'user-juliana-pires': _seededAssignments(
+      userId: 'user-juliana-pires',
+      sectorAssignments: [
+        _seededSectorAssignment(
+          sectorId: 'sector-cardiologia',
+          sectorName: 'Cardiologia',
+          managerId: 'user-otavio-barros',
+          managerName: 'Otávio Barros',
+          territoryIds: const ['territory-leste-cardio-b'],
+        ),
+      ],
+    ),
+    'user-patricia-gomes': _seededAssignments(
+      userId: 'user-patricia-gomes',
+      sectorAssignments: [
+        _seededSectorAssignment(
+          sectorId: 'sector-cardiologia',
+          sectorName: 'Cardiologia',
+          managerId: 'user-eduardo-alves',
+          managerName: 'Eduardo Alves',
+          territoryIds: const ['territory-oeste-cardio-c'],
+        ),
+      ],
     ),
   };
 
@@ -164,15 +182,58 @@ class MockUsersRepository implements UsersRepository {
   }
 
   @override
+  Future<User> updateUserProfile({
+    required String userId,
+    required String firstName,
+    required String lastName,
+    required String email,
+    required String phoneNumber,
+    required String username,
+    DateTime? birthDate,
+  }) async {
+    await _delay(350);
+    final index = _users.indexWhere((u) => u.id == userId);
+    if (index == -1) {
+      throw StateError('User not found: $userId');
+    }
+    final updated = _users[index].copyWith(
+      firstName: firstName,
+      lastName: lastName,
+      email: email,
+      phoneNumber: phoneNumber,
+      username: username,
+      birthDate: birthDate,
+      clearBirthDate: birthDate == null,
+      updatedAt: DateTime.now(),
+    );
+    _users[index] = updated;
+    return updated;
+  }
+
+  @override
   Future<UserAssignments> getUserAssignments(String userId) async {
     await _delay(250);
     return _assignments[userId] ??
         UserAssignments(
           userId: userId,
-          territories: const [],
-          sectors: const [],
+          sectorAssignments: const [],
           isOperationallyActive: false,
         );
+  }
+
+  @override
+  Future<void> replaceSectorAssignments(
+    String userId,
+    List<InviteSectorAssignment> sectorAssignments,
+  ) async {
+    await _delay(400);
+    _assignments[userId] = UserAssignments(
+      userId: userId,
+      sectorAssignments: List<InviteSectorAssignment>.of(sectorAssignments),
+      isOperationallyActive: sectorAssignments.any(
+        (a) => a.territories.isNotEmpty,
+      ),
+    );
   }
 
   @override
@@ -226,17 +287,39 @@ class MockUsersRepository implements UsersRepository {
     }
     final current = await getUserAssignments(userId);
     if (managerId == null) {
-      _assignments[userId] = current.copyWith(clearManager: true);
+      final cleared = current.sectorAssignments
+          .map(
+            (a) => a.copyWith(clearManager: true),
+          )
+          .toList();
+      _assignments[userId] = current.copyWith(sectorAssignments: cleared);
       return;
     }
     final manager = mockManagerOptions.firstWhere(
       (m) => m.id == managerId,
       orElse: () => ManagerOption(id: managerId, name: '—'),
     );
-    _assignments[userId] = current.copyWith(
-      managerId: manager.id,
-      managerName: manager.name,
-    );
+    var sectors = List<InviteSectorAssignment>.of(current.sectorAssignments);
+    if (sectors.isEmpty) {
+      sectors = [
+        InviteSectorAssignment(
+          sectorId: 'sector-oncologia',
+          sectorName: 'Oncologia',
+          managerId: manager.id,
+          managerName: manager.name,
+        ),
+      ];
+    } else {
+      sectors = sectors
+          .map(
+            (a) => a.copyWith(
+              managerId: manager.id,
+              managerName: manager.name,
+            ),
+          )
+          .toList();
+    }
+    _assignments[userId] = current.copyWith(sectorAssignments: sectors);
   }
 
   @override
@@ -248,21 +331,27 @@ class MockUsersRepository implements UsersRepository {
       (t) => t.id == territoryId,
       orElse: () => TerritoryOption(id: territoryId, name: '—'),
     );
-    final updated = [
-      ...current.territories,
-      TerritoryAssignment(
-        territoryId: territory.id,
-        territoryName: territory.name,
-        assignedAt: DateTime.now(),
-        sectorId: territory.sectorId,
-        sectorName: territory.sectorName,
-        centroid: territory.centroid,
-        boundary: territory.boundary,
-      ),
-    ];
+    final sectorId = territory.sectorId ?? 'sector-unknown';
+    final sectors = List<InviteSectorAssignment>.of(current.sectorAssignments);
+    final index = sectors.indexWhere((a) => a.sectorId == sectorId);
+    if (index == -1) {
+      sectors.add(
+        InviteSectorAssignment(
+          sectorId: sectorId,
+          sectorName: territory.sectorName ?? '—',
+          managerId: current.managerId,
+          managerName: current.managerName,
+          territories: [territory],
+        ),
+      );
+    } else {
+      sectors[index] = sectors[index].copyWith(
+        territories: [...sectors[index].territories, territory],
+      );
+    }
     _assignments[userId] = current.copyWith(
-      territories: updated,
-      isOperationallyActive: updated.isNotEmpty,
+      sectorAssignments: sectors,
+      isOperationallyActive: true,
     );
   }
 
@@ -270,12 +359,18 @@ class MockUsersRepository implements UsersRepository {
   Future<void> revokeTerritory(String userId, String territoryId) async {
     await _delay();
     final current = await getUserAssignments(userId);
-    final updated = current.territories
-        .where((t) => t.territoryId != territoryId)
+    final sectors = current.sectorAssignments
+        .map(
+          (a) => a.copyWith(
+            territories: a.territories
+                .where((t) => t.id != territoryId)
+                .toList(),
+          ),
+        )
         .toList();
     _assignments[userId] = current.copyWith(
-      territories: updated,
-      isOperationallyActive: updated.isNotEmpty,
+      sectorAssignments: sectors,
+      isOperationallyActive: sectors.any((a) => a.territories.isNotEmpty),
     );
   }
 
@@ -283,18 +378,19 @@ class MockUsersRepository implements UsersRepository {
   Future<void> assignSector(String userId, String sectorId) async {
     await _delay();
     final current = await getUserAssignments(userId);
-    if (current.sectors.any((s) => s.sectorId == sectorId)) return;
+    if (current.sectorAssignments.any((s) => s.sectorId == sectorId)) return;
     final sector = mockSectorOptions.firstWhere(
       (s) => s.id == sectorId,
       orElse: () => SectorOption(id: sectorId, name: '—'),
     );
     _assignments[userId] = current.copyWith(
-      sectors: [
-        ...current.sectors,
-        SectorAssignment(
+      sectorAssignments: [
+        ...current.sectorAssignments,
+        InviteSectorAssignment(
           sectorId: sector.id,
           sectorName: sector.name,
-          assignedAt: DateTime.now(),
+          managerId: current.managerId,
+          managerName: current.managerName,
         ),
       ],
     );
@@ -305,7 +401,9 @@ class MockUsersRepository implements UsersRepository {
     await _delay();
     final current = await getUserAssignments(userId);
     _assignments[userId] = current.copyWith(
-      sectors: current.sectors.where((s) => s.sectorId != sectorId).toList(),
+      sectorAssignments: current.sectorAssignments
+          .where((s) => s.sectorId != sectorId)
+          .toList(),
     );
   }
 
@@ -354,66 +452,67 @@ class MockUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<ManagerOption>> getManagerOptions() async {
+  Future<List<ManagerOption>> getManagerOptions({String? sectorId}) async {
     await _delay(150);
-    return List<ManagerOption>.of(mockManagerOptions);
+    final all = List<ManagerOption>.of(mockManagerOptions);
+    if (sectorId == null) return all;
+    return all
+        .where((m) => m.sectorIds.contains(sectorId))
+        .toList(growable: false);
   }
 
   @override
-  Future<List<TerritoryOption>> getTerritoryOptions() async {
+  Future<List<TerritoryOption>> getTerritoryOptions({String? sectorId}) async {
     await _delay(150);
-    return List<TerritoryOption>.of(mockTerritoryOptions);
+    final all = List<TerritoryOption>.of(mockTerritoryOptions);
+    if (sectorId == null) return all;
+    return all.where((t) => t.sectorId == sectorId).toList(growable: false);
+  }
+
+  @override
+  Future<ManagerTerritoryScope> getTerritoriesForManager(
+    String managerId, {
+    String? sectorId,
+  }) async {
+    await _delay(280);
+    final manager = mockManagerOptions.firstWhere(
+      (m) => m.id == managerId,
+      orElse: () => ManagerOption(id: managerId, name: '—'),
+    );
+    final zoneId = manager.territoryId;
+    final territories = zoneId == null
+        ? const <TerritoryOption>[]
+        : mockTerritoryOptions
+              .where((t) {
+                if (t.managerTerritoryId != zoneId) return false;
+                if (sectorId != null && t.sectorId != sectorId) return false;
+                return true;
+              })
+              .toList(growable: false);
+    return ManagerTerritoryScope(
+      managerId: manager.id,
+      managerName: manager.name,
+      managerTerritoryId: manager.territoryId,
+      managerTerritoryName: manager.territoryName,
+      managerZoneCentroid: manager.territoryCentroid,
+      managerZoneBoundary: manager.territoryBoundary,
+      territories: territories,
+    );
   }
 
   void _updateStatus(String userId, UserStatus status) {
     final index = _users.indexWhere((u) => u.id == userId);
     if (index == -1) return;
-    _users[index] = _copyWithStatus(_users[index], status);
+    _users[index] = _users[index].copyWith(
+      status: status,
+      updatedAt: DateTime.now(),
+      suspendedAt: status == UserStatus.suspended ? DateTime.now() : null,
+      deactivatedAt: status == UserStatus.inactive ? DateTime.now() : null,
+      clearSuspendedAt: status != UserStatus.suspended,
+      clearDeactivatedAt: status != UserStatus.inactive,
+    );
   }
 
-  static User _copyWithStatus(User user, UserStatus status) => User(
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    phoneNumber: user.phoneNumber,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    avatarUrl: user.avatarUrl,
-    status: status,
-    emailVerified: user.emailVerified,
-    phoneVerified: user.phoneVerified,
-    twoFactorEnabled: user.twoFactorEnabled,
-    emailVerifiedAt: user.emailVerifiedAt,
-    phoneVerifiedAt: user.phoneVerifiedAt,
-    role: user.role,
-    createdAt: user.createdAt,
-    updatedAt: DateTime.now(),
-    lastLoginAt: user.lastLoginAt,
-    birthDate: user.birthDate,
-    suspendedAt: status == UserStatus.suspended ? DateTime.now() : null,
-    deactivatedAt: status == UserStatus.inactive ? DateTime.now() : null,
-  );
-
-  static User _copyWithRole(User user, UserRole role) => User(
-    id: user.id,
-    email: user.email,
-    username: user.username,
-    phoneNumber: user.phoneNumber,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    avatarUrl: user.avatarUrl,
-    status: user.status,
-    emailVerified: user.emailVerified,
-    phoneVerified: user.phoneVerified,
-    twoFactorEnabled: user.twoFactorEnabled,
-    emailVerifiedAt: user.emailVerifiedAt,
-    phoneVerifiedAt: user.phoneVerifiedAt,
-    role: role,
-    createdAt: user.createdAt,
-    updatedAt: DateTime.now(),
-    lastLoginAt: user.lastLoginAt,
-    birthDate: user.birthDate,
-    suspendedAt: user.suspendedAt,
-    deactivatedAt: user.deactivatedAt,
-  );
+  static User _copyWithRole(User user, UserRole role) =>
+      user.copyWith(role: role, updatedAt: DateTime.now());
 }

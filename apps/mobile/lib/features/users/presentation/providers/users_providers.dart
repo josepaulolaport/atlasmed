@@ -52,9 +52,25 @@ final managerOptionsProvider = FutureProvider.autoDispose<List<ManagerOption>>((
   return ref.watch(usersRepositoryProvider).getManagerOptions();
 });
 
+/// Managers operating in a given sector (`GET …&sectorId=`).
+final managersForSectorProvider = FutureProvider.autoDispose
+    .family<List<ManagerOption>, String>((ref, sectorId) {
+      return ref
+          .watch(usersRepositoryProvider)
+          .getManagerOptions(sectorId: sectorId);
+    });
+
 final territoryOptionsProvider =
     FutureProvider.autoDispose<List<TerritoryOption>>((ref) {
       return ref.watch(usersRepositoryProvider).getTerritoryOptions();
+    });
+
+/// Territories in a given sector (`GET /territories?sectorId=`).
+final territoriesForSectorProvider = FutureProvider.autoDispose
+    .family<List<TerritoryOption>, String>((ref, sectorId) {
+      return ref
+          .watch(usersRepositoryProvider)
+          .getTerritoryOptions(sectorId: sectorId);
     });
 
 final sectorOptionsProvider = FutureProvider.autoDispose<List<SectorOption>>((
@@ -66,4 +82,9 @@ final sectorOptionsProvider = FutureProvider.autoDispose<List<SectorOption>>((
 final invitationsListProvider =
     FutureProvider.autoDispose<List<UserInvitation>>((ref) {
       return ref.watch(invitationsRepositoryProvider).getInvitations();
+    });
+
+final invitationDetailProvider = FutureProvider.autoDispose
+    .family<UserInvitation, String>((ref, id) {
+      return ref.watch(invitationsRepositoryProvider).getInvitation(id);
     });

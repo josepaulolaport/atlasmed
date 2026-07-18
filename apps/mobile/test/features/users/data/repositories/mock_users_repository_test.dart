@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/mock_users_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -130,15 +131,15 @@ void main() {
       'assignTerritory adds a territory and revokeTerritory removes it',
       () async {
         const userId = 'user-igor-santana';
-        await repository.assignTerritory(userId, 'territory-centro-onco');
+        await repository.assignTerritory(userId, 'territory-centro-onco-d');
         var assignments = await repository.getUserAssignments(userId);
         expect(
           assignments.territories.map((t) => t.territoryId),
-          contains('territory-centro-onco'),
+          contains('territory-centro-onco-d'),
         );
         expect(assignments.isOperationallyActive, isTrue);
 
-        await repository.revokeTerritory(userId, 'territory-centro-onco');
+        await repository.revokeTerritory(userId, 'territory-centro-onco-d');
         assignments = await repository.getUserAssignments(userId);
         expect(assignments.territories, isEmpty);
         expect(assignments.isOperationallyActive, isFalse);
@@ -187,7 +188,7 @@ void main() {
       'assignTerritory carries sector and map geometry from the option',
       () async {
         const userId = 'user-igor-santana';
-        await repository.assignTerritory(userId, 'territory-centro-onco');
+        await repository.assignTerritory(userId, 'territory-centro-onco-d');
         final assignments = await repository.getUserAssignments(userId);
         final territory = assignments.territories.single;
         expect(territory.sectorName, 'Oncologia');
@@ -195,6 +196,101 @@ void main() {
         expect(territory.boundary, isNotNull);
       },
     );
+
+    test(
+      'getTerritoriesForManager returns only patches under that manager zone',
+      () async {
+        final scope = await repository.getTerritoriesForManager(
+          'user-fernanda-duarte',
+        );
+        expect(scope.managerName, 'Fernanda Duarte');
+        expect(scope.managerTerritoryName, 'Zona Sul');
+        expect(scope.managerZoneBoundary, isNotNull);
+        expect(scope.territories, isNotEmpty);
+        expect(
+          scope.territories.every(
+            (t) => t.managerTerritoryId == scope.managerTerritoryId,
+          ),
+          isTrue,
+        );
+
+        final all = await repository.getTerritoryOptions();
+        expect(scope.territories.length, lessThan(all.length));
+      },
+    );
+
+    test(
+      'getTerritoriesForManager filters by sector when sectorId is set',
+      () async {
+        final scope = await repository.getTerritoriesForManager(
+          'user-fernanda-duarte',
+          sectorId: 'sector-oncologia',
+        );
+        expect(scope.territories, isNotEmpty);
+        expect(
+          scope.territories.every((t) => t.sectorId == 'sector-oncologia'),
+          isTrue,
+        );
+      },
+    );
+
+    test('getManagerOptions filters by sector when sectorId is set', () async {
+      final managers = await repository.getManagerOptions(
+        sectorId: 'sector-cardiologia',
+      );
+      expect(managers, isNotEmpty);
+      expect(
+        managers.every((m) => m.sectorIds.contains('sector-cardiologia')),
+        isTrue,
+      );
+      expect(managers.any((m) => m.id == 'user-eduardo-alves'), isTrue);
+      expect(managers.any((m) => m.id == 'user-renata-souza'), isFalse);
+    });
+
+    test(
+      'replaceSectorAssignments replaces the full invite-shaped payload',
+      () async {
+        await repository.replaceSectorAssignments('user-bruno-castro', const [
+          InviteSectorAssignment(
+            sectorId: 'sector-oncologia',
+            sectorName: 'Oncologia',
+            managerId: 'user-fernanda-duarte',
+            managerName: 'Fernanda Duarte',
+            territories: [],
+          ),
+          InviteSectorAssignment(
+            sectorId: 'sector-cardiologia',
+            sectorName: 'Cardiologia',
+            managerId: 'user-fernanda-duarte',
+            managerName: 'Fernanda Duarte',
+            territories: [],
+          ),
+        ]);
+        final assignments = await repository.getUserAssignments(
+          'user-bruno-castro',
+        );
+        expect(assignments.sectorAssignments, hasLength(2));
+        expect(assignments.isOperationallyActive, isFalse);
+      },
+    );
+  });
+
+  test('updateUserProfile updates identity fields', () async {
+    final updated = await repository.updateUserProfile(
+      userId: 'user-bruno-castro',
+      firstName: 'Bruno',
+      lastName: 'Atualizado',
+      email: 'bruno.atualizado@atlasmed.com.br',
+      phoneNumber: '+55 11 90000-0000',
+      username: 'bruno.atualizado',
+      birthDate: DateTime(1994, 9, 18),
+    );
+    expect(updated.lastName, 'Atualizado');
+    expect(updated.email, 'bruno.atualizado@atlasmed.com.br');
+    expect(updated.username, 'bruno.atualizado');
+
+    final fetched = await repository.getUserById('user-bruno-castro');
+    expect(fetched!.lastName, 'Atualizado');
   });
 
   group('permissions', () {

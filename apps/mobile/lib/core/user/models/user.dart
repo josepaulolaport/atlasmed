@@ -95,6 +95,57 @@ class User extends Equatable {
     return email;
   }
 
+  User copyWith({
+    String? email,
+    String? username,
+    String? phoneNumber,
+    String? firstName,
+    String? lastName,
+    String? avatarUrl,
+    UserStatus? status,
+    bool? emailVerified,
+    bool? phoneVerified,
+    bool? twoFactorEnabled,
+    DateTime? emailVerifiedAt,
+    DateTime? phoneVerifiedAt,
+    UserRole? role,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    DateTime? lastLoginAt,
+    DateTime? suspendedAt,
+    DateTime? deactivatedAt,
+    DateTime? birthDate,
+    bool clearPhoneNumber = false,
+    bool clearBirthDate = false,
+    bool clearSuspendedAt = false,
+    bool clearDeactivatedAt = false,
+  }) {
+    return User(
+      id: id,
+      email: email ?? this.email,
+      username: username ?? this.username,
+      phoneNumber: clearPhoneNumber ? null : (phoneNumber ?? this.phoneNumber),
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      status: status ?? this.status,
+      emailVerified: emailVerified ?? this.emailVerified,
+      phoneVerified: phoneVerified ?? this.phoneVerified,
+      twoFactorEnabled: twoFactorEnabled ?? this.twoFactorEnabled,
+      emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
+      phoneVerifiedAt: phoneVerifiedAt ?? this.phoneVerifiedAt,
+      role: role ?? this.role,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      suspendedAt: clearSuspendedAt ? null : (suspendedAt ?? this.suspendedAt),
+      deactivatedAt: clearDeactivatedAt
+          ? null
+          : (deactivatedAt ?? this.deactivatedAt),
+      birthDate: clearBirthDate ? null : (birthDate ?? this.birthDate),
+    );
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
     final userJson = json.containsKey('user')
         ? json['user'] as Map<String, dynamic>

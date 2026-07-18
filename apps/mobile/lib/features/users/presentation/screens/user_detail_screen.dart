@@ -1,13 +1,14 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/change_role_sheet.dart';
-import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manage_assignments_sheet.dart';
-import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manage_permissions_sheet.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manager_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_card.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_picker_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_avatar.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_badges.dart';
 import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
@@ -54,7 +55,10 @@ class UserDetailScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return _UserDetailBody(user: user, canManage: canManage);
+                  return _UserDetailBody(
+                    user: user,
+                    canManage: canManage,
+                  );
                 },
               ),
             ),
@@ -221,52 +225,38 @@ class _UserDetailBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final assignmentsAsync = ref.watch(userAssignmentsProvider(user.id));
-    final permissionsAsync = ref.watch(userPermissionsProvider(user.id));
+
+    final showsAssignments =
+        user.role.name == UserRoleName.rep ||
+        user.role.name == UserRoleName.manager;
 
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
       children: [
-        _IdentityCard(user: user),
-        const SizedBox(height: 16),
-        assignmentsAsync.when(
-          loading: () => const _SectionShimmer(height: 220),
-          error: (_, _) => const SizedBox.shrink(),
-          data: (assignments) => _AssignmentsSection(
-            user: user,
-            assignments: assignments,
-            canManage: canManage,
-          ),
-        ),
-        if (user.role.name == UserRoleName.rep ||
-            user.role.name == UserRoleName.manager) ...[
+        _IdentityCard(user: user, canManage: canManage),
+        if (showsAssignments) ...[
           const SizedBox(height: 16),
           assignmentsAsync.when(
-            loading: () => const _SectionShimmer(height: 176),
+            loading: () => const _SectionShimmer(height: 220),
             error: (_, _) => const SizedBox.shrink(),
-            data: (assignments) =>
-                _TerritoryMapsSection(assignments: assignments),
+            data: (assignments) => _AssignmentsSection(
+              user: user,
+              assignments: assignments,
+              canManage: canManage,
+            ),
           ),
         ],
-        const SizedBox(height: 16),
-        permissionsAsync.when(
-          loading: () => const _SectionShimmer(height: 140),
-          error: (_, _) => const SizedBox.shrink(),
-          data: (grants) => _PermissionsSection(
-            user: user,
-            grants: grants,
-            canManage: canManage,
-          ),
-        ),
       ],
     );
   }
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.user});
+  const _IdentityCard({required this.user, required this.canManage});
 
   final User user;
+  final bool canManage;
 
   @override
   Widget build(BuildContext context) {
@@ -306,10 +296,11 @@ class _IdentityCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Row(
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
                       children: [
                         RoleBadge(role: user.role.name),
-                        const SizedBox(width: 6),
                         StatusBadge(status: user.status),
                       ],
                     ),
@@ -318,18 +309,29 @@ class _IdentityCard extends StatelessWidget {
               ),
             ],
           ),
+          if (canManage) ...[
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => context.push('/usuarios/${user.id}/editar'),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Editar informações'),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           const Divider(height: 1, color: Color(0xFFf1f3f6)),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _VerificationChip(label: 'Email', verified: user.emailVerified),
-              const SizedBox(width: 8),
               _VerificationChip(
                 label: 'Telefone',
                 verified: user.phoneVerified,
               ),
-              const SizedBox(width: 8),
               _VerificationChip(label: '2FA', verified: user.twoFactorEnabled),
             ],
           ),
@@ -434,43 +436,27 @@ class _AssignmentsSection extends ConsumerWidget {
   final UserAssignments assignments;
   final bool canManage;
 
+  bool get _showManager => user.role.name == UserRoleName.rep;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _SectionCard(
-      title: 'Atribuições',
-      trailing: canManage
-          ? TextButton(
-              onPressed: () async {
-                await ManageAssignmentsSheet.show(
-                  context,
-                  user: user,
-                  assignments: assignments,
-                );
-                ref.invalidate(userAssignmentsProvider(user.id));
-              },
-              child: const Text('Gerenciar'),
-            )
-          : null,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (user.role.name == UserRoleName.rep) ...[
-            _DetailRow(
-              label: 'Gerente',
-              value: assignments.managerName ?? 'Sem gerente',
-            ),
-            const SizedBox(height: 12),
-          ],
-          const Text(
-            'Setores',
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF6b7280),
-            ),
-          ),
-          const SizedBox(height: 6),
-          assignments.sectors.isEmpty
+    final sectorAssignments = assignments.sectorAssignments;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionCard(
+          title: 'Setores',
+          trailing: canManage
+              ? TextButton(
+                  onPressed: () async {
+                    await context.push('/usuarios/${user.id}/atribuicoes');
+                    ref.invalidate(userAssignmentsProvider(user.id));
+                  },
+                  child: const Text('Gerenciar'),
+                )
+              : null,
+          child: sectorAssignments.isEmpty
               ? const Text(
                   'Nenhum setor atribuído.',
                   style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
@@ -478,153 +464,327 @@ class _AssignmentsSection extends ConsumerWidget {
               : Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: assignments.sectors
-                      .map((s) => _Pill(label: s.sectorName))
+                  children: sectorAssignments
+                      .map(
+                        (a) => Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFf3f4f6),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            a.sectorName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF374151),
+                            ),
+                          ),
+                        ),
+                      )
                       .toList(),
                 ),
-          if (assignments.isOperationallyActive) ...[
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                const Icon(
-                  Icons.bolt_rounded,
-                  size: 14,
-                  color: Color(0xFF16a373),
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  'Operacionalmente ativo',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF16a373),
-                  ),
-                ),
-              ],
-            ),
-          ],
+        ),
+        for (final assignment in sectorAssignments) ...[
+          const SizedBox(height: 12),
+          _SectorAssignmentCard(
+            userId: user.id,
+            assignment: assignment,
+            allAssignments: assignments,
+            showManager: _showManager,
+            canManage: canManage,
+          ),
         ],
-      ),
+      ],
     );
   }
 }
 
-class _TerritoryMapsSection extends StatelessWidget {
-  const _TerritoryMapsSection({required this.assignments});
+class _SectorAssignmentCard extends ConsumerStatefulWidget {
+  const _SectorAssignmentCard({
+    required this.userId,
+    required this.assignment,
+    required this.allAssignments,
+    required this.showManager,
+    required this.canManage,
+  });
 
-  final UserAssignments assignments;
+  final String userId;
+  final InviteSectorAssignment assignment;
+  final UserAssignments allAssignments;
+  final bool showManager;
+  final bool canManage;
+
+  @override
+  ConsumerState<_SectorAssignmentCard> createState() =>
+      _SectorAssignmentCardState();
+}
+
+class _SectorAssignmentCardState extends ConsumerState<_SectorAssignmentCard> {
+  bool _busy = false;
+
+  InviteSectorAssignment get assignment => widget.assignment;
+
+  Future<void> _persist(InviteSectorAssignment updated) async {
+    setState(() => _busy = true);
+    try {
+      final next = widget.allAssignments.sectorAssignments
+          .map((a) => a.sectorId == updated.sectorId ? updated : a)
+          .toList();
+      await ref
+          .read(usersRepositoryProvider)
+          .replaceSectorAssignments(widget.userId, next);
+      ref.invalidate(userAssignmentsProvider(widget.userId));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível atualizar o setor.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _pickManager() async {
+    if (!widget.canManage || _busy) return;
+    final managers = await ref.read(
+      managersForSectorProvider(assignment.sectorId).future,
+    );
+    if (!mounted) return;
+    final id = await ManagerPickerSheet.show(
+      context,
+      managers: managers,
+      selectedId: assignment.managerId,
+    );
+    if (id == null || !mounted) return;
+    ManagerOption? manager;
+    for (final m in managers) {
+      if (m.id == id) {
+        manager = m;
+        break;
+      }
+    }
+    await _persist(
+      assignment.copyWith(
+        managerId: id,
+        managerName: manager?.name,
+        // Manager change invalidates territory picks for this sector.
+        territories: const [],
+      ),
+    );
+  }
+
+  Future<void> _clearManager() async {
+    if (!widget.canManage || _busy) return;
+    await _persist(
+      assignment.copyWith(clearManager: true, territories: const []),
+    );
+  }
+
+  Future<void> _pickTerritories() async {
+    if (!widget.canManage || _busy) return;
+    final List<TerritoryOption>? picked;
+    if (widget.showManager) {
+      final managerId = assignment.managerId;
+      if (managerId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Selecione um gerente primeiro.')),
+        );
+        return;
+      }
+      picked = await TerritoryPickerScreen.pickForManager(
+        context,
+        managerId: managerId,
+        sectorId: assignment.sectorId,
+        initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
+      );
+    } else {
+      picked = await TerritoryPickerScreen.pickForSector(
+        context,
+        sectorId: assignment.sectorId,
+        initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
+      );
+    }
+    if (picked == null || !mounted) return;
+    await _persist(assignment.copyWith(territories: picked));
+  }
+
+  Future<void> _removeTerritory(String territoryId) async {
+    if (!widget.canManage || _busy) return;
+    await _persist(
+      assignment.copyWith(
+        territories: assignment.territories
+            .where((t) => t.id != territoryId)
+            .toList(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final territories = assignments.territories;
+    final canManage = widget.canManage;
+
     return _SectionCard(
-      title: 'Territórios atribuídos',
-      child: territories.isEmpty
-          ? const Text(
-              'Nenhum território atribuído.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+      title: assignment.sectorName,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_busy) const LinearProgressIndicator(minHeight: 2),
+          if (_busy) const SizedBox(height: 10),
+          if (widget.showManager) ...[
+            const Text(
+              'Gerente',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6b7280),
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (canManage)
+              Material(
+                color: const Color(0xFFf7f8fb),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Color(0xFFe5e7eb)),
+                ),
+                child: InkWell(
+                  onTap: _busy ? null : _pickManager,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.person_outline_rounded,
+                          size: 20,
+                          color: Color(0xFF0a2f7f),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            assignment.managerName ?? 'Selecionar gerente',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0f1729),
+                            ),
+                          ),
+                        ),
+                        if (assignment.managerId != null)
+                          IconButton(
+                            onPressed: _busy ? null : _clearManager,
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              size: 18,
+                              color: Color(0xFF9ca3af),
+                            ),
+                          )
+                        else
+                          const Icon(
+                            Icons.chevron_right_rounded,
+                            color: Color(0xFF9ca3af),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              )
+            else
+              _DetailRow(
+                label: 'Gerente',
+                value: assignment.managerName ?? 'Sem gerente',
+              ),
+            const SizedBox(height: 12),
+          ],
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Territórios',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF6b7280),
+                  ),
+                ),
+              ),
+              if (canManage)
+                TextButton(
+                  onPressed: _busy ? null : _pickTerritories,
+                  child: Text(
+                    assignment.territories.isEmpty ? 'Selecionar' : 'Editar',
+                  ),
+                ),
+            ],
+          ),
+          if (assignment.territories.isEmpty)
+            Text(
+              canManage && widget.showManager && assignment.managerId == null
+                  ? 'Selecione um gerente primeiro.'
+                  : 'Nenhum território selecionado.',
+              style: const TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
             )
-          : SizedBox(
-              height: 150,
+          else
+            SizedBox(
+              height: 176,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 clipBehavior: Clip.none,
-                itemCount: territories.length,
+                itemCount: assignment.territories.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, index) =>
-                    TerritoryMapCard(assignment: territories[index]),
+                itemBuilder: (context, index) {
+                  final territory = assignment.territories[index];
+                  return Stack(
+                    children: [
+                      TerritoryMapCard(
+                        assignment: TerritoryAssignment.fromOption(territory),
+                        width: 220,
+                        mapHeight: 120,
+                        onTap: canManage ? _pickTerritories : null,
+                      ),
+                      if (canManage)
+                        Positioned(
+                          top: 28,
+                          right: 4,
+                          child: Material(
+                            color: Colors.white,
+                            shape: const CircleBorder(),
+                            elevation: 1,
+                            child: InkWell(
+                              customBorder: const CircleBorder(),
+                              onTap: _busy
+                                  ? null
+                                  : () => _removeTerritory(territory.id),
+                              child: const Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  size: 16,
+                                  color: Color(0xFF6b7280),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
-    );
-  }
-}
-
-class _PermissionsSection extends ConsumerWidget {
-  const _PermissionsSection({
-    required this.user,
-    required this.grants,
-    required this.canManage,
-  });
-
-  final User user;
-  final List<PermissionGrant> grants;
-  final bool canManage;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return _SectionCard(
-      title: 'Permissões extras',
-      trailing: canManage
-          ? TextButton(
-              onPressed: () async {
-                await ManagePermissionsSheet.show(
-                  context,
-                  user: user,
-                  grants: grants,
-                );
-                ref.invalidate(userPermissionsProvider(user.id));
-              },
-              child: const Text('Gerenciar'),
-            )
-          : null,
-      child: grants.isEmpty
-          ? const Text(
-              'Nenhuma permissão extra concedida.',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-            )
-          : Column(
-              children: grants
-                  .map(
-                    (grant) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFF0a2f7f,
-                              ).withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              grant.action.toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF0a2f7f),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              grant.resourceName ?? grant.resource,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF374151),
-                              ),
-                            ),
-                          ),
-                          if (grant.isExpired)
-                            const Text(
-                              'Expirado',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Color(0xFFb84545),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
+        ],
+      ),
     );
   }
 }
@@ -649,14 +809,16 @@ class _SectionCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
+              Expanded(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF0f1729),
+                  ),
                 ),
               ),
               ?trailing,
@@ -679,46 +841,27 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
           style: const TextStyle(fontSize: 13.5, color: Color(0xFF6b7280)),
         ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF0f1729),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+            style: const TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF0f1729),
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: const Color(0xFFf3f4f6),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF374151),
-        ),
-      ),
     );
   }
 }
