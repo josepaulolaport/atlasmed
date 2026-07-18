@@ -52,12 +52,8 @@ class InvitationDetailScreen extends ConsumerWidget {
                               Icons.more_vert_rounded,
                               color: Color(0xFF6b7280),
                             ),
-                            onSelected: (action) => _handleAction(
-                              context,
-                              ref,
-                              invitation,
-                              action,
-                            ),
+                            onSelected: (action) =>
+                                _handleAction(context, ref, invitation, action),
                             itemBuilder: (context) => const [
                               PopupMenuItem(
                                 value: 'resend',
@@ -134,10 +130,7 @@ class InvitationDetailScreen extends ConsumerWidget {
 }
 
 class _InvitationDetailBody extends StatelessWidget {
-  const _InvitationDetailBody({
-    required this.invitation,
-    required this.onEdit,
-  });
+  const _InvitationDetailBody({required this.invitation, required this.onEdit});
 
   final UserInvitation invitation;
   final VoidCallback onEdit;
@@ -214,10 +207,7 @@ class _InvitationDetailBody extends StatelessWidget {
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({
-    required this.invitation,
-    required this.roleLabel,
-  });
+  const _IdentityCard({required this.invitation, required this.roleLabel});
 
   final UserInvitation invitation;
   final String roleLabel;
@@ -294,14 +284,8 @@ class _MetaCard extends StatelessWidget {
             label: 'Enviado em',
             value: formatDate(invitation.createdAt),
           ),
-          _InfoRow(
-            label: 'Expira em',
-            value: formatDate(invitation.expiresAt),
-          ),
-          _InfoRow(
-            label: 'Reenvios',
-            value: '${invitation.resendCount}',
-          ),
+          _InfoRow(label: 'Expira em', value: formatDate(invitation.expiresAt)),
+          _InfoRow(label: 'Reenvios', value: '${invitation.resendCount}'),
         ],
       ),
     );
@@ -325,10 +309,7 @@ class _SectorAssignmentCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showManager) ...[
-            _InfoRow(
-              label: 'Gerente',
-              value: assignment.managerName ?? '—',
-            ),
+            _InfoRow(label: 'Gerente', value: assignment.managerName ?? '—'),
             const SizedBox(height: 8),
           ],
           const Text(

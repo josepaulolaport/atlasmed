@@ -92,9 +92,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
         _sectorAssignments
           ..clear()
           ..addEntries(
-            invitation.sectorAssignments.map(
-              (a) => MapEntry(a.sectorId, a),
-            ),
+            invitation.sectorAssignments.map((a) => MapEntry(a.sectorId, a)),
           );
         _loadingInvitation = false;
         _loadError = null;
@@ -146,8 +144,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
     super.dispose();
   }
 
-  String get _title =>
-      _isExisting ? 'Editar convite' : 'Convidar usuário';
+  String get _title => _isExisting ? 'Editar convite' : 'Convidar usuário';
 
   @override
   Widget build(BuildContext context) {
@@ -217,10 +214,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           TextFormField(
             controller: _firstNameController,
             textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              hintText: 'Nome',
-              isDense: true,
-            ),
+            decoration: const InputDecoration(hintText: 'Nome', isDense: true),
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
                 return 'Informe o nome.';
@@ -401,8 +395,10 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                 needsTerritory: _needsTerritory,
                 onPickManager: () => _pickManager(assignment),
                 onClearManager: () => setState(() {
-                  _sectorAssignments[assignment.sectorId] = assignment
-                      .copyWith(clearManager: true, territories: const []);
+                  _sectorAssignments[assignment.sectorId] = assignment.copyWith(
+                    clearManager: true,
+                    territories: const [],
+                  );
                 }),
                 onPickTerritories: () => _pickTerritories(assignment),
                 onRemoveTerritory: (territoryId) {
@@ -436,9 +432,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : Text(
-                      _isExisting ? 'Salvar alterações' : 'Enviar convite',
-                    ),
+                  : Text(_isExisting ? 'Salvar alterações' : 'Enviar convite'),
             ),
           ),
         ],

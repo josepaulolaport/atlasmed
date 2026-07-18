@@ -278,7 +278,9 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _submitting = true);
     try {
-      await ref.read(usersRepositoryProvider).updateUserProfile(
+      await ref
+          .read(usersRepositoryProvider)
+          .updateUserProfile(
             userId: widget.userId,
             firstName: _firstNameController.text.trim(),
             lastName: _lastNameController.text.trim(),
@@ -309,11 +311,11 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
   }
 
   Widget _label(String text) => Text(
-        text,
-        style: const TextStyle(
-          fontSize: 12.5,
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF6b7280),
-        ),
-      );
+    text,
+    style: const TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      color: Color(0xFF6b7280),
+    ),
+  );
 }

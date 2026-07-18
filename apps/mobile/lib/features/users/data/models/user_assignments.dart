@@ -134,10 +134,8 @@ class UserAssignments extends Equatable {
     return sectorAssignments
         .expand(
           (assignment) => assignment.territories.map(
-            (territory) => TerritoryAssignment.fromOption(
-              territory,
-              assignedAt: now,
-            ),
+            (territory) =>
+                TerritoryAssignment.fromOption(territory, assignedAt: now),
           ),
         )
         .toList(growable: false);

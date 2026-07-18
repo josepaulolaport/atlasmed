@@ -56,9 +56,7 @@ class _EditUserAssignmentsScreenState
         _sectorAssignments
           ..clear()
           ..addEntries(
-            assignments.sectorAssignments.map(
-              (a) => MapEntry(a.sectorId, a),
-            ),
+            assignments.sectorAssignments.map((a) => MapEntry(a.sectorId, a)),
           );
         _loading = false;
         _loadError = null;
@@ -151,7 +149,11 @@ class _EditUserAssignmentsScreenState
         const Text(
           'Selecione os setores deste usuário. Gerente e territórios '
           'são definidos em cada card na ficha do usuário.',
-          style: TextStyle(fontSize: 13.5, color: Color(0xFF6b7280), height: 1.35),
+          style: TextStyle(
+            fontSize: 13.5,
+            color: Color(0xFF6b7280),
+            height: 1.35,
+          ),
         ),
         const SizedBox(height: 16),
         const Text(
@@ -165,8 +167,7 @@ class _EditUserAssignmentsScreenState
         const SizedBox(height: 8),
         sectorsAsync.when(
           loading: () => const CircularProgressIndicator(),
-          error: (_, _) =>
-              const Text('Não foi possível carregar os setores.'),
+          error: (_, _) => const Text('Não foi possível carregar os setores.'),
           data: (sectors) => Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -245,17 +246,15 @@ class _EditUserAssignmentsScreenState
           .replaceSectorAssignments(widget.userId, _orderedAssignments);
       ref.invalidate(userAssignmentsProvider(widget.userId));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Setores atualizados.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Setores atualizados.')));
         context.pop();
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível salvar os setores.'),
-          ),
+          const SnackBar(content: Text('Não foi possível salvar os setores.')),
         );
       }
     } finally {

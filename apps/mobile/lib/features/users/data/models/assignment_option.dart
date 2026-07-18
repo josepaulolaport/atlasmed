@@ -51,15 +51,15 @@ class ManagerOption extends Equatable {
         : MapCoordinate(
             longitude: (json['territoryCentroid']['longitude'] as num)
                 .toDouble(),
-            latitude: (json['territoryCentroid']['latitude'] as num)
-                .toDouble(),
+            latitude: (json['territoryCentroid']['latitude'] as num).toDouble(),
           ),
     territoryBoundary: json['territoryBoundary'] == null
         ? null
         : TerritoryGeometry.fromGeoJson(
             json['territoryBoundary'] as Map<String, dynamic>,
           ),
-    sectorIds: (json['sectorIds'] as List<dynamic>?)
+    sectorIds:
+        (json['sectorIds'] as List<dynamic>?)
             ?.map((e) => e as String)
             .toList(growable: false) ??
         const [],

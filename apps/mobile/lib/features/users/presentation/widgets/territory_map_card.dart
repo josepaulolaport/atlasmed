@@ -103,11 +103,10 @@ class _TerritoryMapCardState extends State<TerritoryMapCard> {
           ],
           const SizedBox(height: 8),
           GestureDetector(
-            onTap: widget.onTap ??
-                () => TerritoryMapExpandedScreen.show(
-                      context,
-                      widget.assignment,
-                    ),
+            onTap:
+                widget.onTap ??
+                () =>
+                    TerritoryMapExpandedScreen.show(context, widget.assignment),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               // Explicit width/height (rather than leaving it to the
@@ -268,7 +267,8 @@ _CameraFit? _idealCameraForBounds({
   final availableHeight = math.max(1.0, boxHeight - padding * 2);
 
   final latFraction =
-      (_mercatorY(bounds.northeast.latitude) - _mercatorY(bounds.southwest.latitude))
+      (_mercatorY(bounds.northeast.latitude) -
+              _mercatorY(bounds.southwest.latitude))
           .abs() /
       math.pi;
   final lngDiff = bounds.northeast.longitude - bounds.southwest.longitude;

@@ -81,10 +81,10 @@ class UserInvitation extends Equatable {
   final int resendCount;
 
   String get displayName {
-    final parts = [firstName, lastName]
-        .whereType<String>()
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty);
+    final parts = [
+      firstName,
+      lastName,
+    ].whereType<String>().map((s) => s.trim()).where((s) => s.isNotEmpty);
     if (parts.isEmpty) return email;
     return parts.join(' ');
   }
@@ -112,9 +112,7 @@ class UserInvitation extends Equatable {
             managerId: raw['managerId'] as String?,
             managerName: raw['managerName'] as String?,
             territories: (raw['territories'] as List<dynamic>? ?? const [])
-                .map(
-                  (t) => TerritoryOption.fromJson(t as Map<String, dynamic>),
-                )
+                .map((t) => TerritoryOption.fromJson(t as Map<String, dynamic>))
                 .toList(),
           ),
         )
@@ -150,9 +148,7 @@ class UserInvitation extends Equatable {
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
       phoneNumber: phoneNumber ?? this.phoneNumber,
-      managerName: clearManagerName
-          ? null
-          : (managerName ?? this.managerName),
+      managerName: clearManagerName ? null : (managerName ?? this.managerName),
       territoryName: clearTerritoryName
           ? null
           : (territoryName ?? this.territoryName),

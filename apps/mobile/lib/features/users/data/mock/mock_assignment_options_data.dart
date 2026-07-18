@@ -60,10 +60,7 @@ ManagerOption _manager({
     name: name,
     territoryId: territoryId,
     territoryName: territoryName,
-    territoryCentroid: MapCoordinate(
-      latitude: centerLat,
-      longitude: centerLng,
-    ),
+    territoryCentroid: MapCoordinate(latitude: centerLat, longitude: centerLng),
     territoryBoundary: _zoneBoundary(
       centerLat: centerLat,
       centerLng: centerLng,

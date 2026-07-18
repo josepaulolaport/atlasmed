@@ -70,8 +70,7 @@ class TerritoryPickerScreen extends ConsumerStatefulWidget {
       _TerritoryPickerScreenState();
 }
 
-class _TerritoryPickerScreenState
-    extends ConsumerState<TerritoryPickerScreen> {
+class _TerritoryPickerScreenState extends ConsumerState<TerritoryPickerScreen> {
   static const _freeColor = 0xFF059669;
   static const _occupiedColor = 0xFF9CA3AF;
   static const _selectedColor = 0xFFF59E0B;
@@ -235,8 +234,7 @@ class _TerritoryPickerScreenState
                     ),
                     onPressed: _loading
                         ? null
-                        : () =>
-                              Navigator.of(context).pop(_selectedTerritories),
+                        : () => Navigator.of(context).pop(_selectedTerritories),
                     child: Text(
                       selectedCount == 0
                           ? 'Confirmar seleção'
@@ -308,10 +306,7 @@ class _TerritoryPickerScreenState
       styleUri: MapboxStyles.STANDARD,
       viewport: _viewportApplied
           ? null
-          : CameraViewportState(
-              center: _point(_saoPauloCenter),
-              zoom: 11,
-            ),
+          : CameraViewportState(center: _point(_saoPauloCenter), zoom: 11),
       onMapCreated: (mapboxMap) {
         _mapboxMap = mapboxMap;
         _viewportApplied = true;

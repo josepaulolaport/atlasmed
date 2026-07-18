@@ -29,10 +29,8 @@ class ManagerPickerSheet extends StatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => ManagerPickerSheet(
-        managers: managers,
-        selectedId: selectedId,
-      ),
+      builder: (_) =>
+          ManagerPickerSheet(managers: managers, selectedId: selectedId),
     );
   }
 
@@ -178,7 +176,9 @@ class _ManagerPickerSheetState extends State<ManagerPickerSheet> {
                           onTap: () => Navigator.pop(context, manager.id),
                           child: Container(
                             color: selected
-                                ? const Color(0xFF0a2f7f).withValues(alpha: 0.06)
+                                ? const Color(
+                                    0xFF0a2f7f,
+                                  ).withValues(alpha: 0.06)
                                 : null,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,

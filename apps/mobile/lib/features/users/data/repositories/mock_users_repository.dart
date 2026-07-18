@@ -28,9 +28,7 @@ InviteSectorAssignment _seededSectorAssignment({
     managerId: managerId,
     managerName: managerName,
     territories: territoryIds
-        .map(
-          (id) => mockTerritoryOptions.firstWhere((o) => o.id == id),
-        )
+        .map((id) => mockTerritoryOptions.firstWhere((o) => o.id == id))
         .toList(),
   );
 }
@@ -288,9 +286,7 @@ class MockUsersRepository implements UsersRepository {
     final current = await getUserAssignments(userId);
     if (managerId == null) {
       final cleared = current.sectorAssignments
-          .map(
-            (a) => a.copyWith(clearManager: true),
-          )
+          .map((a) => a.copyWith(clearManager: true))
           .toList();
       _assignments[userId] = current.copyWith(sectorAssignments: cleared);
       return;
@@ -312,10 +308,7 @@ class MockUsersRepository implements UsersRepository {
     } else {
       sectors = sectors
           .map(
-            (a) => a.copyWith(
-              managerId: manager.id,
-              managerName: manager.name,
-            ),
+            (a) => a.copyWith(managerId: manager.id, managerName: manager.name),
           )
           .toList();
     }

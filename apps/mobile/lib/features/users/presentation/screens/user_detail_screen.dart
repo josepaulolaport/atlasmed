@@ -55,10 +55,7 @@ class UserDetailScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return _UserDetailBody(
-                    user: user,
-                    canManage: canManage,
-                  );
+                  return _UserDetailBody(user: user, canManage: canManage);
                 },
               ),
             ),
@@ -541,9 +538,7 @@ class _SectorAssignmentCardState extends ConsumerState<_SectorAssignmentCard> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível atualizar o setor.'),
-          ),
+          const SnackBar(content: Text('Não foi possível atualizar o setor.')),
         );
       }
     } finally {

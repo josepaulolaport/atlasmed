@@ -263,8 +263,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                         GoRoute(
                           path: 'editar',
                           builder: (_, state) => InviteUserScreen(
-                            invitationId:
-                                state.pathParameters['invitationId'],
+                            invitationId: state.pathParameters['invitationId'],
                           ),
                         ),
                       ],
