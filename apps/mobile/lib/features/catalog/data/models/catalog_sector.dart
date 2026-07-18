@@ -4,7 +4,11 @@
 /// catalog module's own `/sectors` endpoint rather than `/access/sectors`).
 /// Only used to populate the admin product form's sector picker.
 class CatalogSector {
-  const CatalogSector({required this.id, required this.slug, required this.name});
+  const CatalogSector({
+    required this.id,
+    required this.slug,
+    required this.name,
+  });
 
   final String id;
   final String slug;

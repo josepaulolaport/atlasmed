@@ -44,19 +44,13 @@ class _CompetitorFormScreenState extends ConsumerState<CompetitorFormScreen> {
     text: widget.existing?.countryOfOrigin,
   );
   late final _price17 = TextEditingController(
-    text: widget.existing != null
-        ? brlNumber(widget.existing!.price17)
-        : null,
+    text: widget.existing != null ? brlNumber(widget.existing!.price17) : null,
   );
   late final _price18 = TextEditingController(
-    text: widget.existing != null
-        ? brlNumber(widget.existing!.price18)
-        : null,
+    text: widget.existing != null ? brlNumber(widget.existing!.price18) : null,
   );
   late final _price20 = TextEditingController(
-    text: widget.existing != null
-        ? brlNumber(widget.existing!.price20)
-        : null,
+    text: widget.existing != null ? brlNumber(widget.existing!.price20) : null,
   );
 
   bool _saving = false;

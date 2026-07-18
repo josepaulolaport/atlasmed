@@ -58,26 +58,18 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
   late final _brasindiceCode = TextEditingController(
     text: widget.existing?.brasindiceCode,
   );
-  late final _tissCode = TextEditingController(
-    text: widget.existing?.tissCode,
-  );
+  late final _tissCode = TextEditingController(text: widget.existing?.tissCode);
   late final _price = TextEditingController(
     text: widget.existing != null ? brlNumber(widget.existing!.price) : null,
   );
   late final _price17 = TextEditingController(
-    text: widget.existing != null
-        ? brlNumber(widget.existing!.price17)
-        : null,
+    text: widget.existing != null ? brlNumber(widget.existing!.price17) : null,
   );
   late final _price18 = TextEditingController(
-    text: widget.existing != null
-        ? brlNumber(widget.existing!.price18)
-        : null,
+    text: widget.existing != null ? brlNumber(widget.existing!.price18) : null,
   );
   late final _price20 = TextEditingController(
-    text: widget.existing != null
-        ? brlNumber(widget.existing!.price20)
-        : null,
+    text: widget.existing != null ? brlNumber(widget.existing!.price20) : null,
   );
 
   late final Set<String> _selectedSectorIds = {

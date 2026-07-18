@@ -84,7 +84,9 @@ class CatalogVariant {
       price17: readPrice(json['price17']),
       price18: readPrice(json['price18']),
       price20: readPrice(json['price20']),
-      brasindiceUpdatedAt: DateTime.parse(json['brasindiceUpdatedAt'] as String),
+      brasindiceUpdatedAt: DateTime.parse(
+        json['brasindiceUpdatedAt'] as String,
+      ),
       isActive: json['isActive'] as bool? ?? true,
       sectorIds:
           (json['sectorIds'] as List<dynamic>?)?.cast<String>() ?? const [],

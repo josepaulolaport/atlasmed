@@ -24,7 +24,8 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 /// the network directly, matching how [CatalogHomeScreen] already
 /// refetches through `invalidateCatalog` after any admin mutation.
 class CatalogRepository {
-  CatalogRepository({String? baseUrl}) : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
+  CatalogRepository({String? baseUrl})
+    : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
   final String _baseUrl;
   final RepositoryHttpClient _client = createPlatformHttpClient(
@@ -111,9 +112,7 @@ class CatalogRepository {
     ComparisonSortColumn sortBy = ComparisonSortColumn.icms20,
   }) async {
     final response = await _get(
-      _uri('/products/$variantId/comparison', {
-        'sortBy': _sortByParam(sortBy),
-      }),
+      _uri('/products/$variantId/comparison', {'sortBy': _sortByParam(sortBy)}),
     );
     _throwIfError(response);
     return ComparisonGroup.fromJson(
@@ -228,20 +227,17 @@ class CatalogRepository {
   Future<CompetitorProduct> createCompetitorProduct(
     CompetitorProduct draft,
   ) async {
-    final response = await _send(
-      _uri('/competitor-products'),
-      RepositoryHttpMethod.post,
-      {
-        'name': draft.name,
-        'manufacturer': draft.manufacturer,
-        'brand': draft.brand,
-        'countryOfOrigin': draft.countryOfOrigin,
-        'price17': draft.price17,
-        'price18': draft.price18,
-        'price20': draft.price20,
-        'brasindiceUpdatedAt': _dateOnly(draft.brasindiceUpdatedAt),
-      },
-    );
+    final response =
+        await _send(_uri('/competitor-products'), RepositoryHttpMethod.post, {
+          'name': draft.name,
+          'manufacturer': draft.manufacturer,
+          'brand': draft.brand,
+          'countryOfOrigin': draft.countryOfOrigin,
+          'price17': draft.price17,
+          'price18': draft.price18,
+          'price20': draft.price20,
+          'brasindiceUpdatedAt': _dateOnly(draft.brasindiceUpdatedAt),
+        });
     _throwIfError(response);
     return CompetitorProduct.fromJson(
       jsonDecode(response.body) as Map<String, dynamic>,

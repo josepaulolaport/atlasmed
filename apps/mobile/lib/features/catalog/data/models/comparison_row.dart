@@ -39,7 +39,8 @@ class ComparisonRow {
       price17: readPrice(json['price17']),
       price18: readPrice(json['price18']),
       price20: readPrice(json['price20']),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+      updatedAt:
+          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.now(),
       isOwn: json['isOwn'] as bool? ?? false,
     );

@@ -34,10 +34,11 @@ final catalogPriceIndexProvider = FutureProvider<List<ComparisonRow>>((ref) {
 
 /// Every competitor product in the catalog — backs the admin-only
 /// "gerenciar concorrentes" picker.
-final catalogAllCompetitorsProvider =
-    FutureProvider<List<CompetitorProduct>>((ref) {
-      return ref.watch(catalogRepositoryProvider).getAllCompetitorProducts();
-    });
+final catalogAllCompetitorsProvider = FutureProvider<List<CompetitorProduct>>((
+  ref,
+) {
+  return ref.watch(catalogRepositoryProvider).getAllCompetitorProducts();
+});
 
 /// Competitor products not yet linked to [variantId] — the "adicionar
 /// existente" step of the admin competitor picker.

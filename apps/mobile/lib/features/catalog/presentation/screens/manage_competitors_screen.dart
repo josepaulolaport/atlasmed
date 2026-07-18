@@ -101,8 +101,7 @@ class ManageCompetitorsScreen extends ConsumerWidget {
             ),
             Expanded(
               child: comparisonAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => CatalogErrorState(
                   onRetry: () =>
                       ref.invalidate(catalogComparisonProvider(variantId)),
