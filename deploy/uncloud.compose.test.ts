@@ -16,6 +16,14 @@ function readDeploymentConfig() {
 }
 
 describe("production deployment", () => {
+  it("configures the CNES worker with the internal Meilisearch endpoint and deployed key", () => {
+    const { compose } = readDeploymentConfig();
+    const cnesWorker = compose.slice(compose.indexOf("  atlasmed-cnes-worker:"), compose.indexOf("  atlasmed-temporal-db:"));
+
+    expect(cnesWorker).toContain("MEILISEARCH_URL=http://atlasmed-meilisearch:7700");
+    expect(cnesWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
+  });
+
   it("recreates application services when deploying their mutable production images", () => {
     const { compose, workflow } = readDeploymentConfig();
 

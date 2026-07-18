@@ -67,4 +67,74 @@ export async function describeCnesIngestionWorkflow(workflowId: string) {
   return handle.describe();
 }
 
+
+export type SearchSyncEntity = "facilities" | "professionals";
+
+type SearchSyncWorkflowDescriptionHandle = {
+  describe(): Promise<{ runId: string; status: { name: string } }>;
+};
+
+type SearchSyncWorkflowStartHandle = SearchSyncWorkflowDescriptionHandle & {
+  firstExecutionRunId: string;
+};
+
+type SearchSyncTemporalClient = {
+  workflow: {
+    start(
+      workflowType: "fullSearchSyncWorkflow",
+      options: {
+        taskQueue: string;
+        workflowId: string;
+        args: [{ target: SearchSyncEntity }];
+      }
+    ): Promise<SearchSyncWorkflowStartHandle>;
+    getHandle(workflowId: string): SearchSyncWorkflowDescriptionHandle;
+  };
+};
+
+export function fullSearchSyncWorkflowId(entity: SearchSyncEntity): string {
+  return "search-sync-" + entity + "-full";
+}
+
+export async function startFullSearchSyncWorkflowWithClient(
+  client: SearchSyncTemporalClient,
+  entity: SearchSyncEntity
+): Promise<{ workflowId: string; runId: string; existing: boolean }> {
+  const workflowId = fullSearchSyncWorkflowId(entity);
+
+  try {
+    const handle = await client.workflow.start("fullSearchSyncWorkflow", {
+      taskQueue: environment.TEMPORAL_TASK_QUEUE,
+      workflowId,
+      args: [{ target: entity }],
+    });
+    return { workflowId, runId: handle.firstExecutionRunId, existing: false };
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      const description = await client.workflow.getHandle(workflowId).describe();
+      return { workflowId, runId: description.runId, existing: true };
+    }
+    throw error;
+  }
+}
+
+export async function startFullSearchSyncWorkflow(
+  entity: SearchSyncEntity
+): Promise<{ workflowId: string; runId: string; existing: boolean }> {
+  return startFullSearchSyncWorkflowWithClient(await getTemporalClient(), entity);
+}
+
+export function isFullSearchSyncWorkflowId(workflowId: string): boolean {
+  return workflowId === fullSearchSyncWorkflowId("facilities") || workflowId === fullSearchSyncWorkflowId("professionals");
+}
+
+export async function describeSearchSyncWorkflow(workflowId: string): Promise<{
+  workflowId: string;
+  runId: string;
+  status: string;
+}> {
+  const client = await getTemporalClient();
+  const description = await client.workflow.getHandle(workflowId).describe();
+  return { workflowId, runId: description.runId, status: description.status.name };
+}
 export { workflowIdForReference };

@@ -67,7 +67,20 @@ export interface FacilityRepository {
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
     productIds?: string[];
     scope: FacilityListScopeFilter;
+    /** Internal canonical hydration constraint for a Meilisearch result page. */
+    candidateIds?: string[];
   }): Promise<{ facilities: FacilityListRecord[]; total: number }>;
+
+  /** Hydrates ranked search candidates while enforcing canonical list eligibility. */
+  findAllByIds(params: {
+    ids: string[];
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    productIds?: string[];
+    scope: FacilityListScopeFilter;
+  }): Promise<FacilityListRecord[]>;
 
   findById(id: string): Promise<FacilityRecord | null>;
 
