@@ -2,6 +2,8 @@ import { DrizzleSectorRepository } from "./infrastructure/repositories/drizzle/d
 import { DrizzleProductRepository } from "./infrastructure/repositories/drizzle/drizzle-product.repository";
 import { DrizzleHealthcareProviderRepository } from "./infrastructure/repositories/drizzle/drizzle-healthcare-provider.repository";
 import { DrizzleFacilityHealthcareProviderShareRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-healthcare-provider-share.repository";
+import { DrizzleCompetitorProductRepository } from "./infrastructure/repositories/drizzle/drizzle-competitor-product.repository";
+import { DrizzleProductEquivalenceRepository } from "./infrastructure/repositories/drizzle/drizzle-product-equivalence.repository";
 import {
   ListSectorsUseCase,
   CreateSectorUseCase,
@@ -15,6 +17,15 @@ import {
   UpdateHealthcareProviderUseCase,
   ListFacilityHealthcareProviderSharesUseCase,
   CreateFacilityHealthcareProviderShareUseCase,
+  ListCompetitorProductsUseCase,
+  GetCompetitorProductUseCase,
+  CreateCompetitorProductUseCase,
+  UpdateCompetitorProductUseCase,
+  GetProductComparisonUseCase,
+  ListUnlinkedCompetitorProductsUseCase,
+  LinkCompetitorProductUseCase,
+  UnlinkCompetitorProductUseCase,
+  GetPriceIndexUseCase,
 } from "./application/use-cases/catalog.use-cases";
 
 export const catalogRepositories = {
@@ -22,6 +33,8 @@ export const catalogRepositories = {
   product: new DrizzleProductRepository(),
   healthcareProvider: new DrizzleHealthcareProviderRepository(),
   facilityShare: new DrizzleFacilityHealthcareProviderShareRepository(),
+  competitorProduct: new DrizzleCompetitorProductRepository(),
+  productEquivalence: new DrizzleProductEquivalenceRepository(),
 };
 
 export const catalogUseCases = {
@@ -51,5 +64,46 @@ export const catalogUseCases = {
   createFacilityShare: () =>
     new CreateFacilityHealthcareProviderShareUseCase({
       shareRepository: catalogRepositories.facilityShare,
+    }),
+  listCompetitorProducts: () =>
+    new ListCompetitorProductsUseCase({
+      competitorProductRepository: catalogRepositories.competitorProduct,
+    }),
+  getCompetitorProduct: () =>
+    new GetCompetitorProductUseCase({
+      competitorProductRepository: catalogRepositories.competitorProduct,
+    }),
+  createCompetitorProduct: () =>
+    new CreateCompetitorProductUseCase({
+      competitorProductRepository: catalogRepositories.competitorProduct,
+    }),
+  updateCompetitorProduct: () =>
+    new UpdateCompetitorProductUseCase({
+      competitorProductRepository: catalogRepositories.competitorProduct,
+    }),
+  getProductComparison: () =>
+    new GetProductComparisonUseCase({
+      productRepository: catalogRepositories.product,
+      productEquivalenceRepository: catalogRepositories.productEquivalence,
+    }),
+  listUnlinkedCompetitorProducts: () =>
+    new ListUnlinkedCompetitorProductsUseCase({
+      productRepository: catalogRepositories.product,
+      productEquivalenceRepository: catalogRepositories.productEquivalence,
+    }),
+  linkCompetitorProduct: () =>
+    new LinkCompetitorProductUseCase({
+      productRepository: catalogRepositories.product,
+      competitorProductRepository: catalogRepositories.competitorProduct,
+      productEquivalenceRepository: catalogRepositories.productEquivalence,
+    }),
+  unlinkCompetitorProduct: () =>
+    new UnlinkCompetitorProductUseCase({
+      productEquivalenceRepository: catalogRepositories.productEquivalence,
+    }),
+  getPriceIndex: () =>
+    new GetPriceIndexUseCase({
+      productRepository: catalogRepositories.product,
+      competitorProductRepository: catalogRepositories.competitorProduct,
     }),
 };

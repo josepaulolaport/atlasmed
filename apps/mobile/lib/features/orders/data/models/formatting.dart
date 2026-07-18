@@ -17,3 +17,17 @@ String brlNumber(double value) {
 
 /// Formats [value] as a BRL currency string, e.g. "R$1.840,00".
 String brl(double value) => 'R\$${brlNumber(value)}';
+
+/// Parses a user-typed price such as "1.840,00", "1840,00" or "1840.00"
+/// back into a [double] — the inverse of [brlNumber], used by admin forms
+/// that let a rep type a price with a comma decimal separator. Returns
+/// `null` when [input] isn't a valid number.
+double? parseBrlNumber(String input) {
+  final normalized = input.trim();
+  if (normalized.isEmpty) return null;
+  final hasComma = normalized.contains(',');
+  final cleaned = hasComma
+      ? normalized.replaceAll('.', '').replaceAll(',', '.')
+      : normalized;
+  return double.tryParse(cleaned);
+}

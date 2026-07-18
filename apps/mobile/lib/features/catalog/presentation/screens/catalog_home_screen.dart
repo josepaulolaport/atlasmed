@@ -5,9 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/manage_competitors_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/variant_form_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/variant_info_card.dart';
 import 'package:atlasmed_mobile_app/features/orders/data/models/formatting.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
+    show isAdminProvider;
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 
 /// Entry point for the Catálogo de Produtos section, designed like a store
@@ -26,7 +30,7 @@ class CatalogHomeScreen extends ConsumerStatefulWidget {
 class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-  String? _selectedFamilyId;
+  ProductFilterSelection _filter = const ProductFilterSelection();
 
   @override
   void dispose() {
@@ -44,7 +48,15 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
     ];
     return all.where((entry) {
       final (variant, family) = entry;
-      if (_selectedFamilyId != null && family.id != _selectedFamilyId) {
+      if (_filter.familyId != null && family.id != _filter.familyId) {
+        return false;
+      }
+      if (_filter.manufacturer != null &&
+          variant.manufacturer != _filter.manufacturer) {
+        return false;
+      }
+      if (_filter.country != null &&
+          variant.countryOfOrigin != _filter.country) {
         return false;
       }
       if (query.isEmpty) return true;
@@ -52,16 +64,32 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
     }).toList();
   }
 
-  void _openFamilyFilter(List<CatalogFamily> families) {
-    showFamilyFilterSheet(
+  void _openFilterSheet(List<CatalogFamily> families) {
+    final manufacturers = <String>{
+      for (final family in families)
+        for (final variant in family.variants) variant.manufacturer,
+    }.toList()..sort();
+    final countries = <String>{
+      for (final family in families)
+        for (final variant in family.variants) variant.countryOfOrigin,
+    }.toList()..sort();
+
+    showProductFilterSheet(
       context,
       families: families,
-      selectedId: _selectedFamilyId,
-      onSelect: (id) => setState(() => _selectedFamilyId = id),
+      manufacturers: manufacturers,
+      countries: countries,
+      selection: _filter,
+      onApply: (selection) => setState(() => _filter = selection),
     );
   }
 
-  void _openQuickView(CatalogVariant variant, CatalogFamily family) {
+  void _openQuickView(
+    CatalogVariant variant,
+    CatalogFamily family,
+    List<CatalogFamily> families,
+  ) {
+    final isAdmin = ref.read(isAdminProvider);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -73,16 +101,58 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
           Navigator.pop(sheetContext);
           context.push('/catalogo/comparativo/${variant.id}');
         },
+        onEdit: !isAdmin
+            ? null
+            : () {
+                Navigator.pop(sheetContext);
+                VariantFormScreen.show(
+                  context,
+                  existing: variant,
+                  families: families,
+                );
+              },
+        onManageCompetitors: !isAdmin
+            ? null
+            : () {
+                Navigator.pop(sheetContext);
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ManageCompetitorsScreen(
+                      variantId: variant.id,
+                      variantLabel: variant.comparisonLabel,
+                    ),
+                  ),
+                );
+              },
       ),
+    );
+  }
+
+  Future<void> _openNewProductForm(List<CatalogFamily> families) async {
+    final created = await VariantFormScreen.show(context, families: families);
+    if (created == null) return;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${created.name} adicionado ao catálogo')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final familiesAsync = ref.watch(catalogFamiliesProvider);
+    final isAdmin = ref.watch(isAdminProvider);
+    final families = familiesAsync.valueOrNull ?? const [];
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
+      floatingActionButton: isAdmin
+          ? FloatingActionButton.extended(
+              backgroundColor: const Color(0xFF0a2f7f),
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Novo produto'),
+              onPressed: () => _openNewProductForm(families),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
@@ -91,9 +161,9 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
             CatalogSearchBar(
               controller: _searchController,
               onChanged: (value) => setState(() => _query = value),
-              filterCount: _selectedFamilyId == null ? 0 : 1,
+              filterCount: _filter.activeCount,
               onFilter: () =>
-                  _openFamilyFilter(familiesAsync.valueOrNull ?? const []),
+                  _openFilterSheet(familiesAsync.valueOrNull ?? const []),
             ),
             Expanded(
               child: familiesAsync.when(
@@ -122,7 +192,8 @@ class _CatalogHomeScreenState extends ConsumerState<CatalogHomeScreen> {
                             final (variant, family) = entries[index];
                             return _ProductRow(
                               variant: variant,
-                              onTap: () => _openQuickView(variant, family),
+                              onTap: () =>
+                                  _openQuickView(variant, family, families),
                             );
                           },
                         );
@@ -237,11 +308,15 @@ class _VariantQuickView extends StatelessWidget {
   final CatalogVariant variant;
   final CatalogFamily family;
   final VoidCallback onViewComparison;
+  final VoidCallback? onEdit;
+  final VoidCallback? onManageCompetitors;
 
   const _VariantQuickView({
     required this.variant,
     required this.family,
     required this.onViewComparison,
+    this.onEdit,
+    this.onManageCompetitors,
   });
 
   @override
@@ -275,6 +350,8 @@ class _VariantQuickView extends StatelessWidget {
                 variant: variant,
                 bordered: false,
                 onViewComparison: onViewComparison,
+                onEdit: onEdit,
+                onManageCompetitors: onManageCompetitors,
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

@@ -236,40 +236,315 @@ class CatalogSearchBar extends StatelessWidget {
   }
 }
 
-/// Opens the family picker sheet for the flat product list's filter
-/// button — "Todos" plus one option per family, radio-style.
-Future<void> showFamilyFilterSheet(
+/// What the flat product list's filter button controls: family, plus
+/// manufacturer/country of origin so a rep can narrow "only what VSY
+/// makes" or "only German-made" alongside the usual family filter.
+class ProductFilterSelection {
+  final String? familyId;
+  final String? manufacturer;
+  final String? country;
+
+  const ProductFilterSelection({
+    this.familyId,
+    this.manufacturer,
+    this.country,
+  });
+
+  int get activeCount =>
+      [familyId, manufacturer, country].where((v) => v != null).length;
+
+  ProductFilterSelection copyWith({
+    String? Function()? familyId,
+    String? Function()? manufacturer,
+    String? Function()? country,
+  }) {
+    return ProductFilterSelection(
+      familyId: familyId != null ? familyId() : this.familyId,
+      manufacturer: manufacturer != null ? manufacturer() : this.manufacturer,
+      country: country != null ? country() : this.country,
+    );
+  }
+}
+
+/// Opens the multi-facet filter sheet for the flat product list's filter
+/// button — família, fabricante and país as independent chip pickers, all
+/// live inside one sheet so a rep can combine them before applying once
+/// instead of reopening the sheet per facet.
+Future<void> showProductFilterSheet(
   BuildContext context, {
   required List<CatalogFamily> families,
-  required String? selectedId,
-  required ValueChanged<String?> onSelect,
+  required List<String> manufacturers,
+  required List<String> countries,
+  required ProductFilterSelection selection,
+  required ValueChanged<ProductFilterSelection> onApply,
 }) {
   return showModalBottomSheet(
     context: context,
     backgroundColor: Colors.transparent,
-    builder: (sheetContext) => _FilterSheetShell(
-      title: 'FILTRAR POR FAMÍLIA',
-      children: [
-        _FilterOptionRow(
-          label: 'Todos',
-          selected: selectedId == null,
-          onTap: () {
-            onSelect(null);
-            Navigator.pop(sheetContext);
-          },
-        ),
-        for (final family in families)
-          _FilterOptionRow(
-            label: family.name,
-            selected: selectedId == family.id,
-            onTap: () {
-              onSelect(family.id);
-              Navigator.pop(sheetContext);
-            },
-          ),
-      ],
+    isScrollControlled: true,
+    builder: (sheetContext) => _ProductFilterSheet(
+      families: families,
+      manufacturers: manufacturers,
+      countries: countries,
+      initial: selection,
+      onApply: onApply,
     ),
   );
+}
+
+class _ProductFilterSheet extends StatefulWidget {
+  final List<CatalogFamily> families;
+  final List<String> manufacturers;
+  final List<String> countries;
+  final ProductFilterSelection initial;
+  final ValueChanged<ProductFilterSelection> onApply;
+
+  const _ProductFilterSheet({
+    required this.families,
+    required this.manufacturers,
+    required this.countries,
+    required this.initial,
+    required this.onApply,
+  });
+
+  @override
+  State<_ProductFilterSheet> createState() => _ProductFilterSheetState();
+}
+
+class _ProductFilterSheetState extends State<_ProductFilterSheet> {
+  late ProductFilterSelection _selection = widget.initial;
+
+  String? _familyName(String? familyId) {
+    for (final family in widget.families) {
+      if (family.id == familyId) return family.name;
+    }
+    return null;
+  }
+
+  String? _familyIdForName(String? name) {
+    for (final family in widget.families) {
+      if (family.name == name) return family.id;
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 10, bottom: 4),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFe5e7eb),
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 12, 4),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'FILTRAR PRODUTOS',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF9ca3af),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  if (_selection.activeCount > 0)
+                    TextButton(
+                      onPressed: () => setState(
+                        () => _selection = const ProductFilterSelection(),
+                      ),
+                      child: const Text(
+                        'Limpar',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1e40af),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _FilterChipSection(
+                      label: 'FAMÍLIA',
+                      options: [
+                        for (final family in widget.families) family.name,
+                      ],
+                      selectedValue: _familyName(_selection.familyId),
+                      onSelect: (name) => setState(() {
+                        _selection = _selection.copyWith(
+                          familyId: () => _familyIdForName(name),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 18),
+                    _FilterChipSection(
+                      label: 'FABRICANTE',
+                      options: widget.manufacturers,
+                      selectedValue: _selection.manufacturer,
+                      onSelect: (value) => setState(() {
+                        _selection = _selection.copyWith(
+                          manufacturer: () => value,
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 18),
+                    _FilterChipSection(
+                      label: 'PAÍS',
+                      options: widget.countries,
+                      selectedValue: _selection.country,
+                      onSelect: (value) => setState(() {
+                        _selection = _selection.copyWith(country: () => value);
+                      }),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onApply(_selection);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1e40af),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Aplicar filtros',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One filter facet inside [_ProductFilterSheet]: a small caps label
+/// followed by "Todos" plus every distinct value as a wrapping chip row.
+class _FilterChipSection extends StatelessWidget {
+  final String label;
+  final List<String> options;
+  final String? selectedValue;
+  final ValueChanged<String?> onSelect;
+
+  const _FilterChipSection({
+    required this.label,
+    required this.options,
+    required this.selectedValue,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF9ca3af),
+            letterSpacing: 0.4,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _FilterChip(
+              label: 'Todos',
+              selected: selectedValue == null,
+              onTap: () => onSelect(null),
+            ),
+            for (final option in options)
+              _FilterChip(
+                label: option,
+                selected: selectedValue == option,
+                onTap: () => onSelect(option),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? const Color(0xFF1e40af) : const Color(0xFFf3f4f6),
+      borderRadius: BorderRadius.circular(99),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(99),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.white : const Color(0xFF374151),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Opens the sort-column picker sheet for the comparativo / Brasíndice
@@ -442,7 +717,7 @@ class CatalogTabBar extends StatelessWidget {
             ),
             Expanded(
               child: _segment(
-                label: 'Tabela Completa',
+                label: 'Tabela Brasíndice',
                 selected: active == CatalogTab.tabelaCompleta,
                 onTap: () => context.go('/catalogo/brasindice'),
               ),

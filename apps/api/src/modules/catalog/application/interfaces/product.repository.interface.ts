@@ -36,6 +36,9 @@ export interface ProductRepository {
 
   findById(id: string): Promise<ProductRecord | null>;
 
+  /** All active products, unpaginated — backs the price index. */
+  findAllActive(): Promise<ProductRecord[]>;
+
   create(data: {
     code: string;
     name: string;

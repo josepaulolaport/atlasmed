@@ -11,6 +11,12 @@ class VariantInfoCard extends StatelessWidget {
   final CatalogVariant variant;
   final VoidCallback? onViewComparison;
 
+  /// Admin-only actions — `null` hides the corresponding entry point
+  /// entirely, so this card looks identical to a regular rep whether or
+  /// not these are wired up. Callers gate these with `isAdminProvider`.
+  final VoidCallback? onEdit;
+  final VoidCallback? onManageCompetitors;
+
   /// Whether this card draws its own bordered/shadowed surface. Set to
   /// `false` when nesting it inside a parent that already provides the
   /// card chrome (e.g. an expanded family accordion) — avoids a
@@ -21,6 +27,8 @@ class VariantInfoCard extends StatelessWidget {
     super.key,
     required this.variant,
     this.onViewComparison,
+    this.onEdit,
+    this.onManageCompetitors,
     this.bordered = true,
   });
 
@@ -29,22 +37,50 @@ class VariantInfoCard extends StatelessWidget {
     final column = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          variant.name,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF0a2f7f),
-            letterSpacing: -0.1,
-          ),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    variant.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0a2f7f),
+                      letterSpacing: -0.1,
+                    ),
+                  ),
+                  if (variant.presentation.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      variant.presentation,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFF9ca3af),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            if (onEdit != null)
+              InkWell(
+                onTap: onEdit,
+                borderRadius: BorderRadius.circular(8),
+                child: const Padding(
+                  padding: EdgeInsets.all(4),
+                  child: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: Color(0xFF9ca3af),
+                  ),
+                ),
+              ),
+          ],
         ),
-        if (variant.presentation.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            variant.presentation,
-            style: const TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
-          ),
-        ],
         const SizedBox(height: 14),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -101,33 +137,30 @@ class VariantInfoCard extends StatelessWidget {
         ),
         const SizedBox(height: 14),
         _CodesPanel(variant: variant),
-        if (onViewComparison != null) ...[
+        if (onViewComparison != null || onManageCompetitors != null) ...[
           const SizedBox(height: 12),
           const Divider(height: 1, thickness: 1, color: Color(0xFFeef0f3)),
-          InkWell(
-            onTap: onViewComparison,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    'Ver comparativo de preços',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1e40af),
-                    ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 6,
+              children: [
+                if (onManageCompetitors != null)
+                  _CardLink(
+                    label: 'Gerenciar concorrentes',
+                    icon: Icons.compare_arrows_rounded,
+                    onTap: onManageCompetitors!,
                   ),
-                  const SizedBox(width: 2),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 16,
-                    color: Color(0xFF1e40af),
+                if (onViewComparison != null)
+                  _CardLink(
+                    label: 'Ver comparativo de preços',
+                    icon: Icons.chevron_right_rounded,
+                    onTap: onViewComparison!,
                   ),
-                ],
-              ),
+              ],
             ),
           ),
         ],
@@ -152,6 +185,38 @@ class VariantInfoCard extends StatelessWidget {
         ],
       ),
       child: content,
+    );
+  }
+}
+
+/// Small text+icon action used for both the "Ver comparativo" and
+/// admin-only "Gerenciar concorrentes" links at the bottom of the card.
+class _CardLink extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _CardLink({required this.label, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1e40af),
+            ),
+          ),
+          const SizedBox(width: 2),
+          Icon(icon, size: 16, color: const Color(0xFF1e40af)),
+        ],
+      ),
     );
   }
 }

@@ -23,6 +23,27 @@ class ComparisonRow {
   final double price20;
   final DateTime updatedAt;
   final bool isOwn;
+
+  factory ComparisonRow.fromJson(Map<String, dynamic> json) {
+    double readPrice(Object? value) => switch (value) {
+      num v => v.toDouble(),
+      String v => double.tryParse(v) ?? 0,
+      _ => 0,
+    };
+
+    return ComparisonRow(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      manufacturer: json['manufacturer'] as String? ?? '',
+      countryOfOrigin: json['countryOfOrigin'] as String? ?? '',
+      price17: readPrice(json['price17']),
+      price18: readPrice(json['price18']),
+      price20: readPrice(json['price20']),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
+      isOwn: json['isOwn'] as bool? ?? false,
+    );
+  }
 }
 
 /// All comparison rows for a single AtlasMed variant, keyed by the variant's
@@ -37,6 +58,16 @@ class ComparisonGroup {
   final String variantId;
   final String variantLabel;
   final List<ComparisonRow> rows;
+
+  factory ComparisonGroup.fromJson(Map<String, dynamic> json) {
+    return ComparisonGroup(
+      variantId: json['productId'] as String,
+      variantLabel: json['productLabel'] as String,
+      rows: (json['rows'] as List<dynamic>)
+          .map((row) => ComparisonRow.fromJson(row as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }
 
 enum ComparisonSortColumn { icms17, icms18, icms20 }

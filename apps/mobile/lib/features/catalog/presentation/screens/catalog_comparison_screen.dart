@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/providers/catalog_providers.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/manage_competitors_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/catalog_widgets.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/widgets/comparison_table.dart';
 import 'package:atlasmed_mobile_app/features/orders/presentation/widgets/order_widgets.dart';
+import 'package:atlasmed_mobile_app/features/territories/presentation/providers/territories_providers.dart'
+    show isAdminProvider;
 
 /// "Comparativo" screen — scoped to exactly one AtlasMed product: shows that
 /// variant (pinned) plus its registered competitor equivalences, searchable
@@ -72,16 +75,34 @@ class _CatalogComparisonScreenState
     );
   }
 
+  void _openManageCompetitors(String variantLabel) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ManageCompetitorsScreen(
+          variantId: widget.variantId,
+          variantLabel: variantLabel,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final groupAsync = ref.watch(catalogComparisonProvider(widget.variantId));
+    final isAdmin = ref.watch(isAdminProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
       body: SafeArea(
         child: Column(
           children: [
-            const _Header(),
+            _Header(
+              onManageCompetitors: !isAdmin
+                  ? null
+                  : () => _openManageCompetitors(
+                      groupAsync.valueOrNull?.variantLabel ?? '',
+                    ),
+            ),
             CatalogSearchBar(
               controller: _searchController,
               onChanged: _onSearchChanged,
@@ -118,17 +139,19 @@ class _CatalogComparisonScreenState
 }
 
 class _Header extends StatelessWidget {
-  const _Header();
+  final VoidCallback? onManageCompetitors;
+
+  const _Header({this.onManageCompetitors});
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
-          BackChevron(),
-          SizedBox(width: 12),
-          Expanded(
+          const BackChevron(),
+          const SizedBox(width: 12),
+          const Expanded(
             child: Text(
               'COMPARATIVO DE PREÇOS',
               style: TextStyle(
@@ -141,6 +164,19 @@ class _Header extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          if (onManageCompetitors != null)
+            InkWell(
+              onTap: onManageCompetitors,
+              borderRadius: BorderRadius.circular(8),
+              child: const Padding(
+                padding: EdgeInsets.all(4),
+                child: Icon(
+                  Icons.compare_arrows_rounded,
+                  size: 20,
+                  color: Color(0xFF1e40af),
+                ),
+              ),
+            ),
         ],
       ),
     );

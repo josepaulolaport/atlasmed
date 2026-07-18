@@ -3,6 +3,8 @@ import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { catalogUseCases } from "../../composition";
 import { ResourceNotFoundError } from "../../../../shared/errors";
+import { competitorProductsRoute } from "./competitor-products.route";
+import { productComparisonsRoute } from "./product-comparisons.route";
 
 const listSectorsRoute = new Elysia()
   .use(auth)
@@ -295,4 +297,6 @@ export const catalogRoute = new Elysia()
   .use(createHealthcareProviderRoute)
   .use(updateHealthcareProviderRoute)
   .use(listFacilitySharesRoute)
-  .use(createFacilityShareRoute);
+  .use(createFacilityShareRoute)
+  .use(competitorProductsRoute)
+  .use(productComparisonsRoute);

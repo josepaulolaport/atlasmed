@@ -22,4 +22,50 @@ class CompetitorProduct {
   final double price18;
   final double price20;
   final DateTime brasindiceUpdatedAt;
+
+  factory CompetitorProduct.fromJson(Map<String, dynamic> json) {
+    double readPrice(Object? value) => switch (value) {
+      num v => v.toDouble(),
+      String v => double.tryParse(v) ?? 0,
+      _ => 0,
+    };
+
+    return CompetitorProduct(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      manufacturer: json['manufacturer'] as String? ?? '',
+      brand: json['brand'] as String?,
+      countryOfOrigin: json['countryOfOrigin'] as String? ?? '',
+      price17: readPrice(json['price17']),
+      price18: readPrice(json['price18']),
+      price20: readPrice(json['price20']),
+      brasindiceUpdatedAt: DateTime.parse(
+        json['brasindiceUpdatedAt'] as String,
+      ),
+    );
+  }
+
+  CompetitorProduct copyWith({
+    String? id,
+    String? name,
+    String? manufacturer,
+    String? brand,
+    String? countryOfOrigin,
+    double? price17,
+    double? price18,
+    double? price20,
+    DateTime? brasindiceUpdatedAt,
+  }) {
+    return CompetitorProduct(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      manufacturer: manufacturer ?? this.manufacturer,
+      brand: brand ?? this.brand,
+      countryOfOrigin: countryOfOrigin ?? this.countryOfOrigin,
+      price17: price17 ?? this.price17,
+      price18: price18 ?? this.price18,
+      price20: price20 ?? this.price20,
+      brasindiceUpdatedAt: brasindiceUpdatedAt ?? this.brasindiceUpdatedAt,
+    );
+  }
 }
