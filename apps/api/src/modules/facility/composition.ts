@@ -40,6 +40,7 @@ import {
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
 import { FacilityGeocodingService } from "./application/services/facility-geocoding.service";
+import { searchService } from "../../infrastructure/search/search.service";
 import { DrizzleRegistryReadRepository } from "../registry-ingestion/infrastructure/repositories/drizzle/drizzle-registry-read.repository";
 import { professionalRepositories } from "../professional/composition";
 
@@ -70,6 +71,7 @@ async function handleFacilityLocationChanged(facilityId: string): Promise<void> 
 
 const facilityMembershipDeps = {
   facilityRepository: facilityRepositories.facility,
+  searchService,
   facilityGeocodingService,
   onFacilityLocationChanged: handleFacilityLocationChanged,
 };

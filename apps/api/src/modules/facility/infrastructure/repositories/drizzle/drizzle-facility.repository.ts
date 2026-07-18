@@ -71,11 +71,16 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
     productIds?: string[];
     scope: FacilityListScopeFilter;
+    candidateIds?: string[];
   }): Promise<{ facilities: FacilityListRecord[]; total: number }> {
     const conditions = [isNull(facilities.deactivatedAt)];
 
     const scopeCondition = buildScopeCondition(params.scope);
     if (scopeCondition) conditions.push(scopeCondition);
+
+    if (params.candidateIds) {
+      conditions.push(inArray(facilities.id, params.candidateIds));
+    }
 
     if (params.search) {
       conditions.push(ilike(facilities.displayName, `%${params.search}%`));
@@ -153,6 +158,28 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       })),
       total: countRows[0]?.count ?? 0,
     };
+  }
+
+  async findAllByIds(params: {
+    ids: string[];
+    latitude?: number;
+    longitude?: number;
+    radiusKm?: number;
+    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    productIds?: string[];
+    scope: FacilityListScopeFilter;
+  }): Promise<FacilityListRecord[]> {
+    if (params.ids.length === 0) {
+      return [];
+    }
+
+    const { facilities } = await this.findAll({
+      ...params,
+      page: 1,
+      limit: params.ids.length,
+      candidateIds: params.ids,
+    });
+    return facilities;
   }
 
   async findById(id: string): Promise<FacilityRecord | null> {
