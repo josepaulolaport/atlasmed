@@ -1,7 +1,7 @@
 # Spec 0005 — Frontend inventory & backend gap tracker
 
-**Status:** Part A inventory done · §0 plan approved · **implementation frozen** pending API architecture review  
-**Branch:** `feature/establishment-detail-backend-20260719` (inventory) → follow-on architecture branch  
+**Status:** Part A inventory done · §0 plan approved · **implementation frozen** · Part A2 architecture review ready for approval  
+**Branches:** `feature/establishment-detail-backend-20260719` (inventory) · `docs/api-architecture-review-20260719` (this review)  
 **Related:** [requirements.md](./requirements.md), PR #95 (merged to `main`)  
 **UI language:** pt-BR · **This document:** English  
 
@@ -527,6 +527,199 @@ Expose on detail (and optionally on list where cheap):
 
 ---
 
+# Part A2 — API architecture review (ordered)
+
+**Branch:** `docs/api-architecture-review-20260719`  
+**Goal:** Agree how we build Spec 0005 backends before writing more code.  
+**Non-goal:** Big-bang rewrite. Prefer extend-in-place with stronger typing.
+
+**Verdict:** Intentional hexagonal layout exists and is mostly followed. Pain comes from uneven execution: hollow facility read model, serializer-as-DTO without named contracts, Clinic/Facility naming drift, a few god files, and duplicated visits. Not spaghetti end-to-end — **confusing at the edges we will touch**.
+
+### Coding standards we will enforce (locked for this program)
+
+1. **Strong typing end-to-end:** named request/response DTO types (or Zod/`@atlasmed/access` schemas) for every new or enriched public endpoint — no anonymous serializer blobs as the only contract.  
+2. **Layers:** route (TypeBox + auth) → use-case → port interface → Drizzle repo → map to **Record** → use-case maps Record → **DTO**. Never return Drizzle rows from routes.  
+3. **Geometry:** DB `location` only; API may expose derived `lat`/`lng`. Persist writes through `location`, never fake lat/lng columns.  
+4. **Naming:** domain/code/OpenAPI prefer **Facility** / **Professional**. Do not add new “Clinic”/“Doctor” API vocabulary; migrate tags when touching files. Mobile UI stays pt-BR “clínica”.  
+5. **Per-section endpoints** (already decided) — no composite establishment-detail BFF.  
+6. **Authz:** keep `requirePermission` + `resourceIdParam` + `assertResourceInScope`; leave room for finer grants later — no CASL redesign in this program.  
+7. **Tests:** use-case unit tests with fake repos + HTTP contract coverage for new DTO fields.
+
+**Architecture review approval:** ☐  
+
+---
+
+## A2.0 — Cross-cutting conventions
+
+**Canonical layout (real):**
+
+```
+modules/<domain>/
+  application/{use-cases,interfaces,services?}
+  infrastructure/{routes,repositories/drizzle,scope?}
+  composition.ts
+  *-http.integration.test.ts
+```
+
+**Happy path today:** route → `auth` + `requirePermission` → `getScope()` → use-case → port → Drizzle → inline `serializeX()` → JSON.
+
+| Concern | Reality | Target for Spec 0005 |
+|---------|---------|----------------------|
+| Composition root | Good | Keep |
+| Typed domain errors | Good (`shared/errors`) | Keep |
+| Validation | Spotty (TypeBox often alone) | TypeBox + Zod/`parseSchema` when domain rules matter |
+| Response DTOs | Weak (inferred literals) | **Named DTO types** for enriched/new endpoints |
+| Record vs row | Records used (good) | Records complete enough for use-cases; DTOs explicit |
+| Clinic vs Facility | Chronic mix | Stop adding Clinic; prefer Facility in new OpenAPI |
+
+---
+
+## A2.1 — `facility` (critical path)
+
+**Layout:** routes (~665 LOC god file), multiple drizzle repos, use-cases for CRUD / professionals / registry / consultants / conformity / visits, composition ~152 LOC.
+
+**Strengths:** ports, scope, nested resources under `/facilities/:id/…`.
+
+**Weaknesses:**
+
+- `mapFacility` under-projects DB (coords null; contact/status omitted).  
+- `serializeClinic` is the de-facto DTO with no exported type.  
+- create/update comments say lat/lng handled elsewhere but location often not written here.  
+- OpenAPI tags “Clinics” vs path `/facilities`.  
+- Geocoding service largely passthrough.
+
+**Reuse for Spec 0005:** `GET/PATCH /facilities/:id`, geo `GET /facilities`, professionals nested routes, consultants, conformity (later), visits nested.
+
+**Missing:** CRM `GET/POST` representatives (table exists; registry-only list today).
+
+**BEFORE Spec 0005 coding:** §0 DTO + ST_X/ST_Y + persist `location` on write; introduce `FacilityDetailDto` / `FacilityListDto` (or Zod schemas) with strong types.  
+**DURING:** split route file when adding representatives; rename tags opportunistically.
+
+---
+
+## A2.2 — `professional` (+ `facility_professionals`)
+
+**Layout:** clean module; facility owns associations.
+
+**Strengths:** clear person vs association split; `relationship_level` already on association + PATCH.
+
+**Weaknesses:** Doctor naming leftovers; facility association **list** DTO drops phone/email (detail context has them).
+
+**Reuse:** `GET/POST /professionals`, `GET /professionals/:id`, `GET …/professionals?view=confirmed`, associate/confirm/end/role.
+
+**BEFORE:** none required.  
+**DURING §6:** enrich association list DTO with phone/email; map `relationshipLevel` → mobile stars; create = professional + associate (existing flows), typed DTOs.
+
+---
+
+## A2.3 — `orders`
+
+**Layout:** small, clean; list vs detail serializers.
+
+**Gap:** no `facilityId` filter on list — only territory scope + status.
+
+**Reuse:** `GET /orders`, `GET /orders/:id` (items match card preview). Prefer `?facilityId=` over a new module.
+
+**Auth smell:** orders use `FACILITY` permission subject — leave as-is for now.
+
+**BEFORE:** none.  
+**DURING §8:** optional `facilityId` query + typed list DTO; consider top-2 item preview on list if N+1 hurts.
+
+---
+
+## A2.4 — `catalog` (products + healthcare providers / shares)
+
+**Layout:** shares correctly owned here; routes mounted at `/facilities/:id/healthcare-provider-shares`.
+
+**Reuse:** `GET /healthcare-providers`, `GET/POST …/healthcare-provider-shares`.
+
+**Gap for Fontes editor:** create-only; need replace-set and/or PATCH/DELETE so sum can be edited to 100% / cleared.
+
+**Smell:** large `catalog.use-cases.ts` (~693 LOC) — split only if we grow it further.
+
+**BEFORE:** none.  
+**DURING §7:** replace/update shares with strong DTOs; keep ownership in catalog.
+
+---
+
+## A2.5 — `visits` (duplication)
+
+Two stacks, one `visits` table:
+
+| | `modules/visits` | `facility` nested visits |
+|--|------------------|---------------------------|
+| Routes | `POST /visits`, weekly summary | `GET/POST /facilities/:id/visits` |
+| Permission | `VISIT` | nested uses `FACILITY` create for POST |
+| Repos | separate Drizzle classes | separate |
+
+Mobile Spec uses **nested** facility visits.
+
+**Risks:** divergent DTOs (`summary: null` stub); permission mismatch; possible `and()` bug in facility visit repo filters.
+
+**BEFORE:** fix query `and()` if confirmed broken; align create permission story.  
+**DURING:** thin-delegate facility routes to a single visits repository/module; **do not** expand schema for unmounted rich history.
+
+---
+
+## A2.6 — `access` (patterns only)
+
+Copy existing pattern for every new nested facility route:
+
+```ts
+.use(auth)
+.use(requirePermission("read" | "update", "FACILITY", { resourceIdParam: "id" }))
+// + assertResourceInScope in use-case
+```
+
+Do not invent ORDER/DOCUMENT subjects mid-program unless unavoidable. Authz matrices later.
+
+---
+
+## A2.7 — `territory` (scope only)
+
+Reuse `DrizzleTerritoryScopePort` / facility membership on location change. Do not open territory CRUD for Spec 0005. Nearby = facility geo list + scope, not polygons.
+
+---
+
+## A2.8 — `maps` / geocoding
+
+Server maps routes are not required for nearby if facility coords are correct. `FacilityGeocodingService` can stay thin until address→geocode is a real product need. Fix facility location read/write first.
+
+---
+
+## A2.9 — Recommended work order (architecture + Spec sections)
+
+| Priority | Work | When |
+|----------|------|------|
+| P0 | Named facility list/detail DTOs + geometry read/write + §0 mobile wire | First implementation after this review |
+| P0 | Visits `and()` fix + single ownership direction | Before/with §2 Visita confidence |
+| P1 | Representatives CRM list/create/associate (typed) | §5 |
+| P1 | Association list phone/email + relationship | §6 |
+| P1 | Shares replace-set | §7 |
+| P1 | Orders `?facilityId=` | §8 |
+| P2 | Split `facilities.route.ts` when it grows for §5 | During §5 |
+| P2 | OpenAPI Facility naming cleanup | Opportunistic |
+| Later | Photos/notes tables, conformityStatus on DTO, consultant detail join, suggestion pipeline | Matching §§ |
+
+**Do not:** composite sections endpoint; registry representatives for CRM admin UI; expand visits schema for unmounted history; rewrite catalog/orders modules.
+
+---
+
+## A2.10 — Quality scorecard (opinionated)
+
+| Module | Layering | DTO discipline | God files | Spec readiness |
+|--------|----------|----------------|-----------|----------------|
+| facility | B+ | D (hollow) | C− (route) | D until §0 |
+| professional | A− | B | B− | B |
+| orders | A | A− | A | B− (filter) |
+| catalog | B | B+ | C (use-cases) | B− (shares write) |
+| visits | C (split) | C | A (size) | B (create only) |
+| access patterns | A | — | — | A (reuse) |
+| territory scope | A | — | — | A (don’t touch) |
+| maps↔facility | C (noop geocode) | B | B | N/A if coords fixed |
+
+---
+
 # Part C / D — Implementation log
 
 | Section | Backend PR | Mobile wire PR | Notes |
@@ -542,3 +735,4 @@ Expose on detail (and optionally on list where cheap):
 | 2026-07-19 | Part A frontend inventory created (post–PR #95 merge). |
 | 2026-07-19 | §0 decisions locked; Part B §0 draft plan added. |
 | 2026-07-19 | §0 implementation frozen pending API architecture review; incomplete API WIP reverted. |
+| 2026-07-19 | Part A2 ordered API architecture review added (`docs/api-architecture-review-20260719`). |
