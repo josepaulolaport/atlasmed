@@ -171,6 +171,8 @@ jobs:
     environment: production
     permissions:
       contents: write  # para commitar version bump
+    env:
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -221,11 +223,8 @@ jobs:
           curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           echo "$HOME/.shorebird/bin" >> "$GITHUB_PATH"
 
-      - name: Autenticar Shorebird
-        run: shorebird login --ci
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-
+      # SHOREBIRD_TOKEN está definido no env do job.
+      # O Shorebird CLI lê essa variável automaticamente — não precisa de login --ci.
       - name: Shorebird release Android
         run: |
           fvm flutter pub get
@@ -312,6 +311,8 @@ jobs:
     environment: production
     permissions:
       contents: write
+    env:
+      SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -351,11 +352,8 @@ jobs:
           curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           echo "$HOME/.shorebird/bin" >> "$GITHUB_PATH"
 
-      - name: Autenticar Shorebird
-        run: shorebird login --ci
-        env:
-          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
-
+      # SHOREBIRD_TOKEN está definido no env do job.
+      # O Shorebird CLI lê essa variável automaticamente — não precisa de login --ci.
       # Ativar Cider
       - name: Ativar Cider
         run: dart pub global activate cider
