@@ -1,0 +1,18 @@
+# ── Shorebird Configuration ──────────────────────────────────────────
+#
+# Gerado por `shorebird init`. Substitua `app_id` pelo ID real do seu
+# app no Shorebird. Se quiser usar flavors, execute:
+#   shorebird flavors create development
+#   shorebird flavors create staging
+#   shorebird flavors create production
+#
+# Documentação: https://docs.shorebird.dev/
+# ──────────────────────────────────────────────────────────────────────
+
+app_id: SEU_SHOREBIRD_APP_ID_AQUI
+
+# Exemplo com flavors (descomente quando criar os flavors no Shorebird):
+# flavors:
+#   development: <dev-app-id>
+#   staging:      <staging-app-id>
+#   production:   <prod-app-id>

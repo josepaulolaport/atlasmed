@@ -1,0 +1,386 @@
+# ── Mobile CD — Shorebird + Fastlane ────────────────────────────────
+# Executado em todo push ao main com mudanças em apps/mobile/.
+#
+# Modos:
+#   store — Bump minor, Shorebird release (Android + iOS), Fastlane
+#           upload às lojas (Google Play internal + TestFlight).
+#   patch — Bump patch, Shorebird patch OTA via manifest.
+#
+# Resolução do modo (resolve_mode):
+#   1. Se o PR associado tem label "release/store" → store
+#   2. Se arquivos sensíveis mudaram (android/, ios/, pubspec.yaml,
+#      shorebird.yaml, config.production.json) → store
+#   3. Se shorebird-patches.json tem entradas → patch
+#   4. Fallback → store (seguro)
+#
+# Web deploy (Firebase Hosting) continua no fluxo separado
+# deploy-production.yml, executado em paralelo.
+# ──────────────────────────────────────────────────────────────────────
+
+name: 📱 Mobile CD — Shorebird
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/deploy-mobile-main.yml'
+
+concurrency:
+  group: mobile-cd-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: "3.44.1"
+  MOBILE_DIR: ./apps/mobile
+
+jobs:
+  # ── Preflight ────────────────────────────────────────────────────
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Verificar se deve pular
+        id: check
+        run: |
+          if echo "${{ github.event.head_commit.message }}" | grep -qE '\[skip ci\]|\[ci skip\]'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ── Resolve mode ────────────────────────────────────────────────
+  resolve_mode:
+    needs: preflight
+    if: needs.preflight.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.resolve.outputs.mode }}
+      has_patches: ${{ steps.resolve.outputs.has_patches }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Detectar modo de deploy
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          mode="store"  # default seguro
+
+          # 1. Verificar label do PR associado (último commit)
+          pr_number=""
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            pr_number=$(gh pr list --head "${{ github.ref_name }}" --state open --json number --jq '.[0].number' 2>/dev/null || echo "")
+          fi
+
+          if [[ -n "$pr_number" ]]; then
+            labels=$(gh pr view "$pr_number" --json labels --jq '.labels[].name' 2>/dev/null || echo "")
+            if echo "$labels" | grep -q "release/store"; then
+              echo "📋 PR #$pr_number has label 'release/store' → store mode"
+              mode="store"
+            fi
+          fi
+
+          # 2. Verificar arquivos sensíveis no diff
+          if [[ "$mode" != "store" ]]; then
+            sensitive_patterns='^apps/mobile/(android/|ios/|pubspec\.yaml|pubspec\.lock|shorebird\.yaml|config\.production\.json)'
+            changed_sensitive=$(git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -cE "$sensitive_patterns" || true)
+            if [[ "$changed_sensitive" -gt 0 ]]; then
+              echo "🔒 Sensitive files changed → store mode"
+              mode="store"
+            fi
+          fi
+
+          # 3. Verificar patch manifest
+          has_patches="false"
+          manifest="${{ env.MOBILE_DIR }}/shorebird-patches.json"
+          if [[ -f "$manifest" ]]; then
+            count=$(jq '.patches | length' "$manifest" 2>/dev/null || echo 0)
+            if [[ "$count" -gt 0 ]]; then
+              has_patches="true"
+              if [[ "$mode" != "store" ]]; then
+                echo "🩹 Patches manifest has $count entrie(s) → patch mode"
+                mode="patch"
+              fi
+            fi
+          fi
+
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "has_patches=$has_patches" >> "$GITHUB_OUTPUT"
+          echo "✅ Resolved mode: $mode (patches: $has_patches)"
+
+  # ── Setup comum ──────────────────────────────────────────────────
+  setup:
+    needs: resolve_mode
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configurar Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Instalar FVM
+        run: |
+          dart pub global activate fvm
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Flutter via FVM
+        run: fvm install
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      - name: Instalar dependências
+        run: fvm flutter pub get
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      - name: Analisar código
+        run: fvm flutter analyze
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      - name: Executar testes
+        run: fvm flutter test
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      - name: Cache do Flutter
+        uses: actions/cache@v5
+        with:
+          path: /opt/hostedtoolcache/flutter
+          key: flutter-${{ env.FLUTTER_VERSION }}
+
+  # ═════════════════════════════════════════════════════════════════
+  # 🏪 Store Mode
+  # ═════════════════════════════════════════════════════════════════
+  deploy_store:
+    needs: [resolve_mode, setup]
+    if: needs.resolve_mode.outputs.mode == 'store'
+    runs-on: macos-latest
+    timeout-minutes: 90
+    environment: production
+    permissions:
+      contents: write  # para commitar version bump
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.RELEASE_BOT_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Configurar Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Instalar FVM
+        run: |
+          dart pub global activate fvm
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Flutter via FVM
+        run: fvm install
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      - name: Instalar dependências
+        run: fvm flutter pub get
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Materializar config.production.json
+      - name: Materializar config.production.json
+        env:
+          CONFIG_BASE64: ${{ secrets.CONFIG_PRODUCTION_JSON_BASE64 }}
+        run: |
+          if [[ -n "$CONFIG_BASE64" ]]; then
+            echo "$CONFIG_BASE64" | base64 --decode > config.production.json
+          else
+            echo "⚠️  CONFIG_PRODUCTION_JSON_BASE64 not set; using existing file"
+          fi
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Ativar Cider
+      - name: Ativar Cider
+        run: dart pub global activate cider
+
+      # Bump minor version + CHANGELOG
+      - name: Bump minor version
+        run: |
+          cider bump minor --bump-build
+          cider release
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # ── Android ──
+      - name: Instalar Shorebird
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
+          echo "$HOME/.shorebird/bin" >> "$GITHUB_PATH"
+
+      - name: Autenticar Shorebird
+        run: shorebird login --ci
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+
+      - name: Shorebird release Android
+        run: |
+          fvm flutter pub get
+          shorebird release android \
+            --flavor production \
+            --no-confirm \
+            --artifact aab \
+            --flutter-version=${{ env.FLUTTER_VERSION }} \
+            -- --dart-define-from-file=config.production.json --no-tree-shake-icons
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Upload para Google Play (condicional via secret — pula se não configurado)
+      - name: Verificar credenciais do Google Play
+        id: check_play_store
+        run: |
+          if [ -n "${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON_PATH }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload AAB para Google Play (internal)
+        if: steps.check_play_store.outputs.enabled == 'true'
+        env:
+          PLAY_STORE_SERVICE_ACCOUNT_JSON_PATH: ${{ secrets.PLAY_STORE_SERVICE_ACCOUNT_JSON_PATH }}
+        run: |
+          cd ${{ env.MOBILE_DIR }}
+          bundle install
+          bundle exec fastlane android upload_internal
+
+      # ── iOS ──
+      - name: Shorebird release iOS
+        run: |
+          fvm flutter pub get
+          shorebird release ios \
+            --flavor production \
+            --no-confirm \
+            --flutter-version=${{ env.FLUTTER_VERSION }} \
+            -- --dart-define-from-file=config.production.json --no-tree-shake-icons
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Upload para TestFlight (condicional via secret — pula se não configurado)
+      - name: Verificar credenciais do App Store Connect
+        id: check_apple
+        run: |
+          if [ -n "${{ secrets.APPLE_ID }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload IPA para TestFlight
+        if: steps.check_apple.outputs.enabled == 'true'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_ITC_TEAM_ID: ${{ secrets.APPLE_ITC_TEAM_ID }}
+        run: |
+          cd ${{ env.MOBILE_DIR }}
+          bundle install
+          bundle exec fastlane ios upload_testflight
+
+      # Persistir version bump (commita direto pq checkout já está com PAT)
+      - name: Commitar version bump
+        run: |
+          git config user.name "atlasmed-bot"
+          git config user.email "bot@atlasmed.com.br"
+          git add ${{ env.MOBILE_DIR }}/pubspec.yaml ${{ env.MOBILE_DIR }}/CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "ℹ️  No changes to commit"
+          else
+            git commit -m "chore: bump mobile version to $(grep '^version:' ${{ env.MOBILE_DIR }}/pubspec.yaml | awk '{print $2}') [skip ci]"
+            git push
+          fi
+
+  # ═════════════════════════════════════════════════════════════════
+  # 🩹 Patch Mode
+  # ═════════════════════════════════════════════════════════════════
+  deploy_patch:
+    needs: [resolve_mode, setup]
+    if: needs.resolve_mode.outputs.mode == 'patch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: production
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.RELEASE_BOT_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Configurar Dart
+        uses: dart-lang/setup-dart@v1
+
+      - name: Instalar FVM
+        run: |
+          dart pub global activate fvm
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Instalar Flutter via FVM
+        run: fvm install
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      - name: Instalar dependências
+        run: fvm flutter pub get
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Materializar config.production.json
+      - name: Materializar config.production.json
+        env:
+          CONFIG_BASE64: ${{ secrets.CONFIG_PRODUCTION_JSON_BASE64 }}
+        run: |
+          if [[ -n "$CONFIG_BASE64" ]]; then
+            echo "$CONFIG_BASE64" | base64 --decode > config.production.json
+          else
+            echo "⚠️  CONFIG_PRODUCTION_JSON_BASE64 not set; using existing file"
+          fi
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Instalar Shorebird
+      - name: Instalar Shorebird
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
+          echo "$HOME/.shorebird/bin" >> "$GITHUB_PATH"
+
+      - name: Autenticar Shorebird
+        run: shorebird login --ci
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+
+      # Ativar Cider
+      - name: Ativar Cider
+        run: dart pub global activate cider
+
+      # Bump patch version + CHANGELOG
+      - name: Bump patch version
+        run: |
+          cider bump patch --bump-build
+          cider release
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Executar patches do manifest
+      - name: Executar patches Shorebird
+        run: make patch-plan
+        working-directory: ${{ env.MOBILE_DIR }}
+
+      # Persistir version bump (commita direto pq checkout já está com PAT)
+      - name: Commitar version bump
+        run: |
+          git config user.name "atlasmed-bot"
+          git config user.email "bot@atlasmed.com.br"
+          git add ${{ env.MOBILE_DIR }}/pubspec.yaml ${{ env.MOBILE_DIR }}/CHANGELOG.md
+          if git diff --cached --quiet; then
+            echo "ℹ️  No changes to commit"
+          else
+            git commit -m "chore: bump mobile patch to $(grep '^version:' ${{ env.MOBILE_DIR }}/pubspec.yaml | awk '{print $2}') [skip ci]"
+            git push
+          fi

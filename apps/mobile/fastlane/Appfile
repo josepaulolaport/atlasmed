@@ -1,0 +1,15 @@
+# ── Fastlane Appfile ─────────────────────────────────────────────────
+# Bundle identifier usado para upload nas lojas.
+# Ajuste conforme necessário para cada loja.
+# ──────────────────────────────────────────────────────────────────────
+
+app_identifier "br.com.atlasmed.app"
+
+# Para Google Play:
+#   track "internal"
+#   json_key_file "path/to/service-account.json"
+#
+# Para App Store Connect:
+#   apple_id "seu@apple.id"
+#   itc_team_id "..."
+#   team_id "..."

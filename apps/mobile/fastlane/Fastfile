@@ -1,0 +1,53 @@
+# ── Fastlane Fastfile ─────────────────────────────────────────────────
+# Lanes para upload de artefatos gerados pelo Shorebird para as lojas.
+#
+# Uso:
+#   bundle exec fastlane android upload_internal
+#   bundle exec fastlane ios upload_testflight
+# ──────────────────────────────────────────────────────────────────────
+
+default_platform(:android)
+
+########################################################################
+# Android — Google Play Console
+########################################################################
+platform :android do
+  desc "Upload AAB para o Google Play (internal track)"
+  lane :upload_internal do |options|
+    aab_path = options[:aab] || "build/app/outputs/bundle/release/app-release.aab"
+
+    # Se o SHOREBIRD_ARTIFACT_PATH estiver definido, usa ele
+    aab_path = ENV["SHOREBIRD_ARTIFACT_PATH"] || aab_path
+
+    upload_to_play_store(
+      track: "internal",
+      aab: aab_path,
+      release_status: "draft",
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      json_key: ENV["PLAY_STORE_SERVICE_ACCOUNT_JSON_PATH"]
+    )
+  end
+end
+
+########################################################################
+# iOS — App Store Connect (TestFlight)
+########################################################################
+platform :ios do
+  desc "Upload IPA para o App Store Connect (TestFlight)"
+  lane :upload_testflight do |options|
+    ipa_path = options[:ipa] || "build/ios/ipa/*.ipa"
+
+    # Se o SHOREBIRD_ARTIFACT_PATH estiver definido, usa ele
+    ipa_path = ENV["SHOREBIRD_ARTIFACT_PATH"] || ipa_path
+
+    upload_to_testflight(
+      ipa: ipa_path,
+      skip_waiting_for_build_processing: true,
+      apple_id: ENV["APPLE_ID"],
+      team_id: ENV["APPLE_TEAM_ID"],
+      itc_team_id: ENV["APPLE_ITC_TEAM_ID"]
+    )
+  end
+end

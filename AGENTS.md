@@ -7,7 +7,7 @@ Canonical AI instruction file for the AtlasMed monorepo. Every AI agent must rea
 | Path | Tech | Purpose |
 |---|---|---|
 | `apps/api` | Bun + Elysia | Backend API, Drizzle ORM, PostgreSQL/PostGIS, CASL authorization |
-| `apps/mobile` | Flutter | **The product surface.** All feature work lands here |
+| `apps/mobile` | Flutter | **The product surface.** Shorebird OTA + Fastlane CD — see `apps/mobile/Makefile` |
 | `apps/workers/temporal` | Temporal | Background workflows (search-sync, purchase-recurrence, cadastro) — package `@atlasmed/temporal-worker` |
 | `packages/database` | Drizzle | Schema, migrations (Drizzle Kit), DB client, PostGIS geometry types |
 | `packages/access` | CASL | Authorization rules, roles, row-level access |
@@ -320,6 +320,36 @@ Do not resurrect it, and do not plan work against it.
 
 **Stack migration note:** Migration to React Native + Expo is documented in `docs/architecture/adr/0002-mobile-stack.md`. Until then, treat Flutter as active.
 
+### Build & CD tooling
+
+| Tool | Propósito | Config |
+|---|---|---|
+| **Shorebird** | Over-the-air updates + release builds (Android AAB, iOS IPA) | `shorebird.yaml` (app ID), `shorebird-patches.json` (patch manifest) |
+| **Cider** | Version management (semver + build number) + CHANGELOG | CLI-only, ativado on-demand no CI |
+| **Makefile** | Orchestração de build: `make android`, `make ios`, `make patch-release`, `make web` | `apps/mobile/Makefile` — targets documentados |
+| **Fastlane** | Upload de artefatos às lojas (Google Play internal, TestFlight) | `fastlane/Fastfile`, `fastlane/Appfile`, `Gemfile` |
+| **FVM** | Flutter SDK version pinning | `.fvmrc` — `3.44.1` |
+
+### Release workflow (GitHub Actions — `deploy-mobile-main.yml`)
+
+Cada push ao `main` com mudanças em `apps/mobile/` dispara:
+
+1. **Resolve mode** — decide se é `store` (release completa) ou `patch` (OTA)
+   - `store` se: PR label `release/store`, ou arquivos sensíveis mudaram (android/, ios/, pubspec.yaml, shorebird.yaml, config.production.json)
+   - `patch` se: `shorebird-patches.json` tem entradas
+   - Fallback: `store` (seguro)
+2. **Setup** — Flutter analyze + test (compartilhado entre os modos)
+3. **Store mode** (macOS):
+   - `cider bump minor --bump-build` → version bump
+   - `shorebird release android` → AAB → Fastlane → Google Play internal
+   - `shorebird release ios` → IPA → Fastlane → TestFlight
+   - Commit version bump com `[skip ci]`
+4. **Patch mode** (Linux):
+   - `cider bump patch --bump-build` → version bump
+   - `shorebird patch` (OTA) para cada entrada no manifest
+   - Commit version bump com `[skip ci]`
+5. **Web deploy** (Firebase Hosting) continua em paralelo via `deploy-production.yml`
+
 ### Conventions
 
 - Widgets are small. Split UI, state, and data access into separate files.
@@ -327,6 +357,11 @@ Do not resurrect it, and do not plan work against it.
 - Preserve fast route recalculation and map interaction — profile before adding heavy widgets.
 - Handle offline first for visit logging: assume network can fail mid-form.
 - Respect GPS/battery: no continuous foreground GPS unless the user is actively navigating.
+- Version é gerenciada pelo Cider, nunca editada manualmente no `pubspec.yaml`.
+- Patches Shorebird são declarativos: adicione ao `shorebird-patches.json` e o CI aplica.
+- `config.production.json` NÃO é versionado — materializado no CI via `CONFIG_PRODUCTION_JSON_BASE64`.
+- Flutter SDK version pinned via FVM (`.fvmrc`).
+- Android signing config deve ser configurada via `android/key.properties` (não versionado).
 
 ### Required docs
 
@@ -340,12 +375,15 @@ Do not resurrect it, and do not plan work against it.
 | Desempenho / Equipe | `docs/specs/0014-desempenho-e-equipe/requirements.md` |
 | API-backed mobile feature | this file → `apps/api` section (contract + DTO discipline) |
 | Auth / permissions | this file → `packages/access` section, `docs/architecture/features/access-auth.md` |
+| **Build / CD / Shorebird** | `apps/mobile/Makefile`, `apps/mobile/scripts/resolve-shorebird-patches.sh`, `.github/workflows/deploy-mobile-main.yml` |
 
 ### Anti-patterns
 
 - Do not import from other apps.
 - Do not couple to database row types — consume backend DTOs only.
 - Do not add new native plugins without noting platform impact (iOS + Android build changes).
+- Do not edit version manualmente em `pubspec.yaml` — use `make bump-minor` ou `make bump-patch`.
+- Do not pular o setup do Shorebird — toda mudança em android/ ou ios/ exige store release.
 
 ---
 

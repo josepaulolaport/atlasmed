@@ -1,5 +1,8 @@
-name: 🚀 Flutter Web — Produção
+name: 🌐 Flutter Web — Produção
 
+# ⚠️  Este workflow lida APENAS com o build Web (Firebase Hosting).
+# Para builds nativos (Android AAB / iOS IPA) com Shorebird, veja
+# deploy-mobile-main.yml.
 on:
   push:
     branches:
