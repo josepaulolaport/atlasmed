@@ -270,7 +270,7 @@ jobs:
       - name: Verificar credenciais do App Store Connect
         id: check_apple
         run: |
-          if [ -n "${{ secrets.APPLE_ID }}" ]; then
+          if [ -n "${{ secrets.APPLE_TEAM_ID }}" ]; then
             echo "enabled=true" >> "$GITHUB_OUTPUT"
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
@@ -279,7 +279,6 @@ jobs:
       - name: Upload IPA para TestFlight
         if: steps.check_apple.outputs.enabled == 'true'
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_ITC_TEAM_ID: ${{ secrets.APPLE_ITC_TEAM_ID }}
         run: |
