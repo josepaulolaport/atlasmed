@@ -54,6 +54,7 @@ const listFacilitiesRoute = new Elysia()
         radiusKm: t.Optional(t.String()),
         commercialStatus: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
+        sort: t.Optional(t.String()),
       }),
     }
   );

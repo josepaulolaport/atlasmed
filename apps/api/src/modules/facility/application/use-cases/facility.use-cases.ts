@@ -3,13 +3,14 @@ import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
 import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
+import { buildMeiliFilter, eqFilter, geoRadiusFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
 
 export interface SearchService {
   isConfigured(): boolean;
   search<T extends Record<string, unknown>>(
     indexName: string,
     query: string,
-    options: { limit: number; offset: number }
+    options: { limit: number; offset: number; filter?: string; sort?: string[] }
   ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
 }
 
@@ -85,6 +86,7 @@ export class ListFacilitiesUseCase {
     radiusKm?: number;
     commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
     productIds?: string[];
+    sort?: "relevance" | "distance";
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
@@ -121,9 +123,27 @@ export class ListFacilitiesUseCase {
 
     let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
     try {
+      const canonicalFilters = [
+        input.commercialStatus ? eqFilter("commercialStatus", input.commercialStatus) : undefined,
+        input.radiusKm !== undefined && input.latitude !== undefined && input.longitude !== undefined
+          ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
+          : undefined,
+      ];
+      const scopeFilter = input.scope.isGlobal
+        ? undefined
+        : input.scope.facilityIds.length > 0
+          ? inFilter("id", input.scope.facilityIds)
+          : eqFilter("id", "__none__");
+      const filter = buildMeiliFilter([...canonicalFilters, scopeFilter])
+        ?? buildMeiliFilter(canonicalFilters);
+      const sort = input.sort === "distance" && input.latitude !== undefined && input.longitude !== undefined
+        ? [`_geoPoint(${input.latitude}, ${input.longitude}):asc`]
+        : undefined;
       result = await searchService.search<{ id: string }>("facilities", search, {
         limit,
         offset: (page - 1) * limit,
+        ...(filter ? { filter } : {}),
+        ...(sort ? { sort } : {}),
       });
     } catch (error) {
       throw new ServiceUnavailableError("Search", error instanceof Error ? error : undefined);
