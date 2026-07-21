@@ -231,7 +231,7 @@ function createSearchClient(): SearchIndexClient {
 
 export const FACILITY_SETTINGS = {
   searchableAttributes: ["name", "legalName", "tradeName", "cnpj", "cpf", "cnesCode", "city", "state"],
-  filterableAttributes: ["id", "state", "city", "commercialStatus", "territoryId", "territoryAssignmentStatus"],
+  filterableAttributes: ["id", "state", "city", "commercialStatus", "territoryId", "territoryAssignmentStatus", "_geo"],
   sortableAttributes: ["_geo"],
 };
 export const PROFESSIONAL_SETTINGS = {

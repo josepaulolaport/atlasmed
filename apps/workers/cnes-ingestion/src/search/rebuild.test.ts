@@ -149,7 +149,7 @@ describe("search rebuild", () => {
 
   test("exposes hybrid filter and distance-sort index settings", () => {
     expect(searchRebuild.FACILITY_SETTINGS).toMatchObject({
-      filterableAttributes: expect.arrayContaining(["id", "commercialStatus", "territoryId", "territoryAssignmentStatus"]),
+      filterableAttributes: expect.arrayContaining(["id", "commercialStatus", "territoryId", "territoryAssignmentStatus", "_geo"]),
       sortableAttributes: ["_geo"],
     });
     expect(searchRebuild.PROFESSIONAL_SETTINGS).toMatchObject({
