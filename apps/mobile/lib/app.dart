@@ -14,6 +14,8 @@ import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cada
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_comparison_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_price_index_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/product_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
@@ -247,7 +249,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                 ),
               ],
             ),
-            // Catálogo
+            // Catálogo (current — kept intact while Produtos is redesigned)
             GoRoute(
               path: '/catalogo',
               pageBuilder: (_, _) =>
@@ -261,6 +263,20 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                   path: 'comparativo/:variantId',
                   builder: (_, state) => CatalogComparisonScreen(
                     variantId: state.pathParameters['variantId']!,
+                  ),
+                ),
+              ],
+            ),
+            // Produtos (revamp — build the new experience here)
+            GoRoute(
+              path: '/produtos',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: ProductsHomeScreen()),
+              routes: [
+                GoRoute(
+                  path: ':familyId',
+                  builder: (_, state) => ProductDetailScreen(
+                    familyId: state.pathParameters['familyId']!,
                   ),
                 ),
               ],

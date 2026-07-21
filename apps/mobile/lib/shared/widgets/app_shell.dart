@@ -61,7 +61,7 @@ class AppShellScreenState extends State<AppShellScreen> {
     if (location.startsWith('/bi')) return 'desempenho';
     if (location.startsWith('/pedidos')) return 'pedidos';
     if (location.startsWith('/cadastros')) return 'cadastros';
-    if (location.startsWith('/catalogo')) return 'catalogo';
+    if (location.startsWith('/produtos')) return 'produtos';
     if (location.startsWith('/apresentacoes')) return 'apresentacoes';
     if (location.startsWith('/mapa')) return 'mapa';
     if (location.startsWith('/territorios')) return 'territorios';
@@ -280,10 +280,10 @@ const _drawerItems = <_DrawerItem>[
     icon: Icons.fact_check_outlined,
   ),
   _DrawerItem(
-    key: 'catalogo',
-    label: 'Catálogo',
-    route: '/catalogo',
-    icon: Icons.medication_liquid_outlined,
+    key: 'produtos',
+    label: 'Produtos',
+    route: '/produtos',
+    icon: Icons.inventory_outlined,
   ),
   _DrawerItem(
     key: 'apresentacoes',
