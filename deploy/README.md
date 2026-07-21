@@ -111,6 +111,27 @@ The API creates `STORAGE_BUCKET` on startup when object storage is configured. T
    uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --yes
    ```
 
+## Meilisearch v1.13 to v1.48 rollout
+
+The production image is pinned to `getmeili/meilisearch:v1.48`, but the existing `atlasmed_meilisearch_data` database must not be started by v1.48 as a normal in-place volume reuse. Meilisearch databases are version-specific. Officially supported migration choices are a dump import, or the experimental dumpless upgrade for source versions `>=v1.12`; AtlasMed uses the dump path because it is portable, preserves every existing index and its settings, and avoids making an experimental database mutation part of an automatic deploy.
+
+Before deploying `atlasmed-meilisearch` with this compose change:
+
+1. Keep the v1.13 service running and call `POST /dumps` with the production master key. Wait for the returned task to reach `succeeded`.
+2. Copy the resulting `.dump` file out of the persistent volume and retain a separate backup of the original `atlasmed_meilisearch_data` volume for rollback. A snapshot alone is not a cross-version migration artifact.
+3. Inspect the dump or the v1.13 instance's `/indexes` response and record all index UIDs. Do not assume only the rebuildable facilities and professionals projections exist.
+4. Stop v1.13. Let Uncloud create the new `atlasmed_meilisearch_data_v148` volume declared by this compose file; do not delete, empty, or repurpose the retained `atlasmed_meilisearch_data` v1.13 volume.
+5. Import the dump into v1.48 at startup with `--import-dump`. The import must target the empty `atlasmed_meilisearch_data_v148` database. After import completes, verify `/version`, every recorded index, document counts/settings, and representative searches.
+6. Only after verification, deploy the API/workers. Keep the old v1.13 volume until the rollback window closes.
+
+`deploy/uncloud.compose.yml` deliberately switches the service mount to the new v1.48 volume while retaining the old v1.13 volume declaration. It does not automate volume deletion or dump import. An operator must complete the dump migration during the maintenance rollout; merging this change must not be treated as authorization to deploy it before the dump is secured and the import procedure is ready.
+
+Official references:
+
+- [Update to the latest Meilisearch version](https://www.meilisearch.com/docs/learn/update_and_migration/updating)
+- [Exporting and importing dumps](https://www.meilisearch.com/docs/resources/self_hosting/data_backup/dumps)
+- [Exporting and using snapshots](https://www.meilisearch.com/docs/resources/self_hosting/data_backup/snapshots)
+
 ## Runtime health checks
 
 - API: `https://atlasmed-api.b1ixob.uncld.dev/health`

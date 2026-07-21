@@ -16,11 +16,39 @@ function readDeploymentConfig() {
 }
 
 describe("production deployment", () => {
+  it("pins the production Meilisearch server to v1.48", () => {
+    const { compose } = readDeploymentConfig();
+    const meilisearch = compose.slice(
+      compose.indexOf("  atlasmed-meilisearch:"),
+      compose.indexOf("  atlasmed-minio:"),
+    );
+
+    expect(meilisearch).toContain("image: getmeili/meilisearch:v1.48");
+  });
+
+  it("keeps the v1.13 volume for rollback and mounts a fresh v1.48 volume", () => {
+    const { compose } = readDeploymentConfig();
+    const meilisearch = compose.slice(
+      compose.indexOf("  atlasmed-meilisearch:"),
+      compose.indexOf("  atlasmed-minio:"),
+    );
+    const volumes = compose.slice(compose.indexOf("volumes:"));
+
+    expect(meilisearch).toContain("atlasmed_meilisearch_data_v148:/meili_data");
+    expect(volumes).toContain("  atlasmed_meilisearch_data:");
+    expect(volumes).toContain("  atlasmed_meilisearch_data_v148:");
+  });
+
   it("configures the CNES worker with the internal Meilisearch endpoint and deployed key", () => {
     const { compose } = readDeploymentConfig();
-    const cnesWorker = compose.slice(compose.indexOf("  atlasmed-cnes-worker:"), compose.indexOf("  atlasmed-temporal-db:"));
+    const cnesWorker = compose.slice(
+      compose.indexOf("  atlasmed-cnes-worker:"),
+      compose.indexOf("  atlasmed-temporal-db:"),
+    );
 
-    expect(cnesWorker).toContain("MEILISEARCH_URL=http://atlasmed-meilisearch:7700");
+    expect(cnesWorker).toContain(
+      "MEILISEARCH_URL=http://atlasmed-meilisearch:7700",
+    );
     expect(cnesWorker).toContain("MEILISEARCH_API_KEY=${MEILISEARCH_API_KEY}");
   });
 
@@ -32,6 +60,8 @@ describe("production deployment", () => {
     expect(workflow).toContain(
       "uc deploy -f deploy/uncloud.compose.yml atlasmed-api atlasmed-api-worker atlasmed-cnes-worker atlasmed-web --recreate --yes",
     );
-    expect(workflow).toContain("working-directory: deploy\n        run: bun test uncloud.compose.test.ts");
+    expect(workflow).toContain(
+      "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
+    );
   });
 });
