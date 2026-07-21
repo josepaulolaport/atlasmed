@@ -192,13 +192,13 @@ services:
 
   atlasmed-meilisearch:
     x-machines: atlasmed
-    image: getmeili/meilisearch:v1.13
+    image: getmeili/meilisearch:v1.48
     environment:
       - MEILI_ENV=production
       - MEILI_MASTER_KEY=${MEILISEARCH_API_KEY}
       - MEILI_NO_ANALYTICS=true
     volumes:
-      - atlasmed_meilisearch_data:/meili_data
+      - atlasmed_meilisearch_data_v148:/meili_data
 
   atlasmed-minio:
     x-machines: atlasmed
@@ -213,5 +213,7 @@ services:
 volumes:
   atlasmed_temporal_postgres_data:
   atlasmed_redis_data:
+  # Retain the v1.13 volume unchanged for rollback after the dump migration.
   atlasmed_meilisearch_data:
+  atlasmed_meilisearch_data_v148:
   atlasmed_minio_data:

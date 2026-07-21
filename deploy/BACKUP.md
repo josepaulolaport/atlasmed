@@ -19,7 +19,9 @@ pg_dump -h 127.0.0.1 -U temporal temporal > atlasmed-temporal-$(date +%F-%H%M).s
 ## Meilisearch
 
 - Back up the `atlasmed_meilisearch_data` volume.
-- Prefer Meilisearch dumps for portable restore when available.
+- Prefer Meilisearch dumps for portable restore and every cross-version migration. A dump contains all indexes, documents, settings, and completed task history from the instance.
+- Snapshots and raw volume copies are version-specific rollback backups; they cannot migrate a v1.13 database to v1.48.
+- For the v1.13 to v1.48 production rollout, retain `atlasmed_meilisearch_data` unchanged, import a successful v1.13 dump into the empty `atlasmed_meilisearch_data_v148` volume, and verify all index UIDs before switching production. See `deploy/README.md`.
 
 ## MinIO
 
