@@ -1,7 +1,6 @@
 {
   "patches": [
-    // Exemplo: adicione entradas aqui no PR para que o CI aplique patches.
-    // { "platform": "android", "releaseVersion": "1.0.0+1" },
-    // { "platform": "ios", "releaseVersion": "1.0.0+1" }
+    { "platform": "android", "releaseVersion": "1.1.0+1" },
+    { "platform": "ios", "releaseVersion": "1.1.0+1" }
   ]
 }
