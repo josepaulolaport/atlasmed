@@ -84,7 +84,13 @@ async function loadAssociationsMap(
       endedAt: facilityProfessionals.endedAt,
     })
     .from(facilityProfessionals)
-    .where(inArray(facilityProfessionals.professionalId, professionalIds));
+    .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
+    .where(
+      and(
+        inArray(facilityProfessionals.professionalId, professionalIds),
+        isNull(facilities.deactivatedAt)
+      )
+    );
 
   const map = new Map<string, Array<{ facilityId: string; endedAt: Date | null }>>();
   for (const row of rows) {
@@ -182,10 +188,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           db
             .select({ id: facilityProfessionals.professionalId })
             .from(facilityProfessionals)
+            .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
             .where(
               and(
                 inArray(facilityProfessionals.facilityId, facilityIds),
-                isNull(facilityProfessionals.endedAt)
+                isNull(facilityProfessionals.endedAt),
+                isNull(facilities.deactivatedAt)
               )
             )
         )
@@ -199,10 +207,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
           db
             .select({ id: facilityProfessionals.professionalId })
             .from(facilityProfessionals)
+            .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
             .where(
               and(
                 eq(facilityProfessionals.facilityId, params.facilityId),
-                isNull(facilityProfessionals.endedAt)
+                isNull(facilityProfessionals.endedAt),
+                isNull(facilities.deactivatedAt)
               )
             )
         )
@@ -226,11 +236,12 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       ? sql<number>`(select min(ST_Distance(f.location::geography, ${referencePoint}::geography) / 1000)
           from facility_professionals fp
           inner join facilities f on f.id = fp.facility_id
-          where fp.professional_id = ${professionals.id} and fp.ended_at is null and f.location is not null${distanceScope})`
+          where fp.professional_id = ${professionals.id} and fp.ended_at is null and f.deactivated_at is null and f.location is not null${distanceScope})`
       : undefined;
     if (referencePoint) {
       const proximityConditions = [
         isNull(facilityProfessionals.endedAt),
+        isNull(facilities.deactivatedAt),
         sql`${facilities.location} IS NOT NULL`,
         ...(scopedFacilityIds ? [inArray(facilityProfessionals.facilityId, scopedFacilityIds)] : []),
         ...(params.radiusKm === undefined ? [] : [sql`ST_DWithin(${facilities.location}::geography, ${referencePoint}::geography, ${params.radiusKm * 1000})`]),
