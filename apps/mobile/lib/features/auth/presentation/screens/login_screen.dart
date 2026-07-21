@@ -147,125 +147,127 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           Padding(
                             padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
                             child: AnimatedBuilder(
-                            animation: _shakeAnimation,
-                            key: ValueKey('login_form_$_shakeCount'),
-                            builder: (_, _) {
-                              return Transform.translate(
-                                offset: Offset(_shakeAnimation.value, 0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Bem-vindo',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: -0.4,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      'Entre com sua conta para acessar o portal.',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.7,
+                              animation: _shakeAnimation,
+                              key: ValueKey('login_form_$_shakeCount'),
+                              builder: (_, _) {
+                                return Transform.translate(
+                                  offset: Offset(_shakeAnimation.value, 0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Bem-vindo',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: -0.4,
                                         ),
-                                        fontSize: 14,
                                       ),
-                                    ),
-                                    const SizedBox(height: 28),
-                                    GlassInput(
-                                      label: 'E-mail corporativo',
-                                      icon: const Icon(
-                                        Icons.email_outlined,
-                                        size: 18,
-                                      ),
-                                      value: _emailController.text,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          _emailController.text = v;
-                                          _emailController.selection =
-                                              TextSelection.collapsed(
-                                                offset: v.length,
-                                              );
-                                          _errorKind = null;
-                                        });
-                                      },
-                                      keyboardType: TextInputType.emailAddress,
-                                      textInputAction: TextInputAction.next,
-                                      error: hasInputError,
-                                      enabled: !isBlocked && !_isLoading,
-                                    ),
-                                    const SizedBox(height: 12),
-                                    GlassInput(
-                                      label: 'Senha',
-                                      icon: const Icon(
-                                        Icons.lock_outline,
-                                        size: 18,
-                                      ),
-                                      value: _passwordController.text,
-                                      onChanged: (v) {
-                                        setState(() {
-                                          _passwordController.text = v;
-                                          _passwordController.selection =
-                                              TextSelection.collapsed(
-                                                offset: v.length,
-                                              );
-                                          _errorKind = null;
-                                        });
-                                      },
-                                      obscureText: true,
-                                      textInputAction: TextInputAction.done,
-                                      error: hasInputError,
-                                      enabled: !isBlocked && !_isLoading,
-                                    ),
-                                    if (_errorKind != null) ...[
-                                      const SizedBox(height: 12),
+                                      const SizedBox(height: 6),
                                       Text(
-                                        _errorMessage(_errorKind!),
-                                        style: const TextStyle(
-                                          color: Color(0xFFFECACA),
+                                        'Entre com sua conta para acessar o portal.',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.7,
+                                          ),
                                           fontSize: 14,
-                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ],
-                                    const SizedBox(height: 32),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton(
-                                        onPressed: widget.onForgotPassword,
-                                        style: TextButton.styleFrom(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                          ),
+                                      const SizedBox(height: 28),
+                                      GlassInput(
+                                        label: 'E-mail corporativo',
+                                        icon: const Icon(
+                                          Icons.email_outlined,
+                                          size: 18,
                                         ),
-                                        child: Text(
-                                          'Esqueci minha senha',
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.85,
-                                            ),
-                                            fontSize: 13,
+                                        value: _emailController.text,
+                                        onChanged: (v) {
+                                          setState(() {
+                                            _emailController.text = v;
+                                            _emailController.selection =
+                                                TextSelection.collapsed(
+                                                  offset: v.length,
+                                                );
+                                            _errorKind = null;
+                                          });
+                                        },
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        textInputAction: TextInputAction.next,
+                                        error: hasInputError,
+                                        enabled: !isBlocked && !_isLoading,
+                                      ),
+                                      const SizedBox(height: 12),
+                                      GlassInput(
+                                        label: 'Senha',
+                                        icon: const Icon(
+                                          Icons.lock_outline,
+                                          size: 18,
+                                        ),
+                                        value: _passwordController.text,
+                                        onChanged: (v) {
+                                          setState(() {
+                                            _passwordController.text = v;
+                                            _passwordController.selection =
+                                                TextSelection.collapsed(
+                                                  offset: v.length,
+                                                );
+                                            _errorKind = null;
+                                          });
+                                        },
+                                        obscureText: true,
+                                        textInputAction: TextInputAction.done,
+                                        error: hasInputError,
+                                        enabled: !isBlocked && !_isLoading,
+                                      ),
+                                      if (_errorKind != null) ...[
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          _errorMessage(_errorKind!),
+                                          style: const TextStyle(
+                                            color: Color(0xFFFECACA),
+                                            fontSize: 14,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
+                                      ],
+                                      const SizedBox(height: 32),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: widget.onForgotPassword,
+                                          style: TextButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 4,
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'Esqueci minha senha',
+                                            style: TextStyle(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    PrimaryButton(
-                                      label: 'Entrar',
-                                      loading: _isLoading,
-                                      disabled: _isLoading,
-                                      trailingIcon: Icons.arrow_forward,
-                                      onPressed: () => _login(repository),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                      const SizedBox(height: 8),
+                                      PrimaryButton(
+                                        label: 'Entrar',
+                                        loading: _isLoading,
+                                        disabled: _isLoading,
+                                        trailingIcon: Icons.arrow_forward,
+                                        onPressed: () => _login(repository),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
                           ),
                         ],
                       ),
