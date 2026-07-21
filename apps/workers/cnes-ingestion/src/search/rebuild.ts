@@ -186,7 +186,7 @@ export function createSearchIndexClient(client: Meilisearch): SearchIndexClient 
     updateSettings: (uid, settings) => client.index(uid).updateSettings(settings),
     addDocuments: (uid, documents, options) => client.index(uid).addDocuments(documents as Record<string, unknown>[], options),
     waitForTask: (taskUid) => client.tasks.waitForTask(taskUid, SEARCH_REBUILD_TASK_WAIT_OPTIONS),
-    swapIndexes: (swaps) => client.swapIndexes(swaps.map(({ indexes }) => ({ indexes, rename: false }))),
+    swapIndexes: (swaps) => client.swapIndexes(swaps as Parameters<Meilisearch["swapIndexes"]>[0]),
     deleteIndex: (uid) => client.deleteIndex(uid),
   };
 }

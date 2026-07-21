@@ -39,6 +39,23 @@ describe("search rebuild", () => {
     ]);
   });
 
+  test("calls the Meilisearch SDK swap API without the unsupported rename field", async () => {
+    const swapCalls: unknown[] = [];
+    const client = {
+      swapIndexes: async (swaps: unknown) => {
+        swapCalls.push(swaps);
+        return { taskUid: 4 };
+      },
+    } as unknown as Meilisearch;
+
+    const search = searchRebuild.createSearchIndexClient(client);
+    await search.swapIndexes([{ indexes: ["facilities", "facilities__tmp"] }]);
+
+    expect(swapCalls).toEqual([
+      [{ indexes: ["facilities", "facilities__tmp"] }],
+    ]);
+  });
+
   test("uses deterministic workflow ids for one full target rebuild", () => {
     expect(fullSearchSyncWorkflowId("facilities")).toBe("search-sync-facilities-full");
     expect(fullSearchSyncWorkflowId("professionals")).toBe("search-sync-professionals-full");
