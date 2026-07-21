@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { drizzle } from "drizzle-orm/pg-proxy";
 
 const executedSql: string[] = [];
-const proxyDb = drizzle(async (query) => {
+const executedParams: unknown[][] = [];
+const proxyDb = drizzle(async (query, params) => {
   executedSql.push(query);
+  executedParams.push(params);
 
   if (query.includes("count(*)")) return { rows: [[1]] };
   if (query.includes('from "professionals"')) {
@@ -60,6 +62,36 @@ const repository = new DrizzleProfessionalRepository();
 
 beforeEach(() => {
   executedSql.length = 0;
+  executedParams.length = 0;
+});
+
+describe("DrizzleProfessionalRepository.findAll specialty equality", () => {
+  it("normalizes accents, case, trimming, and repeated whitespace canonically", async () => {
+    await repository.findAll({
+      page: 1,
+      limit: 20,
+      specialty: "  Cirurgia   VÁSCULAR  ",
+      scope: { isGlobal: true },
+    });
+
+    const sql = normalizedSql();
+    expect(sql).toContain("regexp_replace");
+    expect(sql).toContain("translate");
+    expect(sql).toContain("chr(768)");
+    expect(sql).toContain("chr(769)");
+    expect(sql).toContain("lower");
+    expect(sql).toContain("trim");
+    expect(executedParams.flat()).toContain("cirurgia vascular");
+    expect(executedParams.flat()).not.toContain("  Cirurgia   VÁSCULAR  ");
+  });
+});
+
+describe("DrizzleProfessionalRepository.findActiveFacilities", () => {
+  it("excludes deactivated facilities", async () => {
+    await repository.findActiveFacilities("professional-1");
+
+    expect(normalizedSql()).toContain("facilities.deactivated_at is null");
+  });
 });
 
 describe("DrizzleProfessionalRepository.findAll active facility associations", () => {

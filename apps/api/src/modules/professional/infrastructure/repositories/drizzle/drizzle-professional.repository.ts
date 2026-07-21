@@ -5,6 +5,7 @@ import {
   facilities,
 } from "@atlasmed/database";
 import { eq, and, or, isNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
+import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
@@ -220,7 +221,10 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
     }
 
     if (params.specialty) {
-      conditions.push(sql`lower(${professionals.primarySpecialtyLabel}) = lower(${params.specialty})`);
+      const normalizedSpecialty = normalizeSearchFilterValue(params.specialty);
+      conditions.push(
+        sql`regexp_replace(trim(translate(lower(${professionals.primarySpecialtyLabel}), 'áàâãäéèêëíìîïóòôõöúùûüç' || chr(768) || chr(769) || chr(770) || chr(771) || chr(776) || chr(807), 'aaaaaeeeeiiiiooooouuuuc')), '[[:space:]]+', ' ', 'g') = ${normalizedSpecialty}`
+      );
     }
 
     // Distances and radius eligibility are calculated only from facilities visible
@@ -379,7 +383,8 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       .where(
         and(
           eq(facilityProfessionals.professionalId, professionalId),
-          isNull(facilityProfessionals.endedAt)
+          isNull(facilityProfessionals.endedAt),
+          isNull(facilities.deactivatedAt)
         )
       )
       .orderBy(asc(facilities.displayName));
