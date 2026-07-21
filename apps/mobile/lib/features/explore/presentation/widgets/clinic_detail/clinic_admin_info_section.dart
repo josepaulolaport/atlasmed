@@ -24,11 +24,7 @@ class ClinicAdminInfoSection extends StatelessWidget {
       cpf: detail.cpf,
     );
 
-    final fields = <({
-      String label,
-      String? value,
-      IconData icon,
-    })>[
+    final fields = <({String label, String? value, IconData icon})>[
       (
         label: taxIdentifier.label,
         value: hasTaxId ? taxIdentifier.value : null,
@@ -44,16 +40,8 @@ class ClinicAdminInfoSection extends StatelessWidget {
         value: formatBrazilianPhone(detail.whatsapp) ?? detail.whatsapp,
         icon: Icons.chat_outlined,
       ),
-      (
-        label: 'E-mail',
-        value: detail.email,
-        icon: Icons.email_outlined,
-      ),
-      (
-        label: 'Site',
-        value: detail.website,
-        icon: Icons.language_outlined,
-      ),
+      (label: 'E-mail', value: detail.email, icon: Icons.email_outlined),
+      (label: 'Site', value: detail.website, icon: Icons.language_outlined),
       (
         label: 'Responsável',
         value: detail.responsibleDoctor,
@@ -70,11 +58,7 @@ class ClinicAdminInfoSection extends StatelessWidget {
           value: _formatDate(detail.registeredSince!),
           icon: Icons.date_range_outlined,
         ),
-      (
-        label: 'Estado',
-        value: detail.state,
-        icon: Icons.map_outlined,
-      ),
+      (label: 'Estado', value: detail.state, icon: Icons.map_outlined),
       (
         label: 'Cidade',
         value: detail.city.trim().isEmpty ? null : detail.city,

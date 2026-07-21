@@ -171,20 +171,15 @@ Future<void> _showAddNoteSheet(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
-    builder: (_) => _AddDoctorNoteSheet(
-      professionalId: professionalId,
-      ref: ref,
-    ),
+    builder: (_) =>
+        _AddDoctorNoteSheet(professionalId: professionalId, ref: ref),
   );
 }
 
 /// Owns its controllers so dismissing an empty sheet cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
 class _AddDoctorNoteSheet extends StatefulWidget {
-  const _AddDoctorNoteSheet({
-    required this.professionalId,
-    required this.ref,
-  });
+  const _AddDoctorNoteSheet({required this.professionalId, required this.ref});
 
   final String professionalId;
   final WidgetRef ref;

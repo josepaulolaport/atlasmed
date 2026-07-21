@@ -322,9 +322,7 @@ List<FacilityCrmDoctor> mockAllFacilityDoctors(String facilityId) {
       phone: i % 4 == 3
           ? null
           : '119${(87654321 - i * 2222).toString().padLeft(8, '0')}',
-      email: i % 5 == 4
-          ? null
-          : '${initials.toLowerCase()}$n@exemplo.com',
+      email: i % 5 == 4 ? null : '${initials.toLowerCase()}$n@exemplo.com',
       isPrescriber: i % 2 == 0,
       isBuyer: i == 2 || i == 7,
       isDecisionMaker: i == 0 || i == 4,

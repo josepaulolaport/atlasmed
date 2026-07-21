@@ -378,7 +378,9 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
     final usableHeight = math.max(mapHeightPx * 0.85, 1.0);
     final zoom =
         math.log(
-          metersPerPixelAtZoom0 * math.cos(latRad).abs() * usableHeight /
+          metersPerPixelAtZoom0 *
+              math.cos(latRad).abs() *
+              usableHeight /
               diameterM,
         ) /
         math.ln2;

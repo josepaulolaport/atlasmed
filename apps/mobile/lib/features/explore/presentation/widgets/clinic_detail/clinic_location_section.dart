@@ -68,10 +68,7 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
               child: SizedBox(
                 height: 160,
                 child: _fullMapOpen
-                    ? _MapPlaceholder(
-                        location: widget.location,
-                        nearby: nearby,
-                      )
+                    ? _MapPlaceholder(location: widget.location, nearby: nearby)
                     : _MiniMapPreview(
                         key: ValueKey('clinic-mini-$_miniMapGeneration'),
                         location: widget.location,
@@ -172,9 +169,9 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
     // Let the mini MapWidget dispose before the full-screen one mounts.
     await WidgetsBinding.instance.endOfFrame;
     if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => screen),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => screen));
     if (!mounted) return;
     setState(() {
       _fullMapOpen = false;

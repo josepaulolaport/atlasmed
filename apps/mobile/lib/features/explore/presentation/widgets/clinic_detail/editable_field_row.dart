@@ -42,11 +42,7 @@ class EditableFieldRow extends StatelessWidget {
     final value = this.value;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
-      showEditSuggestionSheet(
-        context,
-        fieldLabel: label,
-        currentValue: value,
-      );
+      showEditSuggestionSheet(context, fieldLabel: label, currentValue: value);
     });
   }
 

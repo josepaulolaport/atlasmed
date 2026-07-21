@@ -27,20 +27,14 @@ void main() {
     expect(page1.pagination.page, 1);
     expect(page1.pagination.total, all.length);
     expect(page1.pagination.totalPages, greaterThan(1));
-    expect(
-      page1.pagination.page < page1.pagination.totalPages,
-      isTrue,
-    );
+    expect(page1.pagination.page < page1.pagination.totalPages, isTrue);
 
     final lastPage = await mockFacilityDoctorsPage(
       facilityId: 'facility-1',
       page: page1.pagination.totalPages,
     );
     expect(lastPage.pagination.page, page1.pagination.totalPages);
-    expect(
-      lastPage.pagination.page < lastPage.pagination.totalPages,
-      isFalse,
-    );
+    expect(lastPage.pagination.page < lastPage.pagination.totalPages, isFalse);
 
     // First page must not dump the full catalog into the strip.
     expect(page1.items.length, lessThan(all.length));

@@ -287,8 +287,9 @@ class _ClinicDetailContent extends ConsumerWidget {
         else if (adminsRoster.error != null && adminsRoster.items.isEmpty)
           _SectionErrorCard(
             message: _friendlyLoadError(adminsRoster.error!),
-            onRetry: () =>
-                ref.read(facilityAdministratorsRosterProvider(clinicId).notifier).retry(),
+            onRetry: () => ref
+                .read(facilityAdministratorsRosterProvider(clinicId).notifier)
+                .retry(),
           )
         else
           ClinicAdminProfessionalsSection(
@@ -339,8 +340,9 @@ class _ClinicDetailContent extends ConsumerWidget {
         else if (doctorsRoster.error != null && doctorsRoster.items.isEmpty)
           _SectionErrorCard(
             message: _friendlyLoadError(doctorsRoster.error!),
-            onRetry: () =>
-                ref.read(facilityDoctorsRosterProvider(clinicId).notifier).retry(),
+            onRetry: () => ref
+                .read(facilityDoctorsRosterProvider(clinicId).notifier)
+                .retry(),
           )
         else
           ClinicCrmDoctorsSection(

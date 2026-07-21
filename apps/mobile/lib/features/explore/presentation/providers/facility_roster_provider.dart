@@ -53,8 +53,7 @@ typedef FacilityRosterPageLoader<T> =
       required int page,
     });
 
-class FacilityRosterNotifier<T>
-    extends StateNotifier<FacilityRosterState<T>> {
+class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
   FacilityRosterNotifier({
     required this.facilityId,
     required FacilityRosterPageLoader<T> loadPage,
@@ -72,7 +71,10 @@ class FacilityRosterNotifier<T>
   }
 
   Future<void> loadMore() async {
-    if (!state.hasMore || state.loadingMore || state.loading || _fetchInFlight) {
+    if (!state.hasMore ||
+        state.loadingMore ||
+        state.loading ||
+        _fetchInFlight) {
       return;
     }
     await _fetch(page: state.page + 1, append: true);
@@ -102,11 +104,7 @@ class FacilityRosterNotifier<T>
         totalPages: result.pagination.totalPages,
       );
     } catch (error) {
-      state = state.copyWith(
-        loading: false,
-        loadingMore: false,
-        error: error,
-      );
+      state = state.copyWith(loading: false, loadingMore: false, error: error);
     } finally {
       _fetchInFlight = false;
     }
@@ -135,9 +133,6 @@ final facilityAdministratorsRosterProvider = StateNotifierProvider.autoDispose
       return FacilityRosterNotifier<AdministrativeProfessional>(
         facilityId: facilityId,
         loadPage: ({required facilityId, required page}) =>
-            mockFacilityAdministratorsPage(
-              facilityId: facilityId,
-              page: page,
-            ),
+            mockFacilityAdministratorsPage(facilityId: facilityId, page: page),
       );
     });
