@@ -60,9 +60,7 @@ class MockProduct {
   final int competitorMatchCount;
 }
 
-const mockProductSectors = <String>[
-  'Viscossuplementação',
-];
+const mockProductSectors = <String>['Viscossuplementação'];
 
 const mockProductFamilies = <MockProductFamily>[
   MockProductFamily(

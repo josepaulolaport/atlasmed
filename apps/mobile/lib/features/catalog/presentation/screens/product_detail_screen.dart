@@ -21,8 +21,9 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
-  late final List<MockProduct> _familyProducts =
-      mockProductsInFamily(widget.familyId);
+  late final List<MockProduct> _familyProducts = mockProductsInFamily(
+    widget.familyId,
+  );
   late String _selectedProductId = _familyProducts.isEmpty
       ? ''
       : _familyProducts.first.id;
