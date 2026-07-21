@@ -130,17 +130,34 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
           const Divider(height: 1, color: Color(0xFFeef0f3)),
           Expanded(
             child: _payers.isEmpty
-                ? const _EmptyEditor()
+                ? _EmptyEditor(onAdd: _openAddSheet)
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 100),
-                    itemCount: _payers.length,
+                    itemCount: _payers.length + 1,
                     separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) => _PayerEditCard(
-                      payer: _payers[i],
-                      color: payerShareColorForIndex(i),
-                      onChanged: () => setState(() {}),
-                      onRemove: () => _removeAt(i),
-                    ),
+                    itemBuilder: (_, i) {
+                      if (i == _payers.length) {
+                        return OutlinedButton.icon(
+                          onPressed: _openAddSheet,
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          label: const Text('Adicionar fonte'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1e40af),
+                            side: const BorderSide(color: Color(0xFFbfdbfe)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                        );
+                      }
+                      return _PayerEditCard(
+                        payer: _payers[i],
+                        color: payerShareColorForIndex(i),
+                        onChanged: () => setState(() {}),
+                        onRemove: () => _removeAt(i),
+                      );
+                    },
                   ),
           ),
         ],
@@ -158,6 +175,7 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
     final selected = await showModalBottomSheet<List<PayerCatalogEntry>>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -265,23 +283,25 @@ class _TotalChip extends StatelessWidget {
 }
 
 class _EmptyEditor extends StatelessWidget {
-  const _EmptyEditor();
+  const _EmptyEditor({required this.onAdd});
+
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 40),
+        padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
+            const Icon(
               Icons.pie_chart_outline_rounded,
               size: 40,
               color: Color(0xFF9ca3af),
             ),
-            SizedBox(height: 14),
-            Text(
+            const SizedBox(height: 14),
+            const Text(
               'Nenhuma fonte pagadora',
               style: TextStyle(
                 fontSize: 16,
@@ -289,14 +309,31 @@ class _EmptyEditor extends StatelessWidget {
                 color: Color(0xFF0f1729),
               ),
             ),
-            SizedBox(height: 6),
-            Text(
-              'Toque em Adicionar para incluir convênios, SUS, particular e outras fontes.',
+            const SizedBox(height: 6),
+            const Text(
+              'Adicione convênios, SUS, particular e outras fontes do faturamento.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
                 color: Color(0xFF6b7280),
                 height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: onAdd,
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Adicionar fonte'),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1e40af),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ],
@@ -451,15 +488,27 @@ class _AddPayerSourcesSheet extends StatefulWidget {
 }
 
 class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
-  String _query = '';
+  late final TextEditingController _queryCtrl;
   final Set<String> _selectedIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _queryCtrl = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _queryCtrl.dispose();
+    super.dispose();
+  }
 
   List<PayerCatalogEntry> get _available => mockPayerCatalog
       .where((e) => !widget.usedNames.contains(e.name.toLowerCase()))
       .toList();
 
   List<PayerCatalogEntry> get _filtered {
-    final q = _query.trim().toLowerCase();
+    final q = _queryCtrl.text.trim().toLowerCase();
     final base = _available;
     if (q.isEmpty) return base;
     return base.where((e) => e.name.toLowerCase().contains(q)).toList();
@@ -503,8 +552,9 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                 ),
                 const SizedBox(height: 14),
                 TextField(
+                  controller: _queryCtrl,
                   autofocus: true,
-                  onChanged: (q) => setState(() => _query = q),
+                  onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Buscar fonte pagadora…',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
@@ -526,7 +576,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     child: Text(
                       _available.isEmpty
                           ? 'Todas as fontes do catálogo já foram adicionadas'
-                          : 'Nada encontrado para "$_query"',
+                          : 'Nada encontrado para "${_queryCtrl.text.trim()}"',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 13.5,

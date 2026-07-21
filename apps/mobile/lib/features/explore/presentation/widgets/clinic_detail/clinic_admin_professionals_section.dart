@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 
@@ -9,38 +10,30 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 /// mirroring the Médicos section: essential contact info (phone/email), a
 /// badge area, and a relationship rating. The "Ver todos" link to the full
 /// list lives on the section header.
-class ClinicAdminProfessionalsSection extends StatefulWidget {
+class ClinicAdminProfessionalsSection extends StatelessWidget {
   const ClinicAdminProfessionalsSection({
     super.key,
     required this.professionals,
     required this.facilityName,
+    this.hasMore = false,
+    this.onLoadMore,
     this.onAssociate,
   });
 
   final List<AdministrativeProfessional> professionals;
   final String facilityName;
 
+  /// When true, a trailing spinner page is shown and [onLoadMore] is called
+  /// as the user reaches the end of the loaded cards.
+  final bool hasMore;
+  final VoidCallback? onLoadMore;
+
   /// Opens the full list / associate flow when the roster is empty.
   final VoidCallback? onAssociate;
 
   @override
-  State<ClinicAdminProfessionalsSection> createState() =>
-      _ClinicAdminProfessionalsSectionState();
-}
-
-class _ClinicAdminProfessionalsSectionState
-    extends State<ClinicAdminProfessionalsSection> {
-  final PageController _controller = PageController(viewportFraction: 0.86);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (widget.professionals.isEmpty) {
+    if (professionals.isEmpty && !hasMore) {
       return ClinicDetailCard(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -51,10 +44,10 @@ class _ClinicAdminProfessionalsSectionState
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
               ),
-              if (widget.onAssociate != null) ...[
+              if (onAssociate != null) ...[
                 const SizedBox(height: 12),
                 TextButton.icon(
-                  onPressed: widget.onAssociate,
+                  onPressed: onAssociate,
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                   label: const Text('Associar profissionais'),
                   style: TextButton.styleFrom(
@@ -68,21 +61,14 @@ class _ClinicAdminProfessionalsSectionState
       );
     }
 
-    return SizedBox(
+    return FacilityRosterPageView(
       height: 220,
-      child: PageView.builder(
-        controller: _controller,
-        itemCount: widget.professionals.length,
-        itemBuilder: (_, i) => Padding(
-          padding: EdgeInsets.only(
-            left: i == 0 ? 20 : 6,
-            right: i == widget.professionals.length - 1 ? 20 : 6,
-          ),
-          child: _ProfessionalCard(
-            professional: widget.professionals[i],
-            facilityName: widget.facilityName,
-          ),
-        ),
+      itemCount: professionals.length,
+      hasMore: hasMore,
+      onLoadMore: onLoadMore,
+      itemBuilder: (_, i) => _ProfessionalCard(
+        professional: professionals[i],
+        facilityName: facilityName,
       ),
     );
   }

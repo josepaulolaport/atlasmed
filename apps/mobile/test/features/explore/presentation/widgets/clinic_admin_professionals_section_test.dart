@@ -49,4 +49,32 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('shows trailing loader while hasMore', (tester) async {
+    const professionals = [
+      AdministrativeProfessional(
+        id: '1',
+        name: 'Carlos Mendes',
+        roleTitle: 'Diretor administrativo',
+        email: 'carlos@test.com',
+        phone: '11999999999',
+        contactType: 'DECISOR',
+      ),
+    ];
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: ClinicAdminProfessionalsSection(
+            professionals: professionals,
+            facilityName: 'Clínica Teste',
+            hasMore: true,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Carregando…'), findsNothing);
+  });
 }

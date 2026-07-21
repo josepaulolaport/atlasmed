@@ -56,77 +56,16 @@ class _ClinicFieldNotesSectionState extends State<ClinicFieldNotesSection> {
   }
 
   Future<void> _addNote() async {
-    final controller = TextEditingController();
     final text = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 16,
-          bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Nova nota de campo',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF0f1729),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Só você verá esta nota.',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              maxLines: 4,
-              minLines: 2,
-              decoration: InputDecoration(
-                hintText: 'Ex.: Estacionamento difícil, usar Zona Azul...',
-                filled: true,
-                fillColor: const Color(0xFFf8f9fb),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.all(14),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () =>
-                    Navigator.of(sheetContext).pop(controller.text.trim()),
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF1e40af),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Salvar nota'),
-              ),
-            ),
-          ],
-        ),
-      ),
+      builder: (_) => const _AddFieldNoteSheet(),
     );
-    controller.dispose();
 
     if (text != null && text.isNotEmpty && mounted) {
       setState(() {
@@ -140,6 +79,96 @@ class _ClinicFieldNotesSectionState extends State<ClinicFieldNotesSection> {
         ];
       });
     }
+  }
+}
+
+/// Owns its [TextEditingController] so dismiss-while-empty cannot race
+/// InheritedWidget teardown (`_dependents.isEmpty`).
+class _AddFieldNoteSheet extends StatefulWidget {
+  const _AddFieldNoteSheet();
+
+  @override
+  State<_AddFieldNoteSheet> createState() => _AddFieldNoteSheetState();
+}
+
+class _AddFieldNoteSheetState extends State<_AddFieldNoteSheet> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 16,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nova nota de campo',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Só você verá esta nota.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            maxLines: 4,
+            minLines: 2,
+            decoration: InputDecoration(
+              hintText: 'Ex.: Estacionamento difícil, usar Zona Azul...',
+              filled: true,
+              fillColor: const Color(0xFFf8f9fb),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.all(14),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(_controller.text.trim()),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1e40af),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Salvar nota'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

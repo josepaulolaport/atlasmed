@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_suggestion_sheet.dart';
 
-/// Shared label/value row with a trailing pencil that opens the suggestion
-/// sheet. Used by "Informações administrativas" and the médico personal
-/// fields (Formação, Aniversário, Time, Interesses).
+/// Field block with label above value. Tap copies when a value is present;
+/// the pencil opens the suggest-edit sheet.
 class EditableFieldRow extends StatelessWidget {
   const EditableFieldRow({
     super.key,
@@ -11,77 +11,132 @@ class EditableFieldRow extends StatelessWidget {
     required this.value,
     this.icon,
     this.emptyActionLabel = '+ Completar',
-    this.labelWidth = 84,
+    this.showDivider = true,
   });
 
   final String label;
   final String? value;
   final IconData? icon;
   final String emptyActionLabel;
-  final double labelWidth;
+
+  /// Soft hairline under the field (omit on the last row in a card).
+  final bool showDivider;
 
   bool get _isEmpty => value == null || value!.trim().isEmpty;
 
+  Future<void> _copy(BuildContext context) async {
+    final text = value?.trim();
+    if (text == null || text.isEmpty) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    await Clipboard.setData(ClipboardData(text: text));
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text('$label copiado'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _suggestEdit(BuildContext context) {
+    final label = this.label;
+    final value = this.value;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      showEditSuggestionSheet(context, fieldLabel: label, currentValue: value);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 15, color: const Color(0xFF9ca3af)),
-            const SizedBox(width: 8),
-          ],
-          SizedBox(
-            width: labelWidth,
-            child: Text(
-              label.toUpperCase(),
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
-                color: Color(0xFF9ca3af),
-              ),
-            ),
-          ),
-          Expanded(
-            child: _isEmpty
-                ? _EmptyValueChip(
-                    label: emptyActionLabel,
-                    onTap: () => showEditSuggestionSheet(
-                      context,
-                      fieldLabel: label,
-                      currentValue: null,
-                    ),
-                  )
-                : Text(
-                    value!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF0f1729),
-                    ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: _isEmpty
+                ? () => _suggestEdit(context)
+                : () => _copy(context),
+            splashColor: const Color(0xFF1e40af).withValues(alpha: 0.08),
+            highlightColor: const Color(0xFF1e40af).withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (icon != null) ...[
+                        Icon(icon, size: 15, color: const Color(0xFF9ca3af)),
+                        const SizedBox(width: 8),
+                      ],
+                      Expanded(
+                        child: Text(
+                          label.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.3,
+                            color: Color(0xFF9ca3af),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-          ),
-          InkWell(
-            borderRadius: BorderRadius.circular(14),
-            onTap: () => showEditSuggestionSheet(
-              context,
-              fieldLabel: label,
-              currentValue: value,
-            ),
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(
-                Icons.edit_outlined,
-                size: 14,
-                color: Color(0xFFb0b7c3),
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            left: icon != null ? 23 : 0,
+                            top: 8,
+                          ),
+                          child: _isEmpty
+                              ? _EmptyValueChip(
+                                  label: emptyActionLabel,
+                                  onTap: () => _suggestEdit(context),
+                                )
+                              : Text(
+                                  value!,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.35,
+                                    color: Color(0xFF0f1729),
+                                  ),
+                                ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _suggestEdit(context),
+                        icon: const Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: Color(0xFF6b7280),
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 40,
+                          minHeight: 40,
+                        ),
+                        splashRadius: 20,
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
+        ),
+        if (showDivider)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Divider(height: 1, thickness: 1, color: Color(0xFFf3f4f6)),
+          ),
+      ],
     );
   }
 }

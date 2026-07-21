@@ -1,7 +1,16 @@
 // Domain models for establishment detail sections (Spec 0005).
 
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+
+/// One page of a facility roster (doctors or administrative professionals).
+class FacilityRosterPage<T> {
+  const FacilityRosterPage({required this.items, required this.pagination});
+
+  final List<T> items;
+  final Pagination pagination;
+}
 
 /// WGS84 coordinates for map sections.
 class EstablishmentLocation {
@@ -268,16 +277,18 @@ extension FacilityCommercialStatusX on FacilityCommercialStatus {
 enum FacilityPurchaseStatus { nonBuyer, lowBuyer, regularBuyer, highBuyer }
 
 extension FacilityPurchaseStatusX on FacilityPurchaseStatus {
+  /// Short labels for the header "Compra: …" chip — avoid repeating "Compra"
+  /// and never reuse commercial-status wording like "Inativa".
   String get label {
     switch (this) {
       case FacilityPurchaseStatus.nonBuyer:
-        return 'Inativa';
+        return 'Não compra';
       case FacilityPurchaseStatus.lowBuyer:
-        return 'Compra ocasional';
+        return 'Ocasional';
       case FacilityPurchaseStatus.regularBuyer:
-        return 'Compra regular';
+        return 'Regular';
       case FacilityPurchaseStatus.highBuyer:
-        return 'Compra frequente';
+        return 'Frequente';
     }
   }
 
@@ -661,6 +672,8 @@ class EstablishmentDetailSections {
     this.services = const [],
     this.consultantName,
     this.consultantSince,
+    this.managerName,
+    this.managerSince,
     this.territoryLabel,
     this.regionZoneLabel,
     this.administrators = const [],
@@ -677,6 +690,7 @@ class EstablishmentDetailSections {
     this.visitTimeline = const [],
     this.visitStats,
     this.phone,
+    this.whatsapp,
     this.email,
     this.documents = const [],
   });
@@ -685,6 +699,11 @@ class EstablishmentDetailSections {
   final List<FacilityServiceChip> services;
   final String? consultantName;
   final DateTime? consultantSince;
+
+  /// Territory manager overseeing the consultant's patch.
+  final String? managerName;
+  final DateTime? managerSince;
+
   final String? territoryLabel;
 
   /// e.g. "Z. Sul" — sub-territory / commercial zone label.
@@ -708,6 +727,7 @@ class EstablishmentDetailSections {
   /// Facility-level contact — mocked here since the real `ClinicDetail`
   /// (network-backed) doesn't reliably carry these for every facility yet.
   final String? phone;
+  final String? whatsapp;
   final String? email;
 
   /// "Cadastro" — registration document requirements and their review status.

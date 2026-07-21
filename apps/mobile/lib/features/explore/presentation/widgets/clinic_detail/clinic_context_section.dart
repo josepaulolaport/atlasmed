@@ -6,12 +6,16 @@ class ClinicContextSection extends StatelessWidget {
     super.key,
     this.consultantName,
     this.consultantSince,
+    this.managerName,
+    this.managerSince,
     this.regionZoneLabel,
     this.city,
   });
 
   final String? consultantName;
   final DateTime? consultantSince;
+  final String? managerName;
+  final DateTime? managerSince;
   final String? regionZoneLabel;
   final String? city;
 
@@ -20,47 +24,23 @@ class ClinicContextSection extends StatelessWidget {
     return ClinicDetailCard(
       child: Column(
         children: [
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFFeef4ff),
-                child: Text(
-                  _initials(consultantName),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1e40af),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      consultantName ?? '—',
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF0f1729),
-                      ),
-                    ),
-                    Text(
-                      consultantSince != null
-                          ? 'consultor responsável · desde ${_formatMonthYear(consultantSince!)}'
-                          : 'consultor responsável',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF9ca3af),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          _PersonRow(
+            name: consultantName,
+            roleLabel: consultantSince != null
+                ? 'consultor responsável · desde ${_formatMonthYear(consultantSince!)}'
+                : 'consultor responsável',
           ),
+          if (managerName != null && managerName!.trim().isNotEmpty) ...[
+            const SizedBox(height: 14),
+            _PersonRow(
+              name: managerName,
+              roleLabel: managerSince != null
+                  ? 'gerente responsável · desde ${_formatMonthYear(managerSince!)}'
+                  : 'gerente responsável',
+              avatarColor: const Color(0xFFecfdf5),
+              initialsColor: const Color(0xFF047857),
+            ),
+          ],
           const Divider(height: 20, color: Color(0xFFf3f4f6)),
           if (regionZoneLabel != null)
             _ContextRow(
@@ -82,15 +62,6 @@ class ClinicContextSection extends StatelessWidget {
     );
   }
 
-  String _initials(String? name) {
-    if (name == null || name.trim().isEmpty) return '?';
-    final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.length >= 2) {
-      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-    }
-    return name[0].toUpperCase();
-  }
-
   String _formatMonthYear(DateTime d) {
     const months = [
       'jan',
@@ -107,6 +78,72 @@ class ClinicContextSection extends StatelessWidget {
       'dez',
     ];
     return '${months[d.month - 1]}/${d.year}';
+  }
+}
+
+class _PersonRow extends StatelessWidget {
+  const _PersonRow({
+    required this.name,
+    required this.roleLabel,
+    this.avatarColor = const Color(0xFFeef4ff),
+    this.initialsColor = const Color(0xFF1e40af),
+  });
+
+  final String? name;
+  final String roleLabel;
+  final Color avatarColor;
+  final Color initialsColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: avatarColor,
+          child: Text(
+            _initials(name),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: initialsColor,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name?.trim().isNotEmpty == true ? name!.trim() : '—',
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF0f1729),
+                ),
+              ),
+              Text(
+                roleLabel,
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF9ca3af),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _initials(String? name) {
+    if (name == null || name.trim().isEmpty) return '?';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    }
+    return name[0].toUpperCase();
   }
 }
 

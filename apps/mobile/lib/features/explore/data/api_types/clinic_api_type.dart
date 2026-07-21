@@ -21,6 +21,9 @@ class Clinic {
     this.email,
     this.website,
     this.streetAddress,
+    this.streetNumber,
+    this.addressComplement,
+    this.postalCode,
     this.taxIdType,
     this.cnpj,
     this.cpf,
@@ -49,6 +52,11 @@ class Clinic {
       email: readNullableString(map['email']),
       website: readNullableString(map['website']),
       streetAddress: readNullableString(map['streetAddress']),
+      streetNumber: readNullableString(map['streetNumber']),
+      addressComplement: readNullableString(map['addressComplement']),
+      postalCode: readNullableString(
+        map['postalCode'] ?? map['cep'] ?? map['zipCode'],
+      ),
       taxIdType: readNullableString(map['taxIdType']),
       cnpj: readNullableString(map['cnpj']),
       cpf: readNullableString(map['cpf']),
@@ -76,6 +84,9 @@ class Clinic {
   final String? email;
   final String? website;
   final String? streetAddress;
+  final String? streetNumber;
+  final String? addressComplement;
+  final String? postalCode;
   final String? taxIdType;
   final String? cnpj;
   final String? cpf;

@@ -38,7 +38,9 @@ class ClinicNearbyMapScreen extends StatefulWidget {
 }
 
 class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
-  late double _radiusKm = establishmentNearbyDefaultRadiusKm;
+  // Open at the same radius as the inline preview ("5 KM") so the first
+  // paint matches what the user just saw; the slider still goes up to 50 km.
+  late double _radiusKm = establishmentNearbyPreviewRadiusKm;
   // Only fed to `MapWidget.viewport` up until the map is created (see
   // `_viewportApplied`) — after that all camera movement goes through
   // imperative `MapboxMap` calls instead.
@@ -179,6 +181,11 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
                             setState(() => _mapUnavailable = true),
                         onStyleLoadedListener: (_) async {
                           await _syncAnnotations();
+                          // Wait one frame so MapWidget has a non-zero size —
+                          // cameraForCoordinatesPadding is wrong (or no-ops)
+                          // when queried against a 0×0 viewport on first load.
+                          await WidgetsBinding.instance.endOfFrame;
+                          if (!mounted) return;
                           final focusId = widget.initialFocusId;
                           if (focusId != null && !_initialFocusHandled) {
                             _initialFocusHandled = true;
@@ -187,7 +194,7 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
                             // Corrects the coarse bootstrap zoom used for
                             // the declarative initial viewport now that a
                             // real `MapboxMap` exists to fit accurately.
-                            _fitCameraToRadius(_radiusKm);
+                            await _fitCameraToRadius(_radiusKm);
                           }
                         },
                       ),
@@ -277,17 +284,25 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   /// Re-centers the camera on the establishment this screen belongs to and
   /// eases the zoom so a circle of [radiusKm] fits comfortably in view.
   ///
-  /// Uses Mapbox's own [MapboxMap.cameraForCoordinatesPadding] — fed the
-  /// circle's actual boundary points — instead of hand-rolled Web-Mercator
-  /// math. The native call already knows the real device viewport size and
-  /// the SDK's own tile/zoom conventions, which a hand-rolled formula easily
-  /// gets subtly wrong (an earlier version rendered the circle much larger
-  /// on screen than the zoom it picked implied). Since the boundary is a
-  /// perfect circle around [EstablishmentLocation.latitude]/`longitude`,
-  /// the fitted center comes back equal to that point with no extra work.
+  /// Prefers Mapbox's [MapboxMap.cameraForCoordinatesPadding] (fed the
+  /// circle's boundary) so the SDK accounts for the real viewport size and
+  /// its own tile/zoom conventions. Falls back to a Web-Mercator zoom from
+  /// [MapboxMap.getSize] when that call returns a null/unusable zoom —
+  /// which is what previously left the circle clipped or tiny relative to
+  /// the camera.
   Future<void> _fitCameraToRadius(double radiusKm) async {
     final map = _mapboxMap;
     if (map == null) return;
+
+    const padding = 48.0;
+    final edgeInsets = MbxEdgeInsets(
+      top: padding,
+      left: padding,
+      bottom: padding,
+      right: padding,
+    );
+    final center = _point(widget.center);
+
     try {
       final boundary = _circlePositions(
         widget.center,
@@ -295,16 +310,81 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
       ).map((position) => Point(coordinates: position)).toList();
       final fitted = await map.cameraForCoordinatesPadding(
         boundary,
-        CameraOptions(),
-        MbxEdgeInsets(top: 32, left: 32, bottom: 32, right: 32),
+        CameraOptions(center: center, bearing: 0, pitch: 0),
+        edgeInsets,
         null,
         null,
       );
       if (!mounted) return;
-      await map.easeTo(fitted, MapAnimationOptions(duration: 250));
+
+      final zoom = fitted.zoom ?? await _zoomForRadiusKm(map, radiusKm);
+      await map.easeTo(
+        CameraOptions(
+          center: center,
+          zoom: zoom,
+          bearing: 0,
+          pitch: 0,
+          padding: edgeInsets,
+        ),
+        MapAnimationOptions(duration: 250),
+      );
     } catch (_) {
-      // Cosmetic only — never trips the offline-placeholder fallback.
+      if (!mounted) return;
+      try {
+        final zoom = await _zoomForRadiusKm(map, radiusKm);
+        await map.easeTo(
+          CameraOptions(
+            center: center,
+            zoom: zoom,
+            bearing: 0,
+            pitch: 0,
+            padding: edgeInsets,
+          ),
+          MapAnimationOptions(duration: 250),
+        );
+      } catch (_) {
+        // Cosmetic only — never trips the offline-placeholder fallback.
+      }
     }
+  }
+
+  /// Web-Mercator zoom so a circle of [radiusKm] fills most of the map
+  /// height (with ~20% margin). Used when the native fit call can't give
+  /// a zoom, and also as the declarative bootstrap guess.
+  Future<double> _zoomForRadiusKm(MapboxMap map, double radiusKm) async {
+    double mapHeightPx = 400;
+    try {
+      final size = await map.getSize();
+      if (size.height > 0) mapHeightPx = size.height;
+    } catch (_) {
+      // Keep fallback height.
+    }
+    return _zoomForRadiusKmAt(
+      radiusKm,
+      latitude: widget.center.latitude,
+      mapHeightPx: mapHeightPx,
+    );
+  }
+
+  double _zoomForRadiusKmAt(
+    double radiusKm, {
+    required double latitude,
+    required double mapHeightPx,
+  }) {
+    // Diameter × margin so the ring sits inside the padded viewport.
+    final diameterM = radiusKm * 1000 * 2 * 1.2;
+    final latRad = latitude * math.pi / 180;
+    const metersPerPixelAtZoom0 = 156543.03392;
+    final usableHeight = math.max(mapHeightPx * 0.85, 1.0);
+    final zoom =
+        math.log(
+          metersPerPixelAtZoom0 *
+              math.cos(latRad).abs() *
+              usableHeight /
+              diameterM,
+        ) /
+        math.ln2;
+    return zoom.clamp(3.0, 18.0);
   }
 
   /// Rough starting zoom for the *declarative* initial viewport, before the
@@ -313,11 +393,11 @@ class _ClinicNearbyMapScreenState extends State<ClinicNearbyMapScreen> {
   /// `onStyleLoadedListener`), so this only needs to be in the right
   /// ballpark to avoid a jarring jump on first paint.
   double _initialZoomGuess(double radiusKm) {
-    if (radiusKm <= 2) return 13;
-    if (radiusKm <= 5) return 12;
-    if (radiusKm <= 10) return 11;
-    if (radiusKm <= 25) return 10;
-    return 9;
+    return _zoomForRadiusKmAt(
+      radiusKm,
+      latitude: widget.center.latitude,
+      mapHeightPx: 420,
+    );
   }
 
   Future<void> _syncAnnotations() async {

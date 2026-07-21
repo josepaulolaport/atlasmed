@@ -14,7 +14,7 @@ import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 /// establishment's own location, full-screen — the richer radius-slider
 /// experience with nearby pins and cards lives behind the dedicated
 /// "Ver estabelecimentos próximos" entry point (`ClinicNearbyMapScreen`).
-class ClinicLocationSection extends StatelessWidget {
+class ClinicLocationSection extends StatefulWidget {
   const ClinicLocationSection({
     super.key,
     required this.facilityId,
@@ -29,9 +29,23 @@ class ClinicLocationSection extends StatelessWidget {
   final List<NearbyEstablishment> nearbyEstablishments;
 
   @override
+  State<ClinicLocationSection> createState() => _ClinicLocationSectionState();
+}
+
+class _ClinicLocationSectionState extends State<ClinicLocationSection> {
+  /// Bumped after a full-screen Mapbox route pops so the mini preview gets a
+  /// fresh platform view. Leaving the mini `MapWidget` mounted under another
+  /// Mapbox screen blanks its surface on return (Mapbox Flutter quirk).
+  int _miniMapGeneration = 0;
+
+  /// While a full-screen map is open we swap the preview for a placeholder so
+  /// only one native Mapbox view is alive at a time.
+  bool _fullMapOpen = false;
+
+  @override
   Widget build(BuildContext context) {
     final nearby = filterNearbyByRadius(
-      nearbyEstablishments,
+      widget.nearbyEstablishments,
       establishmentNearbyPreviewRadiusKm,
     );
 
@@ -44,16 +58,22 @@ class ClinicLocationSection extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
-              children: [_ExpandButton(onTap: () => _openLocationMap(context))],
+              children: [_ExpandButton(onTap: () => _openLocationMap())],
             ),
           ),
           GestureDetector(
-            onTap: () => _openLocationMap(context),
+            onTap: () => _openLocationMap(),
             child: ClipRRect(
               borderRadius: BorderRadius.zero,
               child: SizedBox(
                 height: 160,
-                child: _MiniMapPreview(location: location, nearby: nearby),
+                child: _fullMapOpen
+                    ? _MapPlaceholder(location: widget.location, nearby: nearby)
+                    : _MiniMapPreview(
+                        key: ValueKey('clinic-mini-$_miniMapGeneration'),
+                        location: widget.location,
+                        nearby: nearby,
+                      ),
               ),
             ),
           ),
@@ -89,8 +109,7 @@ class ClinicLocationSection extends StatelessWidget {
                 separatorBuilder: (_, _) => const SizedBox(width: 8),
                 itemBuilder: (_, i) => _NearbyClinicCard(
                   establishment: nearby[i],
-                  onViewMore: () =>
-                      _openNearbyMap(context, focusId: nearby[i].id),
+                  onViewMore: () => _openNearbyMap(focusId: nearby[i].id),
                 ),
               ),
             ),
@@ -99,7 +118,7 @@ class ClinicLocationSection extends StatelessWidget {
             child: SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => _openNearbyMap(context),
+                onPressed: () => _openNearbyMap(),
                 icon: const Icon(Icons.map_rounded, size: 18),
                 label: const Text('Ver estabelecimentos próximos'),
                 style: OutlinedButton.styleFrom(
@@ -120,14 +139,12 @@ class ClinicLocationSection extends StatelessWidget {
 
   /// "Expandir" and tapping the mini preview both just show this
   /// establishment's own pin, full-screen — no nearby pins, no radius
-  /// controls. That richer view is `_openNearbyMap` below.
-  void _openLocationMap(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ClinicLocationMapScreen(
-          facilityName: facilityName,
-          location: location,
-        ),
+  /// controls. That richer view is [_openNearbyMap] below.
+  Future<void> _openLocationMap() async {
+    await _openFullMap(
+      ClinicLocationMapScreen(
+        facilityName: widget.facilityName,
+        location: widget.location,
       ),
     );
   }
@@ -135,18 +152,31 @@ class ClinicLocationSection extends StatelessWidget {
   /// Opens the radius-slider nearby-clinics map. When [focusId] is given
   /// (from a card's "Ver mais"), that establishment is centered/zoomed in
   /// on with its callout already open, instead of showing the overview.
-  void _openNearbyMap(BuildContext context, {String? focusId}) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => ClinicNearbyMapScreen(
-          facilityId: facilityId,
-          facilityName: facilityName,
-          center: location,
-          allNearby: nearbyEstablishments,
-          initialFocusId: focusId,
-        ),
+  Future<void> _openNearbyMap({String? focusId}) async {
+    await _openFullMap(
+      ClinicNearbyMapScreen(
+        facilityId: widget.facilityId,
+        facilityName: widget.facilityName,
+        center: widget.location,
+        allNearby: widget.nearbyEstablishments,
+        initialFocusId: focusId,
       ),
     );
+  }
+
+  Future<void> _openFullMap(Widget screen) async {
+    setState(() => _fullMapOpen = true);
+    // Let the mini MapWidget dispose before the full-screen one mounts.
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted) return;
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => screen));
+    if (!mounted) return;
+    setState(() {
+      _fullMapOpen = false;
+      _miniMapGeneration++;
+    });
   }
 }
 
@@ -303,7 +333,11 @@ class _NearbyClinicCard extends StatelessWidget {
 }
 
 class _MiniMapPreview extends StatefulWidget {
-  const _MiniMapPreview({required this.location, required this.nearby});
+  const _MiniMapPreview({
+    super.key,
+    required this.location,
+    required this.nearby,
+  });
 
   final EstablishmentLocation location;
   final List<NearbyEstablishment> nearby;

@@ -24,8 +24,13 @@ class ClinicDetail {
 
   // Additional detail fields
   final String? phone;
+  final String? whatsapp;
   final String? consultantName;
   final String? streetAddress;
+  final String? streetNumber;
+  final String? addressComplement;
+  final String? postalCode;
+  final String? state;
 
   // Admin info
   final String? taxIdType;
@@ -49,8 +54,13 @@ class ClinicDetail {
     required this.isPriority,
     required this.products,
     this.phone,
+    this.whatsapp,
     this.consultantName,
     this.streetAddress,
+    this.streetNumber,
+    this.addressComplement,
+    this.postalCode,
+    this.state,
     this.taxIdType,
     this.cnpj,
     this.cpf,
@@ -60,6 +70,30 @@ class ClinicDetail {
     this.openingHours,
     this.registeredSince,
   });
+
+  /// Neighbourhood + street + number + complement as one line for "Endereço".
+  String? get composedAddressLine {
+    final streetParts = <String>[];
+    final street = streetAddress?.trim();
+    final number = streetNumber?.trim();
+    if (street != null && street.isNotEmpty) {
+      streetParts.add(
+        number != null && number.isNotEmpty ? '$street, $number' : street,
+      );
+    } else if (number != null && number.isNotEmpty) {
+      streetParts.add(number);
+    }
+    final complement = addressComplement?.trim();
+    if (complement != null && complement.isNotEmpty) {
+      streetParts.add(complement);
+    }
+    final hood = neighborhood.trim();
+    final line = <String>[
+      if (hood.isNotEmpty) hood,
+      if (streetParts.isNotEmpty) streetParts.join(' · '),
+    ].join(' · ');
+    return line.isEmpty ? null : line;
+  }
 }
 
 // ── Sub-models ────────────────────────────────────────────────

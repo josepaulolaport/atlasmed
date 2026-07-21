@@ -1,19 +1,35 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
+/// Side-scroll roster page size (Phase 1 mock — keep small so paging is obvious).
+const int facilityRosterPageSize = 2;
+
+/// Simulated network latency for roster page fetches.
+const Duration facilityRosterPageDelay = Duration(milliseconds: 900);
+
 /// Phase 1 mock data for establishment detail sections.
 EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
+  final nearbySeed = mockNearbyClinicById(facilityId);
   final seed = facilityId.hashCode.abs();
-  final baseLat = -23.5505 + (seed % 100) * 0.0001;
-  final baseLng = -46.6333 + (seed % 100) * 0.0001;
+  final baseLat = nearbySeed?.latitude ?? (-23.5505 + (seed % 100) * 0.0001);
+  final baseLng = nearbySeed?.longitude ?? (-46.6333 + (seed % 100) * 0.0001);
   final now = DateTime.now();
+  final formattedAddress = nearbySeed != null
+      ? '${nearbySeed.streetAddress}, ${nearbySeed.streetNumber}'
+            '${nearbySeed.addressComplement != null ? ' - ${nearbySeed.addressComplement}' : ''}'
+            ' — ${nearbySeed.neighborhood}, São Paulo, SP'
+      : 'Av. Paulista, 1000 — Bela Vista, São Paulo, SP';
 
   return EstablishmentDetailSections(
     location: EstablishmentLocation(
       latitude: baseLat,
       longitude: baseLng,
-      formattedAddress: 'Av. Paulista, 1000 — Bela Vista, São Paulo, SP',
+      formattedAddress: formattedAddress,
     ),
     services: const [
       FacilityServiceChip(serviceCode: '123', classificationCode: '01'),
@@ -22,73 +38,14 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
     ],
     consultantName: 'Ana Silva',
     consultantSince: DateTime(2023, 3, 1),
+    managerName: 'Roberto Mendes',
+    managerSince: DateTime(2021, 8, 1),
     territoryLabel: 'Patch Centro SP',
     regionZoneLabel: 'Z. Sul',
-    administrators: const [
-      AdministrativeProfessional(
-        id: 'rep-1',
-        name: 'Carlos Mendes',
-        roleTitle: 'Diretor administrativo',
-        email: 'carlos.mendes@clinica.com.br',
-        phone: '11987654321',
-        contactType: 'DECISOR',
-        relationshipScore: 8,
-      ),
-      AdministrativeProfessional(
-        id: 'rep-2',
-        name: 'Fernanda Lima',
-        roleTitle: 'Gerente de compras',
-        email: 'fernanda.lima@clinica.com.br',
-        phone: '11976543210',
-        contactType: 'COMPRADOR',
-      ),
-    ],
-    doctors: [
-      FacilityCrmDoctor(
-        id: 'doc-1',
-        name: 'Dra. Mariana Silva',
-        initials: 'MS',
-        hue: 340,
-        specialty: 'Ortopedia',
-        crm: 'CRM/SP 142.801',
-        phone: '11987654321',
-        email: 'mariana.silva@exemplo.com',
-        isPrescriber: true,
-        isDecisionMaker: true,
-        roleBadge: 'DECISORA',
-        education: 'USP (Medicina 2008)',
-        birthdayLabel: '14 de junho',
-        favoriteTeam: 'Palmeiras',
-        interests: 'Corrida de rua · vinhos',
-        relationshipScore: 9,
-        noteText: 'Prefere reuniões de manhã. Evita segundas.',
-      ),
-      FacilityCrmDoctor(
-        id: 'doc-2',
-        name: 'Dra. Helena Ferreira',
-        initials: 'HF',
-        hue: 210,
-        specialty: 'Ortopedia',
-        crm: 'CRM/SP 198.442',
-        phone: '11976543210',
-        email: 'helena.ferreira@exemplo.com',
-        isPrescriber: true,
-        roleBadge: 'NOVA',
-        education: 'UNIFESP (Medicina 2019)',
-        birthdayLabel: '02 de setembro',
-        relationshipScore: 5,
-      ),
-      const FacilityCrmDoctor(
-        id: 'doc-3',
-        name: 'Dr. Paulo Ferreira',
-        initials: 'PF',
-        hue: 160,
-        specialty: 'Clínica geral',
-        crm: 'CRM/SP 789012',
-        email: 'paulo.ferreira@exemplo.com',
-        isBuyer: true,
-      ),
-    ],
+    // Full catalogs for "Ver todos" / header specialties. Side-scroll strips
+    // load via [mockFacilityAdministratorsPage] / [mockFacilityDoctorsPage].
+    administrators: mockAllFacilityAdministrators(facilityId),
+    doctors: mockAllFacilityDoctors(facilityId),
     payers: const [
       PayerShare(id: 'hp-1', name: 'Outras', sharePercent: 50),
       PayerShare(id: 'hp-2', name: 'Sul América', sharePercent: 20),
@@ -180,8 +137,9 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
       lastPurchaseAt: now.subtract(const Duration(days: 68)),
     ),
     taxIdType: FacilityTaxIdType.pj,
-    phone: '1130405060',
-    email: 'contato@clinica.com.br',
+    phone: nearbySeed?.phone ?? '1130405060',
+    whatsapp: nearbySeed?.whatsapp ?? '11987654321',
+    email: nearbySeed?.email ?? 'contato@clinica.com.br',
     photos: PhotoGallerySummary(
       count: 5,
       thumbnailColors: const [
@@ -282,6 +240,159 @@ EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
   );
 }
 
+/// Full administrative roster catalog for a facility (Phase 1 mock).
+List<AdministrativeProfessional> mockAllFacilityAdministrators(
+  String facilityId,
+) {
+  if (facilityId.endsWith(':empty')) return const [];
+
+  const types = ['DECISOR', 'COMPRADOR', 'PROFESSIONAL'];
+  const roles = [
+    'Diretor administrativo',
+    'Gerente de compras',
+    'Coordenador financeiro',
+    'Assistente administrativo',
+    'Supervisor de contratos',
+    'Analista de faturamento',
+    'Secretária clínica',
+    'Comprador hospitalar',
+  ];
+  const names = [
+    'Carlos Mendes',
+    'Fernanda Lima',
+    'Ricardo Alves',
+    'Juliana Costa',
+    'Patrícia Nogueira',
+    'Bruno Teixeira',
+    'Camila Duarte',
+    'Eduardo Ramos',
+  ];
+
+  return List<AdministrativeProfessional>.generate(names.length, (i) {
+    final n = i + 1;
+    return AdministrativeProfessional(
+      id: 'rep-$n',
+      name: names[i],
+      roleTitle: roles[i],
+      email: '${names[i].split(' ').first.toLowerCase()}.$n@clinica.com.br',
+      phone: '119${(87654321 - i * 1111).toString().padLeft(8, '0')}',
+      contactType: types[i % types.length],
+      relationshipScore: i % 3 == 0 ? null : 4 + (i % 7),
+    );
+  });
+}
+
+/// Full doctor roster catalog for a facility (Phase 1 mock).
+List<FacilityCrmDoctor> mockAllFacilityDoctors(String facilityId) {
+  if (facilityId.endsWith(':empty')) return const [];
+
+  const specialties = [
+    'Ortopedia',
+    'Ortopedia',
+    'Clínica geral',
+    'Cardiologia',
+    'Neurologia',
+    'Dermatologia',
+    'Pediatria',
+    'Anestesiologia',
+    'Cirurgia geral',
+  ];
+  const names = [
+    ('Dra. Mariana Silva', 'MS', 340.0),
+    ('Dra. Helena Ferreira', 'HF', 210.0),
+    ('Dr. Paulo Ferreira', 'PF', 160.0),
+    ('Dr. André Souza', 'AS', 25.0),
+    ('Dra. Beatriz Campos', 'BC', 280.0),
+    ('Dr. Lucas Martins', 'LM', 190.0),
+    ('Dra. Renata Oliveira', 'RO', 12.0),
+    ('Dr. Felipe Araújo', 'FA', 95.0),
+    ('Dra. Sofia Mendes', 'SM', 330.0),
+  ];
+
+  return List<FacilityCrmDoctor>.generate(names.length, (i) {
+    final n = i + 1;
+    final (name, initials, hue) = names[i];
+    return FacilityCrmDoctor(
+      id: 'doc-$n',
+      name: name,
+      initials: initials,
+      hue: hue,
+      specialty: specialties[i],
+      crm: 'CRM/SP ${(140000 + i * 3711)}',
+      phone: i % 4 == 3
+          ? null
+          : '119${(87654321 - i * 2222).toString().padLeft(8, '0')}',
+      email: i % 5 == 4 ? null : '${initials.toLowerCase()}$n@exemplo.com',
+      isPrescriber: i % 2 == 0,
+      isBuyer: i == 2 || i == 7,
+      isDecisionMaker: i == 0 || i == 4,
+      roleBadge: i == 0
+          ? 'DECISORA'
+          : i == 1
+          ? 'NOVA'
+          : null,
+      education: i < 3 ? 'USP (Medicina ${2008 + i * 4})' : null,
+      birthdayLabel: i == 0 ? '14 de junho' : null,
+      favoriteTeam: i == 0 ? 'Palmeiras' : null,
+      interests: i == 0 ? 'Corrida de rua · vinhos' : null,
+      relationshipScore: i % 3 == 2 ? null : 3 + (i % 8),
+      noteText: i == 0 ? 'Prefere reuniões de manhã. Evita segundas.' : null,
+    );
+  });
+}
+
+/// One page of administrative professionals for the side-scroll strip.
+Future<FacilityRosterPage<AdministrativeProfessional>>
+mockFacilityAdministratorsPage({
+  required String facilityId,
+  required int page,
+  int limit = facilityRosterPageSize,
+}) async {
+  await Future<void>.delayed(facilityRosterPageDelay);
+  return _sliceFacilityRosterPage(
+    mockAllFacilityAdministrators(facilityId),
+    page: page,
+    limit: limit,
+  );
+}
+
+/// One page of doctors for the side-scroll strip.
+Future<FacilityRosterPage<FacilityCrmDoctor>> mockFacilityDoctorsPage({
+  required String facilityId,
+  required int page,
+  int limit = facilityRosterPageSize,
+}) async {
+  await Future<void>.delayed(facilityRosterPageDelay);
+  return _sliceFacilityRosterPage(
+    mockAllFacilityDoctors(facilityId),
+    page: page,
+    limit: limit,
+  );
+}
+
+FacilityRosterPage<T> _sliceFacilityRosterPage<T>(
+  List<T> all, {
+  required int page,
+  required int limit,
+}) {
+  final safeLimit = limit < 1 ? facilityRosterPageSize : limit;
+  final total = all.length;
+  final totalPages = total == 0 ? 0 : ((total + safeLimit - 1) ~/ safeLimit);
+  final safePage = totalPages == 0 ? 1 : page.clamp(1, totalPages);
+  final start = (safePage - 1) * safeLimit;
+  final end = (start + safeLimit).clamp(0, total);
+
+  return FacilityRosterPage<T>(
+    items: all.sublist(start, end),
+    pagination: Pagination(
+      page: totalPages == 0 ? 1 : safePage,
+      limit: safeLimit,
+      total: total,
+      totalPages: totalPages,
+    ),
+  );
+}
+
 /// Empty-roster fixture for Phase 1 empty/error UI checks.
 /// Triggered when [facilityId] ends with `:empty`.
 EstablishmentDetailSections mockEmptyEstablishmentDetailSections(
@@ -296,6 +407,8 @@ EstablishmentDetailSections mockEmptyEstablishmentDetailSections(
     ),
     consultantName: 'Ana Silva',
     consultantSince: DateTime(2023, 3, 1),
+    managerName: 'Roberto Mendes',
+    managerSince: DateTime(2021, 8, 1),
     territoryLabel: 'Patch Centro SP',
     regionZoneLabel: 'Z. Sul',
     administrators: const [],
@@ -356,203 +469,292 @@ List<EstablishmentDocument> _mockDocuments(DateTime now) => [
   ),
 ];
 
+/// Fixed absolute coords for Phase-1 "clínicas próximas" so tapping a pin
+/// / callout can open `/workspace/clinic/<id>` with a real mock detail page
+/// (same lat/lng as the pin — not regenerated from a hash).
+class MockNearbyClinic {
+  const MockNearbyClinic({
+    required this.id,
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    required this.specialtyLabel,
+    required this.status,
+    required this.neighborhood,
+    required this.streetAddress,
+    required this.streetNumber,
+    this.addressComplement,
+    this.phone = '1130405060',
+    this.whatsapp = '11987654321',
+    this.email,
+    this.cnpj,
+  });
+
+  final String id;
+  final String name;
+  final double latitude;
+  final double longitude;
+  final String specialtyLabel;
+  final ClinicStatus status;
+  final String neighborhood;
+  final String streetAddress;
+  final String streetNumber;
+  final String? addressComplement;
+  final String phone;
+  final String whatsapp;
+  final String? email;
+  final String? cnpj;
+}
+
+/// Catalog centered around Av. Paulista — distances are computed at use time
+/// against whichever facility is the search origin.
+const List<MockNearbyClinic> mockNearbyClinicCatalog = [
+  MockNearbyClinic(
+    id: 'near-1',
+    name: 'Centro Médico OrtoVita',
+    latitude: -23.5618,
+    longitude: -46.6559,
+    specialtyLabel: 'Ortopedia',
+    status: ClinicStatus.active,
+    neighborhood: 'Jardim Paulista',
+    streetAddress: 'Rua Augusta',
+    streetNumber: '2200',
+    addressComplement: 'Conjunto 12',
+    email: 'contato@ortovita.example',
+    cnpj: '12.345.678/0001-90',
+  ),
+  MockNearbyClinic(
+    id: 'near-2',
+    name: 'Instituto CardioMed',
+    latitude: -23.5612,
+    longitude: -46.6540,
+    specialtyLabel: 'Cardio',
+    status: ClinicStatus.negotiation,
+    neighborhood: 'Bela Vista',
+    streetAddress: 'Alameda Santos',
+    streetNumber: '890',
+    email: 'recepcao@cardiomed.example',
+    cnpj: '23.456.789/0001-01',
+  ),
+  MockNearbyClinic(
+    id: 'near-3',
+    name: 'Clínica Vitalis Itaim',
+    latitude: -23.5825,
+    longitude: -46.6752,
+    specialtyLabel: 'Multi',
+    status: ClinicStatus.active,
+    neighborhood: 'Itaim Bibi',
+    streetAddress: 'Rua Joaquim Floriano',
+    streetNumber: '454',
+    addressComplement: 'Sala 302',
+    email: 'contato@vitalis.example',
+    cnpj: '34.567.890/0001-12',
+  ),
+  MockNearbyClinic(
+    id: 'near-4',
+    name: 'Policlínica Primavera',
+    latitude: -23.5674,
+    longitude: -46.6912,
+    specialtyLabel: 'Derm · Ped',
+    status: ClinicStatus.inactive,
+    neighborhood: 'Pinheiros',
+    streetAddress: 'Rua dos Pinheiros',
+    streetNumber: '621',
+    email: 'agenda@primavera.example',
+    cnpj: '45.678.901/0001-23',
+  ),
+  MockNearbyClinic(
+    id: 'near-5',
+    name: 'Clínica São Lucas',
+    latitude: -23.6012,
+    longitude: -46.6638,
+    specialtyLabel: 'Multi',
+    status: ClinicStatus.active,
+    neighborhood: 'Moema',
+    streetAddress: 'Av. Ibirapuera',
+    streetNumber: '2500',
+    addressComplement: 'Bloco B',
+    email: 'contato@saolucas.example',
+    cnpj: '56.789.012/0001-34',
+  ),
+  MockNearbyClinic(
+    id: 'near-6',
+    name: 'Hospital Santa Clara',
+    latitude: -23.5890,
+    longitude: -46.6345,
+    specialtyLabel: 'Multi',
+    status: ClinicStatus.active,
+    neighborhood: 'Vila Mariana',
+    streetAddress: 'Rua Vergueiro',
+    streetNumber: '1300',
+    email: 'atendimento@santaclara.example',
+    cnpj: '67.890.123/0001-45',
+  ),
+  MockNearbyClinic(
+    id: 'near-7',
+    name: 'Centro Médico Paulista',
+    latitude: -23.5615,
+    longitude: -46.6553,
+    specialtyLabel: 'Clínica geral',
+    status: ClinicStatus.negotiation,
+    neighborhood: 'Consolação',
+    streetAddress: 'Av. Paulista',
+    streetNumber: '1578',
+    addressComplement: 'Cj. 91',
+    email: 'contato@cmpaulista.example',
+    cnpj: '78.901.234/0001-56',
+  ),
+  MockNearbyClinic(
+    id: 'near-8',
+    name: 'Lab Diagnóstico Avançado',
+    latitude: -23.5440,
+    longitude: -46.6575,
+    specialtyLabel: 'Diagnóstico',
+    status: ClinicStatus.active,
+    neighborhood: 'Higienópolis',
+    streetAddress: 'Rua Maranhão',
+    streetNumber: '210',
+    email: 'lab@diagnostico.example',
+    cnpj: '89.012.345/0001-67',
+  ),
+  MockNearbyClinic(
+    id: 'near-9',
+    name: 'Clínica Vida Plena',
+    latitude: -23.5365,
+    longitude: -46.6730,
+    specialtyLabel: 'Multi',
+    status: ClinicStatus.active,
+    neighborhood: 'Perdizes',
+    streetAddress: 'Rua Cardoso de Almeida',
+    streetNumber: '900',
+    email: 'contato@vidaplena.example',
+    cnpj: '90.123.456/0001-78',
+  ),
+  MockNearbyClinic(
+    id: 'near-10',
+    name: 'Instituto Ortopédico SP',
+    latitude: -23.5080,
+    longitude: -46.6250,
+    specialtyLabel: 'Ortopedia',
+    status: ClinicStatus.active,
+    neighborhood: 'Santana',
+    streetAddress: 'Av. Cruzeiro do Sul',
+    streetNumber: '1750',
+    addressComplement: 'Torre 2',
+    email: 'ortopedia@iosp.example',
+    cnpj: '01.234.567/0001-89',
+  ),
+  MockNearbyClinic(
+    id: 'near-11',
+    name: 'Centro de Imagem Norte',
+    latitude: -23.4805,
+    longitude: -46.6030,
+    specialtyLabel: 'Diagnóstico',
+    status: ClinicStatus.active,
+    neighborhood: 'Tucuruvi',
+    streetAddress: 'Av. Tucuruvi',
+    streetNumber: '640',
+    email: 'imagem@norte.example',
+    cnpj: '11.222.333/0001-44',
+  ),
+  MockNearbyClinic(
+    id: 'near-12',
+    name: 'Clínica Bem Estar',
+    latitude: -23.6520,
+    longitude: -46.7040,
+    specialtyLabel: 'Multi',
+    status: ClinicStatus.active,
+    neighborhood: 'Santo Amaro',
+    streetAddress: 'Av. Santo Amaro',
+    streetNumber: '3200',
+    email: 'contato@bemestar.example',
+    cnpj: '22.333.444/0001-55',
+  ),
+];
+
+MockNearbyClinic? mockNearbyClinicById(String id) {
+  for (final clinic in mockNearbyClinicCatalog) {
+    if (clinic.id == id) return clinic;
+  }
+  return null;
+}
+
+/// Header/identity mock for a nearby clinic opened from the map callout.
+/// Returns `null` for non-mock facility ids (caller falls through to the API).
+ClinicDetail? mockClinicDetailForNearbyId(String id) {
+  final seed = mockNearbyClinicById(id);
+  if (seed == null) return null;
+  return ClinicDetail(
+    id: seed.id,
+    name: seed.name,
+    city: 'São Paulo',
+    state: 'SP',
+    neighborhood: seed.neighborhood,
+    distanceKm: 0,
+    status: seed.status,
+    lastVisitDays: null,
+    doctorCount: 8,
+    isPriority: false,
+    products: const [],
+    phone: seed.phone,
+    whatsapp: seed.whatsapp,
+    consultantName: 'Ana Silva',
+    email: seed.email ?? 'contato@clinica.example',
+    website: null,
+    streetAddress: seed.streetAddress,
+    streetNumber: seed.streetNumber,
+    addressComplement: seed.addressComplement,
+    postalCode: '01310-100',
+    taxIdType: 'CNPJ',
+    cnpj: seed.cnpj,
+  );
+}
+
 List<NearbyEstablishment> _mockNearby(
   double centerLat,
   double centerLng,
   String excludeId,
 ) {
-  final offsets =
-      <
-        (
-          String,
-          String,
-          double,
-          double,
-          double,
-          String,
-          ClinicStatus,
-          String,
-          String,
-          String,
-          String?,
-        )
-      >[
-        (
-          'near-1',
-          'Centro Médico OrtoVita',
-          0.004,
-          0.006,
-          0.6,
-          'Ortopedia',
-          ClinicStatus.active,
-          'Jardim Paulista',
-          'Rua Augusta',
-          '2200',
-          'Conjunto 12',
-        ),
-        (
-          'near-2',
-          'Instituto CardioMed',
-          -0.007,
-          0.005,
-          0.9,
-          'Cardio',
-          ClinicStatus.negotiation,
-          'Bela Vista',
-          'Alameda Santos',
-          '890',
-          null,
-        ),
-        (
-          'near-3',
-          'Clínica Vitalis Itaim',
-          0.011,
-          -0.009,
-          1.4,
-          'Multi',
-          ClinicStatus.active,
-          'Itaim Bibi',
-          'Rua Joaquim Floriano',
-          '454',
-          'Sala 302',
-        ),
-        (
-          'near-4',
-          'Policlínica Primavera',
-          -0.014,
-          -0.010,
-          1.8,
-          'Derm · Ped',
-          ClinicStatus.inactive,
-          'Pinheiros',
-          'Rua dos Pinheiros',
-          '621',
-          null,
-        ),
-        (
-          'near-5',
-          'Clínica São Lucas',
-          0.008,
-          0.012,
-          1.2,
-          'Multi',
-          ClinicStatus.active,
-          'Moema',
-          'Av. Ibirapuera',
-          '2500',
-          'Bloco B',
-        ),
-        (
-          'near-6',
-          'Hospital Santa Clara',
-          -0.015,
-          0.006,
-          2.4,
-          'Multi',
-          ClinicStatus.active,
-          'Vila Mariana',
-          'Rua Vergueiro',
-          '1300',
-          null,
-        ),
-        (
-          'near-7',
-          'Centro Médico Paulista',
-          0.022,
-          -0.018,
-          3.8,
-          'Clínica geral',
-          ClinicStatus.negotiation,
-          'Consolação',
-          'Av. Paulista',
-          '1578',
-          'Cj. 91',
-        ),
-        (
-          'near-8',
-          'Lab Diagnóstico Avançado',
-          -0.028,
-          -0.010,
-          5.1,
-          'Diagnóstico',
-          ClinicStatus.active,
-          'Higienópolis',
-          'Rua Maranhão',
-          '210',
-          null,
-        ),
-        (
-          'near-9',
-          'Clínica Vida Plena',
-          0.045,
-          0.030,
-          8.6,
-          'Multi',
-          ClinicStatus.active,
-          'Perdizes',
-          'Rua Cardoso de Almeida',
-          '900',
-          null,
-        ),
-        (
-          'near-10',
-          'Instituto Ortopédico SP',
-          -0.052,
-          0.040,
-          12.3,
-          'Ortopedia',
-          ClinicStatus.active,
-          'Santana',
-          'Av. Cruzeiro do Sul',
-          '1750',
-          'Torre 2',
-        ),
-        (
-          'near-11',
-          'Centro de Imagem Norte',
-          0.080,
-          -0.055,
-          22.0,
-          'Diagnóstico',
-          ClinicStatus.active,
-          'Tucuruvi',
-          'Av. Tucuruvi',
-          '640',
-          null,
-        ),
-        (
-          'near-12',
-          'Clínica Bem Estar',
-          -0.095,
-          -0.070,
-          35.5,
-          'Multi',
-          ClinicStatus.active,
-          'Santo Amaro',
-          'Av. Santo Amaro',
-          '3200',
-          null,
-        ),
-      ];
+  final items = mockNearbyClinicCatalog
+      .where((c) => c.id != excludeId)
+      .map((c) {
+        final distanceKm = _haversineKm(
+          centerLat,
+          centerLng,
+          c.latitude,
+          c.longitude,
+        );
+        return NearbyEstablishment(
+          id: c.id,
+          name: c.name,
+          latitude: c.latitude,
+          longitude: c.longitude,
+          distanceKm: distanceKm,
+          specialtyLabel: c.specialtyLabel,
+          status: c.status,
+          neighborhood: c.neighborhood,
+          streetAddress: c.streetAddress,
+          streetNumber: c.streetNumber,
+          addressComplement: c.addressComplement,
+        );
+      })
+      .where((e) => e.distanceKm <= establishmentNearbyDefaultRadiusKm)
+      .toList();
+  items.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+  return List<NearbyEstablishment>.unmodifiable(items);
+}
 
-  return offsets
-      .where((o) => o.$1 != excludeId)
-      .map(
-        (o) => NearbyEstablishment(
-          id: o.$1,
-          name: o.$2,
-          latitude: centerLat + o.$3,
-          longitude: centerLng + o.$4,
-          distanceKm: o.$5,
-          specialtyLabel: o.$6,
-          status: o.$7,
-          neighborhood: o.$8,
-          streetAddress: o.$9,
-          streetNumber: o.$10,
-          addressComplement: o.$11,
-        ),
-      )
-      .toList(growable: false);
+double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
+  const earthRadiusKm = 6371.0088;
+  final dLat = (lat2 - lat1) * math.pi / 180;
+  final dLng = (lng2 - lng1) * math.pi / 180;
+  final a =
+      math.sin(dLat / 2) * math.sin(dLat / 2) +
+      math.cos(lat1 * math.pi / 180) *
+          math.cos(lat2 * math.pi / 180) *
+          math.sin(dLng / 2) *
+          math.sin(dLng / 2);
+  return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 }
 
 List<NearbyEstablishment> filterNearbyByRadius(
