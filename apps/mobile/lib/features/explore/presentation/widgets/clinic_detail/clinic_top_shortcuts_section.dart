@@ -103,7 +103,8 @@ class _ClinicTopShortcutsSectionState extends State<ClinicTopShortcutsSection> {
 }
 
 /// Counts empty fields among the ones shown on `ClinicAdminInfoSection` —
-/// tax ID, address, phone, email, website, responsible doctor, hours.
+/// tax ID, phone, email, website, responsible doctor, hours, and the split
+/// address fields (estado / cidade / CEP / endereço).
 /// "Cliente desde" is excluded: it's a system field, not something a rep
 /// fills in, so it shouldn't count against completeness.
 int _adminInfoPendingCount(ClinicDetail detail) {
@@ -113,12 +114,16 @@ int _adminInfoPendingCount(ClinicDetail detail) {
       (detail.cpf?.trim().isNotEmpty ?? false);
   final fields = <bool>[
     !hasTaxId,
-    empty(detail.streetAddress),
     empty(detail.phone),
+    empty(detail.whatsapp),
     empty(detail.email),
     empty(detail.website),
     empty(detail.responsibleDoctor),
     empty(detail.openingHours),
+    empty(detail.state),
+    empty(detail.city),
+    empty(detail.postalCode),
+    empty(detail.composedAddressLine),
   ];
   return fields.where((isEmpty) => isEmpty).length;
 }

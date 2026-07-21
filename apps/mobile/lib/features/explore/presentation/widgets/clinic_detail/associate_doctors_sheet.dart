@@ -12,6 +12,7 @@ Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
   return showModalBottomSheet<List<FacilityCrmDoctor>>(
     context: context,
     isScrollControlled: true,
+    useRootNavigator: true,
     backgroundColor: Colors.white,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -265,7 +266,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   }
 }
 
-class _ModalSearchField extends StatelessWidget {
+class _ModalSearchField extends StatefulWidget {
   const _ModalSearchField({
     required this.value,
     required this.hintText,
@@ -275,6 +276,36 @@ class _ModalSearchField extends StatelessWidget {
   final String value;
   final String hintText;
   final ValueChanged<String> onChanged;
+
+  @override
+  State<_ModalSearchField> createState() => _ModalSearchFieldState();
+}
+
+class _ModalSearchFieldState extends State<_ModalSearchField> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.value);
+  }
+
+  @override
+  void didUpdateWidget(covariant _ModalSearchField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: widget.value,
+        selection: TextSelection.collapsed(offset: widget.value.length),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -292,15 +323,10 @@ class _ModalSearchField extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
-              controller: TextEditingController.fromValue(
-                TextEditingValue(
-                  text: value,
-                  selection: TextSelection.collapsed(offset: value.length),
-                ),
-              ),
-              onChanged: onChanged,
+              controller: _controller,
+              onChanged: widget.onChanged,
               decoration: InputDecoration(
-                hintText: hintText,
+                hintText: widget.hintText,
                 hintStyle: const TextStyle(color: Color(0xFF9ca3af)),
                 border: InputBorder.none,
                 isDense: true,
@@ -309,11 +335,11 @@ class _ModalSearchField extends StatelessWidget {
               style: const TextStyle(fontSize: 14, color: Color(0xFF0f1729)),
             ),
           ),
-          if (value.isNotEmpty)
+          if (widget.value.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.close_rounded, size: 18),
               color: const Color(0xFF6b7280),
-              onPressed: () => onChanged(''),
+              onPressed: () => widget.onChanged(''),
             ),
         ],
       ),

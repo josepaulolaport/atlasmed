@@ -34,7 +34,10 @@ class ClinicHeaderSection extends StatelessWidget {
             : null);
     final taxIdType = sections?.taxIdType;
     final phone = sections?.phone ?? detail.phone;
+    final whatsapp = sections?.whatsapp ?? detail.whatsapp;
     final email = sections?.email ?? detail.email;
+    final phoneLabel = formatBrazilianPhone(phone) ?? phone;
+    final whatsappLabel = formatBrazilianPhone(whatsapp) ?? whatsapp;
 
     return Container(
       width: double.infinity,
@@ -183,20 +186,30 @@ class ClinicHeaderSection extends StatelessWidget {
                     ],
                   ),
                 ],
-                if (phone != null || email != null) ...[
+                if (phone != null || whatsapp != null || email != null) ...[
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 14,
                     runSpacing: 6,
                     children: [
-                      if (phone != null)
+                      if (phoneLabel != null)
                         _HeaderContactAction(
                           icon: Icons.phone_rounded,
-                          label: phone,
+                          label: phoneLabel,
                           onTap: () => launchContactUrl(
                             context,
                             url: callUrl(phone),
                             contactLabel: 'telefone',
+                          ),
+                        ),
+                      if (whatsappLabel != null)
+                        _HeaderContactAction(
+                          icon: Icons.chat_rounded,
+                          label: whatsappLabel,
+                          onTap: () => launchContactUrl(
+                            context,
+                            url: whatsappUrl(whatsapp),
+                            contactLabel: 'WhatsApp',
                           ),
                         ),
                       if (email != null)

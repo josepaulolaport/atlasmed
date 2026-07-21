@@ -10,6 +10,27 @@ String? normalizeBrazilianPhone(String? phone) {
   return digits.startsWith('55') ? digits : '55$digits';
 }
 
+/// Display mask for Brazilian numbers: `(11) 98765-4321` / `(11) 3040-5060`.
+/// Returns the original trimmed string when the digit length is unexpected.
+String? formatBrazilianPhone(String? phone) {
+  final raw = phone?.trim();
+  if (raw == null || raw.isEmpty) return null;
+
+  var digits = raw.replaceAll(RegExp(r'\D'), '');
+  if (digits.isEmpty) return raw;
+  if (digits.startsWith('55') && digits.length >= 12) {
+    digits = digits.substring(2);
+  }
+
+  if (digits.length == 11) {
+    return '(${digits.substring(0, 2)}) ${digits.substring(2, 7)}-${digits.substring(7)}';
+  }
+  if (digits.length == 10) {
+    return '(${digits.substring(0, 2)}) ${digits.substring(2, 6)}-${digits.substring(6)}';
+  }
+  return raw;
+}
+
 Uri? callUrl(String? phone) {
   final normalizedPhone = normalizeBrazilianPhone(phone);
   return normalizedPhone == null

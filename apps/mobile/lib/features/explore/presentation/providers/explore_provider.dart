@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
@@ -59,33 +60,46 @@ class _DoctorDetailRepository extends Repository<ApiDoctor>
 
 // ── Detail fetch helpers (no Riverpod family; called per request) ──
 Future<ClinicDetail> _fetchClinicDetail(String id) async {
+  // Phase-1 nearby-map pins use mock ids (`near-*`). Serve local mock detail
+  // so "Ir para página da clínica" works offline / without a real facility.
+  final nearbyMock = mockClinicDetailForNearbyId(id);
+  if (nearbyMock != null) return nearbyMock;
+
   final repo = _ClinicDetailRepository(id: id);
   try {
     final apiClinic = await repo.currentValueOrResolve();
     if (apiClinic == null) {
       throw Exception('Clinic not found: $id');
     }
-    // Map DTO Clinic → ClinicDetail
-    final cityParts = <String>[
-      if (apiClinic.city != null && apiClinic.city!.isNotEmpty) apiClinic.city!,
-      if (apiClinic.state != null && apiClinic.state!.isNotEmpty)
-        apiClinic.state!,
-    ];
+    // Map DTO Clinic → ClinicDetail. Prefer API values; Phase-1 mock-fill
+    // gaps (list/detail DTO still omits number/complement/CEP) so Dados
+    // administrativos can show Estado / Cidade / CEP / Endereço.
+    String? nonEmpty(String? value) {
+      final trimmed = value?.trim();
+      return trimmed == null || trimmed.isEmpty ? null : trimmed;
+    }
+
     return ClinicDetail(
       id: apiClinic.id,
       name: apiClinic.name,
-      city: cityParts.isNotEmpty ? cityParts.join(', ') : '',
-      neighborhood: '',
+      city: nonEmpty(apiClinic.city) ?? 'São Paulo',
+      state: nonEmpty(apiClinic.state) ?? 'SP',
+      neighborhood: nonEmpty(apiClinic.neighborhood) ?? 'Bela Vista',
       distanceKm: apiClinic.distanceKm ?? 0,
       status: ClinicStatus.active,
       lastVisitDays: null,
       doctorCount: apiClinic.professionalCount,
       isPriority: false,
       products: [],
-      phone: apiClinic.phone,
+      phone: nonEmpty(apiClinic.phone) ?? '1130405060',
+      whatsapp: '11987654321',
+      consultantName: apiClinic.consultantName,
       email: apiClinic.email,
       website: apiClinic.website,
-      streetAddress: apiClinic.streetAddress,
+      streetAddress: nonEmpty(apiClinic.streetAddress) ?? 'Av. Paulista',
+      streetNumber: nonEmpty(apiClinic.streetNumber) ?? '1000',
+      addressComplement: nonEmpty(apiClinic.addressComplement) ?? 'Conj. 120',
+      postalCode: nonEmpty(apiClinic.postalCode) ?? '01310-100',
       taxIdType: apiClinic.taxIdType,
       cnpj: apiClinic.cnpj,
       cpf: apiClinic.cpf,

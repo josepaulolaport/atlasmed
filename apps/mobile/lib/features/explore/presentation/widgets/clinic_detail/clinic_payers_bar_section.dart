@@ -38,8 +38,8 @@ class ClinicPayersBarSection extends StatelessWidget {
                 const SizedBox(height: 12),
                 TextButton.icon(
                   onPressed: onEdit,
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Cadastrar fontes'),
+                  icon: const Icon(Icons.add_rounded, size: 18),
+                  label: const Text('Adicionar fonte'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF1e40af),
                   ),
@@ -154,6 +154,23 @@ class ClinicPayersBarSection extends StatelessWidget {
               ),
             ),
           ),
+          if (onEdit != null) ...[
+            const SizedBox(height: 4),
+            const Divider(height: 1, color: Color(0xFFf3f4f6)),
+            const SizedBox(height: 4),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Adicionar fonte'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF1e40af),
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

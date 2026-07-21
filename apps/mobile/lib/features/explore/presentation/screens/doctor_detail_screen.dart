@@ -167,126 +167,148 @@ Future<void> _showAddNoteSheet(
   WidgetRef ref,
   String professionalId,
 ) async {
-  final controller = TextEditingController();
-  final formKey = GlobalKey<FormState>();
-  var isSaving = false;
-  String? errorMessage;
-
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (sheetContext) => StatefulBuilder(
-      builder: (context, setState) => Padding(
-        padding: EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 20,
-          bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
-        ),
-        child: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Adicionar nota',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Esta nota ficará visível somente para você.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: controller,
-                autofocus: true,
-                minLines: 4,
-                maxLines: 8,
-                maxLength: 2000,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Nota',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return 'Digite uma nota para salvar.';
-                  }
-                  return null;
-                },
-              ),
-              if (errorMessage != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  errorMessage!,
-                  style: const TextStyle(
-                    color: Color(0xFFb84545),
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: isSaving
-                        ? null
-                        : () => Navigator.pop(sheetContext),
-                    child: const Text('Cancelar'),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton(
-                    onPressed: isSaving
-                        ? null
-                        : () async {
-                            if (!formKey.currentState!.validate()) return;
-                            setState(() {
-                              isSaving = true;
-                              errorMessage = null;
-                            });
-                            try {
-                              await ref
-                                  .read(
-                                    professionalNotesRepositoryProvider(
-                                      professionalId,
-                                    ),
-                                  )
-                                  .createNote(controller.text.trim());
-                              ref.invalidate(
-                                professionalNotesProvider(professionalId),
-                              );
-                              if (sheetContext.mounted) {
-                                Navigator.pop(sheetContext);
-                              }
-                            } catch (_) {
-                              setState(() {
-                                isSaving = false;
-                                errorMessage =
-                                    'Não foi possível salvar a nota. Tente novamente.';
-                              });
-                            }
-                          },
-                    child: isSaving
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Salvar'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    useRootNavigator: true,
+    builder: (_) => _AddDoctorNoteSheet(
+      professionalId: professionalId,
+      ref: ref,
     ),
   );
-  controller.dispose();
+}
+
+/// Owns its controllers so dismissing an empty sheet cannot race
+/// InheritedWidget teardown (`_dependents.isEmpty`).
+class _AddDoctorNoteSheet extends StatefulWidget {
+  const _AddDoctorNoteSheet({
+    required this.professionalId,
+    required this.ref,
+  });
+
+  final String professionalId;
+  final WidgetRef ref;
+
+  @override
+  State<_AddDoctorNoteSheet> createState() => _AddDoctorNoteSheetState();
+}
+
+class _AddDoctorNoteSheetState extends State<_AddDoctorNoteSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
+  var _isSaving = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      await widget.ref
+          .read(professionalNotesRepositoryProvider(widget.professionalId))
+          .createNote(_controller.text.trim());
+      widget.ref.invalidate(professionalNotesProvider(widget.professionalId));
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _errorMessage = 'Não foi possível salvar a nota. Tente novamente.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Adicionar nota',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Esta nota ficará visível somente para você.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _controller,
+              autofocus: true,
+              minLines: 4,
+              maxLines: 8,
+              maxLength: 2000,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Nota',
+                alignLabelWithHint: true,
+                border: OutlineInputBorder(),
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return 'Digite uma nota para salvar.';
+                }
+                return null;
+              },
+            ),
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage!,
+                style: const TextStyle(color: Color(0xFFb84545), fontSize: 13),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  child: const Text('Cancelar'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(
+                  onPressed: _isSaving ? null : _save,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Salvar'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ======================================================================

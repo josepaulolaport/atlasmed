@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dar
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/administrative_professionals_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_context_section.dart';
@@ -239,6 +240,10 @@ class _ClinicDetailContent extends ConsumerWidget {
     final sectionsAsync = ref.watch(
       establishmentDetailSectionsProvider(clinicId),
     );
+    final adminsRoster = ref.watch(
+      facilityAdministratorsRosterProvider(clinicId),
+    );
+    final doctorsRoster = ref.watch(facilityDoctorsRosterProvider(clinicId));
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(
@@ -254,116 +259,109 @@ class _ClinicDetailContent extends ConsumerWidget {
           // instead of flashing a false "Completo".
           documents: sectionsAsync.valueOrNull?.documents,
         ),
-        const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
-        sectionsAsync.when(
-          loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(
-            message: _friendlyLoadError(err),
-            onRetry: () =>
-                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
-          ),
-          data: (sections) {
-            if (sections.location == null) {
-              return const ClinicDetailCard(
-                child: Text(
-                  'Localização não disponível para este estabelecimento',
-                  style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
-                ),
-              );
-            }
-            return ClinicLocationSection(
-              facilityId: clinicId,
-              facilityName: detail.name,
-              location: sections.location!,
-              nearbyEstablishments: sections.nearbyEstablishments,
-            );
-          },
-        ),
-        sectionsAsync.when(
-          loading: () =>
-              const ClinicSectionHeader(title: 'Profissionais administrativos'),
-          error: (_, _) =>
-              const ClinicSectionHeader(title: 'Profissionais administrativos'),
-          data: (sections) => ClinicSectionHeader(
-            title: 'Profissionais administrativos',
-            badge: sections.administrators.isEmpty
-                ? null
-                : _CountBadge(count: sections.administrators.length),
-            trailing: _HeaderLinkButton(
-              label: 'Ver todos',
-              icon: Icons.chevron_right_rounded,
-              onTap: () => Navigator.of(context).push(
+        ClinicSectionHeader(
+          title: 'Profissionais administrativos',
+          badge: adminsRoster.total == 0
+              ? null
+              : _CountBadge(count: adminsRoster.total),
+          trailing: _HeaderLinkButton(
+            label: 'Ver todos',
+            icon: Icons.chevron_right_rounded,
+            onTap: () {
+              final all =
+                  sectionsAsync.valueOrNull?.administrators ??
+                  adminsRoster.items;
+              Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => AdministrativeProfessionalsListScreen(
-                    professionals: sections.administrators,
+                    professionals: all,
                     facilityName: detail.name,
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
-        sectionsAsync.when(
-          loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(
-            message: _friendlyLoadError(err),
+        if (adminsRoster.loading && adminsRoster.items.isEmpty)
+          const _SectionLoadingCard()
+        else if (adminsRoster.error != null && adminsRoster.items.isEmpty)
+          _SectionErrorCard(
+            message: _friendlyLoadError(adminsRoster.error!),
             onRetry: () =>
-                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
-          ),
-          data: (sections) => ClinicAdminProfessionalsSection(
-            professionals: sections.administrators,
+                ref.read(facilityAdministratorsRosterProvider(clinicId).notifier).retry(),
+          )
+        else
+          ClinicAdminProfessionalsSection(
+            professionals: adminsRoster.items,
             facilityName: detail.name,
-            onAssociate: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AdministrativeProfessionalsListScreen(
-                  professionals: sections.administrators,
-                  facilityName: detail.name,
+            hasMore: adminsRoster.hasMore,
+            onLoadMore: () => ref
+                .read(facilityAdministratorsRosterProvider(clinicId).notifier)
+                .loadMore(),
+            onAssociate: () {
+              final all =
+                  sectionsAsync.valueOrNull?.administrators ??
+                  adminsRoster.items;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdministrativeProfessionalsListScreen(
+                    professionals: all,
+                    facilityName: detail.name,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
-        ),
-        sectionsAsync.when(
-          loading: () => const ClinicSectionHeader(title: 'Médicos'),
-          error: (_, _) => const ClinicSectionHeader(title: 'Médicos'),
-          data: (sections) => ClinicSectionHeader(
-            title: 'Médicos',
-            badge: sections.doctors.isEmpty
-                ? null
-                : _CountBadge(count: sections.doctors.length),
-            trailing: _HeaderLinkButton(
-              label: 'Ver todos',
-              icon: Icons.chevron_right_rounded,
-              onTap: () => Navigator.of(context).push(
+        ClinicSectionHeader(
+          title: 'Médicos',
+          badge: doctorsRoster.total == 0
+              ? null
+              : _CountBadge(count: doctorsRoster.total),
+          trailing: _HeaderLinkButton(
+            label: 'Ver todos',
+            icon: Icons.chevron_right_rounded,
+            onTap: () {
+              final all =
+                  sectionsAsync.valueOrNull?.doctors ?? doctorsRoster.items;
+              Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (_) => DoctorsListScreen(
-                    doctors: sections.doctors,
+                    doctors: all,
                     facilityName: detail.name,
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
-        sectionsAsync.when(
-          loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(
-            message: _friendlyLoadError(err),
+        if (doctorsRoster.loading && doctorsRoster.items.isEmpty)
+          const _SectionLoadingCard()
+        else if (doctorsRoster.error != null && doctorsRoster.items.isEmpty)
+          _SectionErrorCard(
+            message: _friendlyLoadError(doctorsRoster.error!),
             onRetry: () =>
-                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
-          ),
-          data: (sections) => ClinicCrmDoctorsSection(
-            doctors: sections.doctors,
-            onAssociate: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => DoctorsListScreen(
-                  doctors: sections.doctors,
-                  facilityName: detail.name,
+                ref.read(facilityDoctorsRosterProvider(clinicId).notifier).retry(),
+          )
+        else
+          ClinicCrmDoctorsSection(
+            doctors: doctorsRoster.items,
+            hasMore: doctorsRoster.hasMore,
+            onLoadMore: () => ref
+                .read(facilityDoctorsRosterProvider(clinicId).notifier)
+                .loadMore(),
+            onAssociate: () {
+              final all =
+                  sectionsAsync.valueOrNull?.doctors ?? doctorsRoster.items;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => DoctorsListScreen(
+                    doctors: all,
+                    facilityName: detail.name,
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
-        ),
         sectionsAsync.when(
           loading: () => const ClinicSectionHeader(title: 'Fontes Pagadoras'),
           error: (_, _) => const ClinicSectionHeader(title: 'Fontes Pagadoras'),
@@ -414,6 +412,31 @@ class _ClinicDetailContent extends ConsumerWidget {
             );
           },
         ),
+        const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
+        sectionsAsync.when(
+          loading: () => const _SectionLoadingCard(),
+          error: (err, _) => _SectionErrorCard(
+            message: _friendlyLoadError(err),
+            onRetry: () =>
+                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
+          ),
+          data: (sections) {
+            if (sections.location == null) {
+              return const ClinicDetailCard(
+                child: Text(
+                  'Localização não disponível para este estabelecimento',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+                ),
+              );
+            }
+            return ClinicLocationSection(
+              facilityId: clinicId,
+              facilityName: detail.name,
+              location: sections.location!,
+              nearbyEstablishments: sections.nearbyEstablishments,
+            );
+          },
+        ),
         sectionsAsync.when(
           loading: () => const ClinicSectionHeader(title: 'Pedidos recentes'),
           error: (_, _) => const ClinicSectionHeader(title: 'Pedidos recentes'),
@@ -454,7 +477,7 @@ class _ClinicDetailContent extends ConsumerWidget {
           data: (sections) =>
               ClinicFieldNotesSection(initialNotes: sections.fieldNotes),
         ),
-        const ClinicSectionHeader(title: 'Consultor responsável'),
+        const ClinicSectionHeader(title: 'Equipe responsável'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
           error: (err, _) => _SectionErrorCard(
@@ -465,6 +488,8 @@ class _ClinicDetailContent extends ConsumerWidget {
           data: (sections) => ClinicContextSection(
             consultantName: sections.consultantName ?? detail.consultantName,
             consultantSince: sections.consultantSince,
+            managerName: sections.managerName,
+            managerSince: sections.managerSince,
             regionZoneLabel: sections.regionZoneLabel,
             city: detail.city.isNotEmpty ? detail.city : null,
           ),
@@ -650,7 +675,7 @@ class _QuickActions extends ConsumerWidget {
             label: 'WhatsApp',
             onTap: () => launchContactUrl(
               context,
-              url: whatsappUrl(detail.phone),
+              url: whatsappUrl(detail.whatsapp ?? detail.phone),
               contactLabel: 'WhatsApp',
             ),
           ),
