@@ -128,19 +128,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             statusBarBrightness: Brightness.dark,
           ),
           child: Scaffold(
-            body: Stack(
-              children: [
-                const BlueBackdrop(),
-                SafeArea(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 40),
-                        const Center(child: AppLogo(size: 120)),
-                        const SizedBox(height: 16),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
-                          child: AnimatedBuilder(
+            // Keep logo/form/footer pinned; keyboard overlays instead of
+            // shrinking the body and shoving everything upward.
+            resizeToAvoidBottomInset: false,
+            body: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: Stack(
+                children: [
+                  const BlueBackdrop(),
+                  SafeArea(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 40),
+                          const Center(child: AppLogo(size: 120)),
+                          const SizedBox(height: 16),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
+                            child: AnimatedBuilder(
                             animation: _shakeAnimation,
                             key: ValueKey('login_form_$_shakeCount'),
                             builder: (_, _) {
@@ -260,18 +266,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                               );
                             },
                           ),
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                const Positioned(
-                  bottom: 24,
-                  left: 0,
-                  right: 0,
-                  child: TermsFooter(),
-                ),
-              ],
+                  const Positioned(
+                    bottom: 24,
+                    left: 0,
+                    right: 0,
+                    child: TermsFooter(),
+                  ),
+                ],
+              ),
             ),
           ),
         );
