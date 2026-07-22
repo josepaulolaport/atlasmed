@@ -16,6 +16,27 @@ function readDeploymentConfig() {
 }
 
 describe("production deployment", () => {
+  it("builds application images for the ARM64 deployment machine", () => {
+    const { compose } = readDeploymentConfig();
+
+    for (const serviceName of [
+      "atlasmed-web",
+      "atlasmed-api",
+      "atlasmed-api-worker",
+      "atlasmed-cnes-worker",
+    ]) {
+      const serviceStart = compose.indexOf(`  ${serviceName}:`);
+      const nextService = compose.indexOf("\n  atlasmed-", serviceStart + 1);
+      const service = compose.slice(
+        serviceStart,
+        nextService === -1 ? undefined : nextService,
+      );
+
+      expect(service).toContain("platform: linux/arm64");
+      expect(service).toContain("x-machines: oracle-luis");
+    }
+  });
+
   it("pins the production Meilisearch server to v1.48", () => {
     const { compose } = readDeploymentConfig();
     const meilisearch = compose.slice(
