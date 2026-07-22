@@ -267,6 +267,77 @@ describe("ListFacilitiesUseCase", () => {
     ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
   });
 
+  it("prefilters textual facility search by representable status, facility scope, radius, and distance sort", async () => {
+    let options: unknown;
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.findAllByIds = async () => [];
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: repository,
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [], estimatedTotalHits: 0 };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "central",
+      commercialStatus: "ACTIVE",
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 5,
+      sort: "distance",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-2", "facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+
+    expect(options).toEqual({
+      limit: 20,
+      offset: 0,
+      filter: "commercialStatus = 'ACTIVE' AND _geoRadius(-23.55, -46.63, 5000) AND id IN ['facility-1', 'facility-2']",
+      sort: ["_geoPoint(-23.55, -46.63):asc"],
+    });
+  });
+
+  it("prefilters an empty non-global facility scope to no Meilisearch documents", async () => {
+    let options: { filter?: string } | undefined;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => { options = received; return { hits: [] }; },
+      },
+    });
+    await useCase.execute({
+      search: "central",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+    expect(options?.filter).toBe("id = '__none__'");
+  });
+
+  it("keeps representable facility filters when the scope expression exceeds the safe bound", async () => {
+    let options: { filter?: string } | undefined;
+    const useCase = new ListFacilitiesUseCase({
+      facilityRepository: fakeRepository(async () => ({ facilities: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [] };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "central",
+      commercialStatus: "ACTIVE",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+
+    expect(options?.filter).toBe("commercialStatus = 'ACTIVE'");
+  });
+
   it("does not call Meilisearch for blank facility searches", async () => {
     let searchCalls = 0;
     const useCase = new ListFacilitiesUseCase({

@@ -1,5 +1,6 @@
-import { and, asc, gt, isNull } from "drizzle-orm";
-import { facilities, professionals } from "@atlasmed/database";
+import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { facilities, facilityProfessionals, professionals } from "@atlasmed/database";
+import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
 import { Meilisearch } from "meilisearch";
 import { environment } from "@atlasmed/config";
 import { db } from "../infrastructure/db";
@@ -17,6 +18,9 @@ export type FacilitySearchDocument = {
   city: string | null;
   state: string | null;
   commercialStatus: string | null;
+  territoryId: string | null;
+  territoryAssignmentStatus: string;
+  _geo?: { lat: number; lng: number };
 };
 
 export type ProfessionalSearchDocument = {
@@ -25,6 +29,9 @@ export type ProfessionalSearchDocument = {
   socialName: string | null;
   taxId: string | null;
   specialty: string | null;
+  specialtyNormalized: string | null;
+  activeFacilityIds: string[];
+  activeTerritoryIds: string[];
   crmCouncil: string | null;
   crmNumber: string | null;
   crmState: string | null;
@@ -63,6 +70,10 @@ export function mapFacilitySearchDocument(row: {
   city: string | null;
   state: string | null;
   commercialStatus: string | null;
+  territoryId: string | null;
+  territoryAssignmentStatus: string;
+  latitude: number | null;
+  longitude: number | null;
   deactivatedAt: Date | null;
   isActiveInRegistry: boolean;
 }): FacilitySearchDocument | null {
@@ -79,6 +90,11 @@ export function mapFacilitySearchDocument(row: {
     city: row.city,
     state: row.state,
     commercialStatus: row.commercialStatus,
+    territoryId: row.territoryId,
+    territoryAssignmentStatus: row.territoryAssignmentStatus,
+    ...(row.latitude !== null && row.longitude !== null
+      ? { _geo: { lat: row.latitude, lng: row.longitude } }
+      : {}),
   };
 }
 
@@ -93,9 +109,15 @@ export function mapProfessionalSearchDocument(row: {
   crmCouncil: string | null;
   crmNumber: string | null;
   crmState: string | null;
+  activeAssociations: Array<{ facilityId: string; territoryId: string | null }>;
   deletedAt: Date | null;
 }): ProfessionalSearchDocument | null {
   if (row.deletedAt) return null;
+
+  const activeFacilityIds = [...new Set(row.activeAssociations.map((association) => association.facilityId))].sort();
+  const activeTerritoryIds = [...new Set(
+    row.activeAssociations.flatMap((association) => association.territoryId ? [association.territoryId] : [])
+  )].sort();
 
   return {
     id: row.id,
@@ -103,6 +125,11 @@ export function mapProfessionalSearchDocument(row: {
     socialName: row.socialName,
     taxId: row.taxId,
     specialty: row.primarySpecialtyLabel,
+    specialtyNormalized: row.primarySpecialtyLabel
+      ? normalizeSearchFilterValue(row.primarySpecialtyLabel)
+      : null,
+    activeFacilityIds,
+    activeTerritoryIds,
     crmCouncil: row.crmCouncil,
     crmNumber: row.crmNumber,
     crmState: row.crmState,
@@ -202,13 +229,14 @@ function createSearchClient(): SearchIndexClient {
   }));
 }
 
-const FACILITY_SETTINGS = {
+export const FACILITY_SETTINGS = {
   searchableAttributes: ["name", "legalName", "tradeName", "cnpj", "cpf", "cnesCode", "city", "state"],
-  filterableAttributes: ["state", "city", "commercialStatus"],
+  filterableAttributes: ["id", "state", "city", "commercialStatus", "territoryId", "territoryAssignmentStatus", "_geo"],
+  sortableAttributes: ["_geo"],
 };
-const PROFESSIONAL_SETTINGS = {
+export const PROFESSIONAL_SETTINGS = {
   searchableAttributes: ["name", "socialName", "taxId", "specialty", "crmCouncil", "crmNumber", "crmState"],
-  filterableAttributes: ["specialty", "crmState"],
+  filterableAttributes: ["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds", "crmState"],
 };
 
 async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
@@ -227,6 +255,10 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
         city: facilities.city,
         state: facilities.state,
         commercialStatus: facilities.commercialStatus,
+        territoryId: facilities.territoryId,
+        territoryAssignmentStatus: facilities.territoryAssignmentStatus,
+        latitude: sql<number | null>`ST_Y(${facilities.location}::geometry)`,
+        longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
         isActiveInRegistry: facilities.isActiveInRegistry,
       })
@@ -241,6 +273,34 @@ async function* facilityPages(): AsyncGenerator<FacilitySearchDocument[]> {
       .map(mapFacilitySearchDocument)
       .filter((row): row is FacilitySearchDocument => row !== null);
   }
+}
+
+async function loadActiveProfessionalAssociations(
+  professionalIds: string[]
+): Promise<Map<string, Array<{ facilityId: string; territoryId: string | null }>>> {
+  if (professionalIds.length === 0) return new Map();
+
+  const rows = await db
+    .select({
+      professionalId: facilityProfessionals.professionalId,
+      facilityId: facilityProfessionals.facilityId,
+      territoryId: facilities.territoryId,
+    })
+    .from(facilityProfessionals)
+    .innerJoin(facilities, eq(facilityProfessionals.facilityId, facilities.id))
+    .where(and(
+      inArray(facilityProfessionals.professionalId, professionalIds),
+      isNull(facilityProfessionals.endedAt),
+      isNull(facilities.deactivatedAt)
+    ));
+
+  const associations = new Map<string, Array<{ facilityId: string; territoryId: string | null }>>();
+  for (const row of rows) {
+    const current = associations.get(row.professionalId) ?? [];
+    current.push({ facilityId: row.facilityId, territoryId: row.territoryId });
+    associations.set(row.professionalId, current);
+  }
+  return associations;
 }
 
 async function* professionalPages(): AsyncGenerator<ProfessionalSearchDocument[]> {
@@ -268,8 +328,12 @@ async function* professionalPages(): AsyncGenerator<ProfessionalSearchDocument[]
     if (rows.length === 0) return;
 
     lastId = rows.at(-1)!.id;
+    const associations = await loadActiveProfessionalAssociations(rows.map((row) => row.id));
     yield rows
-      .map(mapProfessionalSearchDocument)
+      .map((row) => mapProfessionalSearchDocument({
+        ...row,
+        activeAssociations: associations.get(row.id) ?? [],
+      }))
       .filter((row): row is ProfessionalSearchDocument => row !== null);
   }
 }
