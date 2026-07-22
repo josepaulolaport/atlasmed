@@ -5,15 +5,19 @@ import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dar
 
 /// Full-screen editor for Fontes Pagadoras (payer mix).
 /// Returns the updated [List<PayerShare>] on save, or `null` if cancelled.
+///
+/// [catalog] is the healthcare-provider picker list (`GET /healthcare-providers`).
 class EditPayerSourcesScreen extends StatefulWidget {
   const EditPayerSourcesScreen({
     super.key,
     required this.facilityName,
     required this.initialPayers,
+    this.catalog = mockPayerCatalog,
   });
 
   final String facilityName;
   final List<PayerShare> initialPayers;
+  final List<PayerCatalogEntry> catalog;
 
   @override
   State<EditPayerSourcesScreen> createState() => _EditPayerSourcesScreenState();
@@ -78,9 +82,14 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
         actions: [
           TextButton(
             onPressed: (_payers.isEmpty || balanced) ? _save : null,
-            child: const Text(
+            child: Text(
               'Salvar',
-              style: TextStyle(fontWeight: FontWeight.w700),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: (_payers.isEmpty || balanced)
+                    ? const Color(0xFF1e40af)
+                    : const Color(0xFFcbd5e1),
+              ),
             ),
           ),
         ],
@@ -110,8 +119,9 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Ajuste a participação de cada fonte no faturamento. '
-                  'A soma deve ser 100%.',
+                  'Adicione as fontes e distribua os percentuais '
+                  '(botões ±5% ou digite). A soma precisa ser 100% '
+                  'para habilitar Salvar.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6b7280),
@@ -124,6 +134,21 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                   balanced: balanced,
                   isEmpty: _payers.isEmpty,
                 ),
+                if (_payers.isNotEmpty && !balanced) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    total < 100
+                        ? 'Faltam ${100 - total}% para completar 100%.'
+                        : 'Remova ${total - 100}% — a soma passou de 100%.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: total > 100
+                          ? const Color(0xFFb84545)
+                          : const Color(0xFFc6861b),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -180,16 +205,22 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _AddPayerSourcesSheet(usedNames: _usedNames),
+      builder: (_) =>
+          _AddPayerSourcesSheet(catalog: widget.catalog, usedNames: _usedNames),
     );
     if (selected == null || selected.isEmpty || !mounted) return;
     setState(() {
-      for (final entry in selected) {
+      final remaining = (100 - _totalPercent).clamp(0, 100);
+      for (var i = 0; i < selected.length; i++) {
+        final entry = selected[i];
+        // First newly added row gets the leftover % so a single add can
+        // reach 100% and unlock Salvar without hunting for steppers.
+        final seedPercent = i == 0 && remaining > 0 ? remaining : 0;
         _payers.add(
           _EditablePayer(
             id: entry.id,
             name: entry.name,
-            percentCtrl: TextEditingController(text: '0'),
+            percentCtrl: TextEditingController(text: '$seedPercent'),
           ),
         );
       }
@@ -479,8 +510,9 @@ class _StepButton extends StatelessWidget {
 }
 
 class _AddPayerSourcesSheet extends StatefulWidget {
-  const _AddPayerSourcesSheet({required this.usedNames});
+  const _AddPayerSourcesSheet({required this.catalog, required this.usedNames});
 
+  final List<PayerCatalogEntry> catalog;
   final Set<String> usedNames;
 
   @override
@@ -503,7 +535,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
     super.dispose();
   }
 
-  List<PayerCatalogEntry> get _available => mockPayerCatalog
+  List<PayerCatalogEntry> get _available => widget.catalog
       .where((e) => !widget.usedNames.contains(e.name.toLowerCase()))
       .toList();
 
@@ -636,9 +668,9 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                 onPressed: _selectedIds.isEmpty
                     ? null
                     : () {
-                        final picked = mockPayerCatalog
+                        final picked = widget.catalog
                             .where((e) => _selectedIds.contains(e.id))
-                            .toList();
+                            .toList(growable: false);
                         Navigator.pop(context, picked);
                       },
                 style: FilledButton.styleFrom(

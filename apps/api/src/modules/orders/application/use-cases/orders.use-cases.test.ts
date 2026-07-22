@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { ScopeContext } from "@atlasmed/access";
-import { ForbiddenError } from "../../../../shared/errors";
+import { ForbiddenError, type ScopeContext } from "@atlasmed/access";
 import { GetOrderUseCase, ListOrdersUseCase } from "./orders.use-cases";
 import type { OrderRepository } from "../interfaces/order.repository.interface";
 
@@ -89,6 +88,9 @@ describe("orders use cases", () => {
       page: 2,
       limit: 10,
       statuses: ["PENDING", "APPROVED"],
+      facilityId: "facility-1",
+      includeItemPreviews: true,
+      actor: { userId: "rep-1", roleName: "REP" },
       scope: scopedToFacilityOne,
     });
 
@@ -97,6 +99,9 @@ describe("orders use cases", () => {
       page: 2,
       limit: 10,
       statuses: ["PENDING", "APPROVED"],
+      facilityId: "facility-1",
+      sellerId: "rep-1",
+      includeItemPreviews: true,
       scope: { isGlobal: false, facilityIds: ["facility-1"] },
     });
     expect(result.pagination).toEqual({ page: 2, limit: 10, total: 1, totalPages: 1 });

@@ -22,5 +22,11 @@ export interface FacilityHealthcareProviderShareRepository {
     sharePercent: number;
   }): Promise<FacilityHealthcareProviderShareRecord>;
 
+  /** Atomically replace all shares for a facility (empty clears the mix). */
+  replaceByFacility(
+    facilityId: string,
+    shares: Array<{ healthcareProviderId: string; sharePercent: number }>
+  ): Promise<FacilityHealthcareProviderShareRecord[]>;
+
   sumSharePercentForFacility(facilityId: string): Promise<number>;
 }

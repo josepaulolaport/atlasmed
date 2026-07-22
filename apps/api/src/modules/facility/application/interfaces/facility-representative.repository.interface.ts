@@ -1,10 +1,18 @@
+export type FacilityRepresentativeContactType =
+  | "PROFESSIONAL"
+  | "DECISOR"
+  | "COMPRADOR";
+
 export interface FacilityRepresentativeRecord {
   id: string;
   facilityId: string;
   representativeName: string;
   roleTitle: string | null;
   email: string | null;
+  phone: string | null;
   taxId: string | null;
+  contactType: FacilityRepresentativeContactType;
+  sourceProvider: string | null;
   externalSourceKey: string | null;
   sourceActive: boolean;
   confirmedAt: Date | null;
@@ -14,11 +22,27 @@ export interface FacilityRepresentativeRecord {
   updatedAt: Date;
 }
 
+export interface FacilityRepresentativeListPage {
+  items: FacilityRepresentativeRecord[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface FacilityRepresentativeRepository {
   findByFacilityAndExternalKey(
     facilityId: string,
     externalKey: string
   ): Promise<FacilityRepresentativeRecord | null>;
+
+  /** Active CRM representatives (`ended_at IS NULL`), name ascending. */
+  findActiveByFacility(params: {
+    facilityId: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<FacilityRepresentativeListPage>;
 
   upsertFromRegistry(params: {
     facilityId: string;
@@ -32,6 +56,17 @@ export interface FacilityRepresentativeRepository {
   confirm(params: {
     facilityId: string;
     externalSourceKey: string;
+    confirmedByUserId: string;
+  }): Promise<FacilityRepresentativeRecord>;
+
+  /** Manual CRM create (no registry external key). */
+  createManual(params: {
+    facilityId: string;
+    representativeName: string;
+    roleTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactType?: FacilityRepresentativeContactType;
     confirmedByUserId: string;
   }): Promise<FacilityRepresentativeRecord>;
 

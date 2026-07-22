@@ -1,29 +1,80 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 
-/// "Notas de campo" — private, facility-scoped notes only the current user
-/// sees. Mocked in V1 (in-memory only): no `facility_notes` table yet.
-class ClinicFieldNotesSection extends StatefulWidget {
-  const ClinicFieldNotesSection({super.key, required this.initialNotes});
+/// "Notas de campo" — private, facility-scoped notes only the current user sees.
+class ClinicFieldNotesSection extends ConsumerWidget {
+  const ClinicFieldNotesSection({super.key, required this.facilityId});
 
-  final List<FacilityFieldNote> initialNotes;
+  final String facilityId;
 
   @override
-  State<ClinicFieldNotesSection> createState() =>
-      _ClinicFieldNotesSectionState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notesAsync = ref.watch(facilityNotesProvider(facilityId));
+
+    return notesAsync.when(
+      loading: () => const ClinicDetailCard(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        ),
+      ),
+      error: (err, _) => ClinicDetailCard(
+        child: Column(
+          children: [
+            const Text(
+              'Não foi possível carregar as notas.',
+              style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
+            ),
+            TextButton(
+              onPressed: () =>
+                  ref.invalidate(facilityNotesProvider(facilityId)),
+              child: const Text('Tentar novamente'),
+            ),
+          ],
+        ),
+      ),
+      data: (notes) => _NotesBody(facilityId: facilityId, notes: notes),
+    );
+  }
 }
 
-class _ClinicFieldNotesSectionState extends State<ClinicFieldNotesSection> {
-  late List<FacilityFieldNote> _notes = List.of(widget.initialNotes);
+class _NotesBody extends ConsumerStatefulWidget {
+  const _NotesBody({required this.facilityId, required this.notes});
+
+  final String facilityId;
+  final List<FacilityFieldNote> notes;
+
+  @override
+  ConsumerState<_NotesBody> createState() => _NotesBodyState();
+}
+
+class _NotesBodyState extends ConsumerState<_NotesBody> {
+  bool _saving = false;
+
+  bool get _useApi {
+    final id = widget.facilityId;
+    return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
 
   @override
   Widget build(BuildContext context) {
+    final notes = widget.notes;
+
     return ClinicDetailCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_notes.isEmpty)
+          if (notes.isEmpty)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 4),
               child: Text(
@@ -32,14 +83,20 @@ class _ClinicFieldNotesSectionState extends State<ClinicFieldNotesSection> {
               ),
             )
           else
-            for (final (i, note) in _notes.indexed) ...[
+            for (final (i, note) in notes.indexed) ...[
               if (i > 0) const SizedBox(height: 10),
               _NoteRow(index: i + 1, note: note),
             ],
           const SizedBox(height: 14),
           OutlinedButton.icon(
-            onPressed: _addNote,
-            icon: const Icon(Icons.add_rounded, size: 18),
+            onPressed: _saving ? null : _addNote,
+            icon: _saving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add_rounded, size: 18),
             label: const Text('Adicionar nota'),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF1e40af),
@@ -67,17 +124,52 @@ class _ClinicFieldNotesSectionState extends State<ClinicFieldNotesSection> {
       builder: (_) => const _AddFieldNoteSheet(),
     );
 
-    if (text != null && text.isNotEmpty && mounted) {
-      setState(() {
-        _notes = [
-          ..._notes,
-          FacilityFieldNote(
-            id: 'local-${DateTime.now().microsecondsSinceEpoch}',
-            text: text,
-            createdAt: DateTime.now(),
+    if (text == null || text.isEmpty || !mounted) return;
+
+    if (!_useApi) {
+      // Mock facilities stay local-only for the session via provider invalidate
+      // isn't needed — mock provider returns static mock data.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nota salva localmente (clínica de demonstração)'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _saving = true);
+    try {
+      // Use the shared repository — createNote() refreshes its cache. A
+      // throwaway repo would refresh a different instance while the provider
+      // kept serving stale currentValue via currentValueOrResolve().
+      await ref
+          .read(facilityNotesRepositoryProvider(widget.facilityId))
+          .createNote(text);
+      if (!mounted) return;
+      ref.invalidate(facilityNotesProvider(widget.facilityId));
+      await ref.read(facilityNotesProvider(widget.facilityId).future);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nota salva'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is FacilityNotesException
+                ? (e.message ?? 'Falha ao salvar nota')
+                : 'Falha ao salvar nota',
           ),
-        ];
-      });
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 }

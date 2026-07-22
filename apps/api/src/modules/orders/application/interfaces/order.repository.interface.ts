@@ -16,6 +16,12 @@ export interface OrderIdentity {
   name: string;
 }
 
+export interface OrderListItemPreview {
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface OrderListRecord {
   id: string;
   legacyId: number | null;
@@ -29,6 +35,8 @@ export interface OrderListRecord {
   freight: number;
   itemCount: number;
   itemsTotal: number;
+  /** Up to 2 line items for card previews (optional). */
+  itemPreviews?: OrderListItemPreview[];
 }
 
 export interface OrderDetailRecord {
@@ -80,6 +88,11 @@ export interface OrderRepository {
     page: number;
     limit: number;
     statuses?: OrderStatus[];
+    facilityId?: string;
+    /** When set (REP), only orders sold by this user. */
+    sellerId?: string;
+    /** Include up to 2 line-item previews per order. */
+    includeItemPreviews?: boolean;
     scope: OrderScopeFilter;
   }): Promise<{ orders: OrderListRecord[]; total: number }>;
   findById(id: string): Promise<OrderDetailRecord | null>;

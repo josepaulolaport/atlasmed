@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-/// Shared "Relacionamento" star rating row used by the Médicos and
-/// Profissionais administrativos cards.
+/// "Relacionamento" star rating for Médicos.
 ///
-/// [score] is on a 0-10 scale (5 stars, 2 points each). A `null` score
-/// means the relationship hasn't been assessed yet — all five stars render
-/// as faint outlines instead of a real (but empty) rating.
+/// [score] is the authenticated user's level from
+/// `user_professional_relationships` (1–10 → 5 stars, 2 points each).
+/// A `null` score means not assessed yet — faint outline stars.
 class RelationshipStars extends StatelessWidget {
   const RelationshipStars({super.key, required this.score});
 

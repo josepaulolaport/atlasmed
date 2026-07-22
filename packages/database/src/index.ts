@@ -47,7 +47,7 @@ export type TerritoryAssignmentStatus = (typeof territoryAssignmentStatusEnum.en
 export type TerritoryAssignmentSource = (typeof territoryAssignmentSourceEnum.enumValues)[number];
 export type TerritoryApprovalType = (typeof territoryApprovalTypeEnum.enumValues)[number];
 export type TerritoryApprovalStatus = (typeof territoryApprovalStatusEnum.enumValues)[number];
-/** Integer 1–10 relationship strength between rep and facility contact. */
+/** Integer 1–10 relationship strength between a user and a CRM professional. */
 export type RelationshipLevel = number;
 export { RELATIONSHIP_LEVEL_MIN, RELATIONSHIP_LEVEL_MAX };
 export type ConformityStatus = (typeof conformityStatusEnum.enumValues)[number];

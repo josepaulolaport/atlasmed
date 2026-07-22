@@ -104,7 +104,7 @@ class _ClinicTopShortcutsSectionState extends State<ClinicTopShortcutsSection> {
 
 /// Counts empty fields among the ones shown on `ClinicAdminInfoSection` —
 /// tax ID, phone, email, website, responsible doctor, hours, and the split
-/// address fields (estado / cidade / CEP / endereço).
+/// address fields (estado / cidade / CEP / endereço composto).
 /// "Cliente desde" is excluded: it's a system field, not something a rep
 /// fills in, so it shouldn't count against completeness.
 int _adminInfoPendingCount(ClinicDetail detail) {

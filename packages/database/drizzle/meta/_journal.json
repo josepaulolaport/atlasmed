@@ -43,6 +43,48 @@
       "when": 1784261098857,
       "tag": "0005_remove_territory_hierarchy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784679905526,
+      "tag": "0006_facility_admin_whatsapp_rep_relationship",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784683378299,
+      "tag": "0007_user_professional_relationships",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784683485850,
+      "tag": "0008_migrate_fp_relationship_to_user",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784683489635,
+      "tag": "0009_migrate_fp_relationship_to_user_snapshot",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784743188893,
+      "tag": "0010_facility_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784744150912,
+      "tag": "0011_facility_photos",
+      "breakpoints": true
     }
   ]
 }

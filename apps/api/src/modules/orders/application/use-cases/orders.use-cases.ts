@@ -1,4 +1,4 @@
-import { assertResourceInScope, type ScopeContext } from "@atlasmed/access";
+import { assertResourceInScope, Role, type ScopeContext } from "@atlasmed/access";
 import type {
   OrderDetailRecord,
   OrderRepository,
@@ -24,6 +24,12 @@ function serializeListOrder(order: Awaited<ReturnType<OrderRepository["findAll"]
     itemsTotal: order.itemsTotal,
     freight: order.freight,
     total: order.itemsTotal + order.freight,
+    items: (order.itemPreviews ?? []).map((item) => ({
+      productName: item.productName,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      lineTotal: item.quantity * item.unitPrice,
+    })),
   };
 }
 
@@ -78,14 +84,29 @@ export class ListOrdersUseCase {
     page?: number;
     limit?: number;
     statuses?: OrderStatus[];
+    facilityId?: string;
+    /** Authenticated user — used for REP seller filter. */
+    actor?: { userId: string; roleName: string };
+    includeItemPreviews?: boolean;
     scope: ScopeContext;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
+
+    if (input.facilityId) {
+      assertResourceInScope(input.scope, "facility", input.facilityId);
+    }
+
+    const sellerId =
+      input.actor?.roleName === Role.REP ? input.actor.userId : undefined;
+
     const { orders, total } = await this.deps.orderRepository.findAll({
       page,
       limit,
       statuses: input.statuses,
+      facilityId: input.facilityId,
+      sellerId,
+      includeItemPreviews: input.includeItemPreviews,
       scope: input.scope.isGlobal
         ? { isGlobal: true }
         : { isGlobal: false, facilityIds: input.scope.facilityIds },

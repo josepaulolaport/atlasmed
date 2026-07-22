@@ -384,6 +384,85 @@ export class CreateFacilityHealthcareProviderShareUseCase {
   }
 }
 
+export class ReplaceFacilityHealthcareProviderSharesUseCase {
+  constructor(
+    private readonly deps: {
+      shareRepository: FacilityHealthcareProviderShareRepository;
+    }
+  ) {}
+
+  async execute(input: {
+    facilityId: string;
+    scope: ScopeContext;
+    shares: Array<{ healthcareProviderId: string; sharePercent: number }>;
+  }) {
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+
+    const issues: Array<{ field: string; message: string }> = [];
+    const seen = new Set<string>();
+
+    for (let index = 0; index < input.shares.length; index += 1) {
+      const share = input.shares[index]!;
+      const field = `shares[${index}]`;
+
+      if (!share.healthcareProviderId?.trim()) {
+        issues.push({ field: `${field}.healthcareProviderId`, message: "Required" });
+        continue;
+      }
+
+      if (seen.has(share.healthcareProviderId)) {
+        issues.push({
+          field: `${field}.healthcareProviderId`,
+          message: "Duplicate healthcare provider",
+        });
+      }
+      seen.add(share.healthcareProviderId);
+
+      if (
+        typeof share.sharePercent !== "number" ||
+        Number.isNaN(share.sharePercent) ||
+        share.sharePercent <= 0 ||
+        share.sharePercent > 100
+      ) {
+        issues.push({
+          field: `${field}.sharePercent`,
+          message: "Share percent must be between 0 and 100",
+        });
+      }
+    }
+
+    const total = input.shares.reduce((sum, share) => sum + (share.sharePercent || 0), 0);
+    if (input.shares.length > 0 && Math.abs(total - 100) > 0.01) {
+      issues.push({
+        field: "shares",
+        message: `Shares must sum to 100% (current: ${total}%)`,
+      });
+    }
+
+    if (issues.length > 0) {
+      throw new ValidationError(issues);
+    }
+
+    const replaced = await this.deps.shareRepository.replaceByFacility(
+      input.facilityId,
+      input.shares
+    );
+
+    return {
+      data: replaced.map((share) => ({
+        id: share.id,
+        facilityId: share.facilityId,
+        healthcareProviderId: share.healthcareProviderId,
+        sharePercent: share.sharePercent,
+        source: share.source,
+        healthcareProvider: share.healthcareProvider,
+        createdAt: share.createdAt.toISOString(),
+        updatedAt: share.updatedAt.toISOString(),
+      })),
+    };
+  }
+}
+
 // ============================================================================
 // Competitor products & product equivalences ("comparativo" / price index)
 // ============================================================================

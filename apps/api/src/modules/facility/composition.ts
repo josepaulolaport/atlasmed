@@ -2,8 +2,11 @@ import { DrizzleFacilityRepository } from "./infrastructure/repositories/drizzle
 import { DrizzleFacilityProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
 import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
 import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
+import { DrizzleFacilityNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-note.repository";
+import { DrizzleFacilityPhotoRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-photo.repository";
 import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
 import { DrizzleVisitRepository } from "./infrastructure/repositories/drizzle/drizzle-visit.repository";
+import { AvatarStorageAdapter } from "../access/infrastructure/avatar-storage/avatar-storage.adapter";
 import { DrizzleTerritoryScopePort } from "./infrastructure/scope/drizzle-territory-scope.port";
 import {
   CreateFacilityUseCase,
@@ -36,6 +39,19 @@ import {
   CreateFacilityVisitUseCase,
 } from "./application/use-cases/visit.use-cases";
 import {
+  CreateFacilityRepresentativeUseCase,
+  ListFacilityRepresentativesUseCase,
+} from "./application/use-cases/facility-representative.use-cases";
+import {
+  CreateFacilityNoteUseCase,
+  ListFacilityNotesUseCase,
+} from "./application/use-cases/facility-note.use-cases";
+import {
+  DownloadFacilityPhotoUseCase,
+  ListFacilityPhotosUseCase,
+  UploadFacilityPhotoUseCase,
+} from "./application/use-cases/facility-photo.use-cases";
+import {
   territoryMembershipService,
 } from "../territory/composition";
 import { geocodingPort } from "../maps/composition";
@@ -51,9 +67,13 @@ export const facilityRepositories = {
   association: new DrizzleFacilityProfessionalRepository(),
   representative: new DrizzleFacilityRepresentativeRepository(),
   consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
+  note: new DrizzleFacilityNoteRepository(),
+  photo: new DrizzleFacilityPhotoRepository(),
   conformity: new DrizzleConformityRepository(),
   visit: new DrizzleVisitRepository(),
 };
+
+const facilityPhotoStorage = new AvatarStorageAdapter();
 
 export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
   facilityRepositories.facility
@@ -85,6 +105,8 @@ export const facilityUseCases = {
   listFacilityProfessionals: () =>
     new ListFacilityProfessionalsUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
     }),
   confirmProfessionalAtFacility: () =>
     new ConfirmProfessionalAtFacilityUseCase({
@@ -102,10 +124,14 @@ export const facilityUseCases = {
     new GetFacilityProfessionalContextUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
       professionalRepository: professionalRepositories.professional,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
     }),
   updateFacilityProfessionalRole: () =>
     new UpdateFacilityProfessionalRoleUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
     }),
   confirmRegistryProfessional: () =>
     new ConfirmRegistryProfessionalUseCase({
@@ -118,6 +144,39 @@ export const facilityUseCases = {
       facilityRepresentativeRepository: facilityRepositories.representative,
       facilityRepository: facilityRepositories.facility,
       registryReadRepository,
+    }),
+  listFacilityRepresentatives: () =>
+    new ListFacilityRepresentativesUseCase({
+      facilityRepresentativeRepository: facilityRepositories.representative,
+    }),
+  createFacilityRepresentative: () =>
+    new CreateFacilityRepresentativeUseCase({
+      facilityRepresentativeRepository: facilityRepositories.representative,
+    }),
+  listFacilityNotes: () =>
+    new ListFacilityNotesUseCase({
+      facilityNoteRepository: facilityRepositories.note,
+    }),
+  createFacilityNote: () =>
+    new CreateFacilityNoteUseCase({
+      facilityNoteRepository: facilityRepositories.note,
+    }),
+  listFacilityPhotos: () =>
+    new ListFacilityPhotosUseCase({
+      facilityPhotoRepository: facilityRepositories.photo,
+      facilityRepository: facilityRepositories.facility,
+      storage: facilityPhotoStorage,
+    }),
+  uploadFacilityPhoto: () =>
+    new UploadFacilityPhotoUseCase({
+      facilityPhotoRepository: facilityRepositories.photo,
+      facilityRepository: facilityRepositories.facility,
+      storage: facilityPhotoStorage,
+    }),
+  downloadFacilityPhoto: () =>
+    new DownloadFacilityPhotoUseCase({
+      facilityPhotoRepository: facilityRepositories.photo,
+      storage: facilityPhotoStorage,
     }),
   listConsultantAssignments: () =>
     new ListFacilityConsultantAssignmentsUseCase({

@@ -1,4 +1,5 @@
 import { DrizzleProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-professional.repository";
+import { DrizzleUserProfessionalRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-professional-relationship.repository";
 import { searchService } from "../../infrastructure/search/search.service";
 import {
   CreateDoctorUseCase,
@@ -12,6 +13,8 @@ import {
 
 export const professionalRepositories = {
   professional: new DrizzleProfessionalRepository(),
+  userProfessionalRelationship:
+    new DrizzleUserProfessionalRelationshipRepository(),
 };
 
 export const professionalUseCases = {

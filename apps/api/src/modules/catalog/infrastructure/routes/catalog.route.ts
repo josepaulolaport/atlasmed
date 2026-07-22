@@ -159,9 +159,11 @@ const updateProductRoute = new Elysia()
     }
   );
 
+// Field reps need this catalog when editing facility payer mix (Fontes Pagadoras).
+// CRUD of providers stays on CATALOG; listing for picker is facility-scoped read.
 const listHealthcareProvidersRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("read", "CATALOG"))
+  .use(requirePermission("read", "FACILITY"))
   .get(
     "/healthcare-providers",
     async ({ query }) =>
@@ -285,6 +287,36 @@ const createFacilityShareRoute = new Elysia()
     }
   );
 
+const replaceFacilitySharesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .put(
+    "/facilities/:id/healthcare-provider-shares",
+    async ({ params, body, getScope }) => {
+      const scope = await getScope();
+      return catalogUseCases.replaceFacilityShares().execute({
+        facilityId: params.id,
+        scope,
+        shares: body.shares,
+      });
+    },
+    {
+      detail: {
+        summary: "Replace facility healthcare provider share mix",
+        tags: ["Catalog"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        shares: t.Array(
+          t.Object({
+            healthcareProviderId: t.String(),
+            sharePercent: t.Number(),
+          })
+        ),
+      }),
+    }
+  );
+
 export const catalogRoute = new Elysia()
   .use(listSectorsRoute)
   .use(createSectorRoute)
@@ -298,5 +330,6 @@ export const catalogRoute = new Elysia()
   .use(updateHealthcareProviderRoute)
   .use(listFacilitySharesRoute)
   .use(createFacilityShareRoute)
+  .use(replaceFacilitySharesRoute)
   .use(competitorProductsRoute)
   .use(productComparisonsRoute);
