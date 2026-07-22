@@ -1,11 +1,11 @@
-FROM --platform=linux/amd64 oven/bun:1.3.14 AS prepare
+FROM oven/bun:1.3.14 AS prepare
 
 WORKDIR /app
 COPY . .
 
 RUN bunx turbo prune @atlasmed/web --docker
 
-FROM --platform=linux/amd64 oven/bun:1.3.14 AS installer
+FROM oven/bun:1.3.14 AS installer
 
 WORKDIR /app
 COPY --from=prepare /app/out/json/ ./
@@ -22,7 +22,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 RUN bunx turbo run build --filter=@atlasmed/web
 
-FROM --platform=linux/amd64 node:20-alpine AS runtime
+FROM node:20-alpine AS runtime
 
 WORKDIR /app
 
