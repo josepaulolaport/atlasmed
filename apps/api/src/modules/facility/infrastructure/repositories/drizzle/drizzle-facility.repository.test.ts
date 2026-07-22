@@ -17,6 +17,7 @@ describe("facility list SQL", () => {
     const { sql, params } = sqlShape(buildFacilityListConditions({
       scope: { isGlobal: false, facilityIds: ["facility-1", "facility-2"] },
       search: "Central",
+      productIds: ["product-1"],
       purchaseProfile: "AUTOMATIC",
       purchaseFunnelStages: ["PURCHASE_WINDOW", "CHURN"],
       purchaseIntervalMinDays: 15,
@@ -25,7 +26,21 @@ describe("facility list SQL", () => {
 
     expect(sql).toContain('"facilities"."deactivated_at" is null');
     expect(sql).toContain('"facilities"."id" in');
-    expect(sql).toContain('"facilities"."name" ilike');
+    for (const column of [
+      "name",
+      "legal_name",
+      "trade_name",
+      "cnpj",
+      "cpf",
+      "cnes_code",
+      "city",
+      "state",
+    ]) {
+      expect(sql).toContain(`"facilities"."${column}" ilike`);
+    }
+    expect(sql).toContain(" or ");
+    expect(sql).toContain('"orders" inner join "order_items"');
+    expect(sql).toContain('"order_items"."product_id" in');
     expect(sql).toContain('"facilities"."manual_purchase_profile" is null');
     expect(sql).toContain('"facilities"."purchase_funnel_stage" in');
     expect(sql).toContain('"facilities"."purchase_interval_days" >=');
@@ -34,6 +49,7 @@ describe("facility list SQL", () => {
       "facility-1",
       "facility-2",
       "%Central%",
+      "product-1",
       "PURCHASE_WINDOW",
       "CHURN",
       15,
