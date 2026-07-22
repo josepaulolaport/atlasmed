@@ -323,21 +323,25 @@ describe("facility healthcare provider shares", () => {
       create: mock(async () => {
         throw new Error("unused");
       }),
-      replaceByFacility: mock(async (_facilityId, shares) =>
-        shares.map((share, index) => ({
-          id: `share-${index}`,
-          facilityId,
-          healthcareProviderId: share.healthcareProviderId,
-          sharePercent: share.sharePercent,
-          source: "MANUAL" as const,
-          createdAt: new Date("2024-01-01"),
-          updatedAt: new Date("2024-01-01"),
-          healthcareProvider: {
-            id: share.healthcareProviderId,
-            name: `Provider ${index}`,
-            type: "PRIVATE",
-          },
-        }))
+      replaceByFacility: mock(
+        async (
+          _facilityId: string,
+          shares: Array<{ healthcareProviderId: string; sharePercent: number }>
+        ) =>
+          shares.map((share, index) => ({
+            id: `share-${index}`,
+            facilityId,
+            healthcareProviderId: share.healthcareProviderId,
+            sharePercent: share.sharePercent,
+            source: "MANUAL" as const,
+            createdAt: new Date("2024-01-01"),
+            updatedAt: new Date("2024-01-01"),
+            healthcareProvider: {
+              id: share.healthcareProviderId,
+              name: `Provider ${index}`,
+              type: "PRIVATE",
+            },
+          }))
       ),
       sumSharePercentForFacility: mock(async () => 0),
       ...overrides,
