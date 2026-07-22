@@ -36,7 +36,8 @@ class ClinicFieldNotesSection extends ConsumerWidget {
               style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
             ),
             TextButton(
-              onPressed: () => ref.invalidate(facilityNotesProvider(facilityId)),
+              onPressed: () =>
+                  ref.invalidate(facilityNotesProvider(facilityId)),
               child: const Text('Tentar novamente'),
             ),
           ],

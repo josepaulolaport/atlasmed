@@ -30,9 +30,12 @@ class ClinicHeaderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final top = MediaQuery.of(context).padding.top;
-    final photos = ref.watch(facilityPhotosProvider(detail.id)).valueOrNull ??
+    final photos =
+        ref.watch(facilityPhotosProvider(detail.id)).valueOrNull ??
         sections?.photos;
-    final uploading = ref.watch(facilityPhotoUploadProvider(detail.id)).isLoading;
+    final uploading = ref
+        .watch(facilityPhotoUploadProvider(detail.id))
+        .isLoading;
     ref.listen<AsyncValue<void>>(facilityPhotoUploadProvider(detail.id), (
       previous,
       next,
@@ -122,7 +125,8 @@ class ClinicHeaderSection extends ConsumerWidget {
                     _Avatar(
                       name: detail.name,
                       taxIdType: taxIdType,
-                      imageUrl: photos?.profileImageUrl ??
+                      imageUrl:
+                          photos?.profileImageUrl ??
                           (photos?.imageUrls.isNotEmpty == true
                               ? photos!.imageUrls.first
                               : null),
@@ -273,7 +277,8 @@ class ClinicHeaderSection extends ConsumerWidget {
     PhotoGallerySummary? photos,
   ) async {
     final hasPhotos = photos != null && photos.count > 0;
-    final isMock = detail.id.startsWith('near-') || detail.id.endsWith(':empty');
+    final isMock =
+        detail.id.startsWith('near-') || detail.id.endsWith(':empty');
 
     await showModalBottomSheet<void>(
       context: context,

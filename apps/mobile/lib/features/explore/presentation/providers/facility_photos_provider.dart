@@ -7,11 +7,8 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 bool _isMockFacilityId(String facilityId) =>
     facilityId.startsWith('near-') || facilityId.endsWith(':empty');
 
-final facilityPhotosProvider =
-    FutureProvider.autoDispose.family<PhotoGallerySummary, String>((
-      ref,
-      facilityId,
-    ) async {
+final facilityPhotosProvider = FutureProvider.autoDispose
+    .family<PhotoGallerySummary, String>((ref, facilityId) async {
       if (_isMockFacilityId(facilityId)) {
         final sections = facilityId.endsWith(':empty')
             ? mockEmptyEstablishmentDetailSections(facilityId)

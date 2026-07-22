@@ -3,21 +3,15 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 
-final facilityNotesRepositoryProvider =
-    Provider.autoDispose.family<FacilityNotesRepository, String>((
-      ref,
-      facilityId,
-    ) {
+final facilityNotesRepositoryProvider = Provider.autoDispose
+    .family<FacilityNotesRepository, String>((ref, facilityId) {
       final repository = FacilityNotesRepository(facilityId);
       ref.onDispose(repository.dispose);
       return repository;
     });
 
-final facilityNotesProvider =
-    FutureProvider.autoDispose.family<List<FacilityFieldNote>, String>((
-      ref,
-      facilityId,
-    ) async {
+final facilityNotesProvider = FutureProvider.autoDispose
+    .family<List<FacilityFieldNote>, String>((ref, facilityId) async {
       if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
         final sections = facilityId.endsWith(':empty')
             ? mockEmptyEstablishmentDetailSections(facilityId)

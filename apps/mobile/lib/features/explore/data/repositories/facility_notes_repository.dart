@@ -69,9 +69,7 @@ class FacilityNotesRepository extends Repository<List<FacilityFieldNote>>
       }
     }
 
-    final created = _fromApi(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    final created = _fromApi(jsonDecode(response.body) as Map<String, dynamic>);
     await refresh();
     return created;
   }

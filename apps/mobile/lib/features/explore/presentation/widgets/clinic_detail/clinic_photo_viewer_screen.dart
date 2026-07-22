@@ -187,11 +187,7 @@ class _PlaceholderCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Center(
-        child: Icon(
-          Icons.photo_rounded,
-          size: 72,
-          color: Color(0x4DFFFFFF),
-        ),
+        child: Icon(Icons.photo_rounded, size: 72, color: Color(0x4DFFFFFF)),
       ),
     );
   }

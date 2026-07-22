@@ -32,10 +32,7 @@ class FacilityPhotoFile {
 }
 
 class FacilityPhotosResponse {
-  const FacilityPhotosResponse({
-    required this.imageUrl,
-    required this.photos,
-  });
+  const FacilityPhotosResponse({required this.imageUrl, required this.photos});
 
   factory FacilityPhotosResponse.fromJson(String json) {
     final map = jsonDecode(json) as Map<String, dynamic>;
@@ -44,12 +41,7 @@ class FacilityPhotosResponse {
     return FacilityPhotosResponse(
       imageUrl: map['imageUrl'] as String?,
       photos: data
-          .map(
-            (item) => (
-              id: item['id'] as String,
-              url: item['url'] as String,
-            ),
-          )
+          .map((item) => (id: item['id'] as String, url: item['url'] as String))
           .toList(growable: false),
     );
   }
@@ -126,17 +118,13 @@ class FacilityPhotosRepository extends Repository<FacilityPhotosResponse>
 
     final decoded = jsonDecode(response.body);
     if (decoded is! Map<String, dynamic>) {
-      throw const FacilityPhotosException(
-        'A resposta do servidor é inválida.',
-      );
+      throw const FacilityPhotosException('A resposta do servidor é inválida.');
     }
 
     final id = decoded['id'] as String?;
     final url = decoded['url'] as String?;
     if (id == null || url == null) {
-      throw const FacilityPhotosException(
-        'A resposta do servidor é inválida.',
-      );
+      throw const FacilityPhotosException('A resposta do servidor é inválida.');
     }
 
     await refresh();

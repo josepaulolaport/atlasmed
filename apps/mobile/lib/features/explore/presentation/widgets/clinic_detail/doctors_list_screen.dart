@@ -84,10 +84,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
   Future<void> _refreshAfterMutation(List<FacilityCrmDoctor> added) async {
     setState(() {
       final existing = _doctors.map((d) => d.id).toSet();
-      _doctors = [
-        ..._doctors,
-        ...added.where((d) => !existing.contains(d.id)),
-      ];
+      _doctors = [..._doctors, ...added.where((d) => !existing.contains(d.id))];
     });
     final facilityId = widget.facilityId;
     if (facilityId != null && facilityId.isNotEmpty) {

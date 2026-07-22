@@ -19,18 +19,15 @@ class FacilityAssociateException implements Exception {
 }
 
 /// Search / create / associate doctors against a facility.
-class FacilityAssociateRepository
-    extends Repository<PaginatedDoctors>
+class FacilityAssociateRepository extends Repository<PaginatedDoctors>
     with SessionEnvironmentMixin<PaginatedDoctors> {
-  FacilityAssociateRepository(
-    this.facilityId, {
-    RepositoryHttpClient? client,
-  }) : _client = client,
-       super(
-         endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
-         resolveOnCreate: false,
-         name: 'FacilityAssociateRepository',
-       );
+  FacilityAssociateRepository(this.facilityId, {RepositoryHttpClient? client})
+    : _client = client,
+      super(
+        endpoint: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals'),
+        resolveOnCreate: false,
+        name: 'FacilityAssociateRepository',
+      );
 
   final String facilityId;
   final RepositoryHttpClient? _client;
@@ -45,11 +42,7 @@ class FacilityAssociateRepository
     String? search,
     int limit = 40,
   }) async {
-    final repo = DoctorsRepository(
-      page: 1,
-      limit: limit,
-      searchQuery: search,
-    );
+    final repo = DoctorsRepository(page: 1, limit: limit, searchQuery: search);
     try {
       final page = await repo.currentValueOrResolve();
       if (page == null) {
@@ -129,8 +122,7 @@ class FacilityAssociateRepository
     final map = jsonDecode(response.body) as Map<String, dynamic>;
     final doctor = _doctorFromCreateResponse(map);
 
-    final needsRolePatch =
-        isPrescriber || isBuyer || isDecisionMaker;
+    final needsRolePatch = isPrescriber || isBuyer || isDecisionMaker;
     if (needsRolePatch) {
       await _patchRoles(
         doctor.id,
@@ -216,7 +208,8 @@ class FacilityAssociateRepository
       name: name.isEmpty ? 'Médico' : name,
       initials: initialsFromName(name),
       hue: hueFromName(name),
-      specialty: map['primarySpecialtyLabel'] as String? ??
+      specialty:
+          map['primarySpecialtyLabel'] as String? ??
           map['specialty'] as String?,
       crm: crm,
       phone: map['mobilePhone'] as String? ?? map['landlinePhone'] as String?,
@@ -234,10 +227,7 @@ class FacilityAssociateRepository
   if (parts.length == 1) {
     return (firstName: parts.first, lastName: '-');
   }
-  return (
-    firstName: parts.first,
-    lastName: parts.sublist(1).join(' '),
-  );
+  return (firstName: parts.first, lastName: parts.sublist(1).join(' '));
 }
 
 /// Best-effort CRM parse from free text like `CRM/SP 74.127`.
