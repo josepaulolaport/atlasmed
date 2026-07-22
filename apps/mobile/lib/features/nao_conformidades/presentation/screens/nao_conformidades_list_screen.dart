@@ -58,9 +58,8 @@ class _NaoConformidadesListScreenState
                 ),
                 error: (error, _) => _ErrorState(
                   message: error.toString(),
-                  onRetry: () => ref.invalidate(
-                    opsNaoConformidadesProvider(_apiStatus),
-                  ),
+                  onRetry: () =>
+                      ref.invalidate(opsNaoConformidadesProvider(_apiStatus)),
                 ),
                 data: (queue) {
                   final pendingCount = _filter == 'Pendentes'
@@ -129,9 +128,8 @@ class _NaoConformidadesListScreenState
                           if (i > 0) const SizedBox(height: 10),
                           _SuggestionListCard(
                             suggestion: item,
-                            onTap: () => context.push(
-                              '/nao-conformidades/${item.id}',
-                            ),
+                            onTap: () =>
+                                context.push('/nao-conformidades/${item.id}'),
                           ),
                         ],
                     ],

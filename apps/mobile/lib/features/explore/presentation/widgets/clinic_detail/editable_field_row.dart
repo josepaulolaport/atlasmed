@@ -147,8 +147,7 @@ class EditableFieldRow extends ConsumerWidget {
                               ? (showEditButton
                                     ? _EmptyValueChip(
                                         label: emptyActionLabel,
-                                        onTap: () =>
-                                            _suggestEdit(context, ref),
+                                        onTap: () => _suggestEdit(context, ref),
                                       )
                                     : const Text(
                                         '—',

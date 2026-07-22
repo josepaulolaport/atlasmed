@@ -32,10 +32,9 @@ Future<void> requestClinicDeactivation(
   if (reason == null || reason.trim().isEmpty || !context.mounted) return;
 
   try {
-    await ref.read(naoConformidadeActionsProvider).submitDeactivation(
-      facilityId: clinicId,
-      reason: reason.trim(),
-    );
+    await ref
+        .read(naoConformidadeActionsProvider)
+        .submitDeactivation(facilityId: clinicId, reason: reason.trim());
     if (!context.mounted) return;
     messenger?.showSnackBar(
       const SnackBar(

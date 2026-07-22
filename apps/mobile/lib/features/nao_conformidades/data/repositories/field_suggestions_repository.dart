@@ -18,7 +18,8 @@ class FieldSuggestionsException implements Exception {
 }
 
 /// User-submitted Não Conformidades (`/field-suggestions` + facility nested).
-class FieldSuggestionsRepository extends Repository<List<NaoConformidadeSuggestion>>
+class FieldSuggestionsRepository
+    extends Repository<List<NaoConformidadeSuggestion>>
     with SessionEnvironmentMixin<List<NaoConformidadeSuggestion>> {
   FieldSuggestionsRepository({RepositoryHttpClient? client})
     : _client = client,
@@ -60,11 +61,7 @@ class FieldSuggestionsRepository extends Repository<List<NaoConformidadeSuggesti
     final url = buildEndpoint(
       baseUrl: AppConfig.apiBaseUrl,
       path: '/api/v1/field-suggestions',
-      queryParameters: {
-        'status': status,
-        'page': '$page',
-        'limit': '$limit',
-      },
+      queryParameters: {'status': status, 'page': '$page', 'limit': '$limit'},
     );
     return _getList(url);
   }
@@ -77,11 +74,7 @@ class FieldSuggestionsRepository extends Repository<List<NaoConformidadeSuggesti
     final url = buildEndpoint(
       baseUrl: AppConfig.apiBaseUrl,
       path: '/api/v1/facilities/$facilityId/field-suggestions',
-      queryParameters: {
-        'mine': 'true',
-        'page': '$page',
-        'limit': '$limit',
-      },
+      queryParameters: {'mine': 'true', 'page': '$page', 'limit': '$limit'},
     );
     return _getList(url);
   }
@@ -120,10 +113,7 @@ class FieldSuggestionsRepository extends Repository<List<NaoConformidadeSuggesti
   }) async {
     return _create(
       facilityId: facilityId,
-      body: {
-        'kind': 'DEACTIVATION',
-        'reason': reason.trim(),
-      },
+      body: {'kind': 'DEACTIVATION', 'reason': reason.trim()},
     );
   }
 
@@ -196,10 +186,7 @@ class FieldSuggestionsRepository extends Repository<List<NaoConformidadeSuggesti
     return fromJson(response.body);
   }
 
-  Future<void> _ensureOk(
-    RepositoryHttpResponse response,
-    String action,
-  ) async {
+  Future<void> _ensureOk(RepositoryHttpResponse response, String action) async {
     if (successfulCondition(response.statusCode, response.body)) return;
     final shouldThrow = await onErrorStatusCode(response.statusCode);
     if (shouldThrow) {

@@ -62,9 +62,8 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
 
   bool get _isBalanced => _payers.isEmpty || _totalPercent == 100;
 
-  bool get _hasZeroShare => _payers.any(
-    (p) => (int.tryParse(p.percentCtrl.text.trim()) ?? 0) <= 0,
-  );
+  bool get _hasZeroShare =>
+      _payers.any((p) => (int.tryParse(p.percentCtrl.text.trim()) ?? 0) <= 0);
 
   Set<String> get _usedNames =>
       _payers.map((p) => p.name.toLowerCase()).toSet();
@@ -247,10 +246,8 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _AddPayerSourcesSheet(
-        catalog: widget.catalog,
-        usedNames: _usedNames,
-      ),
+      builder: (_) =>
+          _AddPayerSourcesSheet(catalog: widget.catalog, usedNames: _usedNames),
     );
     if (selected == null || selected.isEmpty || !mounted) return;
 
@@ -637,10 +634,7 @@ class _StepButton extends StatelessWidget {
 }
 
 class _AddPayerSourcesSheet extends StatefulWidget {
-  const _AddPayerSourcesSheet({
-    required this.catalog,
-    required this.usedNames,
-  });
+  const _AddPayerSourcesSheet({required this.catalog, required this.usedNames});
 
   final List<PayerCatalogEntry> catalog;
   final Set<String> usedNames;

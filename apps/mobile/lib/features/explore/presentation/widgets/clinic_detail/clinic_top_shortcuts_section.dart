@@ -57,9 +57,8 @@ class _ClinicTopShortcutsSectionState
       mySuggestionsForClinicProvider(widget.detail.id),
     );
     final pendingSuggestions = mySuggestionsAsync.maybeWhen(
-      data: (items) => items
-          .where((s) => s.status == NaoConformidadeStatus.pending)
-          .length,
+      data: (items) =>
+          items.where((s) => s.status == NaoConformidadeStatus.pending).length,
       orElse: () => 0,
     );
 

@@ -46,10 +46,7 @@ class MySuggestionsScreen extends ConsumerWidget {
                 const Text(
                   'Não foi possível carregar suas sugestões',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 12),
                 FilledButton(

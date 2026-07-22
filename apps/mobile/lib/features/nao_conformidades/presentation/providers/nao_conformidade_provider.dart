@@ -17,10 +17,7 @@ class NaoConformidadeCacheNotifier
 
   void upsertAll(Iterable<NaoConformidadeSuggestion> items) {
     if (items.isEmpty) return;
-    state = {
-      ...state,
-      for (final item in items) item.id: item,
-    };
+    state = {...state, for (final item in items) item.id: item};
   }
 
   NaoConformidadeSuggestion? byId(String id) => state[id];
@@ -33,11 +30,8 @@ final naoConformidadeCacheProvider =
     >((ref) => NaoConformidadeCacheNotifier());
 
 /// Ops queue — `status` is API value: PENDING | APPROVED | REJECTED | ALL.
-final opsNaoConformidadesProvider =
-    FutureProvider.autoDispose.family<List<NaoConformidadeSuggestion>, String>((
-      ref,
-      status,
-    ) async {
+final opsNaoConformidadesProvider = FutureProvider.autoDispose
+    .family<List<NaoConformidadeSuggestion>, String>((ref, status) async {
       final repo = ref.watch(fieldSuggestionsRepositoryProvider);
       final items = await repo.listOps(status: status);
       ref.read(naoConformidadeCacheProvider.notifier).upsertAll(items);
@@ -54,11 +48,8 @@ final mySuggestionsForClinicProvider = FutureProvider.autoDispose
     });
 
 /// Detail lookup: cache first, then ops GET when missing.
-final naoConformidadeByIdProvider =
-    FutureProvider.autoDispose.family<NaoConformidadeSuggestion?, String>((
-      ref,
-      id,
-    ) async {
+final naoConformidadeByIdProvider = FutureProvider.autoDispose
+    .family<NaoConformidadeSuggestion?, String>((ref, id) async {
       final cached = ref.watch(naoConformidadeCacheProvider)[id];
       if (cached != null) return cached;
 

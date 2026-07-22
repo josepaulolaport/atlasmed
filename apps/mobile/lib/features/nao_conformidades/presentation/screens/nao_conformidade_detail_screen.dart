@@ -58,10 +58,7 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
           return _NotFound(onBack: () => context.pop());
         }
 
-        return _DetailBody(
-          suggestion: suggestion,
-          canReview: canReview,
-        );
+        return _DetailBody(suggestion: suggestion, canReview: canReview);
       },
     );
   }

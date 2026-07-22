@@ -40,19 +40,21 @@ Future<void> showAddressEditSuggestionSheet(
   if (submitted == null || !context.mounted) return;
 
   try {
-    await ref.read(naoConformidadeActionsProvider).submitFieldChange(
-      facilityId: facilityId,
-      fieldKey: 'address',
-      proposedValue: {
-        'neighborhood': submitted['neighborhood'],
-        'streetAddress': submitted['streetAddress'],
-        'streetNumber': submitted['streetNumber'],
-        'addressComplement': submitted['addressComplement'],
-        'city': city,
-        'state': state,
-        'postalCode': postalCode,
-      },
-    );
+    await ref
+        .read(naoConformidadeActionsProvider)
+        .submitFieldChange(
+          facilityId: facilityId,
+          fieldKey: 'address',
+          proposedValue: {
+            'neighborhood': submitted['neighborhood'],
+            'streetAddress': submitted['streetAddress'],
+            'streetNumber': submitted['streetNumber'],
+            'addressComplement': submitted['addressComplement'],
+            'city': city,
+            'state': state,
+            'postalCode': postalCode,
+          },
+        );
     if (!context.mounted) return;
     messenger?.showSnackBar(
       const SnackBar(
