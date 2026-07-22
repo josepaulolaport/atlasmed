@@ -75,7 +75,6 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   PointAnnotation? _calloutAnnotation;
   PointAnnotation? _calloutCloseAnnotation;
   bool _mapUnavailable = false;
-  bool _pinTapListenerRegistered = false;
   bool _calloutTapListenerRegistered = false;
   Timer? _pinResyncDebounce;
 
@@ -292,7 +291,6 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     _calloutManager = null;
     _calloutAnnotation = null;
     _calloutCloseAnnotation = null;
-    _pinTapListenerRegistered = false;
     _calloutTapListenerRegistered = false;
     map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
     // Non-deprecated replacement for `MapWidget.onTapListener`: taps that
@@ -503,7 +501,6 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     _pinAnnotationManager = await map.annotations
         .createCircleAnnotationManager();
     _pinAnnotationManager!.tapEvents(onTap: _onPinTapped);
-    _pinTapListenerRegistered = true;
   }
 
   /// Draws (or redraws) a lightly-shaded circle over the current search
@@ -515,10 +512,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     try {
       // Keep the fill under the pin layer so pin taps keep working.
       await _ensurePinAnnotationManager(map);
-      if (_radiusCircleManager == null) {
-        _radiusCircleManager = await map.annotations
-            .createPolygonAnnotationManager(below: _pinAnnotationManager!.id);
-      }
+      _radiusCircleManager ??= await map.annotations
+          .createPolygonAnnotationManager(below: _pinAnnotationManager!.id);
       await _radiusCircleManager!.deleteAll();
       await _radiusCircleManager!.create(
         PolygonAnnotationOptions(

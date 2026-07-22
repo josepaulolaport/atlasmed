@@ -102,7 +102,7 @@ class ClinicDetail {
   /// Full address for header / maps — street line plus city/state when present.
   String? get formattedAddress {
     final parts = <String>[
-      if (composedAddressLine != null) composedAddressLine!,
+      ?composedAddressLine,
       if (city.trim().isNotEmpty) city.trim(),
       if (state != null && state!.trim().isNotEmpty) state!.trim(),
     ];

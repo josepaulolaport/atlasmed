@@ -55,7 +55,7 @@ Uri? emailUrl(String? email) {
 enum _MapsApp { waze, googleMaps }
 
 /// Candidate deep links for a maps app, native first then https fallback.
-List<Uri> mapsAppRouteUrls({
+List<Uri> _mapsAppRouteUrls({
   required _MapsApp app,
   double? latitude,
   double? longitude,
@@ -195,7 +195,7 @@ Future<void> launchMapsRoute(
 
   if (app == null || !context.mounted) return;
 
-  final candidates = mapsAppRouteUrls(
+  final candidates = _mapsAppRouteUrls(
     app: app,
     latitude: latitude,
     longitude: longitude,
