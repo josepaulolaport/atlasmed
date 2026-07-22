@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import type { ScopeContext } from "@atlasmed/access";
+import { createGlobalScopeContext } from "@atlasmed/access";
 import {
   CreateFacilityFieldSuggestionUseCase,
   ApproveFieldSuggestionUseCase,
@@ -12,12 +12,7 @@ import {
   ValidationError,
 } from "../../../../shared/errors";
 
-const globalScope: ScopeContext = {
-  isGlobal: true,
-  facilityIds: [],
-  territoryIds: [],
-  sectorIds: [],
-};
+const globalScope = createGlobalScopeContext();
 
 function facilityStub() {
   return {
