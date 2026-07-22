@@ -229,7 +229,6 @@ jobs:
         run: |
           fvm flutter pub get
           shorebird release android \
-            --flavor production \
             --no-confirm \
             --artifact aab \
             --flutter-version=${{ env.FLUTTER_VERSION }} \
@@ -260,7 +259,6 @@ jobs:
         run: |
           fvm flutter pub get
           shorebird release ios \
-            --flavor production \
             --no-confirm \
             --flutter-version=${{ env.FLUTTER_VERSION }} \
             -- --dart-define-from-file=config.production.json --no-tree-shake-icons

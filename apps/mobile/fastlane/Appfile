@@ -9,7 +9,7 @@ app_identifier "br.com.atlasmed.app"
 #   track "internal"
 #   json_key_file "path/to/service-account.json"
 #
-# Para App Store Connect:
-#   apple_id "seu@apple.id"
-#   itc_team_id "..."
-#   team_id "..."
+
+apple_id "iamyanndias@gmail.com"
+itc_team_id "GNT83DZ768"
+team_id "GNT83DZ768"

@@ -99,7 +99,6 @@ run_patches() {
     if shorebird patch \
       --platforms="$platform" \
       --release-version="$releaseVersion" \
-      --flavor=production \
       $FLAGS \
       -- --dart-define-from-file=config.production.json --no-tree-shake-icons; then
       echo "  ✅ $platform @ $releaseVersion patched successfully"

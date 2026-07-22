@@ -32,8 +32,8 @@ FLAVOR     := production
 CONFIG     := config.$(FLAVOR).json
 
 # ── Flags compartilhadas ───────────────────────────────────────────
-SB_RELEASE_FLAGS := --flavor $(FLAVOR) --no-confirm
-SB_PATCH_FLAGS   := --flavor $(FLAVOR) --no-confirm --allow-asset-diffs --allow-native-diffs
+SB_RELEASE_FLAGS := --no-confirm
+SB_PATCH_FLAGS   := --no-confirm --allow-asset-diffs --allow-native-diffs
 FLUTTER_BUILD_FLAGS := --dart-define-from-file=$(CONFIG) --no-tree-shake-icons
 
 ########################################################################
