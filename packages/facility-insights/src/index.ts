@@ -8,5 +8,6 @@ export type {
   PurchaseFunnelStage,
   PurchaseIntervalSource,
   PurchaseProfile,
+  PurchaseRecurrenceValidationErrorCode,
   PurchaseRecurrenceSnapshot,
 } from "./purchase-recurrence";

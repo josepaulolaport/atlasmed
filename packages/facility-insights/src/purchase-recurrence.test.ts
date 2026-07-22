@@ -26,7 +26,7 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
       observedPurchaseIntervalDays: null,
       purchaseIntervalDays: 30,
       purchaseIntervalSource: "DEFAULT",
-      purchaseProfile: null,
+      manualPurchaseProfile: null,
       manualPurchaseIntervalDays: null,
       lastValidPurchaseDate: null,
       purchaseRecurrenceSampleSize: 0,
@@ -74,12 +74,13 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
     }
   });
 
-  test("uses only the thirteen most recent distinct purchase dates", () => {
+  test("sorts unsorted input and uses only the thirteen most recent distinct purchase dates", () => {
     const purchaseDates = [
+      "2020-01-01",
       ...Array.from({ length: 13 }, (_, index) =>
         new Date(Date.UTC(2026, 6, 20 - index * 2)).toISOString(),
-      ),
-      "2020-01-01",
+      ).reverse(),
+      "2019-01-01",
     ];
 
     expect(calculate({ purchaseDates })).toMatchObject({
@@ -106,6 +107,22 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
     });
   });
 
+  test("deduplicates zero-day purchases before calculating the mean", () => {
+    expect(
+      calculate({
+        purchaseDates: [
+          "2026-07-20T00:00:00Z",
+          "2026-07-20T23:59:59Z",
+          "2026-07-19T12:00:00Z",
+        ],
+      }),
+    ).toMatchObject({
+      observedPurchaseIntervalDays: 1,
+      purchaseIntervalDays: 1,
+      purchaseRecurrenceSampleSize: 1,
+    });
+  });
+
   test("defines the supported preset profile intervals", () => {
     expect(PURCHASE_PROFILE_INTERVAL_DAYS).toEqual({
       WEEKLY: 7,
@@ -128,7 +145,7 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
       observedPurchaseIntervalDays: 10,
       purchaseIntervalDays: 90,
       purchaseIntervalSource: "MANUAL",
-      purchaseProfile: "QUARTERLY",
+      manualPurchaseProfile: "QUARTERLY",
       manualPurchaseIntervalDays: null,
     });
   });
@@ -144,7 +161,7 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
       observedPurchaseIntervalDays: 10,
       purchaseIntervalDays: 45,
       purchaseIntervalSource: "MANUAL",
-      purchaseProfile: "CUSTOM",
+      manualPurchaseProfile: "CUSTOM",
       manualPurchaseIntervalDays: 45,
     });
   });
@@ -160,7 +177,7 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
       observedPurchaseIntervalDays: 10,
       purchaseIntervalDays: 10,
       purchaseIntervalSource: "CALCULATED",
-      purchaseProfile: null,
+      manualPurchaseProfile: null,
       manualPurchaseIntervalDays: null,
     });
 
@@ -169,6 +186,17 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
     ).toMatchObject({
       purchaseIntervalDays: 30,
       purchaseIntervalSource: "DEFAULT",
+    });
+  });
+
+  test.each([1, 3650])("accepts CUSTOM boundary %d", (manualIntervalDays) => {
+    expect(
+      calculate({ manualProfile: "CUSTOM", manualIntervalDays }),
+    ).toMatchObject({
+      purchaseIntervalDays: manualIntervalDays,
+      purchaseIntervalSource: "MANUAL",
+      manualPurchaseProfile: "CUSTOM",
+      manualPurchaseIntervalDays: manualIntervalDays,
     });
   });
 
@@ -193,13 +221,37 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
     ).toThrow("manualIntervalDays must be null without a manual profile");
   });
 
-  test("rejects invalid purchase and today dates with a typed validation error", () => {
-    expect(() => calculate({ purchaseDates: ["not-a-date"] })).toThrow(
-      PurchaseRecurrenceValidationError,
-    );
-    expect(() => calculate({ today: "2026-02-30" })).toThrow(
-      PurchaseRecurrenceValidationError,
-    );
+  test.each([
+    "2026-07-20T12:00:00",
+    "2026/07/20",
+    "2026-07-20 12:00:00Z",
+    "2026-02-30T00:00:00Z",
+  ])("rejects non-strict purchase date %s with stable code and index", (purchaseDate) => {
+    try {
+      calculate({ purchaseDates: ["2026-07-20", purchaseDate] });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PurchaseRecurrenceValidationError);
+      expect(error).toMatchObject({
+        field: "purchaseDates",
+        code: "INVALID_DATE",
+        index: 1,
+      });
+    }
+  });
+
+  test("rejects an impossible today civil date with a stable code and no index", () => {
+    try {
+      calculate({ today: "2026-02-30" });
+      throw new Error("expected validation to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(PurchaseRecurrenceValidationError);
+      expect(error).toMatchObject({
+        field: "today",
+        code: "INVALID_DATE",
+        index: undefined,
+      });
+    }
   });
 
   test.each([
@@ -215,6 +267,40 @@ describe("calculatePurchaseRecurrenceSnapshot", () => {
       expect(calculate({ purchaseDates: [lastPurchase] })).toMatchObject({
         purchaseFunnelStage,
         nextPurchaseFunnelTransitionDate,
+      });
+    },
+  );
+
+  test.each([
+    ["2026-07-15", "OUTSIDE_WINDOW", "2026-07-23"],
+    ["2026-07-14", "PURCHASE_WINDOW", "2026-08-13"],
+  ] as const)(
+    "uses ceil half interval for BIWEEKLY at last purchase %s",
+    (lastPurchase, purchaseFunnelStage, nextPurchaseFunnelTransitionDate) => {
+      expect(
+        calculate({ purchaseDates: [lastPurchase], manualProfile: "BIWEEKLY" }),
+      ).toMatchObject({
+        purchaseFunnelStage,
+        nextPurchaseFunnelTransitionDate,
+      });
+    },
+  );
+
+  test.each([
+    ["2024-02-29", "2024-03-01"],
+    ["2026-01-31", "2026-02-01"],
+  ] as const)(
+    "calculates one-day intervals across calendar transition %s to %s",
+    (earlierPurchase, laterPurchase) => {
+      expect(
+        calculate({
+          purchaseDates: [earlierPurchase, laterPurchase],
+          today: laterPurchase,
+        }),
+      ).toMatchObject({
+        observedPurchaseIntervalDays: 1,
+        purchaseIntervalDays: 1,
+        lastValidPurchaseDate: laterPurchase,
       });
     },
   );
