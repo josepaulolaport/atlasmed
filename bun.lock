@@ -180,6 +180,14 @@
         "typescript": "^5.9.3",
       },
     },
+    "packages/facility-insights": {
+      "name": "@atlasmed/facility-insights",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@types/bun": "1.3.14",
+        "typescript": "^5",
+      },
+    },
     "packages/mapbox": {
       "name": "@atlasmed/mapbox",
       "version": "1.0.0",
@@ -231,6 +239,8 @@
     "@atlasmed/config": ["@atlasmed/config@workspace:packages/config"],
 
     "@atlasmed/database": ["@atlasmed/database@workspace:packages/database"],
+
+    "@atlasmed/facility-insights": ["@atlasmed/facility-insights@workspace:packages/facility-insights"],
 
     "@atlasmed/mapbox": ["@atlasmed/mapbox@workspace:packages/mapbox"],
 
