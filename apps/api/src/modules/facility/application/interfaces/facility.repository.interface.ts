@@ -28,6 +28,14 @@ export interface FacilityVerticalProfileRecord {
   isActive: boolean;
   commercialStatus: FacilityCommercialStatus | null;
   purchaseStatus: FacilityPurchaseStatus | null;
+  observedPurchaseIntervalDays: number | null;
+  purchaseIntervalDays: number;
+  purchaseIntervalSource: "DEFAULT" | "CALCULATED" | "MANUAL";
+  manualPurchaseProfile: "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM" | null;
+  lastValidPurchaseDate: string | null;
+  purchaseRecurrenceSampleSize: number;
+  purchaseFunnelStage: "NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE";
+  nextPurchaseFunnelTransitionDate: string | null;
   /** Profile membership territory (source of truth; not facilities.territory_id). */
   territoryId?: string | null;
 }

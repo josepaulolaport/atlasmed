@@ -49,6 +49,16 @@ export function serializeFacility(
         }
       : {}),
     conformityStatus: clinic.conformityStatus,
+    purchaseRecurrence: {
+      observedIntervalDays: clinic.observedPurchaseIntervalDays,
+      intervalDays: clinic.purchaseIntervalDays,
+      source: clinic.purchaseIntervalSource,
+      profile: clinic.manualPurchaseProfile,
+      lastPurchaseDate: clinic.lastValidPurchaseDate,
+      sampleSize: clinic.purchaseRecurrenceSampleSize,
+      funnelStage: clinic.purchaseFunnelStage,
+      nextTransitionDate: clinic.nextPurchaseFunnelTransitionDate,
+    },
     professionalCount: list.professionalCount ?? 0,
     consultantName: clinic.consultantName,
     consultantSince: clinic.consultantSince?.toISOString() ?? undefined,

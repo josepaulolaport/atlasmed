@@ -1,6 +1,8 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
+import type { PurchaseRecurrenceCommand, PurchaseRecurrenceService } from "../services/purchase-recurrence.service";
+import { ValidationError } from "../../../../shared/errors";
 import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { buildMeiliFilter, eqFilter, geoRadiusFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
@@ -32,6 +34,7 @@ interface Dependencies {
   searchService?: SearchService;
   facilityGeocodingService?: FacilityGeocodingService;
   onFacilityLocationChanged?: (facilityId: string) => Promise<void>;
+  purchaseRecurrenceService?: PurchaseRecurrenceService;
 }
 
 export class ListFacilitiesUseCase {
@@ -211,12 +214,29 @@ export class UpdateFacilityUseCase {
     name?: string;
     lat?: number | null;
     lng?: number | null;
+    purchaseRecurrence?: PurchaseRecurrenceCommand;
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
     const existing = await this.deps.facilityRepository.findById(input.facilityId);
     if (!existing) {
       return null;
+    }
+
+    if (input.purchaseRecurrence) {
+      if (input.lat !== undefined || input.lng !== undefined) {
+        throw new ValidationError([{ field: "purchaseRecurrence", message: "Purchase recurrence cannot be updated with coordinates" }]);
+      }
+      if (!this.deps.purchaseRecurrenceService) {
+        throw new ValidationError([{ field: "purchaseRecurrence", message: "Purchase recurrence is unavailable" }]);
+      }
+      const configuration = this.deps.purchaseRecurrenceService.prepareConfiguration(input.purchaseRecurrence);
+      const clinic = await this.deps.purchaseRecurrenceService.updateFacility(input.facilityId, {
+        fields: { name: input.name, manuallyEditedAt: new Date() },
+        configuration,
+        today: new Date().toISOString().slice(0, 10),
+      });
+      return serializeFacility(clinic);
     }
 
     const coordinates = this.deps.facilityGeocodingService

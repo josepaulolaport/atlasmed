@@ -5,25 +5,9 @@ import { requirePermission } from "../../../access/infrastructure/middleware/per
 import { facilityUseCases } from "../../composition";
 import { ordersUseCases } from "../../../orders/composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
-import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
+import { ResourceNotFoundError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
 import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
-import { z, type ZodTypeAny } from "zod";
-
-function parseSchema<T extends ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
-  const parsed = schema.safeParse(body);
-
-  if (!parsed.success) {
-    throw new ValidationError(
-      parsed.error.issues.map((issue) => ({
-        field: issue.path.join(".") || "body",
-        message: issue.message,
-      }))
-    );
-  }
-
-  return parsed.data;
-}
 
 const listFacilitiesRoute = new Elysia()
   .use(auth)
@@ -120,6 +104,22 @@ const getFacilityRoute = new Elysia()
     }
   );
 
+export const purchaseRecurrenceType = t.Union([
+  t.Object({ mode: t.Literal("AUTOMATIC") }, { additionalProperties: false }),
+  t.Object({
+    mode: t.Literal("PRESET"),
+    profile: t.Union([
+      t.Literal("WEEKLY"), t.Literal("BIWEEKLY"), t.Literal("MONTHLY"),
+      t.Literal("BIMONTHLY"), t.Literal("QUARTERLY"), t.Literal("SEMIANNUAL"),
+      t.Literal("ANNUAL"),
+    ]),
+  }, { additionalProperties: false }),
+  t.Object({
+    mode: t.Literal("CUSTOM"),
+    intervalDays: t.Integer({ minimum: 1, maximum: 3650 }),
+  }, { additionalProperties: false }),
+]);
+
 const updateFacilityRoute = new Elysia()
   .use(auth)
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
@@ -149,6 +149,7 @@ const updateFacilityRoute = new Elysia()
         name: t.Optional(t.String()),
         lat: t.Optional(t.Union([t.Number(), t.Null()])),
         lng: t.Optional(t.Union([t.Number(), t.Null()])),
+        purchaseRecurrence: t.Optional(purchaseRecurrenceType),
       }),
     }
   );

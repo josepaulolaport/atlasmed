@@ -51,7 +51,7 @@ function deriveProfileTerritoryId(
   return null;
 }
 
-function mapFacility(
+export function mapFacility(
   facility: FacilityRowWithCoords | FacilityRow,
   options: {
     lat?: number | null;
@@ -101,6 +101,14 @@ function mapFacility(
     territoryAssignmentSource: facility.territoryAssignmentSource,
     commercialStatus: options.commercialStatus ?? null,
     purchaseStatus: options.purchaseStatus ?? null,
+    observedPurchaseIntervalDays: facility.observedPurchaseIntervalDays ?? null,
+    purchaseIntervalDays: facility.purchaseIntervalDays,
+    purchaseIntervalSource: facility.purchaseIntervalSource,
+    manualPurchaseProfile: facility.manualPurchaseProfile ?? null,
+    lastValidPurchaseDate: facility.lastValidPurchaseDate ?? null,
+    purchaseRecurrenceSampleSize: facility.purchaseRecurrenceSampleSize,
+    purchaseFunnelStage: facility.purchaseFunnelStage,
+    nextPurchaseFunnelTransitionDate: facility.nextPurchaseFunnelTransitionDate ?? null,
     conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
     consultantSince: options.consultantSince ?? null,
