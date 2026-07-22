@@ -3,7 +3,7 @@ name: atlasmed
 services:
   atlasmed-web:
     platform: linux/amd64
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: atlasmed/web:prod
     build:
       context: ..
@@ -25,7 +25,7 @@ services:
 
   atlasmed-api:
     platform: linux/amd64
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: atlasmed/api:prod
     build:
       context: ..
@@ -74,7 +74,7 @@ services:
 
   atlasmed-api-worker:
     platform: linux/amd64
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: atlasmed/api-worker:prod
     build:
       context: ..
@@ -116,7 +116,7 @@ services:
 
   atlasmed-cnes-worker:
     platform: linux/amd64
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: atlasmed/cnes-worker:prod
     build:
       context: ..
@@ -144,7 +144,7 @@ services:
       - atlasmed-minio
 
   atlasmed-temporal-db:
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: postgres:15-alpine
     environment:
       - POSTGRES_USER=temporal
@@ -154,7 +154,7 @@ services:
       - atlasmed_temporal_postgres_data:/var/lib/postgresql/data
 
   atlasmed-temporal:
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: temporalio/auto-setup:1.24.2
     environment:
       - DB=postgres12
@@ -166,7 +166,7 @@ services:
       - atlasmed-temporal-db
 
   atlasmed-temporal-ui:
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: temporalio/ui:2.34.0
     environment:
       - TEMPORAL_ADDRESS=atlasmed-temporal:7233
@@ -184,14 +184,14 @@ services:
       }
 
   atlasmed-redis:
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: redis:7.4-alpine
     command: redis-server --appendonly yes
     volumes:
       - atlasmed_redis_data:/data
 
   atlasmed-meilisearch:
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: getmeili/meilisearch:v1.48
     environment:
       - MEILI_ENV=production
@@ -201,7 +201,7 @@ services:
       - atlasmed_meilisearch_data_v148:/meili_data
 
   atlasmed-minio:
-    x-machines: atlasmed
+    x-machines: oracle-luis
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
