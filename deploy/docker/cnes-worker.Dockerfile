@@ -1,11 +1,11 @@
-FROM --platform=linux/amd64 oven/bun:1.3.14 AS prepare
+FROM oven/bun:1.3.14 AS prepare
 
 WORKDIR /app
 COPY . .
 
 RUN bunx turbo prune @atlasmed/cnes-ingestion-worker --docker
 
-FROM --platform=linux/amd64 oven/bun:1.3.14 AS runtime
+FROM oven/bun:1.3.14 AS runtime
 
 WORKDIR /app
 RUN apt-get update \
