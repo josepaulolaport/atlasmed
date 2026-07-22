@@ -8,7 +8,7 @@ import {
   index,
   unique,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { orderStatusEnum, orderTypeEnum } from "./enums";
 import { businessVerticals } from "./business-verticals";
@@ -59,6 +59,9 @@ export const orders = pgTable(
     index("orders_ordered_at_idx").on(t.orderedAt),
     index("orders_professional_id_idx").on(t.professionalId),
     index("orders_seller_id_idx").on(t.sellerId),
+    index("orders_valid_purchase_facility_ordered_at_idx")
+      .on(t.facilityId, t.orderedAt.desc())
+      .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
     unique("orders_legacy_id_key").on(t.legacyId),
   ]
 );

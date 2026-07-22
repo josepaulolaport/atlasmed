@@ -57,6 +57,31 @@ export const purchaseStatusEnum = pgEnum("purchase_status", [
   "HIGH_BUYER",
 ]);
 
+export const purchaseIntervalSourceEnum = pgEnum("purchase_interval_source", [
+  "DEFAULT",
+  "CALCULATED",
+  "MANUAL",
+]);
+
+export const purchaseProfileEnum = pgEnum("purchase_profile", [
+  "WEEKLY",
+  "BIWEEKLY",
+  "MONTHLY",
+  "BIMONTHLY",
+  "QUARTERLY",
+  "SEMIANNUAL",
+  "ANNUAL",
+  "CUSTOM",
+]);
+
+export const purchaseFunnelStageEnum = pgEnum("purchase_funnel_stage", [
+  "NEVER_PURCHASED",
+  "OUTSIDE_WINDOW",
+  "PURCHASE_WINDOW",
+  "CHURN",
+  "INACTIVE",
+]);
+
 export const contactTypeEnum = pgEnum("contact_type", [
   "PROFESSIONAL",
   "DECISOR",

@@ -6,8 +6,10 @@ import {
   smallint,
   integer,
   bigint,
+  date,
   index,
   uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -16,6 +18,9 @@ import {
   conformityStatusEnum,
   commercialStatusEnum,
   purchaseStatusEnum,
+  purchaseIntervalSourceEnum,
+  purchaseProfileEnum,
+  purchaseFunnelStageEnum,
   contactTypeEnum,
   healthcareProviderTypeEnum,
   healthcareProviderShareSourceEnum,
@@ -87,6 +92,20 @@ export const facilities = pgTable(
 
     // --- Classification ---
     conformityStatus: conformityStatusEnum("conformity_status").notNull().default("INCOMPLETE"),
+    observedPurchaseIntervalDays: integer("observed_purchase_interval_days"),
+    purchaseIntervalDays: integer("purchase_interval_days").notNull().default(30),
+    purchaseIntervalSource: purchaseIntervalSourceEnum("purchase_interval_source")
+      .notNull()
+      .default("DEFAULT"),
+    manualPurchaseProfile: purchaseProfileEnum("manual_purchase_profile"),
+    manualPurchaseIntervalDays: integer("manual_purchase_interval_days"),
+    lastValidPurchaseDate: date("last_valid_purchase_date"),
+    purchaseRecurrenceSampleSize: smallint("purchase_recurrence_sample_size").notNull().default(0),
+    purchaseFunnelStage: purchaseFunnelStageEnum("purchase_funnel_stage")
+      .notNull()
+      .default("NEVER_PURCHASED"),
+    nextPurchaseFunnelTransitionDate: date("next_purchase_funnel_transition_date"),
+    purchaseRecurrenceCalculatedAt: timestamp("purchase_recurrence_calculated_at", { withTimezone: true }),
     imageUrl: text("image_url"),
     /** Legacy free-text unit type (Excel); keep alongside CNES codes in v1. */
     unitType: text("unit_type"),
@@ -133,6 +152,44 @@ export const facilities = pgTable(
     index("facilities_unit_type_code_idx")
       .on(t.unitTypeCode)
       .where(sql`${t.unitTypeCode} IS NOT NULL`),
+    index("facilities_active_purchase_funnel_stage_name_id_idx")
+      .on(t.purchaseFunnelStage, t.displayName, t.id)
+      .where(sql`${t.deactivatedAt} is null`),
+    index("facilities_active_purchase_interval_days_name_id_idx")
+      .on(t.purchaseIntervalDays, t.displayName, t.id)
+      .where(sql`${t.deactivatedAt} is null`),
+    index("facilities_active_manual_purchase_profile_name_id_idx")
+      .on(t.manualPurchaseProfile, t.displayName, t.id)
+      .where(sql`${t.deactivatedAt} is null`),
+    index("facilities_active_next_purchase_funnel_transition_date_idx")
+      .on(t.nextPurchaseFunnelTransitionDate, t.id)
+      .where(sql`${t.deactivatedAt} is null and ${t.nextPurchaseFunnelTransitionDate} is not null`),
+    check(
+      "facilities_observed_purchase_interval_days_check",
+      sql`${t.observedPurchaseIntervalDays} is null or ${t.observedPurchaseIntervalDays} between 1 and 3650`
+    ),
+    check(
+      "facilities_purchase_interval_days_check",
+      sql`${t.purchaseIntervalDays} between 1 and 3650`
+    ),
+    check(
+      "facilities_manual_purchase_interval_days_check",
+      sql`${t.manualPurchaseIntervalDays} is null or ${t.manualPurchaseIntervalDays} between 1 and 3650`
+    ),
+    check(
+      "facilities_manual_purchase_profile_days_check",
+      sql`(${t.manualPurchaseProfile} = 'CUSTOM' and ${t.manualPurchaseIntervalDays} is not null)
+        or (${t.manualPurchaseProfile} is distinct from 'CUSTOM' and ${t.manualPurchaseIntervalDays} is null)`
+    ),
+    check(
+      "facilities_purchase_recurrence_sample_size_check",
+      sql`${t.purchaseRecurrenceSampleSize} between 0 and 12`
+    ),
+    check(
+      "facilities_purchase_interval_source_check",
+      sql`(${t.purchaseIntervalSource} = 'MANUAL' and ${t.manualPurchaseProfile} is not null)
+        or (${t.purchaseIntervalSource} <> 'MANUAL' and ${t.manualPurchaseProfile} is null)`
+    ),
   ]
 );
 
