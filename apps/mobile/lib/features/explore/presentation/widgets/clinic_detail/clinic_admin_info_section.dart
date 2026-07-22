@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_address_suggestion_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 
 /// "Informações administrativas" — every field carries copy + pencil actions.
 /// Address is shown as Estado / Cidade / CEP / Endereço (composed line).
 /// Editing "Endereço" opens a multi-field sheet (bairro / logradouro /
 /// número / complemento).
-class ClinicAdminInfoSection extends StatelessWidget {
+class ClinicAdminInfoSection extends ConsumerWidget {
   const ClinicAdminInfoSection({super.key, required this.detail});
 
   final ClinicDetail detail;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final hasTaxId =
         (detail.cnpj?.trim().isNotEmpty ?? false) ||
         (detail.cpf?.trim().isNotEmpty ?? false);
@@ -25,50 +27,84 @@ class ClinicAdminInfoSection extends StatelessWidget {
       cnpj: detail.cnpj,
       cpf: detail.cpf,
     );
+    final taxFieldKey = switch (taxIdentifier.label.toUpperCase()) {
+      'CNPJ' => 'cnpj',
+      'CPF' => 'cpf',
+      _ => null,
+    };
+
+    final suggestionTarget = EditSuggestionTarget(
+      type: NaoConformidadeTargetType.clinic,
+      id: detail.id,
+      name: detail.name,
+    );
 
     final fields =
-        <({String label, String? value, IconData icon, VoidCallback? onEdit})>[
+        <
+          ({
+            String label,
+            String? value,
+            IconData icon,
+            VoidCallback? onEdit,
+            String? fieldKey,
+            bool editable,
+          })
+        >[
           (
             label: taxIdentifier.label,
             value: hasTaxId ? taxIdentifier.value : null,
             icon: Icons.badge_outlined,
             onEdit: null,
+            fieldKey: taxFieldKey,
+            editable: taxFieldKey != null,
           ),
           (
             label: 'Telefone',
             value: formatBrazilianPhone(detail.phone) ?? detail.phone,
             icon: Icons.phone_outlined,
             onEdit: null,
+            fieldKey: 'phoneNumber',
+            editable: true,
           ),
           (
             label: 'WhatsApp',
             value: formatBrazilianPhone(detail.whatsapp) ?? detail.whatsapp,
             icon: Icons.chat_outlined,
             onEdit: null,
+            fieldKey: 'whatsappNumber',
+            editable: true,
           ),
           (
             label: 'E-mail',
             value: detail.email,
             icon: Icons.email_outlined,
             onEdit: null,
+            fieldKey: 'email',
+            editable: true,
           ),
           (
             label: 'Site',
             value: detail.website,
             icon: Icons.language_outlined,
             onEdit: null,
+            fieldKey: 'websiteUrl',
+            editable: true,
           ),
           (
             label: 'Responsável',
             value: detail.responsibleDoctor,
             icon: Icons.medical_services_outlined,
             onEdit: null,
+            fieldKey: 'responsibleName',
+            editable: true,
           ),
           (
             label: 'Horário',
             value: detail.openingHours,
             icon: Icons.schedule_outlined,
             onEdit: null,
+            fieldKey: 'openingHours',
+            editable: true,
           ),
           if (detail.registeredSince != null)
             (
@@ -76,24 +112,32 @@ class ClinicAdminInfoSection extends StatelessWidget {
               value: _formatDate(detail.registeredSince!),
               icon: Icons.date_range_outlined,
               onEdit: null,
+              fieldKey: null,
+              editable: false,
             ),
           (
             label: 'Estado',
             value: detail.state,
             icon: Icons.map_outlined,
             onEdit: null,
+            fieldKey: null,
+            editable: false,
           ),
           (
             label: 'Cidade',
             value: detail.city.trim().isEmpty ? null : detail.city,
             icon: Icons.location_city_outlined,
             onEdit: null,
+            fieldKey: null,
+            editable: false,
           ),
           (
             label: 'CEP',
             value: detail.postalCode,
             icon: Icons.local_post_office_outlined,
             onEdit: null,
+            fieldKey: null,
+            editable: false,
           ),
           (
             label: 'Endereço',
@@ -101,16 +145,22 @@ class ClinicAdminInfoSection extends StatelessWidget {
             icon: Icons.location_on_outlined,
             onEdit: () => showAddressEditSuggestionSheet(
               context,
+              ref: ref,
+              facilityId: detail.id,
               neighborhood: detail.neighborhood,
               streetAddress: detail.streetAddress,
               streetNumber: detail.streetNumber,
               addressComplement: detail.addressComplement,
+              city: detail.city,
+              state: detail.state,
+              postalCode: detail.postalCode,
             ),
+            fieldKey: 'address',
+            editable: true,
           ),
         ];
 
     return ClinicDetailCard(
-      // Rows own their padding so ink/separators can span the card edge-to-edge.
       padding: EdgeInsets.zero,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -144,6 +194,9 @@ class ClinicAdminInfoSection extends StatelessWidget {
                 icon: fields[i].icon,
                 onEdit: fields[i].onEdit,
                 showDivider: i < fields.length - 1,
+                fieldKey: fields[i].fieldKey,
+                showEditButton: fields[i].editable,
+                suggestionTarget: fields[i].editable ? suggestionTarget : null,
               ),
           ],
         ),

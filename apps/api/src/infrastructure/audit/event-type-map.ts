@@ -83,6 +83,11 @@ const routeMap: Record<RouteKey, EventEntry> = {
   "POST /api/v1/registry/suggestions/:id/approve": { eventType: "REGISTRY.SUGGESTION_APPROVED" },
   "POST /api/v1/registry/suggestions/:id/reject": { eventType: "REGISTRY.SUGGESTION_REJECTED" },
 
+  // --- Field suggestions (Não Conformidades) ---
+  "POST /api/v1/facilities/:id/field-suggestions": { eventType: "FIELD_SUGGESTION.CREATED" },
+  "POST /api/v1/field-suggestions/:id/approve": { eventType: "FIELD_SUGGESTION.APPROVED" },
+  "POST /api/v1/field-suggestions/:id/reject": { eventType: "FIELD_SUGGESTION.REJECTED" },
+
   // --- Catalog ---
   "POST /api/v1/catalog/products": { eventType: "CATALOG.PRODUCT_CREATED" },
   "PUT /api/v1/catalog/products/:id": { eventType: "CATALOG.PRODUCT_UPDATED" },

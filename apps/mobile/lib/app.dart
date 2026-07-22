@@ -11,6 +11,8 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_ne
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_success_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastro_review_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastros_review_list_screen.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidade_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidades_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_comparison_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/catalog_price_index_screen.dart';
@@ -245,6 +247,20 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                   path: ':id',
                   builder: (_, state) => CadastroReviewDetailScreen(
                     submissionId: state.pathParameters['id']!,
+                  ),
+                ),
+              ],
+            ),
+            // Não Conformidades — field-change suggestions (clinic/doctor)
+            GoRoute(
+              path: '/nao-conformidades',
+              pageBuilder: (_, _) =>
+                  const NoTransitionPage(child: NaoConformidadesListScreen()),
+              routes: [
+                GoRoute(
+                  path: ':id',
+                  builder: (_, state) => NaoConformidadeDetailScreen(
+                    suggestionId: state.pathParameters['id']!,
                   ),
                 ),
               ],

@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_registration_documents_screen.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/my_suggestions_screen.dart';
 
-/// Two "Título · Badge · >" shortcut cards, right below the quick actions
-/// strip — entry points to the dedicated "Cadastro" (registration
-/// documents) and "Dados administrativos" (contact/admin fields) screens.
-/// Each badge is a completeness signal so the rep can see at a glance
-/// whether anything needs attention without opening the screen.
-class ClinicTopShortcutsSection extends StatefulWidget {
+/// Shortcut cards below the quick-actions strip — Cadastro, Dados
+/// administrativos, and Não Conformidades.
+class ClinicTopShortcutsSection extends ConsumerStatefulWidget {
   const ClinicTopShortcutsSection({
     super.key,
     required this.facilityName,
@@ -25,11 +26,12 @@ class ClinicTopShortcutsSection extends StatefulWidget {
   final List<EstablishmentDocument>? documents;
 
   @override
-  State<ClinicTopShortcutsSection> createState() =>
+  ConsumerState<ClinicTopShortcutsSection> createState() =>
       _ClinicTopShortcutsSectionState();
 }
 
-class _ClinicTopShortcutsSectionState extends State<ClinicTopShortcutsSection> {
+class _ClinicTopShortcutsSectionState
+    extends ConsumerState<ClinicTopShortcutsSection> {
   List<EstablishmentDocument>? _documents;
 
   @override
@@ -51,6 +53,15 @@ class _ClinicTopShortcutsSectionState extends State<ClinicTopShortcutsSection> {
     final docs = _documents;
     final pendingDocs = docs?.where((d) => d.status.needsAction).length;
     final adminPending = _adminInfoPendingCount(widget.detail);
+    final mySuggestionsAsync = ref.watch(
+      mySuggestionsForClinicProvider(widget.detail.id),
+    );
+    final pendingSuggestions = mySuggestionsAsync.maybeWhen(
+      data: (items) => items
+          .where((s) => s.status == NaoConformidadeStatus.pending)
+          .length,
+      orElse: () => 0,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -93,6 +104,24 @@ class _ClinicTopShortcutsSectionState extends State<ClinicTopShortcutsSection> {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => ClinicAdminInfoScreen(detail: widget.detail),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ShortcutCard(
+            icon: Icons.rate_review_outlined,
+            title: 'Não Conformidades',
+            badge: pendingSuggestions == 0
+                ? const _ShortcutBadge.complete('Em dia')
+                : _ShortcutBadge.pending(
+                    '$pendingSuggestions pendente${pendingSuggestions == 1 ? '' : 's'}',
+                  ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MySuggestionsScreen.clinic(
+                  targetId: widget.detail.id,
+                  targetName: widget.detail.name,
+                ),
               ),
             ),
           ),

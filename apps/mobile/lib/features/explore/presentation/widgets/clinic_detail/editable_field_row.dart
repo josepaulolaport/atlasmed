@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_suggestion_sheet.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+
+/// Optional context so a submitted suggestion lands in the Não Conformidades
+/// queue and on “Não Conformidades” for this profile.
+class EditSuggestionTarget {
+  const EditSuggestionTarget({
+    required this.type,
+    required this.id,
+    required this.name,
+    this.facilityName,
+  });
+
+  final NaoConformidadeTargetType type;
+  final String id;
+  final String name;
+  final String? facilityName;
+}
 
 /// Field block with label above value. Tap copies when a value is present;
 /// the pencil opens the suggest-edit sheet (or [onEdit] when provided).
-class EditableFieldRow extends StatelessWidget {
+class EditableFieldRow extends ConsumerWidget {
   const EditableFieldRow({
     super.key,
     required this.label,
@@ -13,6 +31,9 @@ class EditableFieldRow extends StatelessWidget {
     this.emptyActionLabel = '+ Completar',
     this.showDivider = true,
     this.onEdit,
+    this.suggestionTarget,
+    this.fieldKey,
+    this.showEditButton = true,
   });
 
   final String label;
@@ -26,6 +47,14 @@ class EditableFieldRow extends StatelessWidget {
   /// Custom edit action (e.g. multi-field address sheet). Falls back to the
   /// single-field suggestion sheet when null.
   final VoidCallback? onEdit;
+
+  final EditSuggestionTarget? suggestionTarget;
+
+  /// API `fieldKey` when known; otherwise derived from [label].
+  final String? fieldKey;
+
+  /// When false, hides the pencil and empty-field "+ Completar" suggest affordance.
+  final bool showEditButton;
 
   bool get _isEmpty => value == null || value!.trim().isEmpty;
 
@@ -42,22 +71,33 @@ class EditableFieldRow extends StatelessWidget {
     );
   }
 
-  void _suggestEdit(BuildContext context) {
+  void _suggestEdit(BuildContext context, WidgetRef ref) {
     final customEdit = onEdit;
     final label = this.label;
     final value = this.value;
+    final target = suggestionTarget;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
       if (customEdit != null) {
         customEdit();
         return;
       }
-      showEditSuggestionSheet(context, fieldLabel: label, currentValue: value);
+      showEditSuggestionSheet(
+        context,
+        fieldLabel: label,
+        currentValue: value,
+        ref: target == null ? null : ref,
+        targetType: target?.type,
+        targetId: target?.id,
+        targetName: target?.name,
+        facilityName: target?.facilityName,
+        fieldKey: fieldKey,
+      );
     });
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -65,7 +105,7 @@ class EditableFieldRow extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             onTap: _isEmpty
-                ? () => _suggestEdit(context)
+                ? (showEditButton ? () => _suggestEdit(context, ref) : null)
                 : () => _copy(context),
             splashColor: const Color(0xFF1e40af).withValues(alpha: 0.08),
             highlightColor: const Color(0xFF1e40af).withValues(alpha: 0.05),
@@ -104,10 +144,20 @@ class EditableFieldRow extends StatelessWidget {
                             top: 8,
                           ),
                           child: _isEmpty
-                              ? _EmptyValueChip(
-                                  label: emptyActionLabel,
-                                  onTap: () => _suggestEdit(context),
-                                )
+                              ? (showEditButton
+                                    ? _EmptyValueChip(
+                                        label: emptyActionLabel,
+                                        onTap: () =>
+                                            _suggestEdit(context, ref),
+                                      )
+                                    : const Text(
+                                        '—',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF9ca3af),
+                                        ),
+                                      ))
                               : Text(
                                   value!,
                                   style: const TextStyle(
@@ -119,21 +169,22 @@ class EditableFieldRow extends StatelessWidget {
                                 ),
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => _suggestEdit(context),
-                        icon: const Icon(
-                          Icons.edit_outlined,
-                          size: 18,
-                          color: Color(0xFF6b7280),
+                      if (showEditButton)
+                        IconButton(
+                          onPressed: () => _suggestEdit(context, ref),
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            size: 18,
+                            color: Color(0xFF6b7280),
+                          ),
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(
+                            minWidth: 40,
+                            minHeight: 40,
+                          ),
+                          splashRadius: 20,
                         ),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(
-                          minWidth: 40,
-                          minHeight: 40,
-                        ),
-                        splashRadius: 20,
-                      ),
                     ],
                   ),
                 ],

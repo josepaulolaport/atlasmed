@@ -365,11 +365,13 @@ WHEN a user opens the "Notas de campo" section THEN they SHALL see a private, fa
 
 WHEN a user taps the pencil icon next to any editable field (facility admin data: CNPJ, endereço, telefone, e-mail, site, horário; or médico personal fields: Formação, Aniversário, Time, Interesses) THEN a bottom sheet SHALL open showing the field label, current value and a text input to propose a new value.
 
-WHEN the user submits a suggestion THEN the system SHALL create a reviewable suggestion — conceptually the same review pipeline as the existing `FACILITY_FIELD_UPDATE` type used by the CNES diffing pipeline (`registry-ingestion` module), extended to accept ad-hoc, user-submitted suggestions for both facility fields and professional personal fields (the latter needs a new suggestion type, since today's pipeline only covers facility/professional *registry* fields, not personal fields like birthday/team/hobbies/education).
+WHEN the user submits a suggestion THEN the system SHALL create a reviewable, **user-submitted** suggestion for ops review (accept/reject). This is unrelated to CNES registry suggestions.
 
 Empty fields SHALL show a "+ Completar" affordance instead of "—".
 
-**Phase 1 (this redesign):** mocked — submitting shows a "Sugestão enviada para revisão" snackbar; no network call. Phase 2 needs a new suggestion-submission endpoint (e.g. `POST /facilities/:id/field-suggestions`, `POST /professionals/:id/field-suggestions`) reusing/extending the registry-ingestion suggestion review pipeline, plus a new `education` column on `professionals` (no backing field exists today for "Formação").
+**Phase 1 (this redesign):** mocked — submitting shows a "Sugestão enviada para revisão" snackbar; no network call.
+
+**Phase 2 (facility / Não Conformidades):** specified in [Spec 0007](../0007-nao-conformidades/requirements.md) — `public.field_suggestions` + `/field-suggestions` API (user-only; no CNES coupling). Covers administrative field edits + deactivation; supersedes older pending on resubmit; address accept MUST geocode `facilities.location`. `commercialStatus` editing is a separate flow. Professional personal-field suggestions remain deferred beyond 0007 v1.
 
 ## Authorization & scope (unchanged rules)
 
@@ -460,7 +462,7 @@ High value, visually polished, low scope creep:
 5. New `facility_notes` table + CRUD endpoints (F-014).
 6. New `facility_photos` table + `profile_picture_id` column on `facilities` + upload endpoint (F-013).
 7. New `education` column on `professionals` (F-015, Formação).
-8. New suggestion-submission endpoint(s) for ad-hoc facility/professional field edits, extending the `registry-ingestion` suggestion review pipeline (F-015).
+8. Facility Não Conformidades backend per [Spec 0007](../0007-nao-conformidades/requirements.md) (F-015 Phase 2). Professional personal-field suggestions remain deferred.
 9. Design products-in-use aggregation from `orders`/`order_items` (F-012).
 10. Design visit model enrichment (`sentiment`, `attendees`, `sampleGiven`, `linkedOrderId`) and visit stats aggregation, if the rich visit timeline (decision #12) is promoted from mock to real.
 11. Integration tests: scope denied, REP seller filter, geo nearby from facility point.

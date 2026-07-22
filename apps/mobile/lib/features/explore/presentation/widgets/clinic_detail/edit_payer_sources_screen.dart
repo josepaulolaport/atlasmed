@@ -17,6 +17,8 @@ class EditPayerSourcesScreen extends StatefulWidget {
 
   final String facilityName;
   final List<PayerShare> initialPayers;
+
+  /// Healthcare-provider picker list (`GET /healthcare-providers`).
   final List<PayerCatalogEntry> catalog;
 
   @override
@@ -58,15 +60,74 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
     return sum;
   }
 
-  bool get _isBalanced => _totalPercent == 100;
+  bool get _isBalanced => _payers.isEmpty || _totalPercent == 100;
+
+  bool get _hasZeroShare => _payers.any(
+    (p) => (int.tryParse(p.percentCtrl.text.trim()) ?? 0) <= 0,
+  );
 
   Set<String> get _usedNames =>
       _payers.map((p) => p.name.toLowerCase()).toSet();
+
+  void _setPercent(_EditablePayer payer, int value) {
+    payer.percentCtrl.text = '${value.clamp(0, 100)}';
+    payer.percentCtrl.selection = TextSelection.collapsed(
+      offset: payer.percentCtrl.text.length,
+    );
+  }
+
+  /// Splits 100% across all current payers (largest remainder method).
+  void _distributeEvenly() {
+    if (_payers.isEmpty) return;
+    final n = _payers.length;
+    final base = 100 ~/ n;
+    var remainder = 100 % n;
+    for (final p in _payers) {
+      final share = base + (remainder > 0 ? 1 : 0);
+      if (remainder > 0) remainder--;
+      _setPercent(p, share);
+    }
+    setState(() {});
+  }
+
+  /// After adding [addedCount] new payers at the end, assign them the leftover
+  /// % (or redistribute everything if already at/over 100%).
+  void _assignSharesAfterAdd(int addedCount) {
+    if (addedCount <= 0 || _payers.isEmpty) return;
+
+    final existing = _payers.length - addedCount;
+    if (existing <= 0) {
+      _distributeEvenly();
+      return;
+    }
+
+    var existingTotal = 0;
+    for (var i = 0; i < existing; i++) {
+      existingTotal += int.tryParse(_payers[i].percentCtrl.text.trim()) ?? 0;
+    }
+
+    final leftover = 100 - existingTotal;
+    if (leftover <= 0) {
+      // Already full — redistribute across everyone so new rows get a share.
+      _distributeEvenly();
+      return;
+    }
+
+    final base = leftover ~/ addedCount;
+    var remainder = leftover % addedCount;
+    for (var i = existing; i < _payers.length; i++) {
+      final share = base + (remainder > 0 ? 1 : 0);
+      if (remainder > 0) remainder--;
+      _setPercent(_payers[i], share);
+    }
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     final total = _totalPercent;
     final balanced = _isBalanced;
+    final hasZero = _hasZeroShare;
 
     return Scaffold(
       backgroundColor: const Color(0xFFf8f9fb),
@@ -81,15 +142,10 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: (_payers.isEmpty || balanced) ? _save : null,
-            child: Text(
+            onPressed: _onSavePressed,
+            child: const Text(
               'Salvar',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: (_payers.isEmpty || balanced)
-                    ? const Color(0xFF1e40af)
-                    : const Color(0xFFcbd5e1),
-              ),
+              style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -119,9 +175,8 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Adicione as fontes e distribua os percentuais '
-                  '(botões ±5% ou digite). A soma precisa ser 100% '
-                  'para habilitar Salvar.',
+                  'Ajuste a participação de cada fonte no faturamento. '
+                  'A soma deve ser 100% para salvar.',
                   style: TextStyle(
                     fontSize: 13,
                     color: Color(0xFF6b7280),
@@ -133,22 +188,9 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                   total: total,
                   balanced: balanced,
                   isEmpty: _payers.isEmpty,
+                  hasZeroShare: hasZero,
+                  onDistribute: _payers.length >= 2 ? _distributeEvenly : null,
                 ),
-                if (_payers.isNotEmpty && !balanced) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    total < 100
-                        ? 'Faltam ${100 - total}% para completar 100%.'
-                        : 'Remova ${total - 100}% — a soma passou de 100%.',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: total > 100
-                          ? const Color(0xFFb84545)
-                          : const Color(0xFFc6861b),
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -205,30 +247,74 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) =>
-          _AddPayerSourcesSheet(catalog: widget.catalog, usedNames: _usedNames),
+      builder: (_) => _AddPayerSourcesSheet(
+        catalog: widget.catalog,
+        usedNames: _usedNames,
+      ),
     );
     if (selected == null || selected.isEmpty || !mounted) return;
+
+    final before = _payers.length;
     setState(() {
-      final remaining = (100 - _totalPercent).clamp(0, 100);
-      for (var i = 0; i < selected.length; i++) {
-        final entry = selected[i];
-        // First newly added row gets the leftover % so a single add can
-        // reach 100% and unlock Salvar without hunting for steppers.
-        final seedPercent = i == 0 && remaining > 0 ? remaining : 0;
+      for (final entry in selected) {
         _payers.add(
           _EditablePayer(
             id: entry.id,
             name: entry.name,
-            percentCtrl: TextEditingController(text: '$seedPercent'),
+            percentCtrl: TextEditingController(text: '0'),
           ),
         );
       }
     });
+    _assignSharesAfterAdd(_payers.length - before);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          selected.length == 1
+              ? '${selected.first.name} adicionada — percentuais ajustados'
+              : '${selected.length} fontes adicionadas — percentuais ajustados',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
-  void _save() {
-    if (_payers.isNotEmpty && !_isBalanced) return;
+  void _onSavePressed() {
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (_payers.isEmpty) {
+      Navigator.of(context).pop(<PayerShare>[]);
+      return;
+    }
+
+    if (_hasZeroShare) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Todas as fontes precisam ter mais de 0%. '
+            'Ajuste ou remova as que estão zeradas.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (!_isBalanced) {
+      final total = _totalPercent;
+      final hint = total > 100
+          ? 'A soma está em $total%. Remova ${total - 100}% ou toque em '
+                '“Distribuir igualmente”.'
+          : 'A soma está em $total%. Falta ${100 - total}% ou toque em '
+                '“Distribuir igualmente”.';
+      messenger.showSnackBar(
+        SnackBar(content: Text(hint), behavior: SnackBarBehavior.floating),
+      );
+      return;
+    }
+
     final result = _payers
         .map(
           (p) => PayerShare(
@@ -238,7 +324,6 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
                 .toDouble(),
           ),
         )
-        .where((p) => p.sharePercent > 0)
         .toList();
     Navigator.of(context).pop(result);
   }
@@ -261,20 +346,26 @@ class _TotalChip extends StatelessWidget {
     required this.total,
     required this.balanced,
     required this.isEmpty,
+    required this.hasZeroShare,
+    this.onDistribute,
   });
 
   final int total;
   final bool balanced;
   final bool isEmpty;
+  final bool hasZeroShare;
+  final VoidCallback? onDistribute;
 
   @override
   Widget build(BuildContext context) {
-    final ok = isEmpty || balanced;
+    final ok = isEmpty || (balanced && !hasZeroShare);
     final bg = ok ? const Color(0xFFecfdf5) : const Color(0xFFfef2f2);
     final fg = ok ? const Color(0xFF047857) : const Color(0xFFb84545);
     final String label;
     if (isEmpty) {
       label = 'Nenhuma fonte — salve para limpar o cadastro';
+    } else if (hasZeroShare) {
+      label = 'Há fontes com 0% — ajuste ou remova antes de salvar';
     } else if (balanced) {
       label = 'Soma: 100% — pronto para salvar';
     } else if (total > 100) {
@@ -284,7 +375,7 @@ class _TotalChip extends StatelessWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(10),
@@ -307,6 +398,22 @@ class _TotalChip extends StatelessWidget {
               ),
             ),
           ),
+          if (onDistribute != null && !ok) ...[
+            const SizedBox(width: 4),
+            TextButton(
+              onPressed: onDistribute,
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF1e40af),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text(
+                'Distribuir igualmente',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -342,7 +449,8 @@ class _EmptyEditor extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             const Text(
-              'Adicione convênios, SUS, particular e outras fontes do faturamento.',
+              'Adicione convênios, SUS, particular e outras fontes do faturamento. '
+              'Os percentuais são distribuídos automaticamente.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -389,12 +497,17 @@ class _PayerEditCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final percent = int.tryParse(payer.percentCtrl.text.trim()) ?? 0;
+    final isZero = percent <= 0;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
+        border: Border.all(
+          color: isZero ? const Color(0xFFfecaca) : const Color(0xFFeef0f3),
+        ),
       ),
       child: Row(
         children: [
@@ -405,13 +518,27 @@ class _PayerEditCard extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              payer.name,
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF0f1729),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  payer.name,
+                  style: const TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0f1729),
+                  ),
+                ),
+                if (isZero)
+                  const Text(
+                    '0% — ajuste ou remova',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFdc2626),
+                    ),
+                  ),
+              ],
             ),
           ),
           _PercentStepper(controller: payer.percentCtrl, onChanged: onChanged),
@@ -510,7 +637,10 @@ class _StepButton extends StatelessWidget {
 }
 
 class _AddPayerSourcesSheet extends StatefulWidget {
-  const _AddPayerSourcesSheet({required this.catalog, required this.usedNames});
+  const _AddPayerSourcesSheet({
+    required this.catalog,
+    required this.usedNames,
+  });
 
   final List<PayerCatalogEntry> catalog;
   final Set<String> usedNames;
@@ -579,13 +709,15 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Busque e selecione uma ou mais fontes pagadoras.',
+                  'Selecione uma ou mais fontes. Os percentuais serão '
+                  'ajustados automaticamente.',
                   style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
                 ),
                 const SizedBox(height: 14),
                 TextField(
                   controller: _queryCtrl,
-                  autofocus: true,
+                  // Keep keyboard closed so the catalog stays visible.
+                  autofocus: false,
                   onChanged: (_) => setState(() {}),
                   decoration: InputDecoration(
                     hintText: 'Buscar fonte pagadora…',
@@ -605,14 +737,17 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
           Expanded(
             child: filtered.isEmpty
                 ? Center(
-                    child: Text(
-                      _available.isEmpty
-                          ? 'Todas as fontes do catálogo já foram adicionadas'
-                          : 'Nada encontrado para "${_queryCtrl.text.trim()}"',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Color(0xFF9ca3af),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Text(
+                        _available.isEmpty
+                            ? 'Todas as fontes do catálogo já foram adicionadas'
+                            : 'Nada encontrado para "${_queryCtrl.text.trim()}"',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          color: Color(0xFF9ca3af),
+                        ),
                       ),
                     ),
                   )
@@ -670,7 +805,7 @@ class _AddPayerSourcesSheetState extends State<_AddPayerSourcesSheet> {
                     : () {
                         final picked = widget.catalog
                             .where((e) => _selectedIds.contains(e.id))
-                            .toList(growable: false);
+                            .toList();
                         Navigator.pop(context, picked);
                       },
                 style: FilledButton.styleFrom(

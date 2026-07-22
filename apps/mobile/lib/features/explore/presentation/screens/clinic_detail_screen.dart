@@ -17,6 +17,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_context_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_crm_doctors_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_deactivation_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
@@ -563,6 +564,12 @@ class _ClinicDetailContent extends ConsumerWidget {
           ),
         ),
         const _SuggestEditBanner(),
+        _ClinicDeactivateButton(
+          clinicId: clinicId,
+          clinicName: detail.name,
+          commercialStatus:
+              sectionsAsync.valueOrNull?.statusSignals?.commercialStatus,
+        ),
       ],
     );
   }
@@ -885,6 +892,52 @@ class _SuggestEditBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Destructive action at the end of the clinic profile — button, not a card.
+class _ClinicDeactivateButton extends ConsumerWidget {
+  const _ClinicDeactivateButton({
+    required this.clinicId,
+    required this.clinicName,
+    this.commercialStatus,
+  });
+
+  final String clinicId;
+  final String clinicName;
+  final FacilityCommercialStatus? commercialStatus;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => requestClinicDeactivation(
+            context,
+            ref: ref,
+            clinicId: clinicId,
+            clinicName: clinicName,
+            currentStatus: commercialStatus ?? FacilityCommercialStatus.active,
+          ),
+          icon: const Icon(Icons.power_settings_new_rounded, size: 18),
+          label: const Text('Solicitar desativação'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFdc2626),
+            side: const BorderSide(color: Color(0xFFfca5a5)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }

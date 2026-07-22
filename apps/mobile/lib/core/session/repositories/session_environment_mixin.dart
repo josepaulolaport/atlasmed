@@ -69,7 +69,10 @@ mixin SessionEnvironmentMixin<T> on Repository<T> {
 
   @override
   Future<bool> onErrorStatusCode(int statusCode) async {
-    if (statusCode == 401 || statusCode == 403 || statusCode == 500) {
+    // Only auth failures trigger session refresh. A 5xx from the API is a
+    // server/DB error — treating it as session expiry caused retry loops and
+    // misleading SessionExpiredException logs (e.g. facilities 500).
+    if (statusCode == 401 || statusCode == 403) {
       if (_isSessionEnvironment) {
         // SessionEnvironment itself got rejected → full logout
         await SessionEnvironment.instance.delete();
