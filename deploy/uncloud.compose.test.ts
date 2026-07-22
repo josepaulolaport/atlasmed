@@ -107,5 +107,8 @@ describe("production deployment", () => {
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
     );
+    expect(workflow).toContain(
+      "name: Set up QEMU for ARM64 builds\n        uses: docker/setup-qemu-action@v3",
+    );
   });
 });
