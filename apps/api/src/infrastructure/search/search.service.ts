@@ -12,7 +12,7 @@ export class SearchService {
   async search<T extends Record<string, unknown>>(
     indexName: string,
     query: string,
-    options?: { limit?: number; offset?: number }
+    options?: { limit?: number; offset?: number; filter?: string; sort?: string[] }
   ) {
     return this.index(indexName).search<T>(query, options);
   }

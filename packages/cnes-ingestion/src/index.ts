@@ -12,3 +12,4 @@ export * from "./archive/local-archive.adapter";
 export * from "./archive/s3-archive.adapter";
 export * from "./archive/create-archive-adapter";
 export * from "./parse/parse-cnes-file";
+export * from "./search-normalization";

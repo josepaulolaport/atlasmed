@@ -182,6 +182,95 @@ describe("ListProfessionalsUseCase", () => {
     ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
   });
 
+  it("prefilters textual professional search by normalized specialty, facility, and safe association scope", async () => {
+    let options: unknown;
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({ professionals: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [] };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "ana",
+      facilityId: "facility-1",
+      specialty: " Cirurgia VÁSCULAR ",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-2", "facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+
+    expect(options).toEqual({
+      limit: 20,
+      offset: 0,
+      filter: "specialtyNormalized = 'cirurgia vascular' AND activeFacilityIds = 'facility-1' AND activeFacilityIds IN ['facility-1', 'facility-2']",
+    });
+  });
+
+  it("prefilters an empty non-global professional scope to no Meilisearch documents", async () => {
+    let options: { filter?: string } | undefined;
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({ professionals: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => { options = received; return { hits: [] }; },
+      },
+    });
+    await useCase.execute({
+      search: "ana",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+    expect(options?.filter).toBe("activeFacilityIds = '__none__'");
+  });
+
+  it("keeps representable professional filters when association scope exceeds the safe bound", async () => {
+    let options: { filter?: string } | undefined;
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({ professionals: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [] };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "ana",
+      specialty: "Cardiologia",
+      scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+
+    expect(options?.filter).toBe("specialtyNormalized = 'cardiologia'");
+  });
+
+  it("keeps professional radius filtering DB-only", async () => {
+    let options: unknown;
+    const useCase = new ListProfessionalsUseCase({
+      doctorRepository: fakeRepository(async () => ({ professionals: [], total: 0 })),
+      searchService: {
+        isConfigured: () => true,
+        search: async (_index, _query, received) => {
+          options = received;
+          return { hits: [] };
+        },
+      },
+    });
+
+    await useCase.execute({
+      search: "ana",
+      latitude: -23.55,
+      longitude: -46.63,
+      radiusKm: 5,
+      scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
+    });
+
+    expect(options).toEqual({ limit: 20, offset: 0 });
+  });
+
   it("does not call Meilisearch for blank professional searches", async () => {
     let searchCalls = 0;
     const useCase = new ListProfessionalsUseCase({

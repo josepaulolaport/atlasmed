@@ -57,6 +57,10 @@ describe("search rebuild", () => {
         city: "São Paulo",
         state: "SP",
         commercialStatus: "ACTIVE",
+        territoryId: "territory-1",
+        territoryAssignmentStatus: "assigned",
+        latitude: -23.55,
+        longitude: -46.63,
         deactivatedAt: null,
         isActiveInRegistry: true,
       })
@@ -71,6 +75,9 @@ describe("search rebuild", () => {
       city: "São Paulo",
       state: "SP",
       commercialStatus: "ACTIVE",
+      territoryId: "territory-1",
+      territoryAssignmentStatus: "assigned",
+      _geo: { lat: -23.55, lng: -46.63 },
     });
   });
 
@@ -78,6 +85,7 @@ describe("search rebuild", () => {
     expect(mapFacilitySearchDocument({
       id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
       cnpj: null, cpf: null, cnesCode: null, city: null, state: null, commercialStatus: null,
+      territoryId: null, territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
       deactivatedAt: null, isActiveInRegistry: false,
     })).toEqual({
       id: "facility-1",
@@ -90,6 +98,8 @@ describe("search rebuild", () => {
       city: null,
       state: null,
       commercialStatus: null,
+      territoryId: null,
+      territoryAssignmentStatus: "unassigned",
     });
   });
 
@@ -97,6 +107,7 @@ describe("search rebuild", () => {
     expect(mapFacilitySearchDocument({
       id: "facility-1", displayName: "Clínica", legalName: null, tradeName: null,
       cnpj: null, cpf: null, cnesCode: null, city: null, state: null, commercialStatus: null,
+      territoryId: null, territoryAssignmentStatus: "unassigned", latitude: null, longitude: null,
       deactivatedAt: new Date(), isActiveInRegistry: true,
     })).toBeNull();
   });
@@ -114,6 +125,11 @@ describe("search rebuild", () => {
         crmCouncil: "CRM",
         crmNumber: "12345",
         crmState: "SP",
+        activeAssociations: [
+          { facilityId: "facility-2", territoryId: "territory-2" },
+          { facilityId: "facility-1", territoryId: "territory-1" },
+          { facilityId: "facility-1", territoryId: "territory-1" },
+        ],
         deletedAt: null,
       })
     ).toEqual({
@@ -122,9 +138,22 @@ describe("search rebuild", () => {
       socialName: "Dra. Ana",
       taxId: "123",
       specialty: "Cardiologia",
+      specialtyNormalized: "cardiologia",
+      activeFacilityIds: ["facility-1", "facility-2"],
+      activeTerritoryIds: ["territory-1", "territory-2"],
       crmCouncil: "CRM",
       crmNumber: "12345",
       crmState: "SP",
+    });
+  });
+
+  test("exposes hybrid filter and distance-sort index settings", () => {
+    expect(searchRebuild.FACILITY_SETTINGS).toMatchObject({
+      filterableAttributes: expect.arrayContaining(["id", "commercialStatus", "territoryId", "territoryAssignmentStatus", "_geo"]),
+      sortableAttributes: ["_geo"],
+    });
+    expect(searchRebuild.PROFESSIONAL_SETTINGS).toMatchObject({
+      filterableAttributes: expect.arrayContaining(["specialtyNormalized", "activeFacilityIds", "activeTerritoryIds"]),
     });
   });
 

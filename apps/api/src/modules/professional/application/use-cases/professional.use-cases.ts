@@ -1,6 +1,8 @@
 import type { ScopeContext } from "@atlasmed/access";
 import type { ProfessionalProfile } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
+import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
+import { buildMeiliFilter, eqFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
 import {
   ForbiddenError,
   ResourceNotFoundError,
@@ -12,7 +14,7 @@ type SearchService = {
   search<T extends Record<string, unknown>>(
     indexName: string,
     query: string,
-    options: { limit: number; offset: number }
+    options: { limit: number; offset: number; filter?: string; sort?: string[] }
   ): Promise<{ hits: T[]; estimatedTotalHits?: number }>;
 };
 
@@ -304,9 +306,23 @@ export class ListProfessionalsUseCase {
 
     let result: { hits: Array<{ id: string }>; estimatedTotalHits?: number };
     try {
+      const canonicalFilters = [
+        input.specialty
+          ? eqFilter("specialtyNormalized", normalizeSearchFilterValue(input.specialty))
+          : undefined,
+        input.facilityId ? eqFilter("activeFacilityIds", input.facilityId) : undefined,
+      ];
+      const scopeFilter = input.scope.isGlobal
+        ? undefined
+        : input.scope.facilityIds.length > 0
+          ? inFilter("activeFacilityIds", input.scope.facilityIds)
+          : eqFilter("activeFacilityIds", "__none__");
+      const filter = buildMeiliFilter([...canonicalFilters, scopeFilter])
+        ?? buildMeiliFilter(canonicalFilters);
       result = await searchService.search<{ id: string }>("professionals", search, {
         limit,
         offset: (page - 1) * limit,
+        ...(filter ? { filter } : {}),
       });
     } catch (error) {
       throw new ServiceUnavailableError("Search", error instanceof Error ? error : undefined);

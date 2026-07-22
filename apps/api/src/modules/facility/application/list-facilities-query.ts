@@ -3,12 +3,15 @@ import { ValidationError } from "../../../shared/errors";
 const COMMERCIAL_STATUSES = ["REGISTERED", "ACTIVE", "SUSPENDED", "INACTIVE"] as const;
 export type FacilityCommercialStatus = (typeof COMMERCIAL_STATUSES)[number];
 
+export type FacilitySearchSort = "relevance" | "distance";
+
 export interface ListFacilitiesQuery {
   latitude?: number;
   longitude?: number;
   radiusKm?: number;
   commercialStatus?: FacilityCommercialStatus;
   productIds?: string[];
+  sort?: FacilitySearchSort;
 }
 
 export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFacilitiesQuery {
@@ -19,6 +22,7 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
     ? query.productIds.split(",").map((id) => id.trim()).filter(Boolean)
     : undefined;
   const commercialStatus = query.commercialStatus;
+  const sort = query.sort;
 
   const issues: Array<{ field: string; message: string }> = [];
   if ((latitude === undefined) !== (longitude === undefined)) issues.push({ field: "coordinates", message: "latitude and longitude must be provided together" });
@@ -28,7 +32,9 @@ export function parseListFacilitiesQuery(query: Record<string, unknown>): ListFa
   if (radiusKm !== undefined && latitude === undefined) issues.push({ field: "radiusKm", message: "latitude and longitude are required when radiusKm is provided" });
   if (commercialStatus !== undefined && (typeof commercialStatus !== "string" || !COMMERCIAL_STATUSES.includes(commercialStatus as FacilityCommercialStatus))) issues.push({ field: "commercialStatus", message: "commercialStatus is invalid" });
   if (query.productIds !== undefined && (!productIds || productIds.length === 0)) issues.push({ field: "productIds", message: "productIds must be a comma-separated list of product IDs" });
+  if (sort !== undefined && sort !== "relevance" && sort !== "distance") issues.push({ field: "sort", message: "sort must be relevance or distance" });
+  if (sort === "distance" && latitude === undefined) issues.push({ field: "sort", message: "latitude and longitude are required for distance sort" });
   if (issues.length > 0) throw new ValidationError(issues);
 
-  return { latitude, longitude, radiusKm, commercialStatus: commercialStatus as FacilityCommercialStatus | undefined, productIds };
+  return { latitude, longitude, radiusKm, commercialStatus: commercialStatus as FacilityCommercialStatus | undefined, productIds, sort: sort as FacilitySearchSort | undefined };
 }
