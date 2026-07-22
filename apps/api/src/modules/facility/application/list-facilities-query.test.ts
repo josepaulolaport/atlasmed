@@ -9,11 +9,36 @@ describe("parseListFacilitiesQuery", () => {
       .toMatchObject({ latitude: -23.55, longitude: -46.63, radiusKm: 5, productIds: ["one", "two"] });
   });
 
-  it("validates relevance/distance sort and requires coordinates for distance", () => {
-    expect(parseListFacilitiesQuery({ sort: "relevance" })).toMatchObject({ sort: "relevance" });
+  it("parses purchase filters and applies context-sensitive sort defaults", () => {
+    expect(parseListFacilitiesQuery({ search: "central", purchaseFunnelStage: "CHURN,PURCHASE_WINDOW", purchaseProfile: "AUTOMATIC", purchaseIntervalMinDays: "15", purchaseIntervalMaxDays: "90" }))
+      .toMatchObject({
+        purchaseFunnelStages: ["CHURN", "PURCHASE_WINDOW"],
+        purchaseProfile: "AUTOMATIC",
+        purchaseIntervalMinDays: 15,
+        purchaseIntervalMaxDays: 90,
+        sort: "relevance",
+        order: "desc",
+      });
+    expect(parseListFacilitiesQuery({})).toMatchObject({ sort: "name", order: "asc" });
+  });
+
+  it("validates purchase filters, interval bounds, and order", () => {
+    expect(() => parseListFacilitiesQuery({ purchaseFunnelStage: "CHURN,INVALID" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ purchaseProfile: "INVALID" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ purchaseIntervalMinDays: "0" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ purchaseIntervalMaxDays: "3651" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ purchaseIntervalMinDays: "90", purchaseIntervalMaxDays: "30" })).toThrow();
+    expect(() => parseListFacilitiesQuery({ order: "sideways" })).toThrow();
+  });
+
+  it("validates relevance/distance sort requirements and accepts explicit business sorts", () => {
+    expect(() => parseListFacilitiesQuery({ sort: "relevance" })).toThrow();
+    expect(parseListFacilitiesQuery({ search: "central", sort: "relevance" })).toMatchObject({ sort: "relevance" });
     expect(() => parseListFacilitiesQuery({ sort: "distance" })).toThrow();
-    expect(parseListFacilitiesQuery({ sort: "distance", latitude: "-23.55", longitude: "-46.63" }))
-      .toMatchObject({ sort: "distance", latitude: -23.55, longitude: -46.63 });
-    expect(() => parseListFacilitiesQuery({ sort: "name" })).toThrow();
+    expect(parseListFacilitiesQuery({ sort: "distance", latitude: "-23.55", longitude: "-46.63", order: "desc" }))
+      .toMatchObject({ sort: "distance", order: "desc", latitude: -23.55, longitude: -46.63 });
+    expect(parseListFacilitiesQuery({ sort: "purchaseFunnelStage" })).toMatchObject({ sort: "purchaseFunnelStage", order: "asc" });
+    expect(parseListFacilitiesQuery({ sort: "purchaseIntervalDays" })).toMatchObject({ sort: "purchaseIntervalDays", order: "asc" });
+    expect(parseListFacilitiesQuery({ sort: "lastPurchaseDate" })).toMatchObject({ sort: "lastPurchaseDate", order: "asc" });
   });
 });

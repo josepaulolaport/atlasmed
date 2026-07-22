@@ -160,6 +160,31 @@ describe("Facility HTTP auth integration", () => {
     );
   });
 
+  it("validates facility purchase list filter and sort query combinations", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.admin.email);
+    const invalidRelevance = await authRequest(
+      app,
+      "http://localhost/api/v1/facilities?sort=relevance",
+      token
+    );
+    const invalidRange = await authRequest(
+      app,
+      "http://localhost/api/v1/facilities?purchaseIntervalMinDays=90&purchaseIntervalMaxDays=30",
+      token
+    );
+    const valid = await authRequest(
+      app,
+      "http://localhost/api/v1/facilities?purchaseFunnelStage=NEVER_PURCHASED%2CCHURN&purchaseProfile=AUTOMATIC&purchaseIntervalMinDays=1&purchaseIntervalMaxDays=3650&sort=purchaseFunnelStage&order=desc",
+      token
+    );
+
+    expect(invalidRelevance.status).toBe(400);
+    expect(invalidRange.status).toBe(400);
+    expect(valid.status).toBe(200);
+  });
+
   it("scoped field USER can read in-territory facility", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 

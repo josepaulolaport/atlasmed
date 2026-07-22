@@ -36,7 +36,7 @@ describe("ListFacilitiesUseCase filters", () => {
 
     expect(repository.findAll).toHaveBeenCalledWith(expect.objectContaining({
       page: 2, limit: 10, latitude: -23.55, longitude: -46.63, radiusKm: 5,
-      commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"],
+      commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"], sort: "name", order: "asc",
       scope: { isGlobal: false, facilityIds: ["facility-1"] },
     }));
     expect(result.data[0]?.distanceKm).toBe(1.25);

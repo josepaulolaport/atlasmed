@@ -124,6 +124,11 @@ export interface FacilitySourceUpsertInput {
   sourceLastSeenAt: Date;
 }
 
+export type FacilityPurchaseFunnelStage = "NEVER_PURCHASED" | "OUTSIDE_WINDOW" | "PURCHASE_WINDOW" | "CHURN" | "INACTIVE";
+export type FacilityPurchaseProfileFilter = "AUTOMATIC" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "BIMONTHLY" | "QUARTERLY" | "SEMIANNUAL" | "ANNUAL" | "CUSTOM";
+export type FacilityListSort = "relevance" | "distance" | "name" | "purchaseFunnelStage" | "purchaseIntervalDays" | "lastPurchaseDate";
+export type FacilityListOrder = "asc" | "desc";
+
 export interface FacilityRepository {
   findAll(params: {
     page: number;
@@ -135,6 +140,12 @@ export interface FacilityRepository {
     commercialStatus?: FacilityCommercialStatus;
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
     productIds?: string[];
+    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
+    purchaseProfile?: FacilityPurchaseProfileFilter;
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: FacilityListSort;
+    order?: FacilityListOrder;
     scope: FacilityListScopeFilter;
     /** Internal canonical hydration constraint for a Meilisearch result page. */
     candidateIds?: string[];
@@ -148,6 +159,12 @@ export interface FacilityRepository {
     radiusKm?: number;
     commercialStatus?: FacilityCommercialStatus;
     productIds?: string[];
+    purchaseFunnelStages?: FacilityPurchaseFunnelStage[];
+    purchaseProfile?: FacilityPurchaseProfileFilter;
+    purchaseIntervalMinDays?: number;
+    purchaseIntervalMaxDays?: number;
+    sort?: FacilityListSort;
+    order?: FacilityListOrder;
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]>;
 
