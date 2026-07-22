@@ -59,6 +59,17 @@ export interface FacilityRepresentativeRepository {
     confirmedByUserId: string;
   }): Promise<FacilityRepresentativeRecord>;
 
+  /** Manual CRM create (no registry external key). */
+  createManual(params: {
+    facilityId: string;
+    representativeName: string;
+    roleTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactType?: FacilityRepresentativeContactType;
+    confirmedByUserId: string;
+  }): Promise<FacilityRepresentativeRecord>;
+
   endSourceRepresentative(params: {
     facilityId: string;
     externalSourceKey: string;

@@ -130,7 +130,7 @@ final facilityDoctorsRosterProvider = StateNotifierProvider.autoDispose
             facilityId,
             page: page,
             limit: facilityRosterPageSize,
-            view: 'confirmed',
+            view: 'all',
           );
           try {
             return await repo.loadPage();

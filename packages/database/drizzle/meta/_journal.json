@@ -71,6 +71,20 @@
       "when": 1784683489635,
       "tag": "0009_migrate_fp_relationship_to_user_snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784743188893,
+      "tag": "0010_facility_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784744150912,
+      "tag": "0011_facility_photos",
+      "breakpoints": true
     }
   ]
 }

@@ -183,6 +183,60 @@ export const professionalNotes = pgTable(
 );
 
 /**
+ * Private facility-scoped field notes for the owning user only —
+ * same privacy model as professional_notes (user × facility).
+ */
+export const facilityNotes = pgTable(
+  "facility_notes",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    facilityId: text("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("facility_notes_facility_id_user_id_created_at_idx").on(
+      t.facilityId,
+      t.userId,
+      t.createdAt
+    ),
+    index("facility_notes_user_id_created_at_idx").on(t.userId, t.createdAt),
+  ]
+);
+
+/** Gallery photos for an establishment (header avatar uses `facilities.image_url`). */
+export const facilityPhotos = pgTable(
+  "facility_photos",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    facilityId: text("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    storageKey: text("storage_key").notNull(),
+    url: text("url").notNull(),
+    contentType: text("content_type").notNull(),
+    uploadedByUserId: text("uploaded_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("facility_photos_facility_id_created_at_idx").on(
+      t.facilityId,
+      t.createdAt
+    ),
+    uniqueIndex("facility_photos_storage_key_uidx").on(t.storageKey),
+  ]
+);
+
+/**
  * Per-user relationship strength with a CRM professional (1–10).
  * Private to the owning user — same privacy model as professional_notes.
  * Not facility-scoped and not applicable to facility_representatives.
@@ -442,6 +496,19 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   healthcareProviderShares: many(facilityHealthcareProviderShares),
   conformityRecords: many(conformityRecords),
   services: many(facilityServices),
+  notes: many(facilityNotes),
+  photos: many(facilityPhotos),
+}));
+
+export const facilityPhotosRelations = relations(facilityPhotos, ({ one }) => ({
+  facility: one(facilities, {
+    fields: [facilityPhotos.facilityId],
+    references: [facilities.id],
+  }),
+  uploadedBy: one(users, {
+    fields: [facilityPhotos.uploadedByUserId],
+    references: [users.id],
+  }),
 }));
 
 export const facilityServicesRelations = relations(facilityServices, ({ one }) => ({
@@ -459,6 +526,14 @@ export const professionalNotesRelations = relations(professionalNotes, ({ one })
   professional: one(professionals, {
     fields: [professionalNotes.professionalId],
     references: [professionals.id],
+  }),
+}));
+
+export const facilityNotesRelations = relations(facilityNotes, ({ one }) => ({
+  user: one(users, { fields: [facilityNotes.userId], references: [users.id] }),
+  facility: one(facilities, {
+    fields: [facilityNotes.facilityId],
+    references: [facilities.id],
   }),
 }));
 

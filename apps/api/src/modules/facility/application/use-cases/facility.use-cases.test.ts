@@ -31,6 +31,7 @@ function facilityRecord(id: string): FacilityListRecord {
     lat: null,
     lng: null,
     territoryId: "territory-1",
+    territoryName: null,
     territoryAssignmentStatus: "assigned",
     territoryAssignmentSource: "manual",
     commercialStatus: null,
@@ -50,6 +51,9 @@ function facilityRecord(id: string): FacilityListRecord {
     services: [],
     professionalCount: 3,
     consultantName: null,
+    consultantSince: null,
+    managerName: null,
+    imageUrl: null,
   };
 }
 

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/facility_representative_api_type.dart';
@@ -7,7 +9,12 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 
 class FacilityRepresentativesException implements Exception {
-  const FacilityRepresentativesException();
+  const FacilityRepresentativesException([this.message]);
+
+  final String? message;
+
+  @override
+  String toString() => message ?? 'FacilityRepresentativesException';
 }
 
 /// Paginated CRM administrative professionals for a facility.
@@ -60,5 +67,42 @@ class FacilityRepresentativesRepository
           .toList(growable: false),
       pagination: result.pagination,
     );
+  }
+
+  Future<AdministrativeProfessional> create({
+    required String representativeName,
+    String? roleTitle,
+    String? email,
+    String? phone,
+    String contactType = 'PROFESSIONAL',
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/representatives',
+        ),
+        method: RepositoryHttpMethod.post,
+        headers: const {'Content-Type': 'application/json'},
+        body: {
+          'representativeName': representativeName,
+          if (roleTitle != null && roleTitle.isNotEmpty) 'roleTitle': roleTitle,
+          if (email != null && email.isNotEmpty) 'email': email,
+          if (phone != null && phone.isNotEmpty) 'phone': phone,
+          'contactType': contactType,
+        },
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw FacilityRepresentativesException(
+          'Falha ao criar profissional (${response.statusCode})',
+        );
+      }
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    return FacilityRepresentativeApi.fromMap(map).toDomain();
   }
 }

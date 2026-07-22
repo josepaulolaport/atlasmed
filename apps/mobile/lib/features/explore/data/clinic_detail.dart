@@ -26,6 +26,9 @@ class ClinicDetail {
   final String? phone;
   final String? whatsapp;
   final String? consultantName;
+  final DateTime? consultantSince;
+  final String? managerName;
+  final String? territoryName;
   final String? streetAddress;
   final String? streetNumber;
   final String? addressComplement;
@@ -58,6 +61,9 @@ class ClinicDetail {
     this.phone,
     this.whatsapp,
     this.consultantName,
+    this.consultantSince,
+    this.managerName,
+    this.territoryName,
     this.streetAddress,
     this.streetNumber,
     this.addressComplement,

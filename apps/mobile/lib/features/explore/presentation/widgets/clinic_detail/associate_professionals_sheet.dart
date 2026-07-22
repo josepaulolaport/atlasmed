@@ -4,9 +4,13 @@ import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_moc
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
 
 /// Search + multi-select administrative professionals to associate.
+///
+/// Real facilities have no global admin pool — use **Criar perfil**
+/// (`POST /facilities/:id/representatives`). Mock ids keep the local pool.
 Future<List<AdministrativeProfessional>?> showAssociateProfessionalsSheet(
   BuildContext context, {
   required Set<String> alreadyAssociatedIds,
+  String? facilityId,
 }) {
   return showModalBottomSheet<List<AdministrativeProfessional>>(
     context: context,
@@ -18,14 +22,19 @@ Future<List<AdministrativeProfessional>?> showAssociateProfessionalsSheet(
     ),
     builder: (_) => _AssociateProfessionalsSheet(
       alreadyAssociatedIds: alreadyAssociatedIds,
+      facilityId: facilityId,
     ),
   );
 }
 
 class _AssociateProfessionalsSheet extends StatefulWidget {
-  const _AssociateProfessionalsSheet({required this.alreadyAssociatedIds});
+  const _AssociateProfessionalsSheet({
+    required this.alreadyAssociatedIds,
+    this.facilityId,
+  });
 
   final Set<String> alreadyAssociatedIds;
+  final String? facilityId;
 
   @override
   State<_AssociateProfessionalsSheet> createState() =>
@@ -34,9 +43,17 @@ class _AssociateProfessionalsSheet extends StatefulWidget {
 
 class _AssociateProfessionalsSheetState
     extends State<_AssociateProfessionalsSheet> {
-  late List<AdministrativeProfessional> _pool = mockAssociableProfessionals()
-      .where((p) => !widget.alreadyAssociatedIds.contains(p.id))
-      .toList();
+  bool get _useApi {
+    final id = widget.facilityId;
+    if (id == null || id.isEmpty) return false;
+    return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
+
+  late List<AdministrativeProfessional> _pool = _useApi
+      ? const []
+      : mockAssociableProfessionals()
+            .where((p) => !widget.alreadyAssociatedIds.contains(p.id))
+            .toList();
   final Set<String> _selected = {};
   String _query = '';
 
@@ -239,7 +256,10 @@ class _AssociateProfessionalsSheetState
   }
 
   Future<void> _createProfile() async {
-    final created = await showCreateAdminProfessionalSheet(context);
+    final created = await showCreateAdminProfessionalSheet(
+      context,
+      facilityId: widget.facilityId,
+    );
     if (created == null || !mounted) return;
     setState(() {
       _pool = [created, ..._pool];

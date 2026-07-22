@@ -15,6 +15,9 @@ class Clinic {
     this.territoryId,
     this.territoryAssignmentStatus,
     this.consultantName,
+    this.consultantSince,
+    this.managerName,
+    this.territoryName,
     this.distanceKm,
     this.lat,
     this.lng,
@@ -50,6 +53,9 @@ class Clinic {
       ),
       professionalCount: readInt(map['professionalCount']),
       consultantName: readNullableString(map['consultantName']),
+      consultantSince: readNullableDateTime(map['consultantSince']),
+      managerName: readNullableString(map['managerName']),
+      territoryName: readNullableString(map['territoryName']),
       distanceKm: readNullableDouble(map['distanceKm']),
       lat: readNullableDouble(map['lat']),
       lng: readNullableDouble(map['lng']),
@@ -86,6 +92,9 @@ class Clinic {
   final String? territoryAssignmentStatus;
   final int professionalCount;
   final String? consultantName;
+  final DateTime? consultantSince;
+  final String? managerName;
+  final String? territoryName;
   final double? distanceKm;
   final double? lat;
   final double? lng;

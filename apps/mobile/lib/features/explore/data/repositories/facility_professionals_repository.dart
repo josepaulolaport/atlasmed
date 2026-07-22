@@ -21,7 +21,11 @@ class FacilityProfessionalsRepository
     this.facilityId, {
     this.page = 1,
     this.limit = 20,
-    this.view = 'confirmed',
+    // `all` = source-active CNES links + confirmed CRM rows. Local/imported
+    // data is almost entirely unconfirmed (`confirmed_at` null), so
+    // `confirmed` alone leaves the Médicos strip empty while Explorar search
+    // still shows the same doctors via Meili `activeFacilityIds`.
+    this.view = 'all',
     this.search,
     RepositoryHttpClient? client,
   }) : _client = client,

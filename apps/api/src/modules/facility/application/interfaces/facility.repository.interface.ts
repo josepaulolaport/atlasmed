@@ -43,6 +43,8 @@ export interface FacilityRecord {
   lat: number | null;
   lng: number | null;
   territoryId: string | null;
+  /** Display name of `territoryId` when loaded (list + detail). */
+  territoryName: string | null;
   territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
   territoryAssignmentSource: "geo" | "manual";
   commercialStatus: FacilityCommercialStatus | null;
@@ -50,6 +52,15 @@ export interface FacilityRecord {
   conformityStatus: FacilityConformityStatus;
   /** Active consultant display name when loaded (list + detail). */
   consultantName: string | null;
+  /** Active consultant assignment start (`facility_consultant_assignments.started_at`). */
+  consultantSince: Date | null;
+  /**
+   * Display name of the active consultant's manager (`users.manager_id`).
+   * Null when there is no open consultant assignment or the consultant has no manager.
+   */
+  managerName: string | null;
+  /** Profile / header image URL (`facilities.image_url`). */
+  imageUrl: string | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -134,6 +145,7 @@ export interface FacilityRepository {
       name?: string;
       lat?: number | null;
       lng?: number | null;
+      imageUrl?: string | null;
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord>;

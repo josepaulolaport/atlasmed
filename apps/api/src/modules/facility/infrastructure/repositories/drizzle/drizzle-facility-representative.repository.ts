@@ -169,6 +169,37 @@ export class DrizzleFacilityRepresentativeRepository
     return mapRepresentative(representative!);
   }
 
+  async createManual(params: {
+    facilityId: string;
+    representativeName: string;
+    roleTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactType?: "PROFESSIONAL" | "DECISOR" | "COMPRADOR";
+    confirmedByUserId: string;
+  }): Promise<FacilityRepresentativeRecord> {
+    const now = new Date();
+    const [representative] = await db
+      .insert(facilityRepresentatives)
+      .values({
+        facilityId: params.facilityId,
+        representativeName: params.representativeName,
+        roleTitle: params.roleTitle ?? null,
+        email: params.email ?? null,
+        phone: params.phone ?? null,
+        contactType: params.contactType ?? "PROFESSIONAL",
+        sourceActive: false,
+        sourceProvider: null,
+        externalSourceKey: null,
+        confirmedAt: now,
+        confirmedByUserId: params.confirmedByUserId,
+        manuallyEditedAt: now,
+      })
+      .returning();
+
+    return mapRepresentative(representative!);
+  }
+
   async endSourceRepresentative(params: {
     facilityId: string;
     externalSourceKey: string;

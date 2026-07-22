@@ -696,6 +696,7 @@ ClinicDetail? mockClinicDetailForNearbyId(String id) {
     phone: seed.phone,
     whatsapp: seed.whatsapp,
     consultantName: 'Ana Silva',
+    consultantSince: DateTime(2023, 3, 1),
     email: seed.email ?? 'contato@clinica.example',
     website: null,
     streetAddress: seed.streetAddress,

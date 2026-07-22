@@ -75,3 +75,4 @@ See Spec 37 for the full endpoint table and design detail.
 - Web analytics map UI — API ready
 - Order/visit territory snapshot fields (Spec 06 / 11)
 - `POST /territories/:id/split`
+- Shared geographic coverage with clinic-level ownership (multiple reps in the same neighborhood) — see [Spec 0006](../0006-shared-territory-clinic-ownership/requirements.md)

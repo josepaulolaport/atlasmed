@@ -59,6 +59,7 @@ describe("ListFacilityRepresentativesUseCase", () => {
       }),
       upsertFromRegistry: async () => representative(),
       confirm: async () => representative(),
+      createManual: async () => representative(),
       endSourceRepresentative: async () => null,
     };
 
@@ -102,6 +103,7 @@ describe("ListFacilityRepresentativesUseCase", () => {
         },
         upsertFromRegistry: async () => representative(),
         confirm: async () => representative(),
+        createManual: async () => representative(),
         endSourceRepresentative: async () => null,
       },
     });

@@ -3,6 +3,7 @@ import {
   facilityProfessionals,
   facilityConsultantAssignments,
   facilityServices,
+  territories,
   users,
   orders,
   orderItems,
@@ -39,6 +40,9 @@ function mapFacility(
     lng?: number | null;
     services?: Array<{ serviceCode: string; classificationCode: string }>;
     consultantName?: string | null;
+    consultantSince?: Date | null;
+    managerName?: string | null;
+    territoryName?: string | null;
   } = {}
 ): FacilityRecord {
   const withCoords = facility as FacilityRowWithCoords;
@@ -64,12 +68,16 @@ function mapFacility(
     lat: options.lat !== undefined ? options.lat : (withCoords.lat ?? null),
     lng: options.lng !== undefined ? options.lng : (withCoords.lng ?? null),
     territoryId: facility.territoryId,
+    territoryName: options.territoryName ?? null,
     territoryAssignmentStatus: facility.territoryAssignmentStatus,
     territoryAssignmentSource: facility.territoryAssignmentSource,
     commercialStatus: facility.commercialStatus ?? null,
     purchaseStatus: facility.purchaseStatus ?? null,
     conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
+    consultantSince: options.consultantSince ?? null,
+    managerName: options.managerName ?? null,
+    imageUrl: facility.imageUrl ?? null,
     sourceProvider: facility.sourceProvider,
     externalSourceId: facility.externalSourceId,
     sourceContentHash: facility.sourceContentHash,
@@ -91,9 +99,23 @@ function buildScopeCondition(scope: FacilityListScopeFilter) {
   return inArray(facilities.id, ids);
 }
 
-async function loadConsultantNames(
+type ConsultantInfo = {
+  name: string | null;
+  since: Date | null;
+  managerName: string | null;
+};
+
+function displayName(
+  firstName: string | null | undefined,
+  lastName: string | null | undefined
+): string | null {
+  const name = [firstName, lastName].filter(Boolean).join(" ");
+  return name.length > 0 ? name : null;
+}
+
+async function loadConsultantInfo(
   facilityIds: string[]
-): Promise<Map<string, string | null>> {
+): Promise<Map<string, ConsultantInfo>> {
   if (facilityIds.length === 0) return new Map();
 
   const consultantRows = await db
@@ -101,6 +123,8 @@ async function loadConsultantNames(
       facilityId: facilityConsultantAssignments.facilityId,
       firstName: users.firstName,
       lastName: users.lastName,
+      startedAt: facilityConsultantAssignments.startedAt,
+      managerId: users.managerId,
     })
     .from(facilityConsultantAssignments)
     .innerJoin(users, eq(users.id, facilityConsultantAssignments.userId))
@@ -111,12 +135,62 @@ async function loadConsultantNames(
       )
     );
 
+  const managerIds = [
+    ...new Set(
+      consultantRows
+        .map((row) => row.managerId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0)
+    ),
+  ];
+
+  const managerNameById = new Map<string, string | null>();
+  if (managerIds.length > 0) {
+    const managerRows = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+      })
+      .from(users)
+      .where(inArray(users.id, managerIds));
+
+    for (const row of managerRows) {
+      managerNameById.set(row.id, displayName(row.firstName, row.lastName));
+    }
+  }
+
   return new Map(
     consultantRows.map((row) => [
       row.facilityId,
-      [row.firstName, row.lastName].filter(Boolean).join(" ") || null,
+      {
+        name: displayName(row.firstName, row.lastName),
+        since: row.startedAt ?? null,
+        managerName: row.managerId
+          ? (managerNameById.get(row.managerId) ?? null)
+          : null,
+      },
     ])
   );
+}
+
+async function loadTerritoryNames(
+  territoryIds: Array<string | null | undefined>
+): Promise<Map<string, string>> {
+  const ids = [
+    ...new Set(
+      territoryIds.filter(
+        (id): id is string => typeof id === "string" && id.length > 0
+      )
+    ),
+  ];
+  if (ids.length === 0) return new Map();
+
+  const rows = await db
+    .select({ id: territories.id, name: territories.name })
+    .from(territories)
+    .where(inArray(territories.id, ids));
+
+  return new Map(rows.map((row) => [row.id, row.name]));
 }
 
 export class DrizzleFacilityRepository implements FacilityRepository {
@@ -208,7 +282,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const ids = rows.map((r) => r.id);
 
-    const [profCounts, consultantMap] = await Promise.all([
+    const [profCounts, consultantMap, territoryNameById] = await Promise.all([
       db
         .select({
           facilityId: facilityProfessionals.facilityId,
@@ -222,21 +296,30 @@ export class DrizzleFacilityRepository implements FacilityRepository {
           )
         )
         .groupBy(facilityProfessionals.facilityId),
-      loadConsultantNames(ids),
+      loadConsultantInfo(ids),
+      loadTerritoryNames(rows.map((row) => row.territoryId)),
     ]);
 
     const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
 
     return {
-      facilities: rows.map((row) => ({
-        ...mapFacility(row, {
-          lat: row.lat,
-          lng: row.lng,
-          consultantName: consultantMap.get(row.id) ?? null,
-        }),
-        distanceKm: row.distanceKm ?? null,
-        professionalCount: countMap.get(row.id) ?? 0,
-      })),
+      facilities: rows.map((row) => {
+        const consultant = consultantMap.get(row.id);
+        return {
+          ...mapFacility(row, {
+            lat: row.lat,
+            lng: row.lng,
+            consultantName: consultant?.name ?? null,
+            consultantSince: consultant?.since ?? null,
+            managerName: consultant?.managerName ?? null,
+            territoryName: row.territoryId
+              ? (territoryNameById.get(row.territoryId) ?? null)
+              : null,
+          }),
+          distanceKm: row.distanceKm ?? null,
+          professionalCount: countMap.get(row.id) ?? 0,
+        };
+      }),
       total: countRows[0]?.count ?? 0,
     };
   }
@@ -276,7 +359,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (!facility) return null;
 
-    const [services, consultantMap] = await Promise.all([
+    const [services, consultantMap, territoryNameById] = await Promise.all([
       db
         .select({
           serviceCode: facilityServices.serviceCode,
@@ -284,14 +367,21 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         })
         .from(facilityServices)
         .where(eq(facilityServices.facilityId, id)),
-      loadConsultantNames([id]),
+      loadConsultantInfo([id]),
+      loadTerritoryNames([facility.territoryId]),
     ]);
 
+    const consultant = consultantMap.get(id);
     return mapFacility(facility, {
       lat: facility.lat,
       lng: facility.lng,
       services,
-      consultantName: consultantMap.get(id) ?? null,
+      consultantName: consultant?.name ?? null,
+      consultantSince: consultant?.since ?? null,
+      managerName: consultant?.managerName ?? null,
+      territoryName: facility.territoryId
+        ? (territoryNameById.get(facility.territoryId) ?? null)
+        : null,
     });
   }
 
@@ -367,6 +457,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       name?: string;
       lat?: number | null;
       lng?: number | null;
+      imageUrl?: string | null;
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
@@ -377,6 +468,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.name !== undefined) {
       setData.displayName = data.name;
+    }
+
+    if (data.imageUrl !== undefined) {
+      setData.imageUrl = data.imageUrl;
     }
 
     if (data.lat !== undefined || data.lng !== undefined) {

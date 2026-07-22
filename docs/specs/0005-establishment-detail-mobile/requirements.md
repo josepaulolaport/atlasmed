@@ -1,9 +1,9 @@
 # Spec 0005: Mobile Establishment Detail (Estabelecimento / Clínica)
 
-**Status:** Approved for implementation — redesign addendum (v21)  
-**Last Updated:** 2026-07-18  
+**Status:** Approved for implementation — redesign addendum (v23)  
+**Last Updated:** 2026-07-22  
 **Domains:** `apps/mobile`, `apps/api` (additive contract changes)  
-**Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
+**Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [Spec 0006 — Shared Territory Coverage & Clinic-Level Ownership](../0006-shared-territory-clinic-ownership/requirements.md) (deferred; may affect `regionZoneLabel` / ownership semantics later), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
 
 > **v2 note:** a visual reference (real product screenshots) prompted a redesign of the header, several new sections and a per-field edit pattern. Decisions 1, 3, 4 (representatives/CRM source) are unchanged. Decisions 2 and 5 below are **superseded** — see "Locked product decisions (v2)". Phase 1 (frontend, mocked) of the redesign has shipped; Phase 2 (backend) is documented but not yet implemented.
 
@@ -44,6 +44,18 @@
 > **v20 note:** empty/offline fallbacks — Ver todos stays available with empty rosters; empty Médicos/Admin cards offer Associar CTA into the list+FAB flow; facility EmptyState copy points at +; shell load failure shows friendly offline copy + **Tentar novamente**; section error cards retry via invalidate. Associate modals guide to create-profile when the candidate pool is empty.
 
 > **v21 note:** section formerly labeled **Convênios** is renamed **Fontes Pagadoras**. **Editar** opens a full-screen editor (`EditPayerSourcesScreen`): list of sources with ±5% steppers + numeric %, live sum chip (must total 100% to save, empty list allowed to clear), remove row, and **Adicionar** multi-select sheet over a mocked healthcare-provider catalog (search + exclude already-added). Save updates a local Riverpod override so the donut/legend refresh immediately (Phase 1 — no shares API write yet). Empty section offers **Cadastrar fontes**.
+>
+> **v22 note:** Médicos roster switches from `GET /facilities/:id/professionals?view=confirmed` to `view=all`. Imported CNES links are `source_active` with `confirmed_at` null everywhere in current demo data (0 confirmed rows), so `confirmed` left the strip empty while Explorar/Meili still listed the same doctors via `activeFacilityIds`. `view=all` matches that association set (source-active **or** confirmed). Decision v1 #3 and F-003 are superseded.
+>
+> **v23 note:** Facility DTO exposes `consultantSince` (`facility_consultant_assignments.started_at` of the active assignment). Equipe responsável prefers live `consultantName`/`consultantSince` from `GET /facilities/:id` over mock sections. Per-field edit pencils / suggestion sheet → PATCH remain deferred (UI stay mock-local).
+>
+> **v23b note:** `managerName` on the facility DTO is derived from the active consultor's `users.manager_id` (join to manager user). There is no `facility_manager_assignments` table and no `managerSince` — the card shows "gerente responsável" without tenure.
+>
+> **v24 note:** Remaining wire-up backlog (associate doctors/admins, `territoryName`→região, `facility_notes`, photos, field-suggestions/PATCH, verify payer writes). **Deferred by product:** Sinais chips stay mocked; remounting Produtos em uso / Histórico de visitas stays a product call. Fontes pagadoras GET/PUT already persist.
+>
+> **v25 note:** `facility_notes` (GET/POST) and `facility_photos` (list/upload/download; first upload sets `facilities.image_url` when null) are live. Mobile header avatar + `ClinicPhotoViewerScreen` load gallery via `GET /facilities/:id/photos` with bearer-auth `Image.network`. Associate doctors/admins + `territoryName`→região already wired. Field-suggestion/PATCH pencils remain deferred.
+>
+> **v26 note:** Avatar tap opens photo actions (ver fotos / tirar foto / escolher da galeria) and uploads via `POST /facilities/:id/photos` multipart.
 
 ## User Story
 
@@ -55,7 +67,7 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 |------------|----------|
 | Clínica / estabelecimento | `facilities` |
 | Profissionais administrativos | `public.facility_representatives` |
-| Médicos | `public.facility_professionals` + `public.professionals` (CRM, confirmed) |
+| Médicos | `public.facility_professionals` + `public.professionals` (CRM, `view=all`) |
 | Convênios | `healthcare_providers` + `facility_healthcare_provider_shares` |
 | Pedidos | `orders` + `order_items` |
 | Estabelecimentos próximos | `GET /facilities` geo query scoped to establishment coordinates |
@@ -65,7 +77,7 @@ As a field rep or manager using the mobile app, I want a complete establishment 
 | # | Decision |
 |---|----------|
 | 1 | **Administrative professionals** come from `public.facility_representatives` only. Do **not** use registry read endpoints (`/registry/professionals`, `/registry/representatives`) on mobile for this screen. |
-| 3 | **Médicos** section shows **CRM associations only** (`GET /facilities/:id/professionals?view=confirmed`). |
+| 3 | **Médicos** section shows CRM associations via `GET /facilities/:id/professionals?view=all` (source-active CNES **or** confirmed). **Superseded by v22** (was `view=confirmed`). |
 | 4 | **Convênios** in v1 using existing catalog shares API (`GET /facilities/:id/healthcare-provider-shares`). |
 | 6 | Implementation order: **frontend with mocked data first**, then backend contract + wire-up. |
 
@@ -179,12 +191,14 @@ Sections top → bottom. Items marked **mock** ship in frontend phase 1; **wire*
 | 2 | Sugerir alterações banner (static) | — | done |
 | 4 | **Mapa e clínicas próximas** — inline preview + list, tap → full-screen slider | Facility `lat`/`lng` + geo list centered on facility | mock → wire |
 | 5 | **Profissionais administrativos** — row tap → representative profile screen | `facility_representatives` | mock → wire |
-| 6 | **Médicos** (CRM) — snapping `PageView`, count badge, essential contact fields, badges area | `/professionals?view=confirmed` + `professional_notes` | mock → wire |
+| 6 | **Médicos** (CRM) — snapping `PageView`, count badge, essential contact fields, badges area | `/professionals?view=all` + associate/create API | wire (list + associate) |
 | 7 | **Convênios** — donut chart | healthcare provider shares | mock → wire |
 | 8 | **Pedidos recentes** — snapping `PageView` mirroring Médicos card, count badge | facility-scoped orders | mock → wire |
-| 9 | **Notas de campo** | none yet — new `facility_notes` table | mock |
-| 10 | Consultor responsável (+ tenure, região) | `consultantName`, `consultantSince`, `regionZoneLabel` | mock → wire |
-| 11 | Dados administrativos — per-field pencils | Facility DTO + representatives fallback for responsável | mock → wire |
+| 9 | **Notas de campo** | `GET/POST /facilities/:id/notes` (`facility_notes`, user-private) | wire |
+| 10 | Consultor / gerente responsável (+ tenure, região) | `consultantName`/`consultantSince` live; `managerName` from consultor's `manager_id`; `territoryName` → região | wire |
+| — | Sinais chips (header) | commercial/purchase status | deferred (mock) |
+| — | Produtos em uso / Histórico de visitas | — | deferred (unmounted; product call) |
+| 11 | Dados administrativos — per-field pencils | Facility DTO + representatives fallback for responsável | mock (pencils deferred) |
 
 ### Removed / hidden in v3 (cumulative with v2)
 
@@ -209,6 +223,8 @@ WHEN `GET /facilities/:id` or list returns a facility with a stored `location` T
 - `phone`, `email`, `website`, `streetAddress`, `streetNumber`, `addressComplement`, `postalCode`, `neighborhood`, `city`, `state`
 - `commercialStatus` (enum exposed for status chip mapping)
 - `consultantName` (already on list; ensure on detail)
+- `consultantSince` (ISO date of active `facility_consultant_assignments.started_at`, omitted when none)
+- `managerName` (active consultor's manager via `users.manager_id`; null when no consultor or no manager)
 - `services[]` (already on detail)
 
 WHEN a facility has no `location` THEN `lat`/`lng` SHALL be omitted or `null` and the mobile mini-map SHALL show an empty state with address text only.
@@ -229,9 +245,9 @@ WHEN there are no active representatives THEN the mobile UI SHALL show an empty 
 
 **v4 addition:** the section is rebuilt as a snapping `PageView` card carousel — same structure as F-003's Médicos cards (avatar/name/role header, contact-type badge, divider, always-present phone/e-mail rows, "Ver perfil completo" footer, relationship stars) — replacing the previous `ListTile` column. A count badge and "Ver todos" link (→ `AdministrativeProfessionalsListScreen`) sit on the section header, matching every other section. `AdministrativeProfessional` gained an optional `relationshipScore` (`int?`, 0–10 scale, mocked only).
 
-### F-003 — Médicos (CRM confirmed)
+### F-003 — Médicos (CRM associations)
 
-WHEN the mobile app loads doctors for an establishment THEN it SHALL call `GET /facilities/:id/professionals?view=confirmed`.
+WHEN the mobile app loads doctors for an establishment THEN it SHALL call `GET /facilities/:id/professionals?view=all` (source-active and/or confirmed; not ended).
 
 Each row SHALL display: display name, specialty, CRM (council/number/state when present), role flags (prescriber, buyer, decision-maker) as subtle chips.
 
@@ -335,21 +351,15 @@ WHEN the detail screen loads THEN a "Produtos em uso" section SHALL show, per pr
 
 ### F-013 — Fotos da clínica
 
-WHEN the user taps the header avatar THEN a full-screen, swipeable photo viewer (`ClinicPhotoViewerScreen`) SHALL open, showing one photo at a time with a page-dot indicator, an "n / total" counter and a close action; if there are no photos, a "Nenhuma foto cadastrada" snackbar SHALL show instead (**v5**: superseded by decision #25 — this is no longer a standalone scrollable section, see below for the original v1–v4 shape).
+WHEN the user taps the header avatar THEN a full-screen, swipeable photo viewer (`ClinicPhotoViewerScreen`) SHALL open, showing one photo at a time with a page-dot indicator, an "n / total" counter and a close action; if there are no photos, a "Nenhuma foto cadastrada" snackbar SHALL show instead (**v5**: superseded by decision #25 — this is no longer a standalone scrollable section).
 
-No backend exists for this today (`facilities.image_url` is a single field). Phase 2 needs a `facility_photos` table (one-to-many) and a `profile_picture_id` column on `facilities` for the single avatar/profile image shown in the header (distinct from the gallery).
-
-**Phase 1 (v1–v4, superseded):** a "Fotos da clínica" row in the scroll showed a photo count, up to 3 thumbnail previews, and the most recent upload date; tapping it showed a "disponível em breve" snackbar. The row/widget (`ClinicPhotosSection`) is kept in the codebase, unmounted, for a possible future "manage photos" entry point.
-
-**Phase 1 (v5, current):** mocked via `PhotoGallerySummary.thumbnailColors` — one placeholder color per photo, rendered full-screen as a colored card with a photo icon (no `facility_photos` URLs to display yet).
+**Shipped (v25/v26):** `facility_photos` table + `GET/POST /facilities/:id/photos` + authenticated `GET /facilities/photos/*` download. Profile image uses `facilities.image_url` (set on first upload when null). Mobile loads gallery via `facilityPhotosProvider` and renders real images with bearer-auth headers. Avatar tap opens a sheet: ver fotos / tirar foto / escolher da galeria (multipart upload). `ClinicPhotosSection` stays unmounted for a future manage-photos entry point.
 
 ### F-014 — Notas de campo
 
 WHEN a user opens the "Notas de campo" section THEN they SHALL see a private, facility-scoped, numbered list of notes visible only to them, with a button to add a new one.
 
-No backend exists for this today (`professional_notes` is professional-scoped only). Phase 2 needs a new `facility_notes` table (`id`, `facility_id`, `user_id`, `text`, `created_at`), mirroring `professional_notes`' shape and privacy model.
-
-**Phase 1 (this redesign):** mocked, in-memory only (added notes do not persist across screen reloads).
+**Shipped (v25):** `facility_notes` table + `GET/POST /facilities/:id/notes` (user-private, mirrors professional notes). Mobile `ClinicFieldNotesSection` persists via API.
 
 ### F-015 — Per-field suggestion flow
 

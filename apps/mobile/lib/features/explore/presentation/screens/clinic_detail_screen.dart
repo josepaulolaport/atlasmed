@@ -8,8 +8,10 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/contact_action
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_orders_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_payers_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/administrative_professionals_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
@@ -164,12 +166,13 @@ String _friendlyLoadError(Object error) {
 }
 
 Future<void> _openAdministratorsList(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   required String clinicId,
   required String facilityName,
   required List<AdministrativeProfessional> rosterFallback,
-}) {
-  return Navigator.of(context).push<void>(
+}) async {
+  await Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => AdministrativeProfessionalsListScreen(
         facilityId: clinicId,
@@ -178,15 +181,20 @@ Future<void> _openAdministratorsList(
       ),
     ),
   );
+  // Prefer retry over invalidate — keeps strip items visible while refetching.
+  await ref
+      .read(facilityAdministratorsRosterProvider(clinicId).notifier)
+      .retry();
 }
 
 Future<void> _openDoctorsList(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   required String clinicId,
   required String facilityName,
   required List<FacilityCrmDoctor> rosterFallback,
-}) {
-  return Navigator.of(context).push<void>(
+}) async {
+  await Navigator.of(context).push<void>(
     MaterialPageRoute(
       builder: (_) => DoctorsListScreen(
         facilityId: clinicId,
@@ -195,6 +203,7 @@ Future<void> _openDoctorsList(
       ),
     ),
   );
+  await ref.read(facilityDoctorsRosterProvider(clinicId).notifier).retry();
 }
 
 Future<void> _openPayerSourcesEditor(
@@ -296,6 +305,9 @@ class _ClinicDetailBody extends ConsumerWidget {
               ref.invalidate(clinicDetailProvider(clinicId));
               ref.invalidate(establishmentDetailSectionsProvider(clinicId));
               ref.invalidate(clinicVisitsProvider(clinicId));
+              ref.invalidate(facilityPhotosProvider(clinicId));
+              ref.invalidate(facilityNotesProvider(clinicId));
+              ref.invalidate(facilityNearbyPreviewProvider(clinicId));
               final doctorsNotifier = ref.read(
                 facilityDoctorsRosterProvider(clinicId).notifier,
               );
@@ -308,11 +320,12 @@ class _ClinicDetailBody extends ConsumerWidget {
               final ordersNotifier = ref.read(
                 facilityOrdersProvider(clinicId).notifier,
               );
-              ref.invalidate(facilityNearbyPreviewProvider(clinicId));
               await Future.wait([
                 ref.read(clinicDetailProvider(clinicId).future),
                 ref.read(establishmentDetailSectionsProvider(clinicId).future),
                 ref.read(facilityNearbyPreviewProvider(clinicId).future),
+                ref.read(facilityPhotosProvider(clinicId).future),
+                ref.read(facilityNotesProvider(clinicId).future),
                 doctorsNotifier.retry(),
                 adminsNotifier.retry(),
                 payersNotifier.retry(),
@@ -374,6 +387,7 @@ class _ClinicDetailContent extends ConsumerWidget {
             icon: Icons.chevron_right_rounded,
             onTap: () => _openAdministratorsList(
               context,
+              ref,
               clinicId: clinicId,
               facilityName: detail.name,
               rosterFallback: adminsRoster.items,
@@ -399,6 +413,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                 .loadMore(),
             onAssociate: () => _openAdministratorsList(
               context,
+              ref,
               clinicId: clinicId,
               facilityName: detail.name,
               rosterFallback: adminsRoster.items,
@@ -414,6 +429,7 @@ class _ClinicDetailContent extends ConsumerWidget {
             icon: Icons.chevron_right_rounded,
             onTap: () => _openDoctorsList(
               context,
+              ref,
               clinicId: clinicId,
               facilityName: detail.name,
               rosterFallback: doctorsRoster.items,
@@ -438,6 +454,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                 .loadMore(),
             onAssociate: () => _openDoctorsList(
               context,
+              ref,
               clinicId: clinicId,
               facilityName: detail.name,
               rosterFallback: doctorsRoster.items,
@@ -525,16 +542,7 @@ class _ClinicDetailContent extends ConsumerWidget {
         else
           ClinicOrdersSection(orders: ordersState.orders, facilityId: clinicId),
         const ClinicSectionHeader(title: 'Notas de campo'),
-        sectionsAsync.when(
-          loading: () => const _SectionLoadingCard(),
-          error: (err, _) => _SectionErrorCard(
-            message: _friendlyLoadError(err),
-            onRetry: () =>
-                ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
-          ),
-          data: (sections) =>
-              ClinicFieldNotesSection(initialNotes: sections.fieldNotes),
-        ),
+        ClinicFieldNotesSection(facilityId: clinicId),
         const ClinicSectionHeader(title: 'Equipe responsável'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),
@@ -544,11 +552,13 @@ class _ClinicDetailContent extends ConsumerWidget {
                 ref.invalidate(establishmentDetailSectionsProvider(clinicId)),
           ),
           data: (sections) => ClinicContextSection(
-            consultantName: sections.consultantName ?? detail.consultantName,
-            consultantSince: sections.consultantSince,
-            managerName: sections.managerName,
-            managerSince: sections.managerSince,
-            regionZoneLabel: sections.regionZoneLabel,
+            consultantName: detail.consultantName ?? sections.consultantName,
+            consultantSince: detail.consultantSince ?? sections.consultantSince,
+            // Manager is derived from the consultor's users.manager_id — no
+            // facility tenure. Prefer live; no mock fallback (would invent a manager).
+            managerName: detail.managerName,
+            managerSince: null,
+            regionZoneLabel: detail.territoryName ?? sections.regionZoneLabel,
             city: detail.city.isNotEmpty ? detail.city : null,
           ),
         ),

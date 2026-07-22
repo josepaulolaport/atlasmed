@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_suggestion_sheet.dart';
 
 /// Field block with label above value. Tap copies when a value is present;
-/// the pencil opens the suggest-edit sheet.
+/// the pencil opens the suggest-edit sheet (or [onEdit] when provided).
 class EditableFieldRow extends StatelessWidget {
   const EditableFieldRow({
     super.key,
@@ -12,6 +12,7 @@ class EditableFieldRow extends StatelessWidget {
     this.icon,
     this.emptyActionLabel = '+ Completar',
     this.showDivider = true,
+    this.onEdit,
   });
 
   final String label;
@@ -21,6 +22,10 @@ class EditableFieldRow extends StatelessWidget {
 
   /// Soft hairline under the field (omit on the last row in a card).
   final bool showDivider;
+
+  /// Custom edit action (e.g. multi-field address sheet). Falls back to the
+  /// single-field suggestion sheet when null.
+  final VoidCallback? onEdit;
 
   bool get _isEmpty => value == null || value!.trim().isEmpty;
 
@@ -38,10 +43,15 @@ class EditableFieldRow extends StatelessWidget {
   }
 
   void _suggestEdit(BuildContext context) {
+    final customEdit = onEdit;
     final label = this.label;
     final value = this.value;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!context.mounted) return;
+      if (customEdit != null) {
+        customEdit();
+        return;
+      }
       showEditSuggestionSheet(context, fieldLabel: label, currentValue: value);
     });
   }

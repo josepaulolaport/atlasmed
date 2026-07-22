@@ -34,11 +34,15 @@ export function serializeFacility(
     lat: clinic.lat ?? undefined,
     lng: clinic.lng ?? undefined,
     territoryId: clinic.territoryId ?? undefined,
+    territoryName: clinic.territoryName ?? undefined,
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
     // commercialStatus / purchaseStatus / conformityStatus stay off the
     // public DTO for now — mobile Spec 0005 still mocks Sinais chips.
     professionalCount: list.professionalCount ?? 0,
     consultantName: clinic.consultantName,
+    consultantSince: clinic.consultantSince?.toISOString() ?? undefined,
+    managerName: clinic.managerName,
+    imageUrl: clinic.imageUrl ?? undefined,
     distanceKm: list.distanceKm ?? undefined,
     services: clinic.services ?? [],
     createdAt: clinic.createdAt.toISOString(),

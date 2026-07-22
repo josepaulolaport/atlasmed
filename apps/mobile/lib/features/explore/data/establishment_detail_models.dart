@@ -388,17 +388,24 @@ class FacilityStatusSignals {
       : DateTime.now().difference(lastPurchaseAt!).inDays;
 }
 
-/// Mock summary for "Fotos da clínica" — no `facility_photos` table yet.
+/// Gallery summary for "Fotos da clínica".
+/// Prefer [imageUrls] when live; [thumbnailColors] remain for mock placeholders.
 class PhotoGallerySummary {
   const PhotoGallerySummary({
     required this.count,
     this.thumbnailColors = const [],
+    this.imageUrls = const [],
+    this.profileImageUrl,
     this.lastUpdatedAt,
   });
 
   final int count;
   final List<Color> thumbnailColors;
+  final List<String> imageUrls;
+  final String? profileImageUrl;
   final DateTime? lastUpdatedAt;
+
+  bool get hasRealImages => imageUrls.isNotEmpty;
 }
 
 /// Product performance at this establishment ("Produtos em uso").

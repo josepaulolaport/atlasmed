@@ -1,7 +1,11 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
-import type { FacilityRepresentativeRepository } from "../interfaces/facility-representative.repository.interface";
+import type {
+  FacilityRepresentativeContactType,
+  FacilityRepresentativeRepository,
+} from "../interfaces/facility-representative.repository.interface";
 import { serializeFacilityRepresentative } from "../mappers/facility-representative.mapper";
+import { ValidationError } from "../../../../shared/errors";
 
 interface Dependencies {
   facilityRepresentativeRepository: FacilityRepresentativeRepository;
@@ -36,5 +40,41 @@ export class ListFacilityRepresentativesUseCase {
         totalPages: result.totalPages,
       },
     };
+  }
+}
+
+export class CreateFacilityRepresentativeUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: {
+    facilityId: string;
+    scope: ScopeContext;
+    userId: string;
+    representativeName: string;
+    roleTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactType?: FacilityRepresentativeContactType;
+  }) {
+    assertResourceInScope(input.scope, "facility", input.facilityId);
+
+    const name = input.representativeName.trim();
+    if (!name) {
+      throw new ValidationError([
+        { field: "representativeName", message: "Name is required" },
+      ]);
+    }
+
+    const created = await this.deps.facilityRepresentativeRepository.createManual({
+      facilityId: input.facilityId,
+      representativeName: name,
+      roleTitle: input.roleTitle?.trim() || null,
+      email: input.email?.trim() || null,
+      phone: input.phone?.trim() || null,
+      contactType: input.contactType,
+      confirmedByUserId: input.userId,
+    });
+
+    return serializeFacilityRepresentative(created);
   }
 }
