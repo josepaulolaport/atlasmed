@@ -228,9 +228,7 @@ Future<void> _openPayerSourcesEditor(
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Nenhuma fonte pagadora disponível no catálogo.',
-          ),
+          content: Text('Nenhuma fonte pagadora disponível no catálogo.'),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -525,10 +523,7 @@ class _ClinicDetailContent extends ConsumerWidget {
                 ref.read(facilityOrdersProvider(clinicId).notifier).retry(),
           )
         else
-          ClinicOrdersSection(
-            orders: ordersState.orders,
-            facilityId: clinicId,
-          ),
+          ClinicOrdersSection(orders: ordersState.orders, facilityId: clinicId),
         const ClinicSectionHeader(title: 'Notas de campo'),
         sectionsAsync.when(
           loading: () => const _SectionLoadingCard(),

@@ -205,10 +205,8 @@ class _EditPayerSourcesScreenState extends State<EditPayerSourcesScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _AddPayerSourcesSheet(
-        catalog: widget.catalog,
-        usedNames: _usedNames,
-      ),
+      builder: (_) =>
+          _AddPayerSourcesSheet(catalog: widget.catalog, usedNames: _usedNames),
     );
     if (selected == null || selected.isEmpty || !mounted) return;
     setState(() {
@@ -512,10 +510,7 @@ class _StepButton extends StatelessWidget {
 }
 
 class _AddPayerSourcesSheet extends StatefulWidget {
-  const _AddPayerSourcesSheet({
-    required this.catalog,
-    required this.usedNames,
-  });
+  const _AddPayerSourcesSheet({required this.catalog, required this.usedNames});
 
   final List<PayerCatalogEntry> catalog;
   final Set<String> usedNames;

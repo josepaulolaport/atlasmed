@@ -331,10 +331,7 @@ class _NearbyClinicCard extends StatelessWidget {
 }
 
 class _MiniMapPreview extends StatefulWidget {
-  const _MiniMapPreview({
-    super.key,
-    required this.location,
-  });
+  const _MiniMapPreview({super.key, required this.location});
 
   final EstablishmentLocation location;
 

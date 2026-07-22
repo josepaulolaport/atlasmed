@@ -84,7 +84,10 @@ final facilityNearbyProvider =
         final sections = query.facilityId.endsWith(':empty')
             ? mockEmptyEstablishmentDetailSections(query.facilityId)
             : mockEstablishmentDetailSections(query.facilityId);
-        return filterNearbyByRadius(sections.nearbyEstablishments, query.radiusKm);
+        return filterNearbyByRadius(
+          sections.nearbyEstablishments,
+          query.radiusKm,
+        );
       }
 
       return fetchNearbyFacilities(

@@ -55,7 +55,9 @@ class FacilityRepresentativesRepository
       throw const FacilityRepresentativesException();
     }
     return FacilityRosterPage(
-      items: result.items.map((item) => item.toDomain()).toList(growable: false),
+      items: result.items
+          .map((item) => item.toDomain())
+          .toList(growable: false),
       pagination: result.pagination,
     );
   }

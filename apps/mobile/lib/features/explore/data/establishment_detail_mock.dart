@@ -753,4 +753,3 @@ double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
           math.sin(dLng / 2);
   return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 }
-

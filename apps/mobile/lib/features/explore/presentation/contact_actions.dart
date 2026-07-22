@@ -71,10 +71,7 @@ List<Uri> mapsAppRouteUrls({
         return [
           Uri(
             scheme: 'waze',
-            queryParameters: {
-              'll': '$latitude,$longitude',
-              'navigate': 'yes',
-            },
+            queryParameters: {'ll': '$latitude,$longitude', 'navigate': 'yes'},
           ),
           Uri.https('waze.com', '/ul', {
             'll': '$latitude,$longitude',
@@ -83,10 +80,7 @@ List<Uri> mapsAppRouteUrls({
         ];
       }
       return [
-        Uri(
-          scheme: 'waze',
-          queryParameters: {'q': query, 'navigate': 'yes'},
-        ),
+        Uri(scheme: 'waze', queryParameters: {'q': query, 'navigate': 'yes'}),
         Uri.https('waze.com', '/ul', {'q': query, 'navigate': 'yes'}),
       ];
     case _MapsApp.googleMaps:
@@ -94,10 +88,7 @@ List<Uri> mapsAppRouteUrls({
       return [
         Uri(
           scheme: 'comgooglemaps',
-          queryParameters: {
-            'daddr': destination,
-            'directionsmode': 'driving',
-          },
+          queryParameters: {'daddr': destination, 'directionsmode': 'driving'},
         ),
         // Android Google Maps navigation scheme.
         if (hasCoords)

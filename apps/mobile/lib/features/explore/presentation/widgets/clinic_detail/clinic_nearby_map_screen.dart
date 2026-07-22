@@ -147,7 +147,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
           if (!mounted) return;
           setState(() => _nearby = items);
           _syncAnnotations();
-          if (_selected != null && !_visible.any((e) => e.id == _selected!.id)) {
+          if (_selected != null &&
+              !_visible.any((e) => e.id == _selected!.id)) {
             _dismissCallout();
           }
         });
@@ -516,9 +517,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       await _ensurePinAnnotationManager(map);
       if (_radiusCircleManager == null) {
         _radiusCircleManager = await map.annotations
-            .createPolygonAnnotationManager(
-              below: _pinAnnotationManager!.id,
-            );
+            .createPolygonAnnotationManager(below: _pinAnnotationManager!.id);
       }
       await _radiusCircleManager!.deleteAll();
       await _radiusCircleManager!.create(
@@ -637,9 +636,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
 
   Future<void> _centerOn(double latitude, double longitude) async {
     await _mapboxMap?.easeTo(
-      CameraOptions(
-        center: Point(coordinates: Position(longitude, latitude)),
-      ),
+      CameraOptions(center: Point(coordinates: Position(longitude, latitude))),
       MapAnimationOptions(duration: 300),
     );
   }
@@ -653,12 +650,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     final matches = _visible
         .where(
           (e) =>
-              _haversineKm(
-                latitude,
-                longitude,
-                e.latitude,
-                e.longitude,
-              ) <=
+              _haversineKm(latitude, longitude, e.latitude, e.longitude) <=
               thresholdKm,
         )
         .toList(growable: false);

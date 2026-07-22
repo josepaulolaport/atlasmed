@@ -16,7 +16,8 @@ class FacilityPayerShareApi {
 
   factory FacilityPayerShareApi.fromMap(Map<String, dynamic> map) {
     final provider =
-        (map['healthcareProvider'] as Map?)?.cast<String, dynamic>() ?? const {};
+        (map['healthcareProvider'] as Map?)?.cast<String, dynamic>() ??
+        const {};
     return FacilityPayerShareApi(
       id: readString(map['id']),
       facilityId: readString(map['facilityId']),
