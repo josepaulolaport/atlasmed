@@ -1,21 +1,26 @@
-export type PurchaseIntervalSource = "DEFAULT" | "CALCULATED" | "MANUAL";
+export const PURCHASE_INTERVAL_SOURCES = ["DEFAULT", "CALCULATED", "MANUAL"] as const;
+export type PurchaseIntervalSource = (typeof PURCHASE_INTERVAL_SOURCES)[number];
 
-export type PurchaseProfile =
-  | "WEEKLY"
-  | "BIWEEKLY"
-  | "MONTHLY"
-  | "BIMONTHLY"
-  | "QUARTERLY"
-  | "SEMIANNUAL"
-  | "ANNUAL"
-  | "CUSTOM";
+export const PURCHASE_PROFILES = [
+  "WEEKLY",
+  "BIWEEKLY",
+  "MONTHLY",
+  "BIMONTHLY",
+  "QUARTERLY",
+  "SEMIANNUAL",
+  "ANNUAL",
+  "CUSTOM",
+] as const;
+export type PurchaseProfile = (typeof PURCHASE_PROFILES)[number];
 
-export type PurchaseFunnelStage =
-  | "NEVER_PURCHASED"
-  | "OUTSIDE_WINDOW"
-  | "PURCHASE_WINDOW"
-  | "CHURN"
-  | "INACTIVE";
+export const PURCHASE_FUNNEL_STAGES = [
+  "NEVER_PURCHASED",
+  "OUTSIDE_WINDOW",
+  "PURCHASE_WINDOW",
+  "CHURN",
+  "INACTIVE",
+] as const;
+export type PurchaseFunnelStage = (typeof PURCHASE_FUNNEL_STAGES)[number];
 
 export const PURCHASE_PROFILE_INTERVAL_DAYS = {
   WEEKLY: 7,
@@ -76,12 +81,7 @@ const DEFAULT_INTERVAL_DAYS = 30;
 const MIN_CUSTOM_INTERVAL_DAYS = 1;
 const MAX_CUSTOM_INTERVAL_DAYS = 3_650;
 const MAX_PURCHASE_DATES = 13;
-const PURCHASE_PROFILES = new Set<PurchaseProfile>([
-  ...Object.keys(PURCHASE_PROFILE_INTERVAL_DAYS) as Array<
-    Exclude<PurchaseProfile, "CUSTOM">
-  >,
-  "CUSTOM",
-]);
+const PURCHASE_PROFILE_SET = new Set<PurchaseProfile>(PURCHASE_PROFILES);
 
 function validationError(
   field: keyof CalculatePurchaseRecurrenceSnapshotInput,
@@ -211,7 +211,7 @@ function resolveEffectiveInterval(input: {
 } {
   const { manualProfile, manualIntervalDays, observedPurchaseIntervalDays } = input;
 
-  if (manualProfile !== null && !PURCHASE_PROFILES.has(manualProfile)) {
+  if (manualProfile !== null && !PURCHASE_PROFILE_SET.has(manualProfile)) {
     return validationError(
       "manualProfile",
       "INVALID_MANUAL_PROFILE",

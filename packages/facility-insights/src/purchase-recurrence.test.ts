@@ -1,10 +1,36 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  PURCHASE_FUNNEL_STAGES,
+  PURCHASE_INTERVAL_SOURCES,
+  PURCHASE_PROFILES,
   PURCHASE_PROFILE_INTERVAL_DAYS,
   PurchaseRecurrenceValidationError,
   calculatePurchaseRecurrenceSnapshot,
 } from "./index";
+
+describe("purchase recurrence enum values", () => {
+  test("exports the required ordered runtime tuples", () => {
+    expect(PURCHASE_INTERVAL_SOURCES).toEqual(["DEFAULT", "CALCULATED", "MANUAL"]);
+    expect(PURCHASE_PROFILES).toEqual([
+      "WEEKLY",
+      "BIWEEKLY",
+      "MONTHLY",
+      "BIMONTHLY",
+      "QUARTERLY",
+      "SEMIANNUAL",
+      "ANNUAL",
+      "CUSTOM",
+    ]);
+    expect(PURCHASE_FUNNEL_STAGES).toEqual([
+      "NEVER_PURCHASED",
+      "OUTSIDE_WINDOW",
+      "PURCHASE_WINDOW",
+      "CHURN",
+      "INACTIVE",
+    ]);
+  });
+});
 
 const TODAY = "2026-07-22";
 

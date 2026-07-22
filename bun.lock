@@ -170,6 +170,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@atlasmed/config": "workspace:*",
+        "@atlasmed/facility-insights": "workspace:*",
         "@paralleldrive/cuid2": "^3.3.0",
         "drizzle-orm": "^0.45.2",
         "postgres": "^3.4.9",
