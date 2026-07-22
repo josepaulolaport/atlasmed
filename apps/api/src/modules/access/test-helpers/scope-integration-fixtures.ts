@@ -1,5 +1,5 @@
 import { hash } from "argon2";
-import { eq, like, inArray } from "drizzle-orm";
+import { eq, like, inArray, sql } from "drizzle-orm";
 import {
   territories,
   territoryTypes,
@@ -231,6 +231,16 @@ export async function seedScopeIntegrationFixtures(
     .values({
       displayName: `Scope Facility In ${uniqueId}`,
       territoryId,
+      streetAddress: "Rua Teste",
+      streetNumber: "100",
+      neighborhood: "Centro",
+      city: "São Paulo",
+      state: "SP",
+      postalCode: "01000-000",
+      phoneNumber: "1133334444",
+      email: `facility.in.${uniqueId}@test.example.com`,
+      websiteUrl: "https://example.com/facility",
+      location: sql`ST_SetSRID(ST_MakePoint(${-46.6333}, ${-23.5505}), 4326)`,
     })
     .returning()
     .then((r) => r[0]!);

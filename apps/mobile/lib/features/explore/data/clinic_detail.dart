@@ -31,6 +31,8 @@ class ClinicDetail {
   final String? addressComplement;
   final String? postalCode;
   final String? state;
+  final double? lat;
+  final double? lng;
 
   // Admin info
   final String? taxIdType;
@@ -61,6 +63,8 @@ class ClinicDetail {
     this.addressComplement,
     this.postalCode,
     this.state,
+    this.lat,
+    this.lng,
     this.taxIdType,
     this.cnpj,
     this.cpf,
@@ -93,6 +97,16 @@ class ClinicDetail {
       if (streetParts.isNotEmpty) streetParts.join(' · '),
     ].join(' · ');
     return line.isEmpty ? null : line;
+  }
+
+  /// Full address for header / maps — street line plus city/state when present.
+  String? get formattedAddress {
+    final parts = <String>[
+      if (composedAddressLine != null) composedAddressLine!,
+      if (city.trim().isNotEmpty) city.trim(),
+      if (state != null && state!.trim().isNotEmpty) state!.trim(),
+    ];
+    return parts.isEmpty ? null : parts.join(' — ');
   }
 }
 

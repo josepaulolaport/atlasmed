@@ -63,7 +63,7 @@ export const contactTypeEnum = pgEnum("contact_type", [
   "COMPRADOR",
 ]);
 
-/** Relationship strength on a 1–10 scale (validated in DB + application). */
+/** User×professional relationship strength on a 1–10 scale. */
 export const RELATIONSHIP_LEVEL_MIN = 1;
 export const RELATIONSHIP_LEVEL_MAX = 10;
 

@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type FacilityRoleFormValues = UpdateFacilityProfessionalInput;
 
@@ -88,7 +88,7 @@ export function FacilityRoleForm({
   }, [association, reset]);
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Funções na unidade</CardTitle>
@@ -148,6 +148,28 @@ export function FacilityRoleForm({
           />
 
           <div>
+            <Label htmlFor="specialtyLabel">Rótulo de especialidade na unidade</Label>
+            <Input id="specialtyLabel" disabled={!canEdit} {...register("specialtyLabel")} />
+            <FieldError message={errors.specialtyLabel?.message} />
+          </div>
+
+          <div>
+            <Label htmlFor="associationNotes">Observações da associação</Label>
+            <Textarea id="associationNotes" disabled={!canEdit} {...register("notes")} />
+            <FieldError message={errors.notes?.message} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Seu relacionamento</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          <p className="text-sm text-zinc-500">
+            Nível privado entre você e este profissional (1–10). Não é um atributo da unidade.
+          </p>
+          <div>
             <Label htmlFor="relationshipLevel">Nível de relacionamento</Label>
             <Controller
               name="relationshipLevel"
@@ -179,27 +201,16 @@ export function FacilityRoleForm({
             />
             <FieldError message={errors.relationshipLevel?.message} />
           </div>
-
-          <div>
-            <Label htmlFor="specialtyLabel">Rótulo de especialidade na unidade</Label>
-            <Input id="specialtyLabel" disabled={!canEdit} {...register("specialtyLabel")} />
-            <FieldError message={errors.specialtyLabel?.message} />
-          </div>
-
-          <div>
-            <Label htmlFor="associationNotes">Observações da associação</Label>
-            <Textarea id="associationNotes" disabled={!canEdit} {...register("notes")} />
-            <FieldError message={errors.notes?.message} />
-          </div>
         </CardContent>
-        {canEdit && (
-          <CardFooter>
-            <Button type="submit" disabled={saving}>
-              {saving ? "Salvando..." : "Salvar funções na unidade"}
-            </Button>
-          </CardFooter>
-        )}
       </Card>
+
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button type="submit" disabled={saving}>
+            {saving ? "Salvando..." : "Salvar"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

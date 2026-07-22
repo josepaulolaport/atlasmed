@@ -1,5 +1,3 @@
-import type { RelationshipLevel } from "@atlasmed/database";
-
 export interface FacilityProfessionalRecord {
   id: string;
   professionalId: string;
@@ -10,7 +8,6 @@ export interface FacilityProfessionalRecord {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
-  relationshipLevel: RelationshipLevel | null;
   notes: string | null;
   sourceActive: boolean;
   sourceFirstSeenAt: Date | null;
@@ -34,6 +31,12 @@ export interface FacilityProfessionalWithProfessionalRecord
     specialty: string | null;
     crmNumber: string | null;
     crmState: string | null;
+    mobilePhone: string | null;
+    landlinePhone: string | null;
+    email: string | null;
+    birthDate: Date | null;
+    favoriteTeam: string | null;
+    hobbies: string | null;
     createdAt: Date;
     updatedAt: Date;
   };
@@ -74,7 +77,6 @@ export interface FacilityProfessionalRoleUpdateInput {
   isPrescriber?: boolean;
   isBuyer?: boolean;
   isDecisionMaker?: boolean;
-  relationshipLevel?: RelationshipLevel | null;
   specialtyLabel?: string | null;
   notes?: string | null;
 }

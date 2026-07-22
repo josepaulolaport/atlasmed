@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_professionals_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
@@ -11,15 +12,22 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_s
 
 /// Full list of administrative professionals — same Explorar table chrome
 /// (search + filter + sort + hairline rows) as [DoctorsListScreen].
+///
+/// Opens immediately with [professionals] (strip cache), then hydrates a
+/// fuller page in the background when [facilityId] is set.
 class AdministrativeProfessionalsListScreen extends StatefulWidget {
   const AdministrativeProfessionalsListScreen({
     super.key,
     required this.professionals,
     required this.facilityName,
+    this.facilityId,
   });
 
   final List<AdministrativeProfessional> professionals;
   final String facilityName;
+
+  /// When set, load a larger page after first frame.
+  final String? facilityId;
 
   @override
   State<AdministrativeProfessionalsListScreen> createState() =>
@@ -37,6 +45,40 @@ class _AdministrativeProfessionalsListScreenState
   bool _sortOpen = false;
 
   static const _typeSection = 'Tipo';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _hydrateFullList());
+  }
+
+  Future<void> _hydrateFullList() async {
+    final facilityId = widget.facilityId;
+    if (facilityId == null || facilityId.isEmpty) return;
+
+    List<AdministrativeProfessional> next;
+    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
+      next = mockAllFacilityAdministrators(facilityId);
+    } else {
+      final repo = FacilityRepresentativesRepository(
+        facilityId,
+        page: 1,
+        limit: facilityRosterListPageSize,
+      );
+      try {
+        final page = await repo.loadPage();
+        next = page.items;
+      } catch (_) {
+        return;
+      } finally {
+        repo.dispose();
+      }
+    }
+
+    if (!mounted || next.isEmpty) return;
+    if (next.length < _professionals.length) return;
+    setState(() => _professionals = next);
+  }
 
   @override
   void didUpdateWidget(
@@ -342,8 +384,6 @@ class _AdminProfessionalRow extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 5),
-                  RelationshipStars(score: professional.relationshipScore),
                 ],
               ),
             ),

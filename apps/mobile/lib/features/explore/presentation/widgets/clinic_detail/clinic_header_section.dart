@@ -25,17 +25,16 @@ class ClinicHeaderSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
+    // Sinais stay mocked until commercial/purchase status ship on the DTO.
     final signals = sections?.statusSignals;
+    // Specialties still mock-only (no facility specialty aggregate on DTO yet).
     final specialties = sections?.specialtiesLabel;
-    final fullAddress =
-        sections?.location?.formattedAddress ??
-        (detail.streetAddress != null
-            ? '${detail.streetAddress} — ${detail.neighborhood}'
-            : null);
-    final taxIdType = sections?.taxIdType;
-    final phone = sections?.phone ?? detail.phone;
-    final whatsapp = sections?.whatsapp ?? detail.whatsapp;
-    final email = sections?.email ?? detail.email;
+    // Identity / contact / address / PF-PJ prefer the live facility DTO.
+    final fullAddress = detail.formattedAddress;
+    final taxIdType = parseFacilityTaxIdType(detail.taxIdType);
+    final phone = _nonEmpty(detail.phone);
+    final whatsapp = _nonEmpty(detail.whatsapp);
+    final email = _nonEmpty(detail.email);
     final phoneLabel = formatBrazilianPhone(phone) ?? phone;
     final whatsappLabel = formatBrazilianPhone(whatsapp) ?? whatsapp;
 
@@ -250,6 +249,11 @@ class ClinicHeaderSection extends StatelessWidget {
             ClinicPhotoViewerScreen(facilityName: detail.name, photos: photos),
       ),
     );
+  }
+
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 }
 

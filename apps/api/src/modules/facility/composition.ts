@@ -35,6 +35,7 @@ import {
   ListFacilityVisitsUseCase,
   CreateFacilityVisitUseCase,
 } from "./application/use-cases/visit.use-cases";
+import { ListFacilityRepresentativesUseCase } from "./application/use-cases/facility-representative.use-cases";
 import {
   territoryMembershipService,
 } from "../territory/composition";
@@ -85,6 +86,8 @@ export const facilityUseCases = {
   listFacilityProfessionals: () =>
     new ListFacilityProfessionalsUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
     }),
   confirmProfessionalAtFacility: () =>
     new ConfirmProfessionalAtFacilityUseCase({
@@ -102,10 +105,14 @@ export const facilityUseCases = {
     new GetFacilityProfessionalContextUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
       professionalRepository: professionalRepositories.professional,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
     }),
   updateFacilityProfessionalRole: () =>
     new UpdateFacilityProfessionalRoleUseCase({
       facilityProfessionalRepository: facilityRepositories.association,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
     }),
   confirmRegistryProfessional: () =>
     new ConfirmRegistryProfessionalUseCase({
@@ -118,6 +125,10 @@ export const facilityUseCases = {
       facilityRepresentativeRepository: facilityRepositories.representative,
       facilityRepository: facilityRepositories.facility,
       registryReadRepository,
+    }),
+  listFacilityRepresentatives: () =>
+    new ListFacilityRepresentativesUseCase({
+      facilityRepresentativeRepository: facilityRepositories.representative,
     }),
   listConsultantAssignments: () =>
     new ListFacilityConsultantAssignmentsUseCase({

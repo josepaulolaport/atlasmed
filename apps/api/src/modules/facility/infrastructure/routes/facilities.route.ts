@@ -3,6 +3,7 @@ import { updateFacilityProfessionalSchema } from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
+import { ordersUseCases } from "../../../orders/composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
@@ -172,11 +173,13 @@ const listFacilityProfessionalsRoute = new Elysia()
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id/professionals",
-    async ({ params, query, getScope }) => {
+    async ({ params, query, getScope, getUserId }) => {
       const scope = await getScope();
+      const userId = await getUserId();
       return facilityUseCases.listFacilityProfessionals().execute({
         facilityId: params.id,
         scope,
+        userId,
         view: query.view as "source" | "confirmed" | "pending" | "all" | undefined,
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
@@ -198,6 +201,35 @@ const listFacilityProfessionalsRoute = new Elysia()
             t.Literal("all"),
           ])
         ),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+        search: t.Optional(t.String()),
+      }),
+    }
+  );
+
+const listFacilityRepresentativesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/representatives",
+    async ({ params, query, getScope }) => {
+      const scope = await getScope();
+      return facilityUseCases.listFacilityRepresentatives().execute({
+        facilityId: params.id,
+        scope,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+        search: query.search,
+      });
+    },
+    {
+      detail: {
+        summary: "List active CRM administrative professionals for a facility",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
@@ -258,12 +290,14 @@ const getFacilityProfessionalContextRoute = new Elysia()
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id/professionals/:professionalId",
-    async ({ params, getScope }) => {
+    async ({ params, getScope, getUserId }) => {
       const scope = await getScope();
+      const userId = await getUserId();
       const context = await facilityUseCases.getFacilityProfessionalContext().execute({
         facilityId: params.id,
         professionalId: params.professionalId,
         scope,
+        userId,
       });
 
       if (!context) {
@@ -286,12 +320,14 @@ const updateFacilityProfessionalRoleRoute = new Elysia()
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .patch(
     "/facilities/:id/professionals/:professionalId",
-    async ({ params, body, getScope }) => {
+    async ({ params, body, getScope, getUserId }) => {
       const scope = await getScope();
+      const userId = await getUserId();
       const parsed = parseSchema(updateFacilityProfessionalSchema, body);
       const association = await facilityUseCases.updateFacilityProfessionalRole().execute({
         facilityId: params.id,
         professionalId: params.professionalId,
+        userId,
         scope,
         ...parsed,
       });
@@ -304,7 +340,8 @@ const updateFacilityProfessionalRoleRoute = new Elysia()
     },
     {
       detail: {
-        summary: "Update facility-scoped professional role flags",
+        summary:
+          "Update facility-scoped professional role flags; relationshipLevel is user×professional",
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
@@ -583,6 +620,39 @@ const createFacilityConformityRecordRoute = new Elysia()
     }
   );
 
+const listFacilityOrdersRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/orders",
+    async ({ params, query, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
+      return ordersUseCases.listOrders().execute({
+        facilityId: params.id,
+        page: query.page ? Number(query.page) : 1,
+        limit: query.limit ? Number(query.limit) : 5,
+        includeItemPreviews: true,
+        actor: { userId, roleName: authContext.roleName },
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "List recent orders for a facility (REP: own sales only)",
+        tags: ["Orders"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+    }
+  );
+
 const listFacilityVisitsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
@@ -646,6 +716,7 @@ export const facilitiesRoute = new Elysia()
   .use(updateFacilityRoute)
   .use(deleteFacilityRoute)
   .use(listFacilityProfessionalsRoute)
+  .use(listFacilityRepresentativesRoute)
   .use(confirmDoctorRoute)
   .use(associateDoctorRoute)
   .use(getFacilityProfessionalContextRoute)
@@ -661,5 +732,6 @@ export const facilitiesRoute = new Elysia()
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
   .use(createFacilityConformityRecordRoute)
+  .use(listFacilityOrdersRoute)
   .use(listFacilityVisitsRoute)
   .use(createFacilityVisitRoute);

@@ -1,9 +1,8 @@
-import {
-  facilityRepresentatives,
-} from "@atlasmed/database";
-import { eq, and, isNull } from "drizzle-orm";
+import { facilityRepresentatives } from "@atlasmed/database";
+import { eq, and, isNull, asc, ilike, or, count } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
+  FacilityRepresentativeListPage,
   FacilityRepresentativeRecord,
   FacilityRepresentativeRepository,
 } from "../../../application/interfaces/facility-representative.repository.interface";
@@ -17,7 +16,10 @@ function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord
     representativeName: row.representativeName,
     roleTitle: row.roleTitle,
     email: row.email,
+    phone: row.phone,
     taxId: row.taxId,
+    contactType: row.contactType,
+    sourceProvider: row.sourceProvider,
     externalSourceKey: row.externalSourceKey,
     sourceActive: row.sourceActive,
     confirmedAt: row.confirmedAt,
@@ -28,7 +30,9 @@ function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord
   };
 }
 
-export class DrizzleFacilityRepresentativeRepository implements FacilityRepresentativeRepository {
+export class DrizzleFacilityRepresentativeRepository
+  implements FacilityRepresentativeRepository
+{
   async findByFacilityAndExternalKey(
     facilityId: string,
     externalKey: string
@@ -46,6 +50,61 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
       .limit(1);
 
     return representative ? mapRepresentative(representative) : null;
+  }
+
+  async findActiveByFacility(params: {
+    facilityId: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<FacilityRepresentativeListPage> {
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.min(100, Math.max(1, params.limit ?? 20));
+    const skip = (page - 1) * limit;
+    const search = params.search?.trim();
+
+    const conditions = [
+      eq(facilityRepresentatives.facilityId, params.facilityId),
+      isNull(facilityRepresentatives.endedAt),
+    ];
+
+    if (search) {
+      const pattern = `%${search}%`;
+      conditions.push(
+        or(
+          ilike(facilityRepresentatives.representativeName, pattern),
+          ilike(facilityRepresentatives.roleTitle, pattern),
+          ilike(facilityRepresentatives.email, pattern),
+          ilike(facilityRepresentatives.phone, pattern)
+        )!
+      );
+    }
+
+    const where = and(...conditions);
+
+    const [rows, countRows] = await Promise.all([
+      db
+        .select()
+        .from(facilityRepresentatives)
+        .where(where)
+        .orderBy(asc(facilityRepresentatives.representativeName))
+        .offset(skip)
+        .limit(limit),
+      db
+        .select({ total: count() })
+        .from(facilityRepresentatives)
+        .where(where),
+    ]);
+
+    const total = Number(countRows[0]?.total ?? 0);
+
+    return {
+      items: rows.map(mapRepresentative),
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
   }
 
   async upsertFromRegistry(params: {
@@ -69,7 +128,10 @@ export class DrizzleFacilityRepresentativeRepository implements FacilityRepresen
         sourceProvider: "registry",
       })
       .onConflictDoUpdate({
-        target: [facilityRepresentatives.facilityId, facilityRepresentatives.externalSourceKey],
+        target: [
+          facilityRepresentatives.facilityId,
+          facilityRepresentatives.externalSourceKey,
+        ],
         set: {
           representativeName: params.representativeName,
           roleTitle: params.roleTitle ?? null,

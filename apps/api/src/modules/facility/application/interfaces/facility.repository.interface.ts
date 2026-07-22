@@ -3,12 +3,40 @@ export interface FacilityService {
   classificationCode: string;
 }
 
+export type FacilityCommercialStatus =
+  | "REGISTERED"
+  | "ACTIVE"
+  | "SUSPENDED"
+  | "INACTIVE";
+
+export type FacilityPurchaseStatus =
+  | "NON_BUYER"
+  | "LOW_BUYER"
+  | "REGULAR_BUYER"
+  | "HIGH_BUYER";
+
+export type FacilityConformityStatus =
+  | "INCOMPLETE"
+  | "COMPLETE"
+  | "EXPIRING_SOON"
+  | "NON_CONFORMING";
+
 export interface FacilityRecord {
   id: string;
   name: string;
   neighborhood: string | null;
   city: string | null;
   state: string | null;
+  streetAddress: string | null;
+  streetNumber: string | null;
+  addressComplement: string | null;
+  postalCode: string | null;
+  phone: string | null;
+  whatsapp: string | null;
+  email: string | null;
+  website: string | null;
+  responsibleName: string | null;
+  openingHours: string | null;
   taxIdType: "PJ" | "PF" | null;
   cnpj: string | null;
   cpf: string | null;
@@ -17,7 +45,11 @@ export interface FacilityRecord {
   territoryId: string | null;
   territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
   territoryAssignmentSource: "geo" | "manual";
-  purchaseStatus: "NON_BUYER" | "LOW_BUYER" | "REGULAR_BUYER" | "HIGH_BUYER" | null;
+  commercialStatus: FacilityCommercialStatus | null;
+  purchaseStatus: FacilityPurchaseStatus | null;
+  conformityStatus: FacilityConformityStatus;
+  /** Active consultant display name when loaded (list + detail). */
+  consultantName: string | null;
   sourceProvider: string | null;
   externalSourceId: string | null;
   sourceContentHash: string | null;
@@ -35,7 +67,6 @@ export interface FacilityRecord {
 
 export interface FacilityListRecord extends FacilityRecord {
   professionalCount: number;
-  consultantName: string | null;
   /** Present only when a coordinate query was supplied. */
   distanceKm?: number | null;
 }
@@ -63,7 +94,7 @@ export interface FacilityRepository {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
-    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    commercialStatus?: FacilityCommercialStatus;
     /** Comma-separated API values are parsed into IDs; matches any ordered catalog product. */
     productIds?: string[];
     scope: FacilityListScopeFilter;
@@ -77,7 +108,7 @@ export interface FacilityRepository {
     latitude?: number;
     longitude?: number;
     radiusKm?: number;
-    commercialStatus?: "REGISTERED" | "ACTIVE" | "SUSPENDED" | "INACTIVE";
+    commercialStatus?: FacilityCommercialStatus;
     productIds?: string[];
     scope: FacilityListScopeFilter;
   }): Promise<FacilityListRecord[]>;

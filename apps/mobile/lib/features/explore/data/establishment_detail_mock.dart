@@ -6,11 +6,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
-/// Side-scroll roster page size (Phase 1 mock — keep small so paging is obvious).
-const int facilityRosterPageSize = 2;
+/// Side-scroll roster page size — enough for a few swipes without chatty fetches.
+const int facilityRosterPageSize = 12;
 
-/// Simulated network latency for roster page fetches.
-const Duration facilityRosterPageDelay = Duration(milliseconds: 900);
+/// Full-list fetch size when hydrating "Ver todos" after opening with cache.
+const int facilityRosterListPageSize = 100;
 
 /// Phase 1 mock data for establishment detail sections.
 EstablishmentDetailSections mockEstablishmentDetailSections(String facilityId) {
@@ -277,7 +277,6 @@ List<AdministrativeProfessional> mockAllFacilityAdministrators(
       email: '${names[i].split(' ').first.toLowerCase()}.$n@clinica.com.br',
       phone: '119${(87654321 - i * 1111).toString().padLeft(8, '0')}',
       contactType: types[i % types.length],
-      relationshipScore: i % 3 == 0 ? null : 4 + (i % 7),
     );
   });
 }
@@ -348,7 +347,6 @@ mockFacilityAdministratorsPage({
   required int page,
   int limit = facilityRosterPageSize,
 }) async {
-  await Future<void>.delayed(facilityRosterPageDelay);
   return _sliceFacilityRosterPage(
     mockAllFacilityAdministrators(facilityId),
     page: page,
@@ -362,7 +360,6 @@ Future<FacilityRosterPage<FacilityCrmDoctor>> mockFacilityDoctorsPage({
   required int page,
   int limit = facilityRosterPageSize,
 }) async {
-  await Future<void>.delayed(facilityRosterPageDelay);
   return _sliceFacilityRosterPage(
     mockAllFacilityDoctors(facilityId),
     page: page,
@@ -757,9 +754,3 @@ double _haversineKm(double lat1, double lng1, double lat2, double lng2) {
   return earthRadiusKm * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 }
 
-List<NearbyEstablishment> filterNearbyByRadius(
-  List<NearbyEstablishment> all,
-  double radiusKm,
-) {
-  return all.where((e) => e.distanceKm <= radiusKm).toList(growable: false);
-}

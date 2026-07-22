@@ -3,6 +3,7 @@ import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityGeocodingService } from "../services/facility-geocoding.service";
 import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
+import { serializeFacility } from "../mappers/facility.mapper";
 
 export interface SearchService {
   isConfigured(): boolean;
@@ -22,48 +23,6 @@ export function orderSearchResultsById<T extends { id: string }>(
     const record = recordsById.get(id);
     return record ? [record] : [];
   });
-}
-
-function serializeClinic(clinic: {
-  id: string;
-  name: string;
-  neighborhood: string | null;
-  city: string | null;
-  state: string | null;
-  taxIdType?: "PJ" | "PF" | null;
-  cnpj?: string | null;
-  cpf?: string | null;
-  lat: number | null;
-  lng: number | null;
-  territoryId: string | null;
-  territoryAssignmentStatus: "assigned" | "unassigned" | "ambiguous";
-  createdAt: Date;
-  updatedAt: Date;
-  professionalCount?: number;
-  consultantName?: string | null;
-  services?: Array<{ serviceCode: string; classificationCode: string }>;
-  distanceKm?: number | null;
-}) {
-  return {
-    id: clinic.id,
-    name: clinic.name,
-    neighborhood: clinic.neighborhood,
-    city: clinic.city,
-    state: clinic.state,
-    taxIdType: clinic.taxIdType ?? null,
-    cnpj: clinic.cnpj ?? null,
-    cpf: clinic.cpf ?? null,
-    lat: clinic.lat ?? undefined,
-    lng: clinic.lng ?? undefined,
-    territoryId: clinic.territoryId ?? undefined,
-    territoryAssignmentStatus: clinic.territoryAssignmentStatus,
-    professionalCount: clinic.professionalCount ?? 0,
-    consultantName: clinic.consultantName ?? null,
-    distanceKm: clinic.distanceKm ?? undefined,
-    services: clinic.services ?? [],
-    createdAt: clinic.createdAt.toISOString(),
-    updatedAt: clinic.updatedAt.toISOString(),
-  };
 }
 
 interface Dependencies {
@@ -109,7 +68,7 @@ export class ListFacilitiesUseCase {
       });
 
       return {
-        data: facilities.map(serializeClinic),
+        data: facilities.map(serializeFacility),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
       };
     }
@@ -147,7 +106,7 @@ export class ListFacilitiesUseCase {
     const total = result.estimatedTotalHits ?? 0;
 
     return {
-      data: facilities.map(serializeClinic),
+      data: facilities.map(serializeFacility),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
@@ -165,7 +124,7 @@ export class GetFacilityUseCase {
 
     assertResourceInScope(input.scope, "facility", clinic.id);
 
-    return serializeClinic(clinic);
+    return serializeFacility(clinic);
   }
 }
 
@@ -195,7 +154,7 @@ export class CreateFacilityUseCase {
     }
 
     const refreshed = await this.deps.facilityRepository.findById(clinic.id);
-    return serializeClinic(refreshed ?? clinic);
+    return serializeFacility(refreshed ?? clinic);
   }
 }
 
@@ -242,7 +201,7 @@ export class UpdateFacilityUseCase {
     }
 
     const refreshed = await this.deps.facilityRepository.findById(clinic.id);
-    return serializeClinic(refreshed ?? clinic);
+    return serializeFacility(refreshed ?? clinic);
   }
 }
 

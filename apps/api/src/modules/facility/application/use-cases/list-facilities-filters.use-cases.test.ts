@@ -8,9 +8,16 @@ describe("ListFacilitiesUseCase filters", () => {
     const repository = {
       findAll: mock(async () => ({
         facilities: [{
-          id: "facility-1", name: "Nearby", taxIdType: null, cnpj: null, cpf: null,
+          id: "facility-1", name: "Nearby",
+          neighborhood: null, city: null, state: null,
+          streetAddress: null, streetNumber: null, addressComplement: null, postalCode: null,
+          phone: null, whatsapp: null, email: null, website: null,
+          responsibleName: null, openingHours: null,
+          taxIdType: null, cnpj: null, cpf: null,
           lat: -23.55, lng: -46.63, territoryId: null, territoryAssignmentStatus: "unassigned",
-          territoryAssignmentSource: "geo", purchaseStatus: null, sourceProvider: null,
+          territoryAssignmentSource: "geo",
+          commercialStatus: null, purchaseStatus: null, conformityStatus: "INCOMPLETE",
+          sourceProvider: null,
           externalSourceId: null, sourceContentHash: null, sourceFirstSeenAt: null,
           sourceLastSeenAt: null, sourcePresent: false, sourceTracked: false, manuallyEditedAt: null,
           deactivatedAt: null, createdAt: new Date("2026-01-01"), updatedAt: new Date("2026-01-01"),

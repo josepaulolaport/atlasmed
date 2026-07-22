@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -79,27 +80,35 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       return trimmed == null || trimmed.isEmpty ? null : trimmed;
     }
 
+    // Prefer API values as-is. Do not invent fake address/phone when missing.
+    // Facility status chips (Sinais) stay mocked in establishmentDetailSections
+    // — commercial/purchase/conformity are not wired from this DTO yet.
     return ClinicDetail(
       id: apiClinic.id,
       name: apiClinic.name,
-      city: nonEmpty(apiClinic.city) ?? 'São Paulo',
-      state: nonEmpty(apiClinic.state) ?? 'SP',
-      neighborhood: nonEmpty(apiClinic.neighborhood) ?? 'Bela Vista',
+      city: nonEmpty(apiClinic.city) ?? '',
+      state: nonEmpty(apiClinic.state),
+      neighborhood: nonEmpty(apiClinic.neighborhood) ?? '',
       distanceKm: apiClinic.distanceKm ?? 0,
       status: ClinicStatus.active,
       lastVisitDays: null,
       doctorCount: apiClinic.professionalCount,
       isPriority: false,
       products: [],
-      phone: nonEmpty(apiClinic.phone) ?? '1130405060',
-      whatsapp: '11987654321',
+      phone: nonEmpty(apiClinic.phone),
+      whatsapp: nonEmpty(apiClinic.whatsapp),
       consultantName: apiClinic.consultantName,
-      email: apiClinic.email,
-      website: apiClinic.website,
-      streetAddress: nonEmpty(apiClinic.streetAddress) ?? 'Av. Paulista',
-      streetNumber: nonEmpty(apiClinic.streetNumber) ?? '1000',
-      addressComplement: nonEmpty(apiClinic.addressComplement) ?? 'Conj. 120',
-      postalCode: nonEmpty(apiClinic.postalCode) ?? '01310-100',
+      email: nonEmpty(apiClinic.email),
+      website: nonEmpty(apiClinic.website),
+      responsibleDoctor: nonEmpty(apiClinic.responsibleName),
+      openingHours: nonEmpty(apiClinic.openingHours),
+      registeredSince: apiClinic.registeredSince ?? apiClinic.createdAt,
+      streetAddress: nonEmpty(apiClinic.streetAddress),
+      streetNumber: nonEmpty(apiClinic.streetNumber),
+      addressComplement: nonEmpty(apiClinic.addressComplement),
+      postalCode: nonEmpty(apiClinic.postalCode),
+      lat: apiClinic.lat,
+      lng: apiClinic.lng,
       taxIdType: apiClinic.taxIdType,
       cnpj: apiClinic.cnpj,
       cpf: apiClinic.cpf,
@@ -282,23 +291,12 @@ class ExploreState {
 
   // ── Computed properties ───────────────────────────────────
 
-  /// Filtered clinic list based on query + sort.
-  /// Server-side filtering (status, products) is already applied; search is
-  /// applied locally for instant feedback while typing.
+  /// Clinic list with client-side sort only.
+  /// Search / status / products come from the API (Meilisearch when `query`
+  /// is non-empty); do not re-filter locally or results are capped to the
+  /// already-loaded page.
   List<Clinic> get filteredClinics {
     var list = List<Clinic>.from(clinics);
-
-    // Search – local for instant UX
-    final q = query.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      list = list
-          .where(
-            (c) =>
-                c.name.toLowerCase().contains(q) ||
-                c.neighborhood.toLowerCase().contains(q),
-          )
-          .toList();
-    }
 
     // Sort – client-side (API does not support all sort variants)
     switch (sort) {
@@ -320,24 +318,11 @@ class ExploreState {
     return list;
   }
 
-  /// Filtered doctor list based on query + sort.
-  /// Server-side filtering (specialty) is already applied; search is applied
-  /// locally for instant feedback while typing.
+  /// Doctor list with client-side sort only.
+  /// Search / specialty come from the API (Meilisearch when `query` is
+  /// non-empty); do not re-filter locally.
   List<Doctor> get filteredDoctors {
     var list = List<Doctor>.from(doctors);
-
-    // Search – local for instant UX
-    final q = query.trim().toLowerCase();
-    if (q.isNotEmpty) {
-      list = list
-          .where(
-            (d) =>
-                d.name.toLowerCase().contains(q) ||
-                d.specialty.toLowerCase().contains(q) ||
-                d.primaryClinic.toLowerCase().contains(q),
-          )
-          .toList();
-    }
 
     // Sort – client-side
     switch (sort) {
@@ -366,6 +351,16 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   int _doctorPage = 1;
   bool _clinicHasMore = true;
   bool _doctorHasMore = true;
+  Timer? _searchDebounce;
+  int _refreshGeneration = 0;
+
+  static const _searchDebounceDuration = Duration(milliseconds: 350);
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
 
   // ── Helpers ───────────────────────────────────────────────
 
@@ -377,20 +372,30 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   // ── Data fetching ─────────────────────────────────────────
 
   Future<void> loadData() async {
+    _searchDebounce?.cancel();
+    final generation = ++_refreshGeneration;
     state = state.copyWith(loading: true, resetVisible: true);
     _clinicPage = 1;
     _doctorPage = 1;
     _clinicHasMore = true;
     _doctorHasMore = true;
 
-    await Future.wait([_fetchClinicsPage(page: 1), _fetchDoctorsPage(page: 1)]);
+    await Future.wait([
+      _fetchClinicsPage(page: 1, generation: generation),
+      _fetchDoctorsPage(page: 1, generation: generation),
+    ]);
 
+    if (generation != _refreshGeneration) return;
     state = state.copyWith(loading: false);
   }
 
   /// Fetch a page of clinics from the API with current search/filter/proximity
   /// params. When [append] is true the results are appended to the existing list.
-  Future<void> _fetchClinicsPage({int? page, bool append = false}) async {
+  Future<void> _fetchClinicsPage({
+    int? page,
+    bool append = false,
+    int? generation,
+  }) async {
     final p = page ?? _clinicPage;
     final repo = ClinicsRepository(
       page: p,
@@ -405,6 +410,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     );
     try {
       final result = await repo.currentValueOrResolve();
+      if (generation != null && generation != _refreshGeneration) return;
       if (result != null) {
         final items = result.items.map(Clinic.fromApi).toList();
         if (append) {
@@ -422,7 +428,11 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
 
   /// Fetch a page of doctors from the API with current search/filter/proximity
   /// params. When [append] is true the results are appended to the existing list.
-  Future<void> _fetchDoctorsPage({int? page, bool append = false}) async {
+  Future<void> _fetchDoctorsPage({
+    int? page,
+    bool append = false,
+    int? generation,
+  }) async {
     final p = page ?? _doctorPage;
     final repo = DoctorsRepository(
       page: p,
@@ -436,6 +446,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     );
     try {
       final result = await repo.currentValueOrResolve();
+      if (generation != null && generation != _refreshGeneration) return;
       if (result != null) {
         final items = result.items.map(Doctor.fromApi).toList();
         if (append) {
@@ -453,19 +464,21 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
 
   /// Reload current tab's data from page 1 with the latest params.
   Future<void> _refreshCurrentTab() async {
+    final generation = ++_refreshGeneration;
     state = state.copyWith(loading: true);
     try {
       if (state.activeTab == 'clinic') {
         _clinicPage = 1;
-        await _fetchClinicsPage(page: 1);
+        await _fetchClinicsPage(page: 1, generation: generation);
       } else {
         _doctorPage = 1;
-        await _fetchDoctorsPage(page: 1);
+        await _fetchDoctorsPage(page: 1, generation: generation);
       }
     } catch (_) {
       // Silently handle API errors during refresh – the existing list stays
       // visible (or empty if first load).
     }
+    if (generation != _refreshGeneration) return;
     state = state.copyWith(loading: false);
   }
 
@@ -503,18 +516,27 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
       requestingProximity: false,
       resetVisible: true,
     );
+    unawaited(_refreshCurrentTab());
   }
 
   void setTab(String tab) {
+    if (tab == state.activeTab) return;
     state = state.copyWith(activeTab: tab, resetVisible: true);
+    // Apply current search/filters to the newly visible list.
+    unawaited(_refreshCurrentTab());
   }
 
   void setQuery(String query) {
     state = state.copyWith(query: query, resetVisible: true);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(_searchDebounceDuration, () {
+      unawaited(_refreshCurrentTab());
+    });
   }
 
   void setFilters(Map<String, List<String>> filters) {
     state = state.copyWith(filters: filters, resetVisible: true);
+    unawaited(_refreshCurrentTab());
   }
 
   void setSort(String sort) {

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
@@ -68,11 +67,10 @@ class _ClinicLocationSectionState extends State<ClinicLocationSection> {
               child: SizedBox(
                 height: 160,
                 child: _fullMapOpen
-                    ? _MapPlaceholder(location: widget.location, nearby: nearby)
+                    ? _MapPlaceholder(location: widget.location)
                     : _MiniMapPreview(
                         key: ValueKey('clinic-mini-$_miniMapGeneration'),
                         location: widget.location,
-                        nearby: nearby,
                       ),
               ),
             ),
@@ -336,11 +334,9 @@ class _MiniMapPreview extends StatefulWidget {
   const _MiniMapPreview({
     super.key,
     required this.location,
-    required this.nearby,
   });
 
   final EstablishmentLocation location;
-  final List<NearbyEstablishment> nearby;
 
   @override
   State<_MiniMapPreview> createState() => _MiniMapPreviewState();
@@ -354,7 +350,7 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
   Widget build(BuildContext context) {
     final token = AppConfig.mapboxAccessToken;
     if (token.isEmpty || _unavailable) {
-      return _MapPlaceholder(location: widget.location, nearby: widget.nearby);
+      return _MapPlaceholder(location: widget.location);
     }
 
     MapboxOptions.setAccessToken(token);
@@ -372,11 +368,11 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
         map.scaleBar.updateSettings(ScaleBarSettings(enabled: false));
       },
       onMapLoadErrorListener: (_) => setState(() => _unavailable = true),
-      onStyleLoadedListener: (_) => _addPins(),
+      onStyleLoadedListener: (_) => _addPin(),
     );
   }
 
-  Future<void> _addPins() async {
+  Future<void> _addPin() async {
     final map = _mapboxMap;
     if (map == null || !mounted) return;
 
@@ -389,27 +385,8 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
           circleRadius: 10,
           circleStrokeColor: Colors.white.toARGB32(),
           circleStrokeWidth: 3,
-          circleSortKey: 2,
         ),
       );
-      if (widget.nearby.isNotEmpty) {
-        await manager.createMulti(
-          widget.nearby
-              .map(
-                (e) => CircleAnnotationOptions(
-                  geometry: Point(
-                    coordinates: Position(e.longitude, e.latitude),
-                  ),
-                  circleColor: e.status.color.toARGB32(),
-                  circleRadius: 7,
-                  circleStrokeColor: Colors.white.toARGB32(),
-                  circleStrokeWidth: 2,
-                  circleSortKey: 1,
-                ),
-              )
-              .toList(),
-        );
-      }
     } catch (_) {
       if (mounted) setState(() => _unavailable = true);
     }
@@ -420,10 +397,9 @@ class _MiniMapPreviewState extends State<_MiniMapPreview> {
 }
 
 class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({required this.location, required this.nearby});
+  const _MapPlaceholder({required this.location});
 
   final EstablishmentLocation location;
-  final List<NearbyEstablishment> nearby;
 
   @override
   Widget build(BuildContext context) {

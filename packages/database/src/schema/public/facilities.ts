@@ -61,9 +61,16 @@ export const facilities = pgTable(
 
     // --- Contact ---
     phoneNumber: text("phone_number"),
+    whatsappNumber: text("whatsapp_number"),
     faxNumber: text("fax_number"),
     email: text("email"),
     websiteUrl: text("website_url"),
+
+    // --- Operational profile (CRM / mobile admin) ---
+    /** Technical or commercial responsible person shown on Dados administrativos. */
+    responsibleName: text("responsible_name"),
+    /** Free-text opening hours, e.g. "Seg–Sex 08:00–18:00". */
+    openingHours: text("opening_hours"),
 
     // --- Classification ---
     primarySectorId: text("primary_sector_id").references(() => sectors.id, { onDelete: "set null" }),
@@ -175,6 +182,35 @@ export const professionalNotes = pgTable(
   ]
 );
 
+/**
+ * Per-user relationship strength with a CRM professional (1–10).
+ * Private to the owning user — same privacy model as professional_notes.
+ * Not facility-scoped and not applicable to facility_representatives.
+ */
+export const userProfessionalRelationships = pgTable(
+  "user_professional_relationships",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    professionalId: text("professional_id")
+      .notNull()
+      .references(() => professionals.id, { onDelete: "cascade" }),
+    relationshipLevel: smallint("relationship_level").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("user_professional_relationships_user_id_professional_id_uidx").on(
+      t.userId,
+      t.professionalId
+    ),
+    index("user_professional_relationships_professional_id_idx").on(t.professionalId),
+    index("user_professional_relationships_user_id_idx").on(t.userId),
+  ]
+);
+
 export const facilityProfessionals = pgTable(
   "facility_professionals",
   {
@@ -189,7 +225,6 @@ export const facilityProfessionals = pgTable(
     isBuyer: boolean("is_buyer").notNull().default(false),
     isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
     isPartner: boolean("is_partner").notNull().default(false),
-    relationshipLevel: smallint("relationship_level"),
     notes: text("notes"),
     sourceActive: boolean("source_active").notNull().default(false),
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
@@ -416,6 +451,7 @@ export const facilityServicesRelations = relations(facilityServices, ({ one }) =
 export const professionalsRelations = relations(professionals, ({ many }) => ({
   facilityAssociations: many(facilityProfessionals),
   notes: many(professionalNotes),
+  userRelationships: many(userProfessionalRelationships),
 }));
 
 export const professionalNotesRelations = relations(professionalNotes, ({ one }) => ({
@@ -425,6 +461,20 @@ export const professionalNotesRelations = relations(professionalNotes, ({ one })
     references: [professionals.id],
   }),
 }));
+
+export const userProfessionalRelationshipsRelations = relations(
+  userProfessionalRelationships,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userProfessionalRelationships.userId],
+      references: [users.id],
+    }),
+    professional: one(professionals, {
+      fields: [userProfessionalRelationships.professionalId],
+      references: [professionals.id],
+    }),
+  })
+);
 
 export const facilityProfessionalsRelations = relations(facilityProfessionals, ({ one }) => ({
   professional: one(professionals, { fields: [facilityProfessionals.professionalId], references: [professionals.id] }),

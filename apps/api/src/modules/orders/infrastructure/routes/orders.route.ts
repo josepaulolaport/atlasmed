@@ -29,12 +29,19 @@ const listOrdersRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/orders",
-    async ({ query, getScope }) => {
-      const scope = await getScope();
+    async ({ query, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
       return ordersUseCases.listOrders().execute({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         statuses: parseStatuses(query.status),
+        facilityId: query.facilityId,
+        includeItemPreviews: query.includeItemPreviews === "true",
+        actor: { userId, roleName: authContext.roleName },
         scope,
       });
     },
@@ -47,6 +54,10 @@ const listOrdersRoute = new Elysia()
       query: t.Object({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
+        facilityId: t.Optional(t.String()),
+        includeItemPreviews: t.Optional(t.String({
+          description: "When true, each order includes up to 2 item preview lines",
+        })),
         status: t.Optional(t.String({
           description: "Comma-separated statuses: PENDING,APPROVED,INVOICED",
         })),

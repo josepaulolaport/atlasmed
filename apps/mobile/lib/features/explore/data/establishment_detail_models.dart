@@ -26,6 +26,8 @@ class EstablishmentLocation {
 }
 
 /// CRM row from `facility_representatives`.
+///
+/// No relationship stars — scores live on user × professional only.
 class AdministrativeProfessional {
   const AdministrativeProfessional({
     required this.id,
@@ -34,7 +36,6 @@ class AdministrativeProfessional {
     this.email,
     this.phone,
     required this.contactType,
-    this.relationshipScore,
   });
 
   final String id;
@@ -45,9 +46,6 @@ class AdministrativeProfessional {
 
   /// `PROFESSIONAL`, `DECISOR`, or `COMPRADOR`.
   final String contactType;
-
-  /// Relationship strength, 0-10 scale. Null = not yet determined.
-  final int? relationshipScore;
 
   String get contactTypeLabel {
     switch (contactType) {
@@ -116,7 +114,9 @@ class FacilityCrmDoctor {
   /// Most recent note from `professional_notes`, shown as an amber chip.
   final String? noteText;
 
-  /// Relationship strength, 0-10 scale. Null = not yet determined.
+  /// Authenticated user's relationship with this professional (1–10),
+  /// from `user_professional_relationships`. Null = not yet assessed.
+  /// Drives Relacionamento stars in the UI.
   final int? relationshipScore;
 }
 
@@ -351,6 +351,20 @@ extension FacilityTaxIdTypeX on FacilityTaxIdType {
   IconData get icon => this == FacilityTaxIdType.pj
       ? Icons.apartment_rounded
       : Icons.person_rounded;
+}
+
+/// Maps API `taxIdType` (`PJ` / `PF`, or legacy CNPJ/CPF labels) to the enum.
+FacilityTaxIdType? parseFacilityTaxIdType(String? raw) {
+  switch (raw?.trim().toUpperCase()) {
+    case 'PJ':
+    case 'CNPJ':
+      return FacilityTaxIdType.pj;
+    case 'PF':
+    case 'CPF':
+      return FacilityTaxIdType.pf;
+    default:
+      return null;
+  }
 }
 
 /// Bundle of status signals shown in the header + "Sinais" section.
@@ -766,9 +780,29 @@ class EstablishmentDetailSections {
   }
 }
 
-/// Default nearby search radius — matches Explorar proximity (full-screen map).
-const double establishmentNearbyDefaultRadiusKm = 50;
+/// Minimum radius on the nearby-map slider (0.1 km steps).
+const double establishmentNearbyMinRadiusKm = 0.1;
+
+/// Maximum radius on the nearby-map slider.
+const double establishmentNearbyDefaultRadiusKm = 10;
 
 /// Default radius for the inline map preview on the detail screen. Anything
 /// beyond this is only reachable via "Ver estabelecimentos próximos".
 const double establishmentNearbyPreviewRadiusKm = 5;
+
+/// Snap a slider value to the 0.1 km grid within [min, max].
+double snapNearbyRadiusKm(double value) {
+  final snapped = (value * 10).round() / 10;
+  return snapped.clamp(
+    establishmentNearbyMinRadiusKm,
+    establishmentNearbyDefaultRadiusKm,
+  );
+}
+
+/// Client-side filter by distance from the search origin (facility).
+List<NearbyEstablishment> filterNearbyByRadius(
+  List<NearbyEstablishment> all,
+  double radiusKm,
+) {
+  return all.where((e) => e.distanceKm <= radiusKm).toList(growable: false);
+}

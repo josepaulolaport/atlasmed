@@ -17,6 +17,7 @@ import {
   UpdateHealthcareProviderUseCase,
   ListFacilityHealthcareProviderSharesUseCase,
   CreateFacilityHealthcareProviderShareUseCase,
+  ReplaceFacilityHealthcareProviderSharesUseCase,
   ListCompetitorProductsUseCase,
   GetCompetitorProductUseCase,
   CreateCompetitorProductUseCase,
@@ -63,6 +64,10 @@ export const catalogUseCases = {
     }),
   createFacilityShare: () =>
     new CreateFacilityHealthcareProviderShareUseCase({
+      shareRepository: catalogRepositories.facilityShare,
+    }),
+  replaceFacilityShares: () =>
+    new ReplaceFacilityHealthcareProviderSharesUseCase({
       shareRepository: catalogRepositories.facilityShare,
     }),
   listCompetitorProducts: () =>

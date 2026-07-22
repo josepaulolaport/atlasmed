@@ -16,10 +16,16 @@ class Clinic {
     this.territoryAssignmentStatus,
     this.consultantName,
     this.distanceKm,
+    this.lat,
+    this.lng,
     this.services = const [],
     this.phone,
+    this.whatsapp,
     this.email,
     this.website,
+    this.responsibleName,
+    this.openingHours,
+    this.registeredSince,
     this.streetAddress,
     this.streetNumber,
     this.addressComplement,
@@ -45,12 +51,18 @@ class Clinic {
       professionalCount: readInt(map['professionalCount']),
       consultantName: readNullableString(map['consultantName']),
       distanceKm: readNullableDouble(map['distanceKm']),
+      lat: readNullableDouble(map['lat']),
+      lng: readNullableDouble(map['lng']),
       services: readObjectList(
         map['services'],
       ).map(ClinicService.fromMap).toList(growable: false),
       phone: readNullableString(map['phone']),
+      whatsapp: readNullableString(map['whatsapp']),
       email: readNullableString(map['email']),
       website: readNullableString(map['website']),
+      responsibleName: readNullableString(map['responsibleName']),
+      openingHours: readNullableString(map['openingHours']),
+      registeredSince: readNullableDateTime(map['registeredSince']),
       streetAddress: readNullableString(map['streetAddress']),
       streetNumber: readNullableString(map['streetNumber']),
       addressComplement: readNullableString(map['addressComplement']),
@@ -75,14 +87,20 @@ class Clinic {
   final int professionalCount;
   final String? consultantName;
   final double? distanceKm;
+  final double? lat;
+  final double? lng;
   final List<ClinicService> services;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
-  // Detail-only fields (filled when fetching single clinic)
+  // Detail fields from GET /facilities/:id (and list when present)
   final String? phone;
+  final String? whatsapp;
   final String? email;
   final String? website;
+  final String? responsibleName;
+  final String? openingHours;
+  final DateTime? registeredSince;
   final String? streetAddress;
   final String? streetNumber;
   final String? addressComplement;

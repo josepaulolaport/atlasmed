@@ -98,6 +98,33 @@ export class DrizzleFacilityHealthcareProviderShareRepository
     return mapShare(row!);
   }
 
+  async replaceByFacility(
+    facilityId: string,
+    shares: Array<{ healthcareProviderId: string; sharePercent: number }>
+  ): Promise<FacilityHealthcareProviderShareRecord[]> {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(facilityHealthcareProviderShares)
+        .where(eq(facilityHealthcareProviderShares.facilityId, facilityId));
+
+      if (shares.length === 0) {
+        return;
+      }
+
+      await tx.insert(facilityHealthcareProviderShares).values(
+        shares.map((share) => ({
+          facilityId,
+          healthcareProviderId: share.healthcareProviderId,
+          sharePercent: String(share.sharePercent),
+          source: "MANUAL" as const,
+          manuallyEditedAt: new Date(),
+        }))
+      );
+    });
+
+    return this.findByFacility(facilityId);
+  }
+
   async sumSharePercentForFacility(facilityId: string): Promise<number> {
     const [result] = await db
       .select({ sum: sql<string>`sum(${facilityHealthcareProviderShares.sharePercent}::numeric)` })

@@ -109,6 +109,7 @@ export const updateFacilityProfessionalSchema = z.object({
   isPrescriber: z.boolean().optional(),
   isBuyer: z.boolean().optional(),
   isDecisionMaker: z.boolean().optional(),
+  /** Stored as user×professional (not on the facility association). */
   relationshipLevel: relationshipLevelSchema.nullable().optional(),
   specialtyLabel: z.string().trim().max(200).nullable().optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
@@ -168,6 +169,7 @@ export interface FacilityProfessionalRole {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
+  /** Authenticated user's relationship with this professional (1–10). */
   relationshipLevel?: number;
   specialtyLabel?: string;
   notes?: string;

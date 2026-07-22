@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
 void main() {
   test('filterNearbyByRadius respects radius', () {
@@ -16,14 +17,16 @@ void main() {
   });
 
   test('facility doctor roster pages until hasMore is false', () async {
+    const pageLimit = 2;
     final all = mockAllFacilityDoctors('facility-1');
-    expect(all.length, greaterThan(facilityRosterPageSize));
+    expect(all.length, greaterThan(pageLimit));
 
     final page1 = await mockFacilityDoctorsPage(
       facilityId: 'facility-1',
       page: 1,
+      limit: pageLimit,
     );
-    expect(page1.items.length, facilityRosterPageSize);
+    expect(page1.items.length, pageLimit);
     expect(page1.pagination.page, 1);
     expect(page1.pagination.total, all.length);
     expect(page1.pagination.totalPages, greaterThan(1));
@@ -32,6 +35,7 @@ void main() {
     final lastPage = await mockFacilityDoctorsPage(
       facilityId: 'facility-1',
       page: page1.pagination.totalPages,
+      limit: pageLimit,
     );
     expect(lastPage.pagination.page, page1.pagination.totalPages);
     expect(lastPage.pagination.page < lastPage.pagination.totalPages, isFalse);
