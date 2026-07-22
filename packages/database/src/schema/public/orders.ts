@@ -62,6 +62,7 @@ export const orders = pgTable(
     index("orders_valid_purchase_facility_ordered_at_idx")
       .on(t.facilityId, t.orderedAt.desc())
       .where(sql`${t.status} in ('APPROVED', 'INVOICED') and ${t.type} in ('SALE', 'CONSIGNMENT')`),
+    index("orders_updated_at_facility_id_idx").on(t.updatedAt, t.facilityId),
     unique("orders_legacy_id_key").on(t.legacyId),
   ]
 );
