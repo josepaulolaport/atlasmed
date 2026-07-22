@@ -58,7 +58,7 @@ describe("Facility photo use cases", () => {
       facilityRepository: {
         findById: async () =>
           facility({ imageUrl: "/api/v1/facilities/photos/facilities/facility-1/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg" }),
-      } as FacilityRepository,
+      } as unknown as FacilityRepository,
       storage: {
         upload: async () => undefined,
         delete: async () => undefined,
@@ -192,7 +192,7 @@ describe("Facility photo use cases", () => {
           findById: async () => {
             throw new Error("should not query");
           },
-        } as FacilityRepository,
+        } as unknown as FacilityRepository,
         storage: {
           upload: async () => undefined,
           delete: async () => undefined,
