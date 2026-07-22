@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 
-/// "Fotos da clínica" — mock-only in V1; no `facility_photos` table yet.
+/// "Fotos da clínica" row — kept for a future manage-photos entry point.
+/// The live gallery opens from the header avatar (`ClinicPhotoViewerScreen`).
 class ClinicPhotosSection extends StatelessWidget {
   const ClinicPhotosSection({super.key, required this.photos});
 

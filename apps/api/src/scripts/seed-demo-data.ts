@@ -10,6 +10,9 @@ import {
   facilities,
   professionals,
   facilityProfessionals,
+  userProfessionalRelationships,
+  healthcareProviders,
+  facilityHealthcareProviderShares,
   cnesRuns,
   cnesSuggestions,
 } from "@atlasmed/database";
@@ -118,6 +121,18 @@ async function cleanupDemoData() {
       ...(demoProfessionalIds.length > 0 ? [inArray(facilityProfessionals.professionalId, demoProfessionalIds)] : []),
     ];
     await db.delete(facilityProfessionals).where(or(...fpConditions));
+  }
+
+  if (demoProfessionalIds.length > 0 || demoUserIds.length > 0) {
+    const uprConditions = [
+      ...(demoProfessionalIds.length > 0
+        ? [inArray(userProfessionalRelationships.professionalId, demoProfessionalIds)]
+        : []),
+      ...(demoUserIds.length > 0
+        ? [inArray(userProfessionalRelationships.userId, demoUserIds)]
+        : []),
+    ];
+    await db.delete(userProfessionalRelationships).where(or(...uprConditions));
   }
 
   if (demoProfessionalIds.length > 0) {
@@ -430,7 +445,6 @@ async function seedAssociations(params: {
       isPrescriber: true,
       isBuyer: false,
       isDecisionMaker: true,
-      relationshipLevel: 8,
       notes: "Primary contact at Alpha — partner and decision maker.",
       confirmedAt: now,
       confirmedByUserId: adminUserId,
@@ -444,7 +458,6 @@ async function seedAssociations(params: {
     isPrescriber: true,
     isBuyer: true,
     isDecisionMaker: false,
-    relationshipLevel: 5,
     confirmedAt: now,
     confirmedByUserId: adminUserId,
   });
@@ -458,7 +471,6 @@ async function seedAssociations(params: {
       sourceFirstSeenAt: now,
       sourceLastSeenAt: now,
       isPrescriber: true,
-      relationshipLevel: 3,
       notes: "Awaiting manager confirmation.",
     })
     .returning();
@@ -469,7 +481,6 @@ async function seedAssociations(params: {
     confirmedAt: now,
     confirmedByUserId: adminUserId,
     isDecisionMaker: true,
-    relationshipLevel: 5,
   });
 
   await db.insert(facilityProfessionals).values({
@@ -478,7 +489,6 @@ async function seedAssociations(params: {
     confirmedAt: now,
     confirmedByUserId: adminUserId,
     isPartner: true,
-    relationshipLevel: 8,
   });
 
   const [fernandaSource] = await db
@@ -493,7 +503,105 @@ async function seedAssociations(params: {
     })
     .returning();
 
+  // Relationship scores are user × professional (not facility-scoped).
+  await db.insert(userProfessionalRelationships).values([
+    {
+      userId: adminUserId,
+      professionalId: profs.ana.id,
+      relationshipLevel: 8,
+    },
+    {
+      userId: adminUserId,
+      professionalId: profs.carlos.id,
+      relationshipLevel: 3,
+    },
+    {
+      userId: adminUserId,
+      professionalId: profs.beatriz.id,
+      relationshipLevel: 5,
+    },
+    {
+      userId: adminUserId,
+      professionalId: profs.diego.id,
+      relationshipLevel: 8,
+    },
+  ]);
+
   return { anaAlpha: anaAlpha!, carlosPending: carlosPending!, fernandaSource: fernandaSource! };
+}
+
+async function seedHealthcareProviderShares(params: {
+  facilities: Awaited<ReturnType<typeof seedFacilities>>;
+}) {
+  const catalog = [
+    { name: "Particular", type: "PRIVATE" as const },
+    { name: "SUS", type: "PUBLIC" as const },
+    { name: "Unimed", type: "PRIVATE" as const },
+    { name: "Bradesco Saúde", type: "PRIVATE" as const },
+    { name: "Sul América", type: "PRIVATE" as const },
+    { name: "Amil", type: "PRIVATE" as const },
+  ];
+
+  const providersByName = new Map<string, string>();
+  for (const entry of catalog) {
+    const existing = await db.query.healthcareProviders.findFirst({
+      where: eq(healthcareProviders.name, entry.name),
+    });
+    if (existing) {
+      providersByName.set(entry.name, existing.id);
+      continue;
+    }
+    const [created] = await db
+      .insert(healthcareProviders)
+      .values({ name: entry.name, type: entry.type, isActive: true })
+      .returning({ id: healthcareProviders.id });
+    providersByName.set(entry.name, created!.id);
+  }
+
+  const facilityIds = Object.values(params.facilities).map((f) => f.id);
+  if (facilityIds.length > 0) {
+    await db
+      .delete(facilityHealthcareProviderShares)
+      .where(inArray(facilityHealthcareProviderShares.facilityId, facilityIds));
+  }
+
+  const particular = providersByName.get("Particular")!;
+  const sus = providersByName.get("SUS")!;
+  const unimed = providersByName.get("Unimed")!;
+  const bradesco = providersByName.get("Bradesco Saúde")!;
+
+  await db.insert(facilityHealthcareProviderShares).values([
+    {
+      facilityId: params.facilities.clinicAlpha.id,
+      healthcareProviderId: particular,
+      sharePercent: "40",
+      source: "MANUAL",
+    },
+    {
+      facilityId: params.facilities.clinicAlpha.id,
+      healthcareProviderId: unimed,
+      sharePercent: "35",
+      source: "MANUAL",
+    },
+    {
+      facilityId: params.facilities.clinicAlpha.id,
+      healthcareProviderId: sus,
+      sharePercent: "25",
+      source: "MANUAL",
+    },
+    {
+      facilityId: params.facilities.clinicBeta.id,
+      healthcareProviderId: bradesco,
+      sharePercent: "55",
+      source: "MANUAL",
+    },
+    {
+      facilityId: params.facilities.clinicBeta.id,
+      healthcareProviderId: particular,
+      sharePercent: "45",
+      source: "MANUAL",
+    },
+  ]);
 }
 
 async function seedRegistrySuggestions(params: {
@@ -588,6 +696,7 @@ async function seedDemoData() {
     professionals: professionalSet,
     adminUserId: seededUsers.admin.id,
   });
+  await seedHealthcareProviderShares({ facilities: facilitySet });
   await seedRegistrySuggestions({ facilities: facilitySet, associations });
 
   printSummary({

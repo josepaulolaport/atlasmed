@@ -163,8 +163,32 @@ describe("Facility HTTP auth integration", () => {
     );
 
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { id: string };
+    const body = (await response.json()) as {
+      id: string;
+      name: string;
+      streetAddress?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      website?: string | null;
+      lat?: number;
+      lng?: number;
+      commercialStatus?: string;
+      purchaseStatus?: string;
+      conformityStatus?: string;
+    };
     expect(body.id).toBe(fixtures.inScopeFacilityId);
+    expect(body).toMatchObject({
+      streetAddress: "Rua Teste",
+      phone: "1133334444",
+      email: `facility.in.${fixtures.uniqueId}@test.example.com`,
+      website: "https://example.com/facility",
+      lat: -23.5505,
+      lng: -46.6333,
+    });
+    // Status chips remain mocked on mobile — not part of this DTO yet
+    expect(body.commercialStatus).toBeUndefined();
+    expect(body.purchaseStatus).toBeUndefined();
+    expect(body.conformityStatus).toBeUndefined();
   });
 
   it("scoped field USER gets 403 for out-of-territory facility", async () => {

@@ -3,13 +3,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 
-/// "Profissionais administrativos" — snapping PageView of compact cards,
-/// mirroring the Médicos section: essential contact info (phone/email), a
-/// badge area, and a relationship rating. The "Ver todos" link to the full
-/// list lives on the section header.
+/// "Profissionais administrativos" — snapping PageView of compact cards
+/// with contact info (phone/email) and type badge. No relationship stars
+/// (those are user × professional only, on Médicos).
 class ClinicAdminProfessionalsSection extends StatelessWidget {
   const ClinicAdminProfessionalsSection({
     super.key,
@@ -186,8 +184,6 @@ class _ProfessionalCard extends StatelessWidget {
                   )
                 : null,
           ),
-          const SizedBox(height: 8),
-          RelationshipStars(score: professional.relationshipScore),
           const Spacer(),
           const Divider(height: 1, color: Color(0xFFf3f4f6)),
           const SizedBox(height: 8),

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_professionals_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/search_bar_widget.dart';
@@ -11,23 +14,30 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_s
 
 /// Full list of administrative professionals — same Explorar table chrome
 /// (search + filter + sort + hairline rows) as [DoctorsListScreen].
-class AdministrativeProfessionalsListScreen extends StatefulWidget {
+///
+/// Opens immediately with [professionals] (strip cache), then hydrates a
+/// fuller page in the background when [facilityId] is set.
+class AdministrativeProfessionalsListScreen extends ConsumerStatefulWidget {
   const AdministrativeProfessionalsListScreen({
     super.key,
     required this.professionals,
     required this.facilityName,
+    this.facilityId,
   });
 
   final List<AdministrativeProfessional> professionals;
   final String facilityName;
 
+  /// When set, load a larger page after first frame.
+  final String? facilityId;
+
   @override
-  State<AdministrativeProfessionalsListScreen> createState() =>
+  ConsumerState<AdministrativeProfessionalsListScreen> createState() =>
       _AdministrativeProfessionalsListScreenState();
 }
 
 class _AdministrativeProfessionalsListScreenState
-    extends State<AdministrativeProfessionalsListScreen> {
+    extends ConsumerState<AdministrativeProfessionalsListScreen> {
   late List<AdministrativeProfessional> _professionals = List.of(
     widget.professionals,
   );
@@ -37,6 +47,60 @@ class _AdministrativeProfessionalsListScreenState
   bool _sortOpen = false;
 
   static const _typeSection = 'Tipo';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _hydrateFullList());
+  }
+
+  Future<void> _hydrateFullList({bool force = false}) async {
+    final facilityId = widget.facilityId;
+    if (facilityId == null || facilityId.isEmpty) return;
+
+    List<AdministrativeProfessional> next;
+    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
+      next = mockAllFacilityAdministrators(facilityId);
+    } else {
+      final repo = FacilityRepresentativesRepository(
+        facilityId,
+        page: 1,
+        limit: facilityRosterListPageSize,
+      );
+      try {
+        final page = await repo.loadPage();
+        next = page.items;
+      } catch (_) {
+        return;
+      } finally {
+        repo.dispose();
+      }
+    }
+
+    if (!mounted) return;
+    if (!force && next.isEmpty) return;
+    if (!force && next.length < _professionals.length) return;
+    setState(() => _professionals = next);
+  }
+
+  Future<void> _refreshAfterMutation(
+    List<AdministrativeProfessional> added,
+  ) async {
+    setState(() {
+      final existing = _professionals.map((p) => p.id).toSet();
+      _professionals = [
+        ..._professionals,
+        ...added.where((p) => !existing.contains(p.id)),
+      ];
+    });
+    final facilityId = widget.facilityId;
+    if (facilityId != null && facilityId.isNotEmpty) {
+      await ref
+          .read(facilityAdministratorsRosterProvider(facilityId).notifier)
+          .retry();
+      await _hydrateFullList(force: true);
+    }
+  }
 
   @override
   void didUpdateWidget(
@@ -219,11 +283,11 @@ class _AdministrativeProfessionalsListScreenState
     final added = await showAssociateProfessionalsSheet(
       context,
       alreadyAssociatedIds: _professionals.map((p) => p.id).toSet(),
+      facilityId: widget.facilityId,
     );
     if (added == null || added.isEmpty || !mounted) return;
-    setState(() {
-      _professionals = [..._professionals, ...added];
-    });
+    await _refreshAfterMutation(added);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -342,8 +406,6 @@ class _AdminProfessionalRow extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 5),
-                  RelationshipStars(score: professional.relationshipScore),
                 ],
               ),
             ),

@@ -3,11 +3,13 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_address_suggestion_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 
 /// "Informações administrativas" — every field carries copy + pencil actions.
-/// Address is split into Estado / Cidade / CEP / Endereço and kept last
-/// (Endereço combines neighbourhood, street, number and complement).
+/// Address is shown as Estado / Cidade / CEP / Endereço (composed line).
+/// Editing "Endereço" opens a multi-field sheet (bairro / logradouro /
+/// número / complemento).
 class ClinicAdminInfoSection extends StatelessWidget {
   const ClinicAdminInfoSection({super.key, required this.detail});
 
@@ -24,57 +26,88 @@ class ClinicAdminInfoSection extends StatelessWidget {
       cpf: detail.cpf,
     );
 
-    final fields = <({String label, String? value, IconData icon})>[
-      (
-        label: taxIdentifier.label,
-        value: hasTaxId ? taxIdentifier.value : null,
-        icon: Icons.badge_outlined,
-      ),
-      (
-        label: 'Telefone',
-        value: formatBrazilianPhone(detail.phone) ?? detail.phone,
-        icon: Icons.phone_outlined,
-      ),
-      (
-        label: 'WhatsApp',
-        value: formatBrazilianPhone(detail.whatsapp) ?? detail.whatsapp,
-        icon: Icons.chat_outlined,
-      ),
-      (label: 'E-mail', value: detail.email, icon: Icons.email_outlined),
-      (label: 'Site', value: detail.website, icon: Icons.language_outlined),
-      (
-        label: 'Responsável',
-        value: detail.responsibleDoctor,
-        icon: Icons.medical_services_outlined,
-      ),
-      (
-        label: 'Horário',
-        value: detail.openingHours,
-        icon: Icons.schedule_outlined,
-      ),
-      if (detail.registeredSince != null)
-        (
-          label: 'Cliente desde',
-          value: _formatDate(detail.registeredSince!),
-          icon: Icons.date_range_outlined,
-        ),
-      (label: 'Estado', value: detail.state, icon: Icons.map_outlined),
-      (
-        label: 'Cidade',
-        value: detail.city.trim().isEmpty ? null : detail.city,
-        icon: Icons.location_city_outlined,
-      ),
-      (
-        label: 'CEP',
-        value: detail.postalCode,
-        icon: Icons.local_post_office_outlined,
-      ),
-      (
-        label: 'Endereço',
-        value: detail.composedAddressLine,
-        icon: Icons.location_on_outlined,
-      ),
-    ];
+    final fields =
+        <({String label, String? value, IconData icon, VoidCallback? onEdit})>[
+          (
+            label: taxIdentifier.label,
+            value: hasTaxId ? taxIdentifier.value : null,
+            icon: Icons.badge_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'Telefone',
+            value: formatBrazilianPhone(detail.phone) ?? detail.phone,
+            icon: Icons.phone_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'WhatsApp',
+            value: formatBrazilianPhone(detail.whatsapp) ?? detail.whatsapp,
+            icon: Icons.chat_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'E-mail',
+            value: detail.email,
+            icon: Icons.email_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'Site',
+            value: detail.website,
+            icon: Icons.language_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'Responsável',
+            value: detail.responsibleDoctor,
+            icon: Icons.medical_services_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'Horário',
+            value: detail.openingHours,
+            icon: Icons.schedule_outlined,
+            onEdit: null,
+          ),
+          if (detail.registeredSince != null)
+            (
+              label: 'Cliente desde',
+              value: _formatDate(detail.registeredSince!),
+              icon: Icons.date_range_outlined,
+              onEdit: null,
+            ),
+          (
+            label: 'Estado',
+            value: detail.state,
+            icon: Icons.map_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'Cidade',
+            value: detail.city.trim().isEmpty ? null : detail.city,
+            icon: Icons.location_city_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'CEP',
+            value: detail.postalCode,
+            icon: Icons.local_post_office_outlined,
+            onEdit: null,
+          ),
+          (
+            label: 'Endereço',
+            value: detail.composedAddressLine,
+            icon: Icons.location_on_outlined,
+            onEdit: () => showAddressEditSuggestionSheet(
+              context,
+              neighborhood: detail.neighborhood,
+              streetAddress: detail.streetAddress,
+              streetNumber: detail.streetNumber,
+              addressComplement: detail.addressComplement,
+            ),
+          ),
+        ];
 
     return ClinicDetailCard(
       // Rows own their padding so ink/separators can span the card edge-to-edge.
@@ -109,6 +142,7 @@ class ClinicAdminInfoSection extends StatelessWidget {
                 label: fields[i].label,
                 value: fields[i].value,
                 icon: fields[i].icon,
+                onEdit: fields[i].onEdit,
                 showDivider: i < fields.length - 1,
               ),
           ],

@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_photos_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_photo_viewer_screen.dart';
 
 /// Fixed (non-scrolling) blue header — identity block, inline sinais chips
 /// and full address. Rendered above the scrollable section list, not inside
 /// it, so it stays pinned on screen while the rest of the page scrolls.
-class ClinicHeaderSection extends StatelessWidget {
+class ClinicHeaderSection extends ConsumerWidget {
   const ClinicHeaderSection({
     super.key,
     required this.detail,
@@ -23,19 +28,46 @@ class ClinicHeaderSection extends StatelessWidget {
   final EstablishmentDetailSections? sections;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final top = MediaQuery.of(context).padding.top;
+    final photos =
+        ref.watch(facilityPhotosProvider(detail.id)).valueOrNull ??
+        sections?.photos;
+    final uploading = ref
+        .watch(facilityPhotoUploadProvider(detail.id))
+        .isLoading;
+    ref.listen<AsyncValue<void>>(facilityPhotoUploadProvider(detail.id), (
+      previous,
+      next,
+    ) {
+      if (next.hasError) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.error.toString()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      if (previous?.isLoading == true && next is AsyncData) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Foto adicionada'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    });
+    // Sinais stay mocked until commercial/purchase status ship on the DTO.
     final signals = sections?.statusSignals;
+    // Specialties still mock-only (no facility specialty aggregate on DTO yet).
     final specialties = sections?.specialtiesLabel;
-    final fullAddress =
-        sections?.location?.formattedAddress ??
-        (detail.streetAddress != null
-            ? '${detail.streetAddress} — ${detail.neighborhood}'
-            : null);
-    final taxIdType = sections?.taxIdType;
-    final phone = sections?.phone ?? detail.phone;
-    final whatsapp = sections?.whatsapp ?? detail.whatsapp;
-    final email = sections?.email ?? detail.email;
+    // Identity / contact / address / PF-PJ prefer the live facility DTO.
+    final fullAddress = detail.formattedAddress;
+    final taxIdType = parseFacilityTaxIdType(detail.taxIdType);
+    final phone = _nonEmpty(detail.phone);
+    final whatsapp = _nonEmpty(detail.whatsapp);
+    final email = _nonEmpty(detail.email);
     final phoneLabel = formatBrazilianPhone(phone) ?? phone;
     final whatsappLabel = formatBrazilianPhone(whatsapp) ?? whatsapp;
 
@@ -93,7 +125,13 @@ class ClinicHeaderSection extends StatelessWidget {
                     _Avatar(
                       name: detail.name,
                       taxIdType: taxIdType,
-                      onTap: () => _openPhotos(context),
+                      imageUrl:
+                          photos?.profileImageUrl ??
+                          (photos?.imageUrls.isNotEmpty == true
+                              ? photos!.imageUrls.first
+                              : null),
+                      uploading: uploading,
+                      onTap: () => _showPhotoActions(context, ref, photos),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -233,17 +271,66 @@ class ClinicHeaderSection extends StatelessWidget {
     );
   }
 
-  void _openPhotos(BuildContext context) {
-    final photos = sections?.photos;
-    if (photos == null || photos.count == 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nenhuma foto cadastrada'),
-          behavior: SnackBarBehavior.floating,
+  Future<void> _showPhotoActions(
+    BuildContext context,
+    WidgetRef ref,
+    PhotoGallerySummary? photos,
+  ) async {
+    final hasPhotos = photos != null && photos.count > 0;
+    final isMock =
+        detail.id.startsWith('near-') || detail.id.endsWith(':empty');
+
+    await showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (hasPhotos)
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: Text('Ver fotos (${photos.count})'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _openViewer(context, photos);
+                },
+              ),
+            if (!isMock) ...[
+              ListTile(
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Tirar foto'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ref
+                      .read(facilityPhotoUploadProvider(detail.id).notifier)
+                      .pickAndUpload(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.image_outlined),
+                title: const Text('Escolher da galeria'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  ref
+                      .read(facilityPhotoUploadProvider(detail.id).notifier)
+                      .pickAndUpload(ImageSource.gallery);
+                },
+              ),
+            ],
+            if (!hasPhotos && isMock)
+              const ListTile(
+                leading: Icon(Icons.info_outline),
+                title: Text('Nenhuma foto cadastrada'),
+              ),
+            const SizedBox(height: 8),
+          ],
         ),
-      );
-      return;
-    }
+      ),
+    );
+  }
+
+  void _openViewer(BuildContext context, PhotoGallerySummary photos) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) =>
@@ -251,69 +338,145 @@ class ClinicHeaderSection extends StatelessWidget {
       ),
     );
   }
+
+  static String? _nonEmpty(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, this.taxIdType, this.onTap});
+  const _Avatar({
+    required this.name,
+    this.taxIdType,
+    this.imageUrl,
+    this.uploading = false,
+    this.onTap,
+  });
 
   final String name;
   final FacilityTaxIdType? taxIdType;
+  final String? imageUrl;
+  final bool uploading;
   final VoidCallback? onTap;
+
+  String _absoluteUrl(String url) =>
+      url.startsWith('http') ? url : '${AppConfig.apiBaseUrl}$url';
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: const Color(0x4DFFFFFF), width: 2),
-            ),
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
+    final token = SessionEnvironment.instance.currentValue?.token;
+    final url = imageUrl?.trim();
+    final hasImage = url != null && url.isNotEmpty;
+
+    return Semantics(
+      button: true,
+      label: 'Fotos da clínica',
+      child: GestureDetector(
+        onTap: uploading ? null : onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
+                border: Border.all(color: const Color(0x4DFFFFFF), width: 2),
               ),
-              child: Center(
-                child: Text(
-                  _initials(name),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF1e40af),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (taxIdType != null)
-            Positioned(
-              bottom: -2,
-              right: -2,
               child: Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
+                clipBehavior: Clip.antiAlias,
+                decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF1e40af), width: 2),
                 ),
-                child: Center(
-                  child: Icon(
-                    taxIdType!.icon,
-                    size: 11,
-                    color: const Color(0xFF1e40af),
+                child: hasImage
+                    ? Image.network(
+                        _absoluteUrl(url),
+                        headers: token == null
+                            ? null
+                            : {'Authorization': 'Bearer $token'},
+                        fit: BoxFit.cover,
+                        width: 52,
+                        height: 52,
+                        errorBuilder: (_, _, _) => _Initials(name: name),
+                      )
+                    : _Initials(name: name),
+              ),
+            ),
+            if (taxIdType != null)
+              Positioned(
+                bottom: -2,
+                right: -2,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF1e40af),
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      taxIdType!.icon,
+                      size: 11,
+                      color: const Color(0xFF1e40af),
+                    ),
                   ),
                 ),
               ),
+            Positioned(
+              top: -2,
+              right: -2,
+              child: Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1e40af),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                child: uploading
+                    ? const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.8,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.camera_alt_outlined,
+                        size: 12,
+                        color: Colors.white,
+                      ),
+              ),
             ),
-        ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Initials extends StatelessWidget {
+  const _Initials({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Text(
+        _initials(name),
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFF1e40af),
+        ),
       ),
     );
   }

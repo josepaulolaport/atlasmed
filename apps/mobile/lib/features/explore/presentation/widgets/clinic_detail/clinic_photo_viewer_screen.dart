@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
 /// Full-screen, swipeable photo viewer opened by tapping the establishment
-/// avatar in the header. Mock-only in V1 — renders a colored placeholder
-/// per photo (no `facility_photos` table/URLs yet); swapping in real
-/// images later only touches this screen's `PageView.builder` item.
+/// avatar in the header. Uses live [PhotoGallerySummary.imageUrls] when
+/// present; otherwise falls back to colored placeholders (mock).
 class ClinicPhotoViewerScreen extends StatefulWidget {
   const ClinicPhotoViewerScreen({
     super.key,
@@ -45,9 +46,17 @@ class _ClinicPhotoViewerScreenState extends State<ClinicPhotoViewerScreen> {
     return colors[i % colors.length];
   }
 
+  String _absoluteUrl(String url) =>
+      url.startsWith('http') ? url : '${AppConfig.apiBaseUrl}$url';
+
   @override
   Widget build(BuildContext context) {
     final count = widget.photos.count;
+    final urls = widget.photos.imageUrls;
+    final token = SessionEnvironment.instance.currentValue?.token;
+    final authHeaders = token == null
+        ? null
+        : {'Authorization': 'Bearer $token'};
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -58,20 +67,33 @@ class _ClinicPhotoViewerScreenState extends State<ClinicPhotoViewerScreen> {
               controller: _controller,
               itemCount: count,
               onPageChanged: (i) => setState(() => _index = i),
-              itemBuilder: (_, i) => Container(
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: _colorAt(i),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.photo_rounded,
-                    size: 72,
-                    color: Color(0x4DFFFFFF),
-                  ),
-                ),
-              ),
+              itemBuilder: (_, i) {
+                final url = i < urls.length ? urls[i] : null;
+                if (url != null && url.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.network(
+                        _absoluteUrl(url),
+                        headers: authHeaders,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, _, _) =>
+                            _PlaceholderCard(color: _colorAt(i)),
+                        loadingBuilder: (context, child, progress) {
+                          if (progress == null) return child;
+                          return const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white54,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  );
+                }
+                return _PlaceholderCard(color: _colorAt(i));
+              },
             ),
             Positioned(
               top: 4,
@@ -146,6 +168,26 @@ class _ClinicPhotoViewerScreenState extends State<ClinicPhotoViewerScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PlaceholderCard extends StatelessWidget {
+  const _PlaceholderCard({required this.color});
+
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: const Center(
+        child: Icon(Icons.photo_rounded, size: 72, color: Color(0x4DFFFFFF)),
       ),
     );
   }

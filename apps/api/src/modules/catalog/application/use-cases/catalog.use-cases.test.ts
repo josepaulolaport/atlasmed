@@ -1,4 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
+import { createGlobalScopeContext } from "@atlasmed/access";
 import {
   GetProductUseCase,
   ListProductsUseCase,
@@ -11,6 +12,7 @@ import {
   LinkCompetitorProductUseCase,
   UnlinkCompetitorProductUseCase,
   GetPriceIndexUseCase,
+  ReplaceFacilityHealthcareProviderSharesUseCase,
 } from "./catalog.use-cases";
 import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
 import type {
@@ -18,6 +20,7 @@ import type {
   CompetitorProductRepository,
 } from "../interfaces/competitor-product.repository.interface";
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
+import type { FacilityHealthcareProviderShareRepository } from "../interfaces/facility-healthcare-provider-share.repository.interface";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 
 const product: ProductRecord = {
@@ -306,5 +309,88 @@ describe("product comparison and price index use cases", () => {
     expect(result.data).toHaveLength(2);
     expect(result.data.some((row) => row.isOwn)).toBe(true);
     expect(result.data.some((row) => !row.isOwn)).toBe(true);
+  });
+});
+
+describe("facility healthcare provider shares", () => {
+  const facilityId = "facility-1";
+
+  function shareRepository(
+    overrides: Partial<FacilityHealthcareProviderShareRepository> = {}
+  ): FacilityHealthcareProviderShareRepository {
+    return {
+      findByFacility: mock(async () => []),
+      create: mock(async () => {
+        throw new Error("unused");
+      }),
+      replaceByFacility: mock(
+        async (
+          _facilityId: string,
+          shares: Array<{ healthcareProviderId: string; sharePercent: number }>
+        ) =>
+          shares.map((share, index) => ({
+            id: `share-${index}`,
+            facilityId,
+            healthcareProviderId: share.healthcareProviderId,
+            sharePercent: share.sharePercent,
+            source: "MANUAL" as const,
+            createdAt: new Date("2024-01-01"),
+            updatedAt: new Date("2024-01-01"),
+            healthcareProvider: {
+              id: share.healthcareProviderId,
+              name: `Provider ${index}`,
+              type: "PRIVATE",
+            },
+          }))
+      ),
+      sumSharePercentForFacility: mock(async () => 0),
+      ...overrides,
+    };
+  }
+
+  it("replaces the full share mix when percentages sum to 100", async () => {
+    const repo = shareRepository();
+    const result = await new ReplaceFacilityHealthcareProviderSharesUseCase({
+      shareRepository: repo,
+    }).execute({
+      facilityId,
+      scope: createGlobalScopeContext(),
+      shares: [
+        { healthcareProviderId: "hp-1", sharePercent: 60 },
+        { healthcareProviderId: "hp-2", sharePercent: 40 },
+      ],
+    });
+
+    expect(result.data).toHaveLength(2);
+    expect(repo.replaceByFacility).toHaveBeenCalledWith(facilityId, [
+      { healthcareProviderId: "hp-1", sharePercent: 60 },
+      { healthcareProviderId: "hp-2", sharePercent: 40 },
+    ]);
+  });
+
+  it("allows clearing all shares", async () => {
+    const repo = shareRepository();
+    const result = await new ReplaceFacilityHealthcareProviderSharesUseCase({
+      shareRepository: repo,
+    }).execute({
+      facilityId,
+      scope: createGlobalScopeContext(),
+      shares: [],
+    });
+
+    expect(result.data).toEqual([]);
+    expect(repo.replaceByFacility).toHaveBeenCalledWith(facilityId, []);
+  });
+
+  it("rejects mixes that do not sum to 100", async () => {
+    await expect(
+      new ReplaceFacilityHealthcareProviderSharesUseCase({
+        shareRepository: shareRepository(),
+      }).execute({
+        facilityId,
+        scope: createGlobalScopeContext(),
+        shares: [{ healthcareProviderId: "hp-1", sharePercent: 70 }],
+      })
+    ).rejects.toThrow(ValidationError);
   });
 });

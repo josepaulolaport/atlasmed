@@ -8,6 +8,7 @@ import type {
 import { assertResourceInScope } from "@atlasmed/access";
 import type { FacilityProfessionalRepository } from "../interfaces/facility-professional.repository.interface";
 import type { ProfessionalRepository } from "../../../professional/application/interfaces/professional.repository.interface";
+import type { UserProfessionalRelationshipRepository } from "../../../professional/application/interfaces/user-professional-relationship.repository.interface";
 
 function formatDate(value: Date | null): string | undefined {
   if (!value) {
@@ -17,19 +18,22 @@ function formatDate(value: Date | null): string | undefined {
   return value.toISOString().slice(0, 10);
 }
 
-function serializeAssociationRole(association: {
-  id: string;
-  facilityId: string;
-  professionalId: string;
-  occupationCode: string;
-  isPartner: boolean;
-  isPrescriber: boolean;
-  isBuyer: boolean;
-  isDecisionMaker: boolean;
-  relationshipLevel: number | null;
-  specialtyLabel: string | null;
-  notes: string | null;
-}): FacilityProfessionalRole {
+function serializeAssociationRole(
+  association: {
+    id: string;
+    facilityId: string;
+    professionalId: string;
+    occupationCode: string;
+    isPartner: boolean;
+    isPrescriber: boolean;
+    isBuyer: boolean;
+    isDecisionMaker: boolean;
+    specialtyLabel: string | null;
+    notes: string | null;
+  },
+  /** Authenticated user's relationship with this professional (user × professional). */
+  relationshipLevel?: number | null
+): FacilityProfessionalRole {
   return {
     facilityProfessionalId: association.id,
     facilityId: association.facilityId,
@@ -39,42 +43,51 @@ function serializeAssociationRole(association: {
     isPrescriber: association.isPrescriber,
     isBuyer: association.isBuyer,
     isDecisionMaker: association.isDecisionMaker,
-    relationshipLevel: association.relationshipLevel ?? undefined,
+    relationshipLevel: relationshipLevel ?? undefined,
     specialtyLabel: association.specialtyLabel ?? undefined,
     notes: association.notes ?? undefined,
   };
 }
 
-function serializeAssociation(row: {
-  id: string;
-  professionalId: string;
-  facilityId: string;
-  occupationCode: string;
-  isPartner: boolean;
-  isPrescriber: boolean;
-  isBuyer: boolean;
-  isDecisionMaker: boolean;
-  relationshipLevel: number | null;
-  specialtyLabel: string | null;
-  notes: string | null;
-  sourceActive: boolean;
-  sourceFirstSeenAt: Date | null;
-  sourceLastSeenAt: Date | null;
-  confirmedAt: Date | null;
-  confirmedByUserId: string | null;
-  endedAt: Date | null;
-  professional: {
+function serializeAssociation(
+  row: {
     id: string;
-    firstName: string;
-    lastName: string;
-    fullName: string | null;
-    specialty: string | null;
-    crmNumber: string | null;
-    crmState: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-  };
-}) {
+    professionalId: string;
+    facilityId: string;
+    occupationCode: string;
+    isPartner: boolean;
+    isPrescriber: boolean;
+    isBuyer: boolean;
+    isDecisionMaker: boolean;
+    specialtyLabel: string | null;
+    notes: string | null;
+    sourceActive: boolean;
+    sourceFirstSeenAt: Date | null;
+    sourceLastSeenAt: Date | null;
+    confirmedAt: Date | null;
+    confirmedByUserId: string | null;
+    endedAt: Date | null;
+    professional: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      fullName: string | null;
+      specialty: string | null;
+      crmNumber: string | null;
+      crmState: string | null;
+      mobilePhone: string | null;
+      landlinePhone: string | null;
+      email: string | null;
+      birthDate: Date | null;
+      favoriteTeam: string | null;
+      hobbies: string | null;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+  },
+  /** Authenticated user's score from `user_professional_relationships` (1–10). */
+  relationshipLevel: number | null
+) {
   return {
     facilityProfessionalId: row.id,
     professional: {
@@ -85,11 +98,17 @@ function serializeAssociation(row: {
       specialty: row.professional.specialty ?? undefined,
       crmNumber: row.professional.crmNumber ?? undefined,
       crmState: row.professional.crmState ?? undefined,
+      mobilePhone: row.professional.mobilePhone ?? undefined,
+      landlinePhone: row.professional.landlinePhone ?? undefined,
+      email: row.professional.email ?? undefined,
+      birthDate: formatDate(row.professional.birthDate),
+      favoriteTeam: row.professional.favoriteTeam ?? undefined,
+      hobbies: row.professional.hobbies ?? undefined,
       createdAt: row.professional.createdAt.toISOString(),
       updatedAt: row.professional.updatedAt.toISOString(),
     },
     association: {
-      ...serializeAssociationRole(row),
+      ...serializeAssociationRole(row, relationshipLevel),
       sourceActive: row.sourceActive,
       sourceFirstSeenAt: row.sourceFirstSeenAt?.toISOString(),
       sourceLastSeenAt: row.sourceLastSeenAt?.toISOString(),
@@ -157,17 +176,25 @@ function serializeProfessionalFromContext(
   };
 }
 
-interface Dependencies {
+interface AssociationDependencies {
   facilityProfessionalRepository: FacilityProfessionalRepository;
-  professionalRepository?: ProfessionalRepository;
+}
+
+interface RelationshipAwareDependencies extends AssociationDependencies {
+  userProfessionalRelationshipRepository: UserProfessionalRelationshipRepository;
+}
+
+interface ContextDependencies extends RelationshipAwareDependencies {
+  professionalRepository: ProfessionalRepository;
 }
 
 export class ListFacilityProfessionalsUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: RelationshipAwareDependencies) {}
 
   async execute(input: {
     facilityId: string;
     scope: ScopeContext;
+    userId: string;
     view?: FacilityProfessionalView;
     page?: number;
     limit?: number;
@@ -188,8 +215,16 @@ export class ListFacilityProfessionalsUseCase {
         search: input.search,
       });
 
+    const levels =
+      await this.deps.userProfessionalRelationshipRepository.findLevelsByUserAndProfessionals(
+        input.userId,
+        associations.map((row) => row.professionalId)
+      );
+
     return {
-      data: associations.map(serializeAssociation),
+      data: associations.map((row) =>
+        serializeAssociation(row, levels.get(row.professionalId) ?? null)
+      ),
       pagination: {
         page,
         limit,
@@ -201,12 +236,13 @@ export class ListFacilityProfessionalsUseCase {
 }
 
 export class GetFacilityProfessionalContextUseCase {
-  constructor(private readonly deps: Required<Dependencies>) {}
+  constructor(private readonly deps: ContextDependencies) {}
 
   async execute(input: {
     facilityId: string;
     professionalId: string;
     scope: ScopeContext;
+    userId: string;
   }): Promise<ProfessionalFacilityContext | null> {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
@@ -223,29 +259,40 @@ export class GetFacilityProfessionalContextUseCase {
       input.professionalId
     );
 
+    const rel =
+      await this.deps.userProfessionalRelationshipRepository.findByUserAndProfessional(
+        input.userId,
+        input.professionalId
+      );
+
     return {
       professional: serializeProfessionalFromContext(
         context.professional,
         facilities.map((facility) => facility.id),
         facilities
       ),
-      association: serializeAssociationRole(context.association),
+      association: serializeAssociationRole(
+        context.association,
+        rel?.relationshipLevel ?? null
+      ),
       facilities,
     };
   }
 }
 
 export class UpdateFacilityProfessionalRoleUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: RelationshipAwareDependencies) {}
 
   async execute(input: {
     facilityId: string;
     professionalId: string;
+    userId: string;
     scope: ScopeContext;
     isPartner?: boolean;
     isPrescriber?: boolean;
     isBuyer?: boolean;
     isDecisionMaker?: boolean;
+    /** Persisted on `user_professional_relationships`, not the association row. */
     relationshipLevel?: number | null;
     specialtyLabel?: string | null;
     notes?: string | null;
@@ -260,7 +307,6 @@ export class UpdateFacilityProfessionalRoleUseCase {
         isPrescriber: input.isPrescriber,
         isBuyer: input.isBuyer,
         isDecisionMaker: input.isDecisionMaker,
-        relationshipLevel: input.relationshipLevel,
         specialtyLabel: input.specialtyLabel,
         notes: input.notes,
       },
@@ -270,12 +316,38 @@ export class UpdateFacilityProfessionalRoleUseCase {
       return null;
     }
 
-    return serializeAssociationRole(association);
+    const relationshipRepo = this.deps.userProfessionalRelationshipRepository;
+    let relationshipLevel: number | null;
+
+    if (input.relationshipLevel !== undefined) {
+      if (input.relationshipLevel === null) {
+        await relationshipRepo.deleteByUserAndProfessional(
+          input.userId,
+          input.professionalId
+        );
+        relationshipLevel = null;
+      } else {
+        const saved = await relationshipRepo.upsert({
+          userId: input.userId,
+          professionalId: input.professionalId,
+          relationshipLevel: input.relationshipLevel,
+        });
+        relationshipLevel = saved.relationshipLevel;
+      }
+    } else {
+      const existing = await relationshipRepo.findByUserAndProfessional(
+        input.userId,
+        input.professionalId
+      );
+      relationshipLevel = existing?.relationshipLevel ?? null;
+    }
+
+    return serializeAssociationRole(association, relationshipLevel);
   }
 }
 
 export class ConfirmProfessionalAtFacilityUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: AssociationDependencies) {}
 
   async execute(input: {
     facilityId: string;
@@ -301,7 +373,7 @@ export class ConfirmProfessionalAtFacilityUseCase {
 }
 
 export class ManuallyAssociateProfessionalUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: AssociationDependencies) {}
 
   async execute(input: {
     facilityId: string;
@@ -327,7 +399,7 @@ export class ManuallyAssociateProfessionalUseCase {
 }
 
 export class EndFacilityProfessionalUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(private readonly deps: AssociationDependencies) {}
 
   async execute(input: {
     facilityId: string;

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 
-/// Mock "criar profissional administrativo" form.
+/// Create an administrative professional. When [facilityId] is real, persists
+/// via `POST /facilities/:id/representatives`.
 Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
-  BuildContext context,
-) {
+  BuildContext context, {
+  String? facilityId,
+}) {
   return showModalBottomSheet<AdministrativeProfessional>(
     context: context,
     isScrollControlled: true,
@@ -13,12 +16,14 @@ Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => const _CreateAdminProfessionalSheet(),
+    builder: (_) => _CreateAdminProfessionalSheet(facilityId: facilityId),
   );
 }
 
 class _CreateAdminProfessionalSheet extends StatefulWidget {
-  const _CreateAdminProfessionalSheet();
+  const _CreateAdminProfessionalSheet({this.facilityId});
+
+  final String? facilityId;
 
   @override
   State<_CreateAdminProfessionalSheet> createState() =>
@@ -33,6 +38,12 @@ class _CreateAdminProfessionalSheetState
   final _emailCtrl = TextEditingController();
   String _contactType = 'PROFESSIONAL';
   bool _saving = false;
+
+  bool get _useApi {
+    final id = widget.facilityId;
+    if (id == null || id.isEmpty) return false;
+    return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
 
   @override
   void dispose() {
@@ -73,10 +84,11 @@ class _CreateAdminProfessionalSheetState
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Preencha os dados de contato. O perfil será associado '
-              'após a confirmação.',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+            Text(
+              _useApi
+                  ? 'Preencha os dados de contato. O perfil será criado nesta clínica.'
+                  : 'Preencha os dados de contato. O perfil será associado após a confirmação.',
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
             ),
             const SizedBox(height: 16),
             _field(_nameCtrl, 'Nome completo', TextInputType.name),
@@ -179,18 +191,61 @@ class _CreateAdminProfessionalSheetState
     }
 
     setState(() => _saving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 450));
-    if (!mounted) return;
 
-    Navigator.of(context).pop(
-      AdministrativeProfessional(
-        id: 'new-adm-${DateTime.now().millisecondsSinceEpoch}',
-        name: name,
-        roleTitle: _roleCtrl.text.trim().isEmpty ? null : _roleCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-        email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-        contactType: _contactType,
-      ),
-    );
+    final roleTitle = _roleCtrl.text.trim().isEmpty
+        ? null
+        : _roleCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim().isEmpty
+        ? null
+        : _phoneCtrl.text.trim();
+    final email = _emailCtrl.text.trim().isEmpty
+        ? null
+        : _emailCtrl.text.trim();
+
+    try {
+      if (!_useApi) {
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+        if (!mounted) return;
+        Navigator.of(context).pop(
+          AdministrativeProfessional(
+            id: 'new-adm-${DateTime.now().millisecondsSinceEpoch}',
+            name: name,
+            roleTitle: roleTitle,
+            phone: phone,
+            email: email,
+            contactType: _contactType,
+          ),
+        );
+        return;
+      }
+
+      final repo = FacilityRepresentativesRepository(widget.facilityId!);
+      try {
+        final created = await repo.create(
+          representativeName: name,
+          roleTitle: roleTitle,
+          phone: phone,
+          email: email,
+          contactType: _contactType,
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(created);
+      } finally {
+        repo.dispose();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is FacilityRepresentativesException
+                ? (e.message ?? 'Falha ao criar profissional')
+                : 'Falha ao criar profissional',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

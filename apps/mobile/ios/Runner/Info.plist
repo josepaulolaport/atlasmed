@@ -82,5 +82,14 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Required for canLaunchUrl / deep links to Waze and Google Maps. -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>waze</string>
+		<string>comgooglemaps</string>
+		<string>google.navigation</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
 </dict>
 </plist>

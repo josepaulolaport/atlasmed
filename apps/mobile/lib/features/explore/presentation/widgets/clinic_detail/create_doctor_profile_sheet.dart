@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 
-/// Mock "criar perfil de médico" form. Returns a [FacilityCrmDoctor] on
-/// success — no API persistence in Phase 1.
-Future<FacilityCrmDoctor?> showCreateDoctorProfileSheet(BuildContext context) {
+/// Create a doctor profile. When [facilityId] is a real facility, persists via
+/// `POST /professionals` (with facility link) + optional role PATCH.
+Future<FacilityCrmDoctor?> showCreateDoctorProfileSheet(
+  BuildContext context, {
+  String? facilityId,
+}) {
   return showModalBottomSheet<FacilityCrmDoctor>(
     context: context,
     isScrollControlled: true,
@@ -13,12 +17,14 @@ Future<FacilityCrmDoctor?> showCreateDoctorProfileSheet(BuildContext context) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => const _CreateDoctorProfileSheet(),
+    builder: (_) => _CreateDoctorProfileSheet(facilityId: facilityId),
   );
 }
 
 class _CreateDoctorProfileSheet extends StatefulWidget {
-  const _CreateDoctorProfileSheet();
+  const _CreateDoctorProfileSheet({this.facilityId});
+
+  final String? facilityId;
 
   @override
   State<_CreateDoctorProfileSheet> createState() =>
@@ -35,6 +41,12 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
   bool _decisionMaker = false;
   bool _buyer = false;
   bool _saving = false;
+
+  bool get _useApi {
+    final id = widget.facilityId;
+    if (id == null || id.isEmpty) return false;
+    return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
 
   @override
   void dispose() {
@@ -76,10 +88,11 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
               ),
             ),
             const SizedBox(height: 4),
-            const Text(
-              'Preencha os dados básicos. O perfil será associado '
-              'após a confirmação.',
-              style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+            Text(
+              _useApi
+                  ? 'Preencha os dados básicos. O perfil será criado e vinculado a esta clínica.'
+                  : 'Preencha os dados básicos. O perfil será associado após a confirmação.',
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
             ),
             const SizedBox(height: 16),
             _field(_nameCtrl, 'Nome completo', TextInputType.name),
@@ -180,24 +193,74 @@ class _CreateDoctorProfileSheetState extends State<_CreateDoctorProfileSheet> {
     }
 
     setState(() => _saving = true);
-    await Future<void>.delayed(const Duration(milliseconds: 450));
-    if (!mounted) return;
 
-    final doctor = FacilityCrmDoctor(
-      id: 'new-doc-${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
-      initials: initialsFromName(name),
-      hue: hueFromName(name),
-      specialty: _specialtyCtrl.text.trim().isEmpty
-          ? null
-          : _specialtyCtrl.text.trim(),
-      crm: _crmCtrl.text.trim().isEmpty ? null : _crmCtrl.text.trim(),
-      phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-      email: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
-      isPrescriber: _prescriber,
-      isDecisionMaker: _decisionMaker,
-      isBuyer: _buyer,
-    );
-    Navigator.of(context).pop(doctor);
+    final specialty = _specialtyCtrl.text.trim().isEmpty
+        ? null
+        : _specialtyCtrl.text.trim();
+    final crmRaw = _crmCtrl.text.trim().isEmpty ? null : _crmCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim().isEmpty
+        ? null
+        : _phoneCtrl.text.trim();
+    final email = _emailCtrl.text.trim().isEmpty
+        ? null
+        : _emailCtrl.text.trim();
+
+    try {
+      if (!_useApi) {
+        await Future<void>.delayed(const Duration(milliseconds: 450));
+        if (!mounted) return;
+        Navigator.of(context).pop(
+          FacilityCrmDoctor(
+            id: 'new-doc-${DateTime.now().millisecondsSinceEpoch}',
+            name: name,
+            initials: initialsFromName(name),
+            hue: hueFromName(name),
+            specialty: specialty,
+            crm: crmRaw,
+            phone: phone,
+            email: email,
+            isPrescriber: _prescriber,
+            isDecisionMaker: _decisionMaker,
+            isBuyer: _buyer,
+          ),
+        );
+        return;
+      }
+
+      final names = splitPersonName(name);
+      final crm = parseCrmField(crmRaw);
+      final repo = FacilityAssociateRepository(widget.facilityId!);
+      try {
+        final doctor = await repo.createAndAssociateDoctor(
+          firstName: names.firstName,
+          lastName: names.lastName,
+          specialty: specialty,
+          crmNumber: crm.number,
+          crmState: crm.state,
+          phone: phone,
+          email: email,
+          isPrescriber: _prescriber,
+          isBuyer: _buyer,
+          isDecisionMaker: _decisionMaker,
+        );
+        if (!mounted) return;
+        Navigator.of(context).pop(doctor);
+      } finally {
+        repo.dispose();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is FacilityAssociateException
+                ? (e.message ?? 'Falha ao criar médico')
+                : 'Falha ao criar médico',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }

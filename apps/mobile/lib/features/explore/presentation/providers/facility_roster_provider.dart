@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 
 /// Accumulated state for a paginated facility roster strip.
 class FacilityRosterState<T> {
@@ -119,8 +121,23 @@ final facilityDoctorsRosterProvider = StateNotifierProvider.autoDispose
     >((ref, facilityId) {
       return FacilityRosterNotifier<FacilityCrmDoctor>(
         facilityId: facilityId,
-        loadPage: ({required facilityId, required page}) =>
-            mockFacilityDoctorsPage(facilityId: facilityId, page: page),
+        loadPage: ({required facilityId, required page}) async {
+          // Nearby-map mock ids (`near-*`) stay offline; real facilities hit API.
+          if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
+            return mockFacilityDoctorsPage(facilityId: facilityId, page: page);
+          }
+          final repo = FacilityProfessionalsRepository(
+            facilityId,
+            page: page,
+            limit: facilityRosterPageSize,
+            view: 'all',
+          );
+          try {
+            return await repo.loadPage();
+          } finally {
+            repo.dispose();
+          }
+        },
       );
     });
 
@@ -132,7 +149,24 @@ final facilityAdministratorsRosterProvider = StateNotifierProvider.autoDispose
     >((ref, facilityId) {
       return FacilityRosterNotifier<AdministrativeProfessional>(
         facilityId: facilityId,
-        loadPage: ({required facilityId, required page}) =>
-            mockFacilityAdministratorsPage(facilityId: facilityId, page: page),
+        loadPage: ({required facilityId, required page}) async {
+          // Nearby-map mock ids (`near-*`) stay offline; real facilities hit API.
+          if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
+            return mockFacilityAdministratorsPage(
+              facilityId: facilityId,
+              page: page,
+            );
+          }
+          final repo = FacilityRepresentativesRepository(
+            facilityId,
+            page: page,
+            limit: facilityRosterPageSize,
+          );
+          try {
+            return await repo.loadPage();
+          } finally {
+            repo.dispose();
+          }
+        },
       );
     });

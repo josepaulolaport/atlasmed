@@ -1,4 +1,3 @@
-import type { RelationshipLevel } from "@atlasmed/database";
 import {
   facilityProfessionals,
   professionals,
@@ -25,7 +24,6 @@ type AssociationRow = {
   isPrescriber: boolean;
   isBuyer: boolean;
   isDecisionMaker: boolean;
-  relationshipLevel: number | null;
   notes: string | null;
   sourceActive: boolean;
   sourceFirstSeenAt: Date | null;
@@ -50,7 +48,6 @@ function mapAssociation(association: AssociationRow): FacilityProfessionalRecord
     isPrescriber: association.isPrescriber,
     isBuyer: association.isBuyer,
     isDecisionMaker: association.isDecisionMaker,
-    relationshipLevel: association.relationshipLevel,
     notes: association.notes,
     sourceActive: association.sourceActive,
     sourceFirstSeenAt: association.sourceFirstSeenAt,
@@ -103,7 +100,6 @@ const associationColumns = {
   isPrescriber: facilityProfessionals.isPrescriber,
   isBuyer: facilityProfessionals.isBuyer,
   isDecisionMaker: facilityProfessionals.isDecisionMaker,
-  relationshipLevel: facilityProfessionals.relationshipLevel,
   notes: facilityProfessionals.notes,
   sourceActive: facilityProfessionals.sourceActive,
   sourceFirstSeenAt: facilityProfessionals.sourceFirstSeenAt,
@@ -233,6 +229,12 @@ export class DrizzleFacilityProfessionalRepository
             specialty: professionals.primarySpecialtyLabel,
             crmNumber: professionals.crmNumber,
             crmState: professionals.crmState,
+            mobilePhone: professionals.mobilePhone,
+            landlinePhone: professionals.landlinePhone,
+            email: professionals.email,
+            birthDate: professionals.birthDate,
+            favoriteTeam: professionals.favoriteTeam,
+            hobbies: professionals.hobbies,
             createdAt: professionals.createdAt,
             updatedAt: professionals.updatedAt,
           },
@@ -373,7 +375,6 @@ export class DrizzleFacilityProfessionalRepository
       isPrescriber?: boolean;
       isBuyer?: boolean;
       isDecisionMaker?: boolean;
-      relationshipLevel?: RelationshipLevel | null;
       specialtyLabel?: string | null;
       notes?: string | null;
     };
@@ -394,9 +395,6 @@ export class DrizzleFacilityProfessionalRepository
     if (params.data.isPrescriber !== undefined) setData.isPrescriber = params.data.isPrescriber;
     if (params.data.isBuyer !== undefined) setData.isBuyer = params.data.isBuyer;
     if (params.data.isDecisionMaker !== undefined) setData.isDecisionMaker = params.data.isDecisionMaker;
-    if (params.data.relationshipLevel !== undefined) {
-      setData.relationshipLevel = params.data.relationshipLevel;
-    }
     if (params.data.specialtyLabel !== undefined) setData.specialtyLabel = params.data.specialtyLabel;
     if (params.data.notes !== undefined) setData.notes = params.data.notes;
 

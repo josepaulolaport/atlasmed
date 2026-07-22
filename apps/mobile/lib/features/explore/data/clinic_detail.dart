@@ -26,11 +26,16 @@ class ClinicDetail {
   final String? phone;
   final String? whatsapp;
   final String? consultantName;
+  final DateTime? consultantSince;
+  final String? managerName;
+  final String? territoryName;
   final String? streetAddress;
   final String? streetNumber;
   final String? addressComplement;
   final String? postalCode;
   final String? state;
+  final double? lat;
+  final double? lng;
 
   // Admin info
   final String? taxIdType;
@@ -56,11 +61,16 @@ class ClinicDetail {
     this.phone,
     this.whatsapp,
     this.consultantName,
+    this.consultantSince,
+    this.managerName,
+    this.territoryName,
     this.streetAddress,
     this.streetNumber,
     this.addressComplement,
     this.postalCode,
     this.state,
+    this.lat,
+    this.lng,
     this.taxIdType,
     this.cnpj,
     this.cpf,
@@ -93,6 +103,16 @@ class ClinicDetail {
       if (streetParts.isNotEmpty) streetParts.join(' · '),
     ].join(' · ');
     return line.isEmpty ? null : line;
+  }
+
+  /// Full address for header / maps — street line plus city/state when present.
+  String? get formattedAddress {
+    final parts = <String>[
+      ?composedAddressLine,
+      if (city.trim().isNotEmpty) city.trim(),
+      if (state != null && state!.trim().isNotEmpty) state!.trim(),
+    ];
+    return parts.isEmpty ? null : parts.join(' — ');
   }
 }
 

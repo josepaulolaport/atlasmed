@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -12,26 +16,85 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_s
 
 /// Full list of CRM doctors at an establishment — same table chrome as
 /// Explorar (search + filter + sort chips + [DoctorRow]).
-class DoctorsListScreen extends StatefulWidget {
+///
+/// Opens immediately with [doctors] (strip cache), then hydrates a fuller
+/// page in the background when [facilityId] is set.
+class DoctorsListScreen extends ConsumerStatefulWidget {
   const DoctorsListScreen({
     super.key,
     required this.doctors,
     required this.facilityName,
+    this.facilityId,
   });
 
   final List<FacilityCrmDoctor> doctors;
   final String facilityName;
 
+  /// When set, load a larger roster page after first frame.
+  final String? facilityId;
+
   @override
-  State<DoctorsListScreen> createState() => _DoctorsListScreenState();
+  ConsumerState<DoctorsListScreen> createState() => _DoctorsListScreenState();
 }
 
-class _DoctorsListScreenState extends State<DoctorsListScreen> {
+class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
   late List<FacilityCrmDoctor> _doctors = List.of(widget.doctors);
   String _query = '';
   String _sort = 'name-asc';
   Map<String, List<String>> _filters = {};
   bool _sortOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _hydrateFullList());
+  }
+
+  Future<void> _hydrateFullList({bool force = false}) async {
+    final facilityId = widget.facilityId;
+    if (facilityId == null || facilityId.isEmpty) return;
+
+    List<FacilityCrmDoctor> next;
+    if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
+      next = mockAllFacilityDoctors(facilityId);
+    } else {
+      final repo = FacilityProfessionalsRepository(
+        facilityId,
+        page: 1,
+        limit: facilityRosterListPageSize,
+        view: 'all',
+      );
+      try {
+        final page = await repo.loadPage();
+        next = page.items;
+      } catch (_) {
+        return;
+      } finally {
+        repo.dispose();
+      }
+    }
+
+    if (!mounted) return;
+    if (!force && next.isEmpty) return;
+    // Keep cached rows if hydrate somehow returned a shorter slice.
+    if (!force && next.length < _doctors.length) return;
+    setState(() => _doctors = next);
+  }
+
+  Future<void> _refreshAfterMutation(List<FacilityCrmDoctor> added) async {
+    setState(() {
+      final existing = _doctors.map((d) => d.id).toSet();
+      _doctors = [..._doctors, ...added.where((d) => !existing.contains(d.id))];
+    });
+    final facilityId = widget.facilityId;
+    if (facilityId != null && facilityId.isNotEmpty) {
+      // Refresh detail strip behind this route + re-hydrate list from API.
+      await ref
+          .read(facilityDoctorsRosterProvider(facilityId).notifier)
+          .retry();
+      await _hydrateFullList(force: true);
+    }
+  }
 
   @override
   void didUpdateWidget(covariant DoctorsListScreen oldWidget) {
@@ -265,11 +328,11 @@ class _DoctorsListScreenState extends State<DoctorsListScreen> {
     final added = await showAssociateDoctorsSheet(
       context,
       alreadyAssociatedIds: _doctors.map((d) => d.id).toSet(),
+      facilityId: widget.facilityId,
     );
     if (added == null || added.isEmpty || !mounted) return;
-    setState(() {
-      _doctors = [..._doctors, ...added];
-    });
+    await _refreshAfterMutation(added);
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(

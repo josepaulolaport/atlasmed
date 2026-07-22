@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
 
 /// Search + multi-select doctors to associate with a facility.
-/// Returns the newly selected doctors (not already on the facility).
+/// Returns the newly associated doctors (not already on the facility).
 Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
   BuildContext context, {
   required Set<String> alreadyAssociatedIds,
+  String? facilityId,
 }) {
   return showModalBottomSheet<List<FacilityCrmDoctor>>(
     context: context,
@@ -17,28 +21,107 @@ Future<List<FacilityCrmDoctor>?> showAssociateDoctorsSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) =>
-        _AssociateDoctorsSheet(alreadyAssociatedIds: alreadyAssociatedIds),
+    builder: (_) => _AssociateDoctorsSheet(
+      alreadyAssociatedIds: alreadyAssociatedIds,
+      facilityId: facilityId,
+    ),
   );
 }
 
 class _AssociateDoctorsSheet extends StatefulWidget {
-  const _AssociateDoctorsSheet({required this.alreadyAssociatedIds});
+  const _AssociateDoctorsSheet({
+    required this.alreadyAssociatedIds,
+    this.facilityId,
+  });
 
   final Set<String> alreadyAssociatedIds;
+  final String? facilityId;
 
   @override
   State<_AssociateDoctorsSheet> createState() => _AssociateDoctorsSheetState();
 }
 
 class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
-  late List<FacilityCrmDoctor> _pool = mockAssociableDoctors()
-      .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
-      .toList();
+  List<FacilityCrmDoctor> _pool = const [];
   final Set<String> _selected = {};
   String _query = '';
+  bool _loading = true;
+  bool _saving = false;
+  String? _error;
+  Timer? _debounce;
+
+  bool get _useApi {
+    final id = widget.facilityId;
+    if (id == null || id.isEmpty) return false;
+    return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPool();
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadPool({String? search}) async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      if (!_useApi) {
+        final pool = mockAssociableDoctors()
+            .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
+            .toList();
+        if (!mounted) return;
+        setState(() {
+          _pool = pool;
+          _loading = false;
+        });
+        return;
+      }
+
+      final repo = FacilityAssociateRepository(widget.facilityId!);
+      try {
+        final pool = await repo.searchDoctors(search: search);
+        final filtered = pool
+            .where((d) => !widget.alreadyAssociatedIds.contains(d.id))
+            .toList();
+        if (!mounted) return;
+        setState(() {
+          _pool = filtered;
+          _loading = false;
+        });
+      } finally {
+        repo.dispose();
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+        _pool = const [];
+      });
+    }
+  }
+
+  void _onQueryChanged(String q) {
+    setState(() => _query = q);
+    if (!_useApi) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      _loadPool(search: q.trim().isEmpty ? null : q.trim());
+    });
+  }
 
   List<FacilityCrmDoctor> get _filtered {
+    if (_useApi) return _pool;
     final q = _query.trim().toLowerCase();
     if (q.isEmpty) return _pool;
     return _pool
@@ -94,14 +177,44 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                 _ModalSearchField(
                   value: _query,
                   hintText: 'Buscar médico, especialidade, CRM…',
-                  onChanged: (q) => setState(() => _query = q),
+                  onChanged: _onQueryChanged,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 8),
           Expanded(
-            child: filtered.isEmpty
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Não foi possível carregar médicos.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13.5,
+                              color: Color(0xFF9ca3af),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () => _loadPool(
+                              search: _query.trim().isEmpty
+                                  ? null
+                                  : _query.trim(),
+                            ),
+                            child: const Text('Tentar novamente'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : filtered.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -130,15 +243,17 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                       final selected = _selected.contains(d.id);
                       return CheckboxListTile(
                         value: selected,
-                        onChanged: (v) {
-                          setState(() {
-                            if (v == true) {
-                              _selected.add(d.id);
-                            } else {
-                              _selected.remove(d.id);
-                            }
-                          });
-                        },
+                        onChanged: _saving
+                            ? null
+                            : (v) {
+                                setState(() {
+                                  if (v == true) {
+                                    _selected.add(d.id);
+                                  } else {
+                                    _selected.remove(d.id);
+                                  }
+                                });
+                              },
                         controlAffinity: ListTileControlAffinity.trailing,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16,
@@ -203,7 +318,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: _createProfile,
+                    onPressed: _saving ? null : _createProfile,
                     icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                     label: const Text('Criar perfil de médico'),
                     style: OutlinedButton.styleFrom(
@@ -220,7 +335,7 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton(
-                    onPressed: _selected.isEmpty ? null : _confirm,
+                    onPressed: _selected.isEmpty || _saving ? null : _confirm,
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF1e40af),
                       disabledBackgroundColor: const Color(0xFFe5e7eb),
@@ -229,11 +344,20 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: Text(
-                      _selected.isEmpty
-                          ? 'Associar'
-                          : 'Associar (${_selected.length})',
-                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            _selected.isEmpty
+                                ? 'Associar'
+                                : 'Associar (${_selected.length})',
+                          ),
                   ),
                 ),
               ],
@@ -245,10 +369,13 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   }
 
   Future<void> _createProfile() async {
-    final created = await showCreateDoctorProfileSheet(context);
+    final created = await showCreateDoctorProfileSheet(
+      context,
+      facilityId: widget.facilityId,
+    );
     if (created == null || !mounted) return;
     setState(() {
-      _pool = [created, ..._pool];
+      _pool = [created, ..._pool.where((d) => d.id != created.id)];
       _selected.add(created.id);
       _query = '';
     });
@@ -260,9 +387,46 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
     );
   }
 
-  void _confirm() {
+  Future<void> _confirm() async {
     final chosen = _pool.where((d) => _selected.contains(d.id)).toList();
-    Navigator.of(context).pop(chosen);
+    if (chosen.isEmpty) return;
+
+    if (!_useApi) {
+      Navigator.of(context).pop(chosen);
+      return;
+    }
+
+    // Doctors created via POST /professionals?facilityIds= already linked.
+    // Only call associate for pool picks that were not just created into this
+    // facility (create flow already associates).
+    setState(() => _saving = true);
+    final repo = FacilityAssociateRepository(widget.facilityId!);
+    try {
+      final associated = <FacilityCrmDoctor>[];
+      for (final doctor in chosen) {
+        // Re-associating is idempotent enough for UX; create-with-facility
+        // already linked — associate again is fine / may no-op or refresh.
+        await repo.associateDoctor(doctor.id);
+        associated.add(doctor);
+      }
+      if (!mounted) return;
+      Navigator.of(context).pop(associated);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            e is FacilityAssociateException
+                ? (e.message ?? 'Falha ao associar')
+                : 'Falha ao associar médicos',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      repo.dispose();
+    }
   }
 }
 
