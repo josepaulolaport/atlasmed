@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/tax_identifier.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_address_suggestion_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_tax_id_type_suggestion_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 
 /// "Informações administrativas" — every field carries copy + pencil actions.
@@ -25,9 +27,24 @@ class ClinicAdminInfoSection extends StatelessWidget {
       cnpj: detail.cnpj,
       cpf: detail.cpf,
     );
+    final taxIdType = parseFacilityTaxIdType(detail.taxIdType);
+    final taxTypeLabel = switch (taxIdType) {
+      FacilityTaxIdType.pf => 'Pessoa Física (PF)',
+      FacilityTaxIdType.pj => 'Pessoa Jurídica (PJ)',
+      null => null,
+    };
 
     final fields =
         <({String label, String? value, IconData icon, VoidCallback? onEdit})>[
+          (
+            label: 'Tipo',
+            value: taxTypeLabel,
+            icon: Icons.category_outlined,
+            onEdit: () => showTaxIdTypeSuggestionSheet(
+              context,
+              currentTaxIdType: detail.taxIdType,
+            ),
+          ),
           (
             label: taxIdentifier.label,
             value: hasTaxId ? taxIdentifier.value : null,

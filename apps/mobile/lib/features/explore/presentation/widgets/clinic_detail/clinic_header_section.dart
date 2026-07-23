@@ -58,8 +58,25 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
-    // Sinais stay mocked until commercial/purchase status ship on the DTO.
-    final signals = sections?.statusSignals;
+    // Prefer live commercial/conformity from facility DTO; purchase stays mocked.
+    final mockedSignals = sections?.statusSignals;
+    final liveCommercial = parseFacilityCommercialStatus(detail.commercialStatus);
+    final liveConformity = parseFacilityConformityStatus(detail.conformityStatus);
+    final signals = mockedSignals == null && liveCommercial == null && liveConformity == null
+        ? null
+        : FacilityStatusSignals(
+            commercialStatus:
+                liveCommercial ??
+                mockedSignals?.commercialStatus ??
+                FacilityCommercialStatus.registered,
+            purchaseStatus:
+                mockedSignals?.purchaseStatus ?? FacilityPurchaseStatus.nonBuyer,
+            conformityStatus:
+                liveConformity ??
+                mockedSignals?.conformityStatus ??
+                FacilityConformityStatus.incomplete,
+            lastPurchaseAt: mockedSignals?.lastPurchaseAt,
+          );
     // Specialties still mock-only (no facility specialty aggregate on DTO yet).
     final specialties = sections?.specialtiesLabel;
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
@@ -331,11 +348,10 @@ class ClinicHeaderSection extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context, PhotoGallerySummary photos) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            ClinicPhotoViewerScreen(facilityName: detail.name, photos: photos),
-      ),
+    openClinicPhotoViewer(
+      context,
+      facilityName: detail.name,
+      photos: photos,
     );
   }
 

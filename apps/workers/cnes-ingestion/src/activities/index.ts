@@ -25,10 +25,16 @@ import {
 } from "./reconcile-sync.activities";
 
 import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./search-rebuild.activities";
+import { processCadastroFileUploadedActivity as processCadastroFileUploadedActivityImpl } from "./cadastro-file-processing.activities";
 
 export const rebuildSearchIndexActivity = wrapActivity(
   "rebuildSearchIndex",
   rebuildSearchIndexActivityImpl
+);
+
+export const processCadastroFileUploadedActivity = wrapActivity(
+  "processCadastroFileUploaded",
+  processCadastroFileUploadedActivityImpl
 );
 
 export const discoverLatestReferenceActivity = wrapActivity(

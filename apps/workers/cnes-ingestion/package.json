@@ -10,16 +10,17 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@atlasmed/config": "workspace:*",
     "@atlasmed/cnes-ingestion": "workspace:*",
+    "@atlasmed/config": "workspace:*",
     "@atlasmed/database": "workspace:*",
     "@atlasmed/observability": "workspace:*",
-    "meilisearch": "^0.59.0",
-    "drizzle-orm": "^0.45.2",
+    "@aws-sdk/client-s3": "^3.1093.0",
     "@temporalio/activity": "^1.11.7",
     "@temporalio/client": "^1.11.7",
     "@temporalio/worker": "^1.11.7",
     "@temporalio/workflow": "^1.11.7",
+    "drizzle-orm": "^0.45.2",
+    "meilisearch": "^0.59.0",
     "pg": "^8.16.0"
   },
   "devDependencies": {

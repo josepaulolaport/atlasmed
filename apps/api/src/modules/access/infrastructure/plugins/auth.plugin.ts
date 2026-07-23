@@ -446,6 +446,7 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
             accessGrantService.getActiveGrants(authContext.userId),
         };
       } catch (error) {
+        // Domain auth failures (expired/invalid token, suspended, etc.) — expected.
         if (error instanceof UnauthorizedError || error instanceof AppError) {
           throw error;
         }
@@ -458,7 +459,7 @@ export function createAuthPlugin(dependencies: AuthPluginDependencies) {
           },
           "Auth plugin unexpected error"
         );
-        
+
         throw new UnauthorizedError();
       }
     });

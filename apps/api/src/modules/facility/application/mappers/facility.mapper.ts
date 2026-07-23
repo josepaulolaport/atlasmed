@@ -24,6 +24,7 @@ export function serializeFacility(
     whatsapp: clinic.whatsapp,
     email: clinic.email,
     website: clinic.website,
+    billingEmail: clinic.billingEmail,
     responsibleName: clinic.responsibleName,
     openingHours: clinic.openingHours,
     /** "Cliente desde" — system createdAt until a dedicated commercial date exists. */
@@ -36,8 +37,9 @@ export function serializeFacility(
     territoryId: clinic.territoryId ?? undefined,
     territoryName: clinic.territoryName ?? undefined,
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
-    // commercialStatus / purchaseStatus / conformityStatus stay off the
-    // public DTO for now — mobile Spec 0005 still mocks Sinais chips.
+    commercialStatus: clinic.commercialStatus ?? undefined,
+    conformityStatus: clinic.conformityStatus,
+    // purchaseStatus stays off the public DTO until Spec 0005 Sinais wire it.
     professionalCount: list.professionalCount ?? 0,
     consultantName: clinic.consultantName,
     consultantSince: clinic.consultantSince?.toISOString() ?? undefined,

@@ -132,3 +132,65 @@ export const orderTypeEnum = pgEnum("order_type", [
   "DONATION",
   "OTHER",
 ]);
+
+/** Cadastro package (submission) lifecycle. */
+export const cadastroSubmissionStatusEnum = pgEnum("cadastro_submission_status", [
+  "DRAFT",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "CHANGES_REQUESTED",
+  "APPROVED",
+  "REJECTED",
+  "SUPERSEDED",
+]);
+
+/** Logical document within a cadastro submission. */
+export const cadastroDocumentStatusEnum = pgEnum("cadastro_document_status", [
+  "DRAFT",
+  "PROCESSING",
+  "READY",
+  "SUBMITTED",
+  "UNDER_REVIEW",
+  "CHANGES_REQUESTED",
+  "APPROVED",
+  "REJECTED",
+  "SUPERSEDED",
+]);
+
+/** Physical file asset in object storage. */
+export const cadastroFileAssetStatusEnum = pgEnum("cadastro_file_asset_status", [
+  "PENDING_UPLOAD",
+  "UPLOADING",
+  "UPLOADED",
+  "PROCESSING",
+  "READY",
+  "FAILED",
+]);
+
+/** Role of a file within a logical document. */
+export const cadastroDocumentFileRoleEnum = pgEnum("cadastro_document_file_role", [
+  "FRONT",
+  "BACK",
+  "PAGE",
+  "ATTACHMENT",
+  "SUPPORTING_DOCUMENT",
+]);
+
+export const cadastroUploadSessionStatusEnum = pgEnum("cadastro_upload_session_status", [
+  "PENDING",
+  "IN_PROGRESS",
+  "COMPLETED",
+  "ABORTED",
+  "EXPIRED",
+]);
+
+export const cadastroReviewDecisionEnum = pgEnum("cadastro_review_decision", [
+  "APPROVED",
+  "REJECTED",
+  "CHANGES_REQUESTED",
+]);
+
+export const cadastroProcessingStepStatusEnum = pgEnum(
+  "cadastro_processing_step_status",
+  ["STARTED", "SUCCEEDED", "FAILED"]
+);

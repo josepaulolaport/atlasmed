@@ -81,8 +81,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
     }
 
     // Prefer API values as-is. Do not invent fake address/phone when missing.
-    // Facility status chips (Sinais) stay mocked in establishmentDetailSections
-    // — commercial/purchase/conformity are not wired from this DTO yet.
+    // commercial/conformity come from the facility DTO; purchase stays mocked.
     return ClinicDetail(
       id: apiClinic.id,
       name: apiClinic.name,
@@ -102,6 +101,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       managerName: apiClinic.managerName,
       territoryName: apiClinic.territoryName,
       email: nonEmpty(apiClinic.email),
+      billingEmail: nonEmpty(apiClinic.billingEmail),
       website: nonEmpty(apiClinic.website),
       responsibleDoctor: nonEmpty(apiClinic.responsibleName),
       openingHours: nonEmpty(apiClinic.openingHours),
@@ -115,6 +115,8 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
       taxIdType: apiClinic.taxIdType,
       cnpj: apiClinic.cnpj,
       cpf: apiClinic.cpf,
+      commercialStatus: apiClinic.commercialStatus,
+      conformityStatus: apiClinic.conformityStatus,
     );
   } finally {
     repo.dispose();

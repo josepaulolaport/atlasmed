@@ -1,9 +1,13 @@
 import { randomBytes } from "node:crypto";
 
-import { jwtVerify, SignJWT } from "jose";
+import { errors, jwtVerify, SignJWT } from "jose";
 
 import type { AccessTokenPayload } from "@atlasmed/access";
 
+import {
+  TokenExpiredError,
+  TokenInvalidError,
+} from "../../../../shared/errors";
 import { environment } from "../../../../app/config/environment";
 
 const secret = new TextEncoder().encode(environment.JWT_ACCESS_SECRET);
@@ -34,12 +38,30 @@ export class TokenService {
   }
 
   async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
-    const verified = await jwtVerify(token, secret, {
-      issuer: environment.JWT_ISSUER,
-      audience: environment.JWT_AUDIENCE,
-    });
+    try {
+      const verified = await jwtVerify(token, secret, {
+        issuer: environment.JWT_ISSUER,
+        audience: environment.JWT_AUDIENCE,
+      });
 
-    return verified.payload as AccessTokenPayload;
+      return verified.payload as AccessTokenPayload;
+    } catch (error) {
+      // Access tokens expire every JWT_EXPIRATION (default 15m). Clients refresh
+      // via the refresh token — expired JWTs are expected, not server failures.
+      if (error instanceof errors.JWTExpired) {
+        throw new TokenExpiredError();
+      }
+      if (
+        error instanceof errors.JOSEError ||
+        error instanceof errors.JWTClaimValidationFailed ||
+        error instanceof errors.JWTInvalid
+      ) {
+        throw new TokenInvalidError(
+          error instanceof Error ? error.message : "JWT verification failed"
+        );
+      }
+      throw error;
+    }
   }
 
   generateRefreshToken(): string {

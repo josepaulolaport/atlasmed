@@ -36,6 +36,9 @@ class Clinic {
     this.taxIdType,
     this.cnpj,
     this.cpf,
+    this.billingEmail,
+    this.commercialStatus,
+    this.conformityStatus,
     this.createdAt,
     this.updatedAt,
   });
@@ -78,6 +81,9 @@ class Clinic {
       taxIdType: readNullableString(map['taxIdType']),
       cnpj: readNullableString(map['cnpj']),
       cpf: readNullableString(map['cpf']),
+      billingEmail: readNullableString(map['billingEmail']),
+      commercialStatus: readNullableString(map['commercialStatus']),
+      conformityStatus: readNullableString(map['conformityStatus']),
       createdAt: readNullableDateTime(map['createdAt']),
       updatedAt: readNullableDateTime(map['updatedAt']),
     );
@@ -117,6 +123,9 @@ class Clinic {
   final String? taxIdType;
   final String? cnpj;
   final String? cpf;
+  final String? billingEmail;
+  final String? commercialStatus;
+  final String? conformityStatus;
 }
 
 class ClinicService {

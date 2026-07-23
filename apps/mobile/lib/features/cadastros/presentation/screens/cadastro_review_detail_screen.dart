@@ -1,13 +1,10 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_models.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_document_viewer_screen.dart';
-import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/cadastro_document_pages_preview.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 
 /// Review one Cadastro submission: clinic snapshot + document + decide.
@@ -128,17 +125,10 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _DocumentPreviewCard(
-                    submission: submission,
-                    onOpen: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => ClinicDocumentViewerScreen(
-                            document: submission.asDocument,
-                          ),
-                        ),
-                      );
-                    },
+                  CadastroDocumentPagesPreview(
+                    pages: _previewPagesFor(submission),
+                    height: 240,
+                    emptyLabel: 'Nenhum arquivo disponível para visualização',
                   ),
                 ],
               ),
@@ -154,14 +144,61 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     );
   }
 
+  List<CadastroPreviewPage> _previewPagesFor(
+    CadastroReviewSubmission submission,
+  ) {
+    if (submission.files.isNotEmpty) {
+      final files = submission.files
+          .where((f) => f.fileAssetId.isNotEmpty)
+          .toList(growable: false);
+      return [
+        for (var i = 0; i < files.length; i++)
+          CadastroPreviewPage(
+            id: files[i].fileAssetId,
+            fileName: buildCadastroDocumentFileName(
+              documentType: submission.documentTitle,
+              version: 1,
+              submittedBy: submission.submittedByName,
+              submittedAt: submission.submittedAt,
+              pageIndex: i + 1,
+              extension: extensionFromMimeOrName(
+                mimeType: files[i].contentType,
+                fileName: files[i].fileName,
+              ),
+            ),
+            mimeType: files[i].contentType,
+            remoteUrl: files[i].remoteUrl,
+          ),
+      ];
+    }
+    if (submission.remoteUrl != null && submission.remoteUrl!.isNotEmpty) {
+      return [
+        CadastroPreviewPage(
+          id: submission.id,
+          fileName: buildCadastroDocumentFileName(
+            documentType: submission.documentTitle,
+            version: 1,
+            submittedBy: submission.submittedByName,
+            submittedAt: submission.submittedAt,
+            extension: extensionFromMimeOrName(
+              mimeType: submission.documentMimeType,
+              fileName: submission.documentFileName,
+            ),
+          ),
+          mimeType: submission.documentMimeType,
+          remoteUrl: submission.remoteUrl,
+          localPath: submission.documentLocalPath,
+        ),
+      ];
+    }
+    return const [];
+  }
+
   Future<void> _approve(
     BuildContext context,
     WidgetRef ref,
     CadastroReviewSubmission submission,
   ) async {
-    final queue = ref.read(cadastroReviewQueueProvider.notifier);
-    final reviewer = _reviewerName(ref);
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -187,15 +224,25 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    queue.approve(submission.id, reviewerName: reviewer);
-
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Documento aprovado'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    try {
+      await ref.read(cadastroReviewActionsProvider).approve(submission);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Documento aprovado'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.pop();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _reject(
@@ -203,9 +250,6 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     CadastroReviewSubmission submission,
   ) async {
-    final queue = ref.read(cadastroReviewQueueProvider.notifier);
-    final reviewer = _reviewerName(ref);
-
     final note = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -220,19 +264,27 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     );
     if (note == null || note.isEmpty || !context.mounted) return;
 
-    queue.reject(submission.id, reviewerName: reviewer, note: note);
-
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Documento rejeitado'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  String _reviewerName(WidgetRef ref) {
-    return ref.read(currentUserProvider).valueOrNull?.displayName ?? 'Revisor';
+    try {
+      await ref
+          .read(cadastroReviewActionsProvider)
+          .reject(submission, note: note);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Documento rejeitado'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.pop();
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   String _formatDateTime(DateTime d) {
@@ -546,138 +598,6 @@ class _RejectNoteBanner extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DocumentPreviewCard extends StatelessWidget {
-  const _DocumentPreviewCard({required this.submission, required this.onOpen});
-
-  final CadastroReviewSubmission submission;
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onOpen,
-        borderRadius: BorderRadius.circular(16),
-        child: Ink(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFeef0f3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
-                ),
-                child: SizedBox(
-                  height: 200,
-                  child: submission.canPreviewImage
-                      ? Image.file(
-                          File(submission.documentLocalPath!),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          errorBuilder: (_, _, _) =>
-                              _FileBanner(submission: submission),
-                        )
-                      : _FileBanner(submission: submission),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                child: Row(
-                  children: [
-                    Icon(
-                      submission.isPdf
-                          ? Icons.picture_as_pdf_rounded
-                          : Icons.attach_file_rounded,
-                      size: 18,
-                      color: submission.isPdf
-                          ? const Color(0xFFb84545)
-                          : const Color(0xFF1e40af),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        submission.documentFileName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF0f1729),
-                        ),
-                      ),
-                    ),
-                    const Text(
-                      'Ver completo',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1e40af),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: Color(0xFF1e40af),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FileBanner extends StatelessWidget {
-  const _FileBanner({required this.submission});
-
-  final CadastroReviewSubmission submission;
-
-  @override
-  Widget build(BuildContext context) {
-    return ColoredBox(
-      color: const Color(0xFFf1f5f9),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              submission.isPdf
-                  ? Icons.picture_as_pdf_rounded
-                  : Icons.insert_drive_file_rounded,
-              size: 48,
-              color: submission.isPdf
-                  ? const Color(0xFFb84545)
-                  : const Color(0xFF1e40af),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              submission.isPdf ? 'Documento PDF' : 'Arquivo anexado',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF4b5563),
-              ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Toque para abrir em tela cheia',
-              style: TextStyle(fontSize: 12, color: Color(0xFF9ca3af)),
-            ),
-          ],
-        ),
       ),
     );
   }

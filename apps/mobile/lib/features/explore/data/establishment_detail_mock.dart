@@ -421,48 +421,31 @@ EstablishmentDetailSections mockEmptyEstablishmentDetailSections(
   );
 }
 
-/// "Cadastro" mock — one of each review state so all card variants are
-/// visible without needing to submit anything first.
+/// Nearby-mock Cadastro checklist (PJ catalog + billing email).
 List<EstablishmentDocument> _mockDocuments(DateTime now) => [
   EstablishmentDocument(
-    id: 'doc-alvara',
-    title: 'Alvará de funcionamento',
-    description: 'Autorização municipal para operação do estabelecimento.',
+    id: 'carta_cnpj',
+    title: 'Carta de CNPJ',
+    description: 'Comprovante de inscrição e situação cadastral do CNPJ.',
     status: EstablishmentDocumentStatus.approved,
     submittedAt: now.subtract(const Duration(days: 210)),
-    fileName: 'alvara_funcionamento.pdf',
+    fileName: 'carta_cnpj.pdf',
   ),
   EstablishmentDocument(
-    id: 'doc-vigilancia',
-    title: 'Licença sanitária',
-    description: 'Emitida pela Vigilância Sanitária local, renovação anual.',
+    id: 'licenca_sanitaria',
+    title: 'Licença Sanitária',
+    description: 'Licença ou alvará sanitário vigente do estabelecimento.',
     status: EstablishmentDocumentStatus.pending,
     submittedAt: now.subtract(const Duration(days: 3)),
     fileName: 'licenca_sanitaria_2026.jpg',
   ),
-  EstablishmentDocument(
-    id: 'doc-contrato-social',
-    title: 'CNPJ / Contrato social',
-    description: 'Comprovante de inscrição e ato constitutivo da empresa.',
-    status: EstablishmentDocumentStatus.rejected,
-    submittedAt: now.subtract(const Duration(days: 12)),
-    fileName: 'contrato_social_ilegivel.jpg',
-    mimeType: 'image/jpeg',
-    reviewerNote: 'Documento ilegível — envie uma foto com melhor iluminação.',
-  ),
   const EstablishmentDocument(
-    id: 'doc-resp-tecnica',
-    title: 'Responsabilidade técnica',
-    description: 'Registro (CRM/CRF) do responsável técnico pela clínica.',
-  ),
-  EstablishmentDocument(
-    id: 'doc-cnes',
-    title: 'Certificado CNES',
-    description:
-        'Comprovante de cadastro no Cadastro Nacional de Estabelecimentos de Saúde.',
+    id: 'billing_email',
+    title: 'Email Administrativo',
+    description: 'Email administrativo do estabelecimento.',
+    kind: EstablishmentDocumentKind.billingEmail,
+    billingEmail: 'financeiro@clinica.exemplo',
     status: EstablishmentDocumentStatus.approved,
-    submittedAt: now.subtract(const Duration(days: 400)),
-    fileName: 'certificado_cnes.pdf',
   ),
 ];
 

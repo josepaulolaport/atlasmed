@@ -1,6 +1,6 @@
 # Spec 0005: Mobile Establishment Detail (Estabelecimento / Clínica)
 
-**Status:** Approved for implementation — redesign addendum (v23)  
+**Status:** Approved for implementation — redesign addendum (v27)  
 **Last Updated:** 2026-07-22  
 **Domains:** `apps/mobile`, `apps/api` (additive contract changes)  
 **Related:** [Spec 0002 — Facility and Professional CRM](../0002-clinic-doctor-crm/requirements.md), [Spec 0003 — Territory Management](../0003-territory-management/requirements.md), [Spec 0006 — Shared Territory Coverage & Clinic-Level Ownership](../0006-shared-territory-clinic-ownership/requirements.md) (deferred; may affect `regionZoneLabel` / ownership semantics later), [api-mobile integration guide](../../ai/integration-tasks/api-mobile.md)
@@ -56,6 +56,8 @@
 > **v25 note:** `facility_notes` (GET/POST) and `facility_photos` (list/upload/download; first upload sets `facilities.image_url` when null) are live. Mobile header avatar + `ClinicPhotoViewerScreen` load gallery via `GET /facilities/:id/photos` with bearer-auth `Image.network`. Associate doctors/admins + `territoryName`→região already wired. Field-suggestion/PATCH pencils remain deferred.
 >
 > **v26 note:** Avatar tap opens photo actions (ver fotos / tirar foto / escolher da galeria) and uploads via `POST /facilities/:id/photos` multipart.
+>
+> **v27 note — Facility Cadastro (PF/PJ docs + billing email):** Reuses `conformity_requirements` / `conformity_records` (no parallel `facility_documents` table). Schema adds `facilities.billing_email`, `conformity_requirements.applies_to_tax_id_type`, and file/reviewer columns on records. Seeded catalog: **PF** → Identidade, CRM, Comprovante de Endereço; **PJ** → Carta de CNPJ, Licença Sanitária; plus required **Email Administrativo** (`billingEmail`). APIs: `GET /facilities/:id/cadastro`, `PUT …/billing-email`, multipart `POST …/cadastro/requirements/:requirementId/submit`, `GET /facilities/cadastro/files/*`, ops `POST …/cadastro/records/:recordId/approve|reject`, `GET /cadastro/submissions`. When all applicable file docs are `VALIDATED` and billing email is set → `conformityStatus=COMPLETE` and `commercialStatus=ACTIVE`. Facility DTO exposes `commercialStatus`, `conformityStatus`, `billingEmail`. Mobile Cadastro + ops Cadastros queue are live; header Sinais prefer live commercial/conformity (purchase still mocked).
 
 ## User Story
 

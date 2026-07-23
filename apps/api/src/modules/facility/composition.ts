@@ -5,6 +5,7 @@ import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/
 import { DrizzleFacilityNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-note.repository";
 import { DrizzleFacilityPhotoRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-photo.repository";
 import { DrizzleConformityRepository } from "./infrastructure/repositories/drizzle/drizzle-conformity.repository";
+import { DrizzleCadastroSubmissionRepository } from "./infrastructure/repositories/drizzle/drizzle-cadastro-submission.repository";
 import { DrizzleVisitRepository } from "./infrastructure/repositories/drizzle/drizzle-visit.repository";
 import { AvatarStorageAdapter } from "../access/infrastructure/avatar-storage/avatar-storage.adapter";
 import { DrizzleTerritoryScopePort } from "./infrastructure/scope/drizzle-territory-scope.port";
@@ -34,6 +35,31 @@ import {
   ListConformityRequirementsUseCase,
   ListFacilityConformityRecordsUseCase,
 } from "./application/use-cases/conformity.use-cases";
+import {
+  ApproveFacilityCadastroRecordUseCase,
+  DownloadFacilityCadastroFileUseCase,
+  GetFacilityCadastroChecklistUseCase,
+  ListCadastroSubmissionsUseCase,
+  RejectFacilityCadastroRecordUseCase,
+  SubmitFacilityCadastroDocumentUseCase,
+  UpdateFacilityBillingEmailUseCase,
+} from "./application/use-cases/facility-cadastro.use-cases";
+import {
+  CompleteCadastroFileUploadUseCase,
+  CreateCadastroSubmissionDocumentUseCase,
+  DeleteDraftCadastroSubmissionUseCase,
+  EnsureDraftCadastroSubmissionUseCase,
+  GetCadastroFileSignedUrlUseCase,
+  InitiateCadastroFileUploadUseCase,
+  ListCadastroPackageSubmissionsUseCase,
+  ListCadastroRequirementSubmissionsUseCase,
+  ReorderCadastroDocumentFilesUseCase,
+  ReviewCadastroDocumentUseCase,
+  SignCadastroUploadPartsUseCase,
+  SubmitCadastroRequirementUseCase,
+  SubmitCadastroSubmissionUseCase,
+} from "./application/use-cases/cadastro-submission.use-cases";
+import { FacilityCadastroCompletionService } from "./application/services/facility-cadastro-completion.service";
 import {
   ListFacilityVisitsUseCase,
   CreateFacilityVisitUseCase,
@@ -70,10 +96,32 @@ export const facilityRepositories = {
   note: new DrizzleFacilityNoteRepository(),
   photo: new DrizzleFacilityPhotoRepository(),
   conformity: new DrizzleConformityRepository(),
+  cadastroSubmission: new DrizzleCadastroSubmissionRepository(),
   visit: new DrizzleVisitRepository(),
 };
 
 const facilityPhotoStorage = new AvatarStorageAdapter();
+
+const facilityCadastroCompletionService = new FacilityCadastroCompletionService({
+  facilityRepository: facilityRepositories.facility,
+  conformityRepository: facilityRepositories.conformity,
+  cadastroRepository: facilityRepositories.cadastroSubmission,
+});
+
+const facilityCadastroDeps = {
+  facilityRepository: facilityRepositories.facility,
+  conformityRepository: facilityRepositories.conformity,
+  storage: facilityPhotoStorage,
+  completionService: facilityCadastroCompletionService,
+  cadastroRepository: facilityRepositories.cadastroSubmission,
+};
+
+const cadastroSubmissionDeps = {
+  facilityRepository: facilityRepositories.facility,
+  conformityRepository: facilityRepositories.conformity,
+  cadastroRepository: facilityRepositories.cadastroSubmission,
+  completionService: facilityCadastroCompletionService,
+};
 
 export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
   facilityRepositories.facility
@@ -198,6 +246,53 @@ export const facilityUseCases = {
     new CreateFacilityConformityRecordUseCase({
       conformityRepository: facilityRepositories.conformity,
     }),
+  getFacilityCadastroChecklist: () =>
+    new GetFacilityCadastroChecklistUseCase(facilityCadastroDeps),
+  updateFacilityBillingEmail: () =>
+    new UpdateFacilityBillingEmailUseCase(facilityCadastroDeps),
+  submitFacilityCadastroDocument: () =>
+    new SubmitFacilityCadastroDocumentUseCase(facilityCadastroDeps),
+  downloadFacilityCadastroFile: () =>
+    new DownloadFacilityCadastroFileUseCase({
+      conformityRepository: facilityRepositories.conformity,
+      storage: facilityPhotoStorage,
+    }),
+  approveFacilityCadastroRecord: () =>
+    new ApproveFacilityCadastroRecordUseCase(facilityCadastroDeps),
+  rejectFacilityCadastroRecord: () =>
+    new RejectFacilityCadastroRecordUseCase(facilityCadastroDeps),
+  listCadastroSubmissions: () =>
+    new ListCadastroSubmissionsUseCase({
+      conformityRepository: facilityRepositories.conformity,
+      facilityRepository: facilityRepositories.facility,
+      cadastroRepository: facilityRepositories.cadastroSubmission,
+    }),
+  ensureDraftCadastroSubmission: () =>
+    new EnsureDraftCadastroSubmissionUseCase(cadastroSubmissionDeps),
+  createCadastroSubmissionDocument: () =>
+    new CreateCadastroSubmissionDocumentUseCase(cadastroSubmissionDeps),
+  initiateCadastroFileUpload: () =>
+    new InitiateCadastroFileUploadUseCase(cadastroSubmissionDeps),
+  signCadastroUploadParts: () =>
+    new SignCadastroUploadPartsUseCase(cadastroSubmissionDeps),
+  completeCadastroFileUpload: () =>
+    new CompleteCadastroFileUploadUseCase(cadastroSubmissionDeps),
+  reorderCadastroDocumentFiles: () =>
+    new ReorderCadastroDocumentFilesUseCase(cadastroSubmissionDeps),
+  getCadastroFileSignedUrl: () =>
+    new GetCadastroFileSignedUrlUseCase(cadastroSubmissionDeps),
+  submitCadastroSubmission: () =>
+    new SubmitCadastroSubmissionUseCase(cadastroSubmissionDeps),
+  submitCadastroRequirement: () =>
+    new SubmitCadastroRequirementUseCase(cadastroSubmissionDeps),
+  listCadastroRequirementSubmissions: () =>
+    new ListCadastroRequirementSubmissionsUseCase(cadastroSubmissionDeps),
+  deleteDraftCadastroSubmission: () =>
+    new DeleteDraftCadastroSubmissionUseCase(cadastroSubmissionDeps),
+  reviewCadastroDocument: () =>
+    new ReviewCadastroDocumentUseCase(cadastroSubmissionDeps),
+  listCadastroPackageSubmissions: () =>
+    new ListCadastroPackageSubmissionsUseCase(cadastroSubmissionDeps),
   listFacilityVisits: () =>
     new ListFacilityVisitsUseCase({
       visitRepository: facilityRepositories.visit,

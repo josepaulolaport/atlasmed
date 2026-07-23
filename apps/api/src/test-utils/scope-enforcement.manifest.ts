@@ -48,6 +48,14 @@ export const SCOPE_ENFORCEMENT_MANIFEST: Record<string, ScopeEnforcementEntry> =
     kind: "assert-id",
     patterns: ["assertResourceInScope"],
   },
+  "modules/facility/application/use-cases/facility-cadastro.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
+  "modules/facility/application/use-cases/cadastro-submission.use-cases.ts": {
+    kind: "assert-id",
+    patterns: ["assertResourceInScope"],
+  },
   "modules/facility/application/use-cases/facility-professional.use-cases.ts": {
     kind: "assert-id",
     patterns: ["assertResourceInScope"],

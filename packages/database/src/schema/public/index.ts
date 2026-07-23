@@ -3,6 +3,7 @@ export * from "./sectors";
 export * from "./users";
 export * from "./territories";
 export * from "./facilities";
+export * from "./cadastro-submissions";
 export * from "./catalog";
 export * from "./orders";
 export * from "./visits";

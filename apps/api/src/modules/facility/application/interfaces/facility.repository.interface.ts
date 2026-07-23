@@ -35,9 +35,11 @@ export interface FacilityRecord {
   whatsapp: string | null;
   email: string | null;
   website: string | null;
+  /** Email for boletos / NFs (Cadastro required field). */
+  billingEmail: string | null;
   responsibleName: string | null;
   openingHours: string | null;
-  taxIdType: "PJ" | "PF" | null;
+  taxIdType: "PJ" | "PF";
   cnpj: string | null;
   cpf: string | null;
   lat: number | null;
@@ -146,6 +148,10 @@ export interface FacilityRepository {
       lat?: number | null;
       lng?: number | null;
       imageUrl?: string | null;
+      billingEmail?: string | null;
+      taxIdType?: "PJ" | "PF";
+      conformityStatus?: FacilityConformityStatus;
+      commercialStatus?: FacilityCommercialStatus | null;
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord>;
