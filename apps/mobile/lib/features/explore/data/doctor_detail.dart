@@ -3,10 +3,14 @@
 class DoctorDetail {
   final String id;
   final String name;
+  final String firstName;
+  final String lastName;
   final String initials;
   final double hue;
   final String specialty;
   final String crm;
+  final String? crmNumber;
+  final String? crmState;
   final String role;
   final double distanceKm;
 
@@ -52,10 +56,14 @@ class DoctorDetail {
   const DoctorDetail({
     required this.id,
     required this.name,
+    required this.firstName,
+    required this.lastName,
     required this.initials,
     required this.hue,
     required this.specialty,
     required this.crm,
+    this.crmNumber,
+    this.crmState,
     required this.role,
     this.distanceKm = 0,
     this.phone,

@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/editable_field_row.dart';
 
 // ======================================================================
 // DoctorDetailScreen — full doctor profile with multiple sections
@@ -131,24 +132,10 @@ class _DoctorDetailContent extends ConsumerWidget {
             _DoctorHeader(detail: detail),
             _DoctorQuickActions(detail: detail),
             const SizedBox(height: 16),
-            if (detail.signals.isNotEmpty) ...[
-              _DoctorSignals(signals: detail.signals),
-              const SizedBox(height: 16),
-            ],
-            _DoctorPersonalCard(detail: detail),
+            _DoctorProfileFields(detail: detail, doctorId: doctorId),
             const SizedBox(height: 16),
-            if (detail.prescribing.isNotEmpty) ...[
-              _DoctorPrescribing(items: detail.prescribing),
-              const SizedBox(height: 16),
-            ],
-            if (detail.clinics.isNotEmpty) ...[
-              _DoctorClinics(clinics: detail.clinics),
-              const SizedBox(height: 16),
-            ],
-            if (detail.visits.isNotEmpty) ...[
-              _DoctorVisits(visits: detail.visits),
-              const SizedBox(height: 16),
-            ],
+            _DoctorClinics(clinics: detail.clinics),
+            const SizedBox(height: 16),
             _DoctorNotes(
               notes: notesAsync.valueOrNull ?? const [],
               isLoading: notesAsync.isLoading,
@@ -666,123 +653,42 @@ class _QuickAction extends StatelessWidget {
 }
 
 // ======================================================================
-// 3. DoctorSignals — info/warning/success cards
+// 4. DoctorProfileFields — editable profile via direct PATCH
 // ======================================================================
 
-class _DoctorSignals extends StatelessWidget {
-  final List<DoctorSignal> signals;
-  const _DoctorSignals({required this.signals});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: signals
-            .map(
-              (s) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: _SignalCard(signal: s),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _SignalCard extends StatelessWidget {
-  final DoctorSignal signal;
-  const _SignalCard({required this.signal});
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color color, Color bg, IconData icon) = switch (signal.kind) {
-      'good' => (
-        const Color(0xFF16a373),
-        const Color(0xFFe6f7f0),
-        Icons.trending_up_rounded,
-      ),
-      'warn' => (
-        const Color(0xFFc6861b),
-        const Color(0xFFfef3d5),
-        Icons.info_outline_rounded,
-      ),
-      _ => (
-        const Color(0xFF1e40af),
-        const Color(0xFFeef4ff),
-        Icons.lightbulb_outline_rounded,
-      ),
-    };
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  signal.title,
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                    height: 1.3,
-                  ),
-                ),
-                if (signal.body.isNotEmpty) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    signal.body,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF4b5563),
-                      height: 1.35,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ======================================================================
-// 4. DoctorPersonalCard — personal info + contacts
-// ======================================================================
-
-class _DoctorPersonalCard extends StatelessWidget {
+class _DoctorProfileFields extends ConsumerWidget {
   final DoctorDetail detail;
-  const _DoctorPersonalCard({required this.detail});
+  final String doctorId;
+  const _DoctorProfileFields({required this.detail, required this.doctorId});
+
+  void _edit(
+    BuildContext context,
+    WidgetRef ref, {
+    required String label,
+    required String? value,
+    required Future<Map<String, dynamic>> Function(String raw) buildPatch,
+    TextInputType keyboardType = TextInputType.text,
+    int? maxLength,
+    String? hint,
+  }) {
+    _showDirectEditSheet(
+      context,
+      ref: ref,
+      professionalId: doctorId,
+      label: label,
+      initialValue: value,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      hint: hint,
+      buildPatch: buildPatch,
+    );
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final rows = [
-      _InfoRow(icon: '🎓', label: 'Formação', value: detail.faculty),
-      _InfoRow(icon: '🏥', label: 'Residência', value: detail.residency),
-      _InfoRow(icon: '🎂', label: 'Aniversário', value: detail.birthday),
-      _InfoRow(icon: '⚽', label: 'Time', value: detail.team),
-      _InfoRow(icon: '♡', label: 'Interesses', value: detail.interests),
-      _InfoRow(icon: '🗣', label: 'Idiomas', value: detail.language),
-    ];
-
+  Widget build(BuildContext context, WidgetRef ref) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(color: const Color(0xFFedeff3)),
@@ -798,69 +704,222 @@ class _DoctorPersonalCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section header
-            Row(
-              children: [
-                const Text(
-                  'PESSOAL',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: Color(0xFF8a94a6),
-                  ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+              child: Text(
+                'DADOS DO PROFISSIONAL',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: Color(0xFF8a94a6),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(height: 1, color: const Color(0xFFeef0f3)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            // Personal info grid
-            Wrap(
-              spacing: 12,
-              runSpacing: 10,
-              children: rows
-                  .where((r) => r.value != null)
-                  .map(
-                    (r) => SizedBox(
-                      width: (MediaQuery.of(context).size.width - 60) / 2,
-                      child: r,
-                    ),
-                  )
-                  .toList(),
-            ),
-            if (detail.phone != null ||
-                detail.email != null ||
-                detail.whatsapp != null) ...[
-              Container(
-                height: 1,
-                color: const Color(0xFFeef0f3),
-                margin: const EdgeInsets.symmetric(vertical: 14),
               ),
-              // Contacts
-              if (detail.phone != null)
-                _ContactRow(
-                  label: 'TELEFONE',
-                  value: detail.phone!,
-                  mono: true,
-                ),
-              if (detail.whatsapp != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _ContactRow(
-                    label: 'WHATSAPP',
-                    value: detail.whatsapp!,
-                    mono: true,
-                  ),
-                ),
-              if (detail.email != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: _ContactRow(label: 'E-MAIL', value: detail.email!),
-                ),
-            ],
+            ),
+            EditableFieldRow(
+              label: 'Nome',
+              value: detail.name,
+              icon: Icons.person_outline_rounded,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Nome',
+                value: detail.name,
+                buildPatch: (raw) async {
+                  final trimmed = raw.trim();
+                  if (trimmed.isEmpty) {
+                    throw const FormatException('Informe o nome.');
+                  }
+                  final parts = trimmed
+                      .split(RegExp(r'\s+'))
+                      .where((p) => p.isNotEmpty)
+                      .toList();
+                  final first = parts.first;
+                  final last = parts.length > 1
+                      ? parts.sublist(1).join(' ')
+                      : detail.lastName.trim().isNotEmpty
+                      ? detail.lastName
+                      : first;
+                  return {
+                    'firstName': first,
+                    'lastName': last,
+                    'fullName': trimmed,
+                  };
+                },
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Especialidade',
+              value: detail.specialty.isEmpty ? null : detail.specialty,
+              icon: Icons.medical_services_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Especialidade',
+                value: detail.specialty,
+                buildPatch: (raw) async => {
+                  'primarySpecialtyLabel': _nullableTrim(raw),
+                },
+              ),
+            ),
+            EditableFieldRow(
+              label: 'CRM',
+              value: detail.crmNumber,
+              icon: Icons.badge_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Número do CRM',
+                value: detail.crmNumber,
+                keyboardType: TextInputType.number,
+                maxLength: 30,
+                buildPatch: (raw) async => {
+                  'crmNumber': _nullableTrim(raw),
+                },
+              ),
+            ),
+            EditableFieldRow(
+              label: 'UF do CRM',
+              value: detail.crmState,
+              icon: Icons.map_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'UF do CRM',
+                value: detail.crmState,
+                maxLength: 2,
+                hint: 'Ex: SP',
+                buildPatch: (raw) async {
+                  final trimmed = raw.trim().toUpperCase();
+                  if (trimmed.isEmpty) return {'crmState': null};
+                  if (trimmed.length != 2) {
+                    throw const FormatException('UF deve ter 2 letras.');
+                  }
+                  return {'crmState': trimmed};
+                },
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Formação',
+              value: detail.faculty,
+              icon: Icons.school_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Formação',
+                value: detail.faculty,
+                buildPatch: (raw) async => {'faculty': _nullableTrim(raw)},
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Residência',
+              value: detail.residency,
+              icon: Icons.local_hospital_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Residência',
+                value: detail.residency,
+                buildPatch: (raw) async => {'residency': _nullableTrim(raw)},
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Aniversário',
+              value: detail.birthday,
+              icon: Icons.cake_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Aniversário',
+                value: detail.birthday,
+                keyboardType: TextInputType.datetime,
+                hint: 'dd/mm/aaaa',
+                buildPatch: (raw) async {
+                  final iso = _parseBirthDateToIso(raw);
+                  return {'birthDate': iso};
+                },
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Time',
+              value: detail.team,
+              icon: Icons.sports_soccer_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Time',
+                value: detail.team,
+                buildPatch: (raw) async => {'favoriteTeam': _nullableTrim(raw)},
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Interesses',
+              value: detail.interests,
+              icon: Icons.favorite_outline_rounded,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Interesses',
+                value: detail.interests,
+                buildPatch: (raw) async => {'hobbies': _nullableTrim(raw)},
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Idiomas',
+              value: detail.language,
+              icon: Icons.translate_rounded,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Idiomas',
+                value: detail.language,
+                buildPatch: (raw) async => {'languages': _nullableTrim(raw)},
+              ),
+            ),
+            EditableFieldRow(
+              label: 'Telefone',
+              value: detail.phone,
+              icon: Icons.phone_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'Telefone',
+                value: detail.phone,
+                keyboardType: TextInputType.phone,
+                maxLength: 30,
+                buildPatch: (raw) async => {'mobilePhone': _nullableTrim(raw)},
+              ),
+            ),
+            EditableFieldRow(
+              label: 'WhatsApp',
+              value: detail.whatsapp,
+              icon: Icons.chat_outlined,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'WhatsApp',
+                value: detail.whatsapp,
+                keyboardType: TextInputType.phone,
+                maxLength: 30,
+                buildPatch: (raw) async => {
+                  'whatsappNumber': _nullableTrim(raw),
+                },
+              ),
+            ),
+            EditableFieldRow(
+              label: 'E-mail',
+              value: detail.email,
+              icon: Icons.email_outlined,
+              showDivider: false,
+              onEdit: () => _edit(
+                context,
+                ref,
+                label: 'E-mail',
+                value: detail.email,
+                keyboardType: TextInputType.emailAddress,
+                buildPatch: (raw) async => {'email': _nullableTrim(raw)},
+              ),
+            ),
           ],
         ),
       ),
@@ -868,283 +927,185 @@ class _DoctorPersonalCard extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final String icon;
+String? _nullableTrim(String raw) {
+  final trimmed = raw.trim();
+  return trimmed.isEmpty ? null : trimmed;
+}
+
+/// Accepts `dd/mm/yyyy` or `yyyy-mm-dd`. Empty clears.
+String? _parseBirthDateToIso(String raw) {
+  final trimmed = raw.trim();
+  if (trimmed.isEmpty) return null;
+  final isoMatch = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(trimmed);
+  if (isoMatch != null) return trimmed;
+  final brMatch = RegExp(r'^(\d{2})/(\d{2})/(\d{4})$').firstMatch(trimmed);
+  if (brMatch != null) {
+    return '${brMatch.group(3)}-${brMatch.group(2)}-${brMatch.group(1)}';
+  }
+  throw const FormatException('Use o formato dd/mm/aaaa.');
+}
+
+Future<void> _showDirectEditSheet(
+  BuildContext context, {
+  required WidgetRef ref,
+  required String professionalId,
+  required String label,
+  required String? initialValue,
+  required Future<Map<String, dynamic>> Function(String raw) buildPatch,
+  TextInputType keyboardType = TextInputType.text,
+  int? maxLength,
+  String? hint,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useRootNavigator: true,
+    builder: (_) => _DirectEditProfessionalSheet(
+      professionalId: professionalId,
+      label: label,
+      initialValue: initialValue,
+      buildPatch: buildPatch,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      hint: hint,
+      ref: ref,
+    ),
+  );
+}
+
+class _DirectEditProfessionalSheet extends StatefulWidget {
+  const _DirectEditProfessionalSheet({
+    required this.professionalId,
+    required this.label,
+    required this.initialValue,
+    required this.buildPatch,
+    required this.ref,
+    this.keyboardType = TextInputType.text,
+    this.maxLength,
+    this.hint,
+  });
+
+  final String professionalId;
   final String label;
-  final String? value;
-  const _InfoRow({required this.icon, required this.label, this.value});
+  final String? initialValue;
+  final Future<Map<String, dynamic>> Function(String raw) buildPatch;
+  final WidgetRef ref;
+  final TextInputType keyboardType;
+  final int? maxLength;
+  final String? hint;
+
+  @override
+  State<_DirectEditProfessionalSheet> createState() =>
+      _DirectEditProfessionalSheetState();
+}
+
+class _DirectEditProfessionalSheetState
+    extends State<_DirectEditProfessionalSheet> {
+  late final TextEditingController _controller;
+  var _isSaving = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      final patch = await widget.buildPatch(_controller.text);
+      await widget.ref
+          .read(professionalsRepositoryProvider(widget.professionalId))
+          .updateProfessional(patch);
+      widget.ref.invalidate(doctorDetailProvider(widget.professionalId));
+      if (mounted) Navigator.pop(context);
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _errorMessage = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _errorMessage = 'Não foi possível salvar. Tente novamente.';
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 14, height: 1)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Editar ${widget.label.toLowerCase()}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: widget.keyboardType,
+            maxLength: widget.maxLength,
+            textCapitalization: widget.keyboardType == TextInputType.emailAddress
+                ? TextCapitalization.none
+                : TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              hintText: widget.hint,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Color(0xFFb84545), fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
-                  color: Color(0xFF8a94a6),
-                ),
+              TextButton(
+                onPressed: _isSaving ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
               ),
-              const SizedBox(height: 2),
-              Text(
-                value ?? '',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF0f1729),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _isSaving ? null : _save,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Salvar'),
               ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool mono;
-  const _ContactRow({
-    required this.label,
-    required this.value,
-    this.mono = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 68,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: Color(0xFF8a94a6),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 12.5,
-              color: const Color(0xFF0f1729),
-              fontFamily: mono ? 'monospace' : null,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ======================================================================
-// 5. DoctorPrescribing — product trends with share bars
-// ======================================================================
-
-class _DoctorPrescribing extends StatelessWidget {
-  final List<DoctorPrescribingItem> items;
-  const _DoctorPrescribing({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(
-          title: 'PRESCRIÇÃO · 6 MESES',
-          subtitle: 'volume atribuído a esta médica',
-        ),
-        const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Column(
-              children: List.generate(items.length, (i) {
-                final item = items[i];
-                final max = item.trend.reduce((a, b) => a > b ? a : b);
-                final positive = item.growth >= 0;
-                return Column(
-                  children: [
-                    if (i > 0)
-                      Container(height: 1, color: const Color(0xFFeef0f3)),
-                    Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header row
-                          Row(
-                            children: [
-                              Text(
-                                item.product,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF0f1729),
-                                  letterSpacing: -0.1,
-                                ),
-                              ),
-                              if (item.isNew) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 1,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFe6f7f0),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: const Text(
-                                    'novo',
-                                    style: TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.3,
-                                      color: Color(0xFF117a55),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                              const Spacer(),
-                              Text(
-                                item.volume,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF6b7280),
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${positive ? '▲' : '▼'} ${item.growth.toStringAsFixed(0)}%',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: positive
-                                      ? const Color(0xFF117a55)
-                                      : const Color(0xFFb84545),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          // Trend bars + share
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              // Trend mini-bars
-                              SizedBox(
-                                height: 28,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: item.trend.map((v) {
-                                    final pct = max > 0 ? v / max : 0.0;
-                                    return Container(
-                                      width: 5,
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 1.5,
-                                      ),
-                                      height: pct * 28,
-                                      decoration: BoxDecoration(
-                                        color: v == item.trend.last
-                                            ? const Color(0xFF1e40af)
-                                            : const Color(0xFFc7d2fe),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Share bar
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        const Text(
-                                          'Share da médica',
-                                          style: TextStyle(
-                                            fontSize: 10.5,
-                                            color: Color(0xFF6b7280),
-                                          ),
-                                        ),
-                                        Text(
-                                          '${item.share}%',
-                                          style: const TextStyle(
-                                            fontSize: 10.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF0f1729),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Container(
-                                      height: 5,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFeef0f3),
-                                        borderRadius: BorderRadius.circular(3),
-                                      ),
-                                      child: FractionallySizedBox(
-                                        widthFactor: item.share / 100,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF1e40af),
-                                            borderRadius: BorderRadius.circular(
-                                              3,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              }),
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1163,357 +1124,136 @@ class _DoctorClinics extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionHeader(
-          title: 'CLÍNICAS · ${clinics.length}',
-          subtitle: 'onde atende',
+          title: clinics.isEmpty ? 'CLÍNICAS' : 'CLÍNICAS · ${clinics.length}',
+          subtitle: 'somente leitura — associe na página da clínica',
         ),
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Column(
-              children: List.generate(clinics.length, (i) {
-                final c = clinics[i];
-                return InkWell(
-                  onTap: () {
-                    context.push('/workspace/clinic/${c.id}');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      border: i > 0
-                          ? const Border(
-                              top: BorderSide(color: Color(0xFFeef0f3)),
-                            )
-                          : null,
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          decoration: BoxDecoration(
-                            color: c.isMain
-                                ? const Color(0xFFeef2ff)
-                                : const Color(0xFFf3f4f6),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.local_hospital_rounded,
-                            size: 16,
-                            color: c.isMain
-                                ? const Color(0xFF1e40af)
-                                : const Color(0xFF6b7280),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      c.name,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0f1729),
-                                        letterSpacing: -0.1,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (c.isMain) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 6,
-                                        vertical: 1,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF1e40af,
-                                        ).withValues(alpha: 0.10),
-                                        borderRadius: BorderRadius.circular(
-                                          999,
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'principal',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.3,
-                                          color: Color(0xFF1e40af),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                '${c.role} · ${c.days}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF6b7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(
-                          Icons.chevron_right_rounded,
-                          size: 18,
-                          color: const Color(0xFF8a94a6).withValues(alpha: 0.7),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ======================================================================
-// 7. DoctorVisits — visit history
-// ======================================================================
-
-class _DoctorVisits extends StatelessWidget {
-  final List<DoctorVisit> visits;
-  const _DoctorVisits({required this.visits});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(title: 'HISTÓRICO DE VISITAS'),
-        const SizedBox(height: 6),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: const Color(0xFFedeff3)),
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0f1729).withValues(alpha: 0.03),
-                  blurRadius: 2,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-            ),
-            child: Column(
-              children: List.generate(visits.length, (i) {
-                final v = visits[i];
-                final outcomeColor = switch (v.outcome) {
-                  'positivo' => const Color(0xFF16a373),
-                  'misto' => const Color(0xFFc6861b),
-                  'neutro' => const Color(0xFF6b7280),
-                  _ => const Color(0xFF6b7280),
-                };
-                return Padding(
-                  padding: EdgeInsets.only(top: i > 0 ? 14 : 0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Date column
-                      SizedBox(
-                        width: 52,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              v.date.split(' · ').first,
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF0f1729),
-                              ),
-                            ),
-                            Text(
-                              v.time,
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Color(0xFF9ca3af),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Outcome indicator
-                      Container(
-                        width: 8,
-                        height: 8,
-                        margin: const EdgeInsets.only(top: 3),
-                        decoration: BoxDecoration(
-                          color: outcomeColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      // Content
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 1,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFf3f4f6),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    v.kind,
-                                    style: const TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF6b7280),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    v.location,
-                                    style: const TextStyle(
-                                      fontSize: 10.5,
-                                      color: Color(0xFF9ca3af),
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (v.note.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                v.note,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: Color(0xFF4b5563),
-                                  height: 1.35,
-                                ),
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                            if (v.duration.isNotEmpty) ...[
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  const Icon(
-                                    Icons.access_time_rounded,
-                                    size: 11,
-                                    color: Color(0xFF9ca3af),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    v.duration,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Color(0xFF9ca3af),
-                                    ),
-                                  ),
-                                  if (v.orderValue != null) ...[
-                                    const SizedBox(width: 8),
-                                    const Icon(
-                                      Icons.attach_money_rounded,
-                                      size: 11,
-                                      color: Color(0xFF16a373),
-                                    ),
-                                    Text(
-                                      v.orderValue!,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF16a373),
-                                      ),
-                                    ),
-                                  ],
-                                  // Consultant
-                                  const Spacer(),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Container(
-                                        width: 16,
-                                        height: 16,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: HSLColor.fromAHSL(
-                                            1,
-                                            v.consultantHue,
-                                            0.40,
-                                            0.72,
-                                          ).toColor(),
-                                        ),
-                                        child: Center(
-                                          child: Text(
-                                            v.consultantInitials,
-                                            style: TextStyle(
-                                              fontSize: 7,
-                                              fontWeight: FontWeight.w700,
-                                              color: HSLColor.fromAHSL(
-                                                1,
-                                                v.consultantHue,
-                                                0.60,
-                                                0.22,
-                                              ).toColor(),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        v.consultant,
-                                        style: const TextStyle(
-                                          fontSize: 9.5,
-                                          color: Color(0xFF6b7280),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ],
-                        ),
+          child: clinics.isEmpty
+              ? const _EmptySectionCard(
+                  message: 'Nenhuma clínica associada ainda.',
+                )
+              : Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFedeff3)),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+                        blurRadius: 2,
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
-                );
-              }),
-            ),
-          ),
+                  child: Column(
+                    children: List.generate(clinics.length, (i) {
+                      final c = clinics[i];
+                      return InkWell(
+                        onTap: () {
+                          context.push('/workspace/clinic/${c.id}');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            border: i > 0
+                                ? const Border(
+                                    top: BorderSide(color: Color(0xFFeef0f3)),
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: c.isMain
+                                      ? const Color(0xFFeef2ff)
+                                      : const Color(0xFFf3f4f6),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.local_hospital_rounded,
+                                  size: 16,
+                                  color: c.isMain
+                                      ? const Color(0xFF1e40af)
+                                      : const Color(0xFF6b7280),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            c.name,
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF0f1729),
+                                              letterSpacing: -0.1,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (c.isMain) ...[
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 6,
+                                              vertical: 1,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF1e40af,
+                                              ).withValues(alpha: 0.10),
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                            ),
+                                            child: const Text(
+                                              'principal',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.3,
+                                                color: Color(0xFF1e40af),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      '${c.role} · ${c.days}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Color(0xFF6b7280),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 18,
+                                color: const Color(
+                                  0xFF8a94a6,
+                                ).withValues(alpha: 0.7),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
         ),
       ],
     );
@@ -1665,6 +1405,39 @@ class _DoctorNotes extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ======================================================================
+// Shared empty section card
+// ======================================================================
+
+class _EmptySectionCard extends StatelessWidget {
+  final String message;
+  const _EmptySectionCard({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFedeff3)),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0f1729).withValues(alpha: 0.03),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Text(
+        message,
+        style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+      ),
     );
   }
 }

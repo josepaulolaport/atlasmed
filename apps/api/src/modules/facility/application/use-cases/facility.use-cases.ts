@@ -153,6 +153,25 @@ export class CreateFacilityUseCase {
 
   async execute(input: {
     name: string;
+    legalName?: string;
+    tradeName?: string;
+    taxIdType?: "PJ" | "PF";
+    cnpj?: string;
+    cpf?: string;
+    streetAddress?: string;
+    streetNumber?: string;
+    addressComplement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    stateCode?: string;
+    postalCode?: string;
+    country?: string;
+    phoneNumber?: string;
+    whatsappNumber?: string;
+    email?: string;
+    /** @deprecated Prefer streetAddress. */
+    address?: string;
     lat?: number;
     lng?: number;
   }) {
@@ -160,11 +179,44 @@ export class CreateFacilityUseCase {
       ? await this.deps.facilityGeocodingService.resolveCoordinates({
           lat: input.lat,
           lng: input.lng,
+          address: {
+            streetAddress: input.streetAddress ?? input.address,
+            streetNumber: input.streetNumber,
+            addressComplement: input.addressComplement,
+            neighborhood: input.neighborhood,
+            city: input.city,
+            state: input.state ?? input.stateCode,
+            postalCode: input.postalCode,
+            country: input.country,
+          },
         })
       : { lat: input.lat ?? null, lng: input.lng ?? null, geocoded: false };
 
+    const emptyToNull = (value?: string) => {
+      if (value === undefined) return undefined;
+      const trimmed = value.trim();
+      return trimmed === "" ? null : trimmed;
+    };
+
     const clinic = await this.deps.facilityRepository.create({
       name: input.name,
+      legalName: emptyToNull(input.legalName) ?? null,
+      tradeName: emptyToNull(input.tradeName) ?? null,
+      taxIdType: input.taxIdType,
+      cnpj: emptyToNull(input.cnpj) ?? null,
+      cpf: emptyToNull(input.cpf) ?? null,
+      streetAddress:
+        emptyToNull(input.streetAddress) ?? emptyToNull(input.address) ?? null,
+      streetNumber: emptyToNull(input.streetNumber) ?? null,
+      addressComplement: emptyToNull(input.addressComplement) ?? null,
+      neighborhood: emptyToNull(input.neighborhood) ?? null,
+      city: emptyToNull(input.city) ?? null,
+      state: emptyToNull(input.state) ?? emptyToNull(input.stateCode) ?? null,
+      postalCode: emptyToNull(input.postalCode) ?? null,
+      country: emptyToNull(input.country) ?? "BR",
+      phoneNumber: emptyToNull(input.phoneNumber) ?? null,
+      whatsappNumber: emptyToNull(input.whatsappNumber) ?? null,
+      email: emptyToNull(input.email) ?? null,
       lat: coordinates.lat,
       lng: coordinates.lng,
     });

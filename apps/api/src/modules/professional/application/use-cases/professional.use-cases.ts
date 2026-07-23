@@ -32,6 +32,7 @@ import type {
   ProfessionalRepository,
   ProfessionalUpdateInput,
 } from "../interfaces/professional.repository.interface";
+import type { UserProfessionalRelationshipRepository } from "../interfaces/user-professional-relationship.repository.interface";
 
 function formatDate(value: Date | null): string | undefined {
   if (!value) {
@@ -56,10 +57,14 @@ async function serializeProfessionalProfile(
     taxId: professional.taxId ?? undefined,
     birthDate: formatDate(professional.birthDate),
     mobilePhone: professional.mobilePhone ?? undefined,
+    whatsappNumber: professional.whatsappNumber ?? undefined,
     landlinePhone: professional.landlinePhone ?? undefined,
     email: professional.email ?? undefined,
     websiteUrl: professional.websiteUrl ?? undefined,
     imageUrl: professional.imageUrl ?? undefined,
+    faculty: professional.faculty ?? undefined,
+    residency: professional.residency ?? undefined,
+    languages: professional.languages ?? undefined,
     primarySpecialtyLabel: professional.specialty ?? undefined,
     specialty: professional.specialty ?? undefined,
     crmCouncil: professional.crmCouncil ?? undefined,
@@ -161,10 +166,14 @@ function buildCreateInput(input: {
   taxId?: string;
   birthDate?: string;
   mobilePhone?: string;
+  whatsappNumber?: string;
   landlinePhone?: string;
   email?: string;
   websiteUrl?: string;
   imageUrl?: string;
+  faculty?: string;
+  residency?: string;
+  languages?: string;
   primarySpecialtyLabel?: string;
   specialty?: string;
   crmCouncil?: string;
@@ -184,10 +193,14 @@ function buildCreateInput(input: {
     taxId: input.taxId ?? null,
     birthDate: input.birthDate ? new Date(`${input.birthDate}T00:00:00.000Z`) : null,
     mobilePhone: input.mobilePhone ?? null,
+    whatsappNumber: input.whatsappNumber ?? null,
     landlinePhone: input.landlinePhone ?? null,
     email: input.email ?? null,
     websiteUrl: input.websiteUrl ?? null,
     imageUrl: input.imageUrl ?? null,
+    faculty: input.faculty ?? null,
+    residency: input.residency ?? null,
+    languages: input.languages ?? null,
     specialty: input.primarySpecialtyLabel ?? input.specialty ?? null,
     crmCouncil: input.crmCouncil ?? null,
     crmNumber: input.crmNumber ?? null,
@@ -208,10 +221,14 @@ function buildUpdateInput(input: {
   taxId?: string | null;
   birthDate?: string | null;
   mobilePhone?: string | null;
+  whatsappNumber?: string | null;
   landlinePhone?: string | null;
   email?: string | null;
   websiteUrl?: string | null;
   imageUrl?: string | null;
+  faculty?: string | null;
+  residency?: string | null;
+  languages?: string | null;
   primarySpecialtyLabel?: string | null;
   specialty?: string | null;
   crmCouncil?: string | null;
@@ -230,10 +247,14 @@ function buildUpdateInput(input: {
     taxId: input.taxId,
     birthDate: parseBirthDate(input.birthDate),
     mobilePhone: input.mobilePhone,
+    whatsappNumber: input.whatsappNumber,
     landlinePhone: input.landlinePhone,
     email: input.email,
     websiteUrl: input.websiteUrl,
     imageUrl: input.imageUrl,
+    faculty: input.faculty,
+    residency: input.residency,
+    languages: input.languages,
     specialty:
       input.primarySpecialtyLabel !== undefined
         ? input.primarySpecialtyLabel
@@ -413,10 +434,18 @@ export class CreateProfessionalNoteUseCase {
 }
 
 export class CreateDoctorUseCase {
-  constructor(private readonly deps: Dependencies) {}
+  constructor(
+    private readonly deps: Dependencies & {
+      userProfessionalRelationshipRepository: UserProfessionalRelationshipRepository;
+    }
+  ) {}
 
   async execute(
-    input: Parameters<typeof buildCreateInput>[0] & { scope: ScopeContext }
+    input: Parameters<typeof buildCreateInput>[0] & {
+      scope: ScopeContext;
+      userId: string;
+      relationshipLevel?: number;
+    }
   ) {
     const facilityIds = input.facilityIds ?? [];
 
@@ -435,6 +464,14 @@ export class CreateDoctorUseCase {
     const professional = await this.deps.doctorRepository.create(
       buildCreateInput(input)
     );
+
+    if (input.relationshipLevel != null) {
+      await this.deps.userProfessionalRelationshipRepository.upsert({
+        userId: input.userId,
+        professionalId: professional.id,
+        relationshipLevel: input.relationshipLevel,
+      });
+    }
 
     return serializeProfessionalProfile(professional, this.deps.doctorRepository);
   }

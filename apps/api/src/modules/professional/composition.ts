@@ -30,7 +30,11 @@ export const professionalUseCases = {
   createProfessionalNote: () =>
     new CreateProfessionalNoteUseCase({ doctorRepository: professionalRepositories.professional }),
   createDoctor: () =>
-    new CreateDoctorUseCase({ doctorRepository: professionalRepositories.professional }),
+    new CreateDoctorUseCase({
+      doctorRepository: professionalRepositories.professional,
+      userProfessionalRelationshipRepository:
+        professionalRepositories.userProfessionalRelationship,
+    }),
   updateDoctor: () =>
     new UpdateDoctorUseCase({ doctorRepository: professionalRepositories.professional }),
   deleteDoctor: () =>

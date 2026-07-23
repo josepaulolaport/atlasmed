@@ -42,10 +42,14 @@ function mapProfessional(
     taxId: professional.taxId,
     birthDate: professional.birthDate,
     mobilePhone: professional.mobilePhone,
+    whatsappNumber: professional.whatsappNumber,
     landlinePhone: professional.landlinePhone,
     email: professional.email,
     websiteUrl: professional.websiteUrl,
     imageUrl: professional.imageUrl,
+    faculty: professional.faculty,
+    residency: professional.residency,
+    languages: professional.languages,
     favoriteTeam: professional.favoriteTeam,
     favoriteSport: professional.favoriteSport,
     hobbies: professional.hobbies,
@@ -117,10 +121,14 @@ function buildPersonCreateData(data: ProfessionalCreateInput) {
     taxId: data.taxId ?? null,
     birthDate: data.birthDate ?? null,
     mobilePhone: data.mobilePhone ?? null,
+    whatsappNumber: data.whatsappNumber ?? null,
     landlinePhone: data.landlinePhone ?? null,
     email: data.email ?? null,
     websiteUrl: data.websiteUrl ?? null,
     imageUrl: data.imageUrl ?? null,
+    faculty: data.faculty ?? null,
+    residency: data.residency ?? null,
+    languages: data.languages ?? null,
     favoriteTeam: data.favoriteTeam ?? null,
     favoriteSport: data.favoriteSport ?? null,
     hobbies: data.hobbies ?? null,
@@ -142,10 +150,14 @@ function buildPersonUpdateData(data: ProfessionalUpdateInput) {
   if (data.taxId !== undefined) patch.taxId = data.taxId;
   if (data.birthDate !== undefined) patch.birthDate = data.birthDate;
   if (data.mobilePhone !== undefined) patch.mobilePhone = data.mobilePhone;
+  if (data.whatsappNumber !== undefined) patch.whatsappNumber = data.whatsappNumber;
   if (data.landlinePhone !== undefined) patch.landlinePhone = data.landlinePhone;
   if (data.email !== undefined) patch.email = data.email;
   if (data.websiteUrl !== undefined) patch.websiteUrl = data.websiteUrl;
   if (data.imageUrl !== undefined) patch.imageUrl = data.imageUrl;
+  if (data.faculty !== undefined) patch.faculty = data.faculty;
+  if (data.residency !== undefined) patch.residency = data.residency;
+  if (data.languages !== undefined) patch.languages = data.languages;
   if (data.favoriteTeam !== undefined) patch.favoriteTeam = data.favoriteTeam;
   if (data.favoriteSport !== undefined) patch.favoriteSport = data.favoriteSport;
   if (data.hobbies !== undefined) patch.hobbies = data.hobbies;

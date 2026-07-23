@@ -1,5 +1,8 @@
 import { Elysia, t } from "elysia";
-import { updateFacilityProfessionalSchema } from "@atlasmed/access";
+import {
+  createFacilitySchema,
+  updateFacilityProfessionalSchema,
+} from "@atlasmed/access";
 import { auth } from "../../../access/composition";
 import { requirePermission } from "../../../access/infrastructure/middleware/permission.middleware";
 import { facilityUseCases } from "../../composition";
@@ -67,7 +70,8 @@ const createFacilityRoute = new Elysia()
   .post(
     "/facilities",
     async ({ body }) => {
-      return facilityUseCases.createFacility().execute(body);
+      const parsed = parseSchema(createFacilitySchema, body);
+      return facilityUseCases.createFacility().execute(parsed);
     },
     {
       detail: {
@@ -77,6 +81,24 @@ const createFacilityRoute = new Elysia()
       },
       body: t.Object({
         name: t.String(),
+        legalName: t.Optional(t.String()),
+        tradeName: t.Optional(t.String()),
+        taxIdType: t.Optional(t.Union([t.Literal("PJ"), t.Literal("PF")])),
+        cnpj: t.Optional(t.String()),
+        cpf: t.Optional(t.String()),
+        streetAddress: t.Optional(t.String()),
+        streetNumber: t.Optional(t.String()),
+        addressComplement: t.Optional(t.String()),
+        neighborhood: t.Optional(t.String()),
+        city: t.Optional(t.String()),
+        state: t.Optional(t.String()),
+        stateCode: t.Optional(t.String()),
+        postalCode: t.Optional(t.String()),
+        country: t.Optional(t.String()),
+        phoneNumber: t.Optional(t.String()),
+        whatsappNumber: t.Optional(t.String()),
+        email: t.Optional(t.String()),
+        address: t.Optional(t.String()),
         lat: t.Optional(t.Number()),
         lng: t.Optional(t.Number()),
       }),

@@ -52,10 +52,14 @@ const professionalPersonFieldsSchema = {
   taxId: optionalCpfSchema,
   birthDate: z.string().date().optional(),
   mobilePhone: z.string().trim().max(30).optional(),
+  whatsappNumber: z.string().trim().max(30).optional(),
   landlinePhone: z.string().trim().max(30).optional(),
   email: z.string().trim().email().optional(),
   websiteUrl: z.string().trim().url().optional(),
   imageUrl: z.string().trim().url().optional(),
+  faculty: z.string().trim().max(200).optional(),
+  residency: z.string().trim().max(200).optional(),
+  languages: z.string().trim().max(200).optional(),
   primarySpecialtyLabel: z.string().trim().max(200).optional(),
   crmCouncil: z.string().trim().max(20).optional(),
   crmNumber: z.string().trim().max(30).optional(),
@@ -71,6 +75,8 @@ export const createDoctorSchema = z.object({
   ...professionalPersonFieldsSchema,
   specialty: z.string().trim().max(200).optional(),
   facilityIds: z.array(z.string().trim().min(1)).optional().default([]),
+  /** Authenticated user's private level with this professional (1–10). */
+  relationshipLevel: relationshipLevelSchema.optional(),
 });
 
 export const createProfessionalSchema = createDoctorSchema;
@@ -84,10 +90,14 @@ export const updateDoctorSchema = z.object({
   taxId: optionalCpfSchema.nullable().optional(),
   birthDate: professionalPersonFieldsSchema.birthDate.nullable().optional(),
   mobilePhone: professionalPersonFieldsSchema.mobilePhone.nullable().optional(),
+  whatsappNumber: professionalPersonFieldsSchema.whatsappNumber.nullable().optional(),
   landlinePhone: professionalPersonFieldsSchema.landlinePhone.nullable().optional(),
   email: professionalPersonFieldsSchema.email.nullable().optional(),
   websiteUrl: professionalPersonFieldsSchema.websiteUrl.nullable().optional(),
   imageUrl: professionalPersonFieldsSchema.imageUrl.nullable().optional(),
+  faculty: professionalPersonFieldsSchema.faculty.nullable().optional(),
+  residency: professionalPersonFieldsSchema.residency.nullable().optional(),
+  languages: professionalPersonFieldsSchema.languages.nullable().optional(),
   primarySpecialtyLabel: professionalPersonFieldsSchema.primarySpecialtyLabel
     .nullable()
     .optional(),
@@ -141,10 +151,14 @@ export interface ProfessionalProfile {
   taxId?: string;
   birthDate?: string;
   mobilePhone?: string;
+  whatsappNumber?: string;
   landlinePhone?: string;
   email?: string;
   websiteUrl?: string;
   imageUrl?: string;
+  faculty?: string;
+  residency?: string;
+  languages?: string;
   primarySpecialtyLabel?: string;
   specialty?: string;
   crmCouncil?: string;

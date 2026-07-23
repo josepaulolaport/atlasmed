@@ -15,6 +15,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_notes_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_visits_repository.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
@@ -127,6 +128,88 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
   }
 }
 
+String _formatBirthDatePtBr(String? isoDate) {
+  if (isoDate == null || isoDate.isEmpty) return '';
+  final parts = isoDate.split('-');
+  if (parts.length != 3) return isoDate;
+  return '${parts[2]}/${parts[1]}/${parts[0]}';
+}
+
+DoctorDetail _mapApiDoctorToDetail(ApiDoctor apiDoctor) {
+  final name = apiDoctor.displayName;
+  final nameParts = name
+      .split(RegExp(r'\s+'))
+      .where((p) => p.isNotEmpty)
+      .toList();
+  final initials = nameParts.length >= 2
+      ? '${nameParts.first[0]}${nameParts.last[0]}'
+      : name.isNotEmpty
+      ? name[0]
+      : '?';
+  final clinics = apiDoctor.facilities.isNotEmpty
+      ? apiDoctor.facilities
+            .asMap()
+            .entries
+            .map(
+              (e) => DoctorClinic(
+                id: e.value.id,
+                name: e.value.name,
+                role: '',
+                days: '',
+                isMain: e.key == 0,
+              ),
+            )
+            .toList(growable: false)
+      : apiDoctor.facilityIds
+            .asMap()
+            .entries
+            .map(
+              (e) => DoctorClinic(
+                id: e.value,
+                name: e.value,
+                role: '',
+                days: '',
+                isMain: e.key == 0,
+              ),
+            )
+            .toList(growable: false);
+
+  return DoctorDetail(
+    id: apiDoctor.id,
+    name: name,
+    firstName: apiDoctor.firstName,
+    lastName: apiDoctor.lastName,
+    initials: initials.toUpperCase(),
+    hue: 0,
+    specialty: apiDoctor.specialty ?? '',
+    crm: apiDoctor.crm,
+    crmNumber: apiDoctor.crmNumber,
+    crmState: apiDoctor.crmState,
+    role: apiDoctor.specialty ?? '',
+    distanceKm: apiDoctor.distanceKm ?? 0,
+    phone: apiDoctor.mobilePhone,
+    email: apiDoctor.email,
+    whatsapp: apiDoctor.whatsappNumber,
+    birthday: () {
+      final formatted = _formatBirthDatePtBr(apiDoctor.birthDate);
+      return formatted.isEmpty ? null : formatted;
+    }(),
+    faculty: apiDoctor.faculty,
+    residency: apiDoctor.residency,
+    team: apiDoctor.favoriteTeam,
+    interests: apiDoctor.hobbies,
+    language: apiDoctor.languages,
+    statusLabel: '',
+    relationshipLabel: '',
+    notes: const [],
+    clinics: clinics,
+    gallery: const [],
+    signals: const [],
+    prescribing: const [],
+    visits: const [],
+  );
+}
+
 Future<DoctorDetail> _fetchDoctorDetail(String id) async {
   final repo = _DoctorDetailRepository(id: id);
   try {
@@ -134,41 +217,7 @@ Future<DoctorDetail> _fetchDoctorDetail(String id) async {
     if (apiDoctor == null) {
       throw Exception('Doctor not found: $id');
     }
-    final name = apiDoctor.displayName;
-    final nameParts = name.split(' ');
-    final initials = nameParts.length >= 2
-        ? '${nameParts.first[0]}${nameParts.last[0]}'
-        : name.isNotEmpty
-        ? name[0]
-        : '?';
-    final crm = apiDoctor.crm;
-    return DoctorDetail(
-      id: apiDoctor.id,
-      name: name,
-      initials: initials.toUpperCase(),
-      hue: 0,
-      specialty: apiDoctor.specialty ?? '',
-      crm: crm,
-      role: apiDoctor.specialty != null ? '${apiDoctor.specialty}' : '',
-      distanceKm: apiDoctor.distanceKm ?? 0,
-      phone: null,
-      email: null,
-      whatsapp: null,
-      birthday: null,
-      faculty: null,
-      residency: null,
-      team: null,
-      interests: null,
-      language: null,
-      statusLabel: '',
-      relationshipLabel: '',
-      notes: const [],
-      clinics: const [],
-      gallery: const [],
-      signals: const [],
-      prescribing: const [],
-      visits: const [],
-    );
+    return _mapApiDoctorToDetail(apiDoctor);
   } finally {
     repo.dispose();
   }
@@ -210,6 +259,13 @@ final professionalNotesProvider =
           .watch(professionalNotesRepositoryProvider(professionalId))
           .currentValueOrResolve()
           .then((notes) => notes ?? const []);
+    });
+
+final professionalsRepositoryProvider =
+    Provider.family<ProfessionalsRepository, String>((ref, professionalId) {
+      final repository = ProfessionalsRepository(professionalId);
+      ref.onDispose(repository.dispose);
+      return repository;
     });
 
 // ── Clinic visits ──────────────────────────────────────────

@@ -5,8 +5,14 @@ class EmptyState extends StatelessWidget {
   /// Facility Ver todos: `'facility-doctor'` | `'facility-admin'`.
   final String query;
   final String kind;
+  final VoidCallback? onCreate;
 
-  const EmptyState({super.key, required this.query, required this.kind});
+  const EmptyState({
+    super.key,
+    required this.query,
+    required this.kind,
+    this.onCreate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +34,12 @@ class EmptyState extends StatelessWidget {
             'doctor' => 'Nenhum médico encontrado na sua região.',
             _ => 'Nenhuma clínica encontrada na sua região.',
           };
+
+    final createLabel = kind == 'doctor' ? 'Novo médico' : 'Nova clínica';
+    final showCreate =
+        onCreate != null &&
+        query.isEmpty &&
+        (kind == 'clinic' || kind == 'doctor');
 
     return Center(
       child: Padding(
@@ -70,6 +82,20 @@ class EmptyState extends StatelessWidget {
                 height: 1.5,
               ),
             ),
+            if (showCreate) ...[
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: onCreate,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(createLabel),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF1e40af),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

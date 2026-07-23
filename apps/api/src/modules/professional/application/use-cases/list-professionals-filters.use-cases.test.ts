@@ -9,8 +9,9 @@ describe("ListProfessionalsUseCase filters", () => {
       findAll: mock(async () => ({
         professionals: [{
           id: "professional-1", firstName: "Ana", lastName: "Silva", fullName: "Ana Silva",
-          socialName: null, taxId: null, birthDate: null, mobilePhone: null, landlinePhone: null,
-          email: null, websiteUrl: null, imageUrl: null, favoriteTeam: null, favoriteSport: null,
+          socialName: null, taxId: null, birthDate: null, mobilePhone: null, whatsappNumber: null,
+          landlinePhone: null, email: null, websiteUrl: null, imageUrl: null, faculty: null,
+          residency: null, languages: null, favoriteTeam: null, favoriteSport: null,
           hobbies: null, notes: null, specialty: "Cardiology", crmCouncil: null, crmNumber: null,
           crmState: null, sourceProvider: null, externalSourceId: null, sourceContentHash: null,
           sourceFirstSeenAt: null, sourceLastSeenAt: null, sourcePresent: false, sourceTracked: false,

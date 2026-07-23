@@ -31,10 +31,14 @@ const professionalPersonBody = {
   taxId: t.Optional(t.Union([t.String(), t.Null()])),
   birthDate: t.Optional(t.Union([t.String(), t.Null()])),
   mobilePhone: t.Optional(t.Union([t.String(), t.Null()])),
+  whatsappNumber: t.Optional(t.Union([t.String(), t.Null()])),
   landlinePhone: t.Optional(t.Union([t.String(), t.Null()])),
   email: t.Optional(t.Union([t.String(), t.Null()])),
   websiteUrl: t.Optional(t.Union([t.String(), t.Null()])),
   imageUrl: t.Optional(t.Union([t.String(), t.Null()])),
+  faculty: t.Optional(t.Union([t.String(), t.Null()])),
+  residency: t.Optional(t.Union([t.String(), t.Null()])),
+  languages: t.Optional(t.Union([t.String(), t.Null()])),
   primarySpecialtyLabel: t.Optional(t.Union([t.String(), t.Null()])),
   specialty: t.Optional(t.Union([t.String(), t.Null()])),
   crmCouncil: t.Optional(t.Union([t.String(), t.Null()])),
@@ -87,11 +91,13 @@ const createDoctorRoute = new Elysia()
   .use(requirePermission("create", "PROFESSIONAL"))
   .post(
     "/professionals",
-    async ({ body, getScope }) => {
+    async ({ body, getScope, getUserId }) => {
       const scope = await getScope();
+      const userId = await getUserId();
       const parsed = parseSchema(createProfessionalSchema, body);
       return doctorUseCases.createDoctor().execute({
         ...parsed,
+        userId,
         scope,
       });
     },
@@ -106,6 +112,7 @@ const createDoctorRoute = new Elysia()
         lastName: t.String(),
         ...professionalPersonBody,
         facilityIds: t.Optional(t.Array(t.String())),
+        relationshipLevel: t.Optional(t.Number({ minimum: 1, maximum: 10 })),
       }),
     }
   );

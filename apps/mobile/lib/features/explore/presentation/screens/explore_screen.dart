@@ -63,6 +63,15 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: state.loading
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => _openCreate(isClinic),
+              backgroundColor: const Color(0xFF1e40af),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded),
+              label: Text(isClinic ? 'Nova clínica' : 'Novo médico'),
+            ),
       body: SafeArea(
         child: Stack(
           children: [
@@ -95,7 +104,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                               SkeletonRow(isDoctor: !isClinic),
                         )
                       : filteredList.isEmpty
-                      ? EmptyState(query: state.query, kind: state.activeTab)
+                      ? EmptyState(
+                          query: state.query,
+                          kind: state.activeTab,
+                          onCreate: () => _openCreate(isClinic),
+                        )
                       : _buildList(displayedList, hasMore, isClinic, notifier),
                 ),
               ],
@@ -112,6 +125,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  void _openCreate(bool isClinic) {
+    context.push(
+      isClinic
+          ? '/workspace/explore/clinics/new'
+          : '/workspace/explore/doctors/new',
     );
   }
 

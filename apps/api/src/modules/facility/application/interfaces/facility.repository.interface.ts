@@ -137,6 +137,23 @@ export interface FacilityRepository {
 
   create(data: {
     name: string;
+    legalName?: string | null;
+    tradeName?: string | null;
+    taxIdType?: "PJ" | "PF";
+    cnpj?: string | null;
+    cpf?: string | null;
+    streetAddress?: string | null;
+    streetNumber?: string | null;
+    addressComplement?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+    phoneNumber?: string | null;
+    whatsappNumber?: string | null;
+    email?: string | null;
+    purchaseStatus?: FacilityRecord["purchaseStatus"];
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord>;

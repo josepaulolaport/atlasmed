@@ -432,6 +432,23 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
   async create(data: {
     name: string;
+    legalName?: string | null;
+    tradeName?: string | null;
+    taxIdType?: "PJ" | "PF";
+    cnpj?: string | null;
+    cpf?: string | null;
+    streetAddress?: string | null;
+    streetNumber?: string | null;
+    addressComplement?: string | null;
+    neighborhood?: string | null;
+    city?: string | null;
+    state?: string | null;
+    postalCode?: string | null;
+    country?: string | null;
+    phoneNumber?: string | null;
+    whatsappNumber?: string | null;
+    email?: string | null;
+    purchaseStatus?: FacilityRecord["purchaseStatus"];
     lat?: number | null;
     lng?: number | null;
   }): Promise<FacilityRecord> {
@@ -440,6 +457,23 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       .insert(facilities)
       .values({
         displayName: data.name,
+        legalName: data.legalName ?? null,
+        tradeName: data.tradeName ?? null,
+        taxIdType: data.taxIdType ?? "PJ",
+        cnpj: data.cnpj ?? null,
+        cpf: data.cpf ?? null,
+        streetAddress: data.streetAddress ?? null,
+        streetNumber: data.streetNumber ?? null,
+        addressComplement: data.addressComplement ?? null,
+        neighborhood: data.neighborhood ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        postalCode: data.postalCode ?? null,
+        country: data.country ?? "BR",
+        phoneNumber: data.phoneNumber ?? null,
+        whatsappNumber: data.whatsappNumber ?? null,
+        email: data.email ?? null,
+        purchaseStatus: data.purchaseStatus ?? null,
         ...(hasCoords
           ? { location: locationPointSql(data.lat!, data.lng!) }
           : {}),

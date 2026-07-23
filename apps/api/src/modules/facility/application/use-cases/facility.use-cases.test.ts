@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
-import { ListFacilitiesUseCase } from "./facility.use-cases";
+import {
+  CreateFacilityUseCase,
+  ListFacilitiesUseCase,
+} from "./facility.use-cases";
 import type {
   FacilityListRecord,
   FacilityRepository,
@@ -361,4 +364,134 @@ describe("ListFacilitiesUseCase", () => {
     expect(searchCalls).toBe(0);
   });
 
+});
+
+describe("CreateFacilityUseCase", () => {
+  it("persists full create payload including address, contact, and coordinates", async () => {
+    let createdPayload: unknown;
+    let locationChangedId: string | undefined;
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.create = async (data) => {
+      createdPayload = data;
+      return {
+        ...facilityRecord("facility-created"),
+        name: data.name,
+        taxIdType: data.taxIdType ?? "PJ",
+        cnpj: data.cnpj ?? null,
+        cpf: data.cpf ?? null,
+        streetAddress: data.streetAddress ?? null,
+        streetNumber: data.streetNumber ?? null,
+        addressComplement: data.addressComplement ?? null,
+        neighborhood: data.neighborhood ?? null,
+        city: data.city ?? null,
+        state: data.state ?? null,
+        postalCode: data.postalCode ?? null,
+        phone: data.phoneNumber ?? null,
+        whatsapp: data.whatsappNumber ?? null,
+        email: data.email ?? null,
+        lat: data.lat ?? null,
+        lng: data.lng ?? null,
+      };
+    };
+    repository.findById = async (id) => ({
+      ...facilityRecord(id),
+      name: "Clínica Centro",
+      streetAddress: "Rua A",
+      streetNumber: "100",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      postalCode: "20040020",
+      phone: "21999999999",
+      whatsapp: "21988888888",
+      email: "contato@clinica.com",
+      cnpj: "12345678000199",
+      lat: -22.9,
+      lng: -43.2,
+    });
+
+    const useCase = new CreateFacilityUseCase({
+      facilityRepository: repository,
+      onFacilityLocationChanged: async (id) => {
+        locationChangedId = id;
+      },
+    });
+
+    const result = await useCase.execute({
+      name: "Clínica Centro",
+      legalName: "Clinica Centro LTDA",
+      tradeName: "Centro",
+      taxIdType: "PJ",
+      cnpj: "12345678000199",
+      streetAddress: "Rua A",
+      streetNumber: "100",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      postalCode: "20040020",
+      country: "BR",
+      phoneNumber: "21999999999",
+      whatsappNumber: "21988888888",
+      email: "contato@clinica.com",
+      lat: -22.9,
+      lng: -43.2,
+    });
+
+    expect(createdPayload).toMatchObject({
+      name: "Clínica Centro",
+      legalName: "Clinica Centro LTDA",
+      tradeName: "Centro",
+      taxIdType: "PJ",
+      cnpj: "12345678000199",
+      streetAddress: "Rua A",
+      streetNumber: "100",
+      neighborhood: "Centro",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      postalCode: "20040020",
+      country: "BR",
+      phoneNumber: "21999999999",
+      whatsappNumber: "21988888888",
+      email: "contato@clinica.com",
+      lat: -22.9,
+      lng: -43.2,
+    });
+    expect(locationChangedId).toBe("facility-created");
+    expect(result).toMatchObject({
+      id: "facility-created",
+      name: "Clínica Centro",
+      streetAddress: "Rua A",
+      city: "Rio de Janeiro",
+      state: "RJ",
+      lat: -22.9,
+      lng: -43.2,
+    });
+  });
+
+  it("allows create without coordinates for back-compat", async () => {
+    let createdPayload: unknown;
+    let locationChanged = false;
+    const repository = fakeRepository(async () => ({ facilities: [], total: 0 }));
+    repository.create = async (data) => {
+      createdPayload = data;
+      return facilityRecord("facility-no-coords");
+    };
+    repository.findById = async (id) => facilityRecord(id);
+
+    const useCase = new CreateFacilityUseCase({
+      facilityRepository: repository,
+      onFacilityLocationChanged: async () => {
+        locationChanged = true;
+      },
+    });
+
+    await useCase.execute({ name: "Sem coordenadas" });
+
+    expect(createdPayload).toMatchObject({
+      name: "Sem coordenadas",
+      lat: null,
+      lng: null,
+    });
+    expect(locationChanged).toBe(false);
+  });
 });

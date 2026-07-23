@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/facility_associate_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_doctor_profile_sheet.dart';
+import 'package:go_router/go_router.dart';
 
 /// Search + multi-select doctors to associate with a facility.
 /// Returns the newly associated doctors (not already on the facility).
@@ -369,10 +369,14 @@ class _AssociateDoctorsSheetState extends State<_AssociateDoctorsSheet> {
   }
 
   Future<void> _createProfile() async {
-    final created = await showCreateDoctorProfileSheet(
-      context,
-      facilityId: widget.facilityId,
-    );
+    final facilityId = widget.facilityId;
+    final uri = facilityId == null || facilityId.isEmpty
+        ? '/workspace/explore/doctors/new'
+        : Uri(
+            path: '/workspace/explore/doctors/new',
+            queryParameters: {'facilityId': facilityId},
+          ).toString();
+    final created = await context.push<FacilityCrmDoctor>(uri);
     if (created == null || !mounted) return;
     setState(() {
       _pool = [created, ..._pool.where((d) => d.id != created.id)];

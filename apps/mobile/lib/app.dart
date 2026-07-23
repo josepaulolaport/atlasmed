@@ -21,6 +21,8 @@ import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/produc
 import 'package:atlasmed_mobile_app/features/catalog/presentation/screens/products_home_screen.dart';
 import 'package:atlasmed_mobile_app/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/clinic_detail_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/create_clinic_page.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/screens/create_doctor_page.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/doctor_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/screens/explore_screen.dart';
 import 'package:atlasmed_mobile_app/features/map/presentation/screens/map_screen.dart';
@@ -177,6 +179,16 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               pageBuilder: (_, _) =>
                   const NoTransitionPage(child: ExploreScreen()),
               routes: [
+                GoRoute(
+                  path: 'explore/clinics/new',
+                  builder: (_, _) => const CreateClinicPage(),
+                ),
+                GoRoute(
+                  path: 'explore/doctors/new',
+                  builder: (_, state) => CreateDoctorPage(
+                    facilityId: state.uri.queryParameters['facilityId'],
+                  ),
+                ),
                 GoRoute(
                   path: 'clinic/:id',
                   builder: (_, state) =>
