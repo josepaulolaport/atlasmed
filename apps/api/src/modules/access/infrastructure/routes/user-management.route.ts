@@ -1,5 +1,5 @@
 import { Elysia, t } from "elysia";
-import { changeUserRoleSchema } from "@atlasmed/access";
+import { Role, changeUserRoleSchema, updateUserAsAdminSchema } from "@atlasmed/access";
 import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 import { ForbiddenError } from "../../../../shared/errors";
@@ -7,6 +7,44 @@ import { ForbiddenError } from "../../../../shared/errors";
 export const adminUserManagementRoute = new Elysia()
   .use(auth)
   .use(requirePermission("manage", "USER"))
+  .patch("/users/:id", async ({ params, body, getUser }: any) => {
+    const actor = await getUser();
+    const parsed = updateUserAsAdminSchema.parse(body);
+
+    return accessUseCases.updateUserAsAdmin().execute({
+      targetUserId: params.id,
+      actorRole: actor.role.name as Role,
+      data: {
+        firstName: parsed.firstName,
+        lastName: parsed.lastName,
+        email: parsed.email,
+        phoneNumber: parsed.phoneNumber,
+        username: parsed.username,
+        birthDate:
+          parsed.birthDate === undefined
+            ? undefined
+            : parsed.birthDate === null
+              ? null
+              : new Date(parsed.birthDate),
+      },
+    });
+  }, {
+    detail: {
+      summary: "Update user profile (admin)",
+      description:
+        "Admin update of identity fields for another user (name, email, phone, username, birthDate).",
+      tags: ["Users"],
+      security: [{ bearerAuth: [] }],
+    },
+    body: t.Object({
+      firstName: t.Optional(t.String({ minLength: 1 })),
+      lastName: t.Optional(t.String({ minLength: 1 })),
+      email: t.Optional(t.String({ format: "email" })),
+      phoneNumber: t.Optional(t.Union([t.String({ minLength: 1 }), t.Null()])),
+      username: t.Optional(t.String({ minLength: 3 })),
+      birthDate: t.Optional(t.Union([t.String(), t.Null()])),
+    }),
+  })
   .post("/users/:id/activate", async ({ params, getUserId }: any) => {
     const userId = await getUserId();
 

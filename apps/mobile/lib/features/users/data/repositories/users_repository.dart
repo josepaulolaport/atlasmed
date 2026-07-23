@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
 
 /// Port for the admin user-management data source.
@@ -13,13 +14,15 @@ import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
 /// `apps/api/src/modules/access`) so a future HTTP-backed implementation is
 /// a drop-in replacement for [MockUsersRepository].
 abstract interface class UsersRepository {
-  /// `GET /access/users?page=&limit=&search=&role=&status=`
+  /// `GET /access/users?page=&limit=&search=&role=&status=&sortBy=&sortDir=`
   Future<UsersPage> getUsers({
     required int page,
     int limit = 20,
     String? search,
     UserRoleName? role,
     UserStatus? status,
+    UsersSortBy sortBy = UsersSortBy.createdAt,
+    UsersSortDir sortDir = UsersSortDir.desc,
   });
 
   /// `GET /access/users/:id`
@@ -90,8 +93,13 @@ abstract interface class UsersRepository {
     DateTime? expiresAt,
   });
 
-  /// `DELETE /access/users/:id/permissions`
-  Future<void> revokePermission(String userId, String grantId);
+  /// `DELETE /access/users/:id/permissions` — body uses resource/action/resourceId.
+  Future<void> revokePermission(
+    String userId, {
+    required String resource,
+    required String action,
+    String? resourceId,
+  });
 
   /// `GET /access/roles`
   Future<List<UserRole>> getRoles();

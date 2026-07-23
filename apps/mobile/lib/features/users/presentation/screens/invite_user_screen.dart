@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manager_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_card.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_picker_screen.dart';
+import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +32,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
+  DateTime? _birthDate;
 
   UserRole? _selectedRole;
   UserInvitation? _invitation;
@@ -89,6 +91,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
         _firstNameController.text = invitation.firstName ?? '';
         _lastNameController.text = invitation.lastName ?? '';
         _phoneController.text = invitation.phoneNumber ?? '';
+        _birthDate = invitation.birthDate;
         _sectorAssignments
           ..clear()
           ..addEntries(
@@ -238,6 +241,29 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
               }
               return null;
             },
+          ),
+          const SizedBox(height: 16),
+          _FieldLabel('Data de nascimento'),
+          const SizedBox(height: 6),
+          OutlinedButton(
+            onPressed: _pickBirthDate,
+            style: OutlinedButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+            ),
+            child: Text(
+              _birthDate == null ? 'Selecionar data' : formatDate(_birthDate!),
+              style: TextStyle(
+                color: _birthDate == null
+                    ? const Color(0xFF9ca3af)
+                    : const Color(0xFF0f1729),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'O convidado precisará confirmar esta data no cadastro.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
           ),
           const SizedBox(height: 16),
           _FieldLabel('Email'),
@@ -494,6 +520,19 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
     });
   }
 
+  Future<void> _pickBirthDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _birthDate ?? DateTime(now.year - 30),
+      firstDate: DateTime(1940),
+      lastDate: now,
+    );
+    if (picked != null && mounted) {
+      setState(() => _birthDate = picked);
+    }
+  }
+
   Future<void> _submit() async {
     if (_selectedRole == null) {
       ScaffoldMessenger.of(
@@ -502,6 +541,12 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
       return;
     }
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_birthDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe a data de nascimento.')),
+      );
+      return;
+    }
 
     if (_needsSectors && _sectorAssignments.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -592,6 +637,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           email: email,
           firstName: firstName,
           lastName: lastName,
+          birthDate: _birthDate!,
           phoneNumber: phoneNumber,
           roleId: role.id,
           sectorAssignments: sectorAssignments,
@@ -602,6 +648,7 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           email: email,
           firstName: firstName,
           lastName: lastName,
+          birthDate: _birthDate!,
           phoneNumber: phoneNumber,
           roleId: role.id,
           sectorAssignments: sectorAssignments,

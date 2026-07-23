@@ -21,6 +21,8 @@ export const listUsersRoute = new Elysia({
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
         sectorId: query.sectorId,
+        sortBy: query.sortBy,
+        sortDir: query.sortDir,
         scope,
       });
 
@@ -29,7 +31,8 @@ export const listUsersRoute = new Elysia({
     {
       detail: {
         summary: "List users",
-        description: "List all users with pagination and optional filters. Requires read permission on users.",
+        description:
+          "List all users with pagination, optional filters, and sort by name/role/status. Requires read permission on users.",
         tags: ["Users"],
         security: [{ bearerAuth: [] }],
       },
@@ -47,6 +50,15 @@ export const listUsersRoute = new Elysia({
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
         sectorId: t.Optional(t.String({ description: "Filter to users assigned to this healthcare sector" })),
+        sortBy: t.Optional(
+          t.Union([
+            t.Literal("name"),
+            t.Literal("role"),
+            t.Literal("status"),
+            t.Literal("createdAt"),
+          ]),
+        ),
+        sortDir: t.Optional(t.Union([t.Literal("asc"), t.Literal("desc")])),
       }),
     }
   )

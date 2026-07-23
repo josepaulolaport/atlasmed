@@ -1,6 +1,10 @@
 import { describe, expect, it, mock } from "bun:test";
 import { GetInvitationsUseCase } from "./get-invitations.use-case";
-import { createMockInviteRepository, createMockUserRepository } from "../../test-helpers/repository-mocks";
+import {
+  createMockInviteRepository,
+  createMockUserRepository,
+  createMockScopeRepository,
+} from "../../test-helpers/repository-mocks";
 import { createGlobalScopeContext, Role } from "@atlasmed/access";
 import { scopedManagerContext } from "../../test-helpers/route-test-context";
 import { InsufficientPermissionsError } from "../../../../shared/errors";
@@ -17,13 +21,31 @@ describe("GetInvitationsUseCase", () => {
     revokedAt: null,
     invitedByUserId: "manager-1",
     role: { id: "role-1", name: "USER" },
+    firstName: "New",
+    lastName: "User",
+    managerId: null,
+    managerTerritoryId: null,
+    repTerritoryId: null,
+    acceptedByUserId: null,
+    resendCount: 0,
+    lastResendAt: null,
+    updatedAt: new Date("2025-01-01"),
+    roleId: "role-1",
   };
 
+  const territoryRepository = {
+    findByIds: mock(async () => []),
+  } as any;
+
+  const deps = () => ({
+    inviteRepository: createMockInviteRepository(),
+    userRepository: createMockUserRepository(),
+    scopeRepository: createMockScopeRepository(),
+    territoryRepository,
+  });
+
   it("should reject USER role", async () => {
-    const useCase = new GetInvitationsUseCase({
-      inviteRepository: createMockInviteRepository(),
-      userRepository: createMockUserRepository(),
-    });
+    const useCase = new GetInvitationsUseCase(deps());
 
     await expect(
       useCase.execute({
@@ -51,7 +73,11 @@ describe("GetInvitationsUseCase", () => {
       ) as any,
     });
 
-    const useCase = new GetInvitationsUseCase({ inviteRepository, userRepository });
+    const useCase = new GetInvitationsUseCase({
+      ...deps(),
+      inviteRepository,
+      userRepository,
+    });
     await useCase.execute({
       actorId: "admin-1",
       actorRole: Role.ADMIN,
@@ -70,8 +96,8 @@ describe("GetInvitationsUseCase", () => {
     const inviteRepository = createMockInviteRepository({ findAll });
 
     const useCase = new GetInvitationsUseCase({
+      ...deps(),
       inviteRepository,
-      userRepository: createMockUserRepository(),
     });
 
     await useCase.execute({

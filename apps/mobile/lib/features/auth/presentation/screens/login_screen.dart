@@ -16,11 +16,13 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/widgets/terms_foo
 class LoginScreen extends ConsumerStatefulWidget {
   final VoidCallback onForgotPassword;
   final VoidCallback onLoginSuccess;
+  final VoidCallback onRegisterInvite;
 
   const LoginScreen({
     super.key,
     required this.onForgotPassword,
     required this.onLoginSuccess,
+    required this.onRegisterInvite,
   });
 
   @override
@@ -234,26 +236,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                                         ),
                                       ],
                                       const SizedBox(height: 32),
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: TextButton(
-                                          onPressed: widget.onForgotPassword,
-                                          style: TextButton.styleFrom(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 4,
+                                      Row(
+                                        children: [
+                                          TextButton(
+                                            onPressed: widget.onRegisterInvite,
+                                            style: TextButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                  ),
                                             ),
-                                          ),
-                                          child: Text(
-                                            'Esqueci minha senha',
-                                            style: TextStyle(
-                                              color: Colors.white.withValues(
-                                                alpha: 0.85,
+                                            child: Text(
+                                              'Tenho um convite',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.85,
+                                                ),
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
                                               ),
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                        ),
+                                          const Spacer(),
+                                          TextButton(
+                                            onPressed: widget.onForgotPassword,
+                                            style: TextButton.styleFrom(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                  ),
+                                            ),
+                                            child: Text(
+                                              'Esqueci minha senha',
+                                              style: TextStyle(
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.85,
+                                                ),
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                       const SizedBox(height: 8),
                                       PrimaryButton(

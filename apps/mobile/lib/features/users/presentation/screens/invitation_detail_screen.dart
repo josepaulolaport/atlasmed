@@ -262,6 +262,12 @@ class _IdentityCard extends StatelessWidget {
                 ? invitation.phoneNumber!
                 : '—',
           ),
+          _InfoRow(
+            label: 'Data de nascimento',
+            value: invitation.birthDate != null
+                ? formatDate(invitation.birthDate!)
+                : '—',
+          ),
         ],
       ),
     );

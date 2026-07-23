@@ -1,39 +1,52 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:flutter/material.dart';
 
 class UsersFilterSheet extends StatefulWidget {
   const UsersFilterSheet({
     super.key,
-    required this.role,
-    required this.status,
+    required this.filter,
     required this.onApply,
   });
 
-  final UserRoleName? role;
-  final UserStatus? status;
-  final void Function(UserRoleName? role, UserStatus? status) onApply;
+  final UsersFilter filter;
+  final void Function(UsersFilter filter) onApply;
 
   @override
   State<UsersFilterSheet> createState() => _UsersFilterSheetState();
 }
 
 class _UsersFilterSheetState extends State<UsersFilterSheet> {
-  UserRoleName? _role;
-  UserStatus? _status;
+  late UserRoleName? _role;
+  late UserStatus? _status;
+  late UsersSortBy _sortBy;
+  late UsersSortDir _sortDir;
 
   @override
   void initState() {
     super.initState();
-    _role = widget.role;
-    _status = widget.status;
+    _role = widget.filter.role;
+    _status = widget.filter.status;
+    _sortBy = widget.filter.sortBy;
+    _sortDir = widget.filter.sortDir;
+  }
+
+  void _selectSort(UsersSortBy next) {
+    setState(() {
+      if (_sortBy == next) return;
+      _sortBy = next;
+      _sortDir = next == UsersSortBy.createdAt
+          ? UsersSortDir.desc
+          : UsersSortDir.asc;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       top: false,
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -105,6 +118,43 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                 );
               }).toList(),
             ),
+            const SizedBox(height: 20),
+            const Text(
+              'Ordenar por',
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF6b7280),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: UsersSortBy.values.map((sortBy) {
+                final selected = _sortBy == sortBy;
+                return _Chip(
+                  label: sortBy.label,
+                  color: const Color(0xFF0a2f7f),
+                  selected: selected,
+                  onTap: () => _selectSort(sortBy),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: UsersSortDir.values.map((dir) {
+                final selected = _sortDir == dir;
+                return _Chip(
+                  label: dir.labelFor(_sortBy),
+                  color: const Color(0xFF0a2f7f),
+                  selected: selected,
+                  onTap: () => setState(() => _sortDir = dir),
+                );
+              }).toList(),
+            ),
             const SizedBox(height: 24),
             Row(
               children: [
@@ -114,6 +164,8 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                       setState(() {
                         _role = null;
                         _status = null;
+                        _sortBy = UsersSortBy.createdAt;
+                        _sortDir = UsersSortDir.desc;
                       });
                     },
                     child: const Text('Limpar'),
@@ -126,7 +178,15 @@ class _UsersFilterSheetState extends State<UsersFilterSheet> {
                       backgroundColor: const Color(0xFF0a2f7f),
                     ),
                     onPressed: () {
-                      widget.onApply(_role, _status);
+                      widget.onApply(
+                        UsersFilter(
+                          search: widget.filter.search,
+                          role: _role,
+                          status: _status,
+                          sortBy: _sortBy,
+                          sortDir: _sortDir,
+                        ),
+                      );
                       Navigator.of(context).pop();
                     },
                     child: const Text('Aplicar'),

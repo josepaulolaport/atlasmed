@@ -6,11 +6,13 @@ import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_ass
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/change_role_sheet.dart';
+import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manage_permissions_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/manager_picker_sheet.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_map_card.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/territory_picker_screen.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_avatar.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/user_badges.dart';
+
 import 'package:atlasmed_mobile_app/features/users/utils/date_format.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,6 +84,11 @@ class UserDetailScreen extends ConsumerWidget {
               title: const Text('Alterar função'),
               onTap: () => Navigator.pop(sheetContext, 'role'),
             ),
+            ListTile(
+              leading: const Icon(Icons.security_outlined),
+              title: const Text('Gerenciar permissões'),
+              onTap: () => Navigator.pop(sheetContext, 'permissions'),
+            ),
             if (user.status.name == 'inactive')
               ListTile(
                 leading: const Icon(
@@ -130,6 +137,29 @@ class UserDetailScreen extends ConsumerWidget {
       await ChangeRoleSheet.show(context, user: user);
       ref.invalidate(userDetailProvider(userId));
       await ref.read(usersListProvider.notifier).refreshRow(userId);
+      return;
+    }
+
+    if (action == 'permissions') {
+      try {
+        final grants = await ref
+            .read(usersRepositoryProvider)
+            .getUserPermissions(userId);
+        if (!context.mounted) return;
+        await ManagePermissionsSheet.show(
+          context,
+          user: user,
+          grants: grants,
+        );
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Não foi possível carregar as permissões.'),
+            ),
+          );
+        }
+      }
       return;
     }
 

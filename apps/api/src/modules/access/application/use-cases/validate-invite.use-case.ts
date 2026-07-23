@@ -1,4 +1,5 @@
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
+import { normalizeInviteCode } from "../../../../shared/utils/generate-invite-code";
 import { hashToken } from "../../../../shared/utils/hash-token";
 import { InvalidInviteError } from "../../../../shared/errors";
 
@@ -10,7 +11,7 @@ export class ValidateInviteUseCase {
   constructor(private readonly deps: Dependencies) {}
 
   async execute(params: { token: string }) {
-    const token = params.token.trim();
+    const token = normalizeInviteCode(params.token);
 
     if (!token) {
       throw new InvalidInviteError();
@@ -27,6 +28,8 @@ export class ValidateInviteUseCase {
     return {
       email: invite.email ?? undefined,
       phoneNumber: invite.phoneNumber ?? undefined,
+      firstName: invite.firstName ?? undefined,
+      lastName: invite.lastName ?? undefined,
       role: {
         id: invite.role.id,
         name: invite.role.name,

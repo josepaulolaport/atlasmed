@@ -7,7 +7,7 @@ import { InviteService } from "../services/invite.service";
 import { InvitationTerritoryValidatorService } from "../services/invitation-territory-validator.service";
 import type { TerritoryRepository } from "../../../territory/application/interfaces/territory.repository.interface";
 import type { TerritoryTypeRepository } from "../../../territory/application/interfaces/territory-type.repository.interface";
-import { 
+import {
   ValidationError,
   EmailAlreadyExistsError,
   RoleNotFoundError,
@@ -15,11 +15,16 @@ import {
   InsufficientPermissionsError,
   UserNotFoundError,
 } from "../../../../shared/errors";
-import { Role } from "@atlasmed/access";
+import {
+  Role,
+  toDateOnlyString,
+  type InviteSectorAssignmentInput,
+} from "@atlasmed/access";
 import { canAssignRole } from "../constants/role-priority.constants";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
 import type { IMetrics } from "../interfaces/metrics.interface";
 import { tracer } from "../../../../infrastructure/tracing/tracer";
+import { normalizeInviteAssignments } from "../utils/invite-assignments.utils";
 
 interface Dependencies {
   inviteRepository: InviteRepository;
@@ -40,9 +45,11 @@ interface InviteUserParams {
   invitedByUserId: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
+  birthDate: string;
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
+  sectorAssignments?: InviteSectorAssignmentInput[];
 }
 
 export class InviteUserUseCase {
@@ -69,7 +76,7 @@ export class InviteUserUseCase {
   private async executeInvite(params: InviteUserParams) {
     if (!params.email && !params.phoneNumber) {
       throw new ValidationError([
-        { field: 'email', message: 'Either email or phone number is required' }
+        { field: "email", message: "Either email or phone number is required" },
       ]);
     }
 
@@ -103,12 +110,21 @@ export class InviteUserUseCase {
       );
     }
 
-    await this.territoryValidator.validateInvitationTerritories({
-      roleId: params.roleId,
+    const assignments = normalizeInviteAssignments({
       roleName: role.name,
       managerId: params.managerId,
       managerTerritoryId: params.managerTerritoryId,
       repTerritoryId: params.repTerritoryId,
+      sectorAssignments: params.sectorAssignments,
+    });
+
+    await this.territoryValidator.validateInvitationTerritories({
+      roleId: params.roleId,
+      roleName: role.name,
+      managerId: assignments.managerId,
+      managerTerritoryId: assignments.managerTerritoryId,
+      repTerritoryId: assignments.repTerritoryId,
+      sectorAssignments: assignments.sectorAssignments,
     });
 
     const identifier = params.email || params.phoneNumber!;
@@ -139,9 +155,11 @@ export class InviteUserUseCase {
       invitedByUserId: params.invitedByUserId,
       firstName: params.firstName,
       lastName: params.lastName,
-      managerId: params.managerId,
-      managerTerritoryId: params.managerTerritoryId,
-      repTerritoryId: params.repTerritoryId,
+      birthDate: new Date(`${toDateOnlyString(params.birthDate)}T00:00:00.000Z`),
+      managerId: assignments.managerId,
+      managerTerritoryId: assignments.managerTerritoryId,
+      repTerritoryId: assignments.repTerritoryId,
+      sectorAssignments: assignments.sectorAssignments,
     });
 
     await this.deps.auditLog.logInviteUser({

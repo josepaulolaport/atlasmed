@@ -1,5 +1,3 @@
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
-import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/users_repository.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_state.dart';
@@ -26,6 +24,8 @@ class UsersListNotifier extends StateNotifier<UsersListState> {
         search: state.filter.search.isEmpty ? null : state.filter.search,
         role: state.filter.role,
         status: state.filter.status,
+        sortBy: state.filter.sortBy,
+        sortDir: state.filter.sortDir,
       );
       state = state.copyWith(
         items: result.items,
@@ -52,6 +52,8 @@ class UsersListNotifier extends StateNotifier<UsersListState> {
         search: state.filter.search.isEmpty ? null : state.filter.search,
         role: state.filter.role,
         status: state.filter.status,
+        sortBy: state.filter.sortBy,
+        sortDir: state.filter.sortDir,
       );
       state = state.copyWith(
         items: [...state.items, ...result.items],
@@ -70,19 +72,10 @@ class UsersListNotifier extends StateNotifier<UsersListState> {
     load();
   }
 
-  void setRoleFilter(UserRoleName? role) {
+  /// Applies role/status/sort from the filter sheet in a single reload.
+  void setFilter(UsersFilter filter) {
     state = state.copyWith(
-      filter: state.filter.copyWith(role: role, clearRole: role == null),
-    );
-    load();
-  }
-
-  void setStatusFilter(UserStatus? status) {
-    state = state.copyWith(
-      filter: state.filter.copyWith(
-        status: status,
-        clearStatus: status == null,
-      ),
+      filter: filter.copyWith(search: state.filter.search),
     );
     load();
   }

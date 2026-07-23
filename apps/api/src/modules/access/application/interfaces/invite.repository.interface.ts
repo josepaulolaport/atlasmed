@@ -12,6 +12,7 @@ export interface InviteRecord {
   invitedByUserId: string;
   firstName: string | null;
   lastName: string | null;
+  birthDate: Date | null;
   managerId: string | null;
   managerTerritoryId: string | null;
   repTerritoryId: string | null;
@@ -25,6 +26,12 @@ export interface InviteRecord {
   updatedAt: Date;
 }
 
+export interface InviteSectorAssignmentParams {
+  sectorId: string;
+  managerId?: string | undefined;
+  territoryIds: string[];
+}
+
 export interface CreateInviteParams {
   email?: string | undefined;
   phoneNumber?: string | undefined;
@@ -33,9 +40,12 @@ export interface CreateInviteParams {
   invitedByUserId: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
+  birthDate?: Date | undefined;
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
+  /** Multi-sector staging; empty keeps legacy single-territory columns only. */
+  sectorAssignments?: InviteSectorAssignmentParams[];
   expiresAt: Date;
 }
 
@@ -45,8 +55,9 @@ export interface AcceptInviteTransactionParams {
   phoneNumber?: string | undefined;
   username: string;
   passwordHash: string;
-  firstName?: string | undefined;
-  lastName?: string | undefined;
+  firstName: string;
+  lastName: string;
+  birthDate: Date;
 }
 
 export interface AcceptInviteTransactionResult {
@@ -65,6 +76,27 @@ export interface AcceptInviteTransactionResult {
   invite: InviteRecord;
 }
 
+export interface InviteStagedSectorAssignment {
+  invitationId: string;
+  sectorId: string;
+  managerId: string | null;
+  territoryIds: string[];
+}
+
+export interface UpdatePendingInviteParams {
+  inviteId: string;
+  email?: string | undefined;
+  phoneNumber?: string | null | undefined;
+  roleId?: string | undefined;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
+  birthDate?: Date | undefined;
+  managerId?: string | null | undefined;
+  managerTerritoryId?: string | null | undefined;
+  repTerritoryId?: string | null | undefined;
+  sectorAssignments?: InviteSectorAssignmentParams[];
+}
+
 export interface InviteRepository {
   create(params: CreateInviteParams): Promise<InviteRecord>;
 
@@ -80,6 +112,12 @@ export interface InviteRepository {
     limit?: number;
     invitedByUserId?: string;
   }): Promise<{ invitations: InviteRecord[]; total: number }>;
+
+  findStagedSectorAssignments(
+    invitationIds: string[],
+  ): Promise<InviteStagedSectorAssignment[]>;
+
+  updatePending(params: UpdatePendingInviteParams): Promise<InviteRecord>;
 
   markAccepted(inviteId: string, userId: string): Promise<void>;
 

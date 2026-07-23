@@ -1,5 +1,14 @@
 import { eq, and, or, isNull, isNotNull, inArray, gt, desc, lt, sql } from "drizzle-orm";
-import { users, roles, invitations, userTerritoryAssignments, territories, userSectorAssignments } from "@atlasmed/database";
+import {
+  users,
+  roles,
+  invitations,
+  userTerritoryAssignments,
+  territories,
+  userSectorAssignments,
+  invitationSectorAssignments,
+  invitationTerritoryAssignments,
+} from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import { InvalidInviteError, ResourceConflictError, ResourceNotFoundError } from "../../../../../shared/errors";
 
@@ -26,24 +35,48 @@ export class DrizzleInviteRepository implements InviteRepository {
   async create(params: CreateInviteParams) {
     await this.cleanupExpired();
 
-    const [inserted] = await db
-      .insert(invitations)
-      .values({
-        email: params.email ?? null,
-        phoneNumber: params.phoneNumber ?? null,
-        tokenHash: params.tokenHash,
-        roleId: params.roleId,
-        invitedByUserId: params.invitedByUserId,
-        firstName: params.firstName ?? null,
-        lastName: params.lastName ?? null,
-        managerId: params.managerId ?? null,
-        managerTerritoryId: params.managerTerritoryId ?? null,
-        repTerritoryId: params.repTerritoryId ?? null,
-        expiresAt: params.expiresAt,
-      })
-      .returning();
+    const inviteId = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(invitations)
+        .values({
+          email: params.email ?? null,
+          phoneNumber: params.phoneNumber ?? null,
+          tokenHash: params.tokenHash,
+          roleId: params.roleId,
+          invitedByUserId: params.invitedByUserId,
+          firstName: params.firstName ?? null,
+          lastName: params.lastName ?? null,
+          birthDate: params.birthDate ?? null,
+          managerId: params.managerId ?? null,
+          managerTerritoryId: params.managerTerritoryId ?? null,
+          repTerritoryId: params.repTerritoryId ?? null,
+          expiresAt: params.expiresAt,
+        })
+        .returning({ id: invitations.id });
 
-    const result = await fetchInviteWithRole(inserted!.id);
+      const id = inserted!.id;
+      const sectors = params.sectorAssignments ?? [];
+
+      for (const sector of sectors) {
+        await tx.insert(invitationSectorAssignments).values({
+          invitationId: id,
+          sectorId: sector.sectorId,
+          managerId: sector.managerId ?? null,
+        });
+
+        for (const territoryId of sector.territoryIds) {
+          await tx.insert(invitationTerritoryAssignments).values({
+            invitationId: id,
+            sectorId: sector.sectorId,
+            territoryId,
+          });
+        }
+      }
+
+      return id;
+    });
+
+    const result = await fetchInviteWithRole(inviteId);
     return result!;
   }
 
@@ -68,6 +101,113 @@ export class DrizzleInviteRepository implements InviteRepository {
 
   async findById(inviteId: string) {
     return fetchInviteWithRole(inviteId);
+  }
+
+  async findStagedSectorAssignments(invitationIds: string[]) {
+    if (invitationIds.length === 0) return [];
+
+    const sectorRows = await db
+      .select({
+        invitationId: invitationSectorAssignments.invitationId,
+        sectorId: invitationSectorAssignments.sectorId,
+        managerId: invitationSectorAssignments.managerId,
+      })
+      .from(invitationSectorAssignments)
+      .where(inArray(invitationSectorAssignments.invitationId, invitationIds));
+
+    const territoryRows = await db
+      .select({
+        invitationId: invitationTerritoryAssignments.invitationId,
+        sectorId: invitationTerritoryAssignments.sectorId,
+        territoryId: invitationTerritoryAssignments.territoryId,
+      })
+      .from(invitationTerritoryAssignments)
+      .where(inArray(invitationTerritoryAssignments.invitationId, invitationIds));
+
+    const territoriesByKey = new Map<string, string[]>();
+    for (const row of territoryRows) {
+      const key = `${row.invitationId}:${row.sectorId}`;
+      const list = territoriesByKey.get(key) ?? [];
+      list.push(row.territoryId);
+      territoriesByKey.set(key, list);
+    }
+
+    return sectorRows.map((row) => ({
+      invitationId: row.invitationId,
+      sectorId: row.sectorId,
+      managerId: row.managerId ?? null,
+      territoryIds:
+        territoriesByKey.get(`${row.invitationId}:${row.sectorId}`) ?? [],
+    }));
+  }
+
+  async updatePending(params: {
+    inviteId: string;
+    email?: string | undefined;
+    phoneNumber?: string | null | undefined;
+    roleId?: string | undefined;
+    firstName?: string | undefined;
+    lastName?: string | undefined;
+    birthDate?: Date | undefined;
+    managerId?: string | null | undefined;
+    managerTerritoryId?: string | null | undefined;
+    repTerritoryId?: string | null | undefined;
+    sectorAssignments?: Array<{
+      sectorId: string;
+      managerId?: string | undefined;
+      territoryIds: string[];
+    }>;
+  }) {
+    await db.transaction(async (tx) => {
+      const updates: Record<string, unknown> = { updatedAt: new Date() };
+      if (params.email !== undefined) updates.email = params.email;
+      if (params.phoneNumber !== undefined) updates.phoneNumber = params.phoneNumber;
+      if (params.roleId !== undefined) updates.roleId = params.roleId;
+      if (params.firstName !== undefined) updates.firstName = params.firstName;
+      if (params.lastName !== undefined) updates.lastName = params.lastName;
+      if (params.birthDate !== undefined) updates.birthDate = params.birthDate;
+      if (params.managerId !== undefined) updates.managerId = params.managerId;
+      if (params.managerTerritoryId !== undefined) {
+        updates.managerTerritoryId = params.managerTerritoryId;
+      }
+      if (params.repTerritoryId !== undefined) {
+        updates.repTerritoryId = params.repTerritoryId;
+      }
+
+      await tx
+        .update(invitations)
+        .set(updates)
+        .where(eq(invitations.id, params.inviteId));
+
+      if (params.sectorAssignments !== undefined) {
+        await tx
+          .delete(invitationTerritoryAssignments)
+          .where(
+            eq(invitationTerritoryAssignments.invitationId, params.inviteId),
+          );
+        await tx
+          .delete(invitationSectorAssignments)
+          .where(eq(invitationSectorAssignments.invitationId, params.inviteId));
+
+        for (const sector of params.sectorAssignments) {
+          await tx.insert(invitationSectorAssignments).values({
+            invitationId: params.inviteId,
+            sectorId: sector.sectorId,
+            managerId: sector.managerId ?? null,
+          });
+          for (const territoryId of sector.territoryIds) {
+            await tx.insert(invitationTerritoryAssignments).values({
+              invitationId: params.inviteId,
+              sectorId: sector.sectorId,
+              territoryId,
+            });
+          }
+        }
+      }
+    });
+
+    const result = await fetchInviteWithRole(params.inviteId);
+    return result!;
   }
 
   async findByEmailOrPhone(email?: string | undefined, phoneNumber?: string | undefined) {
@@ -201,9 +341,11 @@ export class DrizzleInviteRepository implements InviteRepository {
           roleId: invitations.roleId,
           firstName: invitations.firstName,
           lastName: invitations.lastName,
+          birthDate: invitations.birthDate,
           managerId: invitations.managerId,
           managerTerritoryId: invitations.managerTerritoryId,
           repTerritoryId: invitations.repTerritoryId,
+          invitedByUserId: invitations.invitedByUserId,
         })
         .from(invitations)
         .where(eq(invitations.tokenHash, params.tokenHash))
@@ -258,8 +400,9 @@ export class DrizzleInviteRepository implements InviteRepository {
           phoneNumber: params.phoneNumber ?? null,
           passwordHash: params.passwordHash,
           roleId: inviteLock.roleId,
-          firstName: params.firstName ?? inviteLock.firstName ?? null,
-          lastName: params.lastName ?? inviteLock.lastName ?? null,
+          firstName: params.firstName,
+          lastName: params.lastName,
+          birthDate: params.birthDate,
           managerId: inviteLock.managerId ?? null,
           emailVerified: Boolean(inviteLock.email),
           phoneVerified: Boolean(inviteLock.phoneNumber),
@@ -276,48 +419,98 @@ export class DrizzleInviteRepository implements InviteRepository {
 
       const user = { ...userRow!.users, role: userRow!.roles! };
 
-      // Create territory assignments and derive sector assignments if specified in invitation
-      const assignedTerritoryIds: string[] = [];
+      const stagedSectors = await tx
+        .select()
+        .from(invitationSectorAssignments)
+        .where(eq(invitationSectorAssignments.invitationId, inviteLock.id));
 
-      if (inviteLock.managerTerritoryId) {
-        await tx.insert(userTerritoryAssignments).values({
-          userId: user.id,
-          territoryId: inviteLock.managerTerritoryId,
-          assignedBy: inviteLock.id,
-        });
-        assignedTerritoryIds.push(inviteLock.managerTerritoryId);
-      }
+      const stagedTerritories = await tx
+        .select()
+        .from(invitationTerritoryAssignments)
+        .where(eq(invitationTerritoryAssignments.invitationId, inviteLock.id));
 
-      if (inviteLock.repTerritoryId) {
-        await tx.insert(userTerritoryAssignments).values({
-          userId: user.id,
-          territoryId: inviteLock.repTerritoryId,
-          assignedBy: inviteLock.id,
-        });
-        assignedTerritoryIds.push(inviteLock.repTerritoryId);
-      }
+      if (stagedTerritories.length > 0 || stagedSectors.length > 0) {
+        const seenTerritoryIds = new Set<string>();
+        for (const row of stagedTerritories) {
+          if (seenTerritoryIds.has(row.territoryId)) continue;
+          seenTerritoryIds.add(row.territoryId);
+          await tx.insert(userTerritoryAssignments).values({
+            userId: user.id,
+            territoryId: row.territoryId,
+            assignedBy: inviteLock.invitedByUserId,
+          });
+        }
 
-      // Derive sector assignments from the assigned territories' sector_id
-      if (assignedTerritoryIds.length > 0) {
-        const territoryRows = await tx
-          .select({ sectorId: territories.sectorId })
-          .from(territories)
-          .where(
-            and(
-              inArray(territories.id, assignedTerritoryIds),
-              isNotNull(territories.sectorId)
-            )
-          );
-
-        const uniqueSectorIds = [
-          ...new Set(territoryRows.map((r) => r.sectorId as string)),
-        ];
-
-        for (const sectorId of uniqueSectorIds) {
+        for (const sector of stagedSectors) {
           await tx
             .insert(userSectorAssignments)
-            .values({ userId: user.id, sectorId })
+            .values({
+              userId: user.id,
+              sectorId: sector.sectorId,
+              managerId: sector.managerId ?? null,
+              assignedByUserId: inviteLock.invitedByUserId,
+            })
             .onConflictDoNothing();
+        }
+
+        const primaryManager =
+          stagedSectors.map((s) => s.managerId).find((id): id is string => Boolean(id)) ??
+          inviteLock.managerId;
+        if (primaryManager && user.managerId !== primaryManager) {
+          await tx
+            .update(users)
+            .set({ managerId: primaryManager, updatedAt: new Date() })
+            .where(eq(users.id, user.id));
+          user.managerId = primaryManager;
+        }
+      } else {
+        // Legacy single-territory invite columns
+        const assignedTerritoryIds: string[] = [];
+
+        if (inviteLock.managerTerritoryId) {
+          await tx.insert(userTerritoryAssignments).values({
+            userId: user.id,
+            territoryId: inviteLock.managerTerritoryId,
+            assignedBy: inviteLock.invitedByUserId,
+          });
+          assignedTerritoryIds.push(inviteLock.managerTerritoryId);
+        }
+
+        if (inviteLock.repTerritoryId) {
+          await tx.insert(userTerritoryAssignments).values({
+            userId: user.id,
+            territoryId: inviteLock.repTerritoryId,
+            assignedBy: inviteLock.invitedByUserId,
+          });
+          assignedTerritoryIds.push(inviteLock.repTerritoryId);
+        }
+
+        if (assignedTerritoryIds.length > 0) {
+          const territoryRows = await tx
+            .select({ sectorId: territories.sectorId })
+            .from(territories)
+            .where(
+              and(
+                inArray(territories.id, assignedTerritoryIds),
+                isNotNull(territories.sectorId),
+              ),
+            );
+
+          const uniqueSectorIds = [
+            ...new Set(territoryRows.map((r) => r.sectorId as string)),
+          ];
+
+          for (const sectorId of uniqueSectorIds) {
+            await tx
+              .insert(userSectorAssignments)
+              .values({
+                userId: user.id,
+                sectorId,
+                managerId: inviteLock.managerId ?? null,
+                assignedByUserId: inviteLock.invitedByUserId,
+              })
+              .onConflictDoNothing();
+          }
         }
       }
 

@@ -1,9 +1,6 @@
-import { generateRandomToken } from "../../../../shared/utils/generate-random-token";
-
+import { generateInviteCode } from "../../../../shared/utils/generate-invite-code";
 import { hashToken } from "../../../../shared/utils/hash-token";
-
 import { environment } from "../../../../app/config/environment";
-
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 
 interface Dependencies {
@@ -17,17 +14,22 @@ interface CreateInviteParams {
   invitedByUserId: string;
   firstName?: string | undefined;
   lastName?: string | undefined;
+  birthDate?: Date | undefined;
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
+  sectorAssignments?: Array<{
+    sectorId: string;
+    managerId?: string | undefined;
+    territoryIds: string[];
+  }>;
 }
 
 export class InviteService {
   constructor(private readonly deps: Dependencies) {}
 
   async createInvite(params: CreateInviteParams) {
-    const token = generateRandomToken();
-
+    const token = generateInviteCode();
     const tokenHash = hashToken(token);
 
     const invite = await this.deps.inviteRepository.create({
@@ -38,10 +40,14 @@ export class InviteService {
       invitedByUserId: params.invitedByUserId,
       firstName: params.firstName,
       lastName: params.lastName,
+      birthDate: params.birthDate,
       managerId: params.managerId,
       managerTerritoryId: params.managerTerritoryId,
       repTerritoryId: params.repTerritoryId,
-      expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+      sectorAssignments: params.sectorAssignments,
+      expiresAt: new Date(
+        Date.now() + environment.INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000,
+      ),
     });
 
     return {
@@ -52,7 +58,7 @@ export class InviteService {
   }
 
   buildRotatedInviteCredentials() {
-    const token = generateRandomToken();
+    const token = generateInviteCode();
     const tokenHash = hashToken(token);
     const expiresAt = new Date(
       Date.now() + environment.INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000

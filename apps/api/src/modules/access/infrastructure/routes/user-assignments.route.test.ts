@@ -102,11 +102,8 @@ describe("userAssignmentsRoute", () => {
     routeTestContext.mocks.getUserAssignmentsExecute.mockImplementation(() =>
       Promise.resolve({
         userId: targetUserId,
-        managerId: null,
-        manager: null,
-        territories: [],
-        sectors: [],
         isOperationallyActive: false,
+        sectorAssignments: [],
       }),
     );
     routeTestContext.mocks.assignUserManagerExecute.mockReset();

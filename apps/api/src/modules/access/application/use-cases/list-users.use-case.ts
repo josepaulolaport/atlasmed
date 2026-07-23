@@ -1,5 +1,9 @@
 import type { ScopeContext } from "@atlasmed/access";
-import type { UserRepository } from "../interfaces/user.repository.interface";
+import type {
+  ListUsersSortBy,
+  ListUsersSortDir,
+  UserRepository,
+} from "../interfaces/user.repository.interface";
 
 interface ListUsersInput {
   page?: number;
@@ -8,6 +12,8 @@ interface ListUsersInput {
   role?: string;
   search?: string;
   sectorId?: string;
+  sortBy?: ListUsersSortBy;
+  sortDir?: ListUsersSortDir;
   scope: ScopeContext;
 }
 
@@ -22,12 +28,17 @@ export function serializeUser(user: {
   phoneNumber?: string | null;
   firstName?: string | null;
   lastName?: string | null;
+  birthDate?: Date | null;
   avatarUrl?: string | null;
   status: string;
   emailVerified: boolean;
   phoneVerified: boolean;
   emailVerifiedAt?: Date | null;
   phoneVerifiedAt?: Date | null;
+  twoFactorEnabled?: boolean;
+  lastLoginAt?: Date | null;
+  suspendedAt?: Date | null;
+  deactivatedAt?: Date | null;
   role: {
     id: string;
     name: string;
@@ -43,12 +54,17 @@ export function serializeUser(user: {
     phoneNumber: user.phoneNumber ?? undefined,
     firstName: user.firstName ?? undefined,
     lastName: user.lastName ?? undefined,
+    birthDate: user.birthDate?.toISOString() ?? undefined,
     avatarUrl: user.avatarUrl ?? undefined,
     status: user.status,
     emailVerified: user.emailVerified,
     phoneVerified: user.phoneVerified,
     emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? undefined,
     phoneVerifiedAt: user.phoneVerifiedAt?.toISOString() ?? undefined,
+    twoFactorEnabled: user.twoFactorEnabled ?? false,
+    lastLoginAt: user.lastLoginAt?.toISOString() ?? undefined,
+    suspendedAt: user.suspendedAt?.toISOString() ?? undefined,
+    deactivatedAt: user.deactivatedAt?.toISOString() ?? undefined,
     role: {
       id: user.role.id,
       name: user.role.name,
@@ -73,6 +89,8 @@ export class ListUsersUseCase {
       role: input.role,
       search: input.search,
       sectorId: input.sectorId,
+      sortBy: input.sortBy,
+      sortDir: input.sortDir,
       scope: input.scope.isGlobal
         ? { isGlobal: true, territoryIds: [] }
         : {

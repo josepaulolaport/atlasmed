@@ -1,7 +1,13 @@
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import type { UserRepository } from "../interfaces/user.repository.interface";
+import type { ScopeRepository } from "../interfaces/scope.repository.interface";
+import type { TerritoryRepository } from "../../../territory/application/interfaces/territory.repository.interface";
 import type { Role, ScopeContext } from "@atlasmed/access";
 import { InsufficientPermissionsError } from "../../../../shared/errors";
+import {
+  groupStagedAssignments,
+  serializeInvitation,
+} from "../utils/serialize-invitation.utils";
 
 interface GetInvitationsInput {
   status?: string;
@@ -15,6 +21,8 @@ interface GetInvitationsInput {
 interface GetInvitationsDependencies {
   inviteRepository: InviteRepository;
   userRepository: UserRepository;
+  scopeRepository: ScopeRepository;
+  territoryRepository: TerritoryRepository;
 }
 
 export class GetInvitationsUseCase {
@@ -24,7 +32,7 @@ export class GetInvitationsUseCase {
     if (input.actorRole === "REP") {
       throw new InsufficientPermissionsError(
         ["invitation:list"],
-        [`role:${input.actorRole}`]
+        [`role:${input.actorRole}`],
       );
     }
 
@@ -49,51 +57,80 @@ export class GetInvitationsUseCase {
     const { invitations, total } =
       await this.dependencies.inviteRepository.findAll(listParams);
 
-    const inviterIds = [
-      ...new Set(invitations.map((invite) => invite.invitedByUserId)),
-    ];
-
-    const inviters = await Promise.all(
-      inviterIds.map((id) => this.dependencies.userRepository.findById(id))
-    );
+    const inviteIds = invitations.map((invite) => invite.id);
+    const [inviters, staged, sectors] = await Promise.all([
+      Promise.all(
+        [...new Set(invitations.map((i) => i.invitedByUserId))].map((id) =>
+          this.dependencies.userRepository.findById(id),
+        ),
+      ),
+      this.dependencies.inviteRepository.findStagedSectorAssignments(inviteIds),
+      this.dependencies.scopeRepository.listActiveSectors(),
+    ]);
 
     const inviterMap = new Map(
       inviters
         .filter((inviter) => inviter !== null)
-        .map((inviter) => [inviter!.id, inviter!])
+        .map((inviter) => [inviter!.id, inviter!]),
+    );
+    const sectorNameById = new Map(sectors.map((s) => [s.id, s.name]));
+    const stagedByInvite = groupStagedAssignments(staged);
+
+    const territoryIds = [...new Set(staged.flatMap((s) => s.territoryIds))];
+    const territories =
+      territoryIds.length > 0
+        ? await this.dependencies.territoryRepository.findByIds(territoryIds)
+        : [];
+    const territoryById = new Map(territories.map((t) => [t.id, t]));
+
+    const managerIds = [
+      ...new Set(
+        staged
+          .map((s) => s.managerId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const managers = await Promise.all(
+      managerIds.map((id) => this.dependencies.userRepository.findById(id)),
+    );
+    const managerNameById = new Map(
+      managers
+        .filter((m): m is NonNullable<typeof m> => Boolean(m))
+        .map((m) => {
+          const name = [m.firstName, m.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+          return [m.id, name || m.username] as const;
+        }),
     );
 
     return {
       invitations: invitations.map((invite) => {
-        const inviter = inviterMap.get(invite.invitedByUserId);
+        const stagedRows = stagedByInvite.get(invite.id) ?? [];
+        const sectorAssignments = stagedRows.map((row) => ({
+          sectorId: row.sectorId,
+          sectorName: sectorNameById.get(row.sectorId) ?? "—",
+          managerId: row.managerId,
+          managerName: row.managerId
+            ? managerNameById.get(row.managerId)
+            : undefined,
+          territories: row.territoryIds.map((id) => {
+            const t = territoryById.get(id);
+            return {
+              id,
+              name: t?.name ?? id,
+              sectorId: row.sectorId,
+              sectorName: sectorNameById.get(row.sectorId),
+            };
+          }),
+        }));
 
-        return {
-          id: invite.id,
-          email: invite.email ?? undefined,
-          phoneNumber: invite.phoneNumber ?? undefined,
-          status: invite.status,
-          role: {
-            id: invite.role.id,
-            name: invite.role.name,
-          },
-          expiresAt: invite.expiresAt.toISOString(),
-          createdAt: invite.createdAt.toISOString(),
-          acceptedAt: invite.acceptedAt?.toISOString() ?? undefined,
-          revokedAt: invite.revokedAt?.toISOString() ?? undefined,
-          invitedBy: inviter
-            ? {
-                id: inviter.id,
-                username: inviter.username,
-                email: inviter.email,
-                firstName: inviter.firstName ?? undefined,
-                lastName: inviter.lastName ?? undefined,
-              }
-            : {
-                id: invite.invitedByUserId,
-                username: "Unknown",
-                email: "",
-              },
-        };
+        return serializeInvitation({
+          invite,
+          invitedBy: inviterMap.get(invite.invitedByUserId) ?? null,
+          sectorAssignments,
+        });
       }),
       pagination: {
         page,

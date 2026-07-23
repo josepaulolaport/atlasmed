@@ -11,6 +11,7 @@ function mapRow(row: {
   action: string;
   conditions: unknown;
   expiresAt: Date | null;
+  createdAt?: Date | null;
 }): AccessGrantRecord {
   return {
     id: row.id,
@@ -19,6 +20,7 @@ function mapRow(row: {
     action: row.action,
     conditions: row.conditions ? (row.conditions as Record<string, unknown>) : undefined,
     expiresAt: row.expiresAt ?? undefined,
+    grantedAt: row.createdAt ?? undefined,
   };
 }
 
@@ -71,6 +73,7 @@ export class DrizzleAccessGrantRepository implements AccessGrantRepository {
         action: permissions.action,
         conditions: permissions.conditions,
         expiresAt: permissions.expiresAt,
+        createdAt: permissions.createdAt,
       });
 
     return mapRow(row!);

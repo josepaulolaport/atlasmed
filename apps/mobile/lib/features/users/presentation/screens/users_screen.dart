@@ -219,12 +219,8 @@ class _UsersListState extends ConsumerState<_UsersList> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => UsersFilterSheet(
-        role: state.filter.role,
-        status: state.filter.status,
-        onApply: (role, status) {
-          notifier.setRoleFilter(role);
-          notifier.setStatusFilter(status);
-        },
+        filter: state.filter,
+        onApply: notifier.setFilter,
       ),
     );
   }

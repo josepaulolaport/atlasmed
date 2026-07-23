@@ -46,6 +46,8 @@ export const users = pgTable(
     passwordHistory: text("password_history").array().notNull().default([]),
     firstName: text("first_name"),
     lastName: text("last_name"),
+    /** Optional profile birth date (admin/mobile user edit). */
+    birthDate: timestamp("birth_date"),
     avatarUrl: text("avatar_url"),
     status: userStatusEnum("status").notNull().default("PENDING"),
     tokenVersion: integer("token_version").notNull().default(1),
@@ -172,6 +174,7 @@ export const invitations = pgTable(
     invitedByUserId: text("invited_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
     firstName: text("first_name"),
     lastName: text("last_name"),
+    birthDate: timestamp("birth_date"),
     managerId: text("manager_id").references(() => users.id, { onDelete: "set null" }),
     managerTerritoryId: text("manager_territory_id"),
     repTerritoryId: text("rep_territory_id"),

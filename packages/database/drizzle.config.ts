@@ -14,4 +14,8 @@ export default defineConfig({
     url: environment.DATABASE_URL,
   },
   schemaFilter: ["public", "audit", "registry", "ingestion"],
+  // Keep PostGIS system tables out of push/generate diffs.
+  // extensionsFilters alone is unreliable on drizzle-kit 0.31.x — also negate via tablesFilter.
+  extensionsFilters: ["postgis"],
+  tablesFilter: ["!geography_columns", "!geometry_columns", "!spatial_ref_sys"],
 });

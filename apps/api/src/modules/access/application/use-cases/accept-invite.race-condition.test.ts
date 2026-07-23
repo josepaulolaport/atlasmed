@@ -101,6 +101,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       email,
       roleId,
       invitedByUserId: adminUserId,
+      birthDate: "1990-05-12",
+      firstName: "Race",
+      lastName: "Test",
     });
 
     const params = {
@@ -108,6 +111,7 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       email,
       username,
       password: "Password123!",
+      birthDate: "1990-05-12",
       firstName: "Race",
       lastName: "Test",
     };
@@ -147,18 +151,27 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       phoneNumber: phone1,
       roleId,
       invitedByUserId: adminUserId,
+      birthDate: "1990-05-12",
+      firstName: "Race",
+      lastName: "Test",
     });
 
     const invite2 = await inviteUser.execute({
       phoneNumber: phone2,
       roleId,
       invitedByUserId: adminUserId,
+      birthDate: "1990-05-12",
+      firstName: "Race",
+      lastName: "Test",
     });
 
     const invite3 = await inviteUser.execute({
       phoneNumber: phone3,
       roleId,
       invitedByUserId: adminUserId,
+      birthDate: "1990-05-12",
+      firstName: "Race",
+      lastName: "Test",
     });
 
     const sharedEmail = `shared-${Date.now()}@example.com`;
@@ -171,6 +184,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
         phoneNumber: phone1,
         username: username1,
         password: "Password123!",
+        firstName: "Race",
+        lastName: "Test",
+        birthDate: "1990-05-12",
       }),
       acceptInviteUseCase.execute({
         token: invite2.token,
@@ -178,6 +194,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
         phoneNumber: phone2,
         username: username2,
         password: "Password123!",
+        firstName: "Race",
+        lastName: "Test",
+        birthDate: "1990-05-12",
       }),
       acceptInviteUseCase.execute({
         token: invite3.token,
@@ -185,6 +204,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
         phoneNumber: phone3,
         username: username3,
         password: "Password123!",
+        firstName: "Race",
+        lastName: "Test",
+        birthDate: "1990-05-12",
       }),
     ]);
 
@@ -212,12 +234,18 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       email: email1,
       roleId,
       invitedByUserId: adminUserId,
+      birthDate: "1990-05-12",
+      firstName: "Race",
+      lastName: "Test",
     });
 
     const invite2 = await inviteUser.execute({
       email: email2,
       roleId,
       invitedByUserId: adminUserId,
+      birthDate: "1990-05-12",
+      firstName: "Race",
+      lastName: "Test",
     });
 
     const user1 = await acceptInviteUseCase.execute({
@@ -225,6 +253,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       email: email1,
       username: username1,
       password: "Password123!",
+        firstName: "Race",
+        lastName: "Test",
+        birthDate: "1990-05-12",
     });
 
     expect(user1).toBeDefined();
@@ -235,6 +266,9 @@ describe("Accept Invite Race Condition Integration Tests", () => {
       email: email2,
       username: username2,
       password: "Password123!",
+        firstName: "Race",
+        lastName: "Test",
+        birthDate: "1990-05-12",
     });
 
     expect(user2).toBeDefined();
