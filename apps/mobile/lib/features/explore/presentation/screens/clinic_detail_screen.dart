@@ -366,9 +366,23 @@ Future<void> _openPurchaseRecurrenceEditor(
                 detail.id,
                 command,
               );
-              ref.read(exploreProvider.notifier).replaceClinic(updated);
-              ref.invalidate(clinicDetailProvider(detail.id));
               if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+              ref.invalidate(clinicDetailProvider(detail.id));
+              try {
+                await ref
+                    .read(exploreProvider.notifier)
+                    .refreshAfterClinicUpdate(updated);
+              } catch (_) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Perfil salvo, mas a lista não pôde ser atualizada agora.',
+                      ),
+                    ),
+                  );
+                }
+              }
             } finally {
               repository.dispose();
             }

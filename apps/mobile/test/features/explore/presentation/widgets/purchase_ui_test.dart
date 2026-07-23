@@ -25,7 +25,7 @@ void main() {
                 city: 'São Paulo',
                 neighborhood: 'Centro',
                 distanceKm: 1,
-                status: ClinicStatus.active,
+                commercialStatus: CommercialStatus.active,
                 lastVisitDays: null,
                 doctorCount: 2,
                 isPriority: false,
@@ -68,11 +68,35 @@ void main() {
       ),
     );
     await tester.tap(find.text('Churn'));
-    await tester.tap(find.text('Janela de compra'));
+    await tester.tap(find.text('Período de compra'));
     await tester.tap(find.text('Mensal'));
     await tester.tap(find.textContaining('Aplicar'));
     expect(applied?['purchaseFunnelStage'], ['CHURN', 'PURCHASE_WINDOW']);
     expect(applied?['purchaseProfile'], ['MONTHLY']);
+  });
+
+  testWidgets('sort sheet hides relevance and distance when unavailable', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SortSheet(
+            open: true,
+            onClose: () {},
+            kind: 'clinic',
+            sort: 'name-asc',
+            hasSearchQuery: false,
+            hasLocation: false,
+            onApply: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Relevância'), findsNothing);
+    expect(find.text('Mais próximos'), findsNothing);
   });
 
   testWidgets('sort sheet exposes purchase fields and direction', (
@@ -87,6 +111,8 @@ void main() {
             onClose: () {},
             kind: 'clinic',
             sort: 'name-asc',
+            hasSearchQuery: true,
+            hasLocation: true,
             onApply: (value) => applied = value,
           ),
         ),
@@ -97,6 +123,34 @@ void main() {
     expect(find.text('Intervalo de compras'), findsOneWidget);
     await tester.tap(find.text('Intervalo de compras'));
     expect(applied, 'purchase-interval-asc');
+  });
+
+  testWidgets('unknown profile requires an explicit choice before save', (
+    tester,
+  ) async {
+    var saves = 0;
+    const unknown = PurchaseRecurrenceSnapshot(
+      intervalDays: 45,
+      sampleSize: 2,
+      rawProfile: 'FUTURE_PROFILE',
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PurchaseRecurrenceForm(
+            initialValue: unknown,
+            onSave: (_) async => saves++,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.textContaining('não é reconhecido'), findsOneWidget);
+    expect(
+      tester.widget<FilledButton>(find.byType(FilledButton)).onPressed,
+      isNull,
+    );
+    expect(saves, 0);
   });
 
   testWidgets(

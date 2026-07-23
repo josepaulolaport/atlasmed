@@ -6,6 +6,8 @@ class SortSheet extends StatefulWidget {
   final VoidCallback onClose;
   final String kind;
   final String sort;
+  final bool hasSearchQuery;
+  final bool hasLocation;
   final ValueChanged<String> onApply;
 
   const SortSheet({
@@ -14,6 +16,8 @@ class SortSheet extends StatefulWidget {
     required this.onClose,
     required this.kind,
     required this.sort,
+    this.hasSearchQuery = false,
+    this.hasLocation = false,
     required this.onApply,
   });
 
@@ -69,14 +73,16 @@ class _SortSheetState extends State<SortSheet>
   List<_SortOption> get _options {
     if (widget.kind == 'clinic') {
       return [
-        _SortOption(
-          'relevance',
-          'Relevância',
-          'Melhores resultados para a busca',
-        ),
+        if (widget.hasSearchQuery)
+          _SortOption(
+            'relevance',
+            'Relevância',
+            'Melhores resultados para a busca',
+          ),
         _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
         _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),
-        _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
+        if (widget.hasLocation)
+          _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
         _SortOption('purchase-funnel-asc', 'Etapa do funil', 'Ordem crescente'),
         _SortOption(
           'purchase-funnel-desc',
@@ -160,77 +166,82 @@ class _SortSheetState extends State<SortSheet>
                   mainAxisSize: MainAxisSize.min,
                   children: _options.map((opt) {
                     final on = _selected == opt.key;
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() => _selected = opt.key);
-                        widget.onApply(opt.key);
-                        widget.onClose();
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        margin: const EdgeInsets.only(bottom: 4),
-                        decoration: BoxDecoration(
-                          color: on
-                              ? const Color(0xFFeef2ff)
-                              : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
+                    return Semantics(
+                      button: true,
+                      selected: on,
+                      label: '${opt.label}. ${opt.subtitle}',
+                      child: InkWell(
+                        onTap: () {
+                          setState(() => _selected = opt.key);
+                          widget.onApply(opt.key);
+                          widget.onClose();
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          margin: const EdgeInsets.only(bottom: 4),
+                          decoration: BoxDecoration(
+                            color: on
+                                ? const Color(0xFFeef2ff)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: on
+                                        ? const Color(0xFF1e40af)
+                                        : const Color(0xFFd1d5db),
+                                    width: 2,
+                                  ),
                                   color: on
                                       ? const Color(0xFF1e40af)
-                                      : const Color(0xFFd1d5db),
-                                  width: 2,
+                                      : Colors.white,
                                 ),
-                                color: on
-                                    ? const Color(0xFF1e40af)
-                                    : Colors.white,
+                                child: on
+                                    ? const Center(
+                                        child: Icon(
+                                          Icons.circle,
+                                          size: 8,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : null,
                               ),
-                              child: on
-                                  ? const Center(
-                                      child: Icon(
-                                        Icons.circle,
-                                        size: 8,
-                                        color: Colors.white,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      opt.label,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0f1729),
                                       ),
-                                    )
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    opt.label,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0f1729),
                                     ),
-                                  ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    opt.subtitle,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF6b7280),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      opt.subtitle,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF6b7280),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );

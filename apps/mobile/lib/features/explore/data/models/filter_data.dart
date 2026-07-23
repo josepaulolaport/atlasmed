@@ -1,5 +1,31 @@
 import 'package:flutter/material.dart';
 
+enum CommercialStatus { registered, active, suspended, inactive }
+
+extension CommercialStatusX on CommercialStatus {
+  String get apiValue => switch (this) {
+    CommercialStatus.registered => 'REGISTERED',
+    CommercialStatus.active => 'ACTIVE',
+    CommercialStatus.suspended => 'SUSPENDED',
+    CommercialStatus.inactive => 'INACTIVE',
+  };
+
+  String get label => switch (this) {
+    CommercialStatus.registered => 'Cadastrado',
+    CommercialStatus.active => 'Ativo',
+    CommercialStatus.suspended => 'Suspenso',
+    CommercialStatus.inactive => 'Inativo',
+  };
+}
+
+CommercialStatus? commercialStatusFromApi(Object? value) => switch (value) {
+  'REGISTERED' => CommercialStatus.registered,
+  'ACTIVE' => CommercialStatus.active,
+  'SUSPENDED' => CommercialStatus.suspended,
+  'INACTIVE' => CommercialStatus.inactive,
+  _ => null,
+};
+
 // ── Clinic status ────────────────────────────────────────────
 enum ClinicStatus { active, negotiation, inactive, rejected }
 
