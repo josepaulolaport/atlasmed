@@ -1,5 +1,6 @@
 import { environment } from "@atlasmed/config";
 import { facilities, orders, type Database } from "@atlasmed/database";
+import { ApplicationFailure } from "@temporalio/activity";
 import {
   calculatePurchaseRecurrenceSnapshot,
   type PurchaseProfile,
@@ -86,7 +87,13 @@ export function selectReconcileFacilityIds(input: {
     .slice(0, input.limit);
 }
 
-function snapshotEquals(
+export function normalizePostgresDate(value: string | Date | null): string | null {
+  if (value === null) return null;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  return value.slice(0, 10);
+}
+
+export function snapshotEquals(
   current: Record<string, unknown>,
   snapshot: PurchaseRecurrenceSnapshot,
 ): boolean {
@@ -95,10 +102,10 @@ function snapshotEquals(
     && current.purchaseIntervalSource === snapshot.purchaseIntervalSource
     && current.manualPurchaseProfile === snapshot.manualPurchaseProfile
     && current.manualPurchaseIntervalDays === snapshot.manualPurchaseIntervalDays
-    && current.lastValidPurchaseDate === snapshot.lastValidPurchaseDate
+    && normalizePostgresDate(current.lastValidPurchaseDate as string | Date | null) === snapshot.lastValidPurchaseDate
     && current.purchaseRecurrenceSampleSize === snapshot.purchaseRecurrenceSampleSize
     && current.purchaseFunnelStage === snapshot.purchaseFunnelStage
-    && current.nextPurchaseFunnelTransitionDate === snapshot.nextPurchaseFunnelTransitionDate;
+    && normalizePostgresDate(current.nextPurchaseFunnelTransitionDate as string | Date | null) === snapshot.nextPurchaseFunnelTransitionDate;
 }
 
 export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
@@ -165,10 +172,10 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         purchase_interval_source: string;
         manual_purchase_profile: PurchaseProfile | null;
         manual_purchase_interval_days: number | null;
-        last_valid_purchase_date: string | null;
+        last_valid_purchase_date: string | Date | null;
         purchase_recurrence_sample_size: number;
         purchase_funnel_stage: string;
-        next_purchase_funnel_transition_date: string | null;
+        next_purchase_funnel_transition_date: string | Date | null;
       }>`
         select id, observed_purchase_interval_days, purchase_interval_days,
           purchase_interval_source, manual_purchase_profile, manual_purchase_interval_days,
@@ -185,15 +192,15 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         purchase_interval_source: string;
         manual_purchase_profile: PurchaseProfile | null;
         manual_purchase_interval_days: number | null;
-        last_valid_purchase_date: string | null;
+        last_valid_purchase_date: string | Date | null;
         purchase_recurrence_sample_size: number;
         purchase_funnel_stage: string;
-        next_purchase_funnel_transition_date: string | null;
+        next_purchase_funnel_transition_date: string | Date | null;
       } | undefined;
       if (!locked) return { facilityId, changed: false, document: null };
 
       const purchaseDates = await tx
-        .select({ date: sql<string>`(${orders.orderedAt} at time zone 'UTC')::date`.as("purchase_date") })
+        .select({ date: sql<string | Date>`(${orders.orderedAt} at time zone 'UTC')::date`.as("purchase_date") })
         .from(orders)
         .where(and(
           eq(orders.facilityId, facilityId),
@@ -203,7 +210,7 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         .groupBy(sql`(${orders.orderedAt} at time zone 'UTC')::date`)
         .orderBy(sql`(${orders.orderedAt} at time zone 'UTC')::date desc`)
         .limit(13)
-        .then((rows) => rows.map((row) => String(row.date)));
+        .then((rows) => rows.map((row) => normalizePostgresDate(row.date)).filter((date): date is string => date !== null));
 
       const snapshot = calculatePurchaseRecurrenceSnapshot({
         purchaseDates,
@@ -222,21 +229,24 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         purchaseFunnelStage: locked.purchase_funnel_stage,
         nextPurchaseFunnelTransitionDate: locked.next_purchase_funnel_transition_date,
       };
-      if (snapshotEquals(current, snapshot)) return { facilityId, changed: false, document: null };
+      const changed = !snapshotEquals(current, snapshot);
+      if (changed) {
+        await tx.update(facilities).set({
+          observedPurchaseIntervalDays: snapshot.observedPurchaseIntervalDays,
+          purchaseIntervalDays: snapshot.purchaseIntervalDays,
+          purchaseIntervalSource: snapshot.purchaseIntervalSource,
+          manualPurchaseProfile: snapshot.manualPurchaseProfile,
+          manualPurchaseIntervalDays: snapshot.manualPurchaseIntervalDays,
+          lastValidPurchaseDate: snapshot.lastValidPurchaseDate,
+          purchaseRecurrenceSampleSize: snapshot.purchaseRecurrenceSampleSize,
+          purchaseFunnelStage: snapshot.purchaseFunnelStage,
+          nextPurchaseFunnelTransitionDate: snapshot.nextPurchaseFunnelTransitionDate,
+          purchaseRecurrenceCalculatedAt: new Date(),
+          updatedAt: new Date(),
+        }).where(eq(facilities.id, facilityId));
+      }
 
-      const [row] = await tx.update(facilities).set({
-        observedPurchaseIntervalDays: snapshot.observedPurchaseIntervalDays,
-        purchaseIntervalDays: snapshot.purchaseIntervalDays,
-        purchaseIntervalSource: snapshot.purchaseIntervalSource,
-        manualPurchaseProfile: snapshot.manualPurchaseProfile,
-        manualPurchaseIntervalDays: snapshot.manualPurchaseIntervalDays,
-        lastValidPurchaseDate: snapshot.lastValidPurchaseDate,
-        purchaseRecurrenceSampleSize: snapshot.purchaseRecurrenceSampleSize,
-        purchaseFunnelStage: snapshot.purchaseFunnelStage,
-        nextPurchaseFunnelTransitionDate: snapshot.nextPurchaseFunnelTransitionDate,
-        purchaseRecurrenceCalculatedAt: new Date(),
-        updatedAt: new Date(),
-      }).where(eq(facilities.id, facilityId)).returning({
+      const [row] = await tx.select({
         id: facilities.id,
         displayName: facilities.displayName,
         legalName: facilities.legalName,
@@ -258,11 +268,14 @@ export class DrizzlePurchaseRecurrenceStore implements PurchaseRecurrenceStore {
         longitude: sql<number | null>`ST_X(${facilities.location}::geometry)`,
         deactivatedAt: facilities.deactivatedAt,
         isActiveInRegistry: facilities.isActiveInRegistry,
-      });
+      }).from(facilities).where(eq(facilities.id, facilityId)).limit(1);
       return {
         facilityId,
-        changed: true,
-        document: row ? mapFacilitySearchDocument(row) : null,
+        changed,
+        document: row ? mapFacilitySearchDocument({
+          ...row,
+          lastValidPurchaseDate: normalizePostgresDate(row.lastValidPurchaseDate),
+        }) : null,
       };
     });
   }
@@ -314,29 +327,53 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
     for (const facilityId of facilityIds) {
       try {
         const result = await dependencies.store.recalculateFacility(facilityId, input.today);
-        if (result.changed) {
-          updated += 1;
-          if (result.document) documents.push(result.document);
-        }
+        if (result.changed) updated += 1;
+        if (result.document) documents.push(result.document);
       } catch (error) {
         failures.push({ facilityId, message: errorMessage(error) });
       }
+    }
+
+    if (failures.length > 0) {
+      const bounded = boundFailures(failures);
+      logger.error("facility_purchase_recurrence.batch_failed", {
+        mode: input.mode,
+        failed: failures.length,
+        failures: bounded,
+        cursor: input.cursor ?? undefined,
+      });
+      throw ApplicationFailure.retryable(
+        `Purchase recurrence database recalculation failed for ${failures.length} facilities`,
+        "PurchaseRecurrenceDatabaseFailure",
+        bounded,
+      );
     }
 
     if (documents.length > 0) {
       try {
         await dependencies.updateSearchDocuments(documents);
       } catch (error) {
-        failures.push({ facilityId: null, message: `Meilisearch partial update failed: ${errorMessage(error)}` });
+        const failure = { facilityId: null, message: `Meilisearch partial update failed: ${errorMessage(error)}` };
+        logger.error("facility_purchase_recurrence.search_publication_failed", {
+          mode: input.mode,
+          processed: facilityIds.length,
+          cursor: input.cursor ?? undefined,
+          failure,
+        });
+        throw ApplicationFailure.retryable(
+          failure.message,
+          "PurchaseRecurrenceSearchPublicationFailure",
+          [failure],
+        );
       }
     }
 
     const result = {
       processed: facilityIds.length,
       updated,
-      failed: failures.length,
+      failed: 0,
       nextCursor: facilityIds.at(-1) ?? null,
-      failures: boundFailures(failures),
+      failures: [],
     };
     logger.info(
       input.mode === "BACKFILL"
@@ -353,6 +390,33 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
     );
     return result;
   };
+}
+
+export interface PurchaseRecurrenceLifecycleLogInput {
+  action:
+    | "facility_purchase_recurrence.backfill_started"
+    | "facility_purchase_recurrence.backfill_completed"
+    | "facility_purchase_recurrence.reconcile_started"
+    | "facility_purchase_recurrence.reconcile_completed";
+  mode: PurchaseRecurrenceMode;
+  today: string;
+  fullSweep: boolean;
+  processed: number;
+  updated: number;
+  failed: number;
+  durationMs: number;
+}
+
+export async function logPurchaseRecurrenceLifecycle(input: PurchaseRecurrenceLifecycleLogInput): Promise<void> {
+  logger.info(input.action, {
+    mode: input.mode,
+    today: input.today,
+    fullSweep: input.fullSweep,
+    processed: input.processed,
+    updated: input.updated,
+    failed: input.failed,
+    durationMs: input.durationMs,
+  });
 }
 
 export const recalculatePurchaseRecurrenceBatch = createPurchaseRecurrenceBatchActivity({

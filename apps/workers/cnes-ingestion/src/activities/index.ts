@@ -27,11 +27,19 @@ import {
 import { rebuildSearchIndexActivity as rebuildSearchIndexActivityImpl } from "./search-rebuild.activities";
 import { processCadastroFileUploadedActivity as processCadastroFileUploadedActivityImpl } from "./cadastro-file-processing.activities";
 
-import { recalculatePurchaseRecurrenceBatch as recalculatePurchaseRecurrenceBatchImpl } from "./purchase-recurrence.activities";
+import {
+  logPurchaseRecurrenceLifecycle as logPurchaseRecurrenceLifecycleImpl,
+  recalculatePurchaseRecurrenceBatch as recalculatePurchaseRecurrenceBatchImpl,
+} from "./purchase-recurrence.activities";
 
 export const recalculatePurchaseRecurrenceBatch = wrapActivity(
   "recalculatePurchaseRecurrenceBatch",
   recalculatePurchaseRecurrenceBatchImpl
+);
+
+export const logPurchaseRecurrenceLifecycle = wrapActivity(
+  "logPurchaseRecurrenceLifecycle",
+  logPurchaseRecurrenceLifecycleImpl
 );
 
 export const rebuildSearchIndexActivity = wrapActivity(

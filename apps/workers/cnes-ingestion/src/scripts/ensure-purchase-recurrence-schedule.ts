@@ -8,14 +8,6 @@ export const PURCHASE_RECURRENCE_SCHEDULES = [
     workflowId: "facility-purchase-recurrence-hourly",
     overlap: "SKIP" as const,
     calendar: { minute: 0 },
-    fullSweep: false,
-  },
-  {
-    scheduleId: "facility-purchase-recurrence-nightly-repair",
-    workflowId: "facility-purchase-recurrence-nightly-repair",
-    overlap: "SKIP" as const,
-    calendar: { hour: 0, minute: 0 },
-    fullSweep: true,
   },
 ] as const;
 
@@ -31,10 +23,7 @@ function scheduleOptions(definition: typeof PURCHASE_RECURRENCE_SCHEDULES[number
       workflowType: "purchaseRecurrenceWorkflow",
       taskQueue: input.taskQueue,
       workflowId: definition.workflowId,
-      args: [{
-        mode: "RECONCILE" as const,
-        ...(definition.fullSweep ? { fullSweep: true } : {}),
-      }],
+      args: [{ mode: "RECONCILE" as const }],
     },
   };
 }
