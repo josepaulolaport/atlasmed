@@ -313,11 +313,7 @@ class HttpUsersRepository implements UsersRepository {
     final response = await _send(
       _accessUri('/users/$userId/permissions'),
       method: RepositoryHttpMethod.delete,
-      body: {
-        'resource': resource,
-        'action': action,
-        'resourceId': ?resourceId,
-      },
+      body: {'resource': resource, 'action': action, 'resourceId': ?resourceId},
     );
     _throwIfError(response);
   }
