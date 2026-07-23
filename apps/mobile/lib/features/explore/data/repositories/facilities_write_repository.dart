@@ -129,7 +129,9 @@ class FacilitiesWriteRepository extends Repository<Map<String, dynamic>>
     final map = fromJson(response.body);
     final id = map['id'] as String?;
     if (id == null || id.isEmpty) {
-      throw const FacilitiesWriteException('Resposta inválida ao criar clínica.');
+      throw const FacilitiesWriteException(
+        'Resposta inválida ao criar clínica.',
+      );
     }
     return id;
   }

@@ -10,8 +10,32 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
 const _kUfOptions = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE',
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
   'TO',
 ];
 
@@ -139,12 +163,20 @@ class _CreateClinicPageState extends ConsumerState<CreateClinicPage> {
                   ),
                 const SizedBox(height: 18),
                 _sectionTitle('Endereço'),
-                _field(_streetCtrl, 'Logradouro *', TextInputType.streetAddress),
+                _field(
+                  _streetCtrl,
+                  'Logradouro *',
+                  TextInputType.streetAddress,
+                ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: _field(_numberCtrl, 'Número *', TextInputType.text),
+                      child: _field(
+                        _numberCtrl,
+                        'Número *',
+                        TextInputType.text,
+                      ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -267,7 +299,9 @@ class _CreateClinicPageState extends ConsumerState<CreateClinicPage> {
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
                 : const Icon(Icons.my_location_rounded, size: 18),
-            label: Text(_geocoding ? 'Geocodificando…' : 'Geocodificar endereço'),
+            label: Text(
+              _geocoding ? 'Geocodificando…' : 'Geocodificar endereço',
+            ),
             style: FilledButton.styleFrom(
               foregroundColor: const Color(0xFF1e40af),
               minimumSize: const Size.fromHeight(44),
@@ -281,10 +315,7 @@ class _CreateClinicPageState extends ConsumerState<CreateClinicPage> {
             Text(
               _geocodeLabel ??
                   '${_lat!.toStringAsFixed(5)}, ${_lng!.toStringAsFixed(5)}',
-              style: const TextStyle(
-                fontSize: 12.5,
-                color: Color(0xFF6b7280),
-              ),
+              style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
             ),
             const SizedBox(height: 10),
             _buildMinimap(),

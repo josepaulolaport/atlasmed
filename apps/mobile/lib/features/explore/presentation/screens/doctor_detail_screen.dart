@@ -773,9 +773,7 @@ class _DoctorProfileFields extends ConsumerWidget {
                 value: detail.crmNumber,
                 keyboardType: TextInputType.number,
                 maxLength: 30,
-                buildPatch: (raw) async => {
-                  'crmNumber': _nullableTrim(raw),
-                },
+                buildPatch: (raw) async => {'crmNumber': _nullableTrim(raw)},
               ),
             ),
             EditableFieldRow(
@@ -1067,7 +1065,8 @@ class _DirectEditProfessionalSheetState
             autofocus: true,
             keyboardType: widget.keyboardType,
             maxLength: widget.maxLength,
-            textCapitalization: widget.keyboardType == TextInputType.emailAddress
+            textCapitalization:
+                widget.keyboardType == TextInputType.emailAddress
                 ? TextCapitalization.none
                 : TextCapitalization.sentences,
             decoration: InputDecoration(

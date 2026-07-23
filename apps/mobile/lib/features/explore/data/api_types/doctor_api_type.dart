@@ -70,9 +70,9 @@ class ApiDoctor {
       favoriteSport: readNullableString(map['favoriteSport']),
       hobbies: readNullableString(map['hobbies']),
       facilityIds: readStringList(map['facilityIds']),
-      facilities: readObjectList(map['facilities'])
-          .map(ApiDoctorFacility.fromMap)
-          .toList(growable: false),
+      facilities: readObjectList(
+        map['facilities'],
+      ).map(ApiDoctorFacility.fromMap).toList(growable: false),
       distanceKm: readNullableDouble(map['distanceKm']),
       createdAt: readNullableDateTime(map['createdAt']),
       updatedAt: readNullableDateTime(map['updatedAt']),

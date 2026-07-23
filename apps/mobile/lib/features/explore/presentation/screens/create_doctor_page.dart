@@ -7,8 +7,32 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/expl
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 
 const _kUfOptions = [
-  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
-  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE',
+  'AC',
+  'AL',
+  'AP',
+  'AM',
+  'BA',
+  'CE',
+  'DF',
+  'ES',
+  'GO',
+  'MA',
+  'MT',
+  'MS',
+  'MG',
+  'PA',
+  'PB',
+  'PR',
+  'PE',
+  'PI',
+  'RJ',
+  'RN',
+  'RS',
+  'RO',
+  'RR',
+  'SC',
+  'SP',
+  'SE',
   'TO',
 ];
 
@@ -162,7 +186,9 @@ class _CreateDoctorPageState extends ConsumerState<CreateDoctorPage> {
                             color: Colors.white,
                           ),
                         )
-                      : Text(_hasFacility ? 'Criar e vincular' : 'Criar médico'),
+                      : Text(
+                          _hasFacility ? 'Criar e vincular' : 'Criar médico',
+                        ),
                 ),
               ],
             ),
@@ -339,10 +365,12 @@ class _CreateDoctorPageState extends ConsumerState<CreateDoctorPage> {
         ? null
         : _specialtyCtrl.text.trim();
     final crmRaw = _crmCtrl.text.trim().isEmpty ? null : _crmCtrl.text.trim();
-    final phone =
-        _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim();
-    final whatsapp =
-        _whatsappCtrl.text.trim().isEmpty ? null : _whatsappCtrl.text.trim();
+    final phone = _phoneCtrl.text.trim().isEmpty
+        ? null
+        : _phoneCtrl.text.trim();
+    final whatsapp = _whatsappCtrl.text.trim().isEmpty
+        ? null
+        : _whatsappCtrl.text.trim();
     final emailValue = email.isEmpty ? null : email;
 
     final names = splitPersonName(name);

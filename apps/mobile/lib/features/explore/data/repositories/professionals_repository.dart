@@ -17,17 +17,15 @@ class ProfessionalsException implements Exception {
 
 class ProfessionalsRepository extends Repository<ApiDoctor>
     with SessionEnvironmentMixin<ApiDoctor> {
-  ProfessionalsRepository(
-    this.professionalId, {
-    RepositoryHttpClient? client,
-  }) : _client = client,
-       super(
-         endpoint: Uri.parse(
-           '${AppConfig.apiBaseUrl}/api/v1/professionals/$professionalId',
-         ),
-         resolveOnCreate: false,
-         name: 'ProfessionalsRepository',
-       );
+  ProfessionalsRepository(this.professionalId, {RepositoryHttpClient? client})
+    : _client = client,
+      super(
+        endpoint: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/professionals/$professionalId',
+        ),
+        resolveOnCreate: false,
+        name: 'ProfessionalsRepository',
+      );
 
   final String professionalId;
   final RepositoryHttpClient? _client;

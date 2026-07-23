@@ -70,8 +70,7 @@ class ProfessionalsWriteRepository extends Repository<Map<String, dynamic>>
           if (email != null && email.isNotEmpty) 'email': email,
           if (facilityId != null && facilityId.isNotEmpty)
             'facilityIds': [facilityId],
-          if (relationshipLevel != null)
-            'relationshipLevel': relationshipLevel,
+          if (relationshipLevel != null) 'relationshipLevel': relationshipLevel,
         },
       ),
     );
@@ -95,13 +94,12 @@ class ProfessionalsWriteRepository extends Repository<Map<String, dynamic>>
       );
     }
 
-    final name =
-        (map['fullName'] as String?)?.trim().isNotEmpty == true
-            ? (map['fullName'] as String).trim()
-            : [
-                map['firstName'],
-                map['lastName'],
-              ].whereType<String>().join(' ').trim();
+    final name = (map['fullName'] as String?)?.trim().isNotEmpty == true
+        ? (map['fullName'] as String).trim()
+        : [
+            map['firstName'],
+            map['lastName'],
+          ].whereType<String>().join(' ').trim();
 
     if (facilityId != null &&
         facilityId.isNotEmpty &&
