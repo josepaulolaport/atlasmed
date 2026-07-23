@@ -5,6 +5,9 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
+import 'package:atlasmed_mobile_app/repository/domain/exceptions/unexpected_status_code_exception.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -151,6 +154,84 @@ void main() {
       isNull,
     );
     expect(saves, 0);
+  });
+
+  testWidgets(
+    'successful save closes once and reports refresh failure as warning',
+    (tester) async {
+      var patchCalls = 0;
+      var closeCalls = 0;
+      var refreshCalls = 0;
+      final warnings = <String>[];
+      final updated = Object();
+
+      Future<void> save(PurchaseRecurrenceCommand command) async {
+        await savePurchaseRecurrence(
+          command: command,
+          update: (_) async {
+            patchCalls++;
+            return updated;
+          },
+          close: () => closeCalls++,
+          refreshDetail: () {},
+          refreshExplore: (_) async {
+            refreshCalls++;
+            throw StateError('offline');
+          },
+          showSynchronizationWarning: warnings.add,
+        );
+      }
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
+        ),
+      );
+      await tester.tap(find.text('Salvar'));
+      await tester.pumpAndSettle();
+
+      expect(patchCalls, 1);
+      expect(closeCalls, 1);
+      expect(refreshCalls, 1);
+      expect(warnings, [purchaseRecurrenceSynchronizationWarning]);
+      expect(
+        find.text('Não foi possível salvar. Tente novamente.'),
+        findsNothing,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('purchase form maps typed 403 to permission message', (
+    tester,
+  ) async {
+    Future<void> save(PurchaseRecurrenceCommand command) async {
+      throw UnexpectedStatusCodeException(
+        sent: RepositoryHttpRequest(url: Uri.parse('https://example.test')),
+        received: const RepositoryHttpResponse(
+          statusCode: 403,
+          headers: {},
+          body: '{}',
+        ),
+      );
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: PurchaseRecurrenceForm(onSave: save)),
+      ),
+    );
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Você não tem permissão para editar este perfil.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('Não foi possível salvar. Tente novamente.'),
+      findsNothing,
+    );
   });
 
   testWidgets(

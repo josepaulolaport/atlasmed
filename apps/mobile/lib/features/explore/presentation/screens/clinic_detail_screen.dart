@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/purchase_recurrence_save.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/establishment_detail_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
@@ -362,27 +363,27 @@ Future<void> _openPurchaseRecurrenceEditor(
           onSave: (command) async {
             final repository = FacilityPurchaseRecurrenceRepository();
             try {
-              final updated = await repository.updatePurchaseRecurrence(
-                detail.id,
-                command,
-              );
-              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
-              ref.invalidate(clinicDetailProvider(detail.id));
-              try {
-                await ref
+              await savePurchaseRecurrence(
+                command: command,
+                update: (command) =>
+                    repository.updatePurchaseRecurrence(detail.id, command),
+                close: () {
+                  if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+                },
+                refreshDetail: () {
+                  ref.invalidate(clinicDetailProvider(detail.id));
+                },
+                refreshExplore: ref
                     .read(exploreProvider.notifier)
-                    .refreshAfterClinicUpdate(updated);
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Perfil salvo, mas a lista não pôde ser atualizada agora.',
-                      ),
-                    ),
-                  );
-                }
-              }
+                    .refreshAfterClinicUpdate,
+                showSynchronizationWarning: (message) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(message)));
+                  }
+                },
+              );
             } finally {
               repository.dispose();
             }
