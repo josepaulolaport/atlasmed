@@ -4,8 +4,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_registration_documents_screen.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/my_suggestions_screen.dart';
 
-/// Two "Título · Badge · >" shortcut cards — Cadastro + Dados administrativos.
+/// Shortcut cards — Cadastro, Dados administrativos, and Não Conformidades.
 class ClinicTopShortcutsSection extends ConsumerWidget {
   const ClinicTopShortcutsSection({
     super.key,
@@ -27,6 +30,14 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
       error: (_, _) => null,
     );
     final adminPending = _adminInfoPendingCount(detail);
+    final mySuggestionsAsync = ref.watch(
+      mySuggestionsForClinicProvider(detail.id),
+    );
+    final pendingSuggestions = mySuggestionsAsync.maybeWhen(
+      data: (items) =>
+          items.where((s) => s.status == NaoConformidadeStatus.pending).length,
+      orElse: () => 0,
+    );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -66,6 +77,24 @@ class ClinicTopShortcutsSection extends ConsumerWidget {
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => ClinicAdminInfoScreen(detail: detail),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _ShortcutCard(
+            icon: Icons.rate_review_outlined,
+            title: 'Não Conformidades',
+            badge: pendingSuggestions == 0
+                ? const _ShortcutBadge.complete('Em dia')
+                : _ShortcutBadge.pending(
+                    '$pendingSuggestions pendente${pendingSuggestions == 1 ? '' : 's'}',
+                  ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MySuggestionsScreen.clinic(
+                  targetId: detail.id,
+                  targetName: detail.name,
+                ),
               ),
             ),
           ),

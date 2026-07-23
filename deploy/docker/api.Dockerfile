@@ -1,11 +1,12 @@
-FROM oven/bun:1.3.14 AS prepare
+ARG DEPLOY_PLATFORM=linux/arm64
+FROM --platform=${DEPLOY_PLATFORM} oven/bun:1.3.14 AS prepare
 
 WORKDIR /app
 COPY . .
 
 RUN bunx turbo prune @atlasmed/api --docker
 
-FROM oven/bun:1.3.14 AS runtime
+FROM --platform=${DEPLOY_PLATFORM} oven/bun:1.3.14 AS runtime
 
 WORKDIR /app
 COPY --from=prepare /app/out/json/ ./

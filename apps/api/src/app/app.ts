@@ -6,6 +6,7 @@ import { healthRoute } from "../infrastructure/health/health.route";
 import { access, user as profileUser } from "../modules/access";
 import { sessions } from "../modules/sessions";
 import { facility } from "../modules/facility";
+import { fieldSuggestions } from "../modules/field-suggestions";
 import { catalog } from "../modules/catalog";
 import { professional } from "../modules/professional";
 import { registryIngestion } from "../modules/registry-ingestion";
@@ -123,6 +124,7 @@ const app = new Elysia()
       .use(access)
       .use(avatarUser)
       .use(facility)
+      .use(fieldSuggestions)
       .use(catalog)
       .use(professional)
       .use(registryIngestion)

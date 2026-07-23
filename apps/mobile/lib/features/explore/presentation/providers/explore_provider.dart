@@ -68,7 +68,11 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
 
   final repo = _ClinicDetailRepository(id: id);
   try {
-    final apiClinic = await repo.currentValueOrResolve();
+    // Always hit the network — currentValueOrResolve() returns hydrated cache
+    // and skips refresh, which leaves stale admin fields after NC approve.
+    // (Constructor hydratate may still race dispose; BaseRepository.emit ignores
+    // closed controllers.)
+    final apiClinic = await repo.refresh();
     if (apiClinic == null) {
       throw Exception('Clinic not found: $id');
     }
@@ -126,7 +130,7 @@ Future<ClinicDetail> _fetchClinicDetail(String id) async {
 Future<DoctorDetail> _fetchDoctorDetail(String id) async {
   final repo = _DoctorDetailRepository(id: id);
   try {
-    final apiDoctor = await repo.currentValueOrResolve();
+    final apiDoctor = await repo.refresh();
     if (apiDoctor == null) {
       throw Exception('Doctor not found: $id');
     }

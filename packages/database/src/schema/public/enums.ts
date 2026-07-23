@@ -194,3 +194,15 @@ export const cadastroProcessingStepStatusEnum = pgEnum(
   "cadastro_processing_step_status",
   ["STARTED", "SUCCEEDED", "FAILED"]
 );
+
+/** User-submitted Não Conformidades (field suggestions) — not CNES registry. */
+export const fieldSuggestionKindEnum = pgEnum("field_suggestion_kind", [
+  "FIELD_CHANGE",
+  "DEACTIVATION",
+]);
+
+export const fieldSuggestionStatusEnum = pgEnum("field_suggestion_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+]);

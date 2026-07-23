@@ -89,50 +89,57 @@
     {
       "idx": 12,
       "version": "7",
-      "when": 1784756737057,
-      "tag": "0012_facility_cadastro",
+      "when": 1784756768746,
+      "tag": "0012_field_suggestions",
       "breakpoints": true
     },
     {
       "idx": 13,
       "version": "7",
-      "when": 1784756796133,
-      "tag": "0013_facility_cadastro_catalog",
+      "when": 1784756737057,
+      "tag": "0013_facility_cadastro",
       "breakpoints": true
     },
     {
       "idx": 14,
       "version": "7",
-      "when": 1784757863789,
-      "tag": "0014_deactivate_legacy_conformity_requirements",
+      "when": 1784756796133,
+      "tag": "0014_facility_cadastro_catalog",
       "breakpoints": true
     },
     {
       "idx": 15,
       "version": "7",
-      "when": 1784758226828,
-      "tag": "0015_facility_tax_id_type_required",
+      "when": 1784757863789,
+      "tag": "0015_deactivate_legacy_conformity_requirements",
       "breakpoints": true
     },
     {
       "idx": 16,
       "version": "7",
-      "when": 1784758278952,
-      "tag": "0016_facility_tax_id_type_required_snapshot",
+      "when": 1784758226828,
+      "tag": "0016_facility_tax_id_type_required",
       "breakpoints": true
     },
     {
       "idx": 17,
       "version": "7",
-      "when": 1784764929973,
-      "tag": "0017_cadastro_submissions_multifile",
+      "when": 1784758278952,
+      "tag": "0017_facility_tax_id_type_required_snapshot",
       "breakpoints": true
     },
     {
       "idx": 18,
       "version": "7",
+      "when": 1784764929973,
+      "tag": "0018_cadastro_submissions_multifile",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
       "when": 1784765211120,
-      "tag": "0018_migrate_legacy_cadastro_to_submissions",
+      "tag": "0019_migrate_legacy_cadastro_to_submissions",
       "breakpoints": true
     }
   ]

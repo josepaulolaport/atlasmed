@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const composePath = resolve(import.meta.dir, "uncloud.compose.yml");
+const dockerfilePaths = [
+  "api.Dockerfile",
+  "api-worker.Dockerfile",
+  "cnes-worker.Dockerfile",
+  "web.Dockerfile",
+].map((name) => resolve(import.meta.dir, "docker", name));
 const workflowPath = resolve(
   import.meta.dir,
   "../.github/workflows/deploy-services-to-cluster.yml",
@@ -16,6 +22,44 @@ function readDeploymentConfig() {
 }
 
 describe("production deployment", () => {
+  it("builds application images for the ARM64 deployment machine", () => {
+    const { compose } = readDeploymentConfig();
+
+    for (const serviceName of [
+      "atlasmed-web",
+      "atlasmed-api",
+      "atlasmed-api-worker",
+      "atlasmed-cnes-worker",
+    ]) {
+      const serviceStart = compose.indexOf(`  ${serviceName}:`);
+      const nextService = compose.indexOf("\n  atlasmed-", serviceStart + 1);
+      const service = compose.slice(
+        serviceStart,
+        nextService === -1 ? undefined : nextService,
+      );
+
+      expect(service).toContain("platform: linux/arm64");
+      expect(service).toContain("x-machines: oracle-luis");
+    }
+  });
+
+  it("pins Dockerfile base images to ARM64 for remote Uncloud builds", () => {
+    for (const dockerfilePath of dockerfilePaths) {
+      const dockerfile = readFileSync(dockerfilePath, "utf8");
+      const fromLines = dockerfile
+        .split("\n")
+        .filter(
+          (line) => line.startsWith("FROM ") && !line.includes(" installer AS "),
+        );
+
+      expect(fromLines.length).toBeGreaterThan(0);
+      for (const fromLine of fromLines) {
+        expect(fromLine).toContain("--platform=${DEPLOY_PLATFORM}");
+      }
+      expect(dockerfile).toContain("ARG DEPLOY_PLATFORM=linux/arm64");
+    }
+  });
+
   it("pins the production Meilisearch server to v1.48", () => {
     const { compose } = readDeploymentConfig();
     const meilisearch = compose.slice(
@@ -62,6 +106,9 @@ describe("production deployment", () => {
     );
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
+    );
+    expect(workflow).toContain(
+      "name: Set up QEMU for ARM64 builds\n        uses: docker/setup-qemu-action@v3",
     );
   });
 });

@@ -35,6 +35,8 @@ import {
   cadastroUploadSessionStatusEnum,
   cadastroReviewDecisionEnum,
   cadastroProcessingStepStatusEnum,
+  fieldSuggestionKindEnum,
+  fieldSuggestionStatusEnum,
 } from "./schema/public/enums";
 import {
   cnesRunStatusEnum,
@@ -80,3 +82,6 @@ export type CadastroReviewDecision =
   (typeof cadastroReviewDecisionEnum.enumValues)[number];
 export type CadastroProcessingStepStatus =
   (typeof cadastroProcessingStepStatusEnum.enumValues)[number];
+export type FieldSuggestionKind = (typeof fieldSuggestionKindEnum.enumValues)[number];
+export type FieldSuggestionStatus =
+  (typeof fieldSuggestionStatusEnum.enumValues)[number];

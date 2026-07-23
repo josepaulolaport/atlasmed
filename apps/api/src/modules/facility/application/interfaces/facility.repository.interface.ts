@@ -174,8 +174,27 @@ export interface FacilityRepository {
     id: string,
     updates: {
       name?: string;
+      legalName?: string | null;
+      phoneNumber?: string | null;
+      whatsappNumber?: string | null;
+      email?: string | null;
+      websiteUrl?: string | null;
+      responsibleName?: string | null;
+      openingHours?: string | null;
+      taxIdType?: "PJ" | "PF" | null;
+      cnpj?: string | null;
+      cpf?: string | null;
+      neighborhood?: string | null;
+      streetAddress?: string | null;
+      streetNumber?: string | null;
+      addressComplement?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postalCode?: string | null;
+      country?: string | null;
       lat?: number | null;
       lng?: number | null;
+      manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord>;
 }

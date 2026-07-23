@@ -613,15 +613,59 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     id: string,
     updates: {
       name?: string;
+      legalName?: string | null;
+      phoneNumber?: string | null;
+      whatsappNumber?: string | null;
+      email?: string | null;
+      websiteUrl?: string | null;
+      responsibleName?: string | null;
+      openingHours?: string | null;
+      taxIdType?: "PJ" | "PF" | null;
+      cnpj?: string | null;
+      cpf?: string | null;
+      neighborhood?: string | null;
+      streetAddress?: string | null;
+      streetNumber?: string | null;
+      addressComplement?: string | null;
+      city?: string | null;
+      state?: string | null;
+      postalCode?: string | null;
+      country?: string | null;
       lat?: number | null;
       lng?: number | null;
+      manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
     const setData: Record<string, unknown> = {
       updatedAt: new Date(),
+      manuallyEditedAt: updates.manuallyEditedAt ?? new Date(),
     };
 
     if (updates.name !== undefined) setData.displayName = updates.name;
+    if (updates.legalName !== undefined) setData.legalName = updates.legalName;
+    if (updates.phoneNumber !== undefined) setData.phoneNumber = updates.phoneNumber;
+    if (updates.whatsappNumber !== undefined) {
+      setData.whatsappNumber = updates.whatsappNumber;
+    }
+    if (updates.email !== undefined) setData.email = updates.email;
+    if (updates.websiteUrl !== undefined) setData.websiteUrl = updates.websiteUrl;
+    if (updates.responsibleName !== undefined) {
+      setData.responsibleName = updates.responsibleName;
+    }
+    if (updates.openingHours !== undefined) setData.openingHours = updates.openingHours;
+    if (updates.taxIdType !== undefined) setData.taxIdType = updates.taxIdType;
+    if (updates.cnpj !== undefined) setData.cnpj = updates.cnpj;
+    if (updates.cpf !== undefined) setData.cpf = updates.cpf;
+    if (updates.neighborhood !== undefined) setData.neighborhood = updates.neighborhood;
+    if (updates.streetAddress !== undefined) setData.streetAddress = updates.streetAddress;
+    if (updates.streetNumber !== undefined) setData.streetNumber = updates.streetNumber;
+    if (updates.addressComplement !== undefined) {
+      setData.addressComplement = updates.addressComplement;
+    }
+    if (updates.city !== undefined) setData.city = updates.city;
+    if (updates.state !== undefined) setData.state = updates.state;
+    if (updates.postalCode !== undefined) setData.postalCode = updates.postalCode;
+    if (updates.country !== undefined) setData.country = updates.country;
 
     if (updates.lat !== undefined || updates.lng !== undefined) {
       if (updates.lat != null && updates.lng != null) {

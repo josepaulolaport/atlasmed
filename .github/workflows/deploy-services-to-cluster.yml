@@ -101,6 +101,11 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: bun run db:migrate
 
+      - name: Set up QEMU for ARM64 builds
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Install Uncloud CLI
         env:
           UNCLOUD_INSTALL_SHA256: 4df443521dba10eb7b8c497caabe1093aa7414ade8943de48bfec59e159602ef

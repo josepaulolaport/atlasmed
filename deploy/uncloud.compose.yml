@@ -2,6 +2,7 @@ name: atlasmed
 
 services:
   atlasmed-web:
+    platform: linux/arm64
     x-machines: oracle-luis
     image: atlasmed/web:prod
     build:
@@ -23,6 +24,7 @@ services:
       }
 
   atlasmed-api:
+    platform: linux/arm64
     x-machines: oracle-luis
     image: atlasmed/api:prod
     build:
@@ -71,6 +73,7 @@ services:
       }
 
   atlasmed-api-worker:
+    platform: linux/arm64
     x-machines: oracle-luis
     image: atlasmed/api-worker:prod
     build:
@@ -112,6 +115,7 @@ services:
       - atlasmed-temporal
 
   atlasmed-cnes-worker:
+    platform: linux/arm64
     x-machines: oracle-luis
     image: atlasmed/cnes-worker:prod
     build:
