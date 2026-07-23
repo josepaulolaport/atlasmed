@@ -35,14 +35,7 @@ import {
 } from "@/components/ui/select";
 import { TabBar as Tabs, type TabItem } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { cn, formatDate } from "@/lib/utils";
-import {
-  formatPurchaseDate,
-  getDefaultPurchaseRecurrence,
-  getPurchaseFunnelStagePresentation,
-  getPurchaseProfileLabel,
-  getPurchaseSourceLabel,
-} from "@/components/facilities/purchase-recurrence";
+import { cn } from "@/lib/utils";
 
 type TabKey =
   | "overview"
@@ -245,7 +238,11 @@ export default function FacilityDetailPage() {
   );
 
   if (loading) {
-    return <div className="py-10 text-center text-sm text-zinc-500">Carregando…</div>;
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+      </div>
+    );
   }
 
   if (!facility) {
@@ -322,11 +319,9 @@ export default function FacilityDetailPage() {
                 Voltar
               </Link>
             </Button>
-            <Button variant="outline" size="default" asChild>
-              <Link href={`/facilities?edit=${facility.id}`}>
-                <iconify-icon icon="solar:pen-linear" stroke-width="1.5" />
-                Editar
-              </Link>
+            <Button variant="outline" size="default">
+              <iconify-icon icon="solar:pen-linear" stroke-width="1.5" />
+              Editar
             </Button>
             <Button variant="outline" size="default">
               <iconify-icon icon="solar:map-linear" stroke-width="1.5" />
@@ -388,9 +383,6 @@ function Field({ label, value }: { label: string; value?: string | null }) {
 }
 
 function OverviewTab({ facility }: { facility: Facility }) {
-  const recurrence = facility.purchaseRecurrence ?? getDefaultPurchaseRecurrence();
-  const funnel = getPurchaseFunnelStagePresentation(recurrence.funnelStage);
-
   return (
     <div className="p-6 max-w-5xl mx-auto w-full">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -413,26 +405,14 @@ function OverviewTab({ facility }: { facility: Facility }) {
                     : undefined
                 }
               />
-              <Field label="Criado em" value={formatDate(facility.createdAt)} />
-              <Field label="Atualizado em" value={formatDate(facility.updatedAt)} />
-            </div>
-          </section>
-          <section className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 bg-zinc-50/50 px-5 py-4">
-              <h3 className="text-sm font-medium tracking-tight text-zinc-900">Compras</h3>
-              <Badge variant={funnel.variant}>{funnel.label}</Badge>
-            </div>
-            <div className="grid gap-5 p-5 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="Perfil" value={getPurchaseProfileLabel(recurrence.profile)} />
-              <Field label="Fonte" value={getPurchaseSourceLabel(recurrence.source)} />
-              <Field label="Intervalo efetivo" value={`${recurrence.intervalDays} dias`} />
               <Field
-                label="Intervalo observado"
-                value={recurrence.observedIntervalDays == null ? "Sem histórico suficiente" : `${recurrence.observedIntervalDays} dias`}
+                label="Criado em"
+                value={new Date(facility.createdAt).toLocaleDateString("pt-BR")}
               />
-              <Field label="Amostra" value={`${recurrence.sampleSize} ${recurrence.sampleSize === 1 ? "intervalo" : "intervalos"}`} />
-              <Field label="Última compra" value={formatPurchaseDate(recurrence.lastPurchaseDate)} />
-              <Field label="Próxima transição" value={recurrence.nextTransitionDate ? formatPurchaseDate(recurrence.nextTransitionDate) : "Sem transição programada"} />
+              <Field
+                label="Atualizado em"
+                value={new Date(facility.updatedAt).toLocaleDateString("pt-BR")}
+              />
             </div>
           </section>
         </div>

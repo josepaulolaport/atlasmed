@@ -12,51 +12,6 @@ export type TerritoryAssignmentStatus = "assigned" | "unassigned" | "ambiguous";
 
 export type PurchaseStatus = "NAO_COMPRA" | "COMPRA" | "COMPRA_POUCO" | "COMPRA_MUITO";
 
-export type PurchaseIntervalSource = "DEFAULT" | "CALCULATED" | "MANUAL";
-
-export type PurchaseProfile =
-  | "WEEKLY"
-  | "BIWEEKLY"
-  | "MONTHLY"
-  | "BIMONTHLY"
-  | "QUARTERLY"
-  | "SEMIANNUAL"
-  | "ANNUAL"
-  | "CUSTOM";
-
-export type PurchaseFunnelStage =
-  | "NEVER_PURCHASED"
-  | "OUTSIDE_WINDOW"
-  | "PURCHASE_WINDOW"
-  | "CHURN"
-  | "INACTIVE";
-
-export interface PurchaseRecurrence {
-  observedIntervalDays: number | null;
-  intervalDays: number;
-  source: PurchaseIntervalSource;
-  profile: PurchaseProfile | null;
-  lastPurchaseDate: string | null;
-  sampleSize: number;
-  funnelStage: PurchaseFunnelStage;
-  nextTransitionDate: string | null;
-}
-
-export type PurchaseRecurrenceUpdateCommand =
-  | { mode: "AUTOMATIC" }
-  | { mode: "PRESET"; profile: Exclude<PurchaseProfile, "CUSTOM"> }
-  | { mode: "CUSTOM"; intervalDays: number };
-
-export type FacilityPurchaseProfileFilter = PurchaseProfile | "AUTOMATIC";
-export type FacilitySort =
-  | "relevance"
-  | "distance"
-  | "name"
-  | "purchaseFunnelStage"
-  | "purchaseIntervalDays"
-  | "lastPurchaseDate";
-export type FacilitySortOrder = "asc" | "desc";
-
 export type FacilityTaxIdType = "PJ" | "PF";
 
 export interface FacilityServiceItem {
@@ -78,7 +33,6 @@ export interface Facility {
   territoryId?: string;
   territoryAssignmentStatus?: TerritoryAssignmentStatus;
   purchaseStatus?: PurchaseStatus;
-  purchaseRecurrence?: PurchaseRecurrence;
   professionalCount?: number;
   consultantName?: string | null;
   services?: FacilityServiceItem[];
@@ -135,7 +89,6 @@ export interface UpdateClinicRequest {
   cnpj?: string | null;
   lat?: number | null;
   lng?: number | null;
-  purchaseRecurrence?: PurchaseRecurrenceUpdateCommand;
 }
 
 export type FacilityProfessionalView = "source" | "confirmed" | "pending" | "all";

@@ -1,44 +1,15 @@
 import apiClient from "./client";
 import type { PaginatedResponse } from "@/types/api";
-import type {
-  Facility,
-  CreateClinicRequest,
-  UpdateClinicRequest,
-  FacilityPurchaseProfileFilter,
-  FacilitySort,
-  FacilitySortOrder,
-  PurchaseFunnelStage,
-} from "@/types/facility";
-
-export interface GetFacilitiesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  purchaseFunnelStage?: PurchaseFunnelStage | PurchaseFunnelStage[];
-  purchaseProfile?: FacilityPurchaseProfileFilter;
-  purchaseIntervalMinDays?: number;
-  purchaseIntervalMaxDays?: number;
-  sort?: FacilitySort;
-  order?: FacilitySortOrder;
-  signal?: AbortSignal;
-}
-
-function serializeFacilitiesParams(params?: GetFacilitiesParams) {
-  if (!params) return undefined;
-  const serialized = Object.fromEntries(
-    Object.entries(params).filter(([key]) => key !== "signal" && key !== "purchaseFunnelStage"),
-  ) as Record<string, string | number | undefined>;
-  serialized.purchaseFunnelStage = Array.isArray(params.purchaseFunnelStage)
-    ? params.purchaseFunnelStage.join(",")
-    : params.purchaseFunnelStage;
-  return serialized;
-}
+import type { Facility, CreateClinicRequest, UpdateClinicRequest } from "@/types/facility";
 
 export const facilitiesApi = {
-  getFacilities: async (params?: GetFacilitiesParams): Promise<PaginatedResponse<Facility>> => {
+  getFacilities: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }): Promise<PaginatedResponse<Facility>> => {
     const response = await apiClient.get<PaginatedResponse<Facility>>("/facilities", {
-      params: serializeFacilitiesParams(params),
-      signal: params?.signal,
+      params,
     });
     return response.data;
   },
