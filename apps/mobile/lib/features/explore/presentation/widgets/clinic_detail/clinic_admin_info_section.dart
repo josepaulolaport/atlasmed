@@ -62,10 +62,14 @@ class ClinicAdminInfoSection extends ConsumerWidget {
             label: 'Tipo',
             value: taxTypeLabel,
             icon: Icons.category_outlined,
-            onEdit: () => showTaxIdTypeSuggestionSheet(
-              context,
-              currentTaxIdType: detail.taxIdType,
-            ),
+            onEdit: () {
+              showTaxIdTypeSuggestionSheet(
+                context,
+                currentTaxIdType: detail.taxIdType,
+              );
+            },
+            fieldKey: null,
+            editable: true,
           ),
           (
             label: taxIdentifier.label,
