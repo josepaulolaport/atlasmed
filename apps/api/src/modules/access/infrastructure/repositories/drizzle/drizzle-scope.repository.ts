@@ -140,17 +140,26 @@ export class DrizzleScopeRepository implements ScopeRepository {
     userId: string;
     sectorId: string;
     assignedByUserId: string;
+    managerId?: string | null;
   }): Promise<void> {
+    const managerId =
+      params.managerId === undefined ? undefined : params.managerId;
+
     await db
       .insert(userSectorAssignments)
       .values({
         userId: params.userId,
         sectorId: params.sectorId,
         assignedByUserId: params.assignedByUserId,
+        managerId: managerId === undefined ? null : managerId,
       })
       .onConflictDoUpdate({
         target: [userSectorAssignments.userId, userSectorAssignments.sectorId],
-        set: { assignedByUserId: params.assignedByUserId, updatedAt: new Date() },
+        set: {
+          assignedByUserId: params.assignedByUserId,
+          ...(managerId !== undefined ? { managerId } : {}),
+          updatedAt: new Date(),
+        },
       });
   }
 
@@ -165,17 +174,66 @@ export class DrizzleScopeRepository implements ScopeRepository {
       );
   }
 
-  async findSectorAssignmentsByUserId(userId: string): Promise<Array<{ sectorId: string; assignedAt: Date }>> {
+  async findSectorAssignmentsByUserId(userId: string): Promise<
+    Array<{ sectorId: string; managerId: string | null; assignedAt: Date }>
+  > {
     const rows = await db
       .select({
         sectorId: userSectorAssignments.sectorId,
+        managerId: userSectorAssignments.managerId,
         createdAt: userSectorAssignments.createdAt,
       })
       .from(userSectorAssignments)
       .where(eq(userSectorAssignments.userId, userId))
       .orderBy(desc(userSectorAssignments.createdAt));
 
-    return rows.map((r) => ({ sectorId: r.sectorId, assignedAt: r.createdAt }));
+    return rows.map((r) => ({
+      sectorId: r.sectorId,
+      managerId: r.managerId ?? null,
+      assignedAt: r.createdAt,
+    }));
+  }
+
+  async replaceAssignments(params: {
+    userId: string;
+    assignedByUserId: string;
+    managerId: string | null;
+    sectorAssignments: Array<{
+      sectorId: string;
+      managerId?: string | null;
+      territoryIds: string[];
+    }>;
+  }): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(userTerritoryAssignments)
+        .where(eq(userTerritoryAssignments.userId, params.userId));
+      await tx
+        .delete(userSectorAssignments)
+        .where(eq(userSectorAssignments.userId, params.userId));
+
+      await tx
+        .update(users)
+        .set({ managerId: params.managerId, updatedAt: new Date() })
+        .where(eq(users.id, params.userId));
+
+      for (const sector of params.sectorAssignments) {
+        await tx.insert(userSectorAssignments).values({
+          userId: params.userId,
+          sectorId: sector.sectorId,
+          assignedByUserId: params.assignedByUserId,
+          managerId: sector.managerId ?? null,
+        });
+
+        for (const territoryId of sector.territoryIds) {
+          await tx.insert(userTerritoryAssignments).values({
+            userId: params.userId,
+            territoryId,
+            assignedBy: params.assignedByUserId,
+          });
+        }
+      }
+    });
   }
 
   async listActiveSectors(): Promise<Array<{ id: string; slug: string; name: string }>> {

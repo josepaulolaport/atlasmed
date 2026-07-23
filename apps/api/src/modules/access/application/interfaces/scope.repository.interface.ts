@@ -45,6 +45,7 @@ export interface ScopeRepository {
     userId: string;
     sectorId: string;
     assignedByUserId: string;
+    managerId?: string | null;
   }): Promise<void>;
 
   revokeSector(params: {
@@ -55,9 +56,25 @@ export interface ScopeRepository {
   findSectorAssignmentsByUserId(userId: string): Promise<
     Array<{
       sectorId: string;
+      managerId: string | null;
       assignedAt: Date;
     }>
   >;
+
+  /**
+   * Atomically replace a user's sector + territory assignments.
+   * Clears existing rows then inserts the provided set.
+   */
+  replaceAssignments(params: {
+    userId: string;
+    assignedByUserId: string;
+    managerId: string | null;
+    sectorAssignments: Array<{
+      sectorId: string;
+      managerId?: string | null;
+      territoryIds: string[];
+    }>;
+  }): Promise<void>;
 
   listActiveSectors(): Promise<Array<{ id: string; slug: string; name: string }>>;
 }

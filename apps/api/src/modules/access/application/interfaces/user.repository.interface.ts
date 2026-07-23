@@ -4,6 +4,7 @@ export interface UserRecord {
   username: string;
   firstName: string | null;
   lastName: string | null;
+  birthDate?: Date | null;
   status: string;
   passwordHash: string;
   emailVerified: boolean;
@@ -17,10 +18,14 @@ export interface UserRecord {
   tokenVersion: number;
   managerId: string | null;
   passwordHistory: string[];
+  lastLoginAt?: Date | null;
+  suspendedAt?: Date | null;
+  deactivatedAt?: Date | null;
   roleId: string;
   role: {
     id: string;
     name: string;
+    description?: string | null;
     priority?: number | null;
   };
   createdAt: Date;
@@ -90,6 +95,9 @@ export interface UserIdentifierMatch {
   id: string;
 }
 
+export type ListUsersSortBy = "name" | "role" | "status" | "createdAt";
+export type ListUsersSortDir = "asc" | "desc";
+
 export interface FindAllUsersParams {
   page: number;
   limit: number;
@@ -97,6 +105,8 @@ export interface FindAllUsersParams {
   role?: string;
   search?: string;
   sectorId?: string;
+  sortBy?: ListUsersSortBy;
+  sortDir?: ListUsersSortDir;
   scope?: UserListScopeFilter;
 }
 
@@ -110,6 +120,15 @@ export interface UpdateProfileParams {
   firstName?: string;
   lastName?: string;
   avatarUrl?: string | null;
+}
+
+export interface UpdateUserAsAdminParams {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phoneNumber?: string | null;
+  username?: string;
+  birthDate?: Date | null;
 }
 
 export interface ChangeRoleTransactionParams {
@@ -201,6 +220,13 @@ export interface UserRepository {
   ): Promise<{ users: UserRecord[]; total: number }>;
 
   updateProfile(userId: string, data: UpdateProfileParams): Promise<UserRecord>;
+
+  updateAsAdmin(
+    userId: string,
+    data: UpdateUserAsAdminParams,
+  ): Promise<UserRecord>;
+
+  findByUsername(username: string): Promise<UserIdentifierMatch | null>;
 
   getMetadata(userId: string): Promise<unknown>;
 

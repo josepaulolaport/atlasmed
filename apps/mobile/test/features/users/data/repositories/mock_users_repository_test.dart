@@ -1,6 +1,7 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/mock_users_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -58,6 +59,32 @@ void main() {
       );
       expect(result.items.length, 1);
       expect(result.items.first.username, 'camila.rocha');
+    });
+
+    test('sorts by name ascending', () async {
+      final result = await repository.getUsers(
+        page: 1,
+        limit: 50,
+        sortBy: UsersSortBy.name,
+        sortDir: UsersSortDir.asc,
+      );
+      final names = result.items
+          .map((u) => u.displayName.toLowerCase())
+          .toList();
+      final sorted = [...names]..sort();
+      expect(names, sorted);
+    });
+
+    test('sorts by status ascending', () async {
+      final result = await repository.getUsers(
+        page: 1,
+        limit: 50,
+        sortBy: UsersSortBy.status,
+        sortDir: UsersSortDir.asc,
+      );
+      final statuses = result.items.map((u) => u.status.name).toList();
+      final sorted = [...statuses]..sort();
+      expect(statuses, sorted);
     });
   });
 
@@ -312,7 +339,12 @@ void main() {
         var grants = await repository.getUserPermissions(userId);
         expect(grants, hasLength(1));
 
-        await repository.revokePermission(userId, grants.first.id);
+        await repository.revokePermission(
+          userId,
+          resource: grants.first.resource,
+          action: grants.first.action,
+          resourceId: grants.first.resourceId,
+        );
         grants = await repository.getUserPermissions(userId);
         expect(grants, isEmpty);
       },

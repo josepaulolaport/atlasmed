@@ -12,6 +12,7 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_em
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_code_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_success_screen.dart';
+import 'package:atlasmed_mobile_app/features/auth/presentation/screens/register_invite_screen.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/screens/location_gate_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastro_review_detail_screen.dart';
@@ -180,12 +181,31 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
               path: 'login',
               builder: (gc, _) => LoginScreen(
                 onForgotPassword: () => gc.push('/splash/login/forgot'),
+                onRegisterInvite: () => gc.push('/splash/login/register'),
                 onLoginSuccess: () {
                   ref.read(locationSessionProvider.notifier).ensureLocation();
                   gc.go('/location-gate');
                 },
               ),
               routes: [
+                GoRoute(
+                  path: 'register',
+                  builder: (gc, state) => RegisterInviteScreen(
+                    initialToken: state.uri.queryParameters['token'],
+                    onBackToLogin: () => gc.go('/splash/login'),
+                    onRegistered: () {
+                      final messenger = ScaffoldMessenger.maybeOf(gc);
+                      gc.go('/splash/login');
+                      messenger?.showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Conta criada. Entre com seu e-mail e senha.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 GoRoute(
                   path: 'forgot',
                   builder: (gc, _) => ForgotEmailScreen(

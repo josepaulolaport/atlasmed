@@ -3,8 +3,8 @@ import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 import { inviteResendRateLimit } from "../middleware/rate-limit.middleware";
 import { sendInviteEmail } from "../email/send-email";
+import { resolveInviteAcceptUrl } from "../email/invite-accept-url";
 import { sendInviteWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
-import { environment } from "../../../../app/config/environment";
 
 export const resendInviteRoute = new Elysia({
   detail: {
@@ -31,7 +31,7 @@ export const resendInviteRoute = new Elysia({
           ? `${user.firstName} ${user.lastName || ""}`.trim()
           : user.username,
         roleName: result.invite.role?.name,
-        inviteUrl: `${environment.FRONTEND_URL}/register`,
+        inviteUrl: resolveInviteAcceptUrl(),
       });
     } else if (result.invite.phoneNumber) {
       await sendInviteWhatsApp(result.invite.phoneNumber, result.token, {

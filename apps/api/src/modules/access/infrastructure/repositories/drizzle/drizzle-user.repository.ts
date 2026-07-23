@@ -1,4 +1,4 @@
-import { eq, and, or, isNull, ilike, inArray, sql, desc } from "drizzle-orm";
+import { eq, and, or, isNull, ilike, inArray, sql, desc, asc } from "drizzle-orm";
 import {
   users,
   roles,
@@ -517,6 +517,20 @@ export class DrizzleUserRepository implements UserRepository {
     }
 
     const where = and(...conditions);
+    const sortBy = params.sortBy ?? "createdAt";
+    const sortDir =
+      params.sortDir ?? (sortBy === "createdAt" ? "desc" : "asc");
+    const dir = sortDir === "asc" ? asc : desc;
+
+    const nameOrder = sql`lower(trim(coalesce(${users.firstName}, '') || ' ' || coalesce(${users.lastName}, '')))`;
+    const orderExpressions =
+      sortBy === "name"
+        ? [dir(nameOrder), dir(sql`lower(${users.username})`)]
+        : sortBy === "role"
+          ? [dir(roles.name), dir(nameOrder)]
+          : sortBy === "status"
+            ? [dir(users.status), dir(nameOrder)]
+            : [dir(users.createdAt)];
 
     const [userRows, countRows] = await Promise.all([
       db
@@ -524,7 +538,7 @@ export class DrizzleUserRepository implements UserRepository {
         .from(users)
         .leftJoin(roles, eq(users.roleId, roles.id))
         .where(where)
-        .orderBy(desc(users.createdAt))
+        .orderBy(...orderExpressions)
         .offset(skip)
         .limit(limit),
       db
@@ -549,6 +563,55 @@ export class DrizzleUserRepository implements UserRepository {
     if (data.firstName !== undefined) updates.firstName = data.firstName;
     if (data.lastName !== undefined) updates.lastName = data.lastName;
     if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl;
+
+    await db.update(users).set(updates).where(eq(users.id, userId));
+
+    const result = await fetchUserWithRole(userId);
+    return result!;
+  }
+
+  async findByUsername(username: string) {
+    const [row] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(and(isNull(users.deletedAt), eq(users.username, username)))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async updateAsAdmin(
+    userId: string,
+    data: {
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      phoneNumber?: string | null;
+      username?: string;
+      birthDate?: Date | null;
+    },
+  ) {
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+
+    if (data.firstName !== undefined) updates.firstName = data.firstName;
+    if (data.lastName !== undefined) updates.lastName = data.lastName;
+    if (data.email !== undefined) {
+      updates.email = data.email;
+      updates.emailVerified = false;
+      updates.emailVerifiedAt = null;
+    }
+    if (data.phoneNumber !== undefined) {
+      updates.phoneNumber = data.phoneNumber;
+      if (data.phoneNumber === null) {
+        updates.phoneVerified = false;
+        updates.phoneVerifiedAt = null;
+      } else {
+        updates.phoneVerified = false;
+        updates.phoneVerifiedAt = null;
+      }
+    }
+    if (data.username !== undefined) updates.username = data.username;
+    if (data.birthDate !== undefined) updates.birthDate = data.birthDate;
 
     await db.update(users).set(updates).where(eq(users.id, userId));
 

@@ -26,6 +26,11 @@ export interface ValidateInvitationTerritoriesParams {
   managerId?: string;
   managerTerritoryId?: string;
   repTerritoryId?: string;
+  sectorAssignments?: Array<{
+    sectorId: string;
+    managerId?: string;
+    territoryIds: string[];
+  }>;
 }
 
 export class InvitationTerritoryValidatorService {
@@ -34,7 +39,18 @@ export class InvitationTerritoryValidatorService {
   async validateInvitationTerritories(
     params: ValidateInvitationTerritoriesParams
   ): Promise<void> {
-    const { roleName, managerId, managerTerritoryId, repTerritoryId } = params;
+    const {
+      roleName,
+      managerId,
+      managerTerritoryId,
+      repTerritoryId,
+      sectorAssignments = [],
+    } = params;
+
+    if (sectorAssignments.length > 0) {
+      await this.validateSectorAssignments(roleName, sectorAssignments);
+      return;
+    }
 
     switch (roleName) {
       case Role.MANAGER:
@@ -62,6 +78,59 @@ export class InvitationTerritoryValidatorService {
 
       default:
         break;
+    }
+  }
+
+  private async validateSectorAssignments(
+    roleName: string,
+    sectorAssignments: Array<{
+      sectorId: string;
+      managerId?: string;
+      territoryIds: string[];
+    }>,
+  ): Promise<void> {
+    if (roleName === Role.ADMIN || roleName === Role.OPS) {
+      throw new ValidationError([
+        {
+          field: "sectorAssignments",
+          message: `${roleName} role does not support territory or manager assignments`,
+        },
+      ]);
+    }
+
+    for (const [index, sector] of sectorAssignments.entries()) {
+      if (sector.territoryIds.length === 0) {
+        throw new ValidationError([
+          {
+            field: `sectorAssignments.${index}.territoryIds`,
+            message: "At least one territory is required per sector",
+          },
+        ]);
+      }
+
+      if (roleName === Role.MANAGER) {
+        for (const territoryId of sector.territoryIds) {
+          await this.validateManagerInvitation({ managerTerritoryId: territoryId });
+        }
+        continue;
+      }
+
+      if (roleName === Role.REP) {
+        if (!sector.managerId) {
+          throw new ValidationError([
+            {
+              field: `sectorAssignments.${index}.managerId`,
+              message: "Manager is required for REP role invitations",
+            },
+          ]);
+        }
+        for (const territoryId of sector.territoryIds) {
+          await this.validateRepInvitation({
+            managerId: sector.managerId,
+            repTerritoryId: territoryId,
+          });
+        }
+      }
     }
   }
 

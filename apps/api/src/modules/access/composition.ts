@@ -59,7 +59,13 @@ import { ChangeUserRoleUseCase } from "./application/use-cases/change-user-role.
 import { ListRolesUseCase } from "./application/use-cases/list-roles.use-case";
 import { ListUsersUseCase } from "./application/use-cases/list-users.use-case";
 import { UpdateProfileUseCase } from "./application/use-cases/update-profile.use-case";
+import { UpdateUserAsAdminUseCase } from "./application/use-cases/update-user-as-admin.use-case";
 import { UpdateAvatarUseCase } from "./application/use-cases/update-avatar.use-case";
+import { ReplaceUserAssignmentsUseCase } from "./application/use-cases/replace-user-assignments.use-case";
+import { GetAssignableTerritoriesForManagerUseCase } from "./application/use-cases/get-assignable-territories-for-manager.use-case";
+import { GetInvitationByIdUseCase } from "./application/use-cases/get-invitation-by-id.use-case";
+import { UpdateInvitationUseCase } from "./application/use-cases/update-invitation.use-case";
+import { InvitationTerritoryValidatorService } from "./application/services/invitation-territory-validator.service";
 import { AvatarStorageAdapter } from "./infrastructure/avatar-storage/avatar-storage.adapter";
 import { AssignUserManagerUseCase } from "./application/use-cases/assign-user-manager.use-case";
 import { AssignUserTerritoryUseCase } from "./application/use-cases/assign-user-territory.use-case";
@@ -243,6 +249,30 @@ export const accessUseCases = {
     new GetInvitationsUseCase({
       inviteRepository: accessRepositories.invite,
       userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      territoryRepository: territoryRepositories.territory,
+    }),
+
+  getInvitationById: () =>
+    new GetInvitationByIdUseCase({
+      inviteRepository: accessRepositories.invite,
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      territoryRepository: territoryRepositories.territory,
+      spatialRepository: territoryRepositories.spatial,
+    }),
+
+  updateInvitation: () =>
+    new UpdateInvitationUseCase({
+      inviteRepository: accessRepositories.invite,
+      userRepository: accessRepositories.user,
+      roleRepository: accessRepositories.role,
+      territoryValidator: new InvitationTerritoryValidatorService({
+        userRepository: accessRepositories.user,
+        territoryRepository: territoryRepositories.territory,
+        territoryTypeRepository: territoryRepositories.territoryType,
+      }),
+      getInvitationById: accessUseCases.getInvitationById(),
     }),
 
   requestPasswordReset: () =>
@@ -408,6 +438,12 @@ export const accessUseCases = {
       authCache: accessCaches.auth,
     }),
 
+  updateUserAsAdmin: () =>
+    new UpdateUserAsAdminUseCase({
+      userRepository: accessRepositories.user,
+      authCache: accessCaches.auth,
+    }),
+
   updateAvatar: () =>
     new UpdateAvatarUseCase({
       userRepository: accessRepositories.user,
@@ -444,6 +480,28 @@ export const accessUseCases = {
     new GetUserAssignmentsUseCase({
       userRepository: accessRepositories.user,
       scopeRepository: accessRepositories.scope,
+      territoryRepository: territoryRepositories.territory,
+      spatialRepository: territoryRepositories.spatial,
+    }),
+
+  replaceUserAssignments: () =>
+    new ReplaceUserAssignmentsUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      territoryValidator: new InvitationTerritoryValidatorService({
+        userRepository: accessRepositories.user,
+        territoryRepository: territoryRepositories.territory,
+        territoryTypeRepository: territoryRepositories.territoryType,
+      }),
+      getUserAssignments: accessUseCases.getUserAssignments(),
+    }),
+
+  getAssignableTerritoriesForManager: () =>
+    new GetAssignableTerritoriesForManagerUseCase({
+      userRepository: accessRepositories.user,
+      scopeRepository: accessRepositories.scope,
+      territoryRepository: territoryRepositories.territory,
+      spatialRepository: territoryRepositories.spatial,
     }),
 
   getTerritoryAssignments: () =>

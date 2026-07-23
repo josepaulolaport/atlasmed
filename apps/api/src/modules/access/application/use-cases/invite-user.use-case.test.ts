@@ -47,6 +47,16 @@ describe("InviteUserUseCase", () => {
     createdAt: new Date(),
     acceptedAt: null,
     revokedAt: null,
+    firstName: "Test",
+    lastName: "User",
+    birthDate: new Date("1990-05-12T00:00:00.000Z"),
+    managerId: null,
+    managerTerritoryId: null,
+    repTerritoryId: null,
+    acceptedByUserId: null,
+    resendCount: 0,
+    lastResendAt: null,
+    updatedAt: new Date(),
     role: {
       id: "role-123",
       name: "USER",
@@ -95,6 +105,9 @@ describe("InviteUserUseCase", () => {
         email: "newuser@example.com",
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       };
 
       const result = await inviteUserUseCase.execute(params);
@@ -115,6 +128,9 @@ describe("InviteUserUseCase", () => {
         phoneNumber: "+1234567890",
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       };
 
       const result = await inviteUserUseCase.execute(params);
@@ -128,6 +144,9 @@ describe("InviteUserUseCase", () => {
         email: "newuser@example.com",
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(result.token).toBeString();
@@ -139,6 +158,9 @@ describe("InviteUserUseCase", () => {
         email: "newuser@example.com",
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(result.invite).toEqual(mockInvite as any);
@@ -151,6 +173,9 @@ describe("InviteUserUseCase", () => {
         email: "newuser@example.com",
         roleId,
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(mockInviteRepository.create).toHaveBeenCalled();
@@ -163,6 +188,9 @@ describe("InviteUserUseCase", () => {
         email: "newuser@example.com",
         roleId: "role-123",
         invitedByUserId,
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(mockInviteRepository.create).toHaveBeenCalled();
@@ -175,6 +203,9 @@ describe("InviteUserUseCase", () => {
         inviteUserUseCase.execute({
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         } as any)
       ).rejects.toThrow(ValidationError);
     });
@@ -187,6 +218,9 @@ describe("InviteUserUseCase", () => {
           email: "user@example.com",
           roleId: "invalid-role-id",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow(RoleNotFoundError);
     });
@@ -199,6 +233,9 @@ describe("InviteUserUseCase", () => {
           email: "user@example.com",
           roleId: "invalid-role-id",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         });
       } catch {}
 
@@ -214,6 +251,9 @@ describe("InviteUserUseCase", () => {
           phoneNumber: "+1234567890",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).resolves.toBeDefined();
     });
@@ -230,6 +270,9 @@ describe("InviteUserUseCase", () => {
           email: "existing@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow(EmailAlreadyExistsError);
     });
@@ -244,6 +287,9 @@ describe("InviteUserUseCase", () => {
           phoneNumber: "+1234567890",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow(ResourceConflictError);
     });
@@ -255,6 +301,9 @@ describe("InviteUserUseCase", () => {
         email,
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(mockUserRepository.findByIdentifier).toHaveBeenCalledWith({
@@ -269,6 +318,9 @@ describe("InviteUserUseCase", () => {
         phoneNumber,
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(mockUserRepository.findByIdentifier).toHaveBeenCalledWith({
@@ -286,6 +338,9 @@ describe("InviteUserUseCase", () => {
           email: "existing@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         });
       } catch {}
 
@@ -302,6 +357,9 @@ describe("InviteUserUseCase", () => {
           email: "newuser@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow(ResourceConflictError);
     });
@@ -314,6 +372,9 @@ describe("InviteUserUseCase", () => {
           phoneNumber: "+1234567890",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow(ResourceConflictError);
     });
@@ -325,6 +386,9 @@ describe("InviteUserUseCase", () => {
         email,
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(mockInviteRepository.findByEmailOrPhone).toHaveBeenCalledWith(
@@ -340,6 +404,9 @@ describe("InviteUserUseCase", () => {
         phoneNumber,
         roleId: "role-123",
         invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
       });
 
       expect(mockInviteRepository.findByEmailOrPhone).toHaveBeenCalledWith(
@@ -356,6 +423,9 @@ describe("InviteUserUseCase", () => {
           email: "newuser@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         });
       } catch {}
 
@@ -368,6 +438,9 @@ describe("InviteUserUseCase", () => {
       email: "newuser@example.com",
       roleId: "role-target",
       invitedByUserId: "manager-123",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
     };
 
     function setupInviter(roleName: keyof typeof ROLE_PRIORITY_BY_NAME) {
@@ -429,6 +502,9 @@ describe("InviteUserUseCase", () => {
         inviteUserUseCase.execute({
           ...inviteParams,
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).resolves.toBeDefined();
     });
@@ -456,6 +532,9 @@ describe("InviteUserUseCase", () => {
           email: "user@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow("Database error");
     });
@@ -470,6 +549,9 @@ describe("InviteUserUseCase", () => {
           email: "user@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow("Query failed");
     });
@@ -484,6 +566,9 @@ describe("InviteUserUseCase", () => {
           email: "user@example.com",
           roleId: "role-123",
           invitedByUserId: "admin-456",
+        birthDate: "1990-05-12",
+        firstName: "Test",
+        lastName: "User",
         })
       ).rejects.toThrow("Create failed");
     });

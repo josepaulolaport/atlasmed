@@ -5,8 +5,8 @@ import { accessUseCases, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
 import { inviteRateLimit } from "../middleware/rate-limit.middleware";
 import { sendInviteEmail } from "../email/send-email";
+import { resolveInviteAcceptUrl } from "../email/invite-accept-url";
 import { sendInviteWhatsApp } from "../../../../infrastructure/external-services/twilio/send-whatsapp";
-import { environment } from "../../../../app/config/environment";
 
 export const inviteUserRoute = new Elysia({ 
   detail: {
@@ -29,9 +29,11 @@ export const inviteUserRoute = new Elysia({
         invitedByUserId: user.id,
         firstName: parsed.firstName,
         lastName: parsed.lastName,
+        birthDate: parsed.birthDate,
         managerId: parsed.managerId || undefined,
         managerTerritoryId: parsed.managerTerritoryId || undefined,
         repTerritoryId: parsed.repTerritoryId || undefined,
+        sectorAssignments: parsed.sectorAssignments,
       });
 
       if (parsed.email) {
@@ -41,7 +43,7 @@ export const inviteUserRoute = new Elysia({
               ? `${user.firstName} ${user.lastName || ""}`.trim()
               : user.username,
             roleName: result.invite.role?.name,
-            inviteUrl: `${environment.FRONTEND_URL}/register`,
+            inviteUrl: resolveInviteAcceptUrl(),
           });
         } catch {
           await accessUseCases.revokeInvite().execute({
@@ -115,9 +117,18 @@ export const inviteUserRoute = new Elysia({
       roleId: t.String({ description: "Role ID to assign to the invited user" }),
       firstName: t.String({ minLength: 1, description: "First name of the invited user" }),
       lastName: t.String({ minLength: 1, description: "Last name of the invited user" }),
+      birthDate: t.String({
+        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+        description: "Invitee birth date (YYYY-MM-DD) — confirmed at registration",
+      }),
       managerId: t.Optional(t.String({ description: "Manager user ID (required for REP role)" })),
       managerTerritoryId: t.Optional(t.String({ description: "Manager zone territory ID (required for MANAGER role)" })),
       repTerritoryId: t.Optional(t.String({ description: "Rep patch territory ID (required for REP role)" })),
+      sectorAssignments: t.Optional(t.Array(t.Object({
+        sectorId: t.String(),
+        managerId: t.Optional(t.String()),
+        territoryIds: t.Array(t.String()),
+      }))),
     }),
     response: {
       200: t.Object({

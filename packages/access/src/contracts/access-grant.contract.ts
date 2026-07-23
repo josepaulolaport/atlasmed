@@ -9,6 +9,7 @@ export interface AccessGrantRecord {
   action: string;
   conditions?: Record<string, unknown>;
   expiresAt?: Date;
+  grantedAt?: Date;
 }
 
 /** Legacy grant resource names mapped to canonical values. */

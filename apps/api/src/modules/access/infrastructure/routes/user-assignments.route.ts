@@ -1,7 +1,9 @@
 import { Elysia, t } from "elysia";
+import { Role } from "@atlasmed/access";
 import {
   assignUserManagerSchema,
   assignUserTerritorySchema,
+  replaceUserAssignmentsSchema,
 } from "@atlasmed/access";
 import { accessUseCases, accessRepositories, auth } from "../../composition";
 import { requirePermission } from "../middleware/permission.middleware";
@@ -90,6 +92,7 @@ export const userAssignmentsRoute = new Elysia({
         userId: params.id,
         sectorId: (body as any).sectorId,
         assignedByUserId,
+        managerId: (body as any).managerId ?? null,
       });
 
       return { message: "Sector assigned successfully" };
@@ -97,6 +100,11 @@ export const userAssignmentsRoute = new Elysia({
     {
       body: t.Object({
         sectorId: t.String({ description: "Sector ID to assign to the user" }),
+        managerId: t.Optional(
+          t.Union([t.String(), t.Null()], {
+            description: "Per-sector reporting manager (REP)",
+          }),
+        ),
       }),
     },
   )
@@ -111,6 +119,81 @@ export const userAssignmentsRoute = new Elysia({
       });
 
       return { message: "Sector revoked successfully" };
+    },
+  )
+  .get(
+    "/users/:id/assignments",
+    async ({ params, getUser }: any) => {
+      const actor = await getUser();
+      return accessUseCases.getUserAssignments().execute({
+        targetUserId: params.id,
+        actorRole: actor.role.name,
+      });
+    },
+    {
+      detail: {
+        summary: "Get assignments for a user (admin)",
+        description:
+          "Returns invite-shaped per-sector manager + territory assignments with map boundaries.",
+        tags: ["Users"],
+        security: [{ bearerAuth: [] }],
+      },
+    },
+  )
+  .put(
+    "/users/:id/assignments",
+    async ({ params, body, getUserId, getUser }: any) => {
+      const actor = await getUser();
+      const assignedBy = await getUserId();
+      const parsed = replaceUserAssignmentsSchema.parse(body);
+
+      return accessUseCases.replaceUserAssignments().execute({
+        targetUserId: params.id,
+        actorUserId: assignedBy,
+        actorRole: actor.role.name as Role,
+        sectorAssignments: parsed.sectorAssignments.map((s) => ({
+          sectorId: s.sectorId,
+          managerId: s.managerId,
+          territoryIds: s.territoryIds,
+        })),
+      });
+    },
+    {
+      detail: {
+        summary: "Replace user sector/territory assignments",
+        tags: ["Users"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        sectorAssignments: t.Array(
+          t.Object({
+            sectorId: t.String(),
+            managerId: t.Optional(t.String()),
+            territoryIds: t.Array(t.String()),
+          }),
+        ),
+      }),
+    },
+  )
+  .get(
+    "/managers/:managerId/assignable-territories",
+    async ({ params, query, getUser }: any) => {
+      const actor = await getUser();
+      return accessUseCases.getAssignableTerritoriesForManager().execute({
+        managerId: params.managerId,
+        sectorId: query.sectorId,
+        actorRole: actor.role.name as Role,
+      });
+    },
+    {
+      detail: {
+        summary: "List assignable rep patches under a manager",
+        tags: ["Users"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        sectorId: t.String({ description: "Healthcare sector ID" }),
+      }),
     },
   )
   .use(requirePermission("read", "TERRITORY"))

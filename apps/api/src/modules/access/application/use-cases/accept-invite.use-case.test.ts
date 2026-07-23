@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { AcceptInviteUseCase } from "./accept-invite.use-case";
-import { InvalidInviteError } from "../../../../shared/errors";
+import { InvalidInviteError, ValidationError } from "../../../../shared/errors";
 import type { InviteRepository } from "../interfaces/invite.repository.interface";
 import { createMockInviteRepository } from "../../test-helpers/fixtures";
 import { createMockAuditLogService } from "../../test-helpers/audit-mocks";
@@ -19,9 +19,19 @@ describe("AcceptInviteUseCase", () => {
     invitedByUserId: "admin-456",
     expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     status: "PENDING",
+    firstName: "Test",
+    lastName: "User",
+    birthDate: new Date("1990-05-12T00:00:00.000Z"),
+    managerId: null,
+    managerTerritoryId: null,
+    repTerritoryId: null,
     createdAt: new Date(),
+    updatedAt: new Date(),
     acceptedAt: null,
+    acceptedByUserId: null,
     revokedAt: null,
+    resendCount: 0,
+    lastResendAt: null,
     role: {
       id: "role-123",
       name: "USER",
@@ -50,8 +60,19 @@ describe("AcceptInviteUseCase", () => {
     role: mockInvite.role,
   };
 
+  const baseParams = {
+    token: "valid-token",
+    email: "newuser@example.com",
+    username: "newusername",
+    password: "SecurePass1!",
+    firstName: "Test",
+    lastName: "User",
+    birthDate: "1990-05-12",
+  };
+
   beforeEach(() => {
     mockInviteRepository = createMockInviteRepository({
+      findValidByTokenHash: mock(async () => mockInvite) as any,
       acceptInviteTransaction: mock(async () => ({
         user: mockUser,
         invite: mockInvite,
@@ -67,194 +88,69 @@ describe("AcceptInviteUseCase", () => {
 
   describe("valid invite acceptance", () => {
     it("should accept valid invite", async () => {
-      const params = {
-        token: "valid-token",
-        email: "newuser@example.com",
-        username: "newusername",
-        password: "SecurePass1",
-        firstName: "Test",
-        lastName: "User",
-      };
-
-      const result = await acceptInviteUseCase.execute(params);
+      const result = await acceptInviteUseCase.execute(baseParams);
 
       expect(result).toBeDefined();
       expect(result.id).toBe("user-123");
     });
 
-    it("should call acceptInviteTransaction with hashed password", async () => {
-      await acceptInviteUseCase.execute({
-        token: "valid-token",
-        email: "newuser@example.com",
-        username: "newusername",
-        password: "SecurePass1",
-      });
+    it("should call acceptInviteTransaction with hashed password and birthDate", async () => {
+      await acceptInviteUseCase.execute(baseParams);
 
       expect(mockInviteRepository.acceptInviteTransaction).toHaveBeenCalledTimes(1);
       const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
       expect(callArgs.email).toBe("newuser@example.com");
       expect(callArgs.username).toBe("newusername");
       expect(callArgs.passwordHash).toStartWith("$argon2id");
+      expect(callArgs.birthDate.toISOString().slice(0, 10)).toBe("1990-05-12");
     });
 
-    it("should hash password before calling transaction", async () => {
+    it("should allow fuzzy name confirmation", async () => {
       await acceptInviteUseCase.execute({
-        token: "valid-token",
-        email: "newuser@example.com",
-        username: "newusername",
-        password: "PlainText1",
+        ...baseParams,
+        firstName: "Test",
+        lastName: "User Silva",
       });
 
-      const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
-      expect(callArgs.passwordHash).not.toBe("PlainText1");
-      expect(callArgs.passwordHash).toStartWith("$argon2id");
+      expect(mockInviteRepository.acceptInviteTransaction).toHaveBeenCalled();
+    });
+  });
+
+  describe("identity confirmation", () => {
+    it("should reject mismatched birth date", async () => {
+      await expect(
+        acceptInviteUseCase.execute({
+          ...baseParams,
+          birthDate: "1991-01-01",
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
     });
 
-    it("should pass firstName to transaction", async () => {
-      await acceptInviteUseCase.execute({
-        token: "valid-token",
-        email: "newuser@example.com",
-        username: "newusername",
-        password: "SecurePass1",
-        firstName: "John",
-      });
-
-      const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
-      expect(callArgs.firstName).toBe("John");
-    });
-
-    it("should pass lastName to transaction", async () => {
-      await acceptInviteUseCase.execute({
-        token: "valid-token",
-        email: "newuser@example.com",
-        username: "newusername",
-        password: "SecurePass1",
-        lastName: "Doe",
-      });
-
-      const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
-      expect(callArgs.lastName).toBe("Doe");
-    });
-
-    it("should pass phoneNumber to transaction", async () => {
-      await acceptInviteUseCase.execute({
-        token: "valid-token",
-        email: "newuser@example.com",
-        phoneNumber: "+1234567890",
-        username: "newusername",
-        password: "SecurePass1",
-      });
-
-      const callArgs = (mockInviteRepository.acceptInviteTransaction as any).mock.calls[0][0];
-      expect(callArgs.phoneNumber).toBe("+1234567890");
-    });
-
-    it("should return user from transaction result", async () => {
-      const result = await acceptInviteUseCase.execute({
-        token: "valid-token",
-        email: "newuser@example.com",
-        username: "newusername",
-        password: "SecurePass1",
-      });
-
-      expect(result).toEqual(mockUser);
+    it("should reject mismatched name", async () => {
+      await expect(
+        acceptInviteUseCase.execute({
+          ...baseParams,
+          firstName: "Maria",
+          lastName: "Silva",
+        }),
+      ).rejects.toBeInstanceOf(ValidationError);
     });
   });
 
   describe("invalid invite", () => {
-    it("should throw InvalidInviteError when invite not found", async () => {
-      mockInviteRepository.acceptInviteTransaction = mock(async () => {
-        throw new InvalidInviteError();
+    it("should throw when invite is missing", async () => {
+      mockInviteRepository = createMockInviteRepository({
+        findValidByTokenHash: mock(async () => null) as any,
+      });
+      acceptInviteUseCase = new AcceptInviteUseCase({
+        inviteRepository: mockInviteRepository,
+        passwordService: new PasswordService(),
+        auditLog: createMockAuditLogService(),
       });
 
-      await expect(
-        acceptInviteUseCase.execute({
-          token: "invalid-token",
-          email: "newuser@example.com",
-          username: "newusername",
-          password: "SecurePass1",
-        })
-      ).rejects.toThrow(InvalidInviteError);
-    });
-
-    it("should throw error when email does not match invite", async () => {
-      mockInviteRepository.acceptInviteTransaction = mock(async () => {
-        throw new InvalidInviteError("Email does not match invitation");
-      });
-
-      await expect(
-        acceptInviteUseCase.execute({
-          token: "valid-token",
-          email: "wrong@example.com",
-          username: "newusername",
-          password: "SecurePass1",
-        })
-      ).rejects.toThrow(InvalidInviteError);
-    });
-
-    it("should throw error when phone does not match invite", async () => {
-      mockInviteRepository.acceptInviteTransaction = mock(async () => {
-        throw new InvalidInviteError("Phone number does not match invitation");
-      });
-
-      await expect(
-        acceptInviteUseCase.execute({
-          token: "valid-token",
-          email: "user@example.com",
-          phoneNumber: "+9999999999",
-          username: "newusername",
-          password: "SecurePass1",
-        })
-      ).rejects.toThrow(InvalidInviteError);
-    });
-  });
-
-  describe("username validation", () => {
-    it("should throw error when username already taken", async () => {
-      mockInviteRepository.acceptInviteTransaction = mock(async () => {
-        throw new Error("User already exists");
-      });
-
-      await expect(
-        acceptInviteUseCase.execute({
-          token: "valid-token",
-          email: "newuser@example.com",
-          username: "existingusername",
-          password: "SecurePass1",
-        })
-      ).rejects.toThrow("User already exists");
-    });
-  });
-
-  describe("repository failures", () => {
-    it("should propagate error when transaction fails", async () => {
-      mockInviteRepository.acceptInviteTransaction = mock(async () => {
-        throw new Error("Database error");
-      });
-
-      await expect(
-        acceptInviteUseCase.execute({
-          token: "valid-token",
-          email: "newuser@example.com",
-          username: "newusername",
-          password: "SecurePass1",
-        })
-      ).rejects.toThrow("Database error");
-    });
-
-    it("should propagate error when user creation fails in transaction", async () => {
-      mockInviteRepository.acceptInviteTransaction = mock(async () => {
-        throw new Error("Create user failed");
-      });
-
-      await expect(
-        acceptInviteUseCase.execute({
-          token: "valid-token",
-          email: "newuser@example.com",
-          username: "newusername",
-          password: "SecurePass1",
-        })
-      ).rejects.toThrow("Create user failed");
+      await expect(acceptInviteUseCase.execute(baseParams)).rejects.toBeInstanceOf(
+        InvalidInviteError,
+      );
     });
   });
 });

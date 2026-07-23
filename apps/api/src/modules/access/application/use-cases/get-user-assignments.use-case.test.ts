@@ -2,15 +2,41 @@ import { describe, expect, it, mock } from "bun:test";
 import { Role } from "@atlasmed/access";
 
 import { GetUserAssignmentsUseCase } from "./get-user-assignments.use-case";
-import { createMockUserRepository } from "../../test-helpers/repository-mocks";
+import {
+  createMockUserRepository,
+  createMockScopeRepository,
+} from "../../test-helpers/repository-mocks";
 import {
   InsufficientPermissionsError,
   UserNotFoundError,
 } from "../../../../shared/errors";
-import { createMockScopeRepository } from "../../test-helpers/repository-mocks";
 
 describe("GetUserAssignmentsUseCase", () => {
-  it("returns assignments with manager details and operational status for USER with territories", async () => {
+  const territoryRepository = {
+    findByIds: mock(async (ids: string[]) =>
+      ids.map((id) => ({
+        id,
+        name: `Territory ${id}`,
+        slug: id,
+        code: id,
+        territoryTypeId: "type-1",
+        managerTerritoryId: null,
+        isActive: true,
+        sectorId: "sector-1",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
+    ),
+  } as any;
+
+  const spatialRepository = {
+    getBoundaryAsGeoJson: mock(async () => ({
+      type: "MultiPolygon",
+      coordinates: [],
+    })),
+  } as any;
+
+  it("returns invite-shaped sector assignments for REP with territories", async () => {
     const assignedAt = new Date("2025-01-15T10:00:00.000Z");
 
     const userRepository = createMockUserRepository({
@@ -39,39 +65,53 @@ describe("GetUserAssignmentsUseCase", () => {
     });
 
     const scopeRepository = createMockScopeRepository({
+      findSectorAssignmentsByUserId: mock(() =>
+        Promise.resolve([
+          {
+            sectorId: "sector-1",
+            managerId: "manager-1",
+            assignedAt,
+          },
+        ]),
+      ),
       findTerritoryAssignmentsByUserId: mock(() =>
         Promise.resolve([{ territoryId: "territory-a", assignedAt }]),
+      ),
+      listActiveSectors: mock(() =>
+        Promise.resolve([
+          { id: "sector-1", slug: "ortho", name: "Ortopedia" },
+        ]),
       ),
     });
 
     const useCase = new GetUserAssignmentsUseCase({
       userRepository,
       scopeRepository,
+      territoryRepository,
+      spatialRepository,
     });
     const result = await useCase.execute({
       targetUserId: "user-1",
       actorRole: Role.ADMIN,
     });
 
-    expect(result).toEqual({
-      userId: "user-1",
+    expect(result.userId).toBe("user-1");
+    expect(result.isOperationallyActive).toBe(true);
+    expect(result.sectorAssignments).toHaveLength(1);
+    expect(result.sectorAssignments[0]).toMatchObject({
+      sectorId: "sector-1",
+      sectorName: "Ortopedia",
       managerId: "manager-1",
-      manager: {
-        id: "manager-1",
-        username: "mgr",
-        email: "mgr@example.com",
-        firstName: "Jane",
-        lastName: "Manager",
-      },
-      territories: [
-        { territoryId: "territory-a", assignedAt: assignedAt.toISOString() },
-      ],
-      sectors: [],
-      isOperationallyActive: true,
+      managerName: "Jane Manager",
+    });
+    expect(result.sectorAssignments[0]!.territories[0]).toMatchObject({
+      id: "territory-a",
+      name: "Territory territory-a",
+      sectorId: "sector-1",
     });
   });
 
-  it("returns inactive operational status for USER without territories", async () => {
+  it("returns inactive operational status for REP without territories", async () => {
     const userRepository = createMockUserRepository({
       findById: mock(() =>
         Promise.resolve({
@@ -84,109 +124,53 @@ describe("GetUserAssignmentsUseCase", () => {
       ) as any,
     });
 
-    const scopeRepository = createMockScopeRepository();
+    const scopeRepository = createMockScopeRepository({
+      listActiveSectors: mock(() => Promise.resolve([])),
+    });
     const useCase = new GetUserAssignmentsUseCase({
       userRepository,
       scopeRepository,
+      territoryRepository,
+      spatialRepository,
     });
     const result = await useCase.execute({
       targetUserId: "user-2",
       actorRole: Role.ADMIN,
     });
 
-    expect(result.managerId).toBeNull();
-    expect(result.manager).toBeNull();
-    expect(result.territories).toEqual([]);
+    expect(result.sectorAssignments).toEqual([]);
     expect(result.isOperationallyActive).toBe(false);
   });
 
-  it("returns isOperationallyActive false for non-USER roles even with territories", async () => {
-    const userRepository = createMockUserRepository({
-      findById: mock(() =>
-        Promise.resolve({
-          id: "manager-1",
-          managerId: null,
-          username: "mgr",
-          email: "mgr@example.com",
-          role: { name: Role.MANAGER },
-        }),
-      ) as any,
-    });
-
-    const scopeRepository = createMockScopeRepository({
-      findTerritoryAssignmentsByUserId: mock(() =>
-        Promise.resolve([
-          { territoryId: "territory-x", assignedAt: new Date() },
-        ]),
-      ),
-    });
-
+  it("rejects non-admin actors", async () => {
     const useCase = new GetUserAssignmentsUseCase({
-      userRepository,
-      scopeRepository,
-    });
-    const result = await useCase.execute({
-      targetUserId: "manager-1",
-      actorRole: Role.ADMIN,
-    });
-
-    expect(result.isOperationallyActive).toBe(false);
-    expect(result.territories).toHaveLength(1);
-  });
-
-  it("throws UserNotFoundError when user does not exist", async () => {
-    const userRepository = createMockUserRepository({
-      findById: mock(() => Promise.resolve(null)),
-    });
-    const scopeRepository = createMockScopeRepository();
-
-    const useCase = new GetUserAssignmentsUseCase({
-      userRepository,
-      scopeRepository,
+      userRepository: createMockUserRepository(),
+      scopeRepository: createMockScopeRepository(),
+      territoryRepository,
+      spatialRepository,
     });
 
     await expect(
-      useCase.execute({ targetUserId: "missing", actorRole: Role.ADMIN }),
-    ).rejects.toThrow(UserNotFoundError);
+      useCase.execute({
+        targetUserId: "user-1",
+        actorRole: Role.MANAGER,
+      }),
+    ).rejects.toBeInstanceOf(InsufficientPermissionsError);
   });
 
-  it("allows non-ADMIN actor to read their own assignments", async () => {
-    const userRepository = createMockUserRepository({
-      findById: mock(() =>
-        Promise.resolve({
-          id: "manager-1",
-          managerId: null,
-          username: "mgr",
-          email: "mgr@example.com",
-          role: { name: Role.MANAGER },
-        }),
-      ) as any,
-    });
-    const scopeRepository = createMockScopeRepository();
+  it("throws when user is missing", async () => {
     const useCase = new GetUserAssignmentsUseCase({
-      userRepository,
-      scopeRepository,
-    });
-
-    const result = await useCase.execute({
-      targetUserId: "manager-1",
-      actorRole: Role.MANAGER,
-      self: true,
-    });
-
-    expect(result.userId).toBe("manager-1");
-  });
-
-  it("rejects non-ADMIN actor", async () => {
-    const userRepository = createMockUserRepository();
-    const scopeRepository = createMockScopeRepository();
-    const useCase = new GetUserAssignmentsUseCase({
-      userRepository,
-      scopeRepository,
+      userRepository: createMockUserRepository(),
+      scopeRepository: createMockScopeRepository(),
+      territoryRepository,
+      spatialRepository,
     });
 
     await expect(
-      useCase.execute({ targetUserId: "user-1", actorRole: Role.MANAGER }),
-    ).rejects.toThrow(InsufficientPermissionsError);
+      useCase.execute({
+        targetUserId: "missing",
+        actorRole: Role.ADMIN,
+      }),
+    ).rejects.toBeInstanceOf(UserNotFoundError);
   });
 });

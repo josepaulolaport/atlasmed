@@ -21,6 +21,7 @@ export const userPermissionsRoute = new Elysia({
         resourceId: grant.resourceId ?? undefined,
         action: grant.action,
         conditions: grant.conditions,
+        grantedAt: grant.grantedAt?.toISOString() ?? new Date().toISOString(),
         expiresAt: grant.expiresAt?.toISOString(),
       })),
     };
@@ -47,6 +48,7 @@ export const userPermissionsRoute = new Elysia({
         resourceId: grant.resourceId ?? undefined,
         action: grant.action,
         conditions: grant.conditions,
+        grantedAt: grant.grantedAt?.toISOString() ?? new Date().toISOString(),
         expiresAt: grant.expiresAt?.toISOString(),
       },
       message: "Permission granted",

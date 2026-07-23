@@ -19,6 +19,8 @@ export const acceptInviteRoute = new Elysia({
       return {
         email: result.email,
         phoneNumber: result.phoneNumber,
+        firstName: result.firstName,
+        lastName: result.lastName,
         role: result.role,
         expiresAt: result.expiresAt,
       };
@@ -27,7 +29,7 @@ export const acceptInviteRoute = new Elysia({
       detail: {
         summary: "Validate invite token",
         description:
-          "Check that an invite token exists, is pending, and has not expired before registration.",
+          "Check that an invite token exists, is pending, and has not expired before registration. Returns invitee identity fields to confirm or complete on the register form (manager/territory stay server-side).",
         tags: ["Authentication"],
       },
       params: t.Object({
@@ -37,6 +39,8 @@ export const acceptInviteRoute = new Elysia({
         200: t.Object({
           email: t.Optional(t.String()),
           phoneNumber: t.Optional(t.String()),
+          firstName: t.Optional(t.String()),
+          lastName: t.Optional(t.String()),
           role: t.Object({
             id: t.String(),
             name: t.String(),
@@ -58,8 +62,9 @@ export const acceptInviteRoute = new Elysia({
       phoneNumber: parsed.phoneNumber || undefined,
       username: parsed.username,
       password: parsed.password,
-      firstName: parsed.firstName || undefined,
-      lastName: parsed.lastName || undefined,
+      firstName: parsed.firstName,
+      lastName: parsed.lastName,
+      birthDate: parsed.birthDate,
     });
 
     const responseUser: {
@@ -95,8 +100,12 @@ export const acceptInviteRoute = new Elysia({
       phoneNumber: t.Optional(t.String({ description: "User phone number (required if invited via phone)" })),
       username: t.String({ description: "Chosen username", minLength: 3 }),
       password: t.String({ description: "User password", minLength: 8 }),
-      firstName: t.Optional(t.String({ description: "User first name" })),
-      lastName: t.Optional(t.String({ description: "User last name" })),
+      firstName: t.String({ minLength: 1, description: "Confirmed first name" }),
+      lastName: t.String({ minLength: 1, description: "Confirmed last name" }),
+      birthDate: t.String({
+        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+        description: "Confirmed birth date (YYYY-MM-DD)",
+      }),
     }),
     response: {
       200: t.Object({

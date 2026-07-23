@@ -60,6 +60,7 @@ describe("ScopeResolver", () => {
       assignSector: mock(async () => undefined),
       revokeSector: mock(async () => undefined),
       findSectorAssignmentsByUserId: mock(async () => []),
+      replaceAssignments: mock(async () => undefined),
       listActiveSectors: mock(async () => []),
     };
 
@@ -92,6 +93,7 @@ describe("ScopeResolver", () => {
       assignSector: mock(async () => undefined),
       revokeSector: mock(async () => undefined),
       findSectorAssignmentsByUserId: mock(async () => []),
+      replaceAssignments: mock(async () => undefined),
       listActiveSectors: mock(async () => []),
     };
 
@@ -123,6 +125,7 @@ describe("ScopeResolver", () => {
       assignSector: mock(async () => undefined),
       revokeSector: mock(async () => undefined),
       findSectorAssignmentsByUserId: mock(async () => []),
+      replaceAssignments: mock(async () => undefined),
       listActiveSectors: mock(async () => []),
     };
 
@@ -152,6 +155,7 @@ describe("ScopeResolver", () => {
       assignSector: mock(async () => undefined),
       revokeSector: mock(async () => undefined),
       findSectorAssignmentsByUserId: mock(async () => []),
+      replaceAssignments: mock(async () => undefined),
       listActiveSectors: mock(async () => []),
     };
 

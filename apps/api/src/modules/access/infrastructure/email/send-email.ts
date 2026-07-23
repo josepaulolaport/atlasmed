@@ -4,7 +4,13 @@ import { environment } from "../../../../app/config/environment";
 
 import { resend } from "../../../../infrastructure/external-services/resend/resend.client";
 import { logger } from "../../../../infrastructure/logging/logger";
+import { ExternalServiceError } from "../../../../shared/errors";
 import { InviteEmail } from "./templates/invite.email";
+
+/** Test harness key from `test-env-loader` — do not call Resend. */
+function isTestResendKey(): boolean {
+  return environment.RESEND_API_KEY === "re_test_key";
+}
 
 export async function sendInviteEmail(
   to: string,
@@ -15,14 +21,16 @@ export async function sendInviteEmail(
     inviteUrl?: string;
   },
 ): Promise<void> {
-  if (!resend) {
-    logger.warn("Resend client not initialized — skipping email send");
-    return;
+  if (!resend || isTestResendKey()) {
+    if (isTestResendKey()) {
+      logger.info("Skipping invite email (test Resend key)", { to });
+      return;
+    }
+    throw new ExternalServiceError("Resend (invite email)");
   }
 
   if (!environment.RESEND_FROM_EMAIL) {
-    logger.error("RESEND_FROM_EMAIL is not set — cannot send invite email");
-    return;
+    throw new ExternalServiceError("Resend (invite email — RESEND_FROM_EMAIL missing)");
   }
 
   try {
@@ -41,11 +49,23 @@ export async function sendInviteEmail(
 
     if (result.error) {
       logger.error("Failed to send invite email", result.error);
-      return;
+      throw new ExternalServiceError(
+        "Resend (invite email)",
+        new Error(
+          typeof result.error === "object" && result.error && "message" in result.error
+            ? String((result.error as { message?: string }).message)
+            : "Resend API error",
+        ),
+      );
     }
 
     logger.info("Invite email sent", { messageId: result.data?.id, to });
   } catch (error) {
+    if (error instanceof ExternalServiceError) throw error;
     logger.error("Failed to send invite email", error);
+    throw new ExternalServiceError(
+      "Resend (invite email)",
+      error instanceof Error ? error : undefined,
+    );
   }
 }

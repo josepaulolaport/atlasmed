@@ -1,5 +1,6 @@
 import { environment } from "../../../app/config/environment";
 import { logger } from "../../logging/logger";
+import { ExternalServiceError } from "../../../shared/errors";
 
 import { twilioClient } from "./twilio.client";
 import { createInviteMessage, createPasswordResetMessage } from "./templates/message.templates";
@@ -12,24 +13,36 @@ export async function sendInviteWhatsApp(
     roleName?: string;
   }
 ): Promise<void> {
-  if (!twilioClient) {
-    logger.warn("Twilio client not initialized — skipping WhatsApp message send");
-    return;
+  // Align with invite email test harness: skip delivery under test credentials.
+  const isTestRuntime =
+    process.env.NODE_ENV === "test" ||
+    environment.RESEND_API_KEY === "re_test_key";
+
+  if (!twilioClient || !environment.TWILIO_WHATSAPP_NUMBER) {
+    if (isTestRuntime) {
+      logger.info("Skipping invite WhatsApp (test runtime / Twilio unset)", { to });
+      return;
+    }
+    throw new ExternalServiceError("Twilio (invite WhatsApp)");
   }
 
   try {
     const message = createInviteMessage(token, options);
-    
+
     logger.info("Sending invite WhatsApp message", { to });
     const result = await twilioClient.messages.create({
-      from: environment.TWILIO_WHATSAPP_NUMBER!,
+      from: environment.TWILIO_WHATSAPP_NUMBER,
       to: `whatsapp:${to}`,
       body: message,
     });
     logger.info("WhatsApp message sent", { sid: result.sid, to });
   } catch (error) {
+    if (error instanceof ExternalServiceError) throw error;
     logger.error("Failed to send invite WhatsApp message", error);
-    // Don't throw - we don't want to block invitation creation if WhatsApp fails
+    throw new ExternalServiceError(
+      "Twilio (invite WhatsApp)",
+      error instanceof Error ? error : undefined,
+    );
   }
 }
 
@@ -41,7 +54,7 @@ export async function sendPasswordResetWhatsApp(to: string, token: string): Prom
 
   try {
     const message = createPasswordResetMessage(token);
-    
+
     logger.info("Sending password reset WhatsApp message", { to });
     const result = await twilioClient.messages.create({
       from: environment.TWILIO_WHATSAPP_NUMBER!,
@@ -51,6 +64,5 @@ export async function sendPasswordResetWhatsApp(to: string, token: string): Prom
     logger.info("WhatsApp message sent", { sid: result.sid, to });
   } catch (error) {
     logger.error("Failed to send password reset WhatsApp message", error);
-    // Don't throw - we don't want to block password reset if WhatsApp fails
   }
 }

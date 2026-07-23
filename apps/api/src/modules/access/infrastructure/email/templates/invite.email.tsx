@@ -34,7 +34,9 @@ export function InviteEmail({ token, inviteUrl, invitedByName, roleName }: Invit
             {roleName ? ` as a ${roleName}` : ""}.
           </Text>
 
-          <Text style={text}>Use the code below or click the link to accept your invitation.</Text>
+          <Text style={text}>
+            Use the code below{acceptLink ? " or click the link" : ""} to accept your invitation.
+          </Text>
 
           <Section style={codeContainer}>
             <Text style={code}>{token}</Text>
@@ -95,16 +97,16 @@ const codeContainer = {
   background: "#f4f4f4",
   borderRadius: "4px",
   margin: "16px auto 16px",
-  width: "280px",
+  width: "220px",
 };
 
 const code = {
   color: "#000",
   display: "inline-block",
-  fontSize: "32px",
+  fontSize: "28px",
   fontWeight: 700,
-  letterSpacing: "6px",
-  lineHeight: "40px",
+  letterSpacing: "4px",
+  lineHeight: "36px",
   paddingBottom: "8px",
   paddingTop: "8px",
   margin: "0 auto",

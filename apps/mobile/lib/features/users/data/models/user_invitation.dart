@@ -48,6 +48,7 @@ class UserInvitation extends Equatable {
     this.roleId,
     this.firstName,
     this.lastName,
+    this.birthDate,
     this.phoneNumber,
     this.managerName,
     this.territoryName,
@@ -67,6 +68,9 @@ class UserInvitation extends Equatable {
   final String? roleId;
   final String? firstName;
   final String? lastName;
+
+  /// Calendar date from invite (`YYYY-MM-DD` on the wire).
+  final DateTime? birthDate;
   final String? phoneNumber;
 
   /// Denormalized summary for list rows (first sector's manager / territories).
@@ -101,6 +105,7 @@ class UserInvitation extends Equatable {
     invitedByName: (json['invitedByName'] as String?) ?? '—',
     firstName: json['firstName'] as String?,
     lastName: json['lastName'] as String?,
+    birthDate: _parseDateOnly(json['birthDate'] as String?),
     phoneNumber: json['phoneNumber'] as String?,
     managerName: json['managerName'] as String?,
     territoryName: json['territoryName'] as String?,
@@ -129,6 +134,7 @@ class UserInvitation extends Equatable {
     InvitationStatus? status,
     String? firstName,
     String? lastName,
+    DateTime? birthDate,
     String? phoneNumber,
     String? managerName,
     String? territoryName,
@@ -147,6 +153,7 @@ class UserInvitation extends Equatable {
       invitedByName: invitedByName,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
+      birthDate: birthDate ?? this.birthDate,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       managerName: clearManagerName ? null : (managerName ?? this.managerName),
       territoryName: clearTerritoryName
@@ -159,6 +166,20 @@ class UserInvitation extends Equatable {
     );
   }
 
+  static DateTime? _parseDateOnly(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    final slice = raw.trim().length >= 10
+        ? raw.trim().substring(0, 10)
+        : raw.trim();
+    final parts = slice.split('-');
+    if (parts.length != 3) return DateTime.tryParse(raw);
+    final y = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    final d = int.tryParse(parts[2]);
+    if (y == null || m == null || d == null) return null;
+    return DateTime(y, m, d);
+  }
+
   @override
   List<Object?> get props => [
     id,
@@ -169,6 +190,7 @@ class UserInvitation extends Equatable {
     invitedByName,
     firstName,
     lastName,
+    birthDate,
     phoneNumber,
     managerName,
     territoryName,

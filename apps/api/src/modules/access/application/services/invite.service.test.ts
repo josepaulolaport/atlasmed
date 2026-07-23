@@ -65,7 +65,7 @@ describe("InviteService", () => {
       expect(createCall.phoneNumber).toBe("+1234567890");
     });
 
-    it("should generate an invite token", async () => {
+    it("should generate a short invite code", async () => {
       const result = await inviteService.createInvite({
         email: "user@example.com",
         roleId: "role-123",
@@ -73,7 +73,8 @@ describe("InviteService", () => {
       });
 
       expect(result.token).toBeString();
-      expect(result.token.length).toBeGreaterThan(0);
+      expect(result.token).toHaveLength(8);
+      expect(result.token).toMatch(/^[A-HJ-NP-Z2-9]+$/);
     });
 
     it("should store HASHED token only", async () => {

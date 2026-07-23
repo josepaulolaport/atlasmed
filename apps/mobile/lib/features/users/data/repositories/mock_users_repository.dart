@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option
 import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_page.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/users_repository.dart';
 
@@ -135,6 +136,8 @@ class MockUsersRepository implements UsersRepository {
     String? search,
     UserRoleName? role,
     UserStatus? status,
+    UsersSortBy sortBy = UsersSortBy.createdAt,
+    UsersSortDir sortDir = UsersSortDir.desc,
   }) async {
     await _delay(350);
 
@@ -153,7 +156,22 @@ class MockUsersRepository implements UsersRepository {
       return true;
     }).toList();
 
-    filtered.sort((a, b) => a.displayName.compareTo(b.displayName));
+    int compare(User a, User b) {
+      final primary = switch (sortBy) {
+        UsersSortBy.name => a.displayName.toLowerCase().compareTo(
+          b.displayName.toLowerCase(),
+        ),
+        UsersSortBy.role => a.role.name.name.compareTo(b.role.name.name),
+        UsersSortBy.status => a.status.name.compareTo(b.status.name),
+        UsersSortBy.createdAt => a.createdAt.compareTo(b.createdAt),
+      };
+      if (primary != 0) {
+        return sortDir == UsersSortDir.asc ? primary : -primary;
+      }
+      return a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase());
+    }
+
+    filtered.sort(compare);
 
     final total = filtered.length;
     final totalPages = total == 0 ? 1 : ((total - 1) ~/ limit) + 1;
@@ -425,10 +443,20 @@ class MockUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> revokePermission(String userId, String grantId) async {
+  Future<void> revokePermission(
+    String userId, {
+    required String resource,
+    required String action,
+    String? resourceId,
+  }) async {
     await _delay();
     final grants = List<PermissionGrant>.of(_permissions[userId] ?? const []);
-    grants.removeWhere((g) => g.id == grantId);
+    grants.removeWhere(
+      (g) =>
+          g.resource == resource &&
+          g.action == action &&
+          g.resourceId == resourceId,
+    );
     _permissions[userId] = grants;
   }
 

@@ -43,7 +43,11 @@ describe("ListUsersUseCase", () => {
       page: 1,
       limit: 10,
       status: undefined,
+      role: undefined,
+      sectorId: undefined,
       search: undefined,
+      sortBy: undefined,
+      sortDir: undefined,
       scope: { isGlobal: true, territoryIds: [] },
     });
 
@@ -56,12 +60,17 @@ describe("ListUsersUseCase", () => {
           phoneNumber: undefined,
           firstName: "Test",
           lastName: "User",
+          birthDate: undefined,
           avatarUrl: undefined,
           status: "ACTIVE",
           emailVerified: true,
           phoneVerified: false,
           emailVerifiedAt: "2024-01-01T00:00:00.000Z",
           phoneVerifiedAt: undefined,
+          twoFactorEnabled: false,
+          lastLoginAt: undefined,
+          suspendedAt: undefined,
+          deactivatedAt: undefined,
           role: {
             id: "role-123",
             name: "USER",
@@ -92,7 +101,11 @@ describe("ListUsersUseCase", () => {
       page: 1,
       limit: 20,
       status: undefined,
+      role: undefined,
+      sectorId: undefined,
       search: undefined,
+      sortBy: undefined,
+      sortDir: undefined,
       scope: { isGlobal: true, territoryIds: [] },
     });
   });
@@ -109,7 +122,36 @@ describe("ListUsersUseCase", () => {
       page: 1,
       limit: 20,
       status: "ACTIVE",
+      role: undefined,
+      sectorId: undefined,
       search: "test",
+      sortBy: undefined,
+      sortDir: undefined,
+      scope: { isGlobal: true, territoryIds: [] },
+    });
+  });
+
+  it("should pass sortBy and sortDir", async () => {
+    const userRepository = createMockUserRepository({
+      findAll: mock(() => Promise.resolve({ users: [], total: 0 })),
+    });
+
+    const useCase = new ListUsersUseCase({ userRepository });
+    await useCase.execute({
+      sortBy: "name",
+      sortDir: "asc",
+      scope: createGlobalScopeContext(),
+    });
+
+    expect(userRepository.findAll).toHaveBeenCalledWith({
+      page: 1,
+      limit: 20,
+      status: undefined,
+      role: undefined,
+      sectorId: undefined,
+      search: undefined,
+      sortBy: "name",
+      sortDir: "asc",
       scope: { isGlobal: true, territoryIds: [] },
     });
   });
@@ -135,7 +177,11 @@ describe("ListUsersUseCase", () => {
       page: 1,
       limit: 20,
       status: undefined,
+      role: undefined,
+      sectorId: undefined,
       search: undefined,
+      sortBy: undefined,
+      sortDir: undefined,
       scope: {
         isGlobal: false,
         territoryIds: ["territory-1"],
@@ -165,7 +211,11 @@ describe("ListUsersUseCase", () => {
       page: 1,
       limit: 20,
       status: undefined,
+      role: undefined,
+      sectorId: undefined,
       search: undefined,
+      sortBy: undefined,
+      sortDir: undefined,
       scope: {
         isGlobal: false,
         territoryIds: ["territory-shared"],
@@ -192,7 +242,11 @@ describe("ListUsersUseCase", () => {
       page: 1,
       limit: 20,
       status: undefined,
+      role: undefined,
+      sectorId: undefined,
       search: undefined,
+      sortBy: undefined,
+      sortDir: undefined,
       scope: {
         isGlobal: false,
         territoryIds: [],

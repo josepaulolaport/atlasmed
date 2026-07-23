@@ -7,7 +7,9 @@ import { inviteUserRoute } from "./infrastructure/routes/invite-user.route";
 import { revokeInviteRoute } from "./infrastructure/routes/revoke-invite.route";
 import { resendInviteRoute } from "./infrastructure/routes/resend-invite.route";
 import { listInvitationsRoute } from "./infrastructure/routes/list-invitations.route";
+import { invitationDetailRoute } from "./infrastructure/routes/invitation-detail.route";
 import { listUsersRoute } from "./infrastructure/routes/list-users.route";
+
 import { userManagementRoute } from "./infrastructure/routes/user-management.route";
 import { userRoute } from "./infrastructure/routes/user.route";
 import { requestPasswordResetRoute } from "./infrastructure/routes/request-password-reset.route";
@@ -32,6 +34,7 @@ export const access = new Elysia({
   .use(acceptInviteRoute)
   .use(inviteUserRoute)
   .use(listInvitationsRoute)
+  .use(invitationDetailRoute)
   .use(listUsersRoute)
   .use(revokeInviteRoute)
   .use(resendInviteRoute)

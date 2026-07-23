@@ -88,12 +88,17 @@ class _ManagePermissionsSheetState
     }
   }
 
-  Future<void> _revoke(String grantId) async {
+  Future<void> _revoke(PermissionGrant grant) async {
     setState(() => _busy = true);
     try {
       await ref
           .read(usersRepositoryProvider)
-          .revokePermission(widget.user.id, grantId);
+          .revokePermission(
+            widget.user.id,
+            resource: grant.resource,
+            action: grant.action,
+            resourceId: grant.resourceId,
+          );
       await _reload();
     } catch (_) {
       if (mounted) {
@@ -277,9 +282,7 @@ class _ManagePermissionsSheetState
                                   size: 18,
                                   color: Color(0xFFB91C1C),
                                 ),
-                                onPressed: _busy
-                                    ? null
-                                    : () => _revoke(grant.id),
+                                onPressed: _busy ? null : () => _revoke(grant),
                               ),
                             ],
                           ),
