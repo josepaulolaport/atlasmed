@@ -20,7 +20,8 @@ Future<FacilityCadastroFile> normalizeCadastroUpload({
   final mime = contentType.trim().toLowerCase();
   final lowerName = fileName.toLowerCase();
   final isPdf = mime == 'application/pdf' || lowerName.endsWith('.pdf');
-  final isImage = mime.startsWith('image/') ||
+  final isImage =
+      mime.startsWith('image/') ||
       lowerName.endsWith('.jpg') ||
       lowerName.endsWith('.jpeg') ||
       lowerName.endsWith('.png') ||
@@ -82,5 +83,7 @@ String _safeFileName(String name, {required String fallback}) {
       .replaceAll(RegExp(r'[^A-Za-z0-9._-]+'), '_')
       .replaceAll(RegExp(r'_+'), '_');
   if (cleaned.isEmpty || cleaned == '.' || cleaned == '..') return fallback;
-  return cleaned.length > 120 ? cleaned.substring(cleaned.length - 120) : cleaned;
+  return cleaned.length > 120
+      ? cleaned.substring(cleaned.length - 120)
+      : cleaned;
 }

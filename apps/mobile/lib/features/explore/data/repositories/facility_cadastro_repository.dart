@@ -83,9 +83,7 @@ class FacilityCadastroChecklist {
   }
 
   bool get hasDraftToDelete =>
-      submissionId != null &&
-      submissionId!.isNotEmpty &&
-      isDraftPackage;
+      submissionId != null && submissionId!.isNotEmpty && isDraftPackage;
 
   bool get showPackageSubmitBar =>
       isDraftPackage &&
@@ -230,7 +228,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
               ? CadastroApprovedSummary.fromJson(approvedRaw)
               : null,
           files: files,
-          title: item['name'] as String? ?? item['slug'] as String? ?? 'Documento',
+          title:
+              item['name'] as String? ?? item['slug'] as String? ?? 'Documento',
           description: item['description'] as String? ?? '',
           status: _mapDocumentStatus(
             uiStatus: item['uiStatus'] as String?,
@@ -245,7 +244,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
           fileName: firstFile?.fileName ?? record?['fileName'] as String?,
           remoteUrl: record?['url'] as String?,
           mimeType: firstFile?.contentType ?? record?['contentType'] as String?,
-          reviewerNote: item['reviewComment'] as String? ??
+          reviewerNote:
+              item['reviewComment'] as String? ??
               record?['reviewerNote'] as String?,
         ),
       );
@@ -257,11 +257,13 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
         EstablishmentDocument(
           id: 'billing_email',
           title: billing['name'] as String? ?? 'Email Administrativo',
-          description: billing['description'] as String? ??
+          description:
+              billing['description'] as String? ??
               'Email administrativo do estabelecimento.',
           status: _mapDocumentStatus(uiStatus: billing['uiStatus'] as String?),
           kind: EstablishmentDocumentKind.billingEmail,
-          billingEmail: billing['billingEmail'] as String? ??
+          billingEmail:
+              billing['billingEmail'] as String? ??
               map['billingEmail'] as String?,
         ),
       );
@@ -278,7 +280,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       submissionStatus: map['submissionStatus'] as String?,
       submissionVersion: (map['submissionVersion'] as num?)?.toInt(),
       documents: docs,
-      pendingAction: (counts?['pendingAction'] as num?)?.toInt() ??
+      pendingAction:
+          (counts?['pendingAction'] as num?)?.toInt() ??
           docs.where((d) => d.status.needsAction).length,
     );
   }
@@ -335,7 +338,11 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     return id;
   }
 
-  Future<void> _putBytes(String url, List<int> bytes, String contentType) async {
+  Future<void> _putBytes(
+    String url,
+    List<int> bytes,
+    String contentType,
+  ) async {
     final ioClient = http.Client();
     try {
       final response = await ioClient.put(
@@ -398,10 +405,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       final completed = await _jsonCall(
         uri: completeUri,
         method: RepositoryHttpMethod.post,
-        body: {
-          'fileId': fileId,
-          'checksum': checksum,
-        },
+        body: {'fileId': fileId, 'checksum': checksum},
       );
       onProgress?.call(1);
       return (
@@ -412,8 +416,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
 
     // MULTIPART
     final uploadSessionId = initiated['uploadSessionId'] as String?;
-    final partSize = (initiated['partSizeBytes'] as num?)?.toInt() ??
-        10 * 1024 * 1024;
+    final partSize =
+        (initiated['partSizeBytes'] as num?)?.toInt() ?? 10 * 1024 * 1024;
     final totalParts = (initiated['totalParts'] as num?)?.toInt() ?? 1;
     if (uploadSessionId == null) {
       throw const FacilityCadastroException('Sessão multipart ausente.');
@@ -443,10 +447,7 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       final chunk = file.bytes.sublist(start, end);
       final ioClient = http.Client();
       try {
-        final response = await ioClient.put(
-          Uri.parse(uploadUrl),
-          body: chunk,
-        );
+        final response = await ioClient.put(Uri.parse(uploadUrl), body: chunk);
         if (response.statusCode < 200 || response.statusCode >= 300) {
           throw FacilityCadastroException(
             'Falha na parte $partNumber (${response.statusCode})',
@@ -496,7 +497,8 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
       int total, {
       String? fileId,
       String? status,
-    })? onFileCompleted,
+    })?
+    onFileCompleted,
   }) async {
     if (files.isEmpty) {
       throw const FacilityCadastroException('Nenhum arquivo para enviar.');
@@ -599,7 +601,9 @@ class FacilityCadastroRepository extends Repository<FacilityCadastroChecklist>
     final map = await _jsonCall(uri: uri, method: RepositoryHttpMethod.get);
     final url = map['url'] as String?;
     if (url == null || url.isEmpty) {
-      throw const FacilityCadastroException('URL de visualização indisponível.');
+      throw const FacilityCadastroException(
+        'URL de visualização indisponível.',
+      );
     }
     return url;
   }

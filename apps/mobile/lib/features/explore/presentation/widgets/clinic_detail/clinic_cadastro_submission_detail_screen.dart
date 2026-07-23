@@ -21,10 +21,10 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
     final dateLabel = date == null
         ? '—'
         : '${date.day.toString().padLeft(2, '0')}/'
-            '${date.month.toString().padLeft(2, '0')}/'
-            '${date.year} '
-            '${date.hour.toString().padLeft(2, '0')}:'
-            '${date.minute.toString().padLeft(2, '0')}';
+              '${date.month.toString().padLeft(2, '0')}/'
+              '${date.year} '
+              '${date.hour.toString().padLeft(2, '0')}:'
+              '${date.minute.toString().padLeft(2, '0')}';
 
     final submittedAt =
         submission.submittedAt ?? submission.createdAt ?? DateTime.now();
@@ -88,10 +88,7 @@ class ClinicCadastroSubmissionDetailScreen extends ConsumerWidget {
                 _MetaRow(label: 'Status', value: submission.statusLabel),
                 _MetaRow(label: 'Versão', value: 'v${submission.version}'),
                 _MetaRow(label: 'Enviado em', value: dateLabel),
-                _MetaRow(
-                  label: 'Arquivos',
-                  value: '${submission.fileCount}',
-                ),
+                _MetaRow(label: 'Arquivos', value: '${submission.fileCount}'),
               ],
             ),
           ),

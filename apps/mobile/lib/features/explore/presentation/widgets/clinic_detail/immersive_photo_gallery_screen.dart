@@ -115,7 +115,8 @@ class _ImmersivePhotoGalleryScreenState
                 });
               },
               scaleStateChangedCallback: (state) {
-                final zoomed = state != PhotoViewScaleState.initial &&
+                final zoomed =
+                    state != PhotoViewScaleState.initial &&
                     state != PhotoViewScaleState.zoomedOut;
                 _setZoomed(zoomed);
               },
@@ -126,7 +127,8 @@ class _ImmersivePhotoGalleryScreenState
                 final provider = widget.providers[index];
                 if (provider == null) {
                   return PhotoViewGalleryPageOptions.customChild(
-                    child: widget.placeholderBuilder?.call(context, index) ??
+                    child:
+                        widget.placeholderBuilder?.call(context, index) ??
                         const Center(
                           child: Icon(
                             Icons.photo_rounded,

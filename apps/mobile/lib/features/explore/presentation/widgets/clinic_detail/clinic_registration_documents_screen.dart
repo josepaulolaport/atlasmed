@@ -115,10 +115,7 @@ class _ClinicRegistrationDocumentsScreenState
               ],
               for (final (i, doc) in documents.indexed) ...[
                 if (i > 0) const SizedBox(height: 10),
-                _DocumentTypeCard(
-                  document: doc,
-                  onTap: () => _openItem(doc),
-                ),
+                _DocumentTypeCard(document: doc, onTap: () => _openItem(doc)),
               ],
             ],
           );
@@ -352,7 +349,8 @@ class _DocumentTypeCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 12,
-                        color: document.isBillingEmail &&
+                        color:
+                            document.isBillingEmail &&
                                 document.billingEmail?.isNotEmpty != true
                             ? const Color(0xFF1e40af)
                             : const Color(0xFF6b7280),

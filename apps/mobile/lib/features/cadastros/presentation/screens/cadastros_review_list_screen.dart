@@ -28,10 +28,7 @@ class _CadastrosReviewListScreenState
     final apiStatus = ref.watch(cadastroReviewApiStatusProvider);
     final queueAsync = ref.watch(cadastroReviewQueueProvider);
     final selectedLabel = _filters
-        .firstWhere(
-          (f) => f.$2 == apiStatus,
-          orElse: () => _filters.first,
-        )
+        .firstWhere((f) => f.$2 == apiStatus, orElse: () => _filters.first)
         .$1;
 
     return Scaffold(
@@ -88,7 +85,8 @@ class _CadastrosReviewListScreenState
                             onTap: () {
                               ref
                                       .read(
-                                        cadastroReviewApiStatusProvider.notifier,
+                                        cadastroReviewApiStatusProvider
+                                            .notifier,
                                       )
                                       .state =
                                   status;
@@ -113,12 +111,13 @@ class _CadastrosReviewListScreenState
                               Text(
                                 error.toString(),
                                 textAlign: TextAlign.center,
-                                style: const TextStyle(color: Color(0xFF6b7280)),
+                                style: const TextStyle(
+                                  color: Color(0xFF6b7280),
+                                ),
                               ),
                               TextButton(
-                                onPressed: () => ref.invalidate(
-                                  cadastroReviewQueueProvider,
-                                ),
+                                onPressed: () =>
+                                    ref.invalidate(cadastroReviewQueueProvider),
                                 child: const Text('Tentar novamente'),
                               ),
                             ],

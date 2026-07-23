@@ -168,8 +168,9 @@ class _CadastroDocumentPagesPreviewState
       var galleryIndex = initialPage;
 
       if (page.isPdf) {
-        final pdfFiles =
-            widget.pages.where((p) => p.isPdf).toList(growable: false);
+        final pdfFiles = widget.pages
+            .where((p) => p.isPdf)
+            .toList(growable: false);
         final loaded = <ImageProvider?>[];
         var startAt = 0;
         for (final pdf in pdfFiles) {
@@ -180,8 +181,7 @@ class _CadastroDocumentPagesPreviewState
           );
           if (batch.isEmpty) continue;
           if (pdf.id == page.id) {
-            startAt = loaded.length +
-                initialPage.clamp(0, batch.length - 1);
+            startAt = loaded.length + initialPage.clamp(0, batch.length - 1);
           }
           loaded.addAll(batch);
         }
@@ -267,8 +267,7 @@ class _CadastroDocumentPagesPreviewState
                       page: page,
                       resolveUrl: () => _urlFor(page),
                       busy: _expanding,
-                      onExpand: (pdfPage) =>
-                          _expandAt(i, initialPage: pdfPage),
+                      onExpand: (pdfPage) => _expandAt(i, initialPage: pdfPage),
                     )
                   : _ImageFileCard(
                       page: page,
@@ -311,10 +310,7 @@ class _PreviewStage extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0x1A0F172A)),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: child,
-        ),
+        child: ClipRRect(borderRadius: BorderRadius.circular(14), child: child),
       ),
     );
   }
@@ -441,10 +437,7 @@ class _PdfFileCardState extends State<_PdfFileCard> {
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: _FullscreenButton(
-                    busy: true,
-                    onTap: () {},
-                  ),
+                  child: _FullscreenButton(busy: true, onTap: () {}),
                 ),
               ],
             );
@@ -804,10 +797,7 @@ Future<Uint8List> _downloadBytes(String url) async {
     },
   );
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw HttpException(
-      'Download failed (${response.statusCode})',
-      uri: uri,
-    );
+    throw HttpException('Download failed (${response.statusCode})', uri: uri);
   }
   return response.bodyBytes;
 }

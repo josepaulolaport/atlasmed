@@ -60,9 +60,16 @@ class ClinicHeaderSection extends ConsumerWidget {
     });
     // Prefer live commercial/conformity from facility DTO; purchase stays mocked.
     final mockedSignals = sections?.statusSignals;
-    final liveCommercial = parseFacilityCommercialStatus(detail.commercialStatus);
-    final liveConformity = parseFacilityConformityStatus(detail.conformityStatus);
-    final signals = mockedSignals == null && liveCommercial == null && liveConformity == null
+    final liveCommercial = parseFacilityCommercialStatus(
+      detail.commercialStatus,
+    );
+    final liveConformity = parseFacilityConformityStatus(
+      detail.conformityStatus,
+    );
+    final signals =
+        mockedSignals == null &&
+            liveCommercial == null &&
+            liveConformity == null
         ? null
         : FacilityStatusSignals(
             commercialStatus:
@@ -70,7 +77,8 @@ class ClinicHeaderSection extends ConsumerWidget {
                 mockedSignals?.commercialStatus ??
                 FacilityCommercialStatus.registered,
             purchaseStatus:
-                mockedSignals?.purchaseStatus ?? FacilityPurchaseStatus.nonBuyer,
+                mockedSignals?.purchaseStatus ??
+                FacilityPurchaseStatus.nonBuyer,
             conformityStatus:
                 liveConformity ??
                 mockedSignals?.conformityStatus ??
@@ -348,11 +356,7 @@ class ClinicHeaderSection extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context, PhotoGallerySummary photos) {
-    openClinicPhotoViewer(
-      context,
-      facilityName: detail.name,
-      photos: photos,
-    );
+    openClinicPhotoViewer(context, facilityName: detail.name, photos: photos);
   }
 
   static String? _nonEmpty(String? value) {

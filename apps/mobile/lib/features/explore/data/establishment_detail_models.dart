@@ -578,6 +578,7 @@ class FacilityServiceChip {
 /// plus a `missing` state for a requirement that hasn't been submitted.
 enum EstablishmentDocumentStatus {
   missing,
+
   /// Files uploaded and processed — waiting for package submit.
   ready,
   pending,
@@ -710,10 +711,9 @@ class CadastroDocumentFile {
     }
   }
 
-  String get displayTitle =>
-      (fileName != null && fileName!.trim().isNotEmpty)
-          ? fileName!.trim()
-          : 'Arquivo $position';
+  String get displayTitle => (fileName != null && fileName!.trim().isNotEmpty)
+      ? fileName!.trim()
+      : 'Arquivo $position';
 
   bool get isImage =>
       _looksLikeImage(fileName: fileName, mimeType: contentType);
@@ -770,8 +770,7 @@ class CadastroRequirementSubmission {
 
   bool get isApproved => status == 'APPROVED';
   bool get isUnderReview => status == 'UNDER_REVIEW' || status == 'SUBMITTED';
-  bool get isRejected =>
-      status == 'REJECTED' || status == 'CHANGES_REQUESTED';
+  bool get isRejected => status == 'REJECTED' || status == 'CHANGES_REQUESTED';
 
   String get statusLabel {
     switch (status) {
@@ -811,12 +810,15 @@ class CadastroRequirementSubmission {
       files: rawFiles
           .map(
             (f) => CadastroDocumentFile(
-              fileAssetId: f['fileAssetId'] as String? ?? f['id'] as String? ?? '',
+              fileAssetId:
+                  f['fileAssetId'] as String? ?? f['id'] as String? ?? '',
               position: (f['position'] as num?)?.toInt() ?? 1,
               role: f['role'] as String? ?? 'PAGE',
-              fileName: f['fileName'] as String? ?? f['originalFilename'] as String?,
+              fileName:
+                  f['fileName'] as String? ?? f['originalFilename'] as String?,
               status: f['status'] as String?,
-              contentType: f['contentType'] as String? ?? f['mimeType'] as String?,
+              contentType:
+                  f['contentType'] as String? ?? f['mimeType'] as String?,
             ),
           )
           .where((f) => f.fileAssetId.isNotEmpty)
@@ -937,8 +939,7 @@ class EstablishmentDocument {
   int get readyFileCount => files.where((f) => f.isReady).length;
   int get failedFileCount => files.where((f) => f.isFailed).length;
 
-  bool get allFilesReady =>
-      files.isNotEmpty && files.every((f) => f.isReady);
+  bool get allFilesReady => files.isNotEmpty && files.every((f) => f.isReady);
 
   bool get hasBusyFiles => files.any((f) => f.isBusy);
 

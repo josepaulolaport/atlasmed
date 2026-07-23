@@ -271,10 +271,7 @@ Future<Uint8List> _downloadAuthenticated(String url) async {
     },
   );
   if (response.statusCode < 200 || response.statusCode >= 300) {
-    throw HttpException(
-      'Download failed (${response.statusCode})',
-      uri: uri,
-    );
+    throw HttpException('Download failed (${response.statusCode})', uri: uri);
   }
   return response.bodyBytes;
 }

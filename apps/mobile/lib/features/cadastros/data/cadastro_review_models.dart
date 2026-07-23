@@ -20,10 +20,12 @@ class CadastroReviewFile {
     return CadastroReviewFile(
       fileAssetId:
           json['fileAssetId'] as String? ?? json['id'] as String? ?? '',
-      fileName: json['fileName'] as String? ??
+      fileName:
+          json['fileName'] as String? ??
           json['originalFilename'] as String? ??
           'arquivo',
-      contentType: json['contentType'] as String? ?? json['mimeType'] as String?,
+      contentType:
+          json['contentType'] as String? ?? json['mimeType'] as String?,
       remoteUrl: json['url'] as String?,
       position: (json['position'] as num?)?.toInt() ?? 1,
     );
@@ -102,15 +104,15 @@ class CadastroReviewSubmission {
   bool get canPreviewImage {
     final mime = documentMimeType?.toLowerCase() ?? '';
     final name = documentFileName.toLowerCase();
-    final isImage = mime.startsWith('image/') ||
+    final isImage =
+        mime.startsWith('image/') ||
         name.endsWith('.jpg') ||
         name.endsWith('.jpeg') ||
         name.endsWith('.png') ||
         name.endsWith('.webp') ||
         name.endsWith('.heic');
     if (!isImage) return false;
-    final hasLocal =
-        documentLocalPath != null && documentLocalPath!.isNotEmpty;
+    final hasLocal = documentLocalPath != null && documentLocalPath!.isNotEmpty;
     final hasRemote = remoteUrl != null && remoteUrl!.isNotEmpty;
     return hasLocal || hasRemote;
   }

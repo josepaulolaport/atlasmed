@@ -214,7 +214,10 @@ class _ClinicRegistrationDocumentDetailScreenState
             else if (_history.isEmpty)
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 28,
+                  horizontal: 16,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
@@ -307,12 +310,12 @@ class _CurrentDocumentCard extends StatelessWidget {
     final status = _badgeStatus;
     final body = hasApproved
         ? 'Versão aprovada v${document.currentApproved!.version}'
-            '${document.currentApproved!.fileCount > 0 ? ' · ${document.currentApproved!.fileCount} arquivo(s)' : ''}'
+              '${document.currentApproved!.fileCount > 0 ? ' · ${document.currentApproved!.fileCount} arquivo(s)' : ''}'
         : status == EstablishmentDocumentStatus.pending
-            ? 'Há um envio em análise.'
-            : status == EstablishmentDocumentStatus.rejected
-                ? 'Último envio precisa de correção. Envie uma nova versão.'
-                : 'Ainda não há documento aprovado para este tipo.';
+        ? 'Há um envio em análise.'
+        : status == EstablishmentDocumentStatus.rejected
+        ? 'Último envio precisa de correção. Envie uma nova versão.'
+        : 'Ainda não há documento aprovado para este tipo.';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -401,8 +404,8 @@ class _HistoryCard extends StatelessWidget {
     final dateLabel = date == null
         ? '—'
         : '${date.day.toString().padLeft(2, '0')}/'
-            '${date.month.toString().padLeft(2, '0')}/'
-            '${date.year}';
+              '${date.month.toString().padLeft(2, '0')}/'
+              '${date.year}';
 
     return Material(
       color: Colors.white,

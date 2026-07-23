@@ -313,7 +313,8 @@ class _RegistrationDocumentComposeScreenState
         _newItem(
           fileName: p.fileName,
           localPath: path,
-          mimeType: p.mimeType ??
+          mimeType:
+              p.mimeType ??
               mimeFromFileName(p.fileName) ??
               'application/octet-stream',
         ),
@@ -596,9 +597,8 @@ class _RegistrationDocumentComposeScreenState
         PickedRegistrationFile(
           fileName: xFile.name,
           localPath: xFile.path,
-          mimeType: xFile.mimeType ??
-              mimeFromFileName(xFile.name) ??
-              'image/jpeg',
+          mimeType:
+              xFile.mimeType ?? mimeFromFileName(xFile.name) ?? 'image/jpeg',
         ),
       ]);
     } catch (_) {
@@ -618,9 +618,8 @@ class _RegistrationDocumentComposeScreenState
           PickedRegistrationFile(
             fileName: xFile.name,
             localPath: xFile.path,
-            mimeType: xFile.mimeType ??
-                mimeFromFileName(xFile.name) ??
-                'image/jpeg',
+            mimeType:
+                xFile.mimeType ?? mimeFromFileName(xFile.name) ?? 'image/jpeg',
           ),
       ]);
     } catch (_) {
@@ -635,14 +634,7 @@ class _RegistrationDocumentComposeScreenState
       setState(() => _pickingLocked = true);
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: const [
-          'pdf',
-          'jpg',
-          'jpeg',
-          'png',
-          'webp',
-          'heic',
-        ],
+        allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
         withData: false,
       );
       if (result == null || result.files.isEmpty || !mounted) return;
@@ -654,7 +646,8 @@ class _RegistrationDocumentComposeScreenState
       }
 
       final name = file.name;
-      final mime = (file.extension != null
+      final mime =
+          (file.extension != null
               ? mimeFromExtension(file.extension!)
               : mimeFromFileName(name)) ??
           'application/octet-stream';
@@ -672,11 +665,7 @@ class _RegistrationDocumentComposeScreenState
       }
 
       await _addAndUpload([
-        PickedRegistrationFile(
-          fileName: name,
-          localPath: path,
-          mimeType: mime,
-        ),
+        PickedRegistrationFile(fileName: name, localPath: path, mimeType: mime),
       ]);
     } catch (_) {
       _showPickerError();
@@ -710,9 +699,7 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: onTap == null
-          ? const Color(0xFFe5e7eb)
-          : const Color(0xFFdbeafe),
+      color: onTap == null ? const Color(0xFFe5e7eb) : const Color(0xFFdbeafe),
       borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,

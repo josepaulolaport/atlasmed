@@ -64,7 +64,7 @@ class FacilityCadastroController {
   Future<EstablishmentDocument> submitDocument({
     required String requirementId,
     required List<({String localPath, String fileName, String contentType})>
-        files,
+    files,
     void Function(int index, int total)? onFileStarted,
     void Function(int index, int total, double progress)? onFileProgress,
     FutureOr<void> Function(
@@ -72,7 +72,8 @@ class FacilityCadastroController {
       int total, {
       String? fileId,
       String? status,
-    })? onFileCompleted,
+    })?
+    onFileCompleted,
   }) async {
     if (_isMockFacilityId(facilityId)) {
       return EstablishmentDocument(

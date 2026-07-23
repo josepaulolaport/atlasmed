@@ -16,9 +16,7 @@ Future<void> openClinicPhotoViewer(
 
   final urls = photos.imageUrls;
   final token = SessionEnvironment.instance.currentValue?.token;
-  final authHeaders = token == null
-      ? null
-      : {'Authorization': 'Bearer $token'};
+  final authHeaders = token == null ? null : {'Authorization': 'Bearer $token'};
 
   final providers = List<ImageProvider?>.generate(count, (i) {
     final url = i < urls.length ? urls[i] : null;
@@ -42,11 +40,7 @@ Future<void> openClinicPhotoViewer(
       return ColoredBox(
         color: color,
         child: const Center(
-          child: Icon(
-            Icons.photo_rounded,
-            size: 72,
-            color: Color(0x4DFFFFFF),
-          ),
+          child: Icon(Icons.photo_rounded, size: 72, color: Color(0x4DFFFFFF)),
         ),
       );
     },

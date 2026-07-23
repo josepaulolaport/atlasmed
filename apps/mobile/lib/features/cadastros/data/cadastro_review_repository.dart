@@ -31,7 +31,8 @@ EstablishmentDocumentStatus _mapStatus(String? raw) {
   }
 }
 
-class CadastroReviewRepository extends Repository<List<CadastroReviewSubmission>>
+class CadastroReviewRepository
+    extends Repository<List<CadastroReviewSubmission>>
     with SessionEnvironmentMixin<List<CadastroReviewSubmission>> {
   CadastroReviewRepository({
     this.status = 'SUBMITTED',
@@ -60,7 +61,8 @@ class CadastroReviewRepository extends Repository<List<CadastroReviewSubmission>
   }
 
   CadastroReviewSubmission _fromApi(Map<String, dynamic> item) {
-    final requirement = item['requirement'] as Map<String, dynamic>? ?? const {};
+    final requirement =
+        item['requirement'] as Map<String, dynamic>? ?? const {};
     final facility = item['facility'] as Map<String, dynamic>? ?? const {};
     final taxIdType = parseFacilityTaxIdType(facility['taxIdType'] as String?);
     final rawFiles = (item['files'] as List<dynamic>? ?? const [])
@@ -72,7 +74,8 @@ class CadastroReviewRepository extends Repository<List<CadastroReviewSubmission>
     final first = files.isNotEmpty ? files.first : null;
     return CadastroReviewSubmission(
       id: item['id'] as String,
-      facilityId: item['facilityId'] as String? ?? facility['id'] as String? ?? '',
+      facilityId:
+          item['facilityId'] as String? ?? facility['id'] as String? ?? '',
       facilityName: facility['name'] as String? ?? 'Estabelecimento',
       documentTitle: requirement['name'] as String? ?? 'Documento',
       documentDescription: requirement['description'] as String? ?? '',
@@ -141,10 +144,7 @@ class CadastroReviewRepository extends Repository<List<CadastroReviewSubmission>
         url: uri,
         method: RepositoryHttpMethod.post,
         headers: const {'Content-Type': 'application/json'},
-        body: {
-          'decision': 'REJECTED',
-          'comment': reviewerNote,
-        },
+        body: {'decision': 'REJECTED', 'comment': reviewerNote},
       ),
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {
