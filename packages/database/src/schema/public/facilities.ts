@@ -4,6 +4,8 @@ import {
   boolean,
   timestamp,
   smallint,
+  integer,
+  bigint,
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
@@ -44,7 +46,7 @@ export const facilities = pgTable(
     registryDeactivationCode: text("registry_deactivation_code"),
 
     // --- Tax identifiers ---
-    taxIdType: facilityTaxIdTypeEnum("tax_id_type"),
+    taxIdType: facilityTaxIdTypeEnum("tax_id_type").notNull().default("PJ"),
     cnpj: text("cnpj"),
     cpf: text("cpf"),
 
@@ -65,6 +67,8 @@ export const facilities = pgTable(
     faxNumber: text("fax_number"),
     email: text("email"),
     websiteUrl: text("website_url"),
+    /** Administrative email (Cadastro required field). */
+    billingEmail: text("billing_email"),
 
     // --- Operational profile (CRM / mobile admin) ---
     /** Technical or commercial responsible person shown on Dados administrativos. */
@@ -423,13 +427,29 @@ export const conformityRequirements = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     sectorId: text("sector_id").references(() => sectors.id, { onDelete: "set null" }),
+    /** When set, requirement applies only to facilities with this tax id type. */
+    appliesToTaxIdType: facilityTaxIdTypeEnum("applies_to_tax_id_type"),
     isActive: boolean("is_active").notNull().default(true),
+    /** Per-document-type upload limits (cadastro multi-file). */
+    allowedMimeTypes: text("allowed_mime_types")
+      .array()
+      .notNull()
+      .default(["image/jpeg", "image/png", "application/pdf"]),
+    maxFiles: integer("max_files").notNull().default(10),
+    maxFileSizeBytes: bigint("max_file_size_bytes", { mode: "number" })
+      .notNull()
+      .default(52_428_800),
+    maxCombinedSizeBytes: bigint("max_combined_size_bytes", { mode: "number" })
+      .notNull()
+      .default(209_715_200),
+    requiresFrontAndBack: boolean("requires_front_and_back").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
     index("conformity_requirements_sector_id_idx").on(t.sectorId),
     index("conformity_requirements_is_active_idx").on(t.isActive),
+    index("conformity_requirements_applies_to_tax_id_type_idx").on(t.appliesToTaxIdType),
   ]
 );
 
@@ -446,6 +466,11 @@ export const conformityRecords = pgTable(
     validatedByUserId: text("validated_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    storageKey: text("storage_key"),
+    url: text("url"),
+    contentType: text("content_type"),
+    fileName: text("file_name"),
+    reviewerNote: text("reviewer_note"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -454,6 +479,7 @@ export const conformityRecords = pgTable(
     index("conformity_records_facility_id_idx").on(t.facilityId),
     index("conformity_records_requirement_id_idx").on(t.requirementId),
     index("conformity_records_status_idx").on(t.status),
+    uniqueIndex("conformity_records_storage_key_uidx").on(t.storageKey),
   ]
 );
 

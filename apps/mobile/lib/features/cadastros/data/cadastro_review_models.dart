@@ -1,5 +1,37 @@
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
+/// One file attached to an ops-queue Cadastro submission.
+class CadastroReviewFile {
+  const CadastroReviewFile({
+    required this.fileAssetId,
+    required this.fileName,
+    this.contentType,
+    this.remoteUrl,
+    this.position = 1,
+  });
+
+  final String fileAssetId;
+  final String fileName;
+  final String? contentType;
+  final String? remoteUrl;
+  final int position;
+
+  factory CadastroReviewFile.fromJson(Map<String, dynamic> json) {
+    return CadastroReviewFile(
+      fileAssetId:
+          json['fileAssetId'] as String? ?? json['id'] as String? ?? '',
+      fileName:
+          json['fileName'] as String? ??
+          json['originalFilename'] as String? ??
+          'arquivo',
+      contentType:
+          json['contentType'] as String? ?? json['mimeType'] as String?,
+      remoteUrl: json['url'] as String?,
+      position: (json['position'] as num?)?.toInt() ?? 1,
+    );
+  }
+}
+
 /// One item in the ops "Cadastros" approval queue — a document submission
 /// paired with a snapshot of the clinic that submitted it.
 class CadastroReviewSubmission {
@@ -23,6 +55,8 @@ class CadastroReviewSubmission {
     this.consultantName,
     this.documentMimeType,
     this.documentLocalPath,
+    this.remoteUrl,
+    this.files = const [],
     this.reviewerNote,
     this.reviewedAt,
     this.reviewedByName,
@@ -38,6 +72,8 @@ class CadastroReviewSubmission {
   final String documentFileName;
   final String? documentMimeType;
   final String? documentLocalPath;
+  final String? remoteUrl;
+  final List<CadastroReviewFile> files;
 
   final EstablishmentDocumentStatus status;
   final DateTime submittedAt;
@@ -66,15 +102,19 @@ class CadastroReviewSubmission {
   }
 
   bool get canPreviewImage {
-    if (documentLocalPath == null || documentLocalPath!.isEmpty) return false;
     final mime = documentMimeType?.toLowerCase() ?? '';
-    if (mime.startsWith('image/')) return true;
     final name = documentFileName.toLowerCase();
-    return name.endsWith('.jpg') ||
+    final isImage =
+        mime.startsWith('image/') ||
+        name.endsWith('.jpg') ||
         name.endsWith('.jpeg') ||
         name.endsWith('.png') ||
         name.endsWith('.webp') ||
         name.endsWith('.heic');
+    if (!isImage) return false;
+    final hasLocal = documentLocalPath != null && documentLocalPath!.isNotEmpty;
+    final hasRemote = remoteUrl != null && remoteUrl!.isNotEmpty;
+    return hasLocal || hasRemote;
   }
 
   /// Thin adapter so we can reuse [ClinicDocumentViewerScreen].
@@ -86,6 +126,7 @@ class CadastroReviewSubmission {
     submittedAt: submittedAt,
     fileName: documentFileName,
     localPath: documentLocalPath,
+    remoteUrl: remoteUrl,
     mimeType: documentMimeType,
     reviewerNote: reviewerNote,
   );
@@ -95,6 +136,7 @@ class CadastroReviewSubmission {
     String? reviewerNote,
     DateTime? reviewedAt,
     String? reviewedByName,
+    List<CadastroReviewFile>? files,
     bool clearReviewerNote = false,
   }) {
     return CadastroReviewSubmission(
@@ -106,6 +148,8 @@ class CadastroReviewSubmission {
       documentFileName: documentFileName,
       documentMimeType: documentMimeType,
       documentLocalPath: documentLocalPath,
+      remoteUrl: remoteUrl,
+      files: files ?? this.files,
       status: status ?? this.status,
       submittedAt: submittedAt,
       submittedByName: submittedByName,

@@ -3,7 +3,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 
 /// "Fotos da clínica" row — kept for a future manage-photos entry point.
-/// The live gallery opens from the header avatar (`ClinicPhotoViewerScreen`).
+/// The live gallery opens from the header avatar (`openClinicPhotoViewer`).
 class ClinicPhotosSection extends StatelessWidget {
   const ClinicPhotosSection({super.key, required this.photos});
 

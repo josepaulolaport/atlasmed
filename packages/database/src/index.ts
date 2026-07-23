@@ -28,6 +28,13 @@ import {
   facilityTaxIdTypeEnum,
   orderStatusEnum,
   orderTypeEnum,
+  cadastroSubmissionStatusEnum,
+  cadastroDocumentStatusEnum,
+  cadastroFileAssetStatusEnum,
+  cadastroDocumentFileRoleEnum,
+  cadastroUploadSessionStatusEnum,
+  cadastroReviewDecisionEnum,
+  cadastroProcessingStepStatusEnum,
   fieldSuggestionKindEnum,
   fieldSuggestionStatusEnum,
 } from "./schema/public/enums";
@@ -61,6 +68,20 @@ export type VerificationTokenType = (typeof verificationTokenTypeEnum.enumValues
 export type FacilityTaxIdType = (typeof facilityTaxIdTypeEnum.enumValues)[number];
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type OrderType = (typeof orderTypeEnum.enumValues)[number];
+export type CadastroSubmissionStatus =
+  (typeof cadastroSubmissionStatusEnum.enumValues)[number];
+export type CadastroDocumentStatus =
+  (typeof cadastroDocumentStatusEnum.enumValues)[number];
+export type CadastroFileAssetStatus =
+  (typeof cadastroFileAssetStatusEnum.enumValues)[number];
+export type CadastroDocumentFileRole =
+  (typeof cadastroDocumentFileRoleEnum.enumValues)[number];
+export type CadastroUploadSessionStatus =
+  (typeof cadastroUploadSessionStatusEnum.enumValues)[number];
+export type CadastroReviewDecision =
+  (typeof cadastroReviewDecisionEnum.enumValues)[number];
+export type CadastroProcessingStepStatus =
+  (typeof cadastroProcessingStepStatusEnum.enumValues)[number];
 export type FieldSuggestionKind = (typeof fieldSuggestionKindEnum.enumValues)[number];
 export type FieldSuggestionStatus =
   (typeof fieldSuggestionStatusEnum.enumValues)[number];

@@ -137,4 +137,39 @@ export async function describeSearchSyncWorkflow(workflowId: string): Promise<{
   const description = await client.workflow.getHandle(workflowId).describe();
   return { workflowId, runId: description.runId, status: description.status.name };
 }
+
+export function cadastroFileUploadedWorkflowId(fileAssetId: string): string {
+  return `cadastro-file-${fileAssetId}`;
+}
+
+export async function startCadastroFileUploadedWorkflow(input: {
+  fileAssetId: string;
+  bucket: string;
+  objectKey: string;
+}): Promise<{ workflowId: string }> {
+  const client = await getTemporalClient();
+  const workflowId = cadastroFileUploadedWorkflowId(input.fileAssetId);
+
+  try {
+    await client.workflow.start("cadastroFileUploadedWorkflow", {
+      taskQueue: environment.TEMPORAL_TASK_QUEUE,
+      workflowId,
+      args: [
+        {
+          fileAssetId: input.fileAssetId,
+          bucket: input.bucket,
+          objectKey: input.objectKey,
+        },
+      ],
+    });
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      return { workflowId };
+    }
+    throw error;
+  }
+
+  return { workflowId };
+}
+
 export { workflowIdForReference };

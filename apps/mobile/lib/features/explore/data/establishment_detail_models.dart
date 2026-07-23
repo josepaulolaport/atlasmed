@@ -367,6 +367,36 @@ FacilityTaxIdType? parseFacilityTaxIdType(String? raw) {
   }
 }
 
+FacilityCommercialStatus? parseFacilityCommercialStatus(String? raw) {
+  switch (raw?.trim().toUpperCase()) {
+    case 'REGISTERED':
+      return FacilityCommercialStatus.registered;
+    case 'ACTIVE':
+      return FacilityCommercialStatus.active;
+    case 'SUSPENDED':
+      return FacilityCommercialStatus.suspended;
+    case 'INACTIVE':
+      return FacilityCommercialStatus.inactive;
+    default:
+      return null;
+  }
+}
+
+FacilityConformityStatus? parseFacilityConformityStatus(String? raw) {
+  switch (raw?.trim().toUpperCase()) {
+    case 'INCOMPLETE':
+      return FacilityConformityStatus.incomplete;
+    case 'COMPLETE':
+      return FacilityConformityStatus.complete;
+    case 'EXPIRING_SOON':
+      return FacilityConformityStatus.expiringSoon;
+    case 'NON_CONFORMING':
+      return FacilityConformityStatus.nonConforming;
+    default:
+      return null;
+  }
+}
+
 /// Bundle of status signals shown in the header + "Sinais" section.
 class FacilityStatusSignals {
   const FacilityStatusSignals({
@@ -546,13 +576,23 @@ class FacilityServiceChip {
 /// documents` table exists yet — this mirrors the vocabulary already used
 /// for `ingestion.cnes_suggestions.status` (`PENDING`/`APPROVED`/`REJECTED`)
 /// plus a `missing` state for a requirement that hasn't been submitted.
-enum EstablishmentDocumentStatus { missing, pending, approved, rejected }
+enum EstablishmentDocumentStatus {
+  missing,
+
+  /// Files uploaded and processed — waiting for package submit.
+  ready,
+  pending,
+  approved,
+  rejected,
+}
 
 extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
   String get label {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
         return 'Não enviado';
+      case EstablishmentDocumentStatus.ready:
+        return 'Pronto';
       case EstablishmentDocumentStatus.pending:
         return 'Em análise';
       case EstablishmentDocumentStatus.approved:
@@ -566,6 +606,8 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
         return const Color(0xFF9ca3af);
+      case EstablishmentDocumentStatus.ready:
+        return const Color(0xFF1e40af);
       case EstablishmentDocumentStatus.pending:
         return const Color(0xFFc6861b);
       case EstablishmentDocumentStatus.approved:
@@ -579,6 +621,8 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
     switch (this) {
       case EstablishmentDocumentStatus.missing:
         return const Color(0xFFf3f4f6);
+      case EstablishmentDocumentStatus.ready:
+        return const Color(0xFFdbeafe);
       case EstablishmentDocumentStatus.pending:
         return const Color(0xFFfef3d5);
       case EstablishmentDocumentStatus.approved:
@@ -588,13 +632,233 @@ extension EstablishmentDocumentStatusX on EstablishmentDocumentStatus {
     }
   }
 
-  /// Whether this document still needs rep action (submit or resubmit).
+  /// Whether this document still needs rep action (add/replace files).
   bool get needsAction =>
-      this != EstablishmentDocumentStatus.approved &&
-      this != EstablishmentDocumentStatus.pending;
+      this == EstablishmentDocumentStatus.missing ||
+      this == EstablishmentDocumentStatus.rejected;
+
+  bool get isEditable =>
+      this == EstablishmentDocumentStatus.missing ||
+      this == EstablishmentDocumentStatus.ready ||
+      this == EstablishmentDocumentStatus.rejected;
 }
 
-/// One registration document requirement (e.g. "Alvará de funcionamento")
+/// Kind of Cadastro checklist row — file upload vs billing email text field.
+enum EstablishmentDocumentKind { file, billingEmail }
+
+/// One physical file/page belonging to a logical Cadastro document.
+class CadastroDocumentFile {
+  const CadastroDocumentFile({
+    required this.fileAssetId,
+    required this.position,
+    required this.role,
+    this.fileName,
+    this.status,
+    this.contentType,
+  });
+
+  final String fileAssetId;
+  final int position;
+  final String role;
+  final String? fileName;
+  final String? status;
+  final String? contentType;
+
+  bool get isReady => status == 'READY';
+  bool get isFailed => status == 'FAILED';
+  bool get isProcessing =>
+      status == 'PROCESSING' ||
+      status == 'UPLOADED' ||
+      status == 'UPLOADING' ||
+      status == 'PENDING_UPLOAD';
+  bool get canView => isReady;
+  bool get isBusy => isProcessing || status == 'UPLOADING';
+
+  /// 0–1 hint for UI progress (indeterminate stages mapped to steps).
+  double get progressValue {
+    switch (status) {
+      case 'PENDING_UPLOAD':
+        return 0.08;
+      case 'UPLOADING':
+        return 0.35;
+      case 'UPLOADED':
+        return 0.55;
+      case 'PROCESSING':
+        return 0.78;
+      case 'READY':
+        return 1;
+      case 'FAILED':
+        return 0;
+      default:
+        return 0.2;
+    }
+  }
+
+  String get statusLabel {
+    switch (status) {
+      case 'READY':
+        return 'Pronto';
+      case 'FAILED':
+        return 'Falhou';
+      case 'PROCESSING':
+      case 'UPLOADED':
+        return 'Processando…';
+      case 'UPLOADING':
+      case 'PENDING_UPLOAD':
+        return 'Enviando…';
+      default:
+        return status ?? '—';
+    }
+  }
+
+  String get displayTitle => (fileName != null && fileName!.trim().isNotEmpty)
+      ? fileName!.trim()
+      : 'Arquivo $position';
+
+  bool get isImage =>
+      _looksLikeImage(fileName: fileName, mimeType: contentType);
+  bool get isPdf => _looksLikePdf(fileName: fileName, mimeType: contentType);
+
+  CadastroDocumentFile copyWith({
+    String? fileAssetId,
+    int? position,
+    String? role,
+    String? fileName,
+    String? status,
+    String? contentType,
+  }) {
+    return CadastroDocumentFile(
+      fileAssetId: fileAssetId ?? this.fileAssetId,
+      position: position ?? this.position,
+      role: role ?? this.role,
+      fileName: fileName ?? this.fileName,
+      status: status ?? this.status,
+      contentType: contentType ?? this.contentType,
+    );
+  }
+}
+
+/// One past submission of a Cadastro document type (history card).
+class CadastroRequirementSubmission {
+  const CadastroRequirementSubmission({
+    required this.documentId,
+    required this.submissionId,
+    required this.requirementId,
+    required this.title,
+    required this.status,
+    required this.version,
+    this.documentVersion,
+    this.reviewComment,
+    this.submittedAt,
+    this.createdAt,
+    this.fileCount = 0,
+    this.files = const [],
+  });
+
+  final String documentId;
+  final String submissionId;
+  final String requirementId;
+  final String title;
+  final String status;
+  final int version;
+  final int? documentVersion;
+  final String? reviewComment;
+  final DateTime? submittedAt;
+  final DateTime? createdAt;
+  final int fileCount;
+  final List<CadastroDocumentFile> files;
+
+  bool get isApproved => status == 'APPROVED';
+  bool get isUnderReview => status == 'UNDER_REVIEW' || status == 'SUBMITTED';
+  bool get isRejected => status == 'REJECTED' || status == 'CHANGES_REQUESTED';
+
+  String get statusLabel {
+    switch (status) {
+      case 'APPROVED':
+        return 'Aprovado';
+      case 'UNDER_REVIEW':
+      case 'SUBMITTED':
+        return 'Em análise';
+      case 'REJECTED':
+        return 'Rejeitado';
+      case 'CHANGES_REQUESTED':
+        return 'Correção solicitada';
+      default:
+        return status;
+    }
+  }
+
+  factory CadastroRequirementSubmission.fromJson(Map<String, dynamic> json) {
+    final rawFiles = (json['files'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+    return CadastroRequirementSubmission(
+      documentId: json['documentId'] as String? ?? '',
+      submissionId: json['submissionId'] as String? ?? '',
+      requirementId: json['requirementId'] as String? ?? '',
+      title: json['title'] as String? ?? 'Envio',
+      status: json['status'] as String? ?? '',
+      version: (json['version'] as num?)?.toInt() ?? 1,
+      documentVersion: (json['documentVersion'] as num?)?.toInt(),
+      reviewComment: json['reviewComment'] as String?,
+      submittedAt: json['submittedAt'] != null
+          ? DateTime.tryParse(json['submittedAt'] as String)
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String)
+          : null,
+      fileCount: (json['fileCount'] as num?)?.toInt() ?? rawFiles.length,
+      files: rawFiles
+          .map(
+            (f) => CadastroDocumentFile(
+              fileAssetId:
+                  f['fileAssetId'] as String? ?? f['id'] as String? ?? '',
+              position: (f['position'] as num?)?.toInt() ?? 1,
+              role: f['role'] as String? ?? 'PAGE',
+              fileName:
+                  f['fileName'] as String? ?? f['originalFilename'] as String?,
+              status: f['status'] as String?,
+              contentType:
+                  f['contentType'] as String? ?? f['mimeType'] as String?,
+            ),
+          )
+          .where((f) => f.fileAssetId.isNotEmpty)
+          .toList(growable: false),
+    );
+  }
+}
+
+class CadastroApprovedSummary {
+  const CadastroApprovedSummary({
+    required this.documentId,
+    required this.submissionId,
+    required this.version,
+    this.submittedAt,
+    this.reviewComment,
+    this.fileCount = 0,
+  });
+
+  final String documentId;
+  final String submissionId;
+  final int version;
+  final DateTime? submittedAt;
+  final String? reviewComment;
+  final int fileCount;
+
+  factory CadastroApprovedSummary.fromJson(Map<String, dynamic> json) {
+    return CadastroApprovedSummary(
+      documentId: json['documentId'] as String? ?? '',
+      submissionId: json['submissionId'] as String? ?? '',
+      version: (json['version'] as num?)?.toInt() ?? 1,
+      submittedAt: json['submittedAt'] != null
+          ? DateTime.tryParse(json['submittedAt'] as String)
+          : null,
+      reviewComment: json['reviewComment'] as String?,
+      fileCount: (json['fileCount'] as num?)?.toInt() ?? 0,
+    );
+  }
+}
+
+/// One registration document requirement (e.g. "Identidade")
 /// and its current review state — the "Cadastro" section.
 class EstablishmentDocument {
   const EstablishmentDocument({
@@ -602,11 +866,21 @@ class EstablishmentDocument {
     required this.title,
     required this.description,
     this.status = EstablishmentDocumentStatus.missing,
+    this.kind = EstablishmentDocumentKind.file,
+    this.requirementId,
+    this.recordId,
+    this.documentStatus,
+    this.latestSubmittedStatus,
+    this.latestSubmittedAt,
+    this.currentApproved,
+    this.files = const [],
     this.submittedAt,
     this.fileName,
     this.localPath,
+    this.remoteUrl,
     this.mimeType,
     this.reviewerNote,
+    this.billingEmail,
   });
 
   final String id;
@@ -615,6 +889,23 @@ class EstablishmentDocument {
   /// One-line explanation of what the document is / why it's required.
   final String description;
   final EstablishmentDocumentStatus status;
+  final EstablishmentDocumentKind kind;
+
+  /// API conformity requirement id (file rows only).
+  final String? requirementId;
+
+  /// Logical submission document id (multi-file model).
+  final String? recordId;
+
+  /// Raw API document status (DRAFT, READY, UNDER_REVIEW, …).
+  final String? documentStatus;
+
+  final String? latestSubmittedStatus;
+  final DateTime? latestSubmittedAt;
+  final CadastroApprovedSummary? currentApproved;
+
+  /// Ordered physical files for this logical document.
+  final List<CadastroDocumentFile> files;
   final DateTime? submittedAt;
 
   /// Attached file name — mocked for seeded docs, real after a local pick.
@@ -622,8 +913,11 @@ class EstablishmentDocument {
 
   /// Device path of a file the user just picked this session. Enables
   /// in-app image preview; PDFs/other types still open a full-screen
-  /// file viewer sheet (no remote storage yet).
+  /// file viewer sheet.
   final String? localPath;
+
+  /// Authenticated download URL from the Cadastro API (`/facilities/cadastro/files/…`).
+  final String? remoteUrl;
 
   /// Optional MIME (e.g. `application/pdf`, `image/jpeg`) from the picker.
   final String? mimeType;
@@ -631,39 +925,97 @@ class EstablishmentDocument {
   /// Shown when [status] is `rejected`, explaining what needs fixing.
   final String? reviewerNote;
 
-  bool get hasAttachment =>
-      (fileName != null && fileName!.isNotEmpty) ||
-      (localPath != null && localPath!.isNotEmpty);
+  /// Current billing email when [kind] is [EstablishmentDocumentKind.billingEmail].
+  final String? billingEmail;
 
-  /// True when we can render a real bitmap preview from [localPath].
+  bool get isBillingEmail => kind == EstablishmentDocumentKind.billingEmail;
+
+  bool get hasAttachment =>
+      files.isNotEmpty ||
+      (fileName != null && fileName!.isNotEmpty) ||
+      (localPath != null && localPath!.isNotEmpty) ||
+      (remoteUrl != null && remoteUrl!.isNotEmpty);
+
+  int get readyFileCount => files.where((f) => f.isReady).length;
+  int get failedFileCount => files.where((f) => f.isFailed).length;
+
+  bool get allFilesReady => files.isNotEmpty && files.every((f) => f.isReady);
+
+  bool get hasBusyFiles => files.any((f) => f.isBusy);
+
+  String get filesSummary {
+    if (files.isEmpty) return 'Nenhum arquivo';
+    final n = files.length;
+    final ready = readyFileCount;
+    if (failedFileCount > 0) {
+      return '$n ${n == 1 ? 'arquivo' : 'arquivos'} · $failedFileCount com falha';
+    }
+    if (hasBusyFiles) {
+      return '$n ${n == 1 ? 'arquivo' : 'arquivos'} · processando';
+    }
+    if (ready == n) {
+      return '$n ${n == 1 ? 'arquivo' : 'arquivos'} · prontos';
+    }
+    return '$n ${n == 1 ? 'arquivo' : 'arquivos'} · $ready prontos';
+  }
+
+  /// True when we can render a real bitmap preview from [localPath] or [remoteUrl].
   bool get canPreviewImage {
-    if (localPath == null || localPath!.isEmpty) return false;
-    return _looksLikeImage(fileName: fileName, mimeType: mimeType);
+    if (localPath != null && localPath!.isNotEmpty) {
+      return _looksLikeImage(fileName: fileName, mimeType: mimeType);
+    }
+    if (remoteUrl != null && remoteUrl!.isNotEmpty) {
+      return _looksLikeImage(fileName: fileName, mimeType: mimeType);
+    }
+    return files.any((f) => f.isImage && f.isReady);
   }
 
   bool get isPdf => _looksLikePdf(fileName: fileName, mimeType: mimeType);
 
   EstablishmentDocument copyWith({
+    String? title,
+    String? description,
     EstablishmentDocumentStatus? status,
+    EstablishmentDocumentKind? kind,
+    String? requirementId,
+    String? recordId,
+    String? documentStatus,
+    String? latestSubmittedStatus,
+    DateTime? latestSubmittedAt,
+    CadastroApprovedSummary? currentApproved,
+    List<CadastroDocumentFile>? files,
     DateTime? submittedAt,
     String? fileName,
     String? localPath,
+    String? remoteUrl,
     String? mimeType,
     String? reviewerNote,
+    String? billingEmail,
     bool clearReviewerNote = false,
   }) {
     return EstablishmentDocument(
       id: id,
-      title: title,
-      description: description,
+      title: title ?? this.title,
+      description: description ?? this.description,
       status: status ?? this.status,
+      kind: kind ?? this.kind,
+      requirementId: requirementId ?? this.requirementId,
+      recordId: recordId ?? this.recordId,
+      documentStatus: documentStatus ?? this.documentStatus,
+      latestSubmittedStatus:
+          latestSubmittedStatus ?? this.latestSubmittedStatus,
+      latestSubmittedAt: latestSubmittedAt ?? this.latestSubmittedAt,
+      currentApproved: currentApproved ?? this.currentApproved,
+      files: files ?? this.files,
       submittedAt: submittedAt ?? this.submittedAt,
       fileName: fileName ?? this.fileName,
       localPath: localPath ?? this.localPath,
+      remoteUrl: remoteUrl ?? this.remoteUrl,
       mimeType: mimeType ?? this.mimeType,
       reviewerNote: clearReviewerNote
           ? null
           : (reviewerNote ?? this.reviewerNote),
+      billingEmail: billingEmail ?? this.billingEmail,
     );
   }
 }

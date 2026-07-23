@@ -7,6 +7,7 @@ import { ordersUseCases } from "../../../orders/composition";
 import { registryReadService } from "../../../registry-ingestion/composition";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
 import { parseListFacilitiesQuery } from "../../application/list-facilities-query";
+import { cadastroSubmissionsRoute } from "./cadastro-submissions.route";
 import { z, type ZodTypeAny } from "zod";
 
 function parseSchema<T extends ZodTypeAny>(schema: T, body: unknown): z.infer<T> {
@@ -749,6 +750,169 @@ const listConformityRequirementsRoute = new Elysia()
     }
   );
 
+const getFacilityCadastroRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
+  .get(
+    "/facilities/:id/cadastro",
+    async ({ params, getScope }) => {
+      const scope = await getScope();
+      return facilityUseCases.getFacilityCadastroChecklist().execute({
+        facilityId: params.id,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Get facility Cadastro checklist (PF/PJ docs + billing email)",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const updateFacilityBillingEmailRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .put(
+    "/facilities/:id/billing-email",
+    async ({ params, body, getScope }) => {
+      const scope = await getScope();
+      return facilityUseCases.updateFacilityBillingEmail().execute({
+        facilityId: params.id,
+        scope,
+        email: body.email,
+      });
+    },
+    {
+      detail: {
+        summary: "Update facility administrative email",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        email: t.String({ minLength: 3, maxLength: 320 }),
+      }),
+    }
+  );
+
+const downloadFacilityCadastroFileRoute = new Elysia()
+  .use(auth)
+  .get(
+    "/facilities/cadastro/files/*",
+    async ({ params, set }) => {
+      const key = params["*"];
+      if (typeof key !== "string") {
+        throw new ValidationError([
+          { field: "key", message: "Invalid cadastro file key" },
+        ]);
+      }
+      const result = await facilityUseCases.downloadFacilityCadastroFile().execute({
+        storageKey: key,
+      });
+      set.headers["content-type"] = result.contentType;
+      set.headers["cache-control"] = "private, max-age=3600";
+      return result.bytes;
+    },
+    {
+      detail: {
+        summary: "Download a Cadastro document by storage key",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const approveFacilityCadastroRecordRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .post(
+    "/facilities/:id/cadastro/records/:recordId/approve",
+    async ({ params, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.approveFacilityCadastroRecord().execute({
+        facilityId: params.id,
+        recordId: params.recordId,
+        userId,
+        scope,
+      });
+    },
+    {
+      detail: {
+        summary: "Approve a submitted Cadastro document",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
+const rejectFacilityCadastroRecordRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .post(
+    "/facilities/:id/cadastro/records/:recordId/reject",
+    async ({ params, body, getScope, getUserId }) => {
+      const [scope, userId] = await Promise.all([getScope(), getUserId()]);
+      return facilityUseCases.rejectFacilityCadastroRecord().execute({
+        facilityId: params.id,
+        recordId: params.recordId,
+        userId,
+        scope,
+        reviewerNote: body.reviewerNote,
+      });
+    },
+    {
+      detail: {
+        summary: "Reject a submitted Cadastro document",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        reviewerNote: t.String({ minLength: 1, maxLength: 2000 }),
+      }),
+    }
+  );
+
+const listCadastroSubmissionsRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY"))
+  .get(
+    "/cadastro/submissions",
+    async ({ query }) => {
+      return facilityUseCases.listCadastroSubmissions().execute({
+        status: query.status as
+          | "SUBMITTED"
+          | "VALIDATED"
+          | "REJECTED"
+          | "UNDER_REVIEW"
+          | "APPROVED"
+          | undefined,
+        page: query.page ? Number(query.page) : undefined,
+        limit: query.limit ? Number(query.limit) : undefined,
+      });
+    },
+    {
+      detail: {
+        summary: "List Cadastro document submissions for ops review",
+        tags: ["Facilities"],
+        security: [{ bearerAuth: [] }],
+      },
+      query: t.Object({
+        status: t.Optional(
+          t.Union([
+            t.Literal("SUBMITTED"),
+            t.Literal("VALIDATED"),
+            t.Literal("REJECTED"),
+            t.Literal("UNDER_REVIEW"),
+            t.Literal("APPROVED"),
+          ])
+        ),
+        page: t.Optional(t.String()),
+        limit: t.Optional(t.String()),
+      }),
+    }
+  );
+
 const listFacilityConformityRecordsRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
@@ -887,6 +1051,7 @@ const createFacilityVisitRoute = new Elysia()
   );
 
 export const facilitiesRoute = new Elysia()
+  .use(cadastroSubmissionsRoute)
   .use(listFacilitiesRoute)
   .use(createFacilityRoute)
   .use(getFacilityRoute)
@@ -898,6 +1063,7 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilityNotesRoute)
   .use(createFacilityNoteRoute)
   .use(downloadFacilityPhotoRoute)
+  .use(downloadFacilityCadastroFileRoute)
   .use(listFacilityPhotosRoute)
   .use(uploadFacilityPhotoRoute)
   .use(confirmDoctorRoute)
@@ -915,6 +1081,11 @@ export const facilitiesRoute = new Elysia()
   .use(listConformityRequirementsRoute)
   .use(listFacilityConformityRecordsRoute)
   .use(createFacilityConformityRecordRoute)
+  .use(getFacilityCadastroRoute)
+  .use(updateFacilityBillingEmailRoute)
+  .use(approveFacilityCadastroRecordRoute)
+  .use(rejectFacilityCadastroRecordRoute)
+  .use(listCadastroSubmissionsRoute)
   .use(listFacilityOrdersRoute)
   .use(listFacilityVisitsRoute)
   .use(createFacilityVisitRoute);

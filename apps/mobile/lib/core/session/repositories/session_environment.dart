@@ -92,6 +92,16 @@ class SessionEnvironment extends Repository<Session?>
       return response.body;
     }
 
+    // Refresh rejected → clear local credentials so the user can log in again
+    // cleanly (do not treat 401 as success — that left a broken Hive session).
+    if (response.statusCode == 401 ||
+        response.statusCode == 400 ||
+        response.statusCode == 403) {
+      await delete();
+      await emit(data: null, datasource: .remote);
+      return null;
+    }
+
     final shouldThrow = await onErrorStatusCode(response.statusCode);
     if (shouldThrow) {
       return null;
@@ -101,12 +111,12 @@ class SessionEnvironment extends Repository<Session?>
 
   @override
   bool successfulCondition(int statusCode, dynamic body) {
-    return statusCode == 200 || statusCode == 401;
+    return statusCode == 200;
   }
 
   @override
   Future<bool> onErrorStatusCode(int statusCode) async {
-    if (statusCode == 400) {
+    if (statusCode == 400 || statusCode == 401 || statusCode == 403) {
       await delete();
       await emit(data: null, datasource: .remote);
       return false;

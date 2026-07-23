@@ -1,100 +1,299 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_registration_document_detail_screen.dart';
 
-/// "Cadastro" — list of registration document requirements.
-///
-/// Tap a row → dedicated detail screen with preview + send/resend.
-/// Mocked in V1: no `facility_documents` table or upload endpoint yet;
-/// the updated list is returned via `Navigator.pop` so the shortcut
-/// card's badge refreshes immediately.
-class ClinicRegistrationDocumentsScreen extends StatefulWidget {
+/// Clinic Cadastro: one card per document type (+ billing email).
+class ClinicRegistrationDocumentsScreen extends ConsumerStatefulWidget {
   const ClinicRegistrationDocumentsScreen({
     super.key,
+    required this.facilityId,
     required this.facilityName,
-    required this.initialDocuments,
   });
 
+  final String facilityId;
   final String facilityName;
-  final List<EstablishmentDocument> initialDocuments;
 
   @override
-  State<ClinicRegistrationDocumentsScreen> createState() =>
+  ConsumerState<ClinicRegistrationDocumentsScreen> createState() =>
       _ClinicRegistrationDocumentsScreenState();
 }
 
 class _ClinicRegistrationDocumentsScreenState
-    extends State<ClinicRegistrationDocumentsScreen> {
-  late List<EstablishmentDocument> _documents = List.of(
-    widget.initialDocuments,
-  );
-
+    extends ConsumerState<ClinicRegistrationDocumentsScreen> {
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop) return;
-        Navigator.of(context).pop(_documents);
-      },
-      child: Scaffold(
+    final checklistAsync = ref.watch(
+      facilityCadastroProvider(widget.facilityId),
+    );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFf8f9fb),
+      appBar: AppBar(
         backgroundColor: const Color(0xFFf8f9fb),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFf8f9fb),
-          elevation: 0,
-          foregroundColor: const Color(0xFF0f1729),
-          title: Text('Cadastro · ${_documents.length}'),
+        elevation: 0,
+        foregroundColor: const Color(0xFF0f1729),
+        title: Text(
+          checklistAsync.when(
+            data: (c) => 'Cadastro · ${c.fileDocuments.length}',
+            loading: () => 'Cadastro',
+            error: (_, _) => 'Cadastro',
+          ),
         ),
-        body: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const Padding(
-              padding: EdgeInsets.only(bottom: 12),
-              child: Text(
-                'Documentos exigidos para manter o cadastro deste '
-                'estabelecimento ativo. Toque em um item para ver o '
-                'arquivo, enviar foto ou PDF — a análise é feita pela '
-                'equipe administrativa.',
-                style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
-              ),
+      ),
+      body: checklistAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  error.toString().replaceFirst('Exception: ', ''),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Color(0xFF6b7280)),
+                ),
+                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: () => ref.invalidate(
+                    facilityCadastroProvider(widget.facilityId),
+                  ),
+                  child: const Text('Tentar novamente'),
+                ),
+              ],
             ),
-            for (final (i, doc) in _documents.indexed) ...[
-              if (i > 0) const SizedBox(height: 10),
-              _DocumentListCard(document: doc, onTap: () => _openDetail(doc)),
-            ],
-          ],
+          ),
         ),
+        data: (checklist) {
+          final documents = checklist.documents;
+          final hasTaxType =
+              checklist.taxIdType == 'PF' || checklist.taxIdType == 'PJ';
+          final fileDocs = checklist.fileDocuments;
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const Text(
+                'Documentos do estabelecimento. Toque em um tipo para ver '
+                'o status atual, histórico de envios e enviar um novo.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.4,
+                  color: Color(0xFF6b7280),
+                ),
+              ),
+              const SizedBox(height: 14),
+              if (!hasTaxType) ...[
+                Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFfef3d5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Defina se o estabelecimento é PF ou PJ em '
+                    'Dados administrativos (CNPJ/CPF) para carregar '
+                    'a lista correta de documentos.',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      height: 1.35,
+                      color: Color(0xFF92400e),
+                    ),
+                  ),
+                ),
+              ] else if (fileDocs.isEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    'Nenhum documento de arquivo aplicável para este tipo.',
+                    style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+                  ),
+                ),
+              ],
+              for (final (i, doc) in documents.indexed) ...[
+                if (i > 0) const SizedBox(height: 10),
+                _DocumentTypeCard(document: doc, onTap: () => _openItem(doc)),
+              ],
+            ],
+          );
+        },
       ),
     );
   }
 
-  Future<void> _openDetail(EstablishmentDocument document) async {
-    final updated = await Navigator.of(context).push<EstablishmentDocument>(
+  Future<void> _openItem(EstablishmentDocument document) async {
+    if (document.isBillingEmail) {
+      await _editBillingEmail(document);
+      return;
+    }
+
+    await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (_) =>
-            ClinicRegistrationDocumentDetailScreen(initialDocument: document),
+        builder: (_) => ClinicRegistrationDocumentDetailScreen(
+          facilityId: widget.facilityId,
+          initialDocument: document,
+        ),
       ),
     );
-    if (updated == null || !mounted) return;
-    setState(() {
-      _documents = _documents
-          .map((d) => d.id == updated.id ? updated : d)
-          .toList(growable: false);
-    });
+    if (mounted) {
+      ref.invalidate(facilityCadastroProvider(widget.facilityId));
+    }
+  }
+
+  Future<void> _editBillingEmail(EstablishmentDocument document) async {
+    final email = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) =>
+          _BillingEmailSheet(initialEmail: document.billingEmail ?? ''),
+    );
+    if (email == null || email.isEmpty || !mounted) return;
+
+    try {
+      await ref
+          .read(facilityCadastroControllerProvider(widget.facilityId))
+          .updateBillingEmail(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Email administrativo salvo'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error.toString()),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 }
 
-/// Compact summary row — title, status, attachment hint, chevron.
-/// All send/preview actions live on the detail screen.
-class _DocumentListCard extends StatelessWidget {
-  const _DocumentListCard({required this.document, required this.onTap});
+class _BillingEmailSheet extends StatefulWidget {
+  const _BillingEmailSheet({required this.initialEmail});
+
+  final String initialEmail;
+
+  @override
+  State<_BillingEmailSheet> createState() => _BillingEmailSheetState();
+}
+
+class _BillingEmailSheetState extends State<_BillingEmailSheet> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.initialEmail,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 16 + bottomInset),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Email Administrativo',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0f1729),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Informe o email administrativo do estabelecimento.',
+            style: TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _controller,
+            keyboardType: TextInputType.emailAddress,
+            autofocus: true,
+            decoration: InputDecoration(
+              hintText: 'financeiro@clinica.com.br',
+              filled: true,
+              fillColor: const Color(0xFFf8f9fb),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () =>
+                  Navigator.of(context).pop(_controller.text.trim()),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF1e40af),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Salvar'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentTypeCard extends StatelessWidget {
+  const _DocumentTypeCard({required this.document, required this.onTap});
 
   final EstablishmentDocument document;
   final VoidCallback onTap;
 
+  EstablishmentDocumentStatus get _listStatus {
+    if (document.isBillingEmail) return document.status;
+    if (document.currentApproved != null) {
+      return EstablishmentDocumentStatus.approved;
+    }
+    switch (document.latestSubmittedStatus) {
+      case 'UNDER_REVIEW':
+      case 'SUBMITTED':
+        return EstablishmentDocumentStatus.pending;
+      case 'REJECTED':
+      case 'CHANGES_REQUESTED':
+        return EstablishmentDocumentStatus.rejected;
+      case 'APPROVED':
+        return EstablishmentDocumentStatus.approved;
+      default:
+        return EstablishmentDocumentStatus.missing;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final status = document.status;
+    final status = _listStatus;
+    final subtitle = document.isBillingEmail
+        ? (document.billingEmail?.isNotEmpty == true
+              ? document.billingEmail!
+              : '+ Completar')
+        : (document.latestSubmittedStatus != null
+              ? _subtitleForSubmitted(document)
+              : 'Nenhum envio ainda');
+
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -123,10 +322,8 @@ class _DocumentListCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
-                  document.hasAttachment
-                      ? (document.isPdf
-                            ? Icons.picture_as_pdf_rounded
-                            : Icons.image_outlined)
+                  document.isBillingEmail
+                      ? Icons.email_outlined
                       : Icons.description_outlined,
                   size: 20,
                   color: status.color,
@@ -139,24 +336,29 @@ class _DocumentListCard extends StatelessWidget {
                   children: [
                     Text(
                       document.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13.5,
+                        fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: Color(0xFF0f1729),
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
-                      document.hasAttachment
-                          ? (document.fileName ?? 'Arquivo anexado')
-                          : 'Nenhum arquivo enviado',
+                      subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF6b7280),
+                        color:
+                            document.isBillingEmail &&
+                                document.billingEmail?.isNotEmpty != true
+                            ? const Color(0xFF1e40af)
+                            : const Color(0xFF6b7280),
+                        fontWeight:
+                            document.isBillingEmail &&
+                                document.billingEmail?.isNotEmpty != true
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                   ],
@@ -178,10 +380,10 @@ class _DocumentListCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: 2),
+              const SizedBox(width: 4),
               const Icon(
                 Icons.chevron_right_rounded,
-                size: 20,
+                size: 18,
                 color: Color(0xFF9ca3af),
               ),
             ],
@@ -189,5 +391,29 @@ class _DocumentListCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _subtitleForSubmitted(EstablishmentDocument document) {
+    if (document.currentApproved != null) {
+      return 'Aprovado · v${document.currentApproved!.version}';
+    }
+    final status = document.latestSubmittedStatus;
+    switch (status) {
+      case 'UNDER_REVIEW':
+      case 'SUBMITTED':
+        return 'Em análise';
+      case 'REJECTED':
+        return 'Rejeitado — reenvie se necessário';
+      case 'CHANGES_REQUESTED':
+        return 'Correção solicitada';
+      case 'APPROVED':
+        return 'Aprovado';
+      case 'READY':
+      case 'DRAFT':
+      case 'PROCESSING':
+        return 'Nenhum envio ainda';
+      default:
+        return 'Nenhum envio ainda';
+    }
   }
 }

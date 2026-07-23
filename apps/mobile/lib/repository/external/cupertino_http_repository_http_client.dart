@@ -13,6 +13,13 @@ import 'package:http/http.dart' as http;
 typedef BearerToken = String;
 typedef TokenBuilder = FutureOr<BearerToken?> Function();
 
+/// Shared session — create/close-per-request races URLSession delegate FFI
+/// callbacks and aborts the isolate (DLRT_GetFfiCallbackMetadata).
+final cupertino.CupertinoClient _sharedCupertinoClient =
+    cupertino.CupertinoClient.fromSessionConfiguration(
+      cupertino.URLSessionConfiguration.defaultSessionConfiguration(),
+    );
+
 class CupertinoHttpRepositoryHttpClient extends RepositoryHttpClient {
   const CupertinoHttpRepositoryHttpClient({this.tokenBuilder, super.mocks});
 
@@ -22,9 +29,7 @@ class CupertinoHttpRepositoryHttpClient extends RepositoryHttpClient {
   Future<RepositoryHttpResponse> call({
     required RepositoryHttpRequest request,
   }) async {
-    final client = cupertino.CupertinoClient.fromSessionConfiguration(
-      cupertino.URLSessionConfiguration.defaultSessionConfiguration(),
-    );
+    final client = _sharedCupertinoClient;
 
     try {
       final tokenWithBearerPrefix = await tokenBuilder?.call();
@@ -41,8 +46,8 @@ class CupertinoHttpRepositoryHttpClient extends RepositoryHttpClient {
 
       final metadata = <String, String>{
         'method': request.method.name.toUpperCase(),
-        'url': request.url.toString(),
         'headers': _hideJwt(headers.toString()),
+        'url': request.url.toString(),
         'body': encodedBody ?? '',
       };
 
@@ -99,8 +104,6 @@ class CupertinoHttpRepositoryHttpClient extends RepositoryHttpClient {
         level: RepositoryLoggingLevel.error,
       );
       throw NetworkUnavailableException(e);
-    } finally {
-      client.close();
     }
   }
 

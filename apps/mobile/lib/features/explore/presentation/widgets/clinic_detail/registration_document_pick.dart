@@ -113,7 +113,7 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
         return PickedRegistrationFile(
           fileName: xFile.name,
           localPath: xFile.path,
-          mimeType: xFile.mimeType ?? _mimeFromName(xFile.name),
+          mimeType: xFile.mimeType ?? mimeFromFileName(xFile.name),
         );
       case _PickKind.file:
         final result = await FilePicker.platform.pickFiles(
@@ -137,8 +137,8 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
           fileName: name,
           localPath: file.path,
           mimeType: file.extension != null
-              ? _mimeFromExtension(file.extension!)
-              : _mimeFromName(name),
+              ? mimeFromExtension(file.extension!)
+              : mimeFromFileName(name),
         );
     }
   } catch (_) {
@@ -154,14 +154,14 @@ Future<PickedRegistrationFile?> pickRegistrationDocument(
   }
 }
 
-String? _mimeFromName(String name) {
+String? mimeFromFileName(String name) {
   final lower = name.toLowerCase();
   final dot = lower.lastIndexOf('.');
   if (dot < 0) return null;
-  return _mimeFromExtension(lower.substring(dot + 1));
+  return mimeFromExtension(lower.substring(dot + 1));
 }
 
-String? _mimeFromExtension(String ext) {
+String? mimeFromExtension(String ext) {
   switch (ext.toLowerCase()) {
     case 'pdf':
       return 'application/pdf';

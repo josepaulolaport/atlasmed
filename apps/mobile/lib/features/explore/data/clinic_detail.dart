@@ -42,10 +42,13 @@ class ClinicDetail {
   final String? cnpj;
   final String? cpf;
   final String? email;
+  final String? billingEmail;
   final String? website;
   final String? responsibleDoctor;
   final String? openingHours;
   final DateTime? registeredSince;
+  final String? commercialStatus;
+  final String? conformityStatus;
 
   const ClinicDetail({
     required this.id,
@@ -75,10 +78,13 @@ class ClinicDetail {
     this.cnpj,
     this.cpf,
     this.email,
+    this.billingEmail,
     this.website,
     this.responsibleDoctor,
     this.openingHours,
     this.registeredSince,
+    this.commercialStatus,
+    this.conformityStatus,
   });
 
   /// Neighbourhood + street + number + complement as one line for "Endereço".

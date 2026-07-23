@@ -56,6 +56,10 @@ Spatial queries use raw `sql` tagged templates via Drizzle's `db.execute()`.
 
 Drizzle ORM with Drizzle Kit for migrations. Schema files live in `packages/database/src/schema/`. Generated migrations live in `packages/database/drizzle/`.
 
+## Cadastro documents
+
+Facility cadastro uses versioned **submissions** with logical **documents** (catalogued in `conformity_requirements`) and ordered **file assets** in private object storage. Clients upload via signed URLs (PUT / multipart); Temporal runs `cadastroFileUploadedWorkflow` for checksum/MIME validation. Ops review is manual per logical document. See `docs/specs/0004-cadastro-submissions/design.md`.
+
 ## Current Gaps
 
 - No explicit multi-tenant organization model.

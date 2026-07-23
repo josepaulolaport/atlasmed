@@ -60,9 +60,10 @@ function mapFacility(
     whatsapp: facility.whatsappNumber,
     email: facility.email,
     website: facility.websiteUrl,
+    billingEmail: facility.billingEmail ?? null,
     responsibleName: facility.responsibleName,
     openingHours: facility.openingHours,
-    taxIdType: facility.taxIdType ?? null,
+    taxIdType: facility.taxIdType ?? "PJ",
     cnpj: facility.cnpj,
     cpf: facility.cpf,
     lat: options.lat !== undefined ? options.lat : (withCoords.lat ?? null),
@@ -458,6 +459,10 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       lat?: number | null;
       lng?: number | null;
       imageUrl?: string | null;
+      billingEmail?: string | null;
+      taxIdType?: "PJ" | "PF";
+      conformityStatus?: FacilityRecord["conformityStatus"];
+      commercialStatus?: FacilityRecord["commercialStatus"];
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
@@ -472,6 +477,22 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.imageUrl !== undefined) {
       setData.imageUrl = data.imageUrl;
+    }
+
+    if (data.billingEmail !== undefined) {
+      setData.billingEmail = data.billingEmail;
+    }
+
+    if (data.taxIdType !== undefined) {
+      setData.taxIdType = data.taxIdType;
+    }
+
+    if (data.conformityStatus !== undefined) {
+      setData.conformityStatus = data.conformityStatus;
+    }
+
+    if (data.commercialStatus !== undefined) {
+      setData.commercialStatus = data.commercialStatus;
     }
 
     if (data.lat !== undefined || data.lng !== undefined) {

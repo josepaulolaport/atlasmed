@@ -430,11 +430,9 @@ class _ClinicDetailContent extends ConsumerWidget {
       children: [
         _QuickActions(detail: detail),
         ClinicTopShortcutsSection(
+          facilityId: clinicId,
           facilityName: detail.name,
           detail: detail,
-          // null while sections are still loading — badge stays neutral
-          // instead of flashing a false "Completo".
-          documents: sectionsAsync.valueOrNull?.documents,
         ),
         ClinicSectionHeader(
           title: 'Profissionais administrativos',

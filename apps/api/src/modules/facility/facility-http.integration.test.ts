@@ -9,8 +9,14 @@ import {
 import { access } from "../access/index";
 import { facility } from "../facility/index";
 import { professional } from "../professional/index";
-import { like, inArray } from "drizzle-orm";
-import { professionals, facilityProfessionals } from "@atlasmed/database";
+import { eq, like, inArray } from "drizzle-orm";
+import {
+  professionals,
+  facilityProfessionals,
+  facilities,
+  fileAssets,
+  documentFiles,
+} from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
 import { getUniqueTestId } from "../../test-utils/database-helpers";
@@ -185,10 +191,9 @@ describe("Facility HTTP auth integration", () => {
       lat: -23.5505,
       lng: -46.6333,
     });
-    // Status chips remain mocked on mobile — not part of this DTO yet
-    expect(body.commercialStatus).toBeUndefined();
+    // purchaseStatus still mocked on mobile Sinais; commercial/conformity are live
     expect(body.purchaseStatus).toBeUndefined();
-    expect(body.conformityStatus).toBeUndefined();
+    expect(body.conformityStatus).toBeDefined();
   });
 
   it("scoped field USER gets 403 for out-of-territory facility", async () => {
@@ -289,5 +294,152 @@ describe("Facility HTTP auth integration", () => {
     );
 
     expect(response.status).toBe(400);
+  });
+
+  it("cadastro checklist filters by PF/PJ and flips statuses after approve + billing email", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const facilityId = fixtures.inScopeFacilityId;
+    await db
+      .update(facilities)
+      .set({
+        taxIdType: "PJ",
+        billingEmail: null,
+        conformityStatus: "INCOMPLETE",
+        commercialStatus: "REGISTERED",
+      })
+      .where(eq(facilities.id, facilityId));
+
+    const token = await loginToken(fixtures.admin.email);
+    const checklistRes = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${facilityId}/cadastro`,
+      token
+    );
+    expect(checklistRes.status).toBe(200);
+    const checklist = (await checklistRes.json()) as {
+      taxIdType?: string;
+      documents: Array<{ slug: string; requirementId: string }>;
+    };
+    expect(checklist.taxIdType).toBe("PJ");
+    const slugs = checklist.documents.map((d) => d.slug);
+    expect(slugs).toContain("carta_cnpj");
+    expect(slugs).toContain("licenca_sanitaria");
+    expect(slugs).not.toContain("identidade");
+    expect(slugs).not.toContain("crm");
+
+    const documentIds: string[] = [];
+    for (const doc of checklist.documents) {
+      const draftRes = await authRequest(
+        app,
+        `http://localhost/api/v1/facilities/${facilityId}/cadastro/submissions`,
+        token,
+        { method: "POST" }
+      );
+      expect(draftRes.status).toBe(200);
+      const draft = (await draftRes.json()) as { id: string };
+
+      const createDocRes = await authRequest(
+        app,
+        `http://localhost/api/v1/facilities/${facilityId}/cadastro/submissions/${draft.id}/documents`,
+        token,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ requirementId: doc.requirementId }),
+        }
+      );
+      expect(createDocRes.status).toBe(200);
+      const createdDoc = (await createDocRes.json()) as { id: string };
+
+      const [asset] = await db
+        .insert(fileAssets)
+        .values({
+          facilityId,
+          bucket: "test-bucket",
+          objectKey: `test/${facilityId}/${doc.requirementId}/${Date.now()}.png`,
+          originalFilename: `${doc.slug}.png`,
+          declaredMimeType: "image/png",
+          detectedMimeType: "image/png",
+          sizeBytes: 68,
+          status: "READY",
+          pageCount: 1,
+          processedAt: new Date(),
+        })
+        .returning();
+      await db.insert(documentFiles).values({
+        submissionDocumentId: createdDoc.id,
+        fileAssetId: asset!.id,
+        position: 1,
+        role: "PAGE",
+      });
+
+      const submitRes = await authRequest(
+        app,
+        `http://localhost/api/v1/facilities/${facilityId}/cadastro/requirements/${doc.requirementId}/submit`,
+        token,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ documentId: createdDoc.id }),
+        }
+      );
+      expect(submitRes.status).toBe(200);
+      const submitted = (await submitRes.json()) as {
+        documentId: string;
+        status: string;
+      };
+      expect(submitted.status).toBe("UNDER_REVIEW");
+      documentIds.push(submitted.documentId);
+    }
+
+    for (const documentId of documentIds) {
+      const approveRes = await authRequest(
+        app,
+        `http://localhost/api/v1/facilities/${facilityId}/cadastro/documents/${documentId}/review`,
+        token,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ decision: "APPROVED" }),
+        }
+      );
+      expect(approveRes.status).toBe(200);
+    }
+
+    const emailRes = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${facilityId}/billing-email`,
+      token,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "financeiro@clinica.test" }),
+      }
+    );
+    expect(emailRes.status).toBe(200);
+    const emailBody = (await emailRes.json()) as {
+      complete: boolean;
+      conformityStatus: string;
+      commercialStatus: string | null;
+    };
+    expect(emailBody.complete).toBe(true);
+    expect(emailBody.conformityStatus).toBe("COMPLETE");
+    expect(emailBody.commercialStatus).toBe("ACTIVE");
+
+    const facilityRes = await authRequest(
+      app,
+      `http://localhost/api/v1/facilities/${facilityId}`,
+      token
+    );
+    expect(facilityRes.status).toBe(200);
+    const facilityBody = (await facilityRes.json()) as {
+      conformityStatus?: string;
+      commercialStatus?: string;
+      billingEmail?: string | null;
+    };
+    expect(facilityBody.conformityStatus).toBe("COMPLETE");
+    expect(facilityBody.commercialStatus).toBe("ACTIVE");
+    expect(facilityBody.billingEmail).toBe("financeiro@clinica.test");
   });
 });

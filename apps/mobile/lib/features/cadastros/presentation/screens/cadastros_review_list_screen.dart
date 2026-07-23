@@ -17,22 +17,19 @@ class CadastrosReviewListScreen extends ConsumerStatefulWidget {
 
 class _CadastrosReviewListScreenState
     extends ConsumerState<CadastrosReviewListScreen> {
-  String _filter = 'Em análise';
-
-  static const _filters = <String>[
-    'Em análise',
-    'Aprovados',
-    'Rejeitados',
-    'Todos',
+  static const _filters = <(String label, String apiStatus)>[
+    ('Em análise', 'SUBMITTED'),
+    ('Aprovados', 'VALIDATED'),
+    ('Rejeitados', 'REJECTED'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final queue = ref.watch(cadastroReviewQueueProvider);
-    final filtered = queue.where(_matchesFilter).toList(growable: false);
-    final pendingCount = queue
-        .where((e) => e.status == EstablishmentDocumentStatus.pending)
-        .length;
+    final apiStatus = ref.watch(cadastroReviewApiStatusProvider);
+    final queueAsync = ref.watch(cadastroReviewQueueProvider);
+    final selectedLabel = _filters
+        .firstWhere((f) => f.$2 == apiStatus, orElse: () => _filters.first)
+        .$1;
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),
@@ -42,87 +39,128 @@ class _CadastrosReviewListScreenState
           children: [
             const AtlasTopBar(page: 'Cadastros'),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                children: [
-                  const Text(
-                    'Cadastros',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF0a2f7f),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(cadastroReviewQueueProvider);
+                  await ref.read(cadastroReviewQueueProvider.future);
+                },
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  children: [
+                    const Text(
+                      'Cadastros',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0a2f7f),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    pendingCount == 0
-                        ? 'Nenhuma submissão aguardando análise'
-                        : '$pendingCount aguardando análise',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6b7280),
+                    const SizedBox(height: 6),
+                    Text(
+                      queueAsync.when(
+                        data: (queue) => queue.isEmpty
+                            ? 'Nenhuma submissão neste filtro'
+                            : '${queue.length} submissão${queue.length == 1 ? '' : 'ões'}',
+                        loading: () => 'Carregando…',
+                        error: (_, _) => 'Falha ao carregar a fila',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6b7280),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 36,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _filters.length,
-                      separatorBuilder: (_, _) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final label = _filters[i];
-                        final selected = label == _filter;
-                        return _FilterChip(
-                          label: label,
-                          selected: selected,
-                          onTap: () => setState(() => _filter = label),
-                        );
-                      },
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _filters.length,
+                        separatorBuilder: (_, _) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          final (label, status) = _filters[i];
+                          final selected = label == selectedLabel;
+                          return _FilterChip(
+                            label: label,
+                            selected: selected,
+                            onTap: () {
+                              ref
+                                      .read(
+                                        cadastroReviewApiStatusProvider
+                                            .notifier,
+                                      )
+                                      .state =
+                                  status;
+                            },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  if (filtered.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.only(top: 48),
-                      child: Center(
-                        child: Text(
-                          'Nenhum cadastro neste filtro',
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            color: Color(0xFF9ca3af),
+                    const SizedBox(height: 16),
+                    ...queueAsync.when(
+                      loading: () => [
+                        const Padding(
+                          padding: EdgeInsets.only(top: 48),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      ],
+                      error: (error, _) => [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 48),
+                          child: Column(
+                            children: [
+                              Text(
+                                error.toString(),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF6b7280),
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () =>
+                                    ref.invalidate(cadastroReviewQueueProvider),
+                                child: const Text('Tentar novamente'),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    for (final (i, item) in filtered.indexed) ...[
-                      if (i > 0) const SizedBox(height: 10),
-                      _ReviewListCard(
-                        submission: item,
-                        onTap: () => context.push('/cadastros/${item.id}'),
-                      ),
-                    ],
-                ],
+                      ],
+                      data: (queue) {
+                        if (queue.isEmpty) {
+                          return [
+                            const Padding(
+                              padding: EdgeInsets.only(top: 48),
+                              child: Center(
+                                child: Text(
+                                  'Nenhum cadastro neste filtro',
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    color: Color(0xFF9ca3af),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ];
+                        }
+                        return [
+                          for (final (i, item) in queue.indexed) ...[
+                            if (i > 0) const SizedBox(height: 10),
+                            _ReviewListCard(
+                              submission: item,
+                              onTap: () =>
+                                  context.push('/cadastros/${item.id}'),
+                            ),
+                          ],
+                        ];
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  bool _matchesFilter(CadastroReviewSubmission item) {
-    switch (_filter) {
-      case 'Em análise':
-        return item.status == EstablishmentDocumentStatus.pending;
-      case 'Aprovados':
-        return item.status == EstablishmentDocumentStatus.approved;
-      case 'Rejeitados':
-        return item.status == EstablishmentDocumentStatus.rejected;
-      default:
-        return true;
-    }
   }
 }
 

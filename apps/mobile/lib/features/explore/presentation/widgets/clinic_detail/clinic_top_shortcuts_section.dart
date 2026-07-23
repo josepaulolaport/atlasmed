@@ -1,60 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_cadastro_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_info_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_registration_documents_screen.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/my_suggestions_screen.dart';
 
-/// Shortcut cards below the quick-actions strip — Cadastro, Dados
-/// administrativos, and Não Conformidades.
-class ClinicTopShortcutsSection extends ConsumerStatefulWidget {
+/// Shortcut cards — Cadastro, Dados administrativos, and Não Conformidades.
+class ClinicTopShortcutsSection extends ConsumerWidget {
   const ClinicTopShortcutsSection({
     super.key,
+    required this.facilityId,
     required this.facilityName,
     required this.detail,
-    this.documents,
   });
 
+  final String facilityId;
   final String facilityName;
   final ClinicDetail detail;
 
-  /// `null` while the sections provider is still loading — badge stays
-  /// neutral instead of flashing a false "Completo".
-  final List<EstablishmentDocument>? documents;
-
   @override
-  ConsumerState<ClinicTopShortcutsSection> createState() =>
-      _ClinicTopShortcutsSectionState();
-}
-
-class _ClinicTopShortcutsSectionState
-    extends ConsumerState<ClinicTopShortcutsSection> {
-  List<EstablishmentDocument>? _documents;
-
-  @override
-  void initState() {
-    super.initState();
-    _documents = widget.documents == null ? null : List.of(widget.documents!);
-  }
-
-  @override
-  void didUpdateWidget(covariant ClinicTopShortcutsSection oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.documents != widget.documents) {
-      _documents = widget.documents == null ? null : List.of(widget.documents!);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final docs = _documents;
-    final pendingDocs = docs?.where((d) => d.status.needsAction).length;
-    final adminPending = _adminInfoPendingCount(widget.detail);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cadastroAsync = ref.watch(facilityCadastroProvider(facilityId));
+    final pendingDocs = cadastroAsync.when(
+      data: (c) => c.pendingAction,
+      loading: () => null,
+      error: (_, _) => null,
+    );
+    final adminPending = _adminInfoPendingCount(detail);
     final mySuggestionsAsync = ref.watch(
-      mySuggestionsForClinicProvider(widget.detail.id),
+      mySuggestionsForClinicProvider(detail.id),
     );
     final pendingSuggestions = mySuggestionsAsync.maybeWhen(
       data: (items) =>
@@ -77,18 +54,15 @@ class _ClinicTopShortcutsSectionState
                     '$pendingDocs pendente${pendingDocs == 1 ? '' : 's'}',
                   ),
             onTap: () async {
-              final updated = await Navigator.of(context)
-                  .push<List<EstablishmentDocument>>(
-                    MaterialPageRoute(
-                      builder: (_) => ClinicRegistrationDocumentsScreen(
-                        facilityName: widget.facilityName,
-                        initialDocuments: docs ?? const [],
-                      ),
-                    ),
-                  );
-              if (updated != null && mounted) {
-                setState(() => _documents = updated);
-              }
+              await Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => ClinicRegistrationDocumentsScreen(
+                    facilityId: facilityId,
+                    facilityName: facilityName,
+                  ),
+                ),
+              );
+              ref.invalidate(facilityCadastroProvider(facilityId));
             },
           ),
           const SizedBox(height: 8),
@@ -102,7 +76,7 @@ class _ClinicTopShortcutsSectionState
                   ),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => ClinicAdminInfoScreen(detail: widget.detail),
+                builder: (_) => ClinicAdminInfoScreen(detail: detail),
               ),
             ),
           ),
@@ -118,8 +92,8 @@ class _ClinicTopShortcutsSectionState
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => MySuggestionsScreen.clinic(
-                  targetId: widget.detail.id,
-                  targetName: widget.detail.name,
+                  targetId: detail.id,
+                  targetName: detail.name,
                 ),
               ),
             ),
@@ -130,17 +104,13 @@ class _ClinicTopShortcutsSectionState
   }
 }
 
-/// Counts empty fields among the ones shown on `ClinicAdminInfoSection` —
-/// tax ID, phone, email, website, responsible doctor, hours, and the split
-/// address fields (estado / cidade / CEP / endereço composto).
-/// "Cliente desde" is excluded: it's a system field, not something a rep
-/// fills in, so it shouldn't count against completeness.
 int _adminInfoPendingCount(ClinicDetail detail) {
   bool empty(String? v) => v == null || v.trim().isEmpty;
   final hasTaxId =
       (detail.cnpj?.trim().isNotEmpty ?? false) ||
       (detail.cpf?.trim().isNotEmpty ?? false);
   final fields = <bool>[
+    empty(detail.taxIdType),
     !hasTaxId,
     empty(detail.phone),
     empty(detail.whatsapp),
