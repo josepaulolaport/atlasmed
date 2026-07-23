@@ -34,12 +34,13 @@ class ClinicStatusSignalsSection extends StatelessWidget {
             value: s.commercialStatus.label,
             color: s.commercialStatus.color,
           ),
-          _SignalRow(
-            label: 'Tipo de cliente',
-            value: s.purchaseStatus.label,
-            color: s.purchaseStatus.color,
-            detail: days != null ? 'sem pedido há $days dias' : null,
-          ),
+          if (s.purchaseStatus != null)
+            _SignalRow(
+              label: 'Tipo de cliente',
+              value: s.purchaseStatus!.label,
+              color: s.purchaseStatus!.color,
+              detail: days != null ? 'sem pedido há $days dias' : null,
+            ),
           _SignalRow(
             label: 'Conformidade',
             value: s.conformityStatus.label,
