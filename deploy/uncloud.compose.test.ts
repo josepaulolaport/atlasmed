@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const composePath = resolve(import.meta.dir, "uncloud.compose.yml");
+const dockerfilePaths = [
+  "api.Dockerfile",
+  "api-worker.Dockerfile",
+  "cnes-worker.Dockerfile",
+  "web.Dockerfile",
+].map((name) => resolve(import.meta.dir, "docker", name));
 const workflowPath = resolve(
   import.meta.dir,
   "../.github/workflows/deploy-services-to-cluster.yml",
@@ -34,6 +40,23 @@ describe("production deployment", () => {
 
       expect(service).toContain("platform: linux/arm64");
       expect(service).toContain("x-machines: oracle-luis");
+    }
+  });
+
+  it("pins Dockerfile base images to ARM64 for remote Uncloud builds", () => {
+    for (const dockerfilePath of dockerfilePaths) {
+      const dockerfile = readFileSync(dockerfilePath, "utf8");
+      const fromLines = dockerfile
+        .split("\n")
+        .filter(
+          (line) => line.startsWith("FROM ") && !line.includes(" installer AS "),
+        );
+
+      expect(fromLines.length).toBeGreaterThan(0);
+      for (const fromLine of fromLines) {
+        expect(fromLine).toContain("--platform=${DEPLOY_PLATFORM}");
+      }
+      expect(dockerfile).toContain("ARG DEPLOY_PLATFORM=linux/arm64");
     }
   });
 
@@ -83,6 +106,9 @@ describe("production deployment", () => {
     );
     expect(workflow).toContain(
       "working-directory: deploy\n        run: bun test uncloud.compose.test.ts",
+    );
+    expect(workflow).toContain(
+      "name: Set up QEMU for ARM64 builds\n        uses: docker/setup-qemu-action@v3",
     );
   });
 });
