@@ -99,6 +99,39 @@ describe("purchase recurrence batch processing", () => {
     expect(updateSearchDocuments).toHaveBeenCalledWith([document]);
   });
 
+  test("wraps invalid raw reconcile input as a non-retryable validation failure", async () => {
+    const store = createStore();
+    const activity = createPurchaseRecurrenceBatchActivity({ store, updateSearchDocuments: async () => {} });
+
+    await expect(activity({ mode: "RECONCILE", cursor: "f-009", limit: 500, today: "2026-07-22" }))
+      .rejects.toMatchObject({
+        name: "ApplicationFailure",
+        type: "PurchaseRecurrenceValidationFailure",
+        nonRetryable: true,
+      });
+    expect(store.listChangedOrderFacilityIds).not.toHaveBeenCalled();
+    expect(store.listDueTransitionFacilityIds).not.toHaveBeenCalled();
+  });
+
+  test("wraps page-list DB failures retryably without recalculating or advancing the cursor", async () => {
+    const recalculateFacility = mock(async () => ({ facilityId: "f-010", changed: true, document }));
+    const activity = createPurchaseRecurrenceBatchActivity({
+      store: createStore({
+        listBackfillFacilityIds: async () => { throw new Error("list query unavailable"); },
+        recalculateFacility,
+      }),
+      updateSearchDocuments: async () => {},
+    });
+
+    await expect(activity({ mode: "BACKFILL", cursor: "f-009", limit: 500, today: "2026-07-22" }))
+      .rejects.toMatchObject({
+        name: "ApplicationFailure",
+        type: "PurchaseRecurrenceDatabaseFailure",
+        nonRetryable: false,
+      });
+    expect(recalculateFacility).not.toHaveBeenCalled();
+  });
+
   test("throws retryably on a DB failure and a retry converges without advancing the failed page", async () => {
     let attempts = 0;
     const updateSearchDocuments = mock(async () => {});

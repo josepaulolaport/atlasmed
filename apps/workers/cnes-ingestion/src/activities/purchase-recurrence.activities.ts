@@ -300,25 +300,48 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
     input: PurchaseRecurrenceBatchInput,
   ): Promise<PurchaseRecurrenceBatchResult> {
     const startedAt = Date.now();
+    if (input.mode === "RECONCILE" && (!input.since || !input.until)) {
+      const message = "RECONCILE requires since and until";
+      logger.error("facility_purchase_recurrence.batch_validation_failed", {
+        mode: input.mode,
+        cursor: input.cursor ?? undefined,
+        message,
+      });
+      throw ApplicationFailure.nonRetryable(message, "PurchaseRecurrenceValidationFailure");
+    }
+
     let facilityIds: string[];
-    if (input.mode === "BACKFILL" || input.fullSweep) {
-      facilityIds = await dependencies.store.listBackfillFacilityIds({ cursor: input.cursor, limit: input.limit });
-    } else {
-      if (!input.since || !input.until) throw new Error("RECONCILE requires since and until");
-      const [changedOrderIds, dueTransitionIds] = await Promise.all([
-        dependencies.store.listChangedOrderFacilityIds({
-          cursor: input.cursor,
-          limit: input.limit,
-          since: input.since,
-          until: input.until,
-        }),
-        dependencies.store.listDueTransitionFacilityIds({
-          cursor: input.cursor,
-          limit: input.limit,
-          today: input.today,
-        }),
-      ]);
-      facilityIds = selectReconcileFacilityIds({ changedOrderIds, dueTransitionIds, cursor: input.cursor, limit: input.limit });
+    try {
+      if (input.mode === "BACKFILL" || input.fullSweep) {
+        facilityIds = await dependencies.store.listBackfillFacilityIds({ cursor: input.cursor, limit: input.limit });
+      } else {
+        const [changedOrderIds, dueTransitionIds] = await Promise.all([
+          dependencies.store.listChangedOrderFacilityIds({
+            cursor: input.cursor,
+            limit: input.limit,
+            since: input.since!,
+            until: input.until!,
+          }),
+          dependencies.store.listDueTransitionFacilityIds({
+            cursor: input.cursor,
+            limit: input.limit,
+            today: input.today,
+          }),
+        ]);
+        facilityIds = selectReconcileFacilityIds({ changedOrderIds, dueTransitionIds, cursor: input.cursor, limit: input.limit });
+      }
+    } catch (error) {
+      const failure = { facilityId: null, message: errorMessage(error) };
+      logger.error("facility_purchase_recurrence.batch_page_selection_failed", {
+        mode: input.mode,
+        cursor: input.cursor ?? undefined,
+        failure,
+      });
+      throw ApplicationFailure.retryable(
+        `Purchase recurrence page selection failed: ${failure.message}`,
+        "PurchaseRecurrenceDatabaseFailure",
+        [failure],
+      );
     }
 
     const failures: PurchaseRecurrenceFailure[] = [];
@@ -328,6 +351,7 @@ export function createPurchaseRecurrenceBatchActivity(dependencies: {
       try {
         const result = await dependencies.store.recalculateFacility(facilityId, input.today);
         if (result.changed) updated += 1;
+        // Re-publish no-op snapshots too: a prior DB commit may have outlived a failed search update.
         if (result.document) documents.push(result.document);
       } catch (error) {
         failures.push({ facilityId, message: errorMessage(error) });

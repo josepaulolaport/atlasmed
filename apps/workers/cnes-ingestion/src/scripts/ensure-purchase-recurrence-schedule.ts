@@ -1,6 +1,14 @@
-import { Client, Connection, ScheduleOverlapPolicy, type ScheduleClient } from "@temporalio/client";
+import {
+  Client,
+  Connection,
+  ScheduleNotFoundError,
+  ScheduleOverlapPolicy,
+  type ScheduleClient,
+} from "@temporalio/client";
 import { loadWorkerConfig } from "../config";
 import { logger } from "../logger";
+
+export const LEGACY_PURCHASE_RECURRENCE_SCHEDULE_ID = "facility-purchase-recurrence-nightly-repair";
 
 export const PURCHASE_RECURRENCE_SCHEDULES = [
   {
@@ -29,7 +37,21 @@ function scheduleOptions(definition: typeof PURCHASE_RECURRENCE_SCHEDULES[number
 }
 
 function isMissingSchedule(error: unknown): boolean {
-  return error instanceof Error && (error.name === "ScheduleNotFoundError" || error.message.includes("not found"));
+  return error instanceof ScheduleNotFoundError;
+}
+
+async function deleteLegacyPurchaseRecurrenceSchedule(
+  schedules: Pick<ScheduleClient, "getHandle">,
+): Promise<void> {
+  try {
+    // Remove the superseded nightly repair schedule so only the canonical hourly reconciler can run.
+    await schedules.getHandle(LEGACY_PURCHASE_RECURRENCE_SCHEDULE_ID).delete();
+    logger.info("facility_purchase_recurrence.legacy_schedule_deleted", {
+      scheduleId: LEGACY_PURCHASE_RECURRENCE_SCHEDULE_ID,
+    });
+  } catch (error) {
+    if (!isMissingSchedule(error)) throw error;
+  }
 }
 
 export async function ensurePurchaseRecurrenceSchedules(
@@ -54,6 +76,8 @@ export async function ensurePurchaseRecurrenceSchedules(
       logger.info("facility_purchase_recurrence.schedule_created", { scheduleId: definition.scheduleId });
     }
   }
+
+  await deleteLegacyPurchaseRecurrenceSchedule(schedules);
 }
 
 async function main(): Promise<void> {
