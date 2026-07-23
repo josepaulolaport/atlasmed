@@ -336,6 +336,173 @@ Future<void> _showAddNoteSheet(
 
 /// Owns its controllers so dismissing an empty sheet cannot race
 /// InheritedWidget teardown (`_dependents.isEmpty`).
+
+Future<void> _showDirectEditSheet(
+  BuildContext context, {
+  required WidgetRef ref,
+  required String professionalId,
+  required String label,
+  required String? initialValue,
+  required Future<Map<String, dynamic>> Function(String raw) buildPatch,
+  TextInputType keyboardType = TextInputType.text,
+  int? maxLength,
+  String? hint,
+}) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useRootNavigator: true,
+    builder: (_) => _DirectEditProfessionalSheet(
+      professionalId: professionalId,
+      label: label,
+      initialValue: initialValue,
+      buildPatch: buildPatch,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      hint: hint,
+      ref: ref,
+    ),
+  );
+}
+
+class _DirectEditProfessionalSheet extends StatefulWidget {
+  const _DirectEditProfessionalSheet({
+    required this.professionalId,
+    required this.label,
+    required this.initialValue,
+    required this.buildPatch,
+    required this.ref,
+    this.keyboardType = TextInputType.text,
+    this.maxLength,
+    this.hint,
+  });
+
+  final String professionalId;
+  final String label;
+  final String? initialValue;
+  final Future<Map<String, dynamic>> Function(String raw) buildPatch;
+  final WidgetRef ref;
+  final TextInputType keyboardType;
+  final int? maxLength;
+  final String? hint;
+
+  @override
+  State<_DirectEditProfessionalSheet> createState() =>
+      _DirectEditProfessionalSheetState();
+}
+
+class _DirectEditProfessionalSheetState
+    extends State<_DirectEditProfessionalSheet> {
+  late final TextEditingController _controller;
+  var _isSaving = false;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue ?? '');
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() {
+      _isSaving = true;
+      _errorMessage = null;
+    });
+    try {
+      final patch = await widget.buildPatch(_controller.text);
+      await widget.ref
+          .read(professionalsRepositoryProvider(widget.professionalId))
+          .updateProfessional(patch);
+      widget.ref.invalidate(doctorDetailProvider(widget.professionalId));
+      if (mounted) Navigator.pop(context);
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _errorMessage = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isSaving = false;
+        _errorMessage = 'Não foi possível salvar. Tente novamente.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.viewInsetsOf(context).bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Editar ${widget.label.toLowerCase()}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _controller,
+            autofocus: true,
+            keyboardType: widget.keyboardType,
+            maxLength: widget.maxLength,
+            textCapitalization:
+                widget.keyboardType == TextInputType.emailAddress
+                ? TextCapitalization.none
+                : TextCapitalization.sentences,
+            decoration: InputDecoration(
+              labelText: widget.label,
+              hintText: widget.hint,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage!,
+              style: const TextStyle(color: Color(0xFFb84545), fontSize: 13),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: _isSaving ? null : () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+              const SizedBox(width: 8),
+              FilledButton(
+                onPressed: _isSaving ? null : _save,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Salvar'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _AddDoctorNoteSheet extends StatefulWidget {
   const _AddDoctorNoteSheet({required this.professionalId, required this.ref});
 
@@ -1207,92 +1374,6 @@ String? _parseBirthDateToIso(String raw) {
     return '${brMatch.group(3)}-${brMatch.group(2)}-${brMatch.group(1)}';
   }
   throw const FormatException('Use o formato dd/mm/aaaa.');
-}
-
-class _InfoRow extends StatelessWidget {
-  final String icon;
-  final String label;
-  final String? value;
-  const _InfoRow({required this.icon, required this.label, this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(icon, style: const TextStyle(fontSize: 14, height: 1)),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
-                  color: Color(0xFF8a94a6),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value ?? '',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF0f1729),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ContactRow extends StatelessWidget {
-  final String label;
-  final String value;
-  final bool mono;
-  const _ContactRow({
-    required this.label,
-    required this.value,
-    this.mono = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 68,
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 9.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: Color(0xFF8a94a6),
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 12.5,
-              color: const Color(0xFF0f1729),
-              fontFamily: mono ? 'monospace' : null,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 // ======================================================================
