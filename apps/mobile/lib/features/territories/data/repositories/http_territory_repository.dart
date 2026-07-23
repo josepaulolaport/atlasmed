@@ -179,17 +179,52 @@ class HttpTerritoryRepository implements TerritoryRepository {
     TerritoryGeometry boundary,
     MapCoordinate centroid,
   ) async {
+    final territoryTypeId = await _resolveTerritoryTypeId(draft.kind.slug);
     final response =
         await _send(_territoryUri('/territories'), RepositoryHttpMethod.post, {
           'name': draft.name,
           'slug': _generateSlug(draft.name),
+          'territoryTypeId': territoryTypeId,
           'typeSlug': draft.kind.slug,
           'sectorId': draft.sectorId,
+          if (draft.managerTerritoryId != null)
+            'managerTerritoryId': draft.managerTerritoryId,
           'boundary': boundary.toGeoJson(),
         });
     _throwIfError(response);
     final row = jsonDecode(response.body) as Map<String, dynamic>;
     return Territory.fromApiRow(row, boundary: boundary, centroid: centroid);
+  }
+
+  /// Resolves `manager_zone` / `patch` to a real type id so create doesn't
+  /// depend solely on slug lookup (clearer failure if the API DB is wrong).
+  Future<String> _resolveTerritoryTypeId(String typeSlug) async {
+    final response = await _get(_territoryUri('/territory-types'));
+    _throwIfError(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final rows = (decoded['data'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>();
+    Map<String, dynamic>? match;
+    for (final row in rows) {
+      if (row['slug'] == typeSlug && (row['isActive'] as bool? ?? true)) {
+        match = row;
+        break;
+      }
+    }
+    final id = match?['id'] as String?;
+    if (id == null || id.isEmpty) {
+      final available = rows
+          .map((row) => row['slug'] as String? ?? '?')
+          .join(', ');
+      throw TerritoryApiException(
+        statusCode: 404,
+        code: 'INVALID_TERRITORY_TYPE',
+        message: available.isEmpty
+            ? 'Tipo de território "$typeSlug" não encontrado nesta API.'
+            : 'Tipo de território "$typeSlug" inválido. Disponíveis: $available.',
+      );
+    }
+    return id;
   }
 
   @override
@@ -308,14 +343,22 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   static String _generateSlug(String name) {
-    final base = name
-        .trim()
-        .toLowerCase()
+    // Fold common pt-BR diacritics so names like "São José" don't collapse
+    // into unreadable slugs after stripping non-ASCII.
+    const from = 'áàâãäéèêëíìîïóòôõöúùûüçñ';
+    const to = 'aaaaaeeeeiiiiooooouuuucn';
+    var folded = name.trim().toLowerCase();
+    for (var i = 0; i < from.length; i++) {
+      folded = folded.replaceAll(from[i], to[i]);
+    }
+    final base = folded
         .replaceAll(RegExp(r'[^a-z0-9\s-]'), '')
         .replaceAll(RegExp(r'\s+'), '-')
-        .replaceAll(RegExp(r'-+'), '-');
+        .replaceAll(RegExp(r'-+'), '-')
+        .replaceAll(RegExp(r'^-|-$'), '');
     final suffix = Random().nextInt(0xFFFFFF).toRadixString(36);
     final trimmedBase = base.isEmpty ? 'territorio' : base;
-    return '$trimmedBase-$suffix';
+    final slug = '$trimmedBase-$suffix';
+    return slug.length <= 60 ? slug : '${trimmedBase.substring(0, 40)}-$suffix';
   }
 }

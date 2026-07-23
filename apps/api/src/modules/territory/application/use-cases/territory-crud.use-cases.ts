@@ -17,6 +17,7 @@ import { normalizeTerritorySlug } from "../constants/territory-slug.constants";
 import {
   OperationNotAllowedError,
   ResourceNotFoundError,
+  ValidationError,
 } from "../../../../shared/errors";
 
 export interface TerritoryDeletionMembershipPort {
@@ -100,19 +101,30 @@ export class TerritoryCrudUseCases {
     territoryTypeId?: string;
     typeSlug?: string;
     sectorId?: string;
+    /** Preferred manager zone for rep patches (from client picker). */
+    managerTerritoryId?: string;
     boundary?: GeoJsonGeometry;
   }) {
-    const type = input.territoryTypeId
+    // Prefer id when present, but fall back to slug so a stale/wrong id
+    // from the client does not fail create when `typeSlug` is still valid.
+    const typeById = input.territoryTypeId
       ? await this.deps.territoryTypeRepository.findById(input.territoryTypeId)
-      : input.typeSlug
-        ? await this.deps.territoryTypeRepository.findBySlug(input.typeSlug)
-        : null;
+      : null;
+    const typeBySlug = input.typeSlug
+      ? await this.deps.territoryTypeRepository.findBySlug(input.typeSlug)
+      : null;
+    const type = typeById?.isActive ? typeById : typeBySlug?.isActive ? typeBySlug : null;
+    const typeRef = input.territoryTypeId ?? input.typeSlug;
 
-    if (!type || !type.isActive) {
-      throw new ResourceNotFoundError(
-        "TerritoryType",
-        input.territoryTypeId ?? input.typeSlug ?? "unknown"
-      );
+    if (!type) {
+      throw new ValidationError([
+        {
+          field: input.territoryTypeId && !typeById ? "territoryTypeId" : "typeSlug",
+          message: typeRef
+            ? `Invalid territory type "${typeRef}". Expected an active type such as manager_zone or patch.`
+            : "Invalid territory type. Provide territoryTypeId or typeSlug.",
+        },
+      ]);
     }
 
     if (input.sectorId) {
@@ -147,6 +159,8 @@ export class TerritoryCrudUseCases {
       | undefined;
 
     if (type.canHaveBoundary) {
+      // Create must not auto-reassign clinics (or cascade membership). That
+      // stays an explicit recompute / later boundary-edit concern.
       boundaryResolution = await applyTerritoryBoundary(
         {
           territoryRepository: this.deps.territoryRepository,
@@ -157,7 +171,11 @@ export class TerritoryCrudUseCases {
           onManagerTerritoryChanged: this.deps.onManagerTerritoryChanged,
         },
         { ...territory, territoryType: type },
-        boundary
+        boundary,
+        {
+          preferredManagerTerritoryId: input.managerTerritoryId,
+          enqueueClinicRecompute: false,
+        }
       );
     }
 

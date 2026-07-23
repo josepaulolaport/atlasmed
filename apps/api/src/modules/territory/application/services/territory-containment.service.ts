@@ -63,11 +63,26 @@ export class TerritoryContainmentService {
   }
 
   async resolveRepPatchManagerZone(
-    geoJson: GeoJsonGeometry
+    geoJson: GeoJsonGeometry,
+    preferredManagerTerritoryId?: string | null
   ): Promise<RepPatchContainmentResolution> {
     const candidates = await this.deps.spatialRepository.findContainingManagerZones({
       geoJson,
     });
+
+    if (preferredManagerTerritoryId) {
+      const preferred = candidates.find((c) => c.id === preferredManagerTerritoryId);
+      if (!preferred) {
+        throw new OperationNotAllowedError(
+          "save_boundary",
+          "A área precisa estar totalmente dentro da zona de gerente selecionada"
+        );
+      }
+      return {
+        managerTerritoryId: preferred.id,
+        candidates: [preferred],
+      };
+    }
 
     if (candidates.length === 0) {
       throw new OperationNotAllowedError(

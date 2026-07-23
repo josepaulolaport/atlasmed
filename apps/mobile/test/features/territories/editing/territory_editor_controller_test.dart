@@ -706,5 +706,59 @@ void main() {
       expect(state.saved, isTrue);
       expect(state.original, isNotNull);
     });
+
+    test(
+      'rep-patch draw rejects taps outside the selected manager zone',
+      () async {
+        final patchTarget = const TerritoryEditorTarget.creating(
+          initialKind: TerritoryKind.repPatch,
+          initialSectorId: 'sector-1',
+        );
+        container.listen(
+          territoryEditorControllerProvider(patchTarget),
+          (previous, next) {},
+        );
+        final controller = container.read(
+          territoryEditorControllerProvider(patchTarget).notifier,
+        );
+        await Future.doWhile(() async {
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+          return container
+              .read(territoryEditorControllerProvider(patchTarget))
+              .loading;
+        });
+
+        // Fence = existing "target" manager zone: square (0,0)-(2,2).
+        await controller.setDraft(
+          const TerritoryDraft(
+            name: 'Área Teste',
+            kind: TerritoryKind.repPatch,
+            sectorId: 'sector-1',
+            managerTerritoryId: 'target',
+          ),
+        );
+
+        expect(
+          container
+              .read(territoryEditorControllerProvider(patchTarget))
+              .fenceZone
+              ?.id,
+          'target',
+        );
+
+        expect(controller.addDrawingPoint(_c(10, 10)), isFalse);
+        final rejected = container.read(
+          territoryEditorControllerProvider(patchTarget),
+        );
+        expect(rejected.drawingPoints, isEmpty);
+        expect(rejected.validation.isValid, isFalse);
+        expect(rejected.validation.message, contains('zona de gerente'));
+
+        expect(controller.addDrawingPoint(_c(0.5, 0.5)), isTrue);
+        expect(controller.addDrawingPoint(_c(1.5, 0.5)), isTrue);
+        expect(controller.addDrawingPoint(_c(1.5, 1.5)), isTrue);
+        expect(controller.addDrawingPoint(_c(0.5, 1.5)), isTrue);
+      },
+    );
   });
 }

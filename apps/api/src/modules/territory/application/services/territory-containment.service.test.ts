@@ -60,4 +60,37 @@ describe("TerritoryContainmentService", () => {
       OperationNotAllowedError
     );
   });
+
+  it("uses the preferred manager zone when it contains the patch", async () => {
+    const service = new TerritoryContainmentService({
+      territoryRepository: {} as never,
+      territoryTypeRepository: {} as never,
+      spatialRepository: {
+        findContainingManagerZones: mock(async () => [
+          { id: "zone-1", code: "ZONE-1", name: "Zone 1" },
+          { id: "zone-2", code: "ZONE-2", name: "Zone 2" },
+        ]),
+      } as never,
+    });
+
+    const resolution = await service.resolveRepPatchManagerZone(polygon, "zone-2");
+    expect(resolution.managerTerritoryId).toBe("zone-2");
+    expect(resolution.candidates).toHaveLength(1);
+  });
+
+  it("rejects when preferred manager zone does not contain the patch", async () => {
+    const service = new TerritoryContainmentService({
+      territoryRepository: {} as never,
+      territoryTypeRepository: {} as never,
+      spatialRepository: {
+        findContainingManagerZones: mock(async () => [
+          { id: "zone-1", code: "ZONE-1", name: "Zone 1" },
+        ]),
+      } as never,
+    });
+
+    await expect(
+      service.resolveRepPatchManagerZone(polygon, "zone-missing")
+    ).rejects.toThrow(OperationNotAllowedError);
+  });
 });

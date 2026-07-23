@@ -43,9 +43,19 @@ export type TerritoryBoundaryResolution =
 export async function applyTerritoryBoundary(
   deps: ApplyTerritoryBoundaryDeps,
   territory: TerritoryRecord,
-  geoJson: GeoJsonGeometry
+  geoJson: GeoJsonGeometry,
+  options?: {
+    /** When set (rep patch), prefer this manager zone if it fully contains the boundary. */
+    preferredManagerTerritoryId?: string | null;
+    /**
+     * When false, skip clinic membership recompute (e.g. initial create).
+     * Default true for boundary edits.
+     */
+    enqueueClinicRecompute?: boolean;
+  }
 ): Promise<TerritoryBoundaryResolution> {
   const boundary = normalizeTerritoryBoundary(geoJson);
+  const enqueueClinicRecompute = options?.enqueueClinicRecompute !== false;
   const type =
     territory.territoryType ??
     (await deps.territoryTypeRepository.findById(territory.territoryTypeId));
@@ -59,7 +69,10 @@ export async function applyTerritoryBoundary(
   await deps.containmentService.assertSiblingOverlapAllowed(territory, boundary);
 
   if (isRepPatchType(type)) {
-    const resolution = await deps.containmentService.resolveRepPatchManagerZone(boundary);
+    const resolution = await deps.containmentService.resolveRepPatchManagerZone(
+      boundary,
+      options?.preferredManagerTerritoryId
+    );
 
     await deps.spatialRepository.saveBoundary(territory.id, boundary);
     await deps.spatialRepository.updateBoundaryMetadata(territory.id);
@@ -68,14 +81,16 @@ export async function applyTerritoryBoundary(
       managerTerritoryId: resolution.managerTerritoryId,
     });
 
-    await deps.onBoundaryChanged?.(territory.id);
+    if (enqueueClinicRecompute) {
+      await deps.onBoundaryChanged?.(territory.id);
+    }
     await deps.onManagerTerritoryChanged?.(resolution.managerTerritoryId);
 
     return {
       mode: "rep_patch",
       managerTerritoryId: resolution.managerTerritoryId,
       managerZoneCandidates: resolution.candidates,
-      clinicRecomputeEnqueued: true,
+      clinicRecomputeEnqueued: enqueueClinicRecompute,
     };
   }
 
@@ -92,7 +107,9 @@ export async function applyTerritoryBoundary(
       territory.id
     );
 
-    await deps.onBoundaryChanged?.(territory.id);
+    if (enqueueClinicRecompute) {
+      await deps.onBoundaryChanged?.(territory.id);
+    }
 
     return {
       mode: "manager_zone",

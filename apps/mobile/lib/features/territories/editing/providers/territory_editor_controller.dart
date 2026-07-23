@@ -171,6 +171,9 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       selectedEdge: null,
       selectionAction: SelectionAction.none,
       drawingPoints: const [],
+      // Drop a stale finish/draw error from the previous tool so Add mode
+      // never keeps showing a Remove-area message (or vice versa).
+      validation: _validate(state.working ?? const [], state.neighbors),
     );
   }
 
@@ -310,10 +313,21 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       mode == EditorMode.addArea || mode == EditorMode.removeArea;
 
   /// Adds a point to the in-progress ring. Rejects (returns `false`)
-  /// points whose new segment would cross an existing one, so an invalid
-  /// self-intersecting shape can never even be drawn in the first place.
+  /// points outside the manager-zone fence, or whose new segment would
+  /// cross an existing one, so an invalid shape can never be drawn.
   bool addDrawingPoint(MapCoordinate point) {
     if (!_isDrawingMode(state.mode)) return false;
+    if (!_isInsideFence(point)) {
+      state = state.copyWith(
+        validation: const GeometryValidation(
+          // Flag must keep `isValid == false` so the banner actually shows.
+          tooFewPoints: true,
+          message:
+              'Toque dentro da zona de gerente selecionada para desenhar a área.',
+        ),
+      );
+      return false;
+    }
     final points = state.drawingPoints;
     if (points.length >= 2) {
       final last = points.last;
@@ -331,7 +345,21 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         }
       }
     }
-    state = state.copyWith(drawingPoints: [...points, point]);
+    // Clear a prior draw/finish hint once the user places a valid point.
+    // While the first ring is still in progress, keep the "draw an area"
+    // prompt — don't leave a Remove-area error sticky on screen.
+    final nextPoints = [...points, point];
+    state = state.copyWith(
+      drawingPoints: nextPoints,
+      validation: state.working == null || state.working!.isEmpty
+          ? GeometryValidation(
+              tooFewPoints: true,
+              message: nextPoints.length >= 3
+                  ? 'Feche a área ou toque em "Adicionar área".'
+                  : 'Desenhe ao menos uma área para o território.',
+            )
+          : _validate(state.working!, state.neighbors),
+    );
     return true;
   }
 
@@ -379,15 +407,16 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
     final next = _resolveNeighborOverlaps(drawn);
 
     if (next.isEmpty) {
-      final outsideFence =
-          state.mode == EditorMode.addArea && state.fenceZone != null;
+      // Keep the in-progress points so the user can adjust instead of
+      // wiping the ring and stranding them on a stale error banner.
       state = state.copyWith(
-        drawingPoints: const [],
         validation: GeometryValidation(
           tooFewPoints: true,
-          message: outsideFence
-              ? 'Essa área precisa estar dentro da zona de gerente selecionada.'
-              : 'Essa remoção eliminaria todo o território.',
+          message: _emptyFinishMessage(
+            mode: state.mode,
+            hadGeometryBefore: working.isNotEmpty,
+            fenced: state.fenceZone != null,
+          ),
         ),
       );
       return false;
@@ -512,7 +541,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         saving: false,
         saveError: error is TerritoryApiException
             ? error.message
-            : 'Não foi possível salvar. Tente novamente.',
+            : 'Não foi possível salvar. Verifique se a área está dentro da zona de gerente e não sobrepõe vizinhos.',
       );
       return false;
     }
@@ -573,10 +602,59 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   GeometryParts _applyFence(GeometryParts parts) {
     final fenceZone = state.fenceZone;
     if (fenceZone == null) return parts;
+    // Only exteriors fence the patch. Passing hole rings as clip paths
+    // with evenOdd can wipe a valid draw (empty intersection) and block
+    // create with a bogus error.
     final fenceRings = fenceZone.boundary.coordinates
-        .expand((part) => part)
+        .where((part) => part.isNotEmpty)
+        .map((part) => part.first)
         .toList();
+    if (fenceRings.isEmpty) return parts;
     return GeometryOps.intersectShape(parts, fenceRings);
+  }
+
+  /// True when [point] lies inside the manager-zone fence (exterior of any
+  /// part, and not inside a hole). Always true when there is no fence or
+  /// the fence has no drawable boundary (don't block create).
+  bool _isInsideFence(MapCoordinate point) {
+    final fenceZone = state.fenceZone;
+    if (fenceZone == null) return true;
+    final parts = fenceZone.boundary.coordinates;
+    if (parts.isEmpty) return true;
+    var hasExterior = false;
+    for (final part in parts) {
+      if (part.isEmpty) continue;
+      hasExterior = true;
+      final exterior = part.first;
+      if (!GeometryMath.pointInPolygon(point, exterior)) continue;
+      var inHole = false;
+      for (var i = 1; i < part.length; i++) {
+        if (GeometryMath.pointInPolygon(point, part[i])) {
+          inHole = true;
+          break;
+        }
+      }
+      if (!inHole) return true;
+    }
+    // Empty/malformed fence must not freeze Add-area taps.
+    return !hasExterior;
+  }
+
+  String _emptyFinishMessage({
+    required EditorMode mode,
+    required bool hadGeometryBefore,
+    required bool fenced,
+  }) {
+    if (mode == EditorMode.removeArea) {
+      return 'Essa remoção eliminaria todo o território.';
+    }
+    if (fenced) {
+      return 'Essa área precisa estar dentro da zona de gerente selecionada.';
+    }
+    if (!hadGeometryBefore) {
+      return 'Essa área fica totalmente dentro de outro território do mesmo tipo. Desenhe fora das áreas existentes.';
+    }
+    return 'Essa área foi totalmente absorvida por territórios vizinhos. Ajuste o contorno.';
   }
 
   /// Stage 3's upgrade from "flag-only" to "auto-resolved": wherever

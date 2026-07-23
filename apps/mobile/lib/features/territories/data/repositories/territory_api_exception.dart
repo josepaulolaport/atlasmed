@@ -27,11 +27,32 @@ class TerritoryApiException implements Exception {
     try {
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final error = decoded['error'] as Map<String, dynamic>?;
-      final message = error?['message'] as String?;
+      // Prefer nested `{ error: { code, message } }`; fall back to top-level.
+      final message =
+          (error?['message'] as String?) ?? (decoded['message'] as String?);
+      final code =
+          (error?['code'] as String?) ??
+          (decoded['code'] as String?) ??
+          'UNKNOWN_ERROR';
+      // ValidationError may carry field issues with more precise copy.
+      final issues = error?['errors'] ?? decoded['errors'];
+      if (issues is List && issues.isNotEmpty) {
+        final first = issues.first;
+        if (first is Map<String, dynamic>) {
+          final fieldMessage = first['message'] as String?;
+          if (fieldMessage != null && fieldMessage.isNotEmpty) {
+            return TerritoryApiException(
+              statusCode: response.statusCode,
+              code: code,
+              message: fieldMessage,
+            );
+          }
+        }
+      }
       if (message != null && message.isNotEmpty) {
         return TerritoryApiException(
           statusCode: response.statusCode,
-          code: error?['code'] as String? ?? 'UNKNOWN_ERROR',
+          code: code,
           message: message,
         );
       }

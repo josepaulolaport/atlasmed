@@ -118,6 +118,7 @@ export const territoriesRoute = new Elysia()
         territoryTypeId: t.Optional(t.String()),
         typeSlug: t.Optional(t.String()),
         sectorId: t.Optional(t.String()),
+        managerTerritoryId: t.Optional(t.String()),
         boundary: t.Optional(
           t.Object({
             type: t.Union([t.Literal("Polygon"), t.Literal("MultiPolygon")]),

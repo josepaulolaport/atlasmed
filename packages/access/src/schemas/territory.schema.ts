@@ -37,6 +37,8 @@ export const createTerritorySchema = z.object({
   territoryTypeId: z.string().trim().min(1).optional(),
   typeSlug: z.string().trim().min(1).optional(),
   sectorId: z.string().trim().min(1).optional(),
+  /** Preferred manager zone when creating a rep patch. */
+  managerTerritoryId: z.string().trim().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
   boundary: territoryBoundarySchema.optional(),
 });

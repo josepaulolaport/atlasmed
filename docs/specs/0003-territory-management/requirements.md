@@ -44,7 +44,7 @@ Clinics are assigned to rep patches via point-in-polygon on write. Scope resolve
 12. WHEN a clinic has coordinates and `territoryAssignmentSource = geo` THEN the system SHALL assign it to the containing active rep patch via `ST_Covers`.
 13. WHEN a clinic is assigned to a rep patch THEN access checks SHALL use `Clinic.territoryId`.
 14. WHEN a clinic has `territoryAssignmentSource = manual` THEN automatic geo recompute SHALL NOT change its assignment until explicitly unlocked.
-15. WHEN a rep patch boundary changes THEN the system SHALL enqueue clinic membership re-evaluation for affected clinics.
+15. WHEN a rep patch boundary is updated (PUT boundary) THEN the system SHALL enqueue clinic membership re-evaluation for affected clinics. WHEN a territory is first created (POST) THEN the system SHALL NOT auto-assign clinics or enqueue membership recompute — clinic membership stays unchanged until an explicit recompute or a later boundary edit.
 
 ### Coverage analytics
 
