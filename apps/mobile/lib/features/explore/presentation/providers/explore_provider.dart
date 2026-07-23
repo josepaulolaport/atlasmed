@@ -9,7 +9,6 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
@@ -65,10 +64,10 @@ class _DoctorDetailRepository extends Repository<ApiDoctor>
 
 // ── Detail fetch helpers (no Riverpod family; called per request) ──
 Future<ClinicDetail> _fetchClinicDetail(String id) async {
-  // Phase-1 nearby-map pins use mock ids (`near-*`). Serve local mock detail
-  // so "Ir para página da clínica" works offline / without a real facility.
-  final nearbyMock = mockClinicDetailForNearbyId(id);
-  if (nearbyMock != null) return nearbyMock;
+  // Mock nearby pins (`near-*` / `:empty`) are disabled on the real API.
+  if (id.startsWith('near-') || id.endsWith(':empty')) {
+    throw Exception('Clinic not found: $id');
+  }
 
   final repo = _ClinicDetailRepository(id: id);
   try {

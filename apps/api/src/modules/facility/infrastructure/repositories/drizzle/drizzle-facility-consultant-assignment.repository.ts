@@ -55,6 +55,20 @@ export class DrizzleFacilityConsultantAssignmentRepository
     return assignment ? mapAssignment(assignment) : null;
   }
 
+  async findActiveFacilityIdsByUserId(userId: string): Promise<string[]> {
+    const rows = await db
+      .select({ facilityId: facilityConsultantAssignments.facilityId })
+      .from(facilityConsultantAssignments)
+      .where(
+        and(
+          eq(facilityConsultantAssignments.userId, userId),
+          isNull(facilityConsultantAssignments.endedAt),
+        ),
+      );
+
+    return [...new Set(rows.map((row) => row.facilityId))];
+  }
+
   async assign(params: {
     facilityId: string;
     userId: string;

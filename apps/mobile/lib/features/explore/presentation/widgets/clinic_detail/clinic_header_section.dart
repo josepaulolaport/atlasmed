@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
@@ -58,8 +59,9 @@ class ClinicHeaderSection extends ConsumerWidget {
         );
       }
     });
-    // Prefer live commercial/conformity from facility DTO; purchase stays mocked.
-    final mockedSignals = sections?.statusSignals;
+    // Prefer live commercial/conformity from facility DTO. Purchase is only
+    // shown when the API (or an explicit section payload) provides it.
+    final sectionSignals = sections?.statusSignals;
     final liveCommercial = parseFacilityCommercialStatus(
       detail.commercialStatus,
     );
@@ -67,25 +69,22 @@ class ClinicHeaderSection extends ConsumerWidget {
       detail.conformityStatus,
     );
     final signals =
-        mockedSignals == null &&
+        sectionSignals == null &&
             liveCommercial == null &&
             liveConformity == null
         ? null
         : FacilityStatusSignals(
             commercialStatus:
                 liveCommercial ??
-                mockedSignals?.commercialStatus ??
+                sectionSignals?.commercialStatus ??
                 FacilityCommercialStatus.registered,
-            purchaseStatus:
-                mockedSignals?.purchaseStatus ??
-                FacilityPurchaseStatus.nonBuyer,
+            purchaseStatus: sectionSignals?.purchaseStatus,
             conformityStatus:
                 liveConformity ??
-                mockedSignals?.conformityStatus ??
+                sectionSignals?.conformityStatus ??
                 FacilityConformityStatus.incomplete,
-            lastPurchaseAt: mockedSignals?.lastPurchaseAt,
+            lastPurchaseAt: sectionSignals?.lastPurchaseAt,
           );
-    // Specialties still mock-only (no facility specialty aggregate on DTO yet).
     final specialties = sections?.specialtiesLabel;
     // Identity / contact / address / PF-PJ prefer the live facility DTO.
     final fullAddress = detail.formattedAddress;
@@ -213,11 +212,12 @@ class ClinicHeaderSection extends ConsumerWidget {
                         label: signals.commercialStatus.label,
                         dotColor: signals.commercialStatus.color,
                       ),
-                      _SignalChip(
-                        category: 'Compra',
-                        label: signals.purchaseStatus.label,
-                        dotColor: signals.purchaseStatus.color,
-                      ),
+                      if (signals.purchaseStatus != null)
+                        _SignalChip(
+                          category: 'Compra',
+                          label: signals.purchaseStatus!.label,
+                          dotColor: signals.purchaseStatus!.color,
+                        ),
                     ] else
                       _SignalChip(
                         category: 'Status',
@@ -304,6 +304,7 @@ class ClinicHeaderSection extends ConsumerWidget {
     final hasPhotos = photos != null && photos.count > 0;
     final isMock =
         detail.id.startsWith('near-') || detail.id.endsWith(':empty');
+    final canUpload = !isMock && ref.read(canMutateFacilityProvider);
 
     await showModalBottomSheet<void>(
       context: context,
@@ -321,7 +322,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                   _openViewer(context, photos);
                 },
               ),
-            if (!isMock) ...[
+            if (canUpload) ...[
               ListTile(
                 leading: const Icon(Icons.photo_camera_outlined),
                 title: const Text('Tirar foto'),
@@ -343,7 +344,7 @@ class ClinicHeaderSection extends ConsumerWidget {
                 },
               ),
             ],
-            if (!hasPhotos && isMock)
+            if (!hasPhotos && !canUpload)
               const ListTile(
                 leading: Icon(Icons.info_outline),
                 title: Text('Nenhuma foto cadastrada'),

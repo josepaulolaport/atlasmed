@@ -15,6 +15,9 @@ export interface FacilityConsultantAssignmentRepository {
 
   findCurrentByFacility(facilityId: string): Promise<FacilityConsultantAssignmentRecord | null>;
 
+  /** Active (endedAt IS NULL) consultant assignments for a user. */
+  findActiveFacilityIdsByUserId(userId: string): Promise<string[]>;
+
   assign(params: {
     facilityId: string;
     userId: string;

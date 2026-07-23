@@ -10,6 +10,7 @@ import { DrizzleCadastroSubmissionRepository } from "./infrastructure/repositori
 import { DrizzleVisitRepository } from "./infrastructure/repositories/drizzle/drizzle-visit.repository";
 import { AvatarStorageAdapter } from "../access/infrastructure/avatar-storage/avatar-storage.adapter";
 import { DrizzleTerritoryScopePort } from "./infrastructure/scope/drizzle-territory-scope.port";
+import { DrizzleFacilityAssociationPort } from "./infrastructure/scope/drizzle-facility-association.port";
 import {
   CreateFacilityUseCase,
   DeleteFacilityUseCase,
@@ -131,6 +132,10 @@ export const facilityTerritoryScopePort = new DrizzleTerritoryScopePort(
   facilityRepositories.facility
 );
 
+export const facilityAssociationPort = new DrizzleFacilityAssociationPort(
+  facilityRepositories.consultantAssignment,
+);
+
 export const facilityGeocodingService = new FacilityGeocodingService({
   facilityRepository: facilityRepositories.facility,
   geocodingPort,
@@ -247,6 +252,13 @@ export const facilityUseCases = {
   assignConsultant: () =>
     new AssignFacilityConsultantUseCase({
       consultantAssignmentRepository: facilityRepositories.consultantAssignment,
+      onConsultantAssignmentChanged: async (userIds) => {
+        // Lazy import avoids access ↔ facility composition cycle at module load.
+        const { accessScopeServices } = await import("../access/composition");
+        await accessScopeServices.scope.invalidateForConsultantAssignmentChange(
+          userIds,
+        );
+      },
     }),
   listConformityRequirements: () =>
     new ListConformityRequirementsUseCase({

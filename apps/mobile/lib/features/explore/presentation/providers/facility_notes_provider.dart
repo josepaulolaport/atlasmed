@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 
 final facilityNotesRepositoryProvider = Provider.autoDispose
@@ -12,11 +12,8 @@ final facilityNotesRepositoryProvider = Provider.autoDispose
 
 final facilityNotesProvider = FutureProvider.autoDispose
     .family<List<FacilityFieldNote>, String>((ref, facilityId) async {
-      if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-        final sections = facilityId.endsWith(':empty')
-            ? mockEmptyEstablishmentDetailSections(facilityId)
-            : mockEstablishmentDetailSections(facilityId);
-        return sections.fieldNotes;
+      if (isMockNearbyFacilityId(facilityId)) {
+        return const [];
       }
 
       final repo = ref.watch(facilityNotesRepositoryProvider(facilityId));

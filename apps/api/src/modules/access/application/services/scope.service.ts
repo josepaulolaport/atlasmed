@@ -1,5 +1,10 @@
 import { mergeGrantsIntoScope, type ScopeContext } from "@atlasmed/access";
-import type { ScopeRepository, TerritoryHierarchyPort, TerritoryScopePort } from "../interfaces/scope.repository.interface";
+import type {
+  FacilityAssociationPort,
+  ScopeRepository,
+  TerritoryHierarchyPort,
+  TerritoryScopePort,
+} from "../interfaces/scope.repository.interface";
 import { ScopeResolver } from "./scope-resolver.service";
 import { scopeCacheService } from "../../infrastructure/cache/scope-cache.service";
 import type { AccessGrantService } from "./access-grant.service";
@@ -8,6 +13,7 @@ interface ScopeServiceDependencies {
   scopeRepository: ScopeRepository;
   territoryScopePort: TerritoryScopePort;
   territoryHierarchyPort: TerritoryHierarchyPort;
+  facilityAssociationPort: FacilityAssociationPort;
   accessGrantService: AccessGrantService;
 }
 
@@ -65,5 +71,12 @@ export class ScopeService {
     }
 
     await scopeCacheService.invalidateMany([...userIdsToInvalidate]);
+  }
+
+  /** Consultant assignment changes expand/contract facilityIds for affected users. */
+  async invalidateForConsultantAssignmentChange(userIds: string[]): Promise<void> {
+    const unique = [...new Set(userIds.filter(Boolean))];
+    if (unique.length === 0) return;
+    await scopeCacheService.invalidateMany(unique);
   }
 }

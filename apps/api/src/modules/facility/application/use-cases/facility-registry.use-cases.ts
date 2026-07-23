@@ -163,6 +163,7 @@ export class AssignFacilityConsultantUseCase {
   constructor(
     private readonly deps: {
       consultantAssignmentRepository: FacilityConsultantAssignmentRepository;
+      onConsultantAssignmentChanged?: (userIds: string[]) => Promise<void>;
     }
   ) {}
 
@@ -174,11 +175,24 @@ export class AssignFacilityConsultantUseCase {
   }) {
     assertResourceInScope(input.scope, "facility", input.facilityId);
 
+    const previous =
+      await this.deps.consultantAssignmentRepository.findCurrentByFacility(
+        input.facilityId,
+      );
+
     const assignment = await this.deps.consultantAssignmentRepository.assign({
       facilityId: input.facilityId,
       userId: input.userId,
       assignedByUserId: input.assignedByUserId,
     });
+
+    const affectedUserIds = [
+      input.userId,
+      ...(previous && previous.userId !== input.userId
+        ? [previous.userId]
+        : []),
+    ];
+    await this.deps.onConsultantAssignmentChanged?.(affectedUserIds);
 
     return {
       id: assignment.id,

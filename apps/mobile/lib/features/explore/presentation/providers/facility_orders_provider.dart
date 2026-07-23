@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_orders_repository.dart';
@@ -44,10 +43,7 @@ class FacilityOrdersNotifier extends StateNotifier<FacilityOrdersState> {
     state = state.copyWith(loading: true, clearError: true);
     try {
       if (isMockNearbyFacilityId(facilityId)) {
-        final sections = facilityId.endsWith(':empty')
-            ? mockEmptyEstablishmentDetailSections(facilityId)
-            : mockEstablishmentDetailSections(facilityId);
-        state = FacilityOrdersState(orders: sections.orders);
+        state = const FacilityOrdersState(orders: []);
         return;
       }
 

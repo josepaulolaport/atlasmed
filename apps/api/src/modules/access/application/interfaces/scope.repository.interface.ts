@@ -83,6 +83,14 @@ export interface TerritoryScopePort {
   getFacilityIdsForTerritories(territoryIds: string[]): Promise<string[]>;
 }
 
+/**
+ * Clinics linked to a user outside pure territory membership.
+ * Today: active `facility_consultant_assignments` only.
+ */
+export interface FacilityAssociationPort {
+  getAssociatedFacilityIds(userId: string): Promise<string[]>;
+}
+
 export interface TerritoryHierarchyPort {
   resolveEffectiveTerritoryIds(
     assignedTerritoryIds: string[],

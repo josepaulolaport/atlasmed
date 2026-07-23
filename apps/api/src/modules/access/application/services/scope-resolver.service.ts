@@ -1,6 +1,7 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { Role, createEmptyScopeContext, createGlobalScopeContext, withTerritoryScopeAliases } from "@atlasmed/access";
 import type {
+  FacilityAssociationPort,
   ScopeRepository,
   TerritoryHierarchyPort,
   TerritoryScopePort,
@@ -11,6 +12,7 @@ export interface ScopeResolverDependencies {
   scopeRepository: ScopeRepository;
   territoryScopePort: TerritoryScopePort;
   territoryHierarchyPort: TerritoryHierarchyPort;
+  facilityAssociationPort: FacilityAssociationPort;
 }
 
 export class ScopeResolver {
@@ -45,10 +47,14 @@ export class ScopeResolver {
           assignedTerritoryIds,
           true
         );
-      const facilityIds =
+      const territoryFacilityIds =
         await this.deps.territoryScopePort.getFacilityIdsForTerritories(
           effectiveTerritoryIds
         );
+      const facilityIds = await this.mergeAssociatedFacilityIds(
+        userId,
+        territoryFacilityIds,
+      );
 
       return withTerritoryScopeAliases({
         isGlobal: false,
@@ -59,7 +65,8 @@ export class ScopeResolver {
         analyticsFacilityIds: facilityIds,
         managedUserIds: [],
         assignedSectorIds,
-        isOperationallyActive: effectiveTerritoryIds.length > 0,
+        isOperationallyActive:
+          effectiveTerritoryIds.length > 0 || facilityIds.length > 0,
       });
     }
 
@@ -104,6 +111,10 @@ export class ScopeResolver {
               oversightTerritoryIds
             )
           : [];
+      const facilityIds = await this.mergeAssociatedFacilityIds(
+        userId,
+        oversightClinicIds,
+      );
 
       const analyticsFacilityIds =
         analyticsEffectiveTerritoryIds.length > 0
@@ -117,14 +128,16 @@ export class ScopeResolver {
         assignedTerritoryIds: ownAssignments,
         effectiveTerritoryIds: oversightTerritoryIds,
         analyticsEffectiveTerritoryIds,
-        facilityIds: [...new Set(oversightClinicIds)],
+        facilityIds,
         analyticsFacilityIds: [...new Set(analyticsFacilityIds)],
         managedUserIds,
         reportAssignedTerritoryIds: reportAssignments,
         assignedSectorIds,
         isOperationallyActive:
-          managedUserIds.length > 0 &&
-          (oversightTerritoryIds.length > 0 || analyticsEffectiveTerritoryIds.length > 0),
+          facilityIds.length > 0 ||
+          (managedUserIds.length > 0 &&
+            (oversightTerritoryIds.length > 0 ||
+              analyticsEffectiveTerritoryIds.length > 0)),
       });
     }
 
@@ -152,5 +165,15 @@ export class ScopeResolver {
       await this.deps.scopeRepository.findTerritoryIdsBySectorIds(sectorIds);
     const allowed = new Set(sectorTerritoryIds);
     return territoryIds.filter((id) => allowed.has(id));
+  }
+
+  /** Territory clinics ∪ active facility_consultant_assignments for the user. */
+  private async mergeAssociatedFacilityIds(
+    userId: string,
+    territoryFacilityIds: string[],
+  ): Promise<string[]> {
+    const associated =
+      await this.deps.facilityAssociationPort.getAssociatedFacilityIds(userId);
+    return [...new Set([...territoryFacilityIds, ...associated])];
   }
 }

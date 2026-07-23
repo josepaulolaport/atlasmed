@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
@@ -52,13 +51,7 @@ final facilityNearbyPreviewProvider =
       facilityId,
     ) async {
       if (isMockNearbyFacilityId(facilityId)) {
-        final sections = facilityId.endsWith(':empty')
-            ? mockEmptyEstablishmentDetailSections(facilityId)
-            : mockEstablishmentDetailSections(facilityId);
-        return filterNearbyByRadius(
-          sections.nearbyEstablishments,
-          establishmentNearbyPreviewRadiusKm,
-        );
+        return const [];
       }
 
       final detail = await ref.watch(clinicDetailProvider(facilityId).future);
@@ -81,13 +74,7 @@ final facilityNearbyProvider =
       query,
     ) async {
       if (isMockNearbyFacilityId(query.facilityId)) {
-        final sections = query.facilityId.endsWith(':empty')
-            ? mockEmptyEstablishmentDetailSections(query.facilityId)
-            : mockEstablishmentDetailSections(query.facilityId);
-        return filterNearbyByRadius(
-          sections.nearbyEstablishments,
-          query.radiusKm,
-        );
+        return const [];
       }
 
       return fetchNearbyFacilities(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
@@ -7,7 +9,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 
 /// Full profile of an administrative representative.
-class RepresentativeDetailScreen extends StatefulWidget {
+class RepresentativeDetailScreen extends ConsumerStatefulWidget {
   const RepresentativeDetailScreen({
     super.key,
     required this.professional,
@@ -20,12 +22,12 @@ class RepresentativeDetailScreen extends StatefulWidget {
   final String? facilityId;
 
   @override
-  State<RepresentativeDetailScreen> createState() =>
+  ConsumerState<RepresentativeDetailScreen> createState() =>
       _RepresentativeDetailScreenState();
 }
 
 class _RepresentativeDetailScreenState
-    extends State<RepresentativeDetailScreen> {
+    extends ConsumerState<RepresentativeDetailScreen> {
   late AdministrativeProfessional _professional = widget.professional;
   bool _savingRelationship = false;
 
@@ -38,6 +40,7 @@ class _RepresentativeDetailScreenState
   @override
   Widget build(BuildContext context) {
     final chips = _professional.roleChipLabels;
+    final canEdit = ref.watch(canMutateProfessionalProvider);
 
     return PopScope(
       canPop: false,
@@ -52,7 +55,10 @@ class _RepresentativeDetailScreenState
           elevation: 0,
           foregroundColor: const Color(0xFF0f1729),
           title: const Text('Perfil do profissional'),
-          actions: [TextButton(onPressed: _edit, child: const Text('Editar'))],
+          actions: [
+            if (canEdit)
+              TextButton(onPressed: _edit, child: const Text('Editar')),
+          ],
         ),
         body: ListView(
           padding: const EdgeInsets.all(20),

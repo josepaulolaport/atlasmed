@@ -6,7 +6,8 @@
  * 2. Mutations/lists: ScopeContext from getScope() — use `facilityIds` for operational
  *    visibility and `analyticsFacilityIds` for manager analytics roll-ups.
  * 3. AccessGrants (Permission table): exceptional overrides merged into CASL and scope (territory/clinic ids).
- * 4. facilityIds in ScopeContext require a real TerritoryScopePort (clinic module); stub returns [] until then.
+ * 4. facilityIds = territory clinics (TerritoryScopePort) ∪ active consultant
+ *    assignments (FacilityAssociationPort).
  * 5. Session validity: JWT + session row + tokenVersion; caches revalidate from DB periodically.
  *
  * domain/ is intentionally empty until domain entities are justified.
@@ -89,7 +90,10 @@ import { Pending2FALoginService } from "./application/services/pending-2fa-login
 
 import { DrizzleScopeRepository } from "./infrastructure/repositories/drizzle/drizzle-scope.repository";
 import { DrizzleAccessGrantRepository } from "./infrastructure/repositories/drizzle/drizzle-access-grant.repository";
-import { facilityTerritoryScopePort } from "../facility/composition";
+import {
+  facilityAssociationPort,
+  facilityTerritoryScopePort,
+} from "../facility/composition";
 import {
   territoryHierarchyPort,
   territoryAssignmentPolicy,
@@ -125,6 +129,7 @@ export const accessRepositories = {
 
 const territoryScopePort = facilityTerritoryScopePort;
 const hierarchyPort = territoryHierarchyPort;
+const associationPort = facilityAssociationPort;
 
 export const accessGrantCache = new AccessGrantCacheService();
 
@@ -137,10 +142,12 @@ export const accessGrantService = new AccessGrantService({
 export const accessScopeServices = {
   territoryScopePort,
   territoryHierarchyPort: hierarchyPort,
+  facilityAssociationPort: associationPort,
   scope: new ScopeService({
     scopeRepository: accessRepositories.scope,
     territoryScopePort,
     territoryHierarchyPort: hierarchyPort,
+    facilityAssociationPort: associationPort,
     accessGrantService,
   }),
 };

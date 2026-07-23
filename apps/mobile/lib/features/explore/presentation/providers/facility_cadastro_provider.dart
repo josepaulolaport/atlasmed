@@ -1,26 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_upload_normalize.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 
-bool _isMockFacilityId(String facilityId) =>
-    facilityId.startsWith('near-') || facilityId.endsWith(':empty');
+bool _isMockFacilityId(String facilityId) => isMockNearbyFacilityId(facilityId);
 
 final facilityCadastroProvider = FutureProvider.autoDispose
     .family<FacilityCadastroChecklist, String>((ref, facilityId) async {
       if (_isMockFacilityId(facilityId)) {
-        final sections = facilityId.endsWith(':empty')
-            ? mockEmptyEstablishmentDetailSections(facilityId)
-            : mockEstablishmentDetailSections(facilityId);
         return FacilityCadastroChecklist(
           facilityId: facilityId,
-          documents: sections.documents,
-          pendingAction: sections.documents
-              .where((d) => d.status.needsAction)
-              .length,
+          documents: const [],
+          pendingAction: 0,
         );
       }
 

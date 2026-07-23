@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_payer_shares_repository.dart';
@@ -50,10 +49,7 @@ class FacilityPayersNotifier extends StateNotifier<FacilityPayersState> {
     state = state.copyWith(loading: true, clearError: true);
     try {
       if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-        final sections = facilityId.endsWith(':empty')
-            ? mockEmptyEstablishmentDetailSections(facilityId)
-            : mockEstablishmentDetailSections(facilityId);
-        state = FacilityPayersState(payers: sections.payers);
+        state = const FacilityPayersState(payers: []);
         return;
       }
 

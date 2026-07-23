@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/bounds.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
@@ -40,9 +41,9 @@ class TerritoriesScreen extends ConsumerWidget {
     // Hidden while a territory is selected — it would otherwise sit right
     // on top of the fixed action bar the selection shows at the bottom.
     final hasSelection = ref.watch(selectedTerritoryIdProvider) != null;
-    final isAdmin = ref.watch(isAdminProvider);
+    final canCreate = ref.watch(canCreateTerritoryProvider);
     return _TerritoriesPage(
-      floatingActionButton: !isAdmin || hasSelection
+      floatingActionButton: !canCreate || hasSelection
           ? null
           : const _NewTerritoryButton(),
       child: _TerritoriesBody(accessToken: token),
@@ -725,7 +726,8 @@ class _TerritoryActionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAdmin = ref.watch(isAdminProvider);
+    final canUpdate = ref.watch(canUpdateTerritoryProvider);
+    final canDelete = ref.watch(canDeleteTerritoryProvider);
     final roleLabel = territory.kind == TerritoryKind.managerZone
         ? 'Gerente'
         : 'Representante';
@@ -844,7 +846,7 @@ class _TerritoryActionBar extends ConsumerWidget {
                 label: 'Detalhes',
                 onTap: onViewDetails,
               ),
-              if (isAdmin) ...[
+              if (canUpdate) ...[
                 _ActionButton(
                   icon: Icons.info_outline,
                   label: 'Informações',
@@ -860,13 +862,14 @@ class _TerritoryActionBar extends ConsumerWidget {
                   label: 'Área',
                   onTap: onEditArea,
                 ),
+              ],
+              if (canDelete)
                 _ActionButton(
                   icon: Icons.delete_outline,
                   label: 'Excluir',
                   onTap: onDelete,
                   color: const Color(0xFFDC2626),
                 ),
-              ],
             ],
           ),
         ],
