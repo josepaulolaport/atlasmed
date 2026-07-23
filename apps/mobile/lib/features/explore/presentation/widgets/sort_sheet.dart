@@ -69,12 +69,39 @@ class _SortSheetState extends State<SortSheet>
   List<_SortOption> get _options {
     if (widget.kind == 'clinic') {
       return [
-        _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
-        _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
         _SortOption(
-          'oldest-visit',
-          'Sem visita há mais tempo',
-          'Priorize clínicas ativas sem atenção',
+          'relevance',
+          'Relevância',
+          'Melhores resultados para a busca',
+        ),
+        _SortOption('name-asc', 'Nome A–Z', 'Ordem alfabética'),
+        _SortOption('name-desc', 'Nome Z–A', 'Ordem alfabética inversa'),
+        _SortOption('distance', 'Mais próximos', 'Menor distância primeiro'),
+        _SortOption('purchase-funnel-asc', 'Etapa do funil', 'Ordem crescente'),
+        _SortOption(
+          'purchase-funnel-desc',
+          'Etapa do funil — inversa',
+          'Ordem decrescente',
+        ),
+        _SortOption(
+          'purchase-interval-asc',
+          'Intervalo de compras',
+          'Menor intervalo primeiro',
+        ),
+        _SortOption(
+          'purchase-interval-desc',
+          'Intervalo de compras — inverso',
+          'Maior intervalo primeiro',
+        ),
+        _SortOption(
+          'last-purchase-desc',
+          'Última compra',
+          'Mais recente primeiro',
+        ),
+        _SortOption(
+          'last-purchase-asc',
+          'Última compra — antiga',
+          'Mais antiga primeiro',
         ),
       ];
     }

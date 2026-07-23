@@ -1,5 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/visit_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
 
 // ── Clinic detail model ───────────────────────────────────────
 //
@@ -21,6 +22,7 @@ class ClinicDetail {
   final int doctorCount;
   final bool isPriority;
   final List<String> products;
+  final PurchaseRecurrenceSnapshot? purchaseRecurrence;
 
   // Additional detail fields
   final String? phone;
@@ -61,6 +63,7 @@ class ClinicDetail {
     required this.doctorCount,
     required this.isPriority,
     required this.products,
+    this.purchaseRecurrence,
     this.phone,
     this.whatsapp,
     this.consultantName,

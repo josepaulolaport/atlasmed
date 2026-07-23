@@ -30,6 +30,9 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_top_shortcuts_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/doctors_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_payer_sources_screen.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_form.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/purchase_recurrence_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
@@ -341,6 +344,41 @@ Future<void> _openPayerSourcesEditor(
   }
 }
 
+Future<void> _openPurchaseRecurrenceEditor(
+  BuildContext context,
+  WidgetRef ref,
+  ClinicDetail detail,
+) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (sheetContext) => SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(sheetContext).bottom + 24,
+        ),
+        child: PurchaseRecurrenceForm(
+          initialValue: detail.purchaseRecurrence,
+          onSave: (command) async {
+            final repository = FacilityPurchaseRecurrenceRepository();
+            try {
+              final updated = await repository.updatePurchaseRecurrence(
+                detail.id,
+                command,
+              );
+              ref.read(exploreProvider.notifier).replaceClinic(updated);
+              ref.invalidate(clinicDetailProvider(detail.id));
+              if (sheetContext.mounted) Navigator.of(sheetContext).pop();
+            } finally {
+              repository.dispose();
+            }
+          },
+        ),
+      ),
+    ),
+  );
+}
+
 // ===============================================================
 // Body — fixed blue header (outside the scroll) + scrollable sections
 // ===============================================================
@@ -436,6 +474,11 @@ class _ClinicDetailContent extends ConsumerWidget {
           facilityId: clinicId,
           facilityName: detail.name,
           detail: detail,
+        ),
+        const ClinicSectionHeader(title: 'Compras'),
+        PurchaseRecurrenceSection(
+          value: detail.purchaseRecurrence,
+          onEdit: () => _openPurchaseRecurrenceEditor(context, ref, detail),
         ),
         ClinicSectionHeader(
           title: 'Profissionais administrativos',

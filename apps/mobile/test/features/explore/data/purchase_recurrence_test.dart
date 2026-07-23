@@ -1,0 +1,143 @@
+import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/purchase_recurrence.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('PurchaseRecurrenceSnapshot', () {
+    test('parses the complete facility response', () {
+      final clinic = Clinic.fromMap({
+        'id': 'facility-1',
+        'name': 'Clínica Central',
+        'professionalCount': 2,
+        'purchaseRecurrence': {
+          'observedIntervalDays': 31,
+          'intervalDays': 30,
+          'source': 'CALCULATED',
+          'profile': 'MONTHLY',
+          'lastPurchaseDate': '2026-07-03',
+          'sampleSize': 5,
+          'funnelStage': 'PURCHASE_WINDOW',
+          'nextTransitionDate': '2026-08-15',
+        },
+      });
+
+      final recurrence = clinic.purchaseRecurrence!;
+      expect(recurrence.observedIntervalDays, 31);
+      expect(recurrence.intervalDays, 30);
+      expect(recurrence.source, PurchaseRecurrenceSource.calculated);
+      expect(recurrence.profile, PurchaseProfile.monthly);
+      expect(recurrence.lastPurchaseDate, DateTime(2026, 7, 3));
+      expect(recurrence.sampleSize, 5);
+      expect(recurrence.funnelStage, PurchaseFunnelStage.purchaseWindow);
+      expect(recurrence.nextTransitionDate, DateTime(2026, 8, 15));
+    });
+
+    test('accepts null fields and safely preserves unknown enums', () {
+      final clinic = Clinic.fromMap({
+        'id': 'facility-1',
+        'name': 'Clínica Central',
+        'professionalCount': 0,
+        'purchaseRecurrence': {
+          'observedIntervalDays': null,
+          'intervalDays': 45,
+          'source': 'FUTURE_SOURCE',
+          'profile': null,
+          'lastPurchaseDate': null,
+          'sampleSize': 0,
+          'funnelStage': 'FUTURE_STAGE',
+          'nextTransitionDate': null,
+        },
+      });
+
+      final recurrence = clinic.purchaseRecurrence!;
+      expect(recurrence.source, isNull);
+      expect(recurrence.funnelStage, isNull);
+      expect(recurrence.profile, isNull);
+      expect(recurrence.lastPurchaseDate, isNull);
+    });
+  });
+
+  group('ClinicsRepository purchase query', () {
+    test('serializes funnel, profile, interval and server sort parameters', () {
+      final endpoint = ClinicsRepository.makeEndpoint(
+        baseUrl: 'https://api.example.test',
+        page: 1,
+        limit: 20,
+        purchaseFunnelStages: const [
+          PurchaseFunnelStage.neverPurchased,
+          PurchaseFunnelStage.churn,
+        ],
+        purchaseProfile: PurchaseProfile.monthly,
+        purchaseIntervalMinDays: 20,
+        purchaseIntervalMaxDays: 60,
+        sort: FacilitySort.purchaseIntervalDays,
+        order: SortOrder.desc,
+      );
+
+      expect(
+        endpoint.queryParameters,
+        containsPair('purchaseFunnelStage', 'NEVER_PURCHASED,CHURN'),
+      );
+      expect(
+        endpoint.queryParameters,
+        containsPair('purchaseProfile', 'MONTHLY'),
+      );
+      expect(
+        endpoint.queryParameters,
+        containsPair('purchaseIntervalMinDays', '20'),
+      );
+      expect(
+        endpoint.queryParameters,
+        containsPair('purchaseIntervalMaxDays', '60'),
+      );
+      expect(
+        endpoint.queryParameters,
+        containsPair('sort', 'purchaseIntervalDays'),
+      );
+      expect(endpoint.queryParameters, containsPair('order', 'desc'));
+    });
+  });
+
+  test('builds the PATCH request with the typed command payload', () {
+    final request = FacilityPurchaseRecurrenceRepository.makePatchRequest(
+      'https://api.example.test',
+      'facility-1',
+      const PresetPurchaseRecurrence(PurchaseProfile.monthly),
+    );
+
+    expect(
+      request.url.toString(),
+      'https://api.example.test/api/v1/facilities/facility-1',
+    );
+    expect(request.method.name, 'patch');
+    expect(request.body, {
+      'purchaseRecurrence': {'mode': 'PRESET', 'profile': 'MONTHLY'},
+    });
+  });
+
+  group('Purchase recurrence commands', () {
+    test('builds automatic, preset and custom payloads', () {
+      expect(const AutomaticPurchaseRecurrence().toJson(), {
+        'purchaseRecurrence': {'mode': 'AUTOMATIC'},
+      });
+      expect(const PresetPurchaseRecurrence(PurchaseProfile.monthly).toJson(), {
+        'purchaseRecurrence': {'mode': 'PRESET', 'profile': 'MONTHLY'},
+      });
+      expect(const CustomPurchaseRecurrence(45).toJson(), {
+        'purchaseRecurrence': {'mode': 'CUSTOM', 'intervalDays': 45},
+      });
+    });
+
+    test('rejects custom intervals outside 1 through 3650', () {
+      expect(
+        () => const CustomPurchaseRecurrence(0).validate(),
+        throwsArgumentError,
+      );
+      expect(
+        () => const CustomPurchaseRecurrence(3651).validate(),
+        throwsArgumentError,
+      );
+    });
+  });
+}
