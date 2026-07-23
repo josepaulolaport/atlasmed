@@ -32,6 +32,7 @@ void main() {
         email: 'novo.usuario@atlasmed.com.br',
         firstName: 'Novo',
         lastName: 'Usuario',
+        birthDate: DateTime(1994, 3, 21),
         phoneNumber: '+55 11 98888-0000',
         roleId: 'role-rep',
         sectorAssignments: const [
@@ -89,6 +90,7 @@ void main() {
       email: 'rafael.mendes@atlasmed.com.br',
       firstName: 'Rafael',
       lastName: 'Mendes',
+      birthDate: DateTime(1992, 4, 18),
       phoneNumber: '+55 11 90000-1111',
       roleId: 'role-rep',
       sectorAssignments: const [
@@ -117,6 +119,7 @@ void main() {
         email: 'aceito.recente@atlasmed.com.br',
         firstName: 'Pedro',
         lastName: 'Vasconcelos',
+        birthDate: DateTime(1988, 6, 14),
         phoneNumber: '+55 11 94321-0987',
         roleId: 'role-rep',
       ),
