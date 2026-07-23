@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # ── resolve-shorebird-patches.sh ────────────────────────────────────
 # Lê shorebird-patches.json e executa `shorebird patch` para cada entrada.
 #

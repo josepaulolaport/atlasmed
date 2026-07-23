@@ -1,15 +1,7 @@
 # ── Fastlane Appfile ─────────────────────────────────────────────────
-# Bundle identifier usado para upload nas lojas.
-# Ajuste conforme necessário para cada loja.
+# Identidade do app iOS publicado no TestFlight.
+# Android está temporariamente desativado no CD.
 # ──────────────────────────────────────────────────────────────────────
 
 app_identifier "br.com.atlasmed.app"
-
-# Para Google Play:
-#   track "internal"
-#   json_key_file "path/to/service-account.json"
-#
-
-apple_id "iamyanndias@gmail.com"
-itc_team_id "GNT83DZ768"
-team_id "GNT83DZ768"
+team_id ENV.fetch("APPLE_TEAM_ID", "GNT83DZ768")
