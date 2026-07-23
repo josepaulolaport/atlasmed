@@ -13,6 +13,7 @@ void main() {
         email: 'carlos@test.com',
         phone: '11999999999',
         contactType: 'DECISOR',
+        isDecisionMaker: true,
       ),
     ];
 
@@ -59,6 +60,7 @@ void main() {
         email: 'carlos@test.com',
         phone: '11999999999',
         contactType: 'DECISOR',
+        isDecisionMaker: true,
       ),
     ];
 

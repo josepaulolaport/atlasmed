@@ -18,6 +18,10 @@ class DoctorRow extends StatelessWidget {
   /// Role chips shown beside specialty (e.g. Decisor, Comprador, Prescritor).
   final List<String> badges;
 
+  /// Facility-roster action to edit association role flags without opening
+  /// the full doctor profile.
+  final VoidCallback? onEditRoles;
+
   const DoctorRow({
     super.key,
     required this.doctor,
@@ -27,6 +31,7 @@ class DoctorRow extends StatelessWidget {
     this.relationshipScore,
     this.showRelationship = false,
     this.badges = const [],
+    this.onEditRoles,
   });
 
   @override
@@ -93,52 +98,34 @@ class DoctorRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          doctor.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0f1729),
-                            letterSpacing: -0.15,
-                          ),
-                        ),
-                      ),
-                      if (showDistance) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          '${doctor.distanceKm.toStringAsFixed(1)} km',
-                          style: const TextStyle(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF6b7280),
-                          ),
-                        ),
-                      ],
-                    ],
+                  Text(
+                    doctor.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0f1729),
+                      letterSpacing: -0.15,
+                    ),
                   ),
-                  if (doctor.specialty.trim().isNotEmpty ||
-                      badges.isNotEmpty) ...[
+                  if (doctor.specialty.trim().isNotEmpty) ...[
                     const SizedBox(height: 2),
+                    Text(
+                      doctor.specialty,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF1e40af),
+                      ),
+                    ),
+                  ],
+                  if (badges.isNotEmpty) ...[
+                    const SizedBox(height: 4),
                     Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
                       spacing: 6,
                       runSpacing: 4,
                       children: [
-                        if (doctor.specialty.trim().isNotEmpty)
-                          Text(
-                            doctor.specialty,
-                            style: const TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF1e40af),
-                            ),
-                          ),
                         for (final label in badges) _RowBadge(label: label),
                       ],
                     ),
@@ -150,6 +137,17 @@ class DoctorRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 11.5,
+                        color: Color(0xFF6b7280),
+                      ),
+                    ),
+                  ],
+                  if (showDistance && doctor.distanceKm != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${doctor.distanceKm!.toStringAsFixed(1)} km',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
                         color: Color(0xFF6b7280),
                       ),
                     ),
@@ -189,6 +187,19 @@ class DoctorRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (onEditRoles != null) ...[
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: onEditRoles,
+                tooltip: 'Editar papel',
+                visualDensity: VisualDensity.compact,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  size: 20,
+                  color: Color(0xFF1e40af),
+                ),
+              ),
+            ],
           ],
         ),
       ),

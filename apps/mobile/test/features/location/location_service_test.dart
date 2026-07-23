@@ -50,6 +50,21 @@ void main() {
     expect(result, const LocationUnavailable(LocationFailure.deniedForever));
     expect(platform.currentPositionCalls, 0);
   });
+
+  test(
+    'checkCurrentLocation does not request permission when denied',
+    () async {
+      final platform = _FakeLocationPlatform(
+        initialPermission: LocationPermissionStatus.denied,
+      );
+      final service = LocationService(platform);
+
+      final result = await service.checkCurrentLocation();
+
+      expect(result, const LocationUnavailable(LocationFailure.denied));
+      expect(platform.requestPermissionCalls, 0);
+    },
+  );
 }
 
 class _FakeLocationPlatform implements LocationPlatform {
@@ -86,4 +101,7 @@ class _FakeLocationPlatform implements LocationPlatform {
     requestPermissionCalls++;
     return requestedPermission;
   }
+
+  @override
+  Stream<bool> get locationServicesEnabledStream => const Stream.empty();
 }

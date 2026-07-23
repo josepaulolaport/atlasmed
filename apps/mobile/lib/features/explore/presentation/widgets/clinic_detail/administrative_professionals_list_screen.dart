@@ -4,7 +4,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_m
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
-import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_professionals_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
@@ -46,7 +46,7 @@ class _AdministrativeProfessionalsListScreenState
   Map<String, List<String>> _filters = {};
   bool _sortOpen = false;
 
-  static const _typeSection = 'Tipo';
+  static const _typeSection = 'Função';
 
   @override
   void initState() {
@@ -113,7 +113,14 @@ class _AdministrativeProfessionalsListScreenState
   }
 
   Map<String, List<String>> get _filterSections => {
-    _typeSection: const ['Decisor', 'Comprador', 'Profissional'],
+    _typeSection: const [
+      'Sócio',
+      'Administrador',
+      'Decisor',
+      'Comprador',
+      'Faturista',
+      'Secretária',
+    ],
   };
 
   int get _filterCount =>
@@ -128,7 +135,7 @@ class _AdministrativeProfessionalsListScreenState
             (p) =>
                 p.name.toLowerCase().contains(q) ||
                 (p.roleTitle?.toLowerCase().contains(q) ?? false) ||
-                p.contactTypeLabel.toLowerCase().contains(q) ||
+                p.roleChipLabels.any((l) => l.toLowerCase().contains(q)) ||
                 (p.phone?.toLowerCase().contains(q) ?? false) ||
                 (p.email?.toLowerCase().contains(q) ?? false),
           )
@@ -137,7 +144,7 @@ class _AdministrativeProfessionalsListScreenState
 
     final types = _filters[_typeSection] ?? const <String>[];
     if (types.isNotEmpty) {
-      list = list.where((p) => types.contains(p.contactTypeLabel)).toList();
+      list = list.where((p) => p.roleChipLabels.any(types.contains)).toList();
     }
 
     list.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -233,14 +240,35 @@ class _AdministrativeProfessionalsListScreenState
                         itemCount: filtered.length,
                         itemBuilder: (_, i) => _AdminProfessionalRow(
                           professional: filtered[i],
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => RepresentativeDetailScreen(
-                                professional: filtered[i],
-                                facilityName: widget.facilityName,
-                              ),
-                            ),
-                          ),
+                          onTap: () async {
+                            final updated = await Navigator.of(context)
+                                .push<AdministrativeProfessional>(
+                                  MaterialPageRoute(
+                                    builder: (_) => RepresentativeDetailScreen(
+                                      professional: filtered[i],
+                                      facilityName: widget.facilityName,
+                                      facilityId: widget.facilityId,
+                                    ),
+                                  ),
+                                );
+                            if (updated == null || !mounted) return;
+                            setState(() {
+                              _professionals = [
+                                for (final p in _professionals)
+                                  if (p.id == updated.id) updated else p,
+                              ];
+                            });
+                            final facilityId = widget.facilityId;
+                            if (facilityId != null && facilityId.isNotEmpty) {
+                              await ref
+                                  .read(
+                                    facilityAdministratorsRosterProvider(
+                                      facilityId,
+                                    ).notifier,
+                                  )
+                                  .retry();
+                            }
+                          },
                         ),
                       ),
               ),
@@ -280,21 +308,16 @@ class _AdministrativeProfessionalsListScreenState
   }
 
   Future<void> _openAssociate() async {
-    final added = await showAssociateProfessionalsSheet(
+    final created = await showCreateAdminProfessionalSheet(
       context,
-      alreadyAssociatedIds: _professionals.map((p) => p.id).toSet(),
       facilityId: widget.facilityId,
     );
-    if (added == null || added.isEmpty || !mounted) return;
-    await _refreshAfterMutation(added);
+    if (created == null || !mounted) return;
+    await _refreshAfterMutation([created]);
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          added.length == 1
-              ? '${added.first.name} associado à clínica'
-              : '${added.length} profissionais associados à clínica',
-        ),
+        content: Text('${created.name} criado na clínica'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -377,7 +400,8 @@ class _AdminProfessionalRow extends StatelessWidget {
                             color: Color(0xFF1e40af),
                           ),
                         ),
-                      _RowBadge(label: professional.contactTypeLabel),
+                      for (final label in professional.roleChipLabels)
+                        _RowBadge(label: label),
                     ],
                   ),
                   const SizedBox(height: 6),

@@ -5,6 +5,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_t
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/doctors_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/professional_specialties_repository.dart';
 
 class ClinicsQuery {
   const ClinicsQuery({
@@ -147,4 +148,14 @@ final doctorsPageProvider = FutureProvider.autoDispose
     .family<PaginatedDoctors?, DoctorsQuery>((ref, query) {
       final repository = ref.watch(doctorsRepositoryProvider(query));
       return repository.currentValueOrResolve();
+    });
+
+final professionalSpecialtiesProvider =
+    FutureProvider.autoDispose<List<String>>((ref) {
+      ref.watch(sessionProvider);
+      final repository = ProfessionalSpecialtiesRepository();
+      ref.onDispose(repository.dispose);
+      return repository.currentValueOrResolve().then(
+        (value) => value ?? const [],
+      );
     });

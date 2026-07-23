@@ -1,7 +1,9 @@
-import 'package:atlasmed_mobile_app/repository/base_repository.dart';
-import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
+import 'package:atlasmed_mobile_app/repository/base_repository.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_cache_storage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -9,35 +11,31 @@ void main() {
     BaseRepository.storage = const _MemoryCacheStorage();
   });
 
-  test('retains the user location after enabling proximity', () async {
-    final notifier = ExploreNotifier(
-      _LocationServiceReturning(
-        const LocationAvailable(
-          DeviceLocation(latitude: -23.55052, longitude: -46.633308),
+  test('syncOrigin stores session location for API geo queries', () {
+    final container = ProviderContainer(
+      overrides: [
+        locationPlatformProvider.overrideWithValue(
+          _FakeLocationPlatform(
+            position: const DeviceLocation(
+              latitude: -23.55052,
+              longitude: -46.633308,
+            ),
+          ),
         ),
-      ),
+      ],
     );
+    addTearDown(container.dispose);
 
-    await notifier.enableProximity();
+    final notifier = container.read(exploreProvider.notifier);
+    notifier.syncOrigin(
+      const DeviceLocation(latitude: -23.55052, longitude: -46.633308),
+      refetch: false,
+    );
 
     expect(
-      notifier.state.proximityOrigin,
+      notifier.state.origin,
       const DeviceLocation(latitude: -23.55052, longitude: -46.633308),
     );
-    expect(notifier.state.proximityFailure, isNull);
-  });
-
-  test('exposes a recoverable failure and leaves proximity inactive', () async {
-    final notifier = ExploreNotifier(
-      _LocationServiceReturning(
-        const LocationUnavailable(LocationFailure.denied),
-      ),
-    );
-
-    await notifier.enableProximity();
-
-    expect(notifier.state.proximityOrigin, isNull);
-    expect(notifier.state.proximityFailure, LocationFailure.denied);
   });
 }
 
@@ -57,27 +55,29 @@ class _MemoryCacheStorage extends RepositoryCacheStorage {
   Future<void> write({required String key, required String value}) async {}
 }
 
-class _LocationServiceReturning extends LocationService {
-  final LocationResult result;
+class _FakeLocationPlatform implements LocationPlatform {
+  final DeviceLocation? position;
 
-  _LocationServiceReturning(this.result) : super(_UnusedLocationPlatform());
-
-  @override
-  Future<LocationResult> requestCurrentLocation() async => result;
-}
-
-class _UnusedLocationPlatform implements LocationPlatform {
-  @override
-  Future<LocationPermissionStatus> checkPermission() =>
-      throw UnimplementedError();
+  _FakeLocationPlatform({this.position});
 
   @override
-  Future<DeviceLocation> getCurrentPosition() => throw UnimplementedError();
+  Future<DeviceLocation> getCurrentPosition() async {
+    final current = position;
+    if (current == null) throw const LocationPlatformException();
+    return current;
+  }
 
   @override
-  Future<bool> isLocationServiceEnabled() => throw UnimplementedError();
+  Future<bool> isLocationServiceEnabled() async => true;
 
   @override
-  Future<LocationPermissionStatus> requestPermission() =>
-      throw UnimplementedError();
+  Future<LocationPermissionStatus> checkPermission() async =>
+      LocationPermissionStatus.whileInUse;
+
+  @override
+  Future<LocationPermissionStatus> requestPermission() async =>
+      LocationPermissionStatus.whileInUse;
+
+  @override
+  Stream<bool> get locationServicesEnabledStream => const Stream.empty();
 }

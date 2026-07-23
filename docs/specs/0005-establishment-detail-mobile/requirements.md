@@ -237,23 +237,30 @@ WHEN `GET /facilities/:id/representatives` is called by a user with read access 
 
 - Filter: `ended_at IS NULL`
 - Sort: `representative_name ASC`
-- Fields per row: `id`, `representativeName`, `roleTitle`, `email`, `phone`, `taxId`, `contactType` (`PROFESSIONAL` \| `DECISOR` \| `COMPRADOR`), `confirmedAt`, `sourceProvider` (optional badge)
+- Fields per row: `id`, `representativeName`, `roleTitle`, `email`, `phone`, `taxId`, `contactType` (legacy), role flags (`isPartner`, `isAdministrator`, `isDecisionMaker`, `isBuyer`, `isBiller`, `isSecretary`), `relationshipLevel` (caller’s 1–10 from `user_representative_relationships`, optional), `confirmedAt`, `sourceProvider` (optional badge)
 
 WHEN there are no active representatives THEN the mobile UI SHALL show an empty state (“Nenhum contato administrativo cadastrado”).
 
-**Explicit exclusion:** no reads from `registry.facility_representatives` or `/registry/representatives` on this screen.
+**Explicit exclusion:** no reads from `registry.facility_representatives` or `/registry/representatives` on this screen. There is **no** global “associate from pool” search for administrativos — create in place via `POST /facilities/:id/representatives`.
 
-**v3 addition:** each row is tappable (trailing chevron) and opens a representative profile screen (name, role, phone/email, parent facility). Phase 1 builds this screen from the already-loaded row data (no new endpoint); a future by-id `GET /facilities/:id/representatives/:repId` is optional if the profile ever needs data beyond what the list already returns.
+**Create / edit:**
+- Mobile FAB / empty CTA opens **Criar perfil** directly (no empty associate search sheet).
+- `POST /facilities/:id/representatives` accepts role flags; `contactType` is derived on write (`isDecisionMaker` → `DECISOR`, else `isBuyer` → `COMPRADOR`, else `PROFESSIONAL`).
+- `PATCH /facilities/:id/representatives/:repId` updates fields, role flags, and optional `relationshipLevel` (null clears the caller’s score).
 
-**v4 addition:** the section is rebuilt as a snapping `PageView` card carousel — same structure as F-003's Médicos cards (avatar/name/role header, contact-type badge, divider, always-present phone/e-mail rows, "Ver perfil completo" footer, relationship stars) — replacing the previous `ListTile` column. A count badge and "Ver todos" link (→ `AdministrativeProfessionalsListScreen`) sit on the section header, matching every other section. `AdministrativeProfessional` gained an optional `relationshipScore` (`int?`, 0–10 scale, mocked only).
+**Relationship:** per-user 1–10 on `user_representative_relationships`, same privacy model as doctors (`user_professional_relationships`). Editable on the representative profile (5-star UI). UI chips come from role flags (Sócio / Administrador / Decisor / Comprador / Faturista / Secretária), not from `contactType`.
+
+**v3 addition:** each row is tappable and opens a representative profile screen (name, role chips, contact, parent facility, editable relationship).
 
 ### F-003 — Médicos (CRM associations)
 
 WHEN the mobile app loads doctors for an establishment THEN it SHALL call `GET /facilities/:id/professionals?view=all` (source-active and/or confirmed; not ended).
 
-Each row SHALL display: display name, specialty, CRM (council/number/state when present), role flags (prescriber, buyer, decision-maker) as subtle chips.
+Each row SHALL display: display name, specialty, CRM (council/number/state when present), role flags (prescriber, buyer, decision-maker, partner) as subtle chips.
 
-WHEN a row is tapped THEN the app SHALL navigate to `/workspace/doctor/:professionalId`.
+WHEN the user taps role chips (or “Definir papel”) on the Médicos card, or the edit-papel control on Ver todos, THEN the app SHALL open a bottom sheet to toggle facility-scoped flags and persist via `PATCH /facilities/:id/professionals/:professionalId` (`isPrescriber` / `isDecisionMaker` / `isBuyer` / `isPartner`). Editing is clinic-context only — not on the global doctor person record.
+
+WHEN a row is tapped THEN the app SHALL navigate to `/workspace/doctor/:professionalId`. When opened from a facility roster, the app SHALL pass `facilityId` as a query param so the doctor profile can load/edit the caller’s `relationshipLevel` via `PATCH /facilities/:id/professionals/:professionalId`. Without `facilityId`, relationship editing is hidden.
 
 **v3 addition:** cards render in a snapping `PageView` (one at a time) instead of a plain horizontal list, with a count badge on the section header. Each card prioritizes essential contact fields — phone and e-mail, tap-to-call/e-mail — over the personal-fields set (Formação/Aniversário/Time/Interesses), which is dropped from this card (still available on the doctor detail screen). Role badge + role flags share one dedicated badges area on the card. This requires `phone`/`email` on the CRM doctor row (mirrors `professionals.phone`/`email`).
 

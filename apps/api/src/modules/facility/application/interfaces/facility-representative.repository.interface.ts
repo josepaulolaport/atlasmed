@@ -3,7 +3,16 @@ export type FacilityRepresentativeContactType =
   | "DECISOR"
   | "COMPRADOR";
 
-export interface FacilityRepresentativeRecord {
+export interface FacilityRepresentativeRoleFlags {
+  isPartner: boolean;
+  isAdministrator: boolean;
+  isDecisionMaker: boolean;
+  isBuyer: boolean;
+  isBiller: boolean;
+  isSecretary: boolean;
+}
+
+export interface FacilityRepresentativeRecord extends FacilityRepresentativeRoleFlags {
   id: string;
   facilityId: string;
   representativeName: string;
@@ -30,10 +39,17 @@ export interface FacilityRepresentativeListPage {
   totalPages: number;
 }
 
+export type FacilityRepresentativeRolePatch = Partial<FacilityRepresentativeRoleFlags>;
+
 export interface FacilityRepresentativeRepository {
   findByFacilityAndExternalKey(
     facilityId: string,
     externalKey: string
+  ): Promise<FacilityRepresentativeRecord | null>;
+
+  findByIdForFacility(
+    facilityId: string,
+    representativeId: string
   ): Promise<FacilityRepresentativeRecord | null>;
 
   /** Active CRM representatives (`ended_at IS NULL`), name ascending. */
@@ -67,8 +83,20 @@ export interface FacilityRepresentativeRepository {
     email?: string | null;
     phone?: string | null;
     contactType?: FacilityRepresentativeContactType;
+    roles?: FacilityRepresentativeRolePatch;
     confirmedByUserId: string;
   }): Promise<FacilityRepresentativeRecord>;
+
+  updateManual(params: {
+    facilityId: string;
+    representativeId: string;
+    representativeName?: string;
+    roleTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactType?: FacilityRepresentativeContactType;
+    roles?: FacilityRepresentativeRolePatch;
+  }): Promise<FacilityRepresentativeRecord | null>;
 
   endSourceRepresentative(params: {
     facilityId: string;
@@ -76,4 +104,13 @@ export interface FacilityRepresentativeRepository {
     endedByUserId: string;
     endReason?: string;
   }): Promise<FacilityRepresentativeRecord | null>;
+}
+
+/** Derive legacy contactType from role flags for back-compat. */
+export function contactTypeFromRoles(
+  roles: FacilityRepresentativeRoleFlags
+): FacilityRepresentativeContactType {
+  if (roles.isDecisionMaker) return "DECISOR";
+  if (roles.isBuyer) return "COMPRADOR";
+  return "PROFESSIONAL";
 }

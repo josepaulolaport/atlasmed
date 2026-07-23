@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 
-/// Create an administrative professional. When [facilityId] is real, persists
-/// via `POST /facilities/:id/representatives`.
+/// Create or edit an administrative professional.
+///
+/// Real [facilityId] → `POST` / `PATCH /facilities/:id/representatives`.
 Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
   BuildContext context, {
   String? facilityId,
+  AdministrativeProfessional? existing,
 }) {
   return showModalBottomSheet<AdministrativeProfessional>(
     context: context,
@@ -16,14 +18,18 @@ Future<AdministrativeProfessional?> showCreateAdminProfessionalSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _CreateAdminProfessionalSheet(facilityId: facilityId),
+    builder: (_) => _CreateAdminProfessionalSheet(
+      facilityId: facilityId,
+      existing: existing,
+    ),
   );
 }
 
 class _CreateAdminProfessionalSheet extends StatefulWidget {
-  const _CreateAdminProfessionalSheet({this.facilityId});
+  const _CreateAdminProfessionalSheet({this.facilityId, this.existing});
 
   final String? facilityId;
+  final AdministrativeProfessional? existing;
 
   @override
   State<_CreateAdminProfessionalSheet> createState() =>
@@ -32,17 +38,40 @@ class _CreateAdminProfessionalSheet extends StatefulWidget {
 
 class _CreateAdminProfessionalSheetState
     extends State<_CreateAdminProfessionalSheet> {
-  final _nameCtrl = TextEditingController();
-  final _roleCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  String _contactType = 'PROFESSIONAL';
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _roleCtrl;
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _emailCtrl;
+  late bool _isPartner;
+  late bool _isAdministrator;
+  late bool _isDecisionMaker;
+  late bool _isBuyer;
+  late bool _isBiller;
+  late bool _isSecretary;
   bool _saving = false;
+
+  bool get _isEdit => widget.existing != null;
 
   bool get _useApi {
     final id = widget.facilityId;
     if (id == null || id.isEmpty) return false;
     return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existing;
+    _nameCtrl = TextEditingController(text: existing?.name ?? '');
+    _roleCtrl = TextEditingController(text: existing?.roleTitle ?? '');
+    _phoneCtrl = TextEditingController(text: existing?.phone ?? '');
+    _emailCtrl = TextEditingController(text: existing?.email ?? '');
+    _isPartner = existing?.isPartner ?? false;
+    _isAdministrator = existing?.isAdministrator ?? false;
+    _isDecisionMaker = existing?.isDecisionMaker ?? false;
+    _isBuyer = existing?.isBuyer ?? false;
+    _isBiller = existing?.isBiller ?? false;
+    _isSecretary = existing?.isSecretary ?? false;
   }
 
   @override
@@ -75,9 +104,11 @@ class _CreateAdminProfessionalSheetState
                 ),
               ),
             ),
-            const Text(
-              'Novo profissional administrativo',
-              style: TextStyle(
+            Text(
+              _isEdit
+                  ? 'Editar profissional administrativo'
+                  : 'Novo profissional administrativo',
+              style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 color: Color(0xFF0f1729),
@@ -85,7 +116,9 @@ class _CreateAdminProfessionalSheetState
             ),
             const SizedBox(height: 4),
             Text(
-              _useApi
+              _isEdit
+                  ? 'Atualize os dados e as funções deste contato.'
+                  : _useApi
                   ? 'Preencha os dados de contato. O perfil será criado nesta clínica.'
                   : 'Preencha os dados de contato. O perfil será associado após a confirmação.',
               style: const TextStyle(fontSize: 12.5, color: Color(0xFF6b7280)),
@@ -98,31 +131,31 @@ class _CreateAdminProfessionalSheetState
             _field(_phoneCtrl, 'Telefone', TextInputType.phone),
             const SizedBox(height: 10),
             _field(_emailCtrl, 'E-mail', TextInputType.emailAddress),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             const Text(
-              'Tipo de contato',
+              'FUNÇÕES',
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
                 color: Color(0xFF6b7280),
               ),
             ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                for (final (value, label) in const [
-                  ('DECISOR', 'Decisor'),
-                  ('COMPRADOR', 'Comprador'),
-                  ('PROFESSIONAL', 'Profissional'),
-                ])
-                  ChoiceChip(
-                    label: Text(label),
-                    selected: _contactType == value,
-                    onSelected: (_) => setState(() => _contactType = value),
-                  ),
-              ],
+            const SizedBox(height: 4),
+            _roleToggle('Sócio', _isPartner, (v) => _isPartner = v),
+            _roleToggle(
+              'Administrador',
+              _isAdministrator,
+              (v) => _isAdministrator = v,
             ),
+            _roleToggle(
+              'Decisor',
+              _isDecisionMaker,
+              (v) => _isDecisionMaker = v,
+            ),
+            _roleToggle('Comprador', _isBuyer, (v) => _isBuyer = v),
+            _roleToggle('Faturista', _isBiller, (v) => _isBiller = v),
+            _roleToggle('Secretária', _isSecretary, (v) => _isSecretary = v),
             const SizedBox(height: 18),
             FilledButton(
               onPressed: _saving ? null : _save,
@@ -142,11 +175,29 @@ class _CreateAdminProfessionalSheetState
                         color: Colors.white,
                       ),
                     )
-                  : const Text('Criar perfil'),
+                  : Text(_isEdit ? 'Salvar' : 'Criar perfil'),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _roleToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile.adaptive(
+      contentPadding: EdgeInsets.zero,
+      dense: true,
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF0f1729),
+        ),
+      ),
+      value: value,
+      activeThumbColor: const Color(0xFF1e40af),
+      onChanged: (next) => setState(() => onChanged(next)),
     );
   }
 
@@ -208,12 +259,20 @@ class _CreateAdminProfessionalSheetState
         if (!mounted) return;
         Navigator.of(context).pop(
           AdministrativeProfessional(
-            id: 'new-adm-${DateTime.now().millisecondsSinceEpoch}',
+            id:
+                widget.existing?.id ??
+                'new-adm-${DateTime.now().millisecondsSinceEpoch}',
             name: name,
             roleTitle: roleTitle,
             phone: phone,
             email: email,
-            contactType: _contactType,
+            isPartner: _isPartner,
+            isAdministrator: _isAdministrator,
+            isDecisionMaker: _isDecisionMaker,
+            isBuyer: _isBuyer,
+            isBiller: _isBiller,
+            isSecretary: _isSecretary,
+            relationshipScore: widget.existing?.relationshipScore,
           ),
         );
         return;
@@ -221,15 +280,37 @@ class _CreateAdminProfessionalSheetState
 
       final repo = FacilityRepresentativesRepository(widget.facilityId!);
       try {
-        final created = await repo.create(
-          representativeName: name,
-          roleTitle: roleTitle,
-          phone: phone,
-          email: email,
-          contactType: _contactType,
-        );
+        final AdministrativeProfessional saved;
+        if (_isEdit) {
+          saved = await repo.updateRepresentative(
+            representativeId: widget.existing!.id,
+            representativeName: name,
+            roleTitle: roleTitle ?? '',
+            phone: phone ?? '',
+            email: email ?? '',
+            isPartner: _isPartner,
+            isAdministrator: _isAdministrator,
+            isDecisionMaker: _isDecisionMaker,
+            isBuyer: _isBuyer,
+            isBiller: _isBiller,
+            isSecretary: _isSecretary,
+          );
+        } else {
+          saved = await repo.create(
+            representativeName: name,
+            roleTitle: roleTitle,
+            phone: phone,
+            email: email,
+            isPartner: _isPartner,
+            isAdministrator: _isAdministrator,
+            isDecisionMaker: _isDecisionMaker,
+            isBuyer: _isBuyer,
+            isBiller: _isBiller,
+            isSecretary: _isSecretary,
+          );
+        }
         if (!mounted) return;
-        Navigator.of(context).pop(created);
+        Navigator.of(context).pop(saved);
       } finally {
         repo.dispose();
       }
@@ -240,8 +321,8 @@ class _CreateAdminProfessionalSheetState
         SnackBar(
           content: Text(
             e is FacilityRepresentativesException
-                ? (e.message ?? 'Falha ao criar profissional')
-                : 'Falha ao criar profissional',
+                ? (e.message ?? 'Falha ao salvar profissional')
+                : 'Falha ao salvar profissional',
           ),
           behavior: SnackBarBehavior.floating,
         ),

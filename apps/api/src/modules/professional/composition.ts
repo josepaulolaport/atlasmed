@@ -7,6 +7,7 @@ import {
   DeleteDoctorUseCase,
   GetProfessionalUseCase,
   ListProfessionalNotesUseCase,
+  ListProfessionalSpecialtiesUseCase,
   ListProfessionalsUseCase,
   UpdateDoctorUseCase,
 } from "./application/use-cases/professional.use-cases";
@@ -22,6 +23,10 @@ export const professionalUseCases = {
     new ListProfessionalsUseCase({
       doctorRepository: professionalRepositories.professional,
       searchService,
+    }),
+  listProfessionalSpecialties: () =>
+    new ListProfessionalSpecialtiesUseCase({
+      doctorRepository: professionalRepositories.professional,
     }),
   getProfessional: () =>
     new GetProfessionalUseCase({ doctorRepository: professionalRepositories.professional }),

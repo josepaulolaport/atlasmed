@@ -74,7 +74,12 @@ class FacilityRepresentativesRepository
     String? roleTitle,
     String? email,
     String? phone,
-    String contactType = 'PROFESSIONAL',
+    bool isPartner = false,
+    bool isAdministrator = false,
+    bool isDecisionMaker = false,
+    bool isBuyer = false,
+    bool isBiller = false,
+    bool isSecretary = false,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -88,18 +93,73 @@ class FacilityRepresentativesRepository
           if (roleTitle != null && roleTitle.isNotEmpty) 'roleTitle': roleTitle,
           if (email != null && email.isNotEmpty) 'email': email,
           if (phone != null && phone.isNotEmpty) 'phone': phone,
-          'contactType': contactType,
+          'isPartner': isPartner,
+          'isAdministrator': isAdministrator,
+          'isDecisionMaker': isDecisionMaker,
+          'isBuyer': isBuyer,
+          'isBiller': isBiller,
+          'isSecretary': isSecretary,
         },
       ),
     );
 
+    return _parseMutationResponse(response, 'criar');
+  }
+
+  Future<AdministrativeProfessional> updateRepresentative({
+    required String representativeId,
+    String? representativeName,
+    String? roleTitle,
+    String? email,
+    String? phone,
+    bool? isPartner,
+    bool? isAdministrator,
+    bool? isDecisionMaker,
+    bool? isBuyer,
+    bool? isBiller,
+    bool? isSecretary,
+    int? relationshipLevel,
+    bool clearRelationshipLevel = false,
+  }) async {
+    final body = <String, Object?>{
+      'representativeName': ?representativeName,
+      'roleTitle': ?roleTitle,
+      'email': ?email,
+      'phone': ?phone,
+      'isPartner': ?isPartner,
+      'isAdministrator': ?isAdministrator,
+      'isDecisionMaker': ?isDecisionMaker,
+      'isBuyer': ?isBuyer,
+      'isBiller': ?isBiller,
+      'isSecretary': ?isSecretary,
+      if (clearRelationshipLevel)
+        'relationshipLevel': null
+      else
+        'relationshipLevel': ?relationshipLevel,
+    };
+
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId/representatives/$representativeId',
+        ),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: body,
+      ),
+    );
+
+    return _parseMutationResponse(response, 'atualizar');
+  }
+
+  AdministrativeProfessional _parseMutationResponse(
+    RepositoryHttpResponse response,
+    String action,
+  ) {
     if (!successfulCondition(response.statusCode, response.body)) {
-      final shouldThrow = await onErrorStatusCode(response.statusCode);
-      if (shouldThrow) {
-        throw FacilityRepresentativesException(
-          'Falha ao criar profissional (${response.statusCode})',
-        );
-      }
+      throw FacilityRepresentativesException(
+        'Falha ao $action profissional (${response.statusCode})',
+      );
     }
 
     final map = jsonDecode(response.body) as Map<String, dynamic>;

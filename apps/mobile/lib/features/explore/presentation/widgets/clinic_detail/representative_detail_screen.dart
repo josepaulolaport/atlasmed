@@ -1,142 +1,234 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/create_admin_professional_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 
-/// Full profile of an administrative representative — pushed from the
-/// "Profissionais administrativos" section. Mock-only in this phase: the
-/// representative data comes from the already-loaded facility sections
-/// rather than a dedicated by-id endpoint.
-class RepresentativeDetailScreen extends StatelessWidget {
+/// Full profile of an administrative representative.
+class RepresentativeDetailScreen extends StatefulWidget {
   const RepresentativeDetailScreen({
     super.key,
     required this.professional,
     required this.facilityName,
+    this.facilityId,
   });
 
   final AdministrativeProfessional professional;
   final String facilityName;
+  final String? facilityId;
+
+  @override
+  State<RepresentativeDetailScreen> createState() =>
+      _RepresentativeDetailScreenState();
+}
+
+class _RepresentativeDetailScreenState
+    extends State<RepresentativeDetailScreen> {
+  late AdministrativeProfessional _professional = widget.professional;
+  bool _savingRelationship = false;
+
+  bool get _useApi {
+    final id = widget.facilityId;
+    if (id == null || id.isEmpty) return false;
+    return !id.startsWith('near-') && !id.endsWith(':empty');
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFf8f9fb),
-      appBar: AppBar(
+    final chips = _professional.roleChipLabels;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        Navigator.of(context).pop(_professional);
+      },
+      child: Scaffold(
         backgroundColor: const Color(0xFFf8f9fb),
-        elevation: 0,
-        foregroundColor: const Color(0xFF0f1729),
-        title: const Text('Perfil do profissional'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Center(
-            child: Column(
-              children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: const Color(0xFFeef4ff),
-                  child: Text(
-                    _initials(professional.name),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Color(0xFF1e40af),
+        appBar: AppBar(
+          backgroundColor: const Color(0xFFf8f9fb),
+          elevation: 0,
+          foregroundColor: const Color(0xFF0f1729),
+          title: const Text('Perfil do profissional'),
+          actions: [TextButton(onPressed: _edit, child: const Text('Editar'))],
+        ),
+        body: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: const Color(0xFFeef4ff),
+                    child: Text(
+                      _initials(_professional.name),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF1e40af),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  professional.name,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
-                  ),
-                ),
-                if (professional.roleTitle != null) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 14),
                   Text(
-                    professional.roleTitle!,
+                    _professional.name,
+                    textAlign: TextAlign.center,
                     style: const TextStyle(
-                      fontSize: 13,
-                      color: Color(0xFF6b7280),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF0f1729),
                     ),
                   ),
+                  if (_professional.roleTitle != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _professional.roleTitle!,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xFF6b7280),
+                      ),
+                    ),
+                  ],
+                  if (chips.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        for (final label in chips) _Chip(label: label),
+                      ],
+                    ),
+                  ],
                 ],
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _SectionCard(
+              title: 'Relacionamento',
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: RelationshipStars(
+                    score: _professional.relationshipScore,
+                    onChanged: _savingRelationship ? null : _setRelationship,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFf3f4f6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    professional.contactTypeLabel,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF4b5563),
-                    ),
-                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Toque nas estrelas para definir (segure para limpar).',
+                  style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          _SectionCard(
-            title: 'Contato',
-            children: [
-              _InfoRow(
-                icon: Icons.phone_outlined,
-                label: 'Telefone',
-                value: professional.phone,
-                onTap: professional.phone != null
-                    ? () => launchContactUrl(
-                        context,
-                        url: callUrl(professional.phone),
-                        contactLabel: 'telefone',
-                      )
-                    : null,
-                onLongPress: professional.phone != null
-                    ? () => _copy(context, professional.phone!, 'Telefone')
-                    : null,
-              ),
-              _InfoRow(
-                icon: Icons.email_outlined,
-                label: 'E-mail',
-                value: professional.email,
-                onTap: professional.email != null
-                    ? () => launchContactUrl(
-                        context,
-                        url: emailUrl(professional.email),
-                        contactLabel: 'e-mail',
-                      )
-                    : null,
-                onLongPress: professional.email != null
-                    ? () => _copy(context, professional.email!, 'E-mail')
-                    : null,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _SectionCard(
-            title: 'Estabelecimento',
-            children: [
-              _InfoRow(
-                icon: Icons.local_hospital_outlined,
-                label: 'Clínica',
-                value: facilityName,
-              ),
-            ],
-          ),
-        ],
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'Contato',
+              children: [
+                _InfoRow(
+                  icon: Icons.phone_outlined,
+                  label: 'Telefone',
+                  value: _professional.phone,
+                  onTap: _professional.phone != null
+                      ? () => launchContactUrl(
+                          context,
+                          url: callUrl(_professional.phone),
+                          contactLabel: 'telefone',
+                        )
+                      : null,
+                  onLongPress: _professional.phone != null
+                      ? () => _copy(context, _professional.phone!, 'Telefone')
+                      : null,
+                ),
+                _InfoRow(
+                  icon: Icons.email_outlined,
+                  label: 'E-mail',
+                  value: _professional.email,
+                  onTap: _professional.email != null
+                      ? () => launchContactUrl(
+                          context,
+                          url: emailUrl(_professional.email),
+                          contactLabel: 'e-mail',
+                        )
+                      : null,
+                  onLongPress: _professional.email != null
+                      ? () => _copy(context, _professional.email!, 'E-mail')
+                      : null,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'Estabelecimento',
+              children: [
+                _InfoRow(
+                  icon: Icons.local_hospital_outlined,
+                  label: 'Clínica',
+                  value: widget.facilityName,
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Future<void> _edit() async {
+    final updated = await showCreateAdminProfessionalSheet(
+      context,
+      facilityId: widget.facilityId,
+      existing: _professional,
+    );
+    if (updated == null || !mounted) return;
+    setState(() => _professional = updated);
+  }
+
+  Future<void> _setRelationship(int? level) async {
+    final previous = _professional;
+    setState(() {
+      _professional = _professional.copyWith(
+        relationshipScore: level,
+        clearRelationshipScore: level == null,
+      );
+      _savingRelationship = true;
+    });
+
+    if (!_useApi) {
+      setState(() => _savingRelationship = false);
+      return;
+    }
+
+    final repo = FacilityRepresentativesRepository(widget.facilityId!);
+    try {
+      final saved = await repo.updateRepresentative(
+        representativeId: _professional.id,
+        relationshipLevel: level,
+        clearRelationshipLevel: level == null,
+      );
+      if (!mounted) return;
+      setState(() {
+        _professional = saved;
+        _savingRelationship = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _professional = previous;
+        _savingRelationship = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível salvar o relacionamento'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      repo.dispose();
+    }
   }
 
   void _copy(BuildContext context, String value, String label) {
@@ -155,6 +247,31 @@ class RepresentativeDetailScreen extends StatelessWidget {
       return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
     }
     return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFeef4ff),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: Color(0xFF1e40af),
+        ),
+      ),
+    );
   }
 }
 

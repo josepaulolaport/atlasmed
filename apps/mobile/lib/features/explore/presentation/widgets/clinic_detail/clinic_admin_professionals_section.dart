@@ -6,13 +6,13 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/representative_detail_screen.dart';
 
 /// "Profissionais administrativos" — snapping PageView of compact cards
-/// with contact info (phone/email) and type badge. No relationship stars
-/// (those are user × professional only, on Médicos).
+/// with contact info (phone/email) and role chips.
 class ClinicAdminProfessionalsSection extends StatelessWidget {
   const ClinicAdminProfessionalsSection({
     super.key,
     required this.professionals,
     required this.facilityName,
+    this.facilityId,
     this.hasMore = false,
     this.onLoadMore,
     this.onAssociate,
@@ -20,6 +20,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
 
   final List<AdministrativeProfessional> professionals;
   final String facilityName;
+  final String? facilityId;
 
   /// When true, a trailing spinner page is shown and [onLoadMore] is called
   /// as the user reaches the end of the loaded cards.
@@ -47,7 +48,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onAssociate,
                   icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                  label: const Text('Associar profissionais'),
+                  label: const Text('Criar profissional'),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF1e40af),
                   ),
@@ -67,6 +68,7 @@ class ClinicAdminProfessionalsSection extends StatelessWidget {
       itemBuilder: (_, i) => _ProfessionalCard(
         professional: professionals[i],
         facilityName: facilityName,
+        facilityId: facilityId,
       ),
     );
   }
@@ -76,10 +78,12 @@ class _ProfessionalCard extends StatelessWidget {
   const _ProfessionalCard({
     required this.professional,
     required this.facilityName,
+    this.facilityId,
   });
 
   final AdministrativeProfessional professional;
   final String facilityName;
+  final String? facilityId;
 
   @override
   Widget build(BuildContext context) {
@@ -152,12 +156,17 @@ class _ProfessionalCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [_Flag(label: professional.contactTypeLabel)],
-          ),
+          if (professional.roleChipLabels.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final label in professional.roleChipLabels)
+                  _Flag(label: label),
+              ],
+            ),
+          ],
           const SizedBox(height: 10),
           const Divider(height: 1, color: Color(0xFFf3f4f6)),
           const SizedBox(height: 8),
@@ -193,6 +202,7 @@ class _ProfessionalCard extends StatelessWidget {
                 builder: (_) => RepresentativeDetailScreen(
                   professional: professional,
                   facilityName: facilityName,
+                  facilityId: facilityId,
                 ),
               ),
             ),

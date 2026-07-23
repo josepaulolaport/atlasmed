@@ -158,6 +158,33 @@ describe("Professional HTTP auth integration", () => {
     expect(Array.isArray(body.data)).toBe(true);
   });
 
+  it("returns 401 for unauthenticated specialty facet list", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const response = await authRequest(
+      app,
+      "http://localhost/api/v1/professionals/specialties",
+      null
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it("allows scoped field USER to list specialty facets", async () => {
+    if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
+
+    const token = await loginToken(fixtures.fieldUser.email);
+    const response = await authRequest(
+      app,
+      "http://localhost/api/v1/professionals/specialties",
+      token
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as { data: unknown[] };
+    expect(Array.isArray(body.data)).toBe(true);
+  });
+
   it("scoped field USER can read in-scope professional", async () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
