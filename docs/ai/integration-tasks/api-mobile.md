@@ -14,7 +14,7 @@ Use when a task touches BOTH `apps/api` and `apps/mobile`.
 | Concern | Load |
 |---|---|
 | authorization / security | `packages/access/AGENTS.md` |
-| persistence / domain model | `packages/database/AGENTS.md` |
+| persistence / domain model | `AGENTS.md` § `packages/database` |
 | observability / audit | `packages/observability/AGENTS.md` |
 | offline-first / device sensors | (patterns live in `apps/mobile/AGENTS.md`) |
 | testing (api-side) | `apps/api/TESTING.md` |
@@ -23,7 +23,7 @@ Use when a task touches BOTH `apps/api` and `apps/mobile`.
 
 1. Define the API contract with mobile version drift in mind.
 2. Prefer additive changes; version if breaking is required.
-3. Update Drizzle schema if persistence changes. Run `bunx drizzle-kit generate` then `bunx drizzle-kit migrate`.
+3. Update Drizzle schema if persistence changes. Follow `AGENTS.md` § Migration workflow: `push` while iterating locally; `generate` once before PR; `bun run db:migrate` + `drizzle-kit check`.
 4. Implement backend per `apps/api/AGENTS.md` route + use-case conventions.
 5. Update mobile client + UI.
 6. Handle offline behavior: form must survive network failure mid-submission.

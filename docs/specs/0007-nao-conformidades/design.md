@@ -104,7 +104,7 @@ Disallowed examples (422): `commercialStatus`, `purchaseStatus`, `conformityStat
 
 ### 4.3 Migration
 
-Follow `packages/database` workflow: edit schema → `drizzle-kit generate` → review SQL → migrate. Never hand-edit `drizzle/*`.
+Follow root `AGENTS.md` § `packages/database` Migration workflow: `push` while iterating; `generate` once before PR; `migrate` + `check`. Never hand-edit `drizzle/*`.
 
 ## 5. API contract
 

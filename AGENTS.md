@@ -408,52 +408,108 @@ Next.js 16 (App Router) + React 19 + Tailwind CSS 4 (zinc palette + blue accent,
 
 ### Migration workflow (MANDATORY)
 
-**Normal changes** (new tables/columns/indexes):
+AtlasMed uses Drizzle Kit with a **branch-friendly** flow: prototype with `push` locally, generate a single migration when the feature is ready to merge, keep `main` / staging / production on SQL migrations only.
+
+Commands run from `packages/database` unless noted. Prefer `bunx drizzle-kit …` and `bun run db:migrate` (repo scripts).
+
+#### 1. Local prototyping — do **not** generate early
+
+Generating a `.sql` + snapshot on every schema tweak clutters `drizzle/`, worsens merge conflicts, and risks out-of-order journal `when` timestamps.
+
+While iterating on a feature branch:
 
 ```bash
-# 1. Edit schema file(s) in src/schema/
-# 2. Generate migration
+# Edit TypeScript schema under src/schema/
 cd packages/database
-DATABASE_URL=<url> bunx drizzle-kit generate --name="<short_description>"
-# 3. Review generated SQL in drizzle/<nnnn>_<name>.sql
-# 4. Apply
-DATABASE_URL=<url> bun run scripts/migrate.ts
-# 5. Commit schema + migration together
+DATABASE_URL=<local-url> bunx drizzle-kit push
 ```
 
-**Ambiguous changes** (renames, type changes, drops — need TTY):
+`push` maps the current TS schema onto the **local** DB only — no migration files, no journal entries.
+
+**Never** `drizzle-kit push` against staging or production.
+
+Optional but recommended: use a Neon (or similar) **database branch** per git feature branch and point local `DATABASE_URL` at it so schema experiments stay isolated.
+
+#### 2. Before opening / merging the PR — generate **once**
+
+When the schema change is final and the branch is rebased onto latest `main`:
+
+```bash
+git fetch origin main && git rebase origin/main   # or merge main
+cd packages/database
+DATABASE_URL=<local-url> bunx drizzle-kit generate --name="<short_description>"
+# Review drizzle/<nnnn>_<name>.sql and meta snapshots
+DATABASE_URL=<local-url> bun run db:migrate       # apply via migrator (not push)
+bunx drizzle-kit check                            # commutativity / race check
+```
+
+Commit **schema + generated migration + meta** together. One logical schema change ⇒ one migration on the PR whenever possible.
+
+Deploy / CI apply migrations with `bun run db:migrate` only (see deploy workflows). Do not generate or push in production pipelines.
+
+#### 3. Multi-branch collaboration — `drizzle-kit check`
+
+When two branches each generate migrations, journal order / snapshots can conflict. After pulling or merging `main` into a schema branch:
 
 ```bash
 cd packages/database
-DATABASE_URL=<url> bunx drizzle-kit generate --custom --name="<short_description>"
-# → empty migration file; fill SQL manually
-# Then update snapshot:
-DATABASE_URL=<url> bunx drizzle-kit generate --name="<same_name>_snapshot"
+bunx drizzle-kit check
 ```
 
-**Never full reset in production/staging.** Only in local dev for large structural refactors:
+Drizzle walks migration history (snapshot DAG / journal) and reports whether parallel migrations are **commutative** (safe in either order, e.g. columns on different tables) or **conflicting** (same table/column altered on both sides).
+
+| Result | Action |
+|---|---|
+| Pass | Continue; merge as usual |
+| Fail (non-commutative) | Delete **your feature branch’s** generated migration SQL + its meta snapshot entries that are not on `main`, rebase onto `main`, then `drizzle-kit generate` again so your migration appends cleanly |
+
+Do **not** hand-edit `_journal.json` `when` values or snapshot graphs to “force” order. The runtime migrator applies a migration only when `folderMillis` (`when`) is greater than the latest applied `created_at` — an out-of-order `when` skips that migration and breaks deploy (seen with `0013` vs `0012`).
+
+#### 4. Ambiguous DDL (renames, type changes, drops)
+
+```bash
+cd packages/database
+DATABASE_URL=<local-url> bunx drizzle-kit generate --custom --name="<short_description>"
+# Fill the empty SQL file carefully
+DATABASE_URL=<local-url> bunx drizzle-kit generate --name="<same_name>_snapshot"
+```
+
+#### 5. Broken migration folder after a bad merge
+
+If git merge leaves orphaned `.sql` files or corrupt meta:
+
+1. Reset `packages/database/drizzle/` migration artifacts that are not on `main` (keep `main`’s history).
+2. Restore a clean schema TS that matches intended end state.
+3. Rebase onto `main`, then `bunx drizzle-kit generate` + `bunx drizzle-kit check`.
+
+Do not invent journal rows or rewrite snapshots by hand.
+
+#### 6. Local full reset (dev only — never staging/production)
 
 ```bash
 psql $DATABASE_URL -c "DROP SCHEMA IF EXISTS ingestion CASCADE; DROP SCHEMA IF EXISTS audit CASCADE; DROP SCHEMA IF EXISTS registry CASCADE; DROP SCHEMA IF EXISTS drizzle CASCADE; DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; CREATE EXTENSION IF NOT EXISTS postgis;"
-rm -rf packages/database/drizzle
-cd packages/database && DATABASE_URL=<url> bunx drizzle-kit generate --name="init"
-DATABASE_URL=<url> bun run scripts/migrate.ts
+# Then either: migrate from existing drizzle/ history, or (rare, coordinated) regenerate history — do not rewrite shared migration history casually
+DATABASE_URL=<url> bun run db:migrate
 ```
 
 ### Rules
 
-- Every schema change ships with its migration file in the same commit/PR.
-- Never hand-edit `drizzle/meta/*_snapshot.json` unless you know exactly what you're doing.
+- Ship schema change + generated migration + meta in the same PR.
+- Local iteration: `push`. PR / shared environments: `generate` + `migrate`.
+- Run `drizzle-kit check` before merge when the branch touches `packages/database/drizzle/`.
+- **Never manually edit** `packages/database/drizzle/*` (SQL, snapshots, `_journal.json`) except filling a `--custom` migration’s empty SQL file. Everything else is generated exclusively by `drizzle-kit generate`.
+- Never hand-edit journal `when` / hashes to unstick deploy — regenerate or follow §3 conflict resolution.
 - Add GiST indexes for geometry columns; B-tree for columns filtered at scale.
 - Use `db.transaction(async (tx) => {...})` for multi-step consistency.
 - PostGIS columns use `geometryPoint` or `geometryMultiPolygon` from `types/geometry.ts`.
 - All DB identifiers (column names, enum names, index names) are `snake_case`.
 - Export new enum value types from `src/index.ts` when consumers need them.
-- **Never manually edit files inside `packages/database/drizzle/*`.** Migration SQL, snapshots, and meta files are generated **exclusively** by `bunx drizzle-kit generate`. Any manual edit to these files will be overwritten on the next `drizzle-kit` run and is forbidden. If you need a custom migration SQL, use `drizzle-kit generate --custom` and fill the generated empty file — never hand-edit a non-custom migration.
 
 ### Anti-patterns
 
 - No Prisma — fully on Drizzle.
+- No `drizzle-kit push` to staging/production.
+- No generating a migration per tiny local schema tweak on a long-lived feature branch.
 - No raw unparameterized queries — always use `sql` tagged template.
 - No direct ORM type leakage into app DTOs.
 - No business logic in this package — infrastructure only.

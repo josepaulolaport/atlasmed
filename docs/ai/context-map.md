@@ -19,7 +19,7 @@ Not a knowledge dump. Every row names files to load, not concepts to memorize.
 | Concern | Load |
 |---|---|
 | authorization / security | `packages/access/AGENTS.md` |
-| persistence / domain model | `packages/database/AGENTS.md` |
+| persistence / domain model | `AGENTS.md` § `packages/database` (Migration workflow) |
 | messaging / background jobs | `apps/workers/AGENTS.md` |
 | data pipeline / integration | `packages/cnes-ingestion/AGENTS.md` |
 | observability / audit | `packages/observability/AGENTS.md` |

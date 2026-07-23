@@ -62,7 +62,7 @@ concerns:   [persistence, domain-model, api-contract]
 **Loading:**
 ```
 Tier 0: AGENTS.md
-Tier 1: packages/database/AGENTS.md
+Tier 1: AGENTS.md § packages/database (Migration workflow)
 ```
 **Total: 2 files.**
 

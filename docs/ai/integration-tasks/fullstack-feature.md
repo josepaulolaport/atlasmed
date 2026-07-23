@@ -13,10 +13,10 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 
 | Concern | Load |
 |---|---|
-| authorization / security | `packages/access/AGENTS.md` |
-| persistence / domain model | `packages/database/AGENTS.md` |
-| background jobs / messaging | `apps/workers/AGENTS.md` |
-| observability / audit | `packages/observability/AGENTS.md` |
+| authorization / security | `AGENTS.md` § `packages/access` |
+| persistence / domain model | `AGENTS.md` § `packages/database` |
+| background jobs / messaging | `AGENTS.md` § `apps/workers` |
+| observability / audit | `AGENTS.md` § `packages/observability` |
 | Feature-domain | Relevant `docs/architecture/features/*.md` or `docs/specs/*/design.md` |
 | testing (api-side) | `apps/api/TESTING.md` |
 
@@ -25,7 +25,7 @@ Use when a feature spans `apps/api` + (`apps/web` OR `apps/mobile`) + at least o
 1. Identify every affected app and package BEFORE editing. Announce the list.
 2. Define API contract first.
 3. Update shared types / place DTOs in a shared location.
-4. Schema change → migration → generate client → commit generated files.
+4. Schema change: `push` locally while iterating; `generate` once before PR; `migrate` + `drizzle-kit check` (see `AGENTS.md` § Migration workflow).
 5. Backend: validation → authorization → use-case → DTO mapping → tests.
 6. Permissions: helper in `packages/access` if reused; enforce at API boundary.
 7. Frontend: fetch → state → UI → loading/empty/error states.

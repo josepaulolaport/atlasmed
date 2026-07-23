@@ -14,7 +14,7 @@ Use when a task touches BOTH `apps/api` and `apps/web`.
 | Concern | Load |
 |---|---|
 | authorization / security | `packages/access/AGENTS.md` |
-| persistence / domain model | `packages/database/AGENTS.md` |
+| persistence / domain model | `AGENTS.md` § `packages/database` |
 | observability / audit | `packages/observability/AGENTS.md` |
 | testing (api-side) | `apps/api/TESTING.md` |
 
@@ -22,7 +22,7 @@ Use when a task touches BOTH `apps/api` and `apps/web`.
 
 1. Define the API contract first. Name the endpoint, request shape, response shape.
 2. If a shared DTO is needed, place it in a shared location the web can import.
-3. Update Drizzle schema if persistence changes. Run `bunx drizzle-kit generate` then `bunx drizzle-kit migrate`.
+3. Update Drizzle schema if persistence changes. Follow `AGENTS.md` § Migration workflow: `push` while iterating locally; `generate` once before PR; `bun run db:migrate` + `drizzle-kit check`.
 4. Implement backend: Zod validation → `requirePermission` → `getScope()` → use-case → DTO mapping → tests.
 5. Update web data-fetching client under `apps/web/lib/api/*`.
 6. Update web UI.
