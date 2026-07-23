@@ -70,7 +70,7 @@ class ProfessionalsWriteRepository extends Repository<Map<String, dynamic>>
           if (email != null && email.isNotEmpty) 'email': email,
           if (facilityId != null && facilityId.isNotEmpty)
             'facilityIds': [facilityId],
-          if (relationshipLevel != null) 'relationshipLevel': relationshipLevel,
+          'relationshipLevel': ?relationshipLevel,
         },
       ),
     );
