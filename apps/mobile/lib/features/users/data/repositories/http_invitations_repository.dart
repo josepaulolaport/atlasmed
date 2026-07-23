@@ -73,8 +73,8 @@ class HttpInvitationsRepository implements InvitationsRepository {
             return {
               ...map,
               'sectorName': map['sectorName'] as String? ?? '—',
-              'territories':
-                  (map['territories'] as List<dynamic>? ?? const []).map((t) {
+              'territories': (map['territories'] as List<dynamic>? ?? const [])
+                  .map((t) {
                     final territory = t as Map<String, dynamic>;
                     return {
                       'id': territory['id'],
@@ -86,7 +86,8 @@ class HttpInvitationsRepository implements InvitationsRepository {
                       if (territory['boundary'] != null)
                         'boundary': territory['boundary'],
                     };
-                  }).toList(),
+                  })
+                  .toList(),
             };
           }).toList(),
     });
@@ -118,9 +119,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
   Future<UserInvitation> getInvitation(String id) async {
     final response = await _get(_uri('/invitations/$id'));
     _throwIfError(response);
-    return _parseInvitation(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    return _parseInvitation(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   @override
@@ -198,9 +197,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
       },
     );
     _throwIfError(response);
-    return _parseInvitation(
-      jsonDecode(response.body) as Map<String, dynamic>,
-    );
+    return _parseInvitation(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
   @override

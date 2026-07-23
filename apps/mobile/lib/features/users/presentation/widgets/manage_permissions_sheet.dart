@@ -282,9 +282,7 @@ class _ManagePermissionsSheetState
                                   size: 18,
                                   color: Color(0xFFB91C1C),
                                 ),
-                                onPressed: _busy
-                                    ? null
-                                    : () => _revoke(grant),
+                                onPressed: _busy ? null : () => _revoke(grant),
                               ),
                             ],
                           ),

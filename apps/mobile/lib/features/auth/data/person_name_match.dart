@@ -29,10 +29,9 @@ String _stripAccents(String input) {
 }
 
 List<String> tokenizePersonName(String name) {
-  final normalized = _stripAccents(name)
-      .toLowerCase()
-      .replaceAll(RegExp(r'[^a-z0-9\s]'), ' ')
-      .trim();
+  final normalized = _stripAccents(
+    name,
+  ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9\s]'), ' ').trim();
   if (normalized.isEmpty) return const [];
   return normalized
       .split(RegExp(r'\s+'))

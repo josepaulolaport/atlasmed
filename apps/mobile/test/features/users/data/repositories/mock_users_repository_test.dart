@@ -68,7 +68,9 @@ void main() {
         sortBy: UsersSortBy.name,
         sortDir: UsersSortDir.asc,
       );
-      final names = result.items.map((u) => u.displayName.toLowerCase()).toList();
+      final names = result.items
+          .map((u) => u.displayName.toLowerCase())
+          .toList();
       final sorted = [...names]..sort();
       expect(names, sorted);
     });

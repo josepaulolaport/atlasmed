@@ -68,6 +68,7 @@ class UserInvitation extends Equatable {
   final String? roleId;
   final String? firstName;
   final String? lastName;
+
   /// Calendar date from invite (`YYYY-MM-DD` on the wire).
   final DateTime? birthDate;
   final String? phoneNumber;
@@ -167,7 +168,9 @@ class UserInvitation extends Equatable {
 
   static DateTime? _parseDateOnly(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
-    final slice = raw.trim().length >= 10 ? raw.trim().substring(0, 10) : raw.trim();
+    final slice = raw.trim().length >= 10
+        ? raw.trim().substring(0, 10)
+        : raw.trim();
     final parts = slice.split('-');
     if (parts.length != 3) return DateTime.tryParse(raw);
     final y = int.tryParse(parts[0]);

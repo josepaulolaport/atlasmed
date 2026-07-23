@@ -130,9 +130,7 @@ class _RegisterInviteScreenState extends State<RegisterInviteScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF0a2f7f),
-            ),
+            colorScheme: const ColorScheme.light(primary: Color(0xFF0a2f7f)),
           ),
           child: child!,
         );
@@ -168,10 +166,7 @@ class _RegisterInviteScreenState extends State<RegisterInviteScreen> {
       return;
     }
     if (invite.expectedFullName.isNotEmpty &&
-        !namesFuzzyMatch(
-          invite.expectedFullName,
-          '$firstName $lastName',
-        )) {
+        !namesFuzzyMatch(invite.expectedFullName, '$firstName $lastName')) {
       setState(
         () => _error =
             'O nome não confere com o convite. Confirme ao menos parte do nome completo.',
@@ -445,7 +440,8 @@ class _RegisterInviteScreenState extends State<RegisterInviteScreen> {
                             ? 'Confirmar e criar conta'
                             : 'Continuar',
                         loading: _loading,
-                        disabled: _loading ||
+                        disabled:
+                            _loading ||
                             (!_onFormStep &&
                                 _tokenController.text.trim().isEmpty),
                         trailingIcon: Icons.arrow_forward,
@@ -495,8 +491,8 @@ class _BirthDateField extends StatelessWidget {
     final label = value == null
         ? 'Selecionar data'
         : '${value!.day.toString().padLeft(2, '0')}/'
-            '${value!.month.toString().padLeft(2, '0')}/'
-            '${value!.year}';
+              '${value!.month.toString().padLeft(2, '0')}/'
+              '${value!.year}';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

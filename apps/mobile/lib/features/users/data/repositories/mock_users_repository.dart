@@ -158,10 +158,10 @@ class MockUsersRepository implements UsersRepository {
 
     int compare(User a, User b) {
       final primary = switch (sortBy) {
-        UsersSortBy.name =>
-          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
-        UsersSortBy.role =>
-          a.role.name.name.compareTo(b.role.name.name),
+        UsersSortBy.name => a.displayName.toLowerCase().compareTo(
+          b.displayName.toLowerCase(),
+        ),
+        UsersSortBy.role => a.role.name.name.compareTo(b.role.name.name),
         UsersSortBy.status => a.status.name.compareTo(b.status.name),
         UsersSortBy.createdAt => a.createdAt.compareTo(b.createdAt),
       };

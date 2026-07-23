@@ -173,7 +173,8 @@ class HttpUsersRepository implements UsersRepository {
             resource: g['resource'] as String,
             action: g['action'] as String,
             resourceId: g['resourceId'] as String?,
-            grantedAt: DateTime.tryParse(g['grantedAt'] as String? ?? '') ??
+            grantedAt:
+                DateTime.tryParse(g['grantedAt'] as String? ?? '') ??
                 DateTime.now(),
             expiresAt: g['expiresAt'] != null
                 ? DateTime.tryParse(g['expiresAt'] as String)

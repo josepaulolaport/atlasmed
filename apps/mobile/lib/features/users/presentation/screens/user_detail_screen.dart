@@ -146,11 +146,7 @@ class UserDetailScreen extends ConsumerWidget {
             .read(usersRepositoryProvider)
             .getUserPermissions(userId);
         if (!context.mounted) return;
-        await ManagePermissionsSheet.show(
-          context,
-          user: user,
-          grants: grants,
-        );
+        await ManagePermissionsSheet.show(context, user: user, grants: grants);
       } catch (_) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

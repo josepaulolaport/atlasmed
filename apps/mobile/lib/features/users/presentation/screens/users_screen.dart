@@ -218,10 +218,8 @@ class _UsersListState extends ConsumerState<_UsersList> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => UsersFilterSheet(
-        filter: state.filter,
-        onApply: notifier.setFilter,
-      ),
+      builder: (_) =>
+          UsersFilterSheet(filter: state.filter, onApply: notifier.setFilter),
     );
   }
 }

@@ -28,15 +28,13 @@ class InviteValidation {
   bool get emailLocked => email != null && email!.trim().isNotEmpty;
 
   /// Invite was sent to a fixed phone — register must use the same number.
-  bool get phoneLocked =>
-      phoneNumber != null && phoneNumber!.trim().isNotEmpty;
+  bool get phoneLocked => phoneNumber != null && phoneNumber!.trim().isNotEmpty;
 
-  String get expectedFullName =>
-      [firstName, lastName]
-          .whereType<String>()
-          .map((s) => s.trim())
-          .where((s) => s.isNotEmpty)
-          .join(' ');
+  String get expectedFullName => [firstName, lastName]
+      .whereType<String>()
+      .map((s) => s.trim())
+      .where((s) => s.isNotEmpty)
+      .join(' ');
 
   factory InviteValidation.fromJson(Map<String, dynamic> json) {
     final role = json['role'] as Map<String, dynamic>;
