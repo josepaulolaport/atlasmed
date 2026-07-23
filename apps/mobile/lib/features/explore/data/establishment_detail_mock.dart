@@ -270,13 +270,19 @@ List<AdministrativeProfessional> mockAllFacilityAdministrators(
 
   return List<AdministrativeProfessional>.generate(names.length, (i) {
     final n = i + 1;
+    final type = types[i % types.length];
     return AdministrativeProfessional(
       id: 'rep-$n',
       name: names[i],
       roleTitle: roles[i],
       email: '${names[i].split(' ').first.toLowerCase()}.$n@clinica.com.br',
       phone: '119${(87654321 - i * 1111).toString().padLeft(8, '0')}',
-      contactType: types[i % types.length],
+      contactType: type,
+      isDecisionMaker: type == 'DECISOR',
+      isBuyer: type == 'COMPRADOR',
+      isSecretary: type == 'PROFESSIONAL' && i.isEven,
+      isBiller: type == 'PROFESSIONAL' && i.isOdd,
+      relationshipScore: i % 3 == 0 ? null : 3 + (i % 8),
     );
   });
 }

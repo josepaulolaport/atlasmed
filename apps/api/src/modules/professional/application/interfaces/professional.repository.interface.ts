@@ -151,6 +151,9 @@ export interface ProfessionalRepository {
     candidateIds?: string[];
   }): Promise<{ professionals: ProfessionalRecord[]; total: number }>;
 
+  /** Distinct non-empty specialty labels visible under the caller's facility scope. */
+  listDistinctSpecialties(scope: ProfessionalListScopeFilter): Promise<string[]>;
+
   /** Hydrates ranked search candidates while enforcing canonical list eligibility. */
   findAllByIds(params: {
     ids: string[];

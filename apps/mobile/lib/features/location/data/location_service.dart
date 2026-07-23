@@ -59,6 +59,9 @@ abstract interface class LocationPlatform {
   Future<LocationPermissionStatus> checkPermission();
   Future<LocationPermissionStatus> requestPermission();
   Future<DeviceLocation> getCurrentPosition();
+
+  /// Emits when OS location services are toggled (true = enabled).
+  Stream<bool> get locationServicesEnabledStream;
 }
 
 class LocationService {
@@ -66,14 +69,26 @@ class LocationService {
 
   LocationService(this._platform);
 
-  Future<LocationResult> requestCurrentLocation() async {
+  Stream<bool> get locationServicesEnabledStream =>
+      _platform.locationServicesEnabledStream;
+
+  /// Prompt for permission if needed, then read a fix.
+  Future<LocationResult> requestCurrentLocation() =>
+      _resolve(requestIfDenied: true);
+
+  /// Soft check — never shows the permission dialog. Used for continuous
+  /// monitoring after the user is already past the location gate.
+  Future<LocationResult> checkCurrentLocation() =>
+      _resolve(requestIfDenied: false);
+
+  Future<LocationResult> _resolve({required bool requestIfDenied}) async {
     try {
       if (!await _platform.isLocationServiceEnabled()) {
         return const LocationUnavailable(LocationFailure.serviceDisabled);
       }
 
       var permission = await _platform.checkPermission();
-      if (permission == LocationPermissionStatus.denied) {
+      if (permission == LocationPermissionStatus.denied && requestIfDenied) {
         permission = await _platform.requestPermission();
       }
 
@@ -103,6 +118,8 @@ class GeolocatorLocationPlatform implements LocationPlatform {
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.medium,
+          // Simulator / weak GPS can hang forever without a deadline.
+          timeLimit: Duration(seconds: 8),
         ),
       );
       return DeviceLocation(
@@ -110,6 +127,15 @@ class GeolocatorLocationPlatform implements LocationPlatform {
         longitude: position.longitude,
       );
     } catch (_) {
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) {
+          return DeviceLocation(
+            latitude: last.latitude,
+            longitude: last.longitude,
+          );
+        }
+      } catch (_) {}
       throw const LocationPlatformException();
     }
   }
@@ -122,6 +148,12 @@ class GeolocatorLocationPlatform implements LocationPlatform {
   Future<LocationPermissionStatus> requestPermission() async {
     return _permissionFrom(await Geolocator.requestPermission());
   }
+
+  @override
+  Stream<bool> get locationServicesEnabledStream =>
+      Geolocator.getServiceStatusStream().map(
+        (status) => status == ServiceStatus.enabled,
+      );
 
   LocationPermissionStatus _permissionFrom(LocationPermission permission) {
     return switch (permission) {

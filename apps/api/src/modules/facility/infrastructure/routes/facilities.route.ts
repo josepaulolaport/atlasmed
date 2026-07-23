@@ -232,16 +232,27 @@ const listFacilityProfessionalsRoute = new Elysia()
     }
   );
 
+const representativeRoleBody = {
+  isPartner: t.Optional(t.Boolean()),
+  isAdministrator: t.Optional(t.Boolean()),
+  isDecisionMaker: t.Optional(t.Boolean()),
+  isBuyer: t.Optional(t.Boolean()),
+  isBiller: t.Optional(t.Boolean()),
+  isSecretary: t.Optional(t.Boolean()),
+};
+
 const listFacilityRepresentativesRoute = new Elysia()
   .use(auth)
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id/representatives",
-    async ({ params, query, getScope }) => {
+    async ({ params, query, getScope, getUserId }) => {
       const scope = await getScope();
+      const userId = await getUserId();
       return facilityUseCases.listFacilityRepresentatives().execute({
         facilityId: params.id,
         scope,
+        userId,
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
@@ -278,6 +289,12 @@ const createFacilityRepresentativeRoute = new Elysia()
         email: body.email,
         phone: body.phone,
         contactType: body.contactType,
+        isPartner: body.isPartner,
+        isAdministrator: body.isAdministrator,
+        isDecisionMaker: body.isDecisionMaker,
+        isBuyer: body.isBuyer,
+        isBiller: body.isBiller,
+        isSecretary: body.isSecretary,
       });
     },
     {
@@ -297,6 +314,61 @@ const createFacilityRepresentativeRoute = new Elysia()
             t.Literal("DECISOR"),
             t.Literal("COMPRADOR"),
           ])
+        ),
+        ...representativeRoleBody,
+      }),
+    }
+  );
+
+const updateFacilityRepresentativeRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .patch(
+    "/facilities/:id/representatives/:repId",
+    async ({ params, body, getScope, getUserId }) => {
+      const scope = await getScope();
+      const userId = await getUserId();
+      return facilityUseCases.updateFacilityRepresentative().execute({
+        facilityId: params.id,
+        representativeId: params.repId,
+        scope,
+        userId,
+        representativeName: body.representativeName,
+        roleTitle: body.roleTitle,
+        email: body.email,
+        phone: body.phone,
+        contactType: body.contactType,
+        isPartner: body.isPartner,
+        isAdministrator: body.isAdministrator,
+        isDecisionMaker: body.isDecisionMaker,
+        isBuyer: body.isBuyer,
+        isBiller: body.isBiller,
+        isSecretary: body.isSecretary,
+        relationshipLevel: body.relationshipLevel,
+      });
+    },
+    {
+      detail: {
+        summary:
+          "Update facility representative fields/role flags; relationshipLevel is user×representative",
+        tags: ["Clinics"],
+        security: [{ bearerAuth: [] }],
+      },
+      body: t.Object({
+        representativeName: t.Optional(t.String({ minLength: 1 })),
+        roleTitle: t.Optional(t.Union([t.String(), t.Null()])),
+        email: t.Optional(t.Union([t.String(), t.Null()])),
+        phone: t.Optional(t.Union([t.String(), t.Null()])),
+        contactType: t.Optional(
+          t.Union([
+            t.Literal("PROFESSIONAL"),
+            t.Literal("DECISOR"),
+            t.Literal("COMPRADOR"),
+          ])
+        ),
+        ...representativeRoleBody,
+        relationshipLevel: t.Optional(
+          t.Union([t.Number({ minimum: 1, maximum: 10 }), t.Null()])
         ),
       }),
     }
@@ -1082,6 +1154,7 @@ export const facilitiesRoute = new Elysia()
   .use(listFacilityProfessionalsRoute)
   .use(listFacilityRepresentativesRoute)
   .use(createFacilityRepresentativeRoute)
+  .use(updateFacilityRepresentativeRoute)
   .use(listFacilityNotesRoute)
   .use(createFacilityNoteRoute)
   .use(downloadFacilityPhotoRoute)

@@ -247,7 +247,7 @@ export const facilityPhotos = pgTable(
 /**
  * Per-user relationship strength with a CRM professional (1–10).
  * Private to the owning user — same privacy model as professional_notes.
- * Not facility-scoped and not applicable to facility_representatives.
+ * Not facility-scoped.
  */
 export const userProfessionalRelationships = pgTable(
   "user_professional_relationships",
@@ -333,9 +333,16 @@ export const facilityRepresentatives = pgTable(
     roleTitle: text("role_title"),
     email: text("email"),
     taxId: text("tax_id"),
+    /** Legacy single label — derived from role flags on write for back-compat. */
     contactType: contactTypeEnum("contact_type").notNull().default("PROFESSIONAL"),
     phone: text("phone"),
     notes: text("notes"),
+    isPartner: boolean("is_partner").notNull().default(false),
+    isAdministrator: boolean("is_administrator").notNull().default(false),
+    isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
+    isBuyer: boolean("is_buyer").notNull().default(false),
+    isBiller: boolean("is_biller").notNull().default(false),
+    isSecretary: boolean("is_secretary").notNull().default(false),
     sourceProvider: text("source_provider"),
     externalSourceKey: text("external_source_key"),
     sourceActive: boolean("source_active").notNull().default(false),
@@ -359,6 +366,34 @@ export const facilityRepresentatives = pgTable(
       t.sourceActive,
       t.endedAt
     ),
+  ]
+);
+
+/**
+ * Per-user relationship strength with a CRM facility representative (1–10).
+ * Private to the owning user — mirrors user_professional_relationships.
+ */
+export const userRepresentativeRelationships = pgTable(
+  "user_representative_relationships",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    representativeId: text("representative_id")
+      .notNull()
+      .references(() => facilityRepresentatives.id, { onDelete: "cascade" }),
+    relationshipLevel: smallint("relationship_level").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("user_representative_relationships_user_id_representative_id_uidx").on(
+      t.userId,
+      t.representativeId
+    ),
+    index("user_representative_relationships_representative_id_idx").on(t.representativeId),
+    index("user_representative_relationships_user_id_idx").on(t.userId),
   ]
 );
 
@@ -596,13 +631,28 @@ export const facilityProfessionalsRelations = relations(facilityProfessionals, (
   }),
 }));
 
-export const facilityRepresentativesRelations = relations(facilityRepresentatives, ({ one }) => ({
+export const facilityRepresentativesRelations = relations(facilityRepresentatives, ({ one, many }) => ({
   facility: one(facilities, { fields: [facilityRepresentatives.facilityId], references: [facilities.id] }),
   confirmedBy: one(users, {
     fields: [facilityRepresentatives.confirmedByUserId],
     references: [users.id],
   }),
+  userRelationships: many(userRepresentativeRelationships),
 }));
+
+export const userRepresentativeRelationshipsRelations = relations(
+  userRepresentativeRelationships,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [userRepresentativeRelationships.userId],
+      references: [users.id],
+    }),
+    representative: one(facilityRepresentatives, {
+      fields: [userRepresentativeRelationships.representativeId],
+      references: [facilityRepresentatives.id],
+    }),
+  })
+);
 
 export const facilityConsultantAssignmentsRelations = relations(facilityConsultantAssignments, ({ one }) => ({
   facility: one(facilities, { fields: [facilityConsultantAssignments.facilityId], references: [facilities.id] }),

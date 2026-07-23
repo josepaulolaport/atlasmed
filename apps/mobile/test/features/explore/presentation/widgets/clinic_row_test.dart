@@ -1,7 +1,6 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
     as api;
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,6 +10,7 @@ void main() {
     String? neighborhood,
     String? city,
     String? state,
+    String? commercialStatus,
   }) {
     return Clinic.fromApi(
       api.Clinic(
@@ -20,6 +20,7 @@ void main() {
         neighborhood: neighborhood,
         city: city,
         state: state,
+        commercialStatus: commercialStatus,
       ),
     );
   }
@@ -37,7 +38,7 @@ void main() {
               city: '',
               neighborhood: '',
               distanceKm: 0,
-              status: ClinicStatus.active,
+              commercialStatus: 'ACTIVE',
               lastVisitDays: null,
               doctorCount: 1,
               isPriority: false,
@@ -50,6 +51,21 @@ void main() {
     );
 
     expect(find.byIcon(Icons.location_on_rounded), findsNothing);
+  });
+
+  testWidgets('shows commercial status from the API', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ClinicRow(
+            clinic: clinicFromLocation(commercialStatus: 'SUSPENDED'),
+            onTap: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Suspensa'), findsOneWidget);
   });
 
   group('Clinic location label', () {

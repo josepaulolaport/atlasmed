@@ -48,6 +48,7 @@ class FacilityProfessionalListItemApi {
       crm: crm,
       phone: phone,
       email: professional.email,
+      isPartner: association.isPartner,
       isPrescriber: association.isPrescriber,
       isBuyer: association.isBuyer,
       isDecisionMaker: association.isDecisionMaker,
@@ -112,6 +113,7 @@ class FacilityProfessionalSummaryApi {
 
 class FacilityProfessionalAssociationApi {
   const FacilityProfessionalAssociationApi({
+    required this.isPartner,
     required this.isPrescriber,
     required this.isBuyer,
     required this.isDecisionMaker,
@@ -121,6 +123,7 @@ class FacilityProfessionalAssociationApi {
 
   factory FacilityProfessionalAssociationApi.fromMap(Map<String, dynamic> map) {
     return FacilityProfessionalAssociationApi(
+      isPartner: map['isPartner'] == true,
       isPrescriber: map['isPrescriber'] == true,
       isBuyer: map['isBuyer'] == true,
       isDecisionMaker: map['isDecisionMaker'] == true,
@@ -129,6 +132,7 @@ class FacilityProfessionalAssociationApi {
     );
   }
 
+  final bool isPartner;
   final bool isPrescriber;
   final bool isBuyer;
   final bool isDecisionMaker;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
 
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/status_chip.dart';
 
@@ -62,32 +62,15 @@ class ClinicRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          clinic.name,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF0f1729),
-                            letterSpacing: -0.15,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${clinic.distanceKm.toStringAsFixed(1)} km',
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF6b7280),
-                        ),
-                      ),
-                    ],
+                  Text(
+                    clinic.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0f1729),
+                      letterSpacing: -0.15,
+                    ),
                   ),
                   if (clinic.locationLabel != null) ...[
                     const SizedBox(height: 3),
@@ -117,18 +100,36 @@ class ClinicRow extends StatelessWidget {
                       ],
                     ),
                   ],
+                  if (clinic.distanceKm != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      '${clinic.distanceKm!.toStringAsFixed(1)} km',
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: Color(0xFF6b7280),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      StatusChip(
-                        label: clinic.status.label,
-                        color: clinic.status.color,
-                        bg: clinic.status.bg,
-                        small: true,
-                      ),
+                      if (clinic.commercialStatus != null)
+                        StatusChip(
+                          label: CommercialStatusFilter.label(
+                            clinic.commercialStatus!,
+                          ),
+                          color: CommercialStatusFilter.color(
+                            clinic.commercialStatus!,
+                          ),
+                          bg: CommercialStatusFilter.bg(
+                            clinic.commercialStatus!,
+                          ),
+                          small: true,
+                        ),
                       if (clinic.lastVisitDays != null)
                         _MetaItem(
                           icon: Icons.access_time_rounded,

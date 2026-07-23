@@ -65,6 +65,8 @@ List<AdministrativeProfessional> mockAssociableProfessionals() => const [
     email: 'juliana.prado@exemplo.com',
     phone: '11981112222',
     contactType: 'DECISOR',
+    isDecisionMaker: true,
+    isAdministrator: true,
   ),
   AdministrativeProfessional(
     id: 'pool-adm-2',
@@ -73,6 +75,7 @@ List<AdministrativeProfessional> mockAssociableProfessionals() => const [
     email: 'marcos.vieira@exemplo.com',
     phone: '11983334444',
     contactType: 'COMPRADOR',
+    isBuyer: true,
   ),
   AdministrativeProfessional(
     id: 'pool-adm-3',
@@ -80,6 +83,7 @@ List<AdministrativeProfessional> mockAssociableProfessionals() => const [
     roleTitle: 'Secretária clínica',
     phone: '11985556666',
     contactType: 'PROFESSIONAL',
+    isSecretary: true,
   ),
   AdministrativeProfessional(
     id: 'pool-adm-4',
@@ -87,6 +91,8 @@ List<AdministrativeProfessional> mockAssociableProfessionals() => const [
     roleTitle: 'Diretor financeiro',
     email: 'roberto.dias@exemplo.com',
     contactType: 'DECISOR',
+    isDecisionMaker: true,
+    isPartner: true,
   ),
 ];
 

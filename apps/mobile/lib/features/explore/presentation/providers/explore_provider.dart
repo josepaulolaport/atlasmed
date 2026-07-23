@@ -21,7 +21,11 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinic_vi
 import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
+
+export 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart'
+    show locationServiceProvider;
 
 // ── Helper: parse a single Clinic from a detail endpoint response ──
 api.Clinic _parseClinicDetail(String json) {
@@ -223,11 +227,6 @@ Future<DoctorDetail> _fetchDoctorDetail(String id) async {
   }
 }
 
-// ── Location service provider ───────────────────────────────
-final locationServiceProvider = Provider<LocationService>((ref) {
-  return LocationService(GeolocatorLocationPlatform());
-});
-
 // ── Clinic detail provider ──────────────────────────────────
 final clinicDetailProvider = FutureProvider.family<ClinicDetail, String>((
   ref,
@@ -294,13 +293,18 @@ class ExploreState {
   final bool loadingMore;
   final String activeTab; // 'clinic' | 'doctor'
   final String query;
-  final Map<String, List<String>>
-  filters; // {status: [...], products: [...], specialties: [...]}
+
+  /// Clinic: `status` (single commercialStatus), `products` (product UUIDs).
+  /// Doctor: `specialties`.
+  final Map<String, List<String>> filters;
   final String sort;
   final int visibleCount;
-  final DeviceLocation? proximityOrigin;
-  final LocationFailure? proximityFailure;
-  final bool requestingProximity;
+
+  /// From [locationSessionProvider] — always set once past the hard gate.
+  final DeviceLocation? origin;
+
+  /// Clinics only; null = no radius limit.
+  final double? radiusKm;
 
   const ExploreState({
     this.clinics = const [],
@@ -312,9 +316,8 @@ class ExploreState {
     this.filters = const {},
     this.sort = 'distance',
     this.visibleCount = 15,
-    this.proximityOrigin,
-    this.proximityFailure,
-    this.requestingProximity = false,
+    this.origin,
+    this.radiusKm,
   });
 
   ExploreState copyWith({
@@ -327,11 +330,10 @@ class ExploreState {
     Map<String, List<String>>? filters,
     String? sort,
     int? visibleCount,
-    DeviceLocation? proximityOrigin,
-    LocationFailure? proximityFailure,
-    bool? requestingProximity,
-    bool clearProximityOrigin = false,
-    bool clearProximityFailure = false,
+    DeviceLocation? origin,
+    double? radiusKm,
+    bool clearOrigin = false,
+    bool clearRadiusKm = false,
     bool resetVisible = false,
   }) {
     return ExploreState(
@@ -344,61 +346,58 @@ class ExploreState {
       filters: filters ?? this.filters,
       sort: sort ?? this.sort,
       visibleCount: resetVisible ? 15 : (visibleCount ?? this.visibleCount),
-      proximityOrigin: clearProximityOrigin
-          ? null
-          : (proximityOrigin ?? this.proximityOrigin),
-      proximityFailure: clearProximityFailure
-          ? null
-          : (proximityFailure ?? this.proximityFailure),
-      requestingProximity: requestingProximity ?? this.requestingProximity,
+      origin: clearOrigin ? null : (origin ?? this.origin),
+      radiusKm: clearRadiusKm ? null : (radiusKm ?? this.radiusKm),
     );
   }
 
-  // ── Computed properties ───────────────────────────────────
+  static int _compareNullableDistance(double? a, double? b) {
+    if (a == null && b == null) return 0;
+    if (a == null) return 1;
+    if (b == null) return -1;
+    return a.compareTo(b);
+  }
 
-  /// Clinic list with client-side sort only.
-  /// Search / status / products come from the API (Meilisearch when `query`
-  /// is non-empty); do not re-filter locally or results are capped to the
-  /// already-loaded page.
+  /// Clinic list with client-side sort only (API already distance-orders when
+  /// coords + sort=distance are sent).
   List<Clinic> get filteredClinics {
     var list = List<Clinic>.from(clinics);
 
-    // Sort – client-side (API does not support all sort variants)
     switch (sort) {
       case 'name-asc':
         list.sort((a, b) => a.name.compareTo(b.name));
-        break;
       case 'distance':
-        list.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-        break;
+        list.sort(
+          (a, b) => _compareNullableDistance(a.distanceKm, b.distanceKm),
+        );
       case 'oldest-visit':
         list.sort((a, b) {
           final aDays = a.lastVisitDays ?? 999999;
           final bDays = b.lastVisitDays ?? 999999;
           return bDays.compareTo(aDays);
         });
+      default:
         break;
     }
 
     return list;
   }
 
-  /// Doctor list with client-side sort only.
-  /// Search / specialty come from the API (Meilisearch when `query` is
-  /// non-empty); do not re-filter locally.
   List<Doctor> get filteredDoctors {
     var list = List<Doctor>.from(doctors);
 
-    // Sort – client-side
     switch (sort) {
       case 'name-asc':
         list.sort((a, b) => a.name.compareTo(b.name));
-        break;
       case 'distance':
-        list.sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
-        break;
+        list.sort(
+          (a, b) => _compareNullableDistance(a.distanceKm, b.distanceKm),
+        );
       case 'last-contact':
-        list.sort((a, b) => b.distanceKm.compareTo(a.distanceKm));
+        list.sort(
+          (a, b) => _compareNullableDistance(b.distanceKm, a.distanceKm),
+        );
+      default:
         break;
     }
 
@@ -408,9 +407,14 @@ class ExploreState {
 
 // ── Explore notifier ────────────────────────────────────────
 class ExploreNotifier extends StateNotifier<ExploreState> {
-  final LocationService _locationService;
+  final Ref _ref;
 
-  ExploreNotifier(this._locationService) : super(const ExploreState());
+  ExploreNotifier(this._ref) : super(const ExploreState()) {
+    final session = _ref.read(locationSessionProvider);
+    if (session.location != null) {
+      state = state.copyWith(origin: session.location);
+    }
+  }
 
   int _clinicPage = 1;
   int _doctorPage = 1;
@@ -420,6 +424,7 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   int _refreshGeneration = 0;
 
   static const _searchDebounceDuration = Duration(milliseconds: 350);
+  static const meaningfulMoveMeters = 150.0;
 
   @override
   void dispose() {
@@ -427,19 +432,65 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     super.dispose();
   }
 
-  // ── Helpers ───────────────────────────────────────────────
-
   String? _commaJoin(List<String>? values) {
     if (values == null || values.isEmpty) return null;
     return values.join(',');
   }
 
-  // ── Data fetching ─────────────────────────────────────────
+  /// Single commercial status (API accepts one string).
+  String? get _commercialStatus {
+    final list = state.filters['status'];
+    if (list == null || list.isEmpty) return null;
+    return list.first;
+  }
+
+  DeviceLocation? get _origin =>
+      state.origin ?? _ref.read(locationSessionProvider).location;
+
+  void syncOrigin(
+    DeviceLocation location, {
+    bool refetch = true,
+    bool requireMeaningfulMove = false,
+  }) {
+    final previous = state.origin;
+    state = state.copyWith(origin: location, resetVisible: refetch);
+    if (!refetch) return;
+    if (requireMeaningfulMove && previous != null) {
+      final moved = LocationSessionNotifier.distanceMeters(previous, location);
+      if (moved != null && moved < meaningfulMoveMeters) return;
+    }
+    unawaited(_refreshCurrentTab());
+  }
+
+  /// Refresh GPS (soft), then always load the list. Never leave [loading]
+  /// stuck true if GPS hangs or coordinates are unchanged.
+  Future<void> refreshGpsAndList() async {
+    try {
+      await _ref
+          .read(locationSessionProvider.notifier)
+          .revalidate()
+          .timeout(const Duration(seconds: 12));
+    } on Object {
+      // Keep cached origin if soft GPS refresh fails/times out.
+    }
+
+    if (!_ref.read(locationSessionProvider).isUsable) {
+      state = state.copyWith(loading: false);
+      return;
+    }
+
+    final location = _ref.read(locationSessionProvider).location;
+    if (location != null) {
+      state = state.copyWith(origin: location);
+    }
+    await loadData();
+  }
 
   Future<void> loadData() async {
     _searchDebounce?.cancel();
     final generation = ++_refreshGeneration;
-    state = state.copyWith(loading: true, resetVisible: true);
+    final origin = _origin;
+    state = state.copyWith(loading: true, resetVisible: true, origin: origin);
     _clinicPage = 1;
     _doctorPage = 1;
     _clinicHasMore = true;
@@ -454,23 +505,23 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     state = state.copyWith(loading: false);
   }
 
-  /// Fetch a page of clinics from the API with current search/filter/proximity
-  /// params. When [append] is true the results are appended to the existing list.
   Future<void> _fetchClinicsPage({
     int? page,
     bool append = false,
     int? generation,
   }) async {
     final p = page ?? _clinicPage;
+    final origin = _origin;
     final repo = ClinicsRepository(
       page: p,
       limit: 20,
       searchQuery: state.query.isNotEmpty ? state.query : null,
-      latitude: state.proximityOrigin?.latitude,
-      longitude: state.proximityOrigin?.longitude,
-      radiusKm: state.proximityOrigin != null ? defaultProximityRadiusKm : null,
-      commercialStatus: _commaJoin(state.filters['status']),
+      latitude: origin?.latitude,
+      longitude: origin?.longitude,
+      radiusKm: state.radiusKm,
+      commercialStatus: _commercialStatus,
       productIds: _commaJoin(state.filters['products']),
+      sort: origin != null && state.sort == 'distance' ? 'distance' : null,
       resolveOnCreate: false,
     );
     try {
@@ -491,21 +542,21 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     }
   }
 
-  /// Fetch a page of doctors from the API with current search/filter/proximity
-  /// params. When [append] is true the results are appended to the existing list.
   Future<void> _fetchDoctorsPage({
     int? page,
     bool append = false,
     int? generation,
   }) async {
     final p = page ?? _doctorPage;
+    final origin = _origin;
     final repo = DoctorsRepository(
       page: p,
       limit: 20,
       searchQuery: state.query.isNotEmpty ? state.query : null,
-      latitude: state.proximityOrigin?.latitude,
-      longitude: state.proximityOrigin?.longitude,
-      radiusKm: state.proximityOrigin != null ? defaultProximityRadiusKm : null,
+      latitude: origin?.latitude,
+      longitude: origin?.longitude,
+      // Spec: doctors never send radiusKm
+      radiusKm: null,
       specialty: _commaJoin(state.filters['specialties']),
       resolveOnCreate: false,
     );
@@ -527,7 +578,6 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     }
   }
 
-  /// Reload current tab's data from page 1 with the latest params.
   Future<void> _refreshCurrentTab() async {
     final generation = ++_refreshGeneration;
     state = state.copyWith(loading: true);
@@ -540,54 +590,15 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
         await _fetchDoctorsPage(page: 1, generation: generation);
       }
     } catch (_) {
-      // Silently handle API errors during refresh – the existing list stays
-      // visible (or empty if first load).
+      // Keep existing list on transient API errors.
     }
     if (generation != _refreshGeneration) return;
     state = state.copyWith(loading: false);
   }
 
-  // ── Public methods ────────────────────────────────────────
-
-  Future<void> enableProximity() async {
-    state = state.copyWith(
-      requestingProximity: true,
-      clearProximityFailure: true,
-    );
-    final result = await _locationService.requestCurrentLocation();
-
-    switch (result) {
-      case LocationAvailable(:final location):
-        state = state.copyWith(
-          proximityOrigin: location,
-          requestingProximity: false,
-          clearProximityFailure: true,
-          resetVisible: true,
-        );
-        await _refreshCurrentTab();
-      case LocationUnavailable(:final failure):
-        state = state.copyWith(
-          requestingProximity: false,
-          proximityFailure: failure,
-          clearProximityOrigin: true,
-        );
-    }
-  }
-
-  void disableProximity() {
-    state = state.copyWith(
-      clearProximityOrigin: true,
-      clearProximityFailure: true,
-      requestingProximity: false,
-      resetVisible: true,
-    );
-    unawaited(_refreshCurrentTab());
-  }
-
   void setTab(String tab) {
     if (tab == state.activeTab) return;
     state = state.copyWith(activeTab: tab, resetVisible: true);
-    // Apply current search/filters to the newly visible list.
     unawaited(_refreshCurrentTab());
   }
 
@@ -599,13 +610,24 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
     });
   }
 
-  void setFilters(Map<String, List<String>> filters) {
-    state = state.copyWith(filters: filters, resetVisible: true);
+  /// Apply clinic/doctor filters and optional clinic radius (null = no limit).
+  void applyFilters({
+    required Map<String, List<String>> filters,
+    double? radiusKm,
+    bool clearRadius = false,
+  }) {
+    state = state.copyWith(
+      filters: filters,
+      radiusKm: radiusKm,
+      clearRadiusKm: clearRadius,
+      resetVisible: true,
+    );
     unawaited(_refreshCurrentTab());
   }
 
   void setSort(String sort) {
     state = state.copyWith(sort: sort, resetVisible: true);
+    unawaited(_refreshCurrentTab());
   }
 
   Future<void> loadMore() async {
@@ -639,6 +661,13 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
 final exploreProvider = StateNotifierProvider<ExploreNotifier, ExploreState>((
   ref,
 ) {
-  final locationService = ref.watch(locationServiceProvider);
-  return ExploreNotifier(locationService);
+  final notifier = ExploreNotifier(ref);
+  ref.listen<LocationSessionState>(locationSessionProvider, (previous, next) {
+    final location = next.location;
+    if (location == null) return;
+    if (previous?.location == location) return;
+    // Background GPS watch: only refetch list after a meaningful move.
+    notifier.syncOrigin(location, requireMeaningfulMove: true);
+  });
+  return notifier;
 });

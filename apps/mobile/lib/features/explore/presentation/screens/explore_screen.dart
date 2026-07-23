@@ -1,12 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
+import 'package:atlasmed_mobile_app/features/explore/data/models/clinic.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/models/distance_bands.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
-import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
@@ -17,6 +18,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skelet
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
+import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
   const ExploreScreen({super.key});
@@ -27,13 +29,26 @@ class ExploreScreen extends ConsumerStatefulWidget {
 
 class _ExploreScreenState extends ConsumerState<ExploreScreen> {
   bool _sortOpen = false;
+  Timer? _gpsTimer;
+
+  static const _gpsInterval = Duration(seconds: 90);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(exploreProvider.notifier).loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await ref.read(exploreProvider.notifier).refreshGpsAndList();
+      _gpsTimer = Timer.periodic(_gpsInterval, (_) {
+        if (!mounted) return;
+        ref.read(exploreProvider.notifier).refreshGpsAndList();
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _gpsTimer?.cancel();
+    super.dispose();
   }
 
   @override
@@ -47,19 +62,18 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         : state.filteredDoctors;
     final displayedList = filteredList.take(state.visibleCount).toList();
     final hasMore = state.visibleCount < filteredList.length;
+    final banded = isClinic
+        ? withDistanceBandHeaders<Clinic>(
+            displayedList.cast<Clinic>(),
+            (c) => c.distanceKm,
+          )
+        : withDistanceBandHeaders<Doctor>(
+            displayedList.cast<Doctor>(),
+            (d) => d.distanceKm,
+          );
 
-    // Build filter chips for active filters
     final filterChips = buildFilterChips(state, notifier, isClinic);
     final filterCount = filterChips.length;
-
-    ref.listen<ExploreState>(exploreProvider, (previous, next) {
-      final failure = next.proximityFailure;
-      if (failure != null && failure != previous?.proximityFailure) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_proximityFailureMessage(failure))),
-        );
-      }
-    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -75,7 +89,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // ── Main content ──────────────────────────────
             Column(
               children: [
                 const AtlasTopBar(page: 'Explorar'),
@@ -109,12 +122,20 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                           kind: state.activeTab,
                           onCreate: () => _openCreate(isClinic),
                         )
-                      : _buildList(displayedList, hasMore, isClinic, notifier),
+                      : RefreshIndicator(
+                          onRefresh: () => ref
+                              .read(exploreProvider.notifier)
+                              .refreshGpsAndList(),
+                          child: _buildBandedList(
+                            banded,
+                            hasMore,
+                            isClinic,
+                            notifier,
+                          ),
+                        ),
                 ),
               ],
             ),
-
-            // ── Sort sheet overlay ────────────────────────
             SortSheet(
               open: _sortOpen,
               onClose: () => setState(() => _sortOpen = false),
@@ -136,18 +157,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  String _proximityFailureMessage(LocationFailure failure) {
-    return switch (failure) {
-      LocationFailure.serviceDisabled =>
-        'Ative os serviços de localização para usar este filtro.',
-      LocationFailure.denied =>
-        'Permita o acesso à localização para usar este filtro.',
-      LocationFailure.deniedForever =>
-        'Ative a permissão de localização nos ajustes do dispositivo.',
-      LocationFailure.unavailable =>
-        'Não foi possível obter sua localização. Tente novamente.',
-    };
-  }
 
   Future<void> _showFilterSheet(
     ExploreState state,
@@ -159,17 +168,13 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
       builder: (context) => FilterSheet(
         kind: state.activeTab,
         filters: state.filters,
-        proximityEnabled: state.proximityOrigin != null,
-        requestingProximity: state.requestingProximity,
-        onProximityToggle: () {
-          if (state.proximityOrigin != null) {
-            notifier.disableProximity();
-          } else {
-            notifier.enableProximity();
-          }
-        },
-        onApply: (filters) {
-          notifier.setFilters(filters);
+        radiusKm: state.radiusKm,
+        onApply: (filters, radiusKm) {
+          notifier.applyFilters(
+            filters: filters,
+            radiusKm: radiusKm,
+            clearRadius: radiusKm == null,
+          );
           Navigator.pop(context);
         },
       ),
@@ -213,8 +218,8 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-  Widget _buildList(
-    List<dynamic> displayedList,
+  Widget _buildBandedList(
+    List<BandedListEntry<dynamic>> banded,
     bool hasMore,
     bool isClinic,
     ExploreNotifier notifier,
@@ -230,10 +235,12 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
         return false;
       },
       child: ListView.builder(
-        physics: const BouncingScrollPhysics(),
-        itemCount: displayedList.length + (hasMore ? 1 : 0),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: BouncingScrollPhysics(),
+        ),
+        itemCount: banded.length + (hasMore ? 1 : 0),
         itemBuilder: (context, index) {
-          if (index >= displayedList.length) {
+          if (index >= banded.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: Center(
@@ -249,18 +256,34 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             );
           }
 
-          if (isClinic) {
-            final clinic = displayedList[index] as Clinic;
-            return ClinicRow(
-              clinic: clinic,
-              onTap: () => context.push('/workspace/clinic/${clinic.id}'),
-            );
-          } else {
-            final doctor = displayedList[index] as Doctor;
-            return DoctorRow(
-              doctor: doctor,
-              onTap: () => context.push('/workspace/doctor/${doctor.id}'),
-            );
+          final entry = banded[index];
+          switch (entry) {
+            case BandHeader(:final band):
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+                child: Text(
+                  band.label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4,
+                    color: Color(0xFF6b7280),
+                  ),
+                ),
+              );
+            case BandItem(:final item):
+              if (isClinic) {
+                final clinic = item as Clinic;
+                return ClinicRow(
+                  clinic: clinic,
+                  onTap: () => context.push('/workspace/clinic/${clinic.id}'),
+                );
+              }
+              final doctor = item as Doctor;
+              return DoctorRow(
+                doctor: doctor,
+                onTap: () => context.push('/workspace/doctor/${doctor.id}'),
+              );
           }
         },
       ),
@@ -276,33 +299,27 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
 
     if (isClinic) {
       for (final key in (state.filters['status'] ?? [])) {
-        final status = ClinicStatus.values.firstWhere(
-          (s) => s.name == key,
-          orElse: () => ClinicStatus.active,
-        );
         chips.add(
           FilterChipData(
-            label: status.label,
+            label: CommercialStatusFilter.label(key),
             onRemove: () {
               final next = Map<String, List<String>>.from(state.filters);
-              next['status'] = (next['status'] ?? [])
-                  .where((x) => x != key)
-                  .toList();
-              notifier.setFilters(next);
+              next['status'] = [];
+              notifier.applyFilters(
+                filters: next,
+                radiusKm: state.radiusKm,
+                clearRadius: state.radiusKm == null,
+              );
             },
           ),
         );
       }
-      for (final p in (state.filters['products'] ?? [])) {
+      if (state.radiusKm != null) {
         chips.add(
           FilterChipData(
-            label: p,
+            label: '${state.radiusKm!.toInt()} km',
             onRemove: () {
-              final next = Map<String, List<String>>.from(state.filters);
-              next['products'] = (next['products'] ?? [])
-                  .where((x) => x != p)
-                  .toList();
-              notifier.setFilters(next);
+              notifier.applyFilters(filters: state.filters, clearRadius: true);
             },
           ),
         );
@@ -317,7 +334,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
               next['specialties'] = (next['specialties'] ?? [])
                   .where((x) => x != s)
                   .toList();
-              notifier.setFilters(next);
+              notifier.applyFilters(filters: next, clearRadius: true);
             },
           ),
         );

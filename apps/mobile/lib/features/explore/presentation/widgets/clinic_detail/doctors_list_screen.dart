@@ -7,6 +7,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/associate_doctors_sheet.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_filter_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/doctor_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/empty_state.dart';
@@ -116,7 +117,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
   Map<String, List<String>> get _filterSections => {
     if (_specialtyOptions.isNotEmpty) 'Especialidade': _specialtyOptions,
-    'Papel': const ['Prescritor', 'Decisor', 'Comprador'],
+    'Papel': const ['Prescritor', 'Decisor', 'Comprador', 'Sócio'],
   };
 
   int get _filterCount =>
@@ -149,6 +150,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
         if (roles.contains('Prescritor') && d.isPrescriber) return true;
         if (roles.contains('Decisor') && d.isDecisionMaker) return true;
         if (roles.contains('Comprador') && d.isBuyer) return true;
+        if (roles.contains('Sócio') && d.isPartner) return true;
         return false;
       }).toList();
     }
@@ -272,8 +274,15 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                               distanceKm: 0,
                               isPriority: d.isDecisionMaker || d.isPrescriber,
                             ),
-                            onTap: () =>
-                                context.push('/workspace/doctor/${d.id}'),
+                            onEditRoles: () => _editRoles(d),
+                            onTap: () {
+                              final facilityId = widget.facilityId;
+                              final uri =
+                                  facilityId == null || facilityId.isEmpty
+                                  ? '/workspace/doctor/${d.id}'
+                                  : '/workspace/doctor/${d.id}?facilityId=$facilityId';
+                              context.push(uri);
+                            },
                           );
                         },
                       ),
@@ -320,8 +329,35 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
     }
     if (d.isPrescriber) badges.add('Prescritor');
     if (d.isBuyer) badges.add('Comprador');
-    if (d.isDecisionMaker) badges.add('Decisor');
+    if (d.isDecisionMaker &&
+        (d.roleBadge == null || d.roleBadge!.trim().isEmpty)) {
+      badges.add('Decisor');
+    }
+    if (d.isPartner) badges.add('Sócio');
     return badges;
+  }
+
+  Future<void> _editRoles(FacilityCrmDoctor doctor) async {
+    final updated = await showEditDoctorRolesSheet(
+      context,
+      doctor: doctor,
+      facilityId: widget.facilityId,
+    );
+    if (updated == null || !mounted) return;
+
+    setState(() {
+      _doctors = [
+        for (final d in _doctors)
+          if (d.id == updated.id) updated else d,
+      ];
+    });
+
+    final facilityId = widget.facilityId;
+    if (facilityId != null && facilityId.isNotEmpty) {
+      ref
+          .read(facilityDoctorsRosterProvider(facilityId).notifier)
+          .replaceWhere((d) => d.id == updated.id, (_) => updated);
+    }
   }
 
   Future<void> _openAssociate() async {

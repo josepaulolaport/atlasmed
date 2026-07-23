@@ -86,6 +86,25 @@ const listProfessionalsRoute = new Elysia()
     }
   );
 
+/** Static path — must register before `/professionals/:id`. */
+const listProfessionalSpecialtiesRoute = new Elysia()
+  .use(auth)
+  .use(requirePermission("read", "PROFESSIONAL"))
+  .get(
+    "/professionals/specialties",
+    async ({ getScope }) => {
+      const scope = await getScope();
+      return doctorUseCases.listProfessionalSpecialties().execute({ scope });
+    },
+    {
+      detail: {
+        summary: "List distinct professional specialty labels visible in the caller's scope",
+        tags: ["Professionals"],
+        security: [{ bearerAuth: [] }],
+      },
+    }
+  );
+
 const createDoctorRoute = new Elysia()
   .use(auth)
   .use(requirePermission("create", "PROFESSIONAL"))
@@ -268,6 +287,7 @@ const deleteDoctorRoute = new Elysia()
 
 export const professionalsRoute = new Elysia()
   .use(listProfessionalsRoute)
+  .use(listProfessionalSpecialtiesRoute)
   .use(createDoctorRoute)
   .use(listProfessionalNotesRoute)
   .use(createProfessionalNoteRoute)
