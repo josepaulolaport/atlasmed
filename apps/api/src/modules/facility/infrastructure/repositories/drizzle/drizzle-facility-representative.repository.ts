@@ -5,9 +5,23 @@ import type {
   FacilityRepresentativeListPage,
   FacilityRepresentativeRecord,
   FacilityRepresentativeRepository,
+  FacilityRepresentativeRoleFlags,
+  FacilityRepresentativeRolePatch,
 } from "../../../application/interfaces/facility-representative.repository.interface";
+import { contactTypeFromRoles } from "../../../application/interfaces/facility-representative.repository.interface";
 
 type RepresentativeRow = typeof facilityRepresentatives.$inferSelect;
+
+function mapRoles(row: RepresentativeRow): FacilityRepresentativeRoleFlags {
+  return {
+    isPartner: row.isPartner,
+    isAdministrator: row.isAdministrator,
+    isDecisionMaker: row.isDecisionMaker,
+    isBuyer: row.isBuyer,
+    isBiller: row.isBiller,
+    isSecretary: row.isSecretary,
+  };
+}
 
 function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord {
   return {
@@ -19,6 +33,7 @@ function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord
     phone: row.phone,
     taxId: row.taxId,
     contactType: row.contactType,
+    ...mapRoles(row),
     sourceProvider: row.sourceProvider,
     externalSourceKey: row.externalSourceKey,
     sourceActive: row.sourceActive,
@@ -27,6 +42,20 @@ function mapRepresentative(row: RepresentativeRow): FacilityRepresentativeRecord
     endedAt: row.endedAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+function resolveRoles(
+  patch: FacilityRepresentativeRolePatch | undefined,
+  existing?: FacilityRepresentativeRoleFlags
+): FacilityRepresentativeRoleFlags {
+  return {
+    isPartner: patch?.isPartner ?? existing?.isPartner ?? false,
+    isAdministrator: patch?.isAdministrator ?? existing?.isAdministrator ?? false,
+    isDecisionMaker: patch?.isDecisionMaker ?? existing?.isDecisionMaker ?? false,
+    isBuyer: patch?.isBuyer ?? existing?.isBuyer ?? false,
+    isBiller: patch?.isBiller ?? existing?.isBiller ?? false,
+    isSecretary: patch?.isSecretary ?? existing?.isSecretary ?? false,
   };
 }
 
@@ -44,6 +73,25 @@ export class DrizzleFacilityRepresentativeRepository
         and(
           eq(facilityRepresentatives.facilityId, facilityId),
           eq(facilityRepresentatives.externalSourceKey, externalKey),
+          isNull(facilityRepresentatives.endedAt)
+        )
+      )
+      .limit(1);
+
+    return representative ? mapRepresentative(representative) : null;
+  }
+
+  async findByIdForFacility(
+    facilityId: string,
+    representativeId: string
+  ): Promise<FacilityRepresentativeRecord | null> {
+    const [representative] = await db
+      .select()
+      .from(facilityRepresentatives)
+      .where(
+        and(
+          eq(facilityRepresentatives.facilityId, facilityId),
+          eq(facilityRepresentatives.id, representativeId),
           isNull(facilityRepresentatives.endedAt)
         )
       )
@@ -176,9 +224,12 @@ export class DrizzleFacilityRepresentativeRepository
     email?: string | null;
     phone?: string | null;
     contactType?: "PROFESSIONAL" | "DECISOR" | "COMPRADOR";
+    roles?: FacilityRepresentativeRolePatch;
     confirmedByUserId: string;
   }): Promise<FacilityRepresentativeRecord> {
     const now = new Date();
+    const roles = resolveRoles(params.roles);
+    const contactType = params.contactType ?? contactTypeFromRoles(roles);
     const [representative] = await db
       .insert(facilityRepresentatives)
       .values({
@@ -187,7 +238,8 @@ export class DrizzleFacilityRepresentativeRepository
         roleTitle: params.roleTitle ?? null,
         email: params.email ?? null,
         phone: params.phone ?? null,
-        contactType: params.contactType ?? "PROFESSIONAL",
+        contactType,
+        ...roles,
         sourceActive: false,
         sourceProvider: null,
         externalSourceKey: null,
@@ -198,6 +250,56 @@ export class DrizzleFacilityRepresentativeRepository
       .returning();
 
     return mapRepresentative(representative!);
+  }
+
+  async updateManual(params: {
+    facilityId: string;
+    representativeId: string;
+    representativeName?: string;
+    roleTitle?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    contactType?: "PROFESSIONAL" | "DECISOR" | "COMPRADOR";
+    roles?: FacilityRepresentativeRolePatch;
+  }): Promise<FacilityRepresentativeRecord | null> {
+    const existing = await this.findByIdForFacility(
+      params.facilityId,
+      params.representativeId
+    );
+    if (!existing) return null;
+
+    const roles =
+      params.roles !== undefined
+        ? resolveRoles(params.roles, existing)
+        : mapRolesFromRecord(existing);
+    const contactType =
+      params.contactType ??
+      (params.roles !== undefined ? contactTypeFromRoles(roles) : existing.contactType);
+
+    const [representative] = await db
+      .update(facilityRepresentatives)
+      .set({
+        ...(params.representativeName !== undefined
+          ? { representativeName: params.representativeName }
+          : {}),
+        ...(params.roleTitle !== undefined ? { roleTitle: params.roleTitle } : {}),
+        ...(params.email !== undefined ? { email: params.email } : {}),
+        ...(params.phone !== undefined ? { phone: params.phone } : {}),
+        contactType,
+        ...roles,
+        manuallyEditedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(facilityRepresentatives.facilityId, params.facilityId),
+          eq(facilityRepresentatives.id, params.representativeId),
+          isNull(facilityRepresentatives.endedAt)
+        )
+      )
+      .returning();
+
+    return representative ? mapRepresentative(representative) : null;
   }
 
   async endSourceRepresentative(params: {
@@ -232,4 +334,17 @@ export class DrizzleFacilityRepresentativeRepository
 
     return mapRepresentative(representative!);
   }
+}
+
+function mapRolesFromRecord(
+  row: FacilityRepresentativeRecord
+): FacilityRepresentativeRoleFlags {
+  return {
+    isPartner: row.isPartner,
+    isAdministrator: row.isAdministrator,
+    isDecisionMaker: row.isDecisionMaker,
+    isBuyer: row.isBuyer,
+    isBiller: row.isBiller,
+    isSecretary: row.isSecretary,
+  };
 }

@@ -9,7 +9,7 @@ class Doctor {
   final String specialty;
   final String primaryClinic;
   final String crm;
-  final double distanceKm;
+  final double? distanceKm;
   final bool isPriority;
 
   const Doctor({
@@ -42,7 +42,7 @@ class Doctor {
       specialty: api.specialty ?? '',
       primaryClinic: '',
       crm: api.crm,
-      distanceKm: api.distanceKm ?? 0,
+      distanceKm: api.distanceKm,
       isPriority: false,
     );
   }

@@ -1,11 +1,12 @@
 import type { FacilityRepresentativeRecord } from "../interfaces/facility-representative.repository.interface";
 
 /**
- * Application → HTTP DTO for CRM facility representatives (F-002).
- * Relationship stars are user×professional only — not returned here.
+ * Application → HTTP DTO for CRM facility representatives.
+ * `relationshipLevel` is the authenticated user's score (1–10), when provided.
  */
 export function serializeFacilityRepresentative(
-  row: FacilityRepresentativeRecord
+  row: FacilityRepresentativeRecord,
+  relationshipLevel?: number | null
 ) {
   return {
     id: row.id,
@@ -16,6 +17,13 @@ export function serializeFacilityRepresentative(
     phone: row.phone,
     taxId: row.taxId,
     contactType: row.contactType,
+    isPartner: row.isPartner,
+    isAdministrator: row.isAdministrator,
+    isDecisionMaker: row.isDecisionMaker,
+    isBuyer: row.isBuyer,
+    isBiller: row.isBiller,
+    isSecretary: row.isSecretary,
+    relationshipLevel: relationshipLevel ?? undefined,
     sourceProvider: row.sourceProvider,
     confirmedAt: row.confirmedAt?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),

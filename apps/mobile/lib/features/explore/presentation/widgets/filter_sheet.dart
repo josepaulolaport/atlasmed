@@ -1,38 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:atlasmed_mobile_app/features/explore/data/models/commercial_status.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/clinics_repository.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/providers/api_repository_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/bottom_sheet.dart';
 
-class FilterSheet extends StatefulWidget {
+class FilterSheet extends ConsumerStatefulWidget {
   final String kind;
   final Map<String, List<String>> filters;
-  final bool proximityEnabled;
-  final bool requestingProximity;
-  final VoidCallback onProximityToggle;
-  final ValueChanged<Map<String, List<String>>> onApply;
+  final double? radiusKm;
+  final void Function(Map<String, List<String>> filters, double? radiusKm)
+  onApply;
 
   const FilterSheet({
     super.key,
     required this.kind,
     required this.filters,
-    required this.proximityEnabled,
-    required this.requestingProximity,
-    required this.onProximityToggle,
+    required this.radiusKm,
     required this.onApply,
   });
 
   @override
-  State<FilterSheet> createState() => _FilterSheetState();
+  ConsumerState<FilterSheet> createState() => _FilterSheetState();
 }
 
-class _FilterSheetState extends State<FilterSheet> {
+class _FilterSheetState extends ConsumerState<FilterSheet> {
   late Map<String, List<String>> _local;
+  double? _radiusKm;
 
   @override
   void initState() {
     super.initState();
-    _local = Map.from(widget.filters);
+    _local = {
+      for (final e in widget.filters.entries) e.key: List<String>.from(e.value),
+    };
+    // Produtos filter removed from Explorar v1 UI.
+    _local.remove('products');
+    _radiusKm = widget.radiusKm;
   }
 
-  void _toggle(String key, String value) {
+  void _toggleMulti(String key, String value) {
     setState(() {
       final list = List<String>.from(_local[key] ?? []);
       if (list.contains(value)) {
@@ -44,10 +52,23 @@ class _FilterSheetState extends State<FilterSheet> {
     });
   }
 
-  int get _count =>
-      (_local['status']?.length ?? 0) +
-      (_local['products']?.length ?? 0) +
-      (_local['specialties']?.length ?? 0);
+  void _selectSingle(String key, String value) {
+    setState(() {
+      final current = _local[key] ?? const <String>[];
+      if (current.length == 1 && current.first == value) {
+        _local[key] = [];
+      } else {
+        _local[key] = [value];
+      }
+    });
+  }
+
+  int get _count {
+    var n =
+        (_local['status']?.length ?? 0) + (_local['specialties']?.length ?? 0);
+    if (widget.kind == 'clinic' && _radiusKm != null) n += 1;
+    return n;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,14 +77,24 @@ class _FilterSheetState extends State<FilterSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ProximityFilter(
-            enabled: widget.proximityEnabled,
-            isLoading: widget.requestingProximity,
-            onChanged: widget.onProximityToggle,
-          ),
-          widget.kind == 'clinic'
-              ? _ClinicFilters(local: _local, onToggle: _toggle)
-              : _DoctorFilters(local: _local, onToggle: _toggle),
+          if (widget.kind == 'clinic') ...[
+            _ClinicFilters(
+              local: _local,
+              radiusKm: _radiusKm,
+              onSelectStatus: (v) => _selectSingle('status', v),
+              onSelectRadius: (km) {
+                setState(() {
+                  _radiusKm = _radiusKm == km ? null : km;
+                });
+              },
+            ),
+          ] else
+            _DoctorFilters(
+              local: _local,
+              specialtiesAsync: ref.watch(professionalSpecialtiesProvider),
+              onToggle: (v) => _toggleMulti('specialties', v),
+              onRetry: () => ref.invalidate(professionalSpecialtiesProvider),
+            ),
           _buildButtons(),
         ],
       ),
@@ -81,7 +112,10 @@ class _FilterSheetState extends State<FilterSheet> {
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => _local = {}),
+              onTap: () => setState(() {
+                _local = {};
+                _radiusKm = null;
+              }),
               child: Container(
                 height: 46,
                 decoration: BoxDecoration(
@@ -106,7 +140,11 @@ class _FilterSheetState extends State<FilterSheet> {
           Expanded(
             flex: 2,
             child: GestureDetector(
-              onTap: () => widget.onApply(_local),
+              onTap: () {
+                final next = Map<String, List<String>>.from(_local)
+                  ..remove('products');
+                widget.onApply(next, _radiusKm);
+              },
               child: Container(
                 height: 46,
                 decoration: BoxDecoration(
@@ -139,72 +177,18 @@ class _FilterSheetState extends State<FilterSheet> {
   }
 }
 
-class _ProximityFilter extends StatelessWidget {
-  final bool enabled;
-  final bool isLoading;
-  final VoidCallback onChanged;
-
-  const _ProximityFilter({
-    required this.enabled,
-    required this.isLoading,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 16, 12),
-      child: Row(
-        children: [
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Usar minha localização',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0f1729),
-                  ),
-                ),
-                SizedBox(height: 2),
-                Text(
-                  'Preparar filtro por proximidade',
-                  style: TextStyle(fontSize: 12, color: Color(0xFF6b7280)),
-                ),
-              ],
-            ),
-          ),
-          if (isLoading)
-            const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else
-            Switch(value: enabled, onChanged: (_) => onChanged()),
-        ],
-      ),
-    );
-  }
-}
-
 class _ClinicFilters extends StatelessWidget {
   final Map<String, List<String>> local;
-  final void Function(String key, String value) onToggle;
+  final double? radiusKm;
+  final ValueChanged<String> onSelectStatus;
+  final ValueChanged<double> onSelectRadius;
 
-  const _ClinicFilters({required this.local, required this.onToggle});
-
-  static const _statuses = [
-    ('ativa', 'Ativa', Color(0xFF16a373)),
-    ('negociacao', 'Em negociação', Color(0xFFc6861b)),
-    ('inativa', 'Inativa', Color(0xFF6b7280)),
-    ('nunca', 'Nunca comprou', Color(0xFF3b82f6)),
-    ('rejeicao', 'Rejeição', Color(0xFFb84545)),
-  ];
-
-  static const _products = ['AtlasGel', 'AtlasCaps', 'AtlasSpray', 'AtlasDerm'];
+  const _ClinicFilters({
+    required this.local,
+    required this.radiusKm,
+    required this.onSelectStatus,
+    required this.onSelectRadius,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -212,35 +196,36 @@ class _ClinicFilters extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'Status'),
+        const _SectionHeader(title: 'Status'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _statuses.map((s) {
-              final on = (local['status'] ?? []).contains(s.$1);
+            children: CommercialStatusFilter.values.map((value) {
+              final on = (local['status'] ?? []).contains(value);
+              final color = CommercialStatusFilter.color(value);
               return _ToggleChip(
-                label: s.$2,
-                dotColor: s.$3,
+                label: CommercialStatusFilter.label(value),
+                dotColor: color,
                 selected: on,
-                onTap: () => onToggle('status', s.$1),
+                onTap: () => onSelectStatus(value),
               );
             }).toList(),
           ),
         ),
-        _SectionHeader(title: 'Produto em uso'),
+        const _SectionHeader(title: 'Distância'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
           child: Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: _products.map((p) {
-              final on = (local['products'] ?? []).contains(p);
+            children: exploreRadiusKmOptions.map((km) {
+              final selected = radiusKm == km;
               return _SimpleChip(
-                label: p,
-                selected: on,
-                onTap: () => onToggle('products', p),
+                label: '${km.toInt()} km',
+                selected: selected,
+                onTap: () => onSelectRadius(km),
               );
             }).toList(),
           ),
@@ -252,40 +237,81 @@ class _ClinicFilters extends StatelessWidget {
 
 class _DoctorFilters extends StatelessWidget {
   final Map<String, List<String>> local;
-  final void Function(String key, String value) onToggle;
+  final AsyncValue<List<String>> specialtiesAsync;
+  final ValueChanged<String> onToggle;
+  final VoidCallback onRetry;
 
-  const _DoctorFilters({required this.local, required this.onToggle});
-
-  static const _specialties = [
-    'Cardiologia',
-    'Ortopedia',
-    'Dermatologia',
-    'Pediatria',
-    'Ginecologia',
-    'Neurologia',
-    'Endocrinologia',
-  ];
+  const _DoctorFilters({
+    required this.local,
+    required this.specialtiesAsync,
+    required this.onToggle,
+    required this.onRetry,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final selected = local['specialties'] ?? const <String>[];
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionHeader(title: 'Especialidade'),
+        const _SectionHeader(title: 'Especialidade'),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _specialties.map((s) {
-              final on = (local['specialties'] ?? []).contains(s);
-              return _SimpleChip(
-                label: s,
-                selected: on,
-                onTap: () => onToggle('specialties', s),
+          child: specialtiesAsync.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Carregando especialidades…',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+              ),
+            ),
+            error: (_, _) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Não foi possível carregar as especialidades.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: onRetry,
+                  child: const Text(
+                    'Tentar novamente',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2563eb),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            data: (specialties) {
+              final options = <String>{...specialties, ...selected}.toList()
+                ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+              if (options.isEmpty) {
+                return const Text(
+                  'Nenhuma especialidade disponível no seu escopo.',
+                  style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+                );
+              }
+
+              return Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: options.map((s) {
+                  final on = selected.contains(s);
+                  return _SimpleChip(
+                    label: s,
+                    selected: on,
+                    onTap: () => onToggle(s),
+                  );
+                }).toList(),
               );
-            }).toList(),
+            },
           ),
         ),
       ],

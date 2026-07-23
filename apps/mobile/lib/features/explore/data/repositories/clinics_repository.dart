@@ -4,8 +4,8 @@ import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 
-/// Default radius (in kilometres) when proximity filtering is enabled.
-const double defaultProximityRadiusKm = 50;
+/// Radius chip options for Explorar clinics (km). Clear = no `radiusKm`.
+const List<double> exploreRadiusKmOptions = [5, 10, 25, 50, 100];
 
 class ClinicsRepository extends Repository<PaginatedClinics>
     with SessionEnvironmentMixin<PaginatedClinics> {
@@ -19,6 +19,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     this.radiusKm,
     this.commercialStatus,
     this.productIds,
+    this.sort,
     super.resolveOnCreate = false,
   }) : super(
          endpoint: buildEndpoint(
@@ -36,6 +37,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
                'commercialStatus': commercialStatus.trim(),
              if (productIds != null && productIds.trim().isNotEmpty)
                'productIds': productIds.trim(),
+             if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
            },
          ),
          name: 'ClinicsRepository',
@@ -49,6 +51,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
   final double? radiusKm;
   final String? commercialStatus;
   final String? productIds;
+  final String? sort;
 
   /// Build the endpoint URI for this repository.
   /// Calls the shared [buildEndpoint] from [query_builder.dart].
@@ -62,6 +65,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
     double? radiusKm,
     String? commercialStatus,
     String? productIds,
+    String? sort,
   }) {
     return buildEndpoint(
       baseUrl: baseUrl,
@@ -78,6 +82,7 @@ class ClinicsRepository extends Repository<PaginatedClinics>
           'commercialStatus': commercialStatus.trim(),
         if (productIds != null && productIds.trim().isNotEmpty)
           'productIds': productIds.trim(),
+        if (sort != null && sort.trim().isNotEmpty) 'sort': sort.trim(),
       },
     );
   }

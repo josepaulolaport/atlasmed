@@ -1,6 +1,5 @@
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/clinic_api_type.dart'
     as api;
-import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 
 // ── Clinic model ─────────────────────────────────────────────
 class Clinic {
@@ -8,8 +7,10 @@ class Clinic {
   final String name;
   final String city;
   final String neighborhood;
-  final double distanceKm;
-  final ClinicStatus status;
+  final double? distanceKm;
+
+  /// API `commercialStatus` (`REGISTERED` / `ACTIVE` / `SUSPENDED` / `INACTIVE`).
+  final String? commercialStatus;
   final int? lastVisitDays;
   final int doctorCount;
   final bool isPriority;
@@ -21,7 +22,7 @@ class Clinic {
     required this.city,
     required this.neighborhood,
     required this.distanceKm,
-    required this.status,
+    required this.commercialStatus,
     required this.lastVisitDays,
     required this.doctorCount,
     required this.isPriority,
@@ -47,13 +48,14 @@ class Clinic {
       if (clinicDto.city?.trim().isNotEmpty ?? false) clinicDto.city!.trim(),
       if (clinicDto.state?.trim().isNotEmpty ?? false) clinicDto.state!.trim(),
     ];
+    final status = clinicDto.commercialStatus?.trim();
     return Clinic(
       id: clinicDto.id,
       name: clinicDto.name,
       city: cityParts.isNotEmpty ? cityParts.join(', ') : '',
       neighborhood: clinicDto.neighborhood ?? '',
-      distanceKm: clinicDto.distanceKm ?? 0,
-      status: ClinicStatus.active,
+      distanceKm: clinicDto.distanceKm,
+      commercialStatus: (status == null || status.isEmpty) ? null : status,
       lastVisitDays: null,
       doctorCount: clinicDto.professionalCount,
       isPriority: false,

@@ -464,6 +464,7 @@ class _ClinicDetailContent extends ConsumerWidget {
           ClinicAdminProfessionalsSection(
             professionals: adminsRoster.items,
             facilityName: detail.name,
+            facilityId: clinicId,
             hasMore: adminsRoster.hasMore,
             onLoadMore: () => ref
                 .read(facilityAdministratorsRosterProvider(clinicId).notifier)
@@ -505,6 +506,7 @@ class _ClinicDetailContent extends ConsumerWidget {
         else
           ClinicCrmDoctorsSection(
             doctors: doctorsRoster.items,
+            facilityId: clinicId,
             hasMore: doctorsRoster.hasMore,
             onLoadMore: () => ref
                 .read(facilityDoctorsRosterProvider(clinicId).notifier)
@@ -516,6 +518,11 @@ class _ClinicDetailContent extends ConsumerWidget {
               facilityName: detail.name,
               rosterFallback: doctorsRoster.items,
             ),
+            onDoctorUpdated: (updated) {
+              ref
+                  .read(facilityDoctorsRosterProvider(clinicId).notifier)
+                  .replaceWhere((d) => d.id == updated.id, (_) => updated);
+            },
           ),
         ClinicSectionHeader(
           title: 'Fontes Pagadoras',

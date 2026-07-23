@@ -141,6 +141,13 @@
       "when": 1784765211120,
       "tag": "0019_migrate_legacy_cadastro_to_submissions",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1784798930629,
+      "tag": "0020_rep_roles_and_user_relationship",
+      "breakpoints": true
     }
   ]
 }
