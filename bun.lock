@@ -117,6 +117,7 @@
         "@atlasmed/cnes-ingestion": "workspace:*",
         "@atlasmed/config": "workspace:*",
         "@atlasmed/database": "workspace:*",
+        "@atlasmed/facility-insights": "workspace:*",
         "@atlasmed/observability": "workspace:*",
         "@aws-sdk/client-s3": "^3.1093.0",
         "@temporalio/activity": "^1.11.7",
