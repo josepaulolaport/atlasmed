@@ -318,13 +318,21 @@ abstract class BaseRepository<Data> {
     required Data data,
     RepositoryDatasource datasource = RepositoryDatasource.local,
   }) async {
+    // Dispose can race constructor hydratate / in-flight refresh (e.g. short-lived
+    // detail repos that call dispose() in a finally). Ignore late emits.
+    if (_controller.isClosed) {
+      logger('Repository($name): skip emit — controller already closed');
+      return;
+    }
     logger('Emitting data to repository $name: $data');
     _controller.add(RepositoryState.ready(data: data, source: datasource));
   }
 
   /// Clears the cache and emits an empty state to the repository stream.
   Future<void> clear() async {
-    _controller.add(const RepositoryState.empty());
+    if (!_controller.isClosed) {
+      _controller.add(const RepositoryState.empty());
+    }
     await clearCache();
   }
 

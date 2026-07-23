@@ -380,55 +380,72 @@ class _TargetCard extends StatelessWidget {
 
   final NaoConformidadeSuggestion suggestion;
 
+  void _openClinic(BuildContext context) {
+    if (suggestion.targetId.isEmpty) return;
+    context.push('/workspace/clinic/${suggestion.targetId}');
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () => _openClinic(context),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFeef0f3)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFFeff6ff),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              suggestion.targetType.icon,
-              size: 20,
-              color: const Color(0xFF1e40af),
-            ),
+        child: Ink(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFeef0f3)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  suggestion.targetName,
-                  style: const TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: FontWeight.w700,
-                    color: Color(0xFF0f1729),
-                  ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFeff6ff),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  suggestion.contextSubtitle,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Color(0xFF6b7280),
-                  ),
+                child: Icon(
+                  suggestion.targetType.icon,
+                  size: 20,
+                  color: const Color(0xFF1e40af),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      suggestion.targetName,
+                      style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0f1729),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      suggestion.contextSubtitle,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: Color(0xFF6b7280),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 22,
+                color: Color(0xFF1e40af),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

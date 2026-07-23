@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
@@ -32,20 +33,82 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
 // ===============================================================
-class ClinicDetailScreen extends ConsumerWidget {
+class ClinicDetailScreen extends ConsumerStatefulWidget {
   final String clinicId;
 
   const ClinicDetailScreen({super.key, required this.clinicId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClinicDetailScreen> createState() => _ClinicDetailScreenState();
+}
+
+class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
+    with WidgetsBindingObserver, RouteAware {
+  /// Avoid refetch storms when resume + didPopNext fire close together.
+  static const _minRefreshGap = Duration(seconds: 15);
+  DateTime? _lastVisibilityRefreshAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshClinicIfStale();
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // A route above this screen was popped — clinic is visible again.
+    _refreshClinicIfStale();
+  }
+
+  void _refreshClinicIfStale() {
+    final now = DateTime.now();
+    final last = _lastVisibilityRefreshAt;
+    if (last != null && now.difference(last) < _minRefreshGap) return;
+    _lastVisibilityRefreshAt = now;
+
+    final clinicId = widget.clinicId;
+    ref.invalidate(clinicDetailProvider(clinicId));
+    // Warm so skipLoadingOnReload can swap in fresh data without a skeleton.
+    // ignore: unused_result
+    ref.read(clinicDetailProvider(clinicId).future);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clinicId = widget.clinicId;
     final detailAsync = ref.watch(clinicDetailProvider(clinicId));
 
     return Scaffold(
       backgroundColor: const Color(0xFFf8f9fb),
       body: detailAsync.when(
+        // Keep showing the last clinic while NC approve (or pull-to-refresh)
+        // refetches — avoids a full-screen skeleton flash.
+        skipLoadingOnReload: true,
         loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, ref, clinicId, err),
+        error: (err, _) => _errorView(context, clinicId, err),
         data: (detail) => _ClinicDetailBody(detail: detail, clinicId: clinicId),
       ),
     );
@@ -90,12 +153,7 @@ class ClinicDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _errorView(
-    BuildContext context,
-    WidgetRef ref,
-    String clinicId,
-    Object error,
-  ) {
+  Widget _errorView(BuildContext context, String clinicId, Object error) {
     return SafeArea(
       child: Center(
         child: Padding(

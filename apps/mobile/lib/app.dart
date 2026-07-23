@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
 import 'package:atlasmed_mobile_app/core/user/controllers/avatar_controller.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/splash_screen.dart';
@@ -88,6 +89,7 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
   GoRouter _buildRouter() {
     return GoRouter(
       initialLocation: '/splash',
+      observers: [appRouteObserver],
       refreshListenable: _sessionListenable,
       redirect: (context, state) {
         final isAuthenticated = _sessionListenable.isAuthenticated;
