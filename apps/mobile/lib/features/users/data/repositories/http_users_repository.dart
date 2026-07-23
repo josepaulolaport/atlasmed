@@ -296,8 +296,8 @@ class HttpUsersRepository implements UsersRepository {
       body: {
         'resource': resource,
         'action': action,
-        if (resourceId != null) 'resourceId': resourceId,
-        if (expiresAt != null) 'expiresAt': expiresAt.toIso8601String(),
+        'resourceId': ?resourceId,
+        'expiresAt': ?expiresAt?.toIso8601String(),
       },
     );
     _throwIfError(response);
@@ -316,7 +316,7 @@ class HttpUsersRepository implements UsersRepository {
       body: {
         'resource': resource,
         'action': action,
-        if (resourceId != null) 'resourceId': resourceId,
+        'resourceId': ?resourceId,
       },
     );
     _throwIfError(response);
@@ -351,7 +351,7 @@ class HttpUsersRepository implements UsersRepository {
       _accessUri('/users', {
         'role': 'MANAGER',
         'limit': '100',
-        if (sectorId != null) 'sectorId': sectorId,
+        'sectorId': ?sectorId,
       }),
     );
     _throwIfError(response);
@@ -374,7 +374,7 @@ class HttpUsersRepository implements UsersRepository {
       _territoryUri('/territories', {
         'type': 'manager_zone',
         'format': 'flat',
-        if (sectorId != null) 'sectorId': sectorId,
+        'sectorId': ?sectorId,
       }),
     );
     _throwIfError(response);
