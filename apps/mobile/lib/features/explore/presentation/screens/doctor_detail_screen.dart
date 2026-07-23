@@ -1209,7 +1209,6 @@ String? _parseBirthDateToIso(String raw) {
   throw const FormatException('Use o formato dd/mm/aaaa.');
 }
 
-
 class _InfoRow extends StatelessWidget {
   final String icon;
   final String label;

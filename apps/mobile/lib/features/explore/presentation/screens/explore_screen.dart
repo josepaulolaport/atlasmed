@@ -157,7 +157,6 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     );
   }
 
-
   Future<void> _showFilterSheet(
     ExploreState state,
     ExploreNotifier notifier,
