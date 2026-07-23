@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/edit_doctor_roles_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/facility_roster_page_view.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 
@@ -13,12 +14,15 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
   const ClinicCrmDoctorsSection({
     super.key,
     required this.doctors,
+    this.facilityId,
     this.hasMore = false,
     this.onLoadMore,
     this.onAssociate,
+    this.onDoctorUpdated,
   });
 
   final List<FacilityCrmDoctor> doctors;
+  final String? facilityId;
 
   /// When true, a trailing spinner page is shown and [onLoadMore] is called
   /// as the user reaches the end of the loaded cards.
@@ -27,6 +31,9 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
 
   /// Opens the full list / associate flow when the roster is empty.
   final VoidCallback? onAssociate;
+
+  /// Called after facility-scoped role flags are saved for a doctor.
+  final ValueChanged<FacilityCrmDoctor>? onDoctorUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -59,19 +66,29 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
     }
 
     return FacilityRosterPageView(
-      height: 258,
+      height: 278,
       itemCount: doctors.length,
       hasMore: hasMore,
       onLoadMore: onLoadMore,
-      itemBuilder: (_, i) => _DoctorCard(doctor: doctors[i]),
+      itemBuilder: (_, i) => _DoctorCard(
+        doctor: doctors[i],
+        facilityId: facilityId,
+        onDoctorUpdated: onDoctorUpdated,
+      ),
     );
   }
 }
 
 class _DoctorCard extends StatelessWidget {
-  const _DoctorCard({required this.doctor});
+  const _DoctorCard({
+    required this.doctor,
+    this.facilityId,
+    this.onDoctorUpdated,
+  });
 
   final FacilityCrmDoctor doctor;
+  final String? facilityId;
+  final ValueChanged<FacilityCrmDoctor>? onDoctorUpdated;
 
   @override
   Widget build(BuildContext context) {
@@ -163,10 +180,36 @@ class _DoctorCard extends StatelessWidget {
               ),
             ],
           ),
-          if (badges.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Wrap(spacing: 6, runSpacing: 6, children: badges),
-          ],
+          const SizedBox(height: 8),
+          InkWell(
+            onTap: () => _editRoles(context),
+            borderRadius: BorderRadius.circular(8),
+            child: badges.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 2),
+                    child: Text(
+                      'Definir papel',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1e40af),
+                      ),
+                    ),
+                  )
+                : Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ...badges,
+                      const Icon(
+                        Icons.edit_outlined,
+                        size: 14,
+                        color: Color(0xFF1e40af),
+                      ),
+                    ],
+                  ),
+          ),
           const SizedBox(height: 10),
           const Divider(height: 1, color: Color(0xFFf3f4f6)),
           const SizedBox(height: 8),
@@ -199,7 +242,13 @@ class _DoctorCard extends StatelessWidget {
           const Divider(height: 1, color: Color(0xFFf3f4f6)),
           const SizedBox(height: 8),
           InkWell(
-            onTap: () => context.push('/workspace/doctor/${doctor.id}'),
+            onTap: () {
+              final id = facilityId;
+              final uri = id == null || id.isEmpty
+                  ? '/workspace/doctor/${doctor.id}'
+                  : '/workspace/doctor/${doctor.id}?facilityId=$id';
+              context.push(uri);
+            },
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
@@ -237,8 +286,21 @@ class _DoctorCard extends StatelessWidget {
     }
     if (doctor.isPrescriber) badges.add(const _Flag(label: 'Prescritor'));
     if (doctor.isBuyer) badges.add(const _Flag(label: 'Comprador'));
-    if (doctor.isDecisionMaker) badges.add(const _Flag(label: 'Decisor'));
+    if (doctor.isDecisionMaker && doctor.roleBadge == null) {
+      badges.add(const _Flag(label: 'Decisor'));
+    }
+    if (doctor.isPartner) badges.add(const _Flag(label: 'Sócio'));
     return badges;
+  }
+
+  Future<void> _editRoles(BuildContext context) async {
+    final updated = await showEditDoctorRolesSheet(
+      context,
+      doctor: doctor,
+      facilityId: facilityId,
+    );
+    if (updated == null) return;
+    onDoctorUpdated?.call(updated);
   }
 }
 

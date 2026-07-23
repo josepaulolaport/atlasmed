@@ -1,6 +1,9 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, mock } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
-import { ListProfessionalsUseCase } from "./professional.use-cases";
+import {
+  ListProfessionalSpecialtiesUseCase,
+  ListProfessionalsUseCase,
+} from "./professional.use-cases";
 import type {
   ProfessionalRecord,
   ProfessionalRepository,
@@ -50,6 +53,7 @@ function fakeRepository(
 ): ProfessionalRepository {
   return {
     findAll,
+    listDistinctSpecialties: async () => [],
     findAllByIds: async () => [],
     findById: async () => null,
     findByExternalId: async () => null,
@@ -69,6 +73,37 @@ function fakeRepository(
     createNote: async () => ({ id: "note-1", userId: "user-1", professionalId: "professional-1", note: "note", createdAt: now, updatedAt: now }),
   };
 }
+
+describe("ListProfessionalSpecialtiesUseCase", () => {
+  it("returns distinct specialties under the caller's facility scope", async () => {
+    const repository = fakeRepository(async () => ({ professionals: [], total: 0 }));
+    repository.listDistinctSpecialties = mock(async () => ["Cardiologia", "Ortopedia"]);
+
+    const result = await new ListProfessionalSpecialtiesUseCase({
+      doctorRepository: repository,
+    }).execute({
+      scope: {
+        isGlobal: false,
+        assignedTerritoryIds: [],
+        effectiveTerritoryIds: [],
+        analyticsEffectiveTerritoryIds: [],
+        territoryIds: [],
+        facilityIds: ["facility-1"],
+        analyticsFacilityIds: [],
+        clinicIds: [],
+        analyticsClinicIds: [],
+        managedUserIds: [],
+        isOperationallyActive: true,
+      },
+    });
+
+    expect(repository.listDistinctSpecialties).toHaveBeenCalledWith({
+      isGlobal: false,
+      facilityIds: ["facility-1"],
+    });
+    expect(result).toEqual({ data: ["Cardiologia", "Ortopedia"] });
+  });
+});
 
 describe("ListProfessionalsUseCase", () => {
   it("returns pagination totals from the repository", async () => {

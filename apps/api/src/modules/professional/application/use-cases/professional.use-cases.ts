@@ -254,6 +254,19 @@ interface Dependencies {
   searchService?: SearchService;
 }
 
+export class ListProfessionalSpecialtiesUseCase {
+  constructor(private readonly deps: Dependencies) {}
+
+  async execute(input: { scope: ScopeContext }): Promise<{ data: string[] }> {
+    const scope = input.scope.isGlobal
+      ? { isGlobal: true as const }
+      : { isGlobal: false as const, facilityIds: input.scope.facilityIds };
+
+    const data = await this.deps.doctorRepository.listDistinctSpecialties(scope);
+    return { data };
+  }
+}
+
 export class ListProfessionalsUseCase {
   constructor(private readonly deps: Dependencies) {}
 

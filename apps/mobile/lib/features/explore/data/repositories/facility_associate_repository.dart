@@ -150,9 +150,11 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
 
   Future<void> _patchRoles(
     String professionalId, {
+    bool isPartner = false,
     required bool isPrescriber,
     required bool isBuyer,
     required bool isDecisionMaker,
+    bool throwOnError = false,
   }) async {
     final response = await client.call(
       request: RepositoryHttpRequest(
@@ -163,6 +165,7 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
         method: RepositoryHttpMethod.patch,
         headers: const {'Content-Type': 'application/json'},
         body: {
+          'isPartner': isPartner,
           'isPrescriber': isPrescriber,
           'isBuyer': isBuyer,
           'isDecisionMaker': isDecisionMaker,
@@ -171,9 +174,96 @@ class FacilityAssociateRepository extends Repository<PaginatedDoctors>
     );
 
     if (!successfulCondition(response.statusCode, response.body)) {
-      // Association already exists; role flags are best-effort.
+      if (throwOnError) {
+        throw FacilityAssociateException(
+          'Falha ao salvar papel (${response.statusCode})',
+        );
+      }
+      // Association already exists; role flags are best-effort on create.
       await onErrorStatusCode(response.statusCode);
     }
+  }
+
+  /// Updates facility-scoped role flags for an associated doctor.
+  Future<FacilityCrmDoctor> updateDoctorRoles(
+    FacilityCrmDoctor doctor, {
+    required bool isPartner,
+    required bool isPrescriber,
+    required bool isBuyer,
+    required bool isDecisionMaker,
+  }) async {
+    await _patchRoles(
+      doctor.id,
+      isPartner: isPartner,
+      isPrescriber: isPrescriber,
+      isBuyer: isBuyer,
+      isDecisionMaker: isDecisionMaker,
+      throwOnError: true,
+    );
+
+    return doctor.copyWith(
+      isPartner: isPartner,
+      isPrescriber: isPrescriber,
+      isBuyer: isBuyer,
+      isDecisionMaker: isDecisionMaker,
+      roleBadge: isDecisionMaker ? 'DECISOR' : null,
+      clearRoleBadge: !isDecisionMaker,
+    );
+  }
+
+  /// User×professional relationship (1–10). Null clears the score.
+  Future<int?> updateRelationshipLevel(
+    String professionalId, {
+    int? relationshipLevel,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
+          '/professionals/$professionalId',
+        ),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {'relationshipLevel': relationshipLevel},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      throw FacilityAssociateException(
+        'Falha ao salvar relacionamento (${response.statusCode})',
+      );
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    final value = map['relationshipLevel'];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return null;
+  }
+
+  /// Current association context including the caller's relationship score.
+  Future<int?> fetchRelationshipLevel(String professionalId) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse(
+          '${AppConfig.apiBaseUrl}/api/v1/facilities/$facilityId'
+          '/professionals/$professionalId',
+        ),
+        method: RepositoryHttpMethod.get,
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      return null;
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    final association = map['association'];
+    if (association is! Map) return null;
+    final value = association['relationshipLevel'];
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return null;
   }
 
   FacilityCrmDoctor _doctorFromApi(ApiDoctor d) {

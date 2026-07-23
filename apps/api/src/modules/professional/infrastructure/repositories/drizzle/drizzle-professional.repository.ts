@@ -4,7 +4,7 @@ import {
   facilityProfessionals,
   facilities,
 } from "@atlasmed/database";
-import { eq, and, or, isNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
+import { eq, and, or, isNull, isNotNull, ilike, inArray, sql, asc, desc, getTableColumns } from "drizzle-orm";
 import { normalizeSearchFilterValue } from "@atlasmed/cnes-ingestion";
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
@@ -236,11 +236,13 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       ? sql` and fp.facility_id in (${sql.join(scopedFacilityIds.map((id) => sql`${id}`), sql`, `)})`
       : sql``;
     const referencePoint = params.latitude === undefined ? undefined : sql`ST_SetSRID(ST_MakePoint(${params.longitude!}, ${params.latitude}), 4326)`;
+    // Qualify outer professionals.id explicitly. Drizzle interpolates ${professionals.id}
+    // as bare "id" in SELECT subqueries, which Postgres rejects as ambiguous vs facilities.id.
     const distanceKm = referencePoint
       ? sql<number>`(select min(ST_Distance(f.location::geography, ${referencePoint}::geography) / 1000)
           from facility_professionals fp
           inner join facilities f on f.id = fp.facility_id
-          where fp.professional_id = ${professionals.id} and fp.ended_at is null and f.deactivated_at is null and f.location is not null${distanceScope})`
+          where fp.professional_id = ${sql.raw('"professionals"."id"')} and fp.ended_at is null and f.deactivated_at is null and f.location is not null${distanceScope})`
       : undefined;
     if (referencePoint) {
       const proximityConditions = [
@@ -294,6 +296,44 @@ export class DrizzleProfessionalRepository implements ProfessionalRepository {
       })),
       total: countRows[0]?.count ?? 0,
     };
+  }
+
+  async listDistinctSpecialties(scope: ProfessionalListScopeFilter): Promise<string[]> {
+    const conditions = [
+      isNull(professionals.deletedAt),
+      isNotNull(professionals.primarySpecialtyLabel),
+      sql`trim(${professionals.primarySpecialtyLabel}) <> ''`,
+    ];
+
+    if (!scope.isGlobal) {
+      const facilityIds = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
+      conditions.push(
+        inArray(
+          professionals.id,
+          db
+            .select({ id: facilityProfessionals.professionalId })
+            .from(facilityProfessionals)
+            .innerJoin(facilities, eq(facilities.id, facilityProfessionals.facilityId))
+            .where(
+              and(
+                inArray(facilityProfessionals.facilityId, facilityIds),
+                isNull(facilityProfessionals.endedAt),
+                isNull(facilities.deactivatedAt)
+              )
+            )
+        )
+      );
+    }
+
+    const rows = await db
+      .selectDistinct({ specialty: professionals.primarySpecialtyLabel })
+      .from(professionals)
+      .where(and(...conditions))
+      .orderBy(asc(professionals.primarySpecialtyLabel));
+
+    return rows
+      .map((row) => row.specialty?.trim() ?? "")
+      .filter((specialty) => specialty.length > 0);
   }
 
   async findAllByIds(params: {

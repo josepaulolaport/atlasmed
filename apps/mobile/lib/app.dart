@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +12,8 @@ import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_em
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_code_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_new_password_screen.dart';
 import 'package:atlasmed_mobile_app/features/auth/presentation/screens/forgot_success_screen.dart';
+import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
+import 'package:atlasmed_mobile_app/features/location/presentation/screens/location_gate_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastro_review_detail_screen.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/screens/cadastros_review_list_screen.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/screens/nao_conformidade_detail_screen.dart';
@@ -55,25 +59,67 @@ class AtlasMedApp extends ConsumerStatefulWidget {
   ConsumerState<AtlasMedApp> createState() => _AtlasMedAppState();
 }
 
-class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
+class _AtlasMedAppState extends ConsumerState<AtlasMedApp>
+    with WidgetsBindingObserver {
   late final GoRouter _router;
   late final SessionListenable _sessionListenable;
+  ProviderSubscription<LocationSessionState>? _locationSub;
+  VoidCallback? _authWatchListener;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final sessionEnvironment = ref.read(sessionProvider);
     _sessionListenable = SessionListenable(sessionEnvironment);
     _router = _buildRouter();
+    _locationSub = ref.listenManual<LocationSessionState>(
+      locationSessionProvider,
+      (_, _) => _router.refresh(),
+    );
+    _authWatchListener = () => _syncLocationWatching();
+    _sessionListenable.addListener(_authWatchListener!);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(avatarControllerProvider.notifier).recoverLostData();
+      _syncLocationWatching();
     });
+  }
+
+  void _syncLocationWatching() {
+    final notifier = ref.read(locationSessionProvider.notifier);
+    if (_sessionListenable.isAuthenticated) {
+      notifier.startWatching();
+      unawaited(notifier.ensureLocation());
+    } else {
+      notifier.stopWatching();
+    }
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    if (_authWatchListener != null) {
+      _sessionListenable.removeListener(_authWatchListener!);
+    }
+    _locationSub?.close();
     _sessionListenable.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_sessionListenable.isAuthenticated) return;
+    final notifier = ref.read(locationSessionProvider.notifier);
+    if (state == AppLifecycleState.resumed) {
+      // Soft recheck first (catches permission revoked in Settings); then
+      // refresh a fix if still allowed.
+      unawaited(() async {
+        await notifier.revalidate();
+        if (ref.read(locationSessionProvider).isUsable) {
+          await notifier.ensureLocation();
+        }
+      }());
+    }
   }
 
   @override
@@ -96,9 +142,15 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
 
         final location = state.matchedLocation;
         final isSplash = location.startsWith('/splash');
+        final isLocationGate = location == '/location-gate';
 
         if (isAuthenticated) {
-          if (isSplash) return '/workspace';
+          final locationSession = ref.read(locationSessionProvider);
+          if (!locationSession.isUsable) {
+            if (!isLocationGate) return '/location-gate';
+            return null;
+          }
+          if (isSplash || isLocationGate) return '/workspace';
           return null;
         }
 
@@ -107,11 +159,16 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
       },
       routes: [
         GoRoute(
+          path: '/location-gate',
+          builder: (_, _) => const LocationGateScreen(),
+        ),
+        GoRoute(
           path: '/splash',
           builder: (gc, _) => SplashScreen(
             onDone: () {
               if (_sessionListenable.isAuthenticated) {
-                gc.go('/workspace');
+                ref.read(locationSessionProvider.notifier).ensureLocation();
+                gc.go('/location-gate');
               } else {
                 gc.go('/splash/login');
               }
@@ -123,7 +180,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
               path: 'login',
               builder: (gc, _) => LoginScreen(
                 onForgotPassword: () => gc.push('/splash/login/forgot'),
-                onLoginSuccess: () => gc.go('/workspace'),
+                onLoginSuccess: () {
+                  ref.read(locationSessionProvider.notifier).ensureLocation();
+                  gc.go('/location-gate');
+                },
               ),
               routes: [
                 GoRoute(
@@ -184,8 +244,10 @@ class _AtlasMedAppState extends ConsumerState<AtlasMedApp> {
                 ),
                 GoRoute(
                   path: 'doctor/:id',
-                  builder: (_, state) =>
-                      DoctorDetailScreen(doctorId: state.pathParameters['id']!),
+                  builder: (_, state) => DoctorDetailScreen(
+                    doctorId: state.pathParameters['id']!,
+                    facilityId: state.uri.queryParameters['facilityId'],
+                  ),
                 ),
               ],
             ),

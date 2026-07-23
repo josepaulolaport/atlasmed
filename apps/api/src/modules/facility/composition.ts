@@ -1,6 +1,7 @@
 import { DrizzleFacilityRepository } from "./infrastructure/repositories/drizzle/drizzle-facility.repository";
 import { DrizzleFacilityProfessionalRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-professional.repository";
 import { DrizzleFacilityRepresentativeRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-representative.repository";
+import { DrizzleUserRepresentativeRelationshipRepository } from "./infrastructure/repositories/drizzle/drizzle-user-representative-relationship.repository";
 import { DrizzleFacilityConsultantAssignmentRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-consultant-assignment.repository";
 import { DrizzleFacilityNoteRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-note.repository";
 import { DrizzleFacilityPhotoRepository } from "./infrastructure/repositories/drizzle/drizzle-facility-photo.repository";
@@ -67,6 +68,7 @@ import {
 import {
   CreateFacilityRepresentativeUseCase,
   ListFacilityRepresentativesUseCase,
+  UpdateFacilityRepresentativeUseCase,
 } from "./application/use-cases/facility-representative.use-cases";
 import {
   CreateFacilityNoteUseCase,
@@ -92,6 +94,8 @@ export const facilityRepositories = {
   facility: new DrizzleFacilityRepository(),
   association: new DrizzleFacilityProfessionalRepository(),
   representative: new DrizzleFacilityRepresentativeRepository(),
+  userRepresentativeRelationship:
+    new DrizzleUserRepresentativeRelationshipRepository(),
   consultantAssignment: new DrizzleFacilityConsultantAssignmentRepository(),
   note: new DrizzleFacilityNoteRepository(),
   photo: new DrizzleFacilityPhotoRepository(),
@@ -196,10 +200,20 @@ export const facilityUseCases = {
   listFacilityRepresentatives: () =>
     new ListFacilityRepresentativesUseCase({
       facilityRepresentativeRepository: facilityRepositories.representative,
+      userRepresentativeRelationshipRepository:
+        facilityRepositories.userRepresentativeRelationship,
     }),
   createFacilityRepresentative: () =>
     new CreateFacilityRepresentativeUseCase({
       facilityRepresentativeRepository: facilityRepositories.representative,
+      userRepresentativeRelationshipRepository:
+        facilityRepositories.userRepresentativeRelationship,
+    }),
+  updateFacilityRepresentative: () =>
+    new UpdateFacilityRepresentativeUseCase({
+      facilityRepresentativeRepository: facilityRepositories.representative,
+      userRepresentativeRelationshipRepository:
+        facilityRepositories.userRepresentativeRelationship,
     }),
   listFacilityNotes: () =>
     new ListFacilityNotesUseCase({

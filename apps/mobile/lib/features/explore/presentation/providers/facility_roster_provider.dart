@@ -87,6 +87,16 @@ class FacilityRosterNotifier<T> extends StateNotifier<FacilityRosterState<T>> {
     await _fetch(page: 1, append: false);
   }
 
+  /// Locally replaces items matching [test] (e.g. after a role PATCH).
+  void replaceWhere(bool Function(T item) test, T Function(T item) update) {
+    state = state.copyWith(
+      items: [
+        for (final item in state.items)
+          if (test(item)) update(item) else item,
+      ],
+    );
+  }
+
   Future<void> _fetch({required int page, required bool append}) async {
     _fetchInFlight = true;
     state = state.copyWith(

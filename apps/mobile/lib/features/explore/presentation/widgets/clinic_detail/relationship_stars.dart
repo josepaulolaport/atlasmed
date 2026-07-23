@@ -1,18 +1,26 @@
 import 'package:flutter/material.dart';
 
-/// "Relacionamento" star rating for Médicos.
+/// "Relacionamento" star rating (1–10 → 5 stars, 2 points each).
 ///
-/// [score] is the authenticated user's level from
-/// `user_professional_relationships` (1–10 → 5 stars, 2 points each).
-/// A `null` score means not assessed yet — faint outline stars.
+/// When [onChanged] is set, taps adjust the score (tap star N → 2N, or
+/// toggle half-step). A `null` score means not assessed yet.
 class RelationshipStars extends StatelessWidget {
-  const RelationshipStars({super.key, required this.score});
+  const RelationshipStars({
+    super.key,
+    required this.score,
+    this.onChanged,
+    this.showLabel = true,
+  });
 
   final int? score;
+  final ValueChanged<int?>? onChanged;
+  final bool showLabel;
 
   static const _filledColor = Color(0xFFf5a623);
   static const _emptyColor = Color(0xFFcbd5e1);
   static const _undeterminedColor = Color(0xFFcbd5e1);
+
+  bool get _editable => onChanged != null;
 
   @override
   Widget build(BuildContext context) {
@@ -23,15 +31,17 @@ class RelationshipStars extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'Relacionamento:',
-          style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF6b7280),
+        if (showLabel) ...[
+          const Text(
+            'Relacionamento:',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF6b7280),
+            ),
           ),
-        ),
-        const SizedBox(width: 6),
+          const SizedBox(width: 6),
+        ],
         ...List.generate(5, (i) {
           IconData icon;
           Color color;
@@ -48,9 +58,38 @@ class RelationshipStars extends StatelessWidget {
             icon = Icons.star_border_rounded;
             color = _emptyColor;
           }
-          return Icon(icon, size: 14.5, color: color);
+
+          final star = Icon(icon, size: _editable ? 22 : 14.5, color: color);
+          if (!_editable) return star;
+
+          return InkWell(
+            onTap: () => _handleTap(i),
+            onLongPress: () => onChanged!(null),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: star,
+            ),
+          );
         }),
       ],
     );
+  }
+
+  void _handleTap(int starIndex) {
+    final onChanged = this.onChanged;
+    if (onChanged == null) return;
+
+    final fullLevel = (starIndex + 1) * 2;
+    final halfLevel = fullLevel - 1;
+    final current = score;
+
+    if (current == fullLevel) {
+      onChanged(halfLevel);
+    } else if (current == halfLevel) {
+      onChanged(null);
+    } else {
+      onChanged(fullLevel);
+    }
   }
 }

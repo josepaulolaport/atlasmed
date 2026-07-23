@@ -3,9 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 
-/// DTO from `GET /facilities/:id/representatives`.
-///
-/// No relationship field — stars apply only to user × professional (doctors).
+/// DTO from `GET|POST|PATCH /facilities/:id/representatives`.
 class FacilityRepresentativeApi {
   const FacilityRepresentativeApi({
     required this.id,
@@ -16,6 +14,13 @@ class FacilityRepresentativeApi {
     this.phone,
     this.taxId,
     required this.contactType,
+    this.isPartner = false,
+    this.isAdministrator = false,
+    this.isDecisionMaker = false,
+    this.isBuyer = false,
+    this.isBiller = false,
+    this.isSecretary = false,
+    this.relationshipLevel,
     this.sourceProvider,
     this.confirmedAt,
   });
@@ -32,6 +37,13 @@ class FacilityRepresentativeApi {
       contactType: readString(map['contactType']).isEmpty
           ? 'PROFESSIONAL'
           : readString(map['contactType']),
+      isPartner: map['isPartner'] == true,
+      isAdministrator: map['isAdministrator'] == true,
+      isDecisionMaker: map['isDecisionMaker'] == true,
+      isBuyer: map['isBuyer'] == true,
+      isBiller: map['isBiller'] == true,
+      isSecretary: map['isSecretary'] == true,
+      relationshipLevel: _readLevel(map['relationshipLevel']),
       sourceProvider: readNullableString(map['sourceProvider']),
       confirmedAt: readNullableDateTime(map['confirmedAt']),
     );
@@ -45,6 +57,13 @@ class FacilityRepresentativeApi {
   final String? phone;
   final String? taxId;
   final String contactType;
+  final bool isPartner;
+  final bool isAdministrator;
+  final bool isDecisionMaker;
+  final bool isBuyer;
+  final bool isBiller;
+  final bool isSecretary;
+  final int? relationshipLevel;
   final String? sourceProvider;
   final DateTime? confirmedAt;
 
@@ -56,7 +75,20 @@ class FacilityRepresentativeApi {
       email: email,
       phone: phone,
       contactType: contactType,
+      isPartner: isPartner,
+      isAdministrator: isAdministrator,
+      isDecisionMaker: isDecisionMaker,
+      isBuyer: isBuyer,
+      isBiller: isBiller,
+      isSecretary: isSecretary,
+      relationshipScore: relationshipLevel,
     );
+  }
+
+  static int? _readLevel(Object? value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return null;
   }
 }
 

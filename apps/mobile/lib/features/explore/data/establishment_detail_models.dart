@@ -26,8 +26,6 @@ class EstablishmentLocation {
 }
 
 /// CRM row from `facility_representatives`.
-///
-/// No relationship stars — scores live on user × professional only.
 class AdministrativeProfessional {
   const AdministrativeProfessional({
     required this.id,
@@ -35,7 +33,14 @@ class AdministrativeProfessional {
     this.roleTitle,
     this.email,
     this.phone,
-    required this.contactType,
+    this.contactType = 'PROFESSIONAL',
+    this.isPartner = false,
+    this.isAdministrator = false,
+    this.isDecisionMaker = false,
+    this.isBuyer = false,
+    this.isBiller = false,
+    this.isSecretary = false,
+    this.relationshipScore,
   });
 
   final String id;
@@ -44,8 +49,19 @@ class AdministrativeProfessional {
   final String? email;
   final String? phone;
 
-  /// `PROFESSIONAL`, `DECISOR`, or `COMPRADOR`.
+  /// Legacy single label — prefer [roleChipLabels] for UI.
   final String contactType;
+
+  final bool isPartner;
+  final bool isAdministrator;
+  final bool isDecisionMaker;
+  final bool isBuyer;
+  final bool isBiller;
+  final bool isSecretary;
+
+  /// Authenticated user's relationship (1–10) from
+  /// `user_representative_relationships`. Null = not yet assessed.
+  final int? relationshipScore;
 
   String get contactTypeLabel {
     switch (contactType) {
@@ -56,6 +72,51 @@ class AdministrativeProfessional {
       default:
         return 'Profissional';
     }
+  }
+
+  /// Multi-select role chips for list/profile UI.
+  List<String> get roleChipLabels => [
+    if (isPartner) 'Sócio',
+    if (isAdministrator) 'Administrador',
+    if (isDecisionMaker) 'Decisor',
+    if (isBuyer) 'Comprador',
+    if (isBiller) 'Faturista',
+    if (isSecretary) 'Secretária',
+  ];
+
+  AdministrativeProfessional copyWith({
+    String? id,
+    String? name,
+    String? roleTitle,
+    String? email,
+    String? phone,
+    String? contactType,
+    bool? isPartner,
+    bool? isAdministrator,
+    bool? isDecisionMaker,
+    bool? isBuyer,
+    bool? isBiller,
+    bool? isSecretary,
+    int? relationshipScore,
+    bool clearRelationshipScore = false,
+  }) {
+    return AdministrativeProfessional(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      roleTitle: roleTitle ?? this.roleTitle,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      contactType: contactType ?? this.contactType,
+      isPartner: isPartner ?? this.isPartner,
+      isAdministrator: isAdministrator ?? this.isAdministrator,
+      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
+      isBuyer: isBuyer ?? this.isBuyer,
+      isBiller: isBiller ?? this.isBiller,
+      isSecretary: isSecretary ?? this.isSecretary,
+      relationshipScore: clearRelationshipScore
+          ? null
+          : (relationshipScore ?? this.relationshipScore),
+    );
   }
 }
 
@@ -70,6 +131,7 @@ class FacilityCrmDoctor {
     this.crm,
     this.phone,
     this.email,
+    this.isPartner = false,
     this.isPrescriber = false,
     this.isBuyer = false,
     this.isDecisionMaker = false,
@@ -92,6 +154,9 @@ class FacilityCrmDoctor {
   /// Essential contact fields — mirrors `professionals.phone`/`email`.
   final String? phone;
   final String? email;
+
+  /// Facility-association role flags (`facility_professionals`).
+  final bool isPartner;
   final bool isPrescriber;
   final bool isBuyer;
   final bool isDecisionMaker;
@@ -118,6 +183,51 @@ class FacilityCrmDoctor {
   /// from `user_professional_relationships`. Null = not yet assessed.
   /// Drives Relacionamento stars in the UI.
   final int? relationshipScore;
+
+  FacilityCrmDoctor copyWith({
+    String? id,
+    String? name,
+    String? initials,
+    double? hue,
+    String? specialty,
+    String? crm,
+    String? phone,
+    String? email,
+    bool? isPartner,
+    bool? isPrescriber,
+    bool? isBuyer,
+    bool? isDecisionMaker,
+    String? roleBadge,
+    bool clearRoleBadge = false,
+    String? education,
+    String? birthdayLabel,
+    String? favoriteTeam,
+    String? interests,
+    String? noteText,
+    int? relationshipScore,
+  }) {
+    return FacilityCrmDoctor(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      initials: initials ?? this.initials,
+      hue: hue ?? this.hue,
+      specialty: specialty ?? this.specialty,
+      crm: crm ?? this.crm,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      isPartner: isPartner ?? this.isPartner,
+      isPrescriber: isPrescriber ?? this.isPrescriber,
+      isBuyer: isBuyer ?? this.isBuyer,
+      isDecisionMaker: isDecisionMaker ?? this.isDecisionMaker,
+      roleBadge: clearRoleBadge ? null : (roleBadge ?? this.roleBadge),
+      education: education ?? this.education,
+      birthdayLabel: birthdayLabel ?? this.birthdayLabel,
+      favoriteTeam: favoriteTeam ?? this.favoriteTeam,
+      interests: interests ?? this.interests,
+      noteText: noteText ?? this.noteText,
+      relationshipScore: relationshipScore ?? this.relationshipScore,
+    );
+  }
 }
 
 /// Healthcare provider share (convênio).

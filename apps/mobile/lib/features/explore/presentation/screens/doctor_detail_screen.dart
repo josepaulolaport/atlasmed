@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/professional_note.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/doctor_detail.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_associate_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/contact_actions.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/explore_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/relationship_stars.dart';
 
 // ======================================================================
 // DoctorDetailScreen — full doctor profile with multiple sections
@@ -13,7 +15,14 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/providers/expl
 class DoctorDetailScreen extends ConsumerWidget {
   final String doctorId;
 
-  const DoctorDetailScreen({super.key, required this.doctorId});
+  /// When set (facility roster navigation), relationship can be edited.
+  final String? facilityId;
+
+  const DoctorDetailScreen({
+    super.key,
+    required this.doctorId,
+    this.facilityId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -24,8 +33,11 @@ class DoctorDetailScreen extends ConsumerWidget {
       body: detailAsync.when(
         loading: () => _loadingSkeleton(context),
         error: (err, _) => _errorView(context, err.toString()),
-        data: (detail) =>
-            _DoctorDetailContent(detail: detail, doctorId: doctorId),
+        data: (detail) => _DoctorDetailContent(
+          detail: detail,
+          doctorId: doctorId,
+          facilityId: facilityId,
+        ),
       ),
     );
   }
@@ -117,7 +129,12 @@ class DoctorDetailScreen extends ConsumerWidget {
 class _DoctorDetailContent extends ConsumerWidget {
   final DoctorDetail detail;
   final String doctorId;
-  const _DoctorDetailContent({required this.detail, required this.doctorId});
+  final String? facilityId;
+  const _DoctorDetailContent({
+    required this.detail,
+    required this.doctorId,
+    this.facilityId,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,6 +148,19 @@ class _DoctorDetailContent extends ConsumerWidget {
             _DoctorHeader(detail: detail),
             _DoctorQuickActions(detail: detail),
             const SizedBox(height: 16),
+            if (facilityId != null &&
+                facilityId!.isNotEmpty &&
+                !facilityId!.startsWith('near-') &&
+                !facilityId!.endsWith(':empty')) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _DoctorRelationshipCard(
+                  facilityId: facilityId!,
+                  professionalId: doctorId,
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             if (detail.signals.isNotEmpty) ...[
               _DoctorSignals(signals: detail.signals),
               const SizedBox(height: 16),
@@ -157,6 +187,133 @@ class _DoctorDetailContent extends ConsumerWidget {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DoctorRelationshipCard extends StatefulWidget {
+  const _DoctorRelationshipCard({
+    required this.facilityId,
+    required this.professionalId,
+  });
+
+  final String facilityId;
+  final String professionalId;
+
+  @override
+  State<_DoctorRelationshipCard> createState() =>
+      _DoctorRelationshipCardState();
+}
+
+class _DoctorRelationshipCardState extends State<_DoctorRelationshipCard> {
+  int? _score;
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final repo = FacilityAssociateRepository(widget.facilityId);
+    try {
+      final level = await repo.fetchRelationshipLevel(widget.professionalId);
+      if (!mounted) return;
+      setState(() {
+        _score = level;
+        _loading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+    } finally {
+      repo.dispose();
+    }
+  }
+
+  Future<void> _set(int? level) async {
+    final previous = _score;
+    setState(() {
+      _score = level;
+      _saving = true;
+    });
+    final repo = FacilityAssociateRepository(widget.facilityId);
+    try {
+      final saved = await repo.updateRelationshipLevel(
+        widget.professionalId,
+        relationshipLevel: level,
+      );
+      if (!mounted) return;
+      setState(() {
+        _score = saved;
+        _saving = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _score = previous;
+        _saving = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível salvar o relacionamento'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      repo.dispose();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'RELACIONAMENTO',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+              color: Color(0xFF9ca3af),
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Carregando…',
+                style: TextStyle(fontSize: 13, color: Color(0xFF6b7280)),
+              ),
+            )
+          else ...[
+            RelationshipStars(score: _score, onChanged: _saving ? null : _set),
+            const SizedBox(height: 4),
+            const Text(
+              'Toque nas estrelas para definir (segure para limpar).',
+              style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
+            ),
+          ],
+        ],
       ),
     );
   }
