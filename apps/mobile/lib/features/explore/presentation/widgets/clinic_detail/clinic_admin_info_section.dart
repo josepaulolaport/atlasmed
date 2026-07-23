@@ -219,8 +219,9 @@ class ClinicAdminInfoSection extends ConsumerWidget {
                 showDivider: i < fields.length - 1,
                 fieldKey: fields[i].fieldKey,
                 showEditButton: canSuggest && fields[i].editable,
-                suggestionTarget:
-                    canSuggest && fields[i].editable ? suggestionTarget : null,
+                suggestionTarget: canSuggest && fields[i].editable
+                    ? suggestionTarget
+                    : null,
               ),
           ],
         ),

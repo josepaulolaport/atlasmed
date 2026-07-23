@@ -15,7 +15,6 @@ export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_state.dart';
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_repository_providers.dart';
 
-
 /// Looks up a single user by id — used by the detail screen and by the
 /// change-role sheet's initial selection.
 final userDetailProvider = FutureProvider.autoDispose.family<User?, String>((

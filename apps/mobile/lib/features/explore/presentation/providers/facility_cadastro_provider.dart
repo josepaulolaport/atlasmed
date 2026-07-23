@@ -6,8 +6,7 @@ import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_cadastro_upload_normalize.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 
-bool _isMockFacilityId(String facilityId) =>
-    isMockNearbyFacilityId(facilityId);
+bool _isMockFacilityId(String facilityId) => isMockNearbyFacilityId(facilityId);
 
 final facilityCadastroProvider = FutureProvider.autoDispose
     .family<FacilityCadastroChecklist, String>((ref, facilityId) async {

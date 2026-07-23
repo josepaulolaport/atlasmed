@@ -63,10 +63,7 @@ class UserDetailScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return _UserDetailBody(
-                    user: user,
-                    canManageAdmin: canAdmin,
-                  );
+                  return _UserDetailBody(user: user, canManageAdmin: canAdmin);
                 },
               ),
             ),
@@ -252,10 +249,7 @@ class _Header extends StatelessWidget {
 }
 
 class _UserDetailBody extends ConsumerWidget {
-  const _UserDetailBody({
-    required this.user,
-    required this.canManageAdmin,
-  });
+  const _UserDetailBody({required this.user, required this.canManageAdmin});
 
   final User user;
   final bool canManageAdmin;
@@ -291,10 +285,7 @@ class _UserDetailBody extends ConsumerWidget {
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({
-    required this.user,
-    required this.canManageAdmin,
-  });
+  const _IdentityCard({required this.user, required this.canManageAdmin});
 
   final User user;
   final bool canManageAdmin;

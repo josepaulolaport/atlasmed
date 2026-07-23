@@ -278,7 +278,8 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                               distanceKm: 0,
                               isPriority: d.isDecisionMaker || d.isPrescriber,
                             ),
-                            onEditRoles: ref.watch(canMutateProfessionalProvider)
+                            onEditRoles:
+                                ref.watch(canMutateProfessionalProvider)
                                 ? () => _editRoles(d)
                                 : null,
                             onTap: () {
