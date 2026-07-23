@@ -1,4 +1,9 @@
-import { assertResourceInScope, Role, type ScopeContext } from "@atlasmed/access";
+import {
+  assertResourceInScope,
+  ForbiddenError,
+  Role,
+  type ScopeContext,
+} from "@atlasmed/access";
 import type {
   OrderDetailRecord,
   OrderRepository,
@@ -122,11 +127,23 @@ export class ListOrdersUseCase {
 export class GetOrderUseCase {
   constructor(private readonly deps: { orderRepository: OrderRepository }) {}
 
-  async execute(input: { orderId: string; scope: ScopeContext }) {
+  async execute(input: {
+    orderId: string;
+    scope: ScopeContext;
+    actor?: { userId: string; roleName: string };
+  }) {
     const order = await this.deps.orderRepository.findById(input.orderId);
     if (!order) return null;
 
     assertResourceInScope(input.scope, "facility", order.facility.id);
+
+    if (
+      input.actor?.roleName === Role.REP &&
+      order.seller?.id !== input.actor.userId
+    ) {
+      throw new ForbiddenError("Order seller outside actor scope");
+    }
+
     return serializeOrder(order);
   }
 }

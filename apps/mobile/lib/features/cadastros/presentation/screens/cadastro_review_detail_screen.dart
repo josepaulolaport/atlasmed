@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/data/cadastro_review_models.dart';
 import 'package:atlasmed_mobile_app/features/cadastros/presentation/providers/cadastro_review_provider.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
@@ -43,7 +44,8 @@ class CadastroReviewDetailScreen extends ConsumerWidget {
     }
 
     final status = submission.status;
-    final pending = submission.isPending;
+    final pending =
+        submission.isPending && ref.watch(canReviewCadastroProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFFf7f8fb),

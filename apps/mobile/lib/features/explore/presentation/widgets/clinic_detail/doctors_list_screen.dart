@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+    show facilityRosterListPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/doctor.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_professionals_repository.dart';
@@ -57,7 +59,7 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
 
     List<FacilityCrmDoctor> next;
     if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-      next = mockAllFacilityDoctors(facilityId);
+      next = const [];
     } else {
       final repo = FacilityProfessionalsRepository(
         facilityId,
@@ -208,12 +210,14 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAssociate,
-        backgroundColor: const Color(0xFF1e40af),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: ref.watch(canMutateProfessionalProvider)
+          ? FloatingActionButton(
+              onPressed: _openAssociate,
+              backgroundColor: const Color(0xFF1e40af),
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
       body: Stack(
         children: [
           Column(
@@ -274,7 +278,9 @@ class _DoctorsListScreenState extends ConsumerState<DoctorsListScreen> {
                               distanceKm: 0,
                               isPriority: d.isDecisionMaker || d.isPrescriber,
                             ),
-                            onEditRoles: () => _editRoles(d),
+                            onEditRoles: ref.watch(canMutateProfessionalProvider)
+                                ? () => _editRoles(d)
+                                : null,
                             onTap: () {
                               final facilityId = widget.facilityId;
                               final uri =

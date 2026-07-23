@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_notes_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_notes_provider.dart';
@@ -43,16 +44,25 @@ class ClinicFieldNotesSection extends ConsumerWidget {
           ],
         ),
       ),
-      data: (notes) => _NotesBody(facilityId: facilityId, notes: notes),
+      data: (notes) => _NotesBody(
+        facilityId: facilityId,
+        notes: notes,
+        canAdd: ref.watch(canMutateFacilityProvider),
+      ),
     );
   }
 }
 
 class _NotesBody extends ConsumerStatefulWidget {
-  const _NotesBody({required this.facilityId, required this.notes});
+  const _NotesBody({
+    required this.facilityId,
+    required this.notes,
+    required this.canAdd,
+  });
 
   final String facilityId;
   final List<FacilityFieldNote> notes;
+  final bool canAdd;
 
   @override
   ConsumerState<_NotesBody> createState() => _NotesBodyState();
@@ -87,26 +97,28 @@ class _NotesBodyState extends ConsumerState<_NotesBody> {
               if (i > 0) const SizedBox(height: 10),
               _NoteRow(index: i + 1, note: note),
             ],
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : _addNote,
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Adicionar nota'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF1e40af),
-              side: const BorderSide(color: Color(0xFFdbeafe)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          if (widget.canAdd) ...[
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _addNote,
+              icon: _saving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.add_rounded, size: 18),
+              label: const Text('Adicionar nota'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1e40af),
+                side: const BorderSide(color: Color(0xFFdbeafe)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

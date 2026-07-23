@@ -125,4 +125,46 @@ describe("orders use cases", () => {
       })
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
+
+  it("denies REP detail access when the seller is another user", async () => {
+    const repository = createRepository();
+    repository.findById = async () => ({
+      id: "order-1",
+      legacyId: null,
+      facility: { id: "facility-1", name: "Clínica Um" },
+      professional: null,
+      seller: { id: "other-rep", name: "Outro" },
+      status: "PENDING",
+      type: "STANDARD",
+      orderedAt: null,
+      createdAt: new Date("2026-01-01T10:00:00Z"),
+      updatedAt: new Date("2026-01-01T10:00:00Z"),
+      surgeryType: null,
+      surgerySubtype: null,
+      notes: null,
+      freight: 0,
+      grossWeight: 0,
+      netWeight: 0,
+      currency: "BRL",
+      usdExchangeRate: null,
+      finalizedById: null,
+      finalizedAt: null,
+      rejectedById: null,
+      rejectionReason: null,
+      noBillingById: null,
+      noBillingAt: null,
+      noBillingNotes: null,
+      expenseAuthorizedById: null,
+      expenseAuthorizedAt: null,
+      items: [],
+    });
+
+    await expect(
+      new GetOrderUseCase({ orderRepository: repository }).execute({
+        orderId: "order-1",
+        scope: scopedToFacilityOne,
+        actor: { userId: "rep-1", roleName: "REP" },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
 });

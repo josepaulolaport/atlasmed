@@ -1,12 +1,15 @@
 import { describe, expect, it, mock } from "bun:test";
 import { ScopeResolver } from "./scope-resolver.service";
 import { Role } from "@atlasmed/access";
-import type { ScopeRepository } from "../interfaces/scope.repository.interface";
+import type {
+  FacilityAssociationPort,
+  ScopeRepository,
+} from "../interfaces/scope.repository.interface";
 
 describe("ScopeResolver", () => {
   const territoryScopePort = {
     getFacilityIdsForTerritories: mock(async (territoryIds: string[]) =>
-      territoryIds.map((id) => `clinic-for-${id}`)
+      territoryIds.map((id) => `clinic-for-${id}`),
     ),
   };
 
@@ -17,154 +20,173 @@ describe("ScopeResolver", () => {
     ]),
   };
 
-  it("returns global scope for ADMIN", async () => {
-    const scopeRepository = {} as ScopeRepository;
-    const resolver = new ScopeResolver({
-      scopeRepository,
+  const emptyAssociationPort: FacilityAssociationPort = {
+    getAssociatedFacilityIds: mock(async () => []),
+  };
+
+  function emptyScopeRepository(
+    overrides: Partial<ScopeRepository> = {},
+  ): ScopeRepository {
+    return {
+      findTerritoryIdsByUserId: mock(async () => []),
+      findTerritoryIdsByUserIds: mock(async () => []),
+      findManagedUserIds: mock(async () => []),
+      assignTerritory: mock(async () => undefined),
+      revokeTerritory: mock(async () => undefined),
+      findTerritoryAssignmentsByUserId: mock(async () => []),
+      findUserIdsByTerritoryId: mock(async () => []),
+      findManagerIdByUserId: mock(async () => null),
+      findSectorIdsByUserId: mock(async () => []),
+      findTerritoryIdsBySectorIds: mock(async () => []),
+      assignSector: mock(async () => undefined),
+      revokeSector: mock(async () => undefined),
+      findSectorAssignmentsByUserId: mock(async () => []),
+      replaceAssignments: mock(async () => undefined),
+      listActiveSectors: mock(async () => []),
+      ...overrides,
+    };
+  }
+
+  function createResolver(params: {
+    scopeRepository?: ScopeRepository;
+    facilityAssociationPort?: FacilityAssociationPort;
+  } = {}) {
+    return new ScopeResolver({
+      scopeRepository: params.scopeRepository ?? ({} as ScopeRepository),
       territoryScopePort,
       territoryHierarchyPort,
+      facilityAssociationPort:
+        params.facilityAssociationPort ?? emptyAssociationPort,
     });
+  }
 
-    const scope = await resolver.resolve("admin-1", Role.ADMIN);
+  it("returns global scope for ADMIN", async () => {
+    const scope = await createResolver().resolve("admin-1", Role.ADMIN);
 
     expect(scope.isGlobal).toBe(true);
     expect(scope.isOperationallyActive).toBe(true);
   });
 
   it("returns global read scope for OPS", async () => {
-    const scopeRepository = {} as ScopeRepository;
-    const resolver = new ScopeResolver({
-      scopeRepository,
-      territoryScopePort,
-      territoryHierarchyPort,
-    });
-
-    const scope = await resolver.resolve("ops-1", Role.OPS);
+    const scope = await createResolver().resolve("ops-1", Role.OPS);
 
     expect(scope.isGlobal).toBe(true);
     expect(scope.isOperationallyActive).toBe(true);
   });
 
   it("expands user territory assignments via effective territory resolution", async () => {
-    const scopeRepository: ScopeRepository = {
-      findTerritoryIdsByUserId: mock(async () => ["territory-1"]),
-      findTerritoryIdsByUserIds: mock(async () => []),
-      findManagedUserIds: mock(async () => []),
-      assignTerritory: mock(async () => undefined),
-      revokeTerritory: mock(async () => undefined),
-      findTerritoryAssignmentsByUserId: mock(async () => []),
-      findUserIdsByTerritoryId: mock(async () => []),
-      findManagerIdByUserId: mock(async () => null),
-      findSectorIdsByUserId: mock(async () => []),
-      findTerritoryIdsBySectorIds: mock(async () => []),
-      assignSector: mock(async () => undefined),
-      revokeSector: mock(async () => undefined),
-      findSectorAssignmentsByUserId: mock(async () => []),
-      replaceAssignments: mock(async () => undefined),
-      listActiveSectors: mock(async () => []),
-    };
-
-    const resolver = new ScopeResolver({
-      scopeRepository,
-      territoryScopePort,
-      territoryHierarchyPort,
-    });
-    const scope = await resolver.resolve("user-1", Role.REP);
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findTerritoryIdsByUserId: mock(async () => ["territory-1"]),
+      }),
+    }).resolve("user-1", Role.REP);
 
     expect(scope.assignedTerritoryIds).toEqual(["territory-1"]);
-    expect(scope.effectiveTerritoryIds).toEqual(["territory-1", "territory-1-patch"]);
-    expect(scope.facilityIds).toEqual(["clinic-for-territory-1", "clinic-for-territory-1-patch"]);
+    expect(scope.effectiveTerritoryIds).toEqual([
+      "territory-1",
+      "territory-1-patch",
+    ]);
+    expect(scope.facilityIds).toEqual([
+      "clinic-for-territory-1",
+      "clinic-for-territory-1-patch",
+    ]);
+  });
+
+  it("unions active consultant assignments into REP facilityIds", async () => {
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findTerritoryIdsByUserId: mock(async () => ["territory-1"]),
+      }),
+      facilityAssociationPort: {
+        getAssociatedFacilityIds: mock(async () => ["clinic-associated-1"]),
+      },
+    }).resolve("rep-1", Role.REP);
+
+    expect(scope.facilityIds).toEqual([
+      "clinic-for-territory-1",
+      "clinic-for-territory-1-patch",
+      "clinic-associated-1",
+    ]);
+    expect(scope.isOperationallyActive).toBe(true);
+  });
+
+  it("keeps REP operationally active when only consultant associations exist", async () => {
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository(),
+      facilityAssociationPort: {
+        getAssociatedFacilityIds: mock(async () => ["clinic-associated-1"]),
+      },
+    }).resolve("rep-1", Role.REP);
+
+    expect(scope.facilityIds).toEqual(["clinic-associated-1"]);
+    expect(scope.isOperationallyActive).toBe(true);
   });
 
   it("splits manager oversight and analytics clinic scope", async () => {
-    const scopeRepository: ScopeRepository = {
-      findTerritoryIdsByUserId: mock(async (userId: string) =>
-        userId === "manager-1" ? ["manager-zone-1"] : []
-      ),
-      findTerritoryIdsByUserIds: mock(async () => ["patch-1"]),
-      findManagedUserIds: mock(async () => ["user-1"]),
-      assignTerritory: mock(async () => undefined),
-      revokeTerritory: mock(async () => undefined),
-      findTerritoryAssignmentsByUserId: mock(async () => []),
-      findUserIdsByTerritoryId: mock(async () => []),
-      findManagerIdByUserId: mock(async () => null),
-      findSectorIdsByUserId: mock(async () => []),
-      findTerritoryIdsBySectorIds: mock(async () => []),
-      assignSector: mock(async () => undefined),
-      revokeSector: mock(async () => undefined),
-      findSectorAssignmentsByUserId: mock(async () => []),
-      replaceAssignments: mock(async () => undefined),
-      listActiveSectors: mock(async () => []),
-    };
-
-    const resolver = new ScopeResolver({
-      scopeRepository,
-      territoryScopePort,
-      territoryHierarchyPort,
-    });
-    const scope = await resolver.resolve("manager-1", Role.MANAGER);
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findTerritoryIdsByUserId: mock(async (userId: string) =>
+          userId === "manager-1" ? ["manager-zone-1"] : [],
+        ),
+        findTerritoryIdsByUserIds: mock(async () => ["patch-1"]),
+        findManagedUserIds: mock(async () => ["user-1"]),
+      }),
+    }).resolve("manager-1", Role.MANAGER);
 
     expect(scope.assignedTerritoryIds).toEqual(["manager-zone-1"]);
     expect(scope.reportAssignedTerritoryIds).toEqual(["patch-1"]);
-    expect(scope.effectiveTerritoryIds).toEqual(["manager-zone-1", "manager-zone-1-patch"]);
-    expect(scope.analyticsEffectiveTerritoryIds).toEqual(["patch-1", "patch-1-patch"]);
+    expect(scope.effectiveTerritoryIds).toEqual([
+      "manager-zone-1",
+      "manager-zone-1-patch",
+    ]);
+    expect(scope.analyticsEffectiveTerritoryIds).toEqual([
+      "patch-1",
+      "patch-1-patch",
+    ]);
+  });
+
+  it("unions manager consultant associations into oversight facilityIds only", async () => {
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findTerritoryIdsByUserId: mock(async () => ["manager-zone-1"]),
+        findManagedUserIds: mock(async () => ["user-1"]),
+        findTerritoryIdsByUserIds: mock(async () => ["patch-1"]),
+      }),
+      facilityAssociationPort: {
+        getAssociatedFacilityIds: mock(async () => ["clinic-associated-mgr"]),
+      },
+    }).resolve("manager-1", Role.MANAGER);
+
+    expect(scope.facilityIds).toContain("clinic-associated-mgr");
+    expect(scope.facilityIds).toContain("clinic-for-manager-zone-1");
+    expect(scope.analyticsFacilityIds).not.toContain("clinic-associated-mgr");
   });
 
   it("filters REP territory assignments to assigned sectors only", async () => {
-    const scopeRepository: ScopeRepository = {
-      findTerritoryIdsByUserId: mock(async () => ["territory-sector-a", "territory-sector-b"]),
-      findTerritoryIdsByUserIds: mock(async () => []),
-      findManagedUserIds: mock(async () => []),
-      assignTerritory: mock(async () => undefined),
-      revokeTerritory: mock(async () => undefined),
-      findTerritoryAssignmentsByUserId: mock(async () => []),
-      findUserIdsByTerritoryId: mock(async () => []),
-      findManagerIdByUserId: mock(async () => null),
-      findSectorIdsByUserId: mock(async () => ["sector-a"]),
-      findTerritoryIdsBySectorIds: mock(async () => ["territory-sector-a"]),
-      assignSector: mock(async () => undefined),
-      revokeSector: mock(async () => undefined),
-      findSectorAssignmentsByUserId: mock(async () => []),
-      replaceAssignments: mock(async () => undefined),
-      listActiveSectors: mock(async () => []),
-    };
-
-    const resolver = new ScopeResolver({
-      scopeRepository,
-      territoryScopePort,
-      territoryHierarchyPort,
-    });
-    const scope = await resolver.resolve("rep-1", Role.REP);
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findTerritoryIdsByUserId: mock(async () => [
+          "territory-sector-a",
+          "territory-sector-b",
+        ]),
+        findSectorIdsByUserId: mock(async () => ["sector-a"]),
+        findTerritoryIdsBySectorIds: mock(async () => ["territory-sector-a"]),
+      }),
+    }).resolve("rep-1", Role.REP);
 
     expect(scope.assignedTerritoryIds).toEqual(["territory-sector-a"]);
     expect(scope.assignedSectorIds).toEqual(["sector-a"]);
   });
 
   it("falls back to all territory assignments when REP has no sectors", async () => {
-    const scopeRepository: ScopeRepository = {
-      findTerritoryIdsByUserId: mock(async () => ["territory-1", "territory-2"]),
-      findTerritoryIdsByUserIds: mock(async () => []),
-      findManagedUserIds: mock(async () => []),
-      assignTerritory: mock(async () => undefined),
-      revokeTerritory: mock(async () => undefined),
-      findTerritoryAssignmentsByUserId: mock(async () => []),
-      findUserIdsByTerritoryId: mock(async () => []),
-      findManagerIdByUserId: mock(async () => null),
-      findSectorIdsByUserId: mock(async () => []),
-      findTerritoryIdsBySectorIds: mock(async () => []),
-      assignSector: mock(async () => undefined),
-      revokeSector: mock(async () => undefined),
-      findSectorAssignmentsByUserId: mock(async () => []),
-      replaceAssignments: mock(async () => undefined),
-      listActiveSectors: mock(async () => []),
-    };
-
-    const resolver = new ScopeResolver({
-      scopeRepository,
-      territoryScopePort,
-      territoryHierarchyPort,
-    });
-    const scope = await resolver.resolve("rep-2", Role.REP);
+    const scope = await createResolver({
+      scopeRepository: emptyScopeRepository({
+        findTerritoryIdsByUserId: mock(async () => [
+          "territory-1",
+          "territory-2",
+        ]),
+      }),
+    }).resolve("rep-2", Role.REP);
 
     expect(scope.assignedTerritoryIds).toEqual(["territory-1", "territory-2"]);
     expect(scope.assignedSectorIds).toEqual([]);

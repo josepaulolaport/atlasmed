@@ -73,6 +73,7 @@ class ClinicCrmDoctorsSection extends StatelessWidget {
       itemBuilder: (_, i) => _DoctorCard(
         doctor: doctors[i],
         facilityId: facilityId,
+        canEditRoles: onDoctorUpdated != null,
         onDoctorUpdated: onDoctorUpdated,
       ),
     );
@@ -83,11 +84,13 @@ class _DoctorCard extends StatelessWidget {
   const _DoctorCard({
     required this.doctor,
     this.facilityId,
+    this.canEditRoles = false,
     this.onDoctorUpdated,
   });
 
   final FacilityCrmDoctor doctor;
   final String? facilityId;
+  final bool canEditRoles;
   final ValueChanged<FacilityCrmDoctor>? onDoctorUpdated;
 
   @override
@@ -181,35 +184,43 @@ class _DoctorCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          InkWell(
-            onTap: () => _editRoles(context),
-            borderRadius: BorderRadius.circular(8),
-            child: badges.isEmpty
-                ? const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 2),
-                    child: Text(
-                      'Definir papel',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1e40af),
+          if (canEditRoles)
+            InkWell(
+              onTap: () => _editRoles(context),
+              borderRadius: BorderRadius.circular(8),
+              child: badges.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        'Definir papel',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1e40af),
+                        ),
                       ),
+                    )
+                  : Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ...badges,
+                        const Icon(
+                          Icons.edit_outlined,
+                          size: 14,
+                          color: Color(0xFF1e40af),
+                        ),
+                      ],
                     ),
-                  )
-                : Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      ...badges,
-                      const Icon(
-                        Icons.edit_outlined,
-                        size: 14,
-                        color: Color(0xFF1e40af),
-                      ),
-                    ],
-                  ),
-          ),
+            )
+          else if (badges.isNotEmpty)
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: badges,
+            ),
           const SizedBox(height: 10),
           const Divider(height: 1, color: Color(0xFFf3f4f6)),
           const SizedBox(height: 8),

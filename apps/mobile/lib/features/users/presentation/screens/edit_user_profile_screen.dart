@@ -53,6 +53,34 @@ class _EditUserProfileScreenState extends ConsumerState<EditUserProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canAdmin = ref.watch(canManageUserAdminProvider);
+    if (!canAdmin) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: IconButton(
+                  onPressed: () => context.pop(),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                ),
+              ),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Acesso restrito.',
+                    style: TextStyle(color: Color(0xFF6b7280)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final userAsync = ref.watch(userDetailProvider(widget.userId));
 
     return Scaffold(

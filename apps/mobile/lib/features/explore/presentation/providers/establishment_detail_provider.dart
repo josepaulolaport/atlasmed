@@ -1,26 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
 
-/// Phase 1: mocked establishment detail sections.
-/// Phase 3 replaces this with real API repositories.
+/// Section shell for establishment detail.
 ///
-/// Errors are rethrown so section cards can show retry UI. Pass a facility id
-/// ending in `:empty` to exercise empty-roster fallbacks in Phase 1.
+/// Real facilities no longer pull Phase-1 mock bundles (purchase signals,
+/// fake nearby pins, invented specialties). Empty sections mean "not on API
+/// yet" — individual providers (roster, notes, photos, payers) load live data.
 final establishmentDetailSectionsProvider =
     FutureProvider.family<EstablishmentDetailSections, String>((
       ref,
       facilityId,
     ) async {
-      try {
-        if (facilityId.endsWith(':empty')) {
-          return mockEmptyEstablishmentDetailSections(facilityId);
-        }
-        return mockEstablishmentDetailSections(facilityId);
-      } catch (error) {
-        Error.throwWithStackTrace(
-          Exception('Falha ao carregar seções do estabelecimento: $error'),
-          StackTrace.current,
-        );
+      if (isMockNearbyFacilityId(facilityId)) {
+        return const EstablishmentDetailSections();
       }
+      return const EstablishmentDetailSections();
     });

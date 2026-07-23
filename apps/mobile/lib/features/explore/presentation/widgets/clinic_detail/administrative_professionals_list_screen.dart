@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_mock.dart'
+    show facilityRosterListPageSize;
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_representatives_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_roster_provider.dart';
@@ -60,7 +62,7 @@ class _AdministrativeProfessionalsListScreenState
 
     List<AdministrativeProfessional> next;
     if (facilityId.startsWith('near-') || facilityId.endsWith(':empty')) {
-      next = mockAllFacilityAdministrators(facilityId);
+      next = const [];
     } else {
       final repo = FacilityRepresentativesRepository(
         facilityId,
@@ -191,12 +193,14 @@ class _AdministrativeProfessionalsListScreenState
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAssociate,
-        backgroundColor: const Color(0xFF1e40af),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add_rounded),
-      ),
+      floatingActionButton: ref.watch(canMutateProfessionalProvider)
+          ? FloatingActionButton(
+              onPressed: _openAssociate,
+              backgroundColor: const Color(0xFF1e40af),
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add_rounded),
+            )
+          : null,
       body: Stack(
         children: [
           Column(

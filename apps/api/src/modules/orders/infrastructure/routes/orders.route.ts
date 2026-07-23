@@ -70,9 +70,17 @@ const getOrderRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/orders/:id",
-    async ({ params, getScope }) => {
-      const scope = await getScope();
-      const order = await ordersUseCases.getOrder().execute({ orderId: params.id, scope });
+    async ({ params, getScope, getUserId, getAuthContext }) => {
+      const [scope, userId, authContext] = await Promise.all([
+        getScope(),
+        getUserId(),
+        getAuthContext(),
+      ]);
+      const order = await ordersUseCases.getOrder().execute({
+        orderId: params.id,
+        scope,
+        actor: { userId, roleName: authContext.roleName },
+      });
       if (!order) throw new ResourceNotFoundError("Order", params.id);
       return order;
     },

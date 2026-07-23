@@ -34,10 +34,24 @@ Invite delivery uses Resend (`RESEND_FROM_EMAIL`). Codes are short 8-char string
 
 Registration identity: inviter sets `birthDate` + name on the invite; invitee must confirm birth date exactly and name via soft fuzzy match (≥50% of name tokens, case/accent-insensitive). Password confirmation is client-side only.
 
+## Clinic visibility (ScopeContext)
+
+| Role | `facilityIds` |
+|---|---|
+| `ADMIN` / `OPS` | Global (`isGlobal`) |
+| `REP` | Territories (sector-filtered patches) **∪** active `facility_consultant_assignments` for self |
+| `MANAGER` | Own territory oversight (manager zones → patches; fallback to reports’ patches) **∪** own consultant assignments. Does **not** include peer managers’ zones. Analytics facility set remains report-territory based (no consultant union). |
+
+Scope cache is invalidated when consultant assignments change (assignee + previous assignee).
+
+API lists/details that take `getScope()` filter or `assertResourceInScope` on `facilityIds`. Mobile nav/actions mirror CASL via `role_capabilities.dart`; empty/403 from API remains authoritative.
+
+Orders: REP list/detail restricted to `sellerId = actor` within facility scope.
+
 ## Known Follow-Ups
 
-- Finish authorization scope enforcement before exposing sensitive clinical/healthcare relationship data.
 - Align grant `conditions` semantics between API, CASL helpers, and UI.
+- Finish Spec 0006 clinic-ownership design if ownership should diverge from consultant assignments.
 - Expand audit events for 2FA failure reasons and permission changes.
 - Add SSO/OIDC support for Google, Microsoft Entra ID, and Okta readiness.
 - Add 2FA recovery codes and admin reset workflow.

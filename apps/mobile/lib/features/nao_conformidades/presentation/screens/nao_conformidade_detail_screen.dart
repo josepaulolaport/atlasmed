@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
 import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
@@ -28,6 +29,8 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
       naoConformidadeByIdProvider(suggestionId),
     );
     final user = ref.watch(currentUserProvider).valueOrNull;
+    final roleCanReview = ref.watch(canReviewFieldSuggestionsProvider);
+    final effectiveCanReview = canReview && roleCanReview;
 
     return asyncSuggestion.when(
       loading: () => Scaffold(
@@ -54,11 +57,14 @@ class NaoConformidadeDetailScreen extends ConsumerWidget {
             ) ??
             false;
 
-        if (suggestion == null || (!canReview && !owned)) {
+        if (suggestion == null || (!effectiveCanReview && !owned)) {
           return _NotFound(onBack: () => context.pop());
         }
 
-        return _DetailBody(suggestion: suggestion, canReview: canReview);
+        return _DetailBody(
+          suggestion: suggestion,
+          canReview: effectiveCanReview,
+        );
       },
     );
   }

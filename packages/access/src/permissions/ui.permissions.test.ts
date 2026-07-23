@@ -4,6 +4,7 @@ import {
   canManageUsers,
   canReadCatalog,
   canManageCatalog,
+  canReadFieldSuggestions,
   canReadTerritories,
   canManageTerritories,
   canViewHealth,
@@ -65,11 +66,20 @@ describe("ui.permissions", () => {
       expect(canManageCatalog(Role.ADMIN)).toBe(true);
     });
 
-    it("should deny MANAGER and USER catalog access", () => {
-      expect(canReadCatalog(Role.MANAGER)).toBe(false);
+    it("should allow MANAGER and REP to read catalog", () => {
+      expect(canReadCatalog(Role.MANAGER)).toBe(true);
       expect(canManageCatalog(Role.MANAGER)).toBe(false);
-      expect(canReadCatalog(Role.REP)).toBe(false);
+      expect(canReadCatalog(Role.REP)).toBe(true);
       expect(canManageCatalog(Role.REP)).toBe(false);
+    });
+  });
+
+  describe("canReadFieldSuggestions", () => {
+    it("should allow ADMIN, MANAGER, OPS and deny REP", () => {
+      expect(canReadFieldSuggestions(Role.ADMIN)).toBe(true);
+      expect(canReadFieldSuggestions(Role.MANAGER)).toBe(true);
+      expect(canReadFieldSuggestions(Role.OPS)).toBe(true);
+      expect(canReadFieldSuggestions(Role.REP)).toBe(false);
     });
   });
 });

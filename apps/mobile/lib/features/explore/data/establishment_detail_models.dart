@@ -511,13 +511,15 @@ FacilityConformityStatus? parseFacilityConformityStatus(String? raw) {
 class FacilityStatusSignals {
   const FacilityStatusSignals({
     required this.commercialStatus,
-    required this.purchaseStatus,
+    this.purchaseStatus,
     required this.conformityStatus,
     this.lastPurchaseAt,
   });
 
   final FacilityCommercialStatus commercialStatus;
-  final FacilityPurchaseStatus purchaseStatus;
+
+  /// Omitted when the API has no purchase aggregate (no mock fallback).
+  final FacilityPurchaseStatus? purchaseStatus;
   final FacilityConformityStatus conformityStatus;
 
   /// Backend-computed from `orders` in Phase 2. Mocked in Phase 1.

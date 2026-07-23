@@ -11,13 +11,9 @@ final territoryRepositoryProvider = Provider<TerritoryRepository>((ref) {
   return HttpTerritoryRepository();
 });
 
-/// Whether the signed-in user can mutate territories (create, edit info,
-/// assign, delete, edit the boundary). Mobile mutations are ADMIN-only for
-/// now — MANAGER/REP get a read-only map; the backend enforces the same
-/// restriction independently, this only controls whether the mutation UI
-/// is shown at all. Defaults to `false` while the session is still
-/// resolving or on error, so mutation controls never flash on before
-/// access is actually confirmed.
+/// ADMIN-only helper (catalog manage, etc.). Territory create/update/delete
+/// use `canCreateTerritoryProvider` / `canUpdateTerritoryProvider` /
+/// `canDeleteTerritoryProvider` from `role_capability_providers.dart`.
 final isAdminProvider = Provider<bool>((ref) {
   final user = ref.watch(currentUserProvider).valueOrNull;
   return user?.role.name == UserRoleName.admin;

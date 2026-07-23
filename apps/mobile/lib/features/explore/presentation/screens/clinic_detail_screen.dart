@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
@@ -421,6 +422,8 @@ class _ClinicDetailContent extends ConsumerWidget {
     final ordersState = ref.watch(facilityOrdersProvider(clinicId));
     final location = establishmentLocationFromDetail(detail);
     final nearbyAsync = ref.watch(facilityNearbyPreviewProvider(clinicId));
+    final canMutate = ref.watch(canMutateFacilityProvider);
+    final canSuggest = ref.watch(canCreateFieldSuggestionProvider);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(
@@ -469,13 +472,15 @@ class _ClinicDetailContent extends ConsumerWidget {
             onLoadMore: () => ref
                 .read(facilityAdministratorsRosterProvider(clinicId).notifier)
                 .loadMore(),
-            onAssociate: () => _openAdministratorsList(
-              context,
-              ref,
-              clinicId: clinicId,
-              facilityName: detail.name,
-              rosterFallback: adminsRoster.items,
-            ),
+            onAssociate: canMutate
+                ? () => _openAdministratorsList(
+                    context,
+                    ref,
+                    clinicId: clinicId,
+                    facilityName: detail.name,
+                    rosterFallback: adminsRoster.items,
+                  )
+                : null,
           ),
         ClinicSectionHeader(
           title: 'Médicos',
@@ -511,22 +516,30 @@ class _ClinicDetailContent extends ConsumerWidget {
             onLoadMore: () => ref
                 .read(facilityDoctorsRosterProvider(clinicId).notifier)
                 .loadMore(),
-            onAssociate: () => _openDoctorsList(
-              context,
-              ref,
-              clinicId: clinicId,
-              facilityName: detail.name,
-              rosterFallback: doctorsRoster.items,
-            ),
-            onDoctorUpdated: (updated) {
-              ref
-                  .read(facilityDoctorsRosterProvider(clinicId).notifier)
-                  .replaceWhere((d) => d.id == updated.id, (_) => updated);
-            },
+            onAssociate: canMutate
+                ? () => _openDoctorsList(
+                    context,
+                    ref,
+                    clinicId: clinicId,
+                    facilityName: detail.name,
+                    rosterFallback: doctorsRoster.items,
+                  )
+                : null,
+            onDoctorUpdated: canMutate
+                ? (updated) {
+                    ref
+                        .read(facilityDoctorsRosterProvider(clinicId).notifier)
+                        .replaceWhere(
+                          (d) => d.id == updated.id,
+                          (_) => updated,
+                        );
+                  }
+                : null,
           ),
         ClinicSectionHeader(
           title: 'Fontes Pagadoras',
-          trailing: payersState.loading && payersState.payers.isEmpty
+          trailing: !canMutate ||
+                  (payersState.loading && payersState.payers.isEmpty)
               ? null
               : _HeaderLinkButton(
                   label: 'Editar',
@@ -551,13 +564,15 @@ class _ClinicDetailContent extends ConsumerWidget {
           ClinicPayersBarSection(
             payers: payersState.payers,
             summary: payersState.summary,
-            onEdit: () => _openPayerSourcesEditor(
-              context,
-              ref,
-              clinicId: clinicId,
-              facilityName: detail.name,
-              payers: payersState.payers,
-            ),
+            onEdit: canMutate
+                ? () => _openPayerSourcesEditor(
+                    context,
+                    ref,
+                    clinicId: clinicId,
+                    facilityName: detail.name,
+                    payers: payersState.payers,
+                  )
+                : null,
           ),
         const ClinicSectionHeader(title: 'Mapa e clínicas próximas'),
         if (location == null)
@@ -626,13 +641,14 @@ class _ClinicDetailContent extends ConsumerWidget {
             city: detail.city.isNotEmpty ? detail.city : null,
           ),
         ),
-        const _SuggestEditBanner(),
-        _ClinicDeactivateButton(
-          clinicId: clinicId,
-          clinicName: detail.name,
-          commercialStatus:
-              sectionsAsync.valueOrNull?.statusSignals?.commercialStatus,
-        ),
+        if (canSuggest) const _SuggestEditBanner(),
+        if (canSuggest)
+          _ClinicDeactivateButton(
+            clinicId: clinicId,
+            clinicName: detail.name,
+            commercialStatus:
+                sectionsAsync.valueOrNull?.statusSignals?.commercialStatus,
+          ),
       ],
     );
   }
@@ -782,6 +798,7 @@ class _QuickActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final canVisit = ref.watch(canCreateVisitProvider);
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 0),
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -827,36 +844,37 @@ class _QuickActions extends ConsumerWidget {
               address: detail.formattedAddress,
             ),
           ),
-          _ActionButton(
-            icon: Icons.calendar_month_rounded,
-            label: 'Visita',
-            onTap: () async {
-              try {
-                final repo = ref.read(
-                  clinicVisitsRepositoryProvider(detail.id),
-                );
-                await repo.createVisit();
-                ref.invalidate(clinicVisitsProvider(detail.id));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Visita registrada com sucesso'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+          if (canVisit)
+            _ActionButton(
+              icon: Icons.calendar_month_rounded,
+              label: 'Visita',
+              onTap: () async {
+                try {
+                  final repo = ref.read(
+                    clinicVisitsRepositoryProvider(detail.id),
                   );
+                  await repo.createVisit();
+                  ref.invalidate(clinicVisitsProvider(detail.id));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Visita registrada com sucesso'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Erro ao registrar visita'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
                 }
-              } catch (_) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Erro ao registrar visita'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              }
-            },
-          ),
+              },
+            ),
           _ActionButton(
             icon: Icons.note_add_rounded,
             label: 'Pedido',

@@ -8,6 +8,7 @@ import 'package:atlasmed_mobile_app/core/session/repositories/session_environmen
 import 'package:atlasmed_mobile_app/core/session/models/session.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
+import 'package:atlasmed_mobile_app/core/user/role_capabilities.dart';
 import 'package:atlasmed_mobile_app/core/user/repositories/user_repository.dart';
 import 'package:atlasmed_mobile_app/repository/repository_flutter.dart';
 
@@ -210,8 +211,6 @@ class AtlasTopBar extends StatelessWidget {
   }
 }
 
-bool _isAdmin(UserRoleName role) => role == UserRoleName.admin;
-
 // ======================================================================
 // Navigation items definition
 // ======================================================================
@@ -223,9 +222,8 @@ class _DrawerItem {
   final IconData icon;
 
   /// When set, the item is hidden from roles for which this returns
-  /// `false`. `null` means visible to everyone (the default for every
-  /// existing section — territories, for instance, is read-only for
-  /// non-admins rather than hidden).
+  /// `false`. `null` means visible to everyone. Prefer mirroring CASL
+  /// helpers in `role_capabilities.dart` — API still enforces access.
   final bool Function(UserRoleName role)? visibleFor;
 
   const _DrawerItem({
@@ -238,12 +236,6 @@ class _DrawerItem {
 }
 
 const _drawerItems = <_DrawerItem>[
-  _DrawerItem(
-    key: 'desempenho',
-    label: 'Desempenho',
-    route: '/bi',
-    icon: Icons.bar_chart_rounded,
-  ),
   _DrawerItem(
     key: 'explorar',
     label: 'Explorar',
@@ -261,13 +253,14 @@ const _drawerItems = <_DrawerItem>[
     label: 'Territórios',
     route: '/territorios',
     icon: Icons.layers_outlined,
+    visibleFor: canReadTerritories,
   ),
   _DrawerItem(
     key: 'usuarios',
     label: 'Usuários',
     route: '/usuarios',
     icon: Icons.people_outline_rounded,
-    visibleFor: _isAdmin,
+    visibleFor: canManageUsers,
   ),
   _DrawerItem(
     key: 'pedidos',
@@ -280,24 +273,21 @@ const _drawerItems = <_DrawerItem>[
     label: 'Cadastros',
     route: '/cadastros',
     icon: Icons.fact_check_outlined,
+    visibleFor: canReviewCadastro,
   ),
   _DrawerItem(
     key: 'nao-conformidades',
     label: 'Não Conformidades',
     route: '/nao-conformidades',
     icon: Icons.rate_review_outlined,
+    visibleFor: canReadFieldSuggestions,
   ),
   _DrawerItem(
     key: 'produtos',
     label: 'Produtos',
     route: '/produtos',
     icon: Icons.inventory_outlined,
-  ),
-  _DrawerItem(
-    key: 'apresentacoes',
-    label: 'Apresentações',
-    route: '/apresentacoes',
-    icon: Icons.slideshow_outlined,
+    visibleFor: canReadCatalog,
   ),
   _DrawerItem(
     key: 'perfil',

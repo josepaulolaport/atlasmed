@@ -25,7 +25,8 @@ class UserDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final canManage = ref.watch(canManageUsersProvider);
+    final canLifecycle = ref.watch(canLifecycleUserProvider);
+    final canAdmin = ref.watch(canManageUserAdminProvider);
     final userAsync = ref.watch(userDetailProvider(userId));
 
     return Scaffold(
@@ -35,8 +36,13 @@ class UserDetailScreen extends ConsumerWidget {
           children: [
             _Header(
               title: userAsync.valueOrNull?.displayName ?? 'Usuário',
-              onMore: canManage && userAsync.valueOrNull != null
-                  ? () => _showLifecycleSheet(context, ref, userAsync.value!)
+              onMore: canLifecycle && userAsync.valueOrNull != null
+                  ? () => _showLifecycleSheet(
+                      context,
+                      ref,
+                      userAsync.value!,
+                      canAdmin: canAdmin,
+                    )
                   : null,
             ),
             Expanded(
@@ -57,7 +63,10 @@ class UserDetailScreen extends ConsumerWidget {
                       ),
                     );
                   }
-                  return _UserDetailBody(user: user, canManage: canManage);
+                  return _UserDetailBody(
+                    user: user,
+                    canManageAdmin: canAdmin,
+                  );
                 },
               ),
             ),
@@ -70,8 +79,9 @@ class UserDetailScreen extends ConsumerWidget {
   Future<void> _showLifecycleSheet(
     BuildContext context,
     WidgetRef ref,
-    User user,
-  ) async {
+    User user, {
+    required bool canAdmin,
+  }) async {
     final action = await showModalBottomSheet<String>(
       context: context,
       showDragHandle: true,
@@ -79,16 +89,18 @@ class UserDetailScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.badge_outlined),
-              title: const Text('Alterar função'),
-              onTap: () => Navigator.pop(sheetContext, 'role'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.security_outlined),
-              title: const Text('Gerenciar permissões'),
-              onTap: () => Navigator.pop(sheetContext, 'permissions'),
-            ),
+            if (canAdmin) ...[
+              ListTile(
+                leading: const Icon(Icons.badge_outlined),
+                title: const Text('Alterar função'),
+                onTap: () => Navigator.pop(sheetContext, 'role'),
+              ),
+              ListTile(
+                leading: const Icon(Icons.security_outlined),
+                title: const Text('Gerenciar permissões'),
+                onTap: () => Navigator.pop(sheetContext, 'permissions'),
+              ),
+            ],
             if (user.status.name == 'inactive')
               ListTile(
                 leading: const Icon(
@@ -240,10 +252,13 @@ class _Header extends StatelessWidget {
 }
 
 class _UserDetailBody extends ConsumerWidget {
-  const _UserDetailBody({required this.user, required this.canManage});
+  const _UserDetailBody({
+    required this.user,
+    required this.canManageAdmin,
+  });
 
   final User user;
-  final bool canManage;
+  final bool canManageAdmin;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -257,7 +272,7 @@ class _UserDetailBody extends ConsumerWidget {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
       children: [
-        _IdentityCard(user: user, canManage: canManage),
+        _IdentityCard(user: user, canManageAdmin: canManageAdmin),
         if (showsAssignments) ...[
           const SizedBox(height: 16),
           assignmentsAsync.when(
@@ -266,7 +281,7 @@ class _UserDetailBody extends ConsumerWidget {
             data: (assignments) => _AssignmentsSection(
               user: user,
               assignments: assignments,
-              canManage: canManage,
+              canManage: canManageAdmin,
             ),
           ),
         ],
@@ -276,10 +291,13 @@ class _UserDetailBody extends ConsumerWidget {
 }
 
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.user, required this.canManage});
+  const _IdentityCard({
+    required this.user,
+    required this.canManageAdmin,
+  });
 
   final User user;
-  final bool canManage;
+  final bool canManageAdmin;
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +350,7 @@ class _IdentityCard extends StatelessWidget {
               ),
             ],
           ),
-          if (canManage) ...[
+          if (canManageAdmin) ...[
             const SizedBox(height: 14),
             SizedBox(
               width: double.infinity,

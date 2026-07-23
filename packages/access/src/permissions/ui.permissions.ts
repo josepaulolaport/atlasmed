@@ -86,6 +86,15 @@ export function canReadCatalog(role: Role): boolean {
   );
 }
 
+/** Ops review queue (Não Conformidades). REP can create suggestions but not read the queue. */
+export function canReadFieldSuggestions(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return (
+    ability.can("read", "FIELD_SUGGESTION") ||
+    ability.can("manage", "FIELD_SUGGESTION")
+  );
+}
+
 export function isAdmin(role: Role): boolean {
   return role === Role.ADMIN;
 }

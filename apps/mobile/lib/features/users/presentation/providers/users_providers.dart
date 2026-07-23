@@ -1,6 +1,4 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
-import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
-import 'package:atlasmed_mobile_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
@@ -8,20 +6,15 @@ import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.d
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_repository_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+export 'package:atlasmed_mobile_app/core/user/role_capability_providers.dart'
+    show
+        canLifecycleUserProvider,
+        canManageUserAdminProvider,
+        canManageUsersProvider;
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_notifier.dart';
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_list_state.dart';
 export 'package:atlasmed_mobile_app/features/users/presentation/providers/users_repository_providers.dart';
 
-/// Whether the signed-in user can access User Management at all. Unlike
-/// territories (read-only for non-admins), this screen is admin-only end
-/// to end — the backend's `manage USER` / role-change / grant rules are
-/// effectively ADMIN-exclusive, so the mobile UI mirrors that instead of
-/// showing a partial read-only view. Defaults to `false` while the session
-/// is still resolving or on error.
-final canManageUsersProvider = Provider<bool>((ref) {
-  final user = ref.watch(currentUserProvider).valueOrNull;
-  return user?.role.name == UserRoleName.admin;
-});
 
 /// Looks up a single user by id — used by the detail screen and by the
 /// change-role sheet's initial selection.
