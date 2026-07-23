@@ -7,10 +7,7 @@ final currentUserRoleProvider = Provider<UserRoleName?>((ref) {
   return ref.watch(currentUserProvider).valueOrNull?.role.name;
 });
 
-bool _roleFlag(
-  Ref ref,
-  bool Function(UserRoleName role) predicate,
-) {
+bool _roleFlag(Ref ref, bool Function(UserRoleName role) predicate) {
   final role = ref.watch(currentUserRoleProvider);
   return role != null && predicate(role);
 }

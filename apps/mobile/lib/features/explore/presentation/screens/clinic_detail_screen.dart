@@ -538,8 +538,8 @@ class _ClinicDetailContent extends ConsumerWidget {
           ),
         ClinicSectionHeader(
           title: 'Fontes Pagadoras',
-          trailing: !canMutate ||
-                  (payersState.loading && payersState.payers.isEmpty)
+          trailing:
+              !canMutate || (payersState.loading && payersState.payers.isEmpty)
               ? null
               : _HeaderLinkButton(
                   label: 'Editar',
