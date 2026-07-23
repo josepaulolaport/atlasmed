@@ -265,7 +265,7 @@ describe("Suggestion use cases", () => {
       billingEmail: null,
       responsibleName: null,
       openingHours: null,
-      taxIdType: "PJ",
+      taxIdType: "PJ" as const,
       cnpj: null,
       cpf: null,
       lat: null,
