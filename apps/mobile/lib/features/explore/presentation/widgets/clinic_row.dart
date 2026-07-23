@@ -92,18 +92,26 @@ class ClinicRow extends StatelessWidget {
                   if (clinic.locationLabel != null) ...[
                     const SizedBox(height: 3),
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          Icons.location_on_rounded,
-                          size: 11,
-                          color: const Color(0xFF6b7280),
+                        const Padding(
+                          padding: EdgeInsets.only(top: 2),
+                          child: Icon(
+                            Icons.location_on_rounded,
+                            size: 11,
+                            color: Color(0xFF6b7280),
+                          ),
                         ),
                         const SizedBox(width: 2),
-                        Text(
-                          clinic.locationLabel!,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: Color(0xFF6b7280),
+                        Expanded(
+                          child: Text(
+                            clinic.locationLabel!,
+                            softWrap: true,
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              color: Color(0xFF6b7280),
+                              height: 1.25,
+                            ),
                           ),
                         ),
                       ],
