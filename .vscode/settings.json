@@ -21,5 +21,6 @@
     "source.fixAll.eslint": "explicit"
   },
   "dart.flutterSdkPath": "apps/mobile/.fvm/flutter_sdk",
+  "dart.sdkPath": "apps/mobile/.fvm/flutter_sdk/bin/cache/dart-sdk",
   "tailwindCSS.lint.suggestCanonicalClasses": "error"
 }
