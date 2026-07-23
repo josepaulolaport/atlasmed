@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/data/field_suggestion_mapper.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/data/nao_conformidade_models.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 
 /// Shared bottom sheet for the "tap a pencil, suggest an edit" pattern.
-///
-/// Phase 1 (mocked): submission just shows a confirmation snackbar — no
-/// network call. Phase 2 wires this to a suggestion-submission endpoint that
-/// reuses the existing `FACILITY_FIELD_UPDATE` review pipeline so changes
-/// still pass through administrative review before landing on the profile.
 Future<void> showEditSuggestionSheet(
   BuildContext context, {
   required String fieldLabel,
   required String? currentValue,
+  WidgetRef? ref,
+  NaoConformidadeTargetType? targetType,
+  String? targetId,
+  String? targetName,
+  String? facilityName,
+  String? fieldKey,
 }) async {
-  // Opening a route in the same frame as an InkWell/Tooltip interaction can
-  // race InheritedWidget teardown (`_dependents.isEmpty`). Wait one frame.
   await Future<void>.delayed(Duration.zero);
   if (!context.mounted) return;
 
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final submitted = await showModalBottomSheet<bool>(
+  final submittedValue = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -33,10 +36,51 @@ Future<void> showEditSuggestionSheet(
     },
   );
 
-  if (submitted == true && messenger != null) {
-    messenger.showSnackBar(
+  if (submittedValue == null || !context.mounted) return;
+
+  if (ref == null ||
+      targetType != NaoConformidadeTargetType.clinic ||
+      targetId == null) {
+    messenger?.showSnackBar(
       const SnackBar(
         content: Text('Sugestão enviada para revisão'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+  final resolvedKey = fieldKey ?? fieldKeyForLabel(fieldLabel);
+  if (resolvedKey == null) {
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text('Campo "$fieldLabel" ainda não pode ser sugerido'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+    return;
+  }
+
+  try {
+    await ref
+        .read(naoConformidadeActionsProvider)
+        .submitFieldChange(
+          facilityId: targetId,
+          fieldKey: resolvedKey,
+          proposedValue: submittedValue.trim(),
+        );
+    if (!context.mounted) return;
+    messenger?.showSnackBar(
+      const SnackBar(
+        content: Text('Sugestão enviada para revisão'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text('Falha ao enviar sugestão: $e'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -140,7 +184,11 @@ class _EditSuggestionSheetBodyState extends State<_EditSuggestionSheetBody> {
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
+              onPressed: () {
+                final value = _controller.text.trim();
+                if (value.isEmpty) return;
+                Navigator.of(context).pop(value);
+              },
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF1e40af),
                 foregroundColor: Colors.white,

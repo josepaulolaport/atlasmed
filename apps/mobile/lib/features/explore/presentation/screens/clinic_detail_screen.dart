@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:atlasmed_mobile_app/core/navigation/app_route_observer.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/clinic_detail.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/payer_catalog_mock.dart';
@@ -17,6 +18,7 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_admin_professionals_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_context_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_crm_doctors_section.dart';
+import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_deactivation_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_detail_card.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_field_notes_section.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic_detail/clinic_header_section.dart';
@@ -31,20 +33,82 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/clinic
 // ===============================================================
 // ClinicDetailScreen — establishment detail, per Spec 0005 redesign
 // ===============================================================
-class ClinicDetailScreen extends ConsumerWidget {
+class ClinicDetailScreen extends ConsumerStatefulWidget {
   final String clinicId;
 
   const ClinicDetailScreen({super.key, required this.clinicId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClinicDetailScreen> createState() => _ClinicDetailScreenState();
+}
+
+class _ClinicDetailScreenState extends ConsumerState<ClinicDetailScreen>
+    with WidgetsBindingObserver, RouteAware {
+  /// Avoid refetch storms when resume + didPopNext fire close together.
+  static const _minRefreshGap = Duration(seconds: 15);
+  DateTime? _lastVisibilityRefreshAt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      appRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    appRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshClinicIfStale();
+    }
+  }
+
+  @override
+  void didPopNext() {
+    // A route above this screen was popped — clinic is visible again.
+    _refreshClinicIfStale();
+  }
+
+  void _refreshClinicIfStale() {
+    final now = DateTime.now();
+    final last = _lastVisibilityRefreshAt;
+    if (last != null && now.difference(last) < _minRefreshGap) return;
+    _lastVisibilityRefreshAt = now;
+
+    final clinicId = widget.clinicId;
+    ref.invalidate(clinicDetailProvider(clinicId));
+    // Warm so skipLoadingOnReload can swap in fresh data without a skeleton.
+    // ignore: unused_result
+    ref.read(clinicDetailProvider(clinicId).future);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clinicId = widget.clinicId;
     final detailAsync = ref.watch(clinicDetailProvider(clinicId));
 
     return Scaffold(
       backgroundColor: const Color(0xFFf8f9fb),
       body: detailAsync.when(
+        // Keep showing the last clinic while NC approve (or pull-to-refresh)
+        // refetches — avoids a full-screen skeleton flash.
+        skipLoadingOnReload: true,
         loading: () => _loadingSkeleton(context),
-        error: (err, _) => _errorView(context, ref, clinicId, err),
+        error: (err, _) => _errorView(context, clinicId, err),
         data: (detail) => _ClinicDetailBody(detail: detail, clinicId: clinicId),
       ),
     );
@@ -89,12 +153,7 @@ class ClinicDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _errorView(
-    BuildContext context,
-    WidgetRef ref,
-    String clinicId,
-    Object error,
-  ) {
+  Widget _errorView(BuildContext context, String clinicId, Object error) {
     return SafeArea(
       child: Center(
         child: Padding(
@@ -563,6 +622,12 @@ class _ClinicDetailContent extends ConsumerWidget {
           ),
         ),
         const _SuggestEditBanner(),
+        _ClinicDeactivateButton(
+          clinicId: clinicId,
+          clinicName: detail.name,
+          commercialStatus:
+              sectionsAsync.valueOrNull?.statusSignals?.commercialStatus,
+        ),
       ],
     );
   }
@@ -885,6 +950,52 @@ class _SuggestEditBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Destructive action at the end of the clinic profile — button, not a card.
+class _ClinicDeactivateButton extends ConsumerWidget {
+  const _ClinicDeactivateButton({
+    required this.clinicId,
+    required this.clinicName,
+    this.commercialStatus,
+  });
+
+  final String clinicId;
+  final String clinicName;
+  final FacilityCommercialStatus? commercialStatus;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: () => requestClinicDeactivation(
+            context,
+            ref: ref,
+            clinicId: clinicId,
+            clinicName: clinicName,
+            currentStatus: commercialStatus ?? FacilityCommercialStatus.active,
+          ),
+          icon: const Icon(Icons.power_settings_new_rounded, size: 18),
+          label: const Text('Solicitar desativação'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: const Color(0xFFdc2626),
+            side: const BorderSide(color: Color(0xFFfca5a5)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            textStyle: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -132,3 +132,15 @@ export const orderTypeEnum = pgEnum("order_type", [
   "DONATION",
   "OTHER",
 ]);
+
+/** User-submitted Não Conformidades (field suggestions) — not CNES registry. */
+export const fieldSuggestionKindEnum = pgEnum("field_suggestion_kind", [
+  "FIELD_CHANGE",
+  "DEACTIVATION",
+]);
+
+export const fieldSuggestionStatusEnum = pgEnum("field_suggestion_status", [
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+]);

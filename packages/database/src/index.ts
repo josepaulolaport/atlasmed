@@ -28,6 +28,8 @@ import {
   facilityTaxIdTypeEnum,
   orderStatusEnum,
   orderTypeEnum,
+  fieldSuggestionKindEnum,
+  fieldSuggestionStatusEnum,
 } from "./schema/public/enums";
 import {
   cnesRunStatusEnum,
@@ -59,3 +61,6 @@ export type VerificationTokenType = (typeof verificationTokenTypeEnum.enumValues
 export type FacilityTaxIdType = (typeof facilityTaxIdTypeEnum.enumValues)[number];
 export type OrderStatus = (typeof orderStatusEnum.enumValues)[number];
 export type OrderType = (typeof orderTypeEnum.enumValues)[number];
+export type FieldSuggestionKind = (typeof fieldSuggestionKindEnum.enumValues)[number];
+export type FieldSuggestionStatus =
+  (typeof fieldSuggestionStatusEnum.enumValues)[number];

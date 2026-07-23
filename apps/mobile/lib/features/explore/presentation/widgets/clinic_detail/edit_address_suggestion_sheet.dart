@@ -1,22 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:atlasmed_mobile_app/features/nao_conformidades/presentation/providers/nao_conformidade_provider.dart';
 
 /// Bottom sheet to suggest edits for the street-address components.
 /// Display on the admin card stays as one composed "Endereço" line; editing
 /// opens this multi-field form (bairro / logradouro / número / complemento).
-///
-/// Phase 1 (mocked): submission shows a confirmation snackbar — no network.
 Future<void> showAddressEditSuggestionSheet(
   BuildContext context, {
+  required WidgetRef ref,
+  required String facilityId,
   required String? neighborhood,
   required String? streetAddress,
   required String? streetNumber,
   required String? addressComplement,
+  String? city,
+  String? state,
+  String? postalCode,
 }) async {
   await Future<void>.delayed(Duration.zero);
   if (!context.mounted) return;
 
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final submitted = await showModalBottomSheet<bool>(
+  final submitted = await showModalBottomSheet<Map<String, String?>>(
     context: context,
     isScrollControlled: true,
     useRootNavigator: true,
@@ -32,10 +37,36 @@ Future<void> showAddressEditSuggestionSheet(
     ),
   );
 
-  if (submitted == true && messenger != null) {
-    messenger.showSnackBar(
+  if (submitted == null || !context.mounted) return;
+
+  try {
+    await ref
+        .read(naoConformidadeActionsProvider)
+        .submitFieldChange(
+          facilityId: facilityId,
+          fieldKey: 'address',
+          proposedValue: {
+            'neighborhood': submitted['neighborhood'],
+            'streetAddress': submitted['streetAddress'],
+            'streetNumber': submitted['streetNumber'],
+            'addressComplement': submitted['addressComplement'],
+            'city': city,
+            'state': state,
+            'postalCode': postalCode,
+          },
+        );
+    if (!context.mounted) return;
+    messenger?.showSnackBar(
       const SnackBar(
         content: Text('Sugestão enviada para revisão'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (e) {
+    if (!context.mounted) return;
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text('Falha ao enviar sugestão: $e'),
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -182,7 +213,22 @@ class _AddressEditSuggestionSheetBodyState
             SizedBox(
               width: double.infinity,
               child: FilledButton(
-                onPressed: () => Navigator.of(context).pop(true),
+                onPressed: () {
+                  Navigator.of(context).pop(<String, String?>{
+                    'neighborhood': _neighborhoodCtrl.text.trim().isEmpty
+                        ? null
+                        : _neighborhoodCtrl.text.trim(),
+                    'streetAddress': _streetCtrl.text.trim().isEmpty
+                        ? null
+                        : _streetCtrl.text.trim(),
+                    'streetNumber': _numberCtrl.text.trim().isEmpty
+                        ? null
+                        : _numberCtrl.text.trim(),
+                    'addressComplement': _complementCtrl.text.trim().isEmpty
+                        ? null
+                        : _complementCtrl.text.trim(),
+                  });
+                },
                 style: FilledButton.styleFrom(
                   backgroundColor: const Color(0xFF1e40af),
                   foregroundColor: Colors.white,

@@ -24,6 +24,7 @@ export function applyRoleAbilities(
       can("manage", "SEARCH_SYNC");
       can("manage", "CATALOG");
       can("manage", "VISIT");
+      can("manage", "FIELD_SUGGESTION");
       break;
 
     case "MANAGER":
@@ -46,6 +47,9 @@ export function applyRoleAbilities(
       can("update", "REGISTRY_SUGGESTION");
       can("read", "REGISTRY_INGESTION");
       can("read", "CATALOG");
+      can("create", "FIELD_SUGGESTION");
+      can("read", "FIELD_SUGGESTION");
+      can("update", "FIELD_SUGGESTION");
       break;
 
     case "REP":
@@ -56,6 +60,10 @@ export function applyRoleAbilities(
       can("read", "PROFESSIONAL");
       can("update", "PROFESSIONAL");
       can("read", "CATALOG");
+      // Mine list is facility-scoped (read FACILITY); ops queue requires read FIELD_SUGGESTION.
+      can("create", "FIELD_SUGGESTION");
+      cannot("read", "FIELD_SUGGESTION");
+      cannot("update", "FIELD_SUGGESTION");
       cannot("create", "USER");
       cannot("update", "USER");
       cannot("delete", "USER");
@@ -66,6 +74,9 @@ export function applyRoleAbilities(
       can("read", "PROFESSIONAL");
       can("read", "TERRITORY");
       can("read", "USER");
+      can("read", "FIELD_SUGGESTION");
+      can("update", "FIELD_SUGGESTION");
+      cannot("create", "FIELD_SUGGESTION");
       cannot("create", "FACILITY");
       cannot("update", "FACILITY");
       cannot("delete", "FACILITY");
