@@ -139,6 +139,7 @@ function serializeProfessionalFromContext(
     crmState: string | null;
     favoriteTeam: string | null;
     favoriteSport: string | null;
+    languages: string | null;
     hobbies: string | null;
     notes: string | null;
     createdAt: Date;
@@ -167,6 +168,7 @@ function serializeProfessionalFromContext(
     crmState: professional.crmState ?? undefined,
     favoriteTeam: professional.favoriteTeam ?? undefined,
     favoriteSport: professional.favoriteSport ?? undefined,
+    languages: professional.languages ?? undefined,
     hobbies: professional.hobbies ?? undefined,
     notes: professional.notes ?? undefined,
     facilityIds,
@@ -255,9 +257,14 @@ export class GetFacilityProfessionalContextUseCase {
       return null;
     }
 
-    const facilities = await this.deps.professionalRepository.findActiveFacilities(
+    const allFacilities = await this.deps.professionalRepository.findActiveFacilities(
       input.professionalId
     );
+    const facilities = input.scope.isGlobal
+      ? allFacilities
+      : allFacilities.filter((facility) =>
+          input.scope.facilityIds.includes(facility.id)
+        );
 
     const rel =
       await this.deps.userProfessionalRelationshipRepository.findByUserAndProfessional(

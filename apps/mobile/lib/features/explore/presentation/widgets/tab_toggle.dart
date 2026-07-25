@@ -5,6 +5,7 @@ class TabToggle extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final int clinicCount;
   final int doctorCount;
+  final Widget? trailing;
 
   const TabToggle({
     super.key,
@@ -12,6 +13,7 @@ class TabToggle extends StatelessWidget {
     required this.onChanged,
     required this.clinicCount,
     required this.doctorCount,
+    this.trailing,
   });
 
   @override
@@ -36,6 +38,7 @@ class TabToggle extends StatelessWidget {
             selected: value == 'doctor',
             onTap: () => onChanged('doctor'),
           ),
+          if (trailing != null) ...[const Spacer(), trailing!],
         ],
       ),
     );

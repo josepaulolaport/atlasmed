@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment_mixin.dart';
+import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/repositories/http_repository.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/doctor_api_type.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/api_types/query_builder.dart';
@@ -81,4 +84,31 @@ class DoctorsRepository extends Repository<PaginatedDoctors>
 
   @override
   PaginatedDoctors fromJson(String json) => PaginatedDoctors.fromJson(json);
+
+  /// Patches a single person-level field via `PATCH /api/v1/professionals/:id`.
+  /// Pass [value] `null` to clear a nullable column.
+  Future<ApiDoctor> patchProfessionalField({
+    required String id,
+    required String fieldKey,
+    required String? value,
+  }) async {
+    final response = await client.call(
+      request: RepositoryHttpRequest(
+        url: Uri.parse('${AppConfig.apiBaseUrl}/api/v1/professionals/$id'),
+        method: RepositoryHttpMethod.patch,
+        headers: const {'Content-Type': 'application/json'},
+        body: {fieldKey: value},
+      ),
+    );
+
+    if (!successfulCondition(response.statusCode, response.body)) {
+      final shouldThrow = await onErrorStatusCode(response.statusCode);
+      if (shouldThrow) {
+        throw Exception('Falha ao atualizar médico (${response.statusCode})');
+      }
+    }
+
+    final map = jsonDecode(response.body) as Map<String, dynamic>;
+    return ApiDoctor.fromMap(map);
+  }
 }

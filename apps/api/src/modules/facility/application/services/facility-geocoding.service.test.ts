@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import {
   composeAddressQuery,
   FacilityGeocodingService,
+  pickBestGeocodeCandidate,
 } from "./facility-geocoding.service";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import type { GeocodingPort } from "../../../maps/application/interfaces/geocoding.port";
@@ -61,20 +62,66 @@ describe("composeAddressQuery", () => {
       composeAddressQuery({
         streetAddress: "Av. Paulista",
         streetNumber: "1000",
-        addressComplement: "Cj 12",
         neighborhood: "Jardim Paulista",
         city: "São Paulo",
         state: "SP",
-        postalCode: "01310-100",
+        postalCode: "01310100",
       })
     ).toBe(
-      "Av. Paulista, 1000 - Cj 12, Jardim Paulista, São Paulo - SP, 01310-100, Brazil"
+      "Avenida Paulista, 1000, Jardim Paulista, São Paulo - SP, 01310-100, Brazil"
+    );
+  });
+
+  it("can omit country for Mapbox country=br calls", () => {
+    expect(
+      composeAddressQuery(
+        {
+          streetAddress: "R GAL MONTEIRO",
+          streetNumber: "76",
+          neighborhood: "BOTAFOGO",
+          city: "RIO DE JANEIRO",
+          state: "RJ",
+          postalCode: "22290080",
+        },
+        { includeCountry: false }
+      )
+    ).toBe(
+      "Rua General MONTEIRO, 76, BOTAFOGO, RIO DE JANEIRO - RJ, 22290-080"
     );
   });
 
   it("returns null when there is no local address signal", () => {
     expect(composeAddressQuery({ country: "Brazil" })).toBeNull();
     expect(composeAddressQuery({})).toBeNull();
+  });
+});
+
+describe("pickBestGeocodeCandidate", () => {
+  it("prefers Botafogo / Rio over a Resende street match", () => {
+    const best = pickBestGeocodeCandidate(
+      [
+        {
+          latitude: -22.45519,
+          longitude: -44.45592,
+          fullAddress:
+            "Rua General Monteiro de Barros 76, Resende - Rio de Janeiro, 27533, Brasil",
+        },
+        {
+          latitude: -22.956,
+          longitude: -43.17959,
+          fullAddress:
+            "Rua General Góis Monteiro 76, Botafogo, Rio de Janeiro - Rio de Janeiro, 22290-080, Brasil",
+        },
+      ],
+      {
+        city: "RIO DE JANEIRO",
+        state: "RJ",
+        neighborhood: "BOTAFOGO",
+        postalCode: "22290080",
+      }
+    );
+
+    expect(best?.latitude).toBeCloseTo(-22.956, 4);
   });
 });
 
@@ -92,10 +139,43 @@ describe("FacilityGeocodingService", () => {
       longitude: -46.6333,
       fullAddress: "Av. Paulista, São Paulo",
     })),
+    forwardGeocodeMany: mock(async () => [
+      {
+        latitude: -23.5505,
+        longitude: -46.6333,
+        fullAddress: "Av. Paulista, São Paulo, São Paulo, Brasil",
+      },
+    ]),
     reverseGeocode: mock(async () => null),
   };
 
+  const originalFetch = globalThis.fetch;
+
   beforeEach(() => {
+    globalThis.fetch = mock(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("viacep.com.br/ws/01310100")) {
+        return new Response(
+          JSON.stringify({
+            cep: "01310-100",
+            logradouro: "Avenida Paulista",
+            bairro: "Bela Vista",
+            localidade: "São Paulo",
+            uf: "SP",
+          })
+        );
+      }
+      return new Response(JSON.stringify({ erro: true }), { status: 200 });
+    }) as unknown as typeof fetch;
+
+    (geocodingPort.forwardGeocodeMany as ReturnType<typeof mock>).mockClear();
+    (geocodingPort.forwardGeocodeMany as ReturnType<typeof mock>).mockResolvedValue([
+      {
+        latitude: -23.5505,
+        longitude: -46.6333,
+        fullAddress: "Av. Paulista, São Paulo, São Paulo, Brasil",
+      },
+    ]);
     (facilityRepository.findById as ReturnType<typeof mock>).mockClear();
     (facilityRepository.findById as ReturnType<typeof mock>).mockResolvedValue(
       facilityStub()
@@ -107,6 +187,10 @@ describe("FacilityGeocodingService", () => {
       longitude: -46.6333,
       fullAddress: "Av. Paulista, São Paulo",
     });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   it("returns provided coordinates without calling Mapbox", async () => {
@@ -145,16 +229,16 @@ describe("FacilityGeocodingService", () => {
       lng: -46.6333,
       geocoded: true,
     });
-    expect(geocodingPort.forwardGeocode).toHaveBeenCalledWith({
-      query: "Av. Paulista, 1000, São Paulo - SP, Brazil",
+    expect(geocodingPort.forwardGeocodeMany).toHaveBeenCalledWith({
+      query: "Avenida Paulista, 1000, São Paulo - SP",
       country: "br",
-      limit: 1,
+      limit: 5,
     });
   });
 
   it("returns null coordinates when geocode yields no result", async () => {
-    (geocodingPort.forwardGeocode as ReturnType<typeof mock>).mockResolvedValueOnce(
-      null
+    (geocodingPort.forwardGeocodeMany as ReturnType<typeof mock>).mockResolvedValueOnce(
+      []
     );
 
     const service = new FacilityGeocodingService({
@@ -181,6 +265,12 @@ describe("FacilityGeocodingService", () => {
       lat: -23.5505,
       lng: -46.6333,
       geocoded: true,
+    });
+    expect(geocodingPort.forwardGeocodeMany).toHaveBeenCalledWith({
+      query:
+        "Avenida Paulista, 1000, Bela Vista, São Paulo - SP, 01310-100",
+      country: "br",
+      limit: 5,
     });
     expect(facilityRepository.update).toHaveBeenCalledWith("clinic-1", {
       lat: -23.5505,

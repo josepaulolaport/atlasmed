@@ -95,6 +95,15 @@ export function canReadFieldSuggestions(role: Role): boolean {
   );
 }
 
+/** Ops Cadastro review queue. REP can upload docs (update FACILITY) but not review. */
+export function canReadCadastroSubmissions(role: Role): boolean {
+  const ability = defineAbilitiesFor(role);
+  return (
+    ability.can("read", "CADASTRO_SUBMISSION") ||
+    ability.can("manage", "CADASTRO_SUBMISSION")
+  );
+}
+
 export function isAdmin(role: Role): boolean {
   return role === Role.ADMIN;
 }

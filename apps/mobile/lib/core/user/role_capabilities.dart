@@ -55,8 +55,12 @@ bool canReviewFieldSuggestions(UserRoleName role) =>
     role == UserRoleName.manager ||
     role == UserRoleName.ops;
 
-/// Cadastro review queue uses type-level `update FACILITY` on the API.
-bool canReviewCadastro(UserRoleName role) => canMutateFacility(role);
+/// Ops Cadastro review queue (`read`/`update CADASTRO_SUBMISSION` on the API).
+/// REP can upload docs via `update FACILITY` but cannot browse or approve.
+bool canReviewCadastro(UserRoleName role) =>
+    role == UserRoleName.admin ||
+    role == UserRoleName.manager ||
+    role == UserRoleName.ops;
 
 bool canReadCatalog(UserRoleName role) =>
     role == UserRoleName.admin ||

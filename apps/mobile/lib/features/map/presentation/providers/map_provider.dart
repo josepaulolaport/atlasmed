@@ -1,7 +1,9 @@
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
-import 'package:atlasmed_mobile_app/features/map/data/models/map_data.dart';
-import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
 import 'package:atlasmed_mobile_app/core/session/providers/session_provider.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
+import 'package:atlasmed_mobile_app/features/explore/data/repositories/facility_nearby_repository.dart';
+import 'package:atlasmed_mobile_app/features/location/data/location_service.dart';
+import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/map/data/repositories/map_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,28 +21,46 @@ final mapRepositoryProvider = Provider<MapRepository>((ref) {
   );
 });
 
-final mapDataProvider = FutureProvider<MapData>((ref) async {
-  final locationService = ref.watch(currentLocationServiceProvider);
-  final repository = ref.watch(mapRepositoryProvider);
+/// Optional territory polygon for the live map overlay. Missing territory
+/// must not block the map — clinics still load around the user.
+final mapTerritoryProvider = FutureProvider<TerritoryGeometry?>((ref) async {
+  return ref.watch(mapRepositoryProvider).getAssignedTerritory();
+});
 
-  final userLocation = await locationService.getCurrentLocation();
-  final territory = await repository.getAssignedTerritory();
-  if (territory == null) {
-    return MapData(
-      userLocation: userLocation,
-      territory: null,
-      facilities: const [],
-    );
+/// User-centered clinic search for the live map tab.
+class LiveMapClinicsQuery {
+  const LiveMapClinicsQuery({
+    required this.latitude,
+    required this.longitude,
+    required this.radiusKm,
+  });
+
+  final double latitude;
+  final double longitude;
+  final double radiusKm;
+
+  @override
+  bool operator ==(Object other) {
+    return other is LiveMapClinicsQuery &&
+        other.latitude == latitude &&
+        other.longitude == longitude &&
+        other.radiusKm == radiusKm;
   }
 
-  final facilities = await repository.getNearbyFacilities(
-    userLocation.latitude,
-    userLocation.longitude,
-    50.0,
-  );
-  return MapData(
-    userLocation: userLocation,
-    territory: territory,
-    facilities: facilities,
-  );
-});
+  @override
+  int get hashCode => Object.hash(latitude, longitude, radiusKm);
+}
+
+final liveMapClinicsProvider =
+    FutureProvider.family<List<NearbyEstablishment>, LiveMapClinicsQuery>((
+      ref,
+      query,
+    ) {
+      return fetchNearbyFacilities(
+        latitude: query.latitude,
+        longitude: query.longitude,
+        radiusKm: query.radiusKm,
+        // API caps list pages at 100; viewport fetches want the full page.
+        limit: 100,
+      );
+    });

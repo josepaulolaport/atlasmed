@@ -42,6 +42,7 @@ const professionalPersonBody = {
   crmState: t.Optional(t.Union([t.String(), t.Null()])),
   favoriteTeam: t.Optional(t.Union([t.String(), t.Null()])),
   favoriteSport: t.Optional(t.Union([t.String(), t.Null()])),
+  languages: t.Optional(t.Union([t.String(), t.Null()])),
   hobbies: t.Optional(t.Union([t.String(), t.Null()])),
   notes: t.Optional(t.Union([t.String(), t.Null()])),
 };

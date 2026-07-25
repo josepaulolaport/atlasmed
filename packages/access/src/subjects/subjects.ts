@@ -21,6 +21,9 @@ export const Subjects = {
 
   /** User-submitted Não Conformidades (not CNES registry suggestions). */
   FIELD_SUGGESTION: "FIELD_SUGGESTION",
+
+  /** Ops Cadastro document review queue (approve / reject / list). */
+  CADASTRO_SUBMISSION: "CADASTRO_SUBMISSION",
 } as const;
 
 export type Subject = (typeof Subjects)[keyof typeof Subjects];

@@ -12,6 +12,10 @@ class NoopGeocodingAdapter implements GeocodingPort {
     return null;
   }
 
+  async forwardGeocodeMany() {
+    return [];
+  }
+
   async reverseGeocode() {
     return null;
   }

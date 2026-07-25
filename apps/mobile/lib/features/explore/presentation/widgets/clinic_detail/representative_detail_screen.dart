@@ -121,11 +121,12 @@ class _RepresentativeDetailScreenState
                   child: RelationshipStars(
                     score: _professional.relationshipScore,
                     onChanged: _savingRelationship ? null : _setRelationship,
+                    showLabel: false,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 const Text(
-                  'Toque nas estrelas para definir (segure para limpar).',
+                  'Toque à esquerda da estrela para meia, à direita para cheia. Segure para limpar.',
                   style: TextStyle(fontSize: 11.5, color: Color(0xFF9ca3af)),
                 ),
               ],

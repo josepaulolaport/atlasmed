@@ -41,11 +41,25 @@ function formatDate(value: Date | null): string | undefined {
   return value.toISOString().slice(0, 10);
 }
 
+function facilitiesInScope(
+  facilities: Array<{ id: string; name: string }>,
+  scope: ScopeContext
+): Array<{ id: string; name: string }> {
+  if (scope.isGlobal) {
+    return facilities;
+  }
+
+  const allowed = new Set(scope.facilityIds);
+  return facilities.filter((facility) => allowed.has(facility.id));
+}
+
 async function serializeProfessionalProfile(
   professional: ProfessionalRecord,
-  repository: ProfessionalRepository
+  repository: ProfessionalRepository,
+  scope: ScopeContext
 ): Promise<ProfessionalProfile> {
-  const facilities = await repository.findActiveFacilities(professional.id);
+  const allFacilities = await repository.findActiveFacilities(professional.id);
+  const facilities = facilitiesInScope(allFacilities, scope);
 
   return {
     id: professional.id,
@@ -67,9 +81,10 @@ async function serializeProfessionalProfile(
     crmState: professional.crmState ?? undefined,
     favoriteTeam: professional.favoriteTeam ?? undefined,
     favoriteSport: professional.favoriteSport ?? undefined,
+    languages: professional.languages ?? undefined,
     hobbies: professional.hobbies ?? undefined,
     notes: professional.notes ?? undefined,
-    facilityIds: professional.facilityIds,
+    facilityIds: facilities.map((facility) => facility.id),
     facilities,
     createdAt: professional.createdAt.toISOString(),
     updatedAt: professional.updatedAt.toISOString(),
@@ -172,6 +187,7 @@ function buildCreateInput(input: {
   crmState?: string;
   favoriteTeam?: string;
   favoriteSport?: string;
+  languages?: string;
   hobbies?: string;
   notes?: string;
   facilityIds?: string[];
@@ -194,6 +210,7 @@ function buildCreateInput(input: {
     crmState: input.crmState ?? null,
     favoriteTeam: input.favoriteTeam ?? null,
     favoriteSport: input.favoriteSport ?? null,
+    languages: input.languages ?? null,
     hobbies: input.hobbies ?? null,
     notes: input.notes ?? null,
     facilityIds: input.facilityIds ?? [],
@@ -219,6 +236,7 @@ function buildUpdateInput(input: {
   crmState?: string | null;
   favoriteTeam?: string | null;
   favoriteSport?: string | null;
+  languages?: string | null;
   hobbies?: string | null;
   notes?: string | null;
 }): ProfessionalUpdateInput {
@@ -243,6 +261,7 @@ function buildUpdateInput(input: {
     crmState: input.crmState,
     favoriteTeam: input.favoriteTeam,
     favoriteSport: input.favoriteSport,
+    languages: input.languages,
     hobbies: input.hobbies,
     notes: input.notes,
     manuallyEditedAt: new Date(),
@@ -377,7 +396,11 @@ export class GetProfessionalUseCase {
 
     assertProfessionalAccessible(input.scope, professional.facilityIds);
 
-    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+    return serializeProfessionalProfile(
+      professional,
+      this.deps.doctorRepository,
+      input.scope
+    );
   }
 }
 
@@ -449,7 +472,11 @@ export class CreateDoctorUseCase {
       buildCreateInput(input)
     );
 
-    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+    return serializeProfessionalProfile(
+      professional,
+      this.deps.doctorRepository,
+      input.scope
+    );
   }
 }
 
@@ -486,7 +513,11 @@ export class UpdateDoctorUseCase {
       buildUpdateInput(input)
     );
 
-    return serializeProfessionalProfile(professional, this.deps.doctorRepository);
+    return serializeProfessionalProfile(
+      professional,
+      this.deps.doctorRepository,
+      input.scope
+    );
   }
 }
 

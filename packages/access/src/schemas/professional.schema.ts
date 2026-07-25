@@ -62,6 +62,7 @@ const professionalPersonFieldsSchema = {
   crmState: z.string().trim().length(2).optional(),
   favoriteTeam: z.string().trim().max(100).optional(),
   favoriteSport: z.string().trim().max(100).optional(),
+  languages: z.string().trim().max(200).optional(),
   hobbies: z.string().trim().max(500).optional(),
   notes: z.string().trim().max(2000).optional(),
 };
@@ -97,6 +98,7 @@ export const updateDoctorSchema = z.object({
   crmState: professionalPersonFieldsSchema.crmState.nullable().optional(),
   favoriteTeam: professionalPersonFieldsSchema.favoriteTeam.nullable().optional(),
   favoriteSport: professionalPersonFieldsSchema.favoriteSport.nullable().optional(),
+  languages: professionalPersonFieldsSchema.languages.nullable().optional(),
   hobbies: professionalPersonFieldsSchema.hobbies.nullable().optional(),
   notes: professionalPersonFieldsSchema.notes.nullable().optional(),
   facilityIds: z.array(z.string().trim().min(1)).min(1).optional(),
@@ -152,6 +154,7 @@ export interface ProfessionalProfile {
   crmState?: string;
   favoriteTeam?: string;
   favoriteSport?: string;
+  languages?: string;
   hobbies?: string;
   notes?: string;
   facilityIds: string[];

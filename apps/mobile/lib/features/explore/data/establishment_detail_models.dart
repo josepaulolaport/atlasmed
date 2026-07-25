@@ -1257,9 +1257,10 @@ const double establishmentNearbyMinRadiusKm = 0.1;
 /// Maximum radius on the nearby-map slider.
 const double establishmentNearbyDefaultRadiusKm = 10;
 
-/// Default radius for the inline map preview on the detail screen. Anything
-/// beyond this is only reachable via "Ver estabelecimentos próximos".
-const double establishmentNearbyPreviewRadiusKm = 5;
+/// Default radius for the inline map preview on the detail screen (and the
+/// nearby-map slider's initial value). Anything beyond this is only
+/// reachable via "Ver estabelecimentos próximos".
+const double establishmentNearbyPreviewRadiusKm = 1;
 
 /// Snap a slider value to the 0.1 km grid within [min, max].
 double snapNearbyRadiusKm(double value) {

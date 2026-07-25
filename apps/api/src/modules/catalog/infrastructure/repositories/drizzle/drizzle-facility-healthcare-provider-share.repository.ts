@@ -6,6 +6,20 @@ import type {
   FacilityHealthcareProviderShareRepository,
 } from "../../../application/interfaces/facility-healthcare-provider-share.repository.interface";
 
+/** Imported rows may store values like `"20%"`; API/manual writes store `"20"`. */
+function parseSharePercent(value: string): number {
+  const cleaned = value.trim().replace(/%/g, "").replace(",", ".");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function formatSharePercent(value: number): string {
+  return String(value);
+}
+
+/** Cast text share_percent to numeric, tolerating a trailing `%`. */
+const sharePercentNumeric = sql`replace(${facilityHealthcareProviderShares.sharePercent}, '%', '')::numeric`;
+
 function mapShare(row: {
   id: string;
   facilityId: string;
@@ -20,7 +34,7 @@ function mapShare(row: {
     id: row.id,
     facilityId: row.facilityId,
     healthcareProviderId: row.healthcareProviderId,
-    sharePercent: Number(row.sharePercent),
+    sharePercent: parseSharePercent(row.sharePercent),
     source: row.source,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -53,7 +67,7 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         eq(facilityHealthcareProviderShares.healthcareProviderId, healthcareProviders.id)
       )
       .where(eq(facilityHealthcareProviderShares.facilityId, facilityId))
-      .orderBy(sql`${facilityHealthcareProviderShares.sharePercent}::numeric desc`);
+      .orderBy(sql`${sharePercentNumeric} desc`);
 
     return rows.map(mapShare);
   }
@@ -68,7 +82,7 @@ export class DrizzleFacilityHealthcareProviderShareRepository
       .values({
         facilityId: data.facilityId,
         healthcareProviderId: data.healthcareProviderId,
-        sharePercent: String(data.sharePercent),
+        sharePercent: formatSharePercent(data.sharePercent),
         source: "MANUAL",
       })
       .returning({ id: facilityHealthcareProviderShares.id });
@@ -115,7 +129,7 @@ export class DrizzleFacilityHealthcareProviderShareRepository
         shares.map((share) => ({
           facilityId,
           healthcareProviderId: share.healthcareProviderId,
-          sharePercent: String(share.sharePercent),
+          sharePercent: formatSharePercent(share.sharePercent),
           source: "MANUAL" as const,
           manuallyEditedAt: new Date(),
         }))
@@ -127,7 +141,7 @@ export class DrizzleFacilityHealthcareProviderShareRepository
 
   async sumSharePercentForFacility(facilityId: string): Promise<number> {
     const [result] = await db
-      .select({ sum: sql<string>`sum(${facilityHealthcareProviderShares.sharePercent}::numeric)` })
+      .select({ sum: sql<string>`sum(${sharePercentNumeric})` })
       .from(facilityHealthcareProviderShares)
       .where(eq(facilityHealthcareProviderShares.facilityId, facilityId));
 

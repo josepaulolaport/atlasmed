@@ -246,35 +246,13 @@ class _DetailBody extends ConsumerWidget {
     WidgetRef ref,
     NaoConformidadeSuggestion suggestion,
   ) async {
-    final controller = TextEditingController();
+    // Dialog owns the TextEditingController — disposing it here while the
+    // route is still animating out leaves EditableText dependents attached
+    // and trips `_dependents.isEmpty` in framework.dart.
     final note = await showDialog<String>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Rejeitar sugestão'),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Motivo da rejeição',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-              child: const Text('Rejeitar'),
-            ),
-          ],
-        );
-      },
+      builder: (ctx) => const _RejectSuggestionDialog(),
     );
-    controller.dispose();
     if (note == null || note.isEmpty || !context.mounted) return;
 
     try {
@@ -305,6 +283,50 @@ class _DetailBody extends ConsumerWidget {
     final h = at.hour.toString().padLeft(2, '0');
     final min = at.minute.toString().padLeft(2, '0');
     return '$d/$m/${at.year} $h:$min';
+  }
+}
+
+class _RejectSuggestionDialog extends StatefulWidget {
+  const _RejectSuggestionDialog();
+
+  @override
+  State<_RejectSuggestionDialog> createState() =>
+      _RejectSuggestionDialogState();
+}
+
+class _RejectSuggestionDialogState extends State<_RejectSuggestionDialog> {
+  late final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Rejeitar sugestão'),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLines: 3,
+        decoration: const InputDecoration(
+          hintText: 'Motivo da rejeição',
+          border: OutlineInputBorder(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: const Text('Rejeitar'),
+        ),
+      ],
+    );
   }
 }
 

@@ -1,6 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,6 +11,8 @@ import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/providers/facility_nearby_provider.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/utils/clinic_map_pin.dart';
+import 'package:atlasmed_mobile_app/features/map/presentation/widgets/clinic_pin_callout.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' hide Size;
 
 /// Full-screen map of establishments near the current facility.
@@ -69,14 +71,42 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   // every camera change past this point is driven imperatively instead.
   bool _viewportApplied = false;
   MapboxMap? _mapboxMap;
-  CircleAnnotationManager? _pinAnnotationManager;
-  PolygonAnnotationManager? _radiusCircleManager;
   PointAnnotationManager? _calloutManager;
   PointAnnotation? _calloutAnnotation;
   PointAnnotation? _calloutCloseAnnotation;
   bool _mapUnavailable = false;
   bool _calloutTapListenerRegistered = false;
+  bool _clinicLayersReady = false;
+  bool _clinicInteractionsRegistered = false;
+  bool _closeStyleImageReady = false;
+
+  /// Bumped on map create / style reload so a stale ensure cannot mark ready
+  /// after its sources were torn down.
+  int _clinicLayersEpoch = 0;
+
+  /// Serializes source/layer setup — concurrent ensures race-remove sources
+  /// while layers still reference them ("Source … missing for layer").
+  Future<void>? _clinicLayersEnsureInFlight;
   Timer? _pinResyncDebounce;
+
+  /// Nearby clinics as plain GeoJSON points (no Supercluster).
+  ///
+  /// The live map clusters city-wide; this screen is radius-bounded (≤10 km)
+  /// and camera-fitted to the circle — clustering at `clusterMaxZoom: 18`
+  /// kept every pin merged at the fit zoom, so the radius looked empty /
+  /// wrong. Co-located addresses still open the stacked sheet on pin tap.
+  static const _nearbySourceId = 'nearby-clinicas';
+  static const _nearbyFocusSourceId = 'nearby-focus';
+  static const _nearbyRadiusSourceId = 'nearby-radius';
+  static const _nearbyRadiusFillLayerId = 'nearby-radius-fill';
+  static const _nearbyRadiusLineLayerId = 'nearby-radius-line';
+  static const _nearbyUnclusteredLayerId = 'nearby-clinicas-unclustered';
+  static const _nearbyFocusLayerId = 'nearby-focus-pin';
+  static const _calloutImageId = 'atlasmed-nearby-callout';
+  static const _calloutCloseImageId = 'atlasmed-nearby-callout-close';
+  static const _pinInteractionId = 'tap-nearby-pin';
+
+  static const _coLocatedThresholdKm = 0.025;
 
   /// Guards against the native map's generic tap listener firing right
   /// after an annotation tap for the same gesture and immediately
@@ -94,9 +124,8 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
 
   /// The close ("X") badge is identical every time, so it's rasterized
   /// once (off the permanently-mounted [_closeButtonCaptureKey] boundary)
-  /// and its bytes reused for every callout instead of re-rendering it.
+  /// and registered as a stable style image.
   final GlobalKey _closeButtonCaptureKey = GlobalKey();
-  Uint8List? _closeButtonImageBytes;
 
   /// Drives the horizontal nearby-clinic card strip so it can be
   /// re-centered on whichever establishment's pin/callout is active.
@@ -145,7 +174,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
         next.whenData((items) {
           if (!mounted) return;
           setState(() => _nearby = items);
-          _syncAnnotations();
+          unawaited(_syncClinicPins());
           if (_selected != null &&
               !_visible.any((e) => e.id == _selected!.id)) {
             _dismissCallout();
@@ -220,7 +249,13 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                         onMapLoadErrorListener: (_) =>
                             setState(() => _mapUnavailable = true),
                         onStyleLoadedListener: (_) async {
-                          await _syncAnnotations();
+                          _clinicLayersEpoch++;
+                          _clinicLayersReady = false;
+                          _clinicInteractionsRegistered = false;
+                          _closeStyleImageReady = false;
+                          await _ensureClinicLayers();
+                          await _updateRadiusCircle();
+                          await _syncClinicPins();
                           // Wait one frame so MapWidget has a non-zero size —
                           // cameraForCoordinatesPadding is wrong (or no-ops)
                           // when queried against a 0×0 viewport on first load.
@@ -247,7 +282,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                           top: 0,
                           child: RepaintBoundary(
                             key: _calloutCaptureKey,
-                            child: _PinCalloutContent(
+                            child: ClinicPinCalloutContent(
                               establishment: _pendingCapture!,
                             ),
                           ),
@@ -259,7 +294,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
                         top: 0,
                         child: RepaintBoundary(
                           key: _closeButtonCaptureKey,
-                          child: const _CalloutCloseButtonContent(),
+                          child: const ClinicPinCalloutCloseButton(),
                         ),
                       ),
                     ],
@@ -286,8 +321,10 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   void _onMapCreated(MapboxMap map) {
     _mapboxMap = map;
     _viewportApplied = true;
-    _pinAnnotationManager = null;
-    _radiusCircleManager = null;
+    _clinicLayersEpoch++;
+    _clinicLayersReady = false;
+    _clinicInteractionsRegistered = false;
+    _closeStyleImageReady = false;
     _calloutManager = null;
     _calloutAnnotation = null;
     _calloutCloseAnnotation = null;
@@ -302,7 +339,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   void _onRadiusChanged(double value) {
     final radius = snapNearbyRadiusKm(value);
     setState(() => _radiusKm = radius);
-    _updateRadiusCircle();
+    unawaited(_updateRadiusCircle());
     // Always snap back to the establishment the page is about (not
     // wherever the user may have panned/zoomed to) and auto-fit the zoom
     // so the whole search radius stays visible as it grows/shrinks.
@@ -310,7 +347,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     // Drop out-of-range pins/cards immediately via [_visible] filter —
     // do not wait for the next API response (which still has the wider set
     // cached until [_committedRadiusKm] updates).
-    _syncAnnotations();
+    unawaited(_syncClinicPins());
     if (_selected != null && !_visible.any((e) => e.id == _selected!.id)) {
       _dismissCallout();
     }
@@ -443,86 +480,293 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     );
   }
 
-  Future<void> _syncAnnotations() async {
+  Future<void> _ensureClinicLayers() async {
     final map = _mapboxMap;
     if (map == null || !mounted) return;
 
+    // Loop so a waiter that joined a build invalidated by a style reload
+    // starts a fresh build for the new epoch instead of returning unready.
+    while (mounted) {
+      if (_clinicLayersReady && await _clinicSourcesPresent(map.style)) {
+        return;
+      }
+      _clinicLayersReady = false;
+
+      final inFlight = _clinicLayersEnsureInFlight;
+      if (inFlight != null) {
+        await inFlight;
+        continue;
+      }
+
+      final epoch = _clinicLayersEpoch;
+      final future = _buildClinicLayers(epoch);
+      _clinicLayersEnsureInFlight = future;
+      try {
+        await future;
+      } finally {
+        if (identical(_clinicLayersEnsureInFlight, future)) {
+          _clinicLayersEnsureInFlight = null;
+        }
+      }
+
+      if (_clinicLayersReady && await _clinicSourcesPresent(map.style)) {
+        return;
+      }
+      // Build failed or was aborted for this epoch — stop unless a newer
+      // style load bumped the epoch and needs another pass.
+      if (epoch == _clinicLayersEpoch) return;
+    }
+  }
+
+  Future<bool> _clinicSourcesPresent(StyleManager style) async {
+    return await style.styleSourceExists(_nearbySourceId) &&
+        await style.styleSourceExists(_nearbyFocusSourceId);
+  }
+
+  Future<void> _removeLayerIfExists(StyleManager style, String id) async {
+    if (await style.styleLayerExists(id)) {
+      await style.removeStyleLayer(id);
+    }
+  }
+
+  Future<void> _removeSourceIfExists(StyleManager style, String id) async {
+    if (await style.styleSourceExists(id)) {
+      await style.removeStyleSource(id);
+    }
+  }
+
+  Future<void> _buildClinicLayers(int epoch) async {
+    final map = _mapboxMap;
+    if (map == null || !mounted || epoch != _clinicLayersEpoch) return;
+    final dpr = MediaQuery.devicePixelRatioOf(context);
+
     try {
-      // Pin manager must exist before the radius polygon so the polygon can
-      // be inserted *below* it. Otherwise the fill steals every pin tap.
-      await _ensurePinAnnotationManager(map);
-      await _updateRadiusCircle();
+      final style = map.style;
 
-      await _pinAnnotationManager!.deleteAll();
+      await ClinicMapPin.ensureRegistered(style, devicePixelRatio: dpr);
+      if (!mounted || epoch != _clinicLayersEpoch) return;
 
-      await _pinAnnotationManager!.create(
-        CircleAnnotationOptions(
-          geometry: _point(widget.center),
-          circleColor: const Color(0xFF1e40af).toARGB32(),
-          circleRadius: 11,
-          circleStrokeColor: Colors.white.toARGB32(),
-          circleStrokeWidth: 3,
-          circleSortKey: 2,
+      // Always layers-before-sources. Never leave a layer without its source.
+      // Also drop legacy cluster layers from earlier builds of this screen.
+      for (final id in [
+        _nearbyFocusLayerId,
+        _nearbyUnclusteredLayerId,
+        'nearby-clinicas-cluster-count',
+        'nearby-clinicas-clusters',
+        _nearbyRadiusLineLayerId,
+        _nearbyRadiusFillLayerId,
+      ]) {
+        await _removeLayerIfExists(style, id);
+      }
+      for (final id in [
+        _nearbySourceId,
+        _nearbyFocusSourceId,
+        _nearbyRadiusSourceId,
+      ]) {
+        await _removeSourceIfExists(style, id);
+      }
+      if (!mounted || epoch != _clinicLayersEpoch) return;
+
+      // Radius under pins: add fill/line first, then pin symbol layers on top.
+      // Style layers (not PolygonAnnotation) so taps reach pins.
+      await style.addSource(
+        GeoJsonSource(
+          id: _nearbyRadiusSourceId,
+          data: jsonEncode({
+            'type': 'FeatureCollection',
+            'features': <Object>[],
+          }),
+        ),
+      );
+      await style.addLayer(
+        FillLayer(
+          id: _nearbyRadiusFillLayerId,
+          sourceId: _nearbyRadiusSourceId,
+          fillColor: const Color(0xFF1e40af).toARGB32(),
+          fillOpacity: 0.10,
+        ),
+      );
+      await style.addLayer(
+        LineLayer(
+          id: _nearbyRadiusLineLayerId,
+          sourceId: _nearbyRadiusSourceId,
+          lineColor: const Color(0xFF2563eb).toARGB32(),
+          lineWidth: 1.5,
+          lineOpacity: 0.40,
         ),
       );
 
-      final clusters = _clusterNearby(_visible);
-      if (clusters.isNotEmpty) {
-        await _pinAnnotationManager!.createMulti(
-          clusters
-              .map(
-                (cluster) => CircleAnnotationOptions(
-                  geometry: Point(
-                    coordinates: Position(cluster.longitude, cluster.latitude),
-                  ),
-                  circleColor: const Color(0xFF16a373).toARGB32(),
-                  // Slightly larger pin when several clinics share the spot.
-                  circleRadius: cluster.items.length > 1 ? 11 : 8,
-                  circleStrokeColor: Colors.white.toARGB32(),
-                  circleStrokeWidth: 2,
-                  circleSortKey: 1,
-                  // Platform channel is happiest with string values only.
-                  customData: {
-                    'facilityId': cluster.items.first.id,
-                    'count': '${cluster.items.length}',
-                  },
-                ),
-              )
-              .toList(),
-        );
+      await style.addSource(
+        GeoJsonSource(
+          id: _nearbySourceId,
+          data: jsonEncode({
+            'type': 'FeatureCollection',
+            'features': <Object>[],
+          }),
+        ),
+      );
+      await style.addSource(
+        GeoJsonSource(
+          id: _nearbyFocusSourceId,
+          data: jsonEncode({
+            'type': 'FeatureCollection',
+            'features': <Object>[],
+          }),
+        ),
+      );
+      if (!mounted || epoch != _clinicLayersEpoch) return;
+
+      await style.addLayer(
+        SymbolLayer(
+          id: _nearbyUnclusteredLayerId,
+          sourceId: _nearbySourceId,
+          iconImage: ClinicMapPin.singleImageId,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconSize: 1,
+        ),
+      );
+      await style.addLayer(
+        SymbolLayer(
+          id: _nearbyFocusLayerId,
+          sourceId: _nearbyFocusSourceId,
+          iconImage: ClinicMapPin.focusImageId,
+          iconAnchor: IconAnchor.BOTTOM,
+          iconAllowOverlap: true,
+          iconIgnorePlacement: true,
+          iconSize: 1,
+        ),
+      );
+
+      if (!await _clinicSourcesPresent(style) || epoch != _clinicLayersEpoch) {
+        return;
       }
+
+      _clinicLayersReady = true;
+      _registerClinicInteractions(map);
     } catch (_) {
+      _clinicLayersReady = false;
       if (mounted) setState(() => _mapUnavailable = true);
     }
   }
 
-  Future<void> _ensurePinAnnotationManager(MapboxMap map) async {
-    if (_pinAnnotationManager != null) return;
-    _pinAnnotationManager = await map.annotations
-        .createCircleAnnotationManager();
-    _pinAnnotationManager!.tapEvents(onTap: _onPinTapped);
+  void _registerClinicInteractions(MapboxMap map) {
+    if (_clinicInteractionsRegistered) return;
+    try {
+      // Drop legacy cluster interaction ids from earlier builds.
+      for (final id in [
+        _pinInteractionId,
+        'tap-nearby-cluster',
+        'tap-nearby-cluster-count',
+      ]) {
+        try {
+          map.removeInteraction(id);
+        } catch (_) {}
+      }
+      map.addInteraction(
+        TapInteraction(
+          FeaturesetDescriptor(layerId: _nearbyUnclusteredLayerId),
+          (feature, _) {
+            unawaited(_onUnclusteredFeatureTapped(feature));
+          },
+        ),
+        interactionID: _pinInteractionId,
+      );
+      _clinicInteractionsRegistered = true;
+    } catch (_) {
+      _clinicInteractionsRegistered = false;
+    }
+  }
+
+  /// Pushes the radius-filtered pin set + focus pin into the GeoJSON sources.
+  Future<void> _syncClinicPins() async {
+    final map = _mapboxMap;
+    if (map == null || !mounted) return;
+
+    try {
+      await _ensureClinicLayers();
+      if (!_clinicLayersReady) return;
+
+      final features = _visible
+          .map(
+            (e) => {
+              'type': 'Feature',
+              'geometry': {
+                'type': 'Point',
+                'coordinates': [e.longitude, e.latitude],
+              },
+              'properties': {'facilityId': e.id, 'name': e.name},
+            },
+          )
+          .toList(growable: false);
+
+      await map.style.setStyleSourceProperty(
+        _nearbySourceId,
+        'data',
+        jsonEncode({'type': 'FeatureCollection', 'features': features}),
+      );
+      await map.style.setStyleSourceProperty(
+        _nearbyFocusSourceId,
+        'data',
+        jsonEncode({
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'geometry': {
+                'type': 'Point',
+                'coordinates': [
+                  widget.center.longitude,
+                  widget.center.latitude,
+                ],
+              },
+              'properties': {
+                'facilityId': widget.facilityId,
+                'name': widget.facilityName,
+              },
+            },
+          ],
+        }),
+      );
+    } catch (_) {
+      // Keep the basemap; pins can retry on the next sync/style load.
+    }
   }
 
   /// Draws (or redraws) a lightly-shaded circle over the current search
   /// radius. Cheap enough to call on every slider tick — unlike the pins,
   /// it doesn't need debouncing to look smooth as the slider moves.
+  ///
+  /// Uses a GeoJSON Fill/Line layer (not PolygonAnnotation). Annotation
+  /// managers own an interactive layer that steals taps across the whole
+  /// radius, so pin TapInteractions never fire.
   Future<void> _updateRadiusCircle() async {
     final map = _mapboxMap;
     if (map == null || !mounted) return;
     try {
-      // Keep the fill under the pin layer so pin taps keep working.
-      await _ensurePinAnnotationManager(map);
-      _radiusCircleManager ??= await map.annotations
-          .createPolygonAnnotationManager(below: _pinAnnotationManager!.id);
-      await _radiusCircleManager!.deleteAll();
-      await _radiusCircleManager!.create(
-        PolygonAnnotationOptions(
-          geometry: Polygon(
-            coordinates: [_circlePositions(widget.center, _radiusKm)],
-          ),
-          fillColor: const Color(0x1A1e40af).toARGB32(),
-          fillOutlineColor: const Color(0x662563eb).toARGB32(),
-        ),
+      await _ensureClinicLayers();
+      if (!_clinicLayersReady) return;
+      if (!await map.style.styleSourceExists(_nearbyRadiusSourceId)) return;
+      final ring = _circlePositions(widget.center, _radiusKm)
+          .map((p) => [p.lng.toDouble(), p.lat.toDouble()])
+          .toList(growable: false);
+      await map.style.setStyleSourceProperty(
+        _nearbyRadiusSourceId,
+        'data',
+        jsonEncode({
+          'type': 'FeatureCollection',
+          'features': [
+            {
+              'type': 'Feature',
+              'geometry': {
+                'type': 'Polygon',
+                'coordinates': [ring],
+              },
+              'properties': <String, Object>{},
+            },
+          ],
+        }),
       );
     } catch (_) {
       // Cosmetic only — never trips the offline-placeholder fallback.
@@ -556,16 +800,35 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     });
   }
 
-  Future<void> _onPinTapped(CircleAnnotation annotation) async {
+  Future<void> _onUnclusteredFeatureTapped(FeaturesetFeature feature) async {
     _suppressNextMapTap = true;
     Future.delayed(
       const Duration(milliseconds: 300),
       () => _suppressNextMapTap = false,
     );
 
-    final match = _establishmentForPinAnnotation(annotation);
+    final facilityId = feature.properties['facilityId']?.toString();
+    NearbyEstablishment? match;
+    if (facilityId != null) {
+      for (final e in _visible) {
+        if (e.id == facilityId) {
+          match = e;
+          break;
+        }
+      }
+    }
+    match ??= () {
+      final point = _pointFromGeometry(feature.geometry);
+      if (point == null) return null;
+      final near = _establishmentsNear(point.latitude, point.longitude);
+      return near.isEmpty ? null : near.first;
+    }();
     if (match == null) return;
 
+    await _selectPinEstablishment(match);
+  }
+
+  Future<void> _selectPinEstablishment(NearbyEstablishment match) async {
     final stacked = _establishmentsNear(match.latitude, match.longitude);
     await _centerOn(match.latitude, match.longitude);
 
@@ -585,23 +848,15 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     _scrollToCard(match.id);
   }
 
-  NearbyEstablishment? _establishmentForPinAnnotation(
-    CircleAnnotation annotation,
+  ({double latitude, double longitude})? _pointFromGeometry(
+    Map<String?, Object?> geometry,
   ) {
-    final rawId = annotation.customData?['facilityId']?.toString();
-    if (rawId != null && rawId.isNotEmpty && rawId != widget.facilityId) {
-      for (final e in _visible) {
-        if (e.id == rawId) return e;
-      }
-    }
-
-    // Fallback: resolve by pin coordinates (customData can be flaky).
-    final coords = annotation.geometry.coordinates;
-    final lat = coords.lat.toDouble();
-    final lng = coords.lng.toDouble();
-    final near = _establishmentsNear(lat, lng);
-    if (near.isEmpty) return null;
-    return near.first;
+    final coords = geometry['coordinates'];
+    if (coords is! List || coords.length < 2) return null;
+    final lng = (coords[0] as num?)?.toDouble();
+    final lat = (coords[1] as num?)?.toDouble();
+    if (lat == null || lng == null) return null;
+    return (latitude: lat, longitude: lng);
   }
 
   /// Tapping a card centers the map on that clinic and opens its callout —
@@ -641,49 +896,14 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     double latitude,
     double longitude,
   ) {
-    const thresholdKm = 0.025;
     final matches = _visible
         .where(
           (e) =>
               _haversineKm(latitude, longitude, e.latitude, e.longitude) <=
-              thresholdKm,
+              _coLocatedThresholdKm,
         )
         .toList(growable: false);
     return matches;
-  }
-
-  /// One pin per coincident cluster so stacked clinics share a single tap
-  /// target (and a slightly larger pin when count > 1).
-  List<_NearbyPinCluster> _clusterNearby(List<NearbyEstablishment> items) {
-    const thresholdKm = 0.025;
-    final clusters = <_NearbyPinCluster>[];
-    for (final item in items) {
-      _NearbyPinCluster? host;
-      for (final cluster in clusters) {
-        if (_haversineKm(
-              cluster.latitude,
-              cluster.longitude,
-              item.latitude,
-              item.longitude,
-            ) <=
-            thresholdKm) {
-          host = cluster;
-          break;
-        }
-      }
-      if (host != null) {
-        host.items.add(item);
-      } else {
-        clusters.add(
-          _NearbyPinCluster(
-            latitude: item.latitude,
-            longitude: item.longitude,
-            items: [item],
-          ),
-        );
-      }
-    }
-    return clusters;
   }
 
   Future<void> _showStackedEstablishmentsSheet(
@@ -874,8 +1094,10 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       return;
     }
     final bytes = byteData.buffer.asUint8List();
-    final logicalHeight = image.height / devicePixelRatio;
-    final closeBytes = await _ensureCloseButtonImage();
+    final pxW = image.width;
+    final pxH = image.height;
+    final logicalHeight = pxH / devicePixelRatio;
+    final closeReady = await _ensureCloseButtonStyleImage(map);
     if (!mounted || _pendingCapture?.id != establishment.id) return;
 
     final geometry = Point(
@@ -883,6 +1105,17 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     );
 
     try {
+      // Stable style image ids — never pass raw `image:` bytes (UUID churn).
+      await map.style.addStyleImage(
+        _calloutImageId,
+        devicePixelRatio,
+        MbxImage(width: pxW, height: pxH, data: bytes),
+        false,
+        [],
+        [],
+        null,
+      );
+
       final manager = _calloutManager ??= await map.annotations
           .createPointAnnotationManager();
       if (!_calloutTapListenerRegistered) {
@@ -893,7 +1126,7 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       _calloutAnnotation = await manager.create(
         PointAnnotationOptions(
           geometry: geometry,
-          image: bytes,
+          iconImage: _calloutImageId,
           iconAnchor: IconAnchor.BOTTOM,
           iconOffset: [0, -16],
           symbolSortKey: 3,
@@ -903,17 +1136,17 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
       if (previous != null) await manager.delete(previous);
 
       final previousClose = _calloutCloseAnnotation;
-      if (closeBytes != null) {
+      if (closeReady) {
         // Anchored to the same point as the bubble (so it tracks it
         // through pans/zooms) but offset to sit right on the bubble's
         // top-right corner, straddling the edge like a badge.
         _calloutCloseAnnotation = await manager.create(
           PointAnnotationOptions(
             geometry: geometry,
-            image: closeBytes,
+            iconImage: _calloutCloseImageId,
             iconAnchor: IconAnchor.CENTER,
             iconOffset: [
-              _PinCalloutContent.cardWidth / 2,
+              ClinicPinCalloutContent.cardWidth / 2,
               -(logicalHeight + 16),
             ],
             symbolSortKey: 4,
@@ -932,24 +1165,34 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
     if (mounted) setState(() => _pendingCapture = null);
   }
 
-  /// Rasterizes the close ("X") badge once and caches the bytes — its
-  /// appearance never changes, so there's no need to re-render it per
-  /// callout the way the bubble itself is (which has per-clinic content).
-  Future<Uint8List?> _ensureCloseButtonImage() async {
-    final cached = _closeButtonImageBytes;
-    if (cached != null) return cached;
+  /// Rasterizes the close ("X") badge once and registers it as a style image.
+  Future<bool> _ensureCloseButtonStyleImage(MapboxMap map) async {
+    if (_closeStyleImageReady) return true;
 
     await WidgetsBinding.instance.endOfFrame;
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted) return null;
+    if (!mounted) return false;
     final boundary = _closeButtonCaptureKey.currentContext?.findRenderObject();
-    if (boundary is! RenderRepaintBoundary) return null;
+    if (boundary is! RenderRepaintBoundary) return false;
     final devicePixelRatio = MediaQuery.of(context).devicePixelRatio;
     final image = await boundary.toImage(pixelRatio: devicePixelRatio);
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    final pxW = image.width;
+    final pxH = image.height;
     image.dispose();
-    if (byteData == null) return null;
-    return _closeButtonImageBytes = byteData.buffer.asUint8List();
+    if (byteData == null) return false;
+    await map.style.addStyleImage(
+      _calloutCloseImageId,
+      devicePixelRatio,
+      MbxImage(width: pxW, height: pxH, data: byteData.buffer.asUint8List()),
+      false,
+      [],
+      [],
+      null,
+    );
+    if (!mounted) return false;
+    _closeStyleImageReady = true;
+    return true;
   }
 
   Future<void> _dismissCallout() async {
@@ -983,12 +1226,17 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
   }
 
   void _onCalloutTapped(PointAnnotation annotation) {
-    final action = annotation.customData?['action'] as String?;
+    _suppressNextMapTap = true;
+    Future.delayed(
+      const Duration(milliseconds: 300),
+      () => _suppressNextMapTap = false,
+    );
+    final action = annotation.customData?['action']?.toString();
     if (action == 'close') {
-      _dismissCallout();
+      unawaited(_dismissCallout());
       return;
     }
-    final id = annotation.customData?['facilityId'] as String?;
+    final id = annotation.customData?['facilityId']?.toString();
     if (id != null) _openEstablishment(id);
   }
 
@@ -999,18 +1247,6 @@ class _ClinicNearbyMapScreenState extends ConsumerState<ClinicNearbyMapScreen> {
 
   Point _point(EstablishmentLocation loc) =>
       Point(coordinates: Position(loc.longitude, loc.latitude));
-}
-
-class _NearbyPinCluster {
-  _NearbyPinCluster({
-    required this.latitude,
-    required this.longitude,
-    required this.items,
-  });
-
-  final double latitude;
-  final double longitude;
-  final List<NearbyEstablishment> items;
 }
 
 class _StackedEstablishmentTile extends StatelessWidget {
@@ -1317,196 +1553,6 @@ class _NearbyEstablishmentCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Content of the pin callout/"info window". Never actually shown on
-/// screen directly — [_ClinicNearbyMapScreenState._showCallout] renders
-/// this off-screen, rasterizes it, and adds the bitmap to the map as a
-/// real `PointAnnotation` so it stays attached to its pin natively.
-///
-/// Since it becomes a static image, the whole bubble is one tappable unit
-/// (handled by the annotation's tap event, not by widgets in here) — no
-/// individually-tappable close/detail buttons.
-class _PinCalloutContent extends StatelessWidget {
-  const _PinCalloutContent({required this.establishment});
-
-  final NearbyEstablishment establishment;
-
-  static const double cardWidth = 216;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: cardWidth,
-          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x40111827),
-                blurRadius: 18,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                establishment.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF0f1729),
-                  height: 1.15,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Wrap(
-                spacing: 6,
-                runSpacing: 3,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 7,
-                        height: 7,
-                        decoration: BoxDecoration(
-                          color: establishment.status.color,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        establishment.status.label,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: establishment.status.color,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (establishment.specialtyLabel != null)
-                    Text(
-                      '· ${establishment.specialtyLabel}',
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Color(0xFF6b7280),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 3),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.near_me_rounded,
-                    size: 12,
-                    color: Color(0xFF6b7280),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${establishment.distanceKm.toStringAsFixed(1)} km de distância',
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Color(0xFF6b7280),
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 16, color: Color(0xFFf3f4f6)),
-              const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Ir para página da clínica',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1e40af),
-                    ),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(
-                    Icons.arrow_forward_rounded,
-                    size: 13,
-                    color: Color(0xFF1e40af),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const Align(
-          alignment: Alignment.center,
-          child: CustomPaint(size: Size(16, 8), painter: _CalloutTailPainter()),
-        ),
-      ],
-    );
-  }
-}
-
-/// Content of the callout's close ("X") badge. Same rasterize-off-screen
-/// treatment as [_PinCalloutContent], but rendered once and cached (see
-/// [_ClinicNearbyMapScreenState._ensureCloseButtonImage]) since it never
-/// changes in appearance across establishments.
-class _CalloutCloseButtonContent extends StatelessWidget {
-  const _CalloutCloseButtonContent();
-
-  static const double size = 26;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFe5e7eb)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x40111827),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Icon(
-        Icons.close_rounded,
-        size: 15,
-        color: Color(0xFF4b5563),
-      ),
-    );
-  }
-}
-
-class _CalloutTailPainter extends CustomPainter {
-  const _CalloutTailPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width / 2, size.height)
-      ..close();
-    canvas.drawPath(path, Paint()..color = Colors.white);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _NearbyMapPlaceholder extends StatelessWidget {

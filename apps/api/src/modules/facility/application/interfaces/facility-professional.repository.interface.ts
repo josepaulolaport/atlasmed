@@ -63,6 +63,7 @@ export interface FacilityProfessionalContextRecord {
     crmState: string | null;
     favoriteTeam: string | null;
     favoriteSport: string | null;
+    languages: string | null;
     hobbies: string | null;
     notes: string | null;
     createdAt: Date;

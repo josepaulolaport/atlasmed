@@ -897,7 +897,7 @@ const downloadFacilityCadastroFileRoute = new Elysia()
 
 const approveFacilityCadastroRecordRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .use(requirePermission("update", "CADASTRO_SUBMISSION"))
   .post(
     "/facilities/:id/cadastro/records/:recordId/approve",
     async ({ params, getScope, getUserId }) => {
@@ -920,7 +920,7 @@ const approveFacilityCadastroRecordRoute = new Elysia()
 
 const rejectFacilityCadastroRecordRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .use(requirePermission("update", "CADASTRO_SUBMISSION"))
   .post(
     "/facilities/:id/cadastro/records/:recordId/reject",
     async ({ params, body, getScope, getUserId }) => {
@@ -947,7 +947,7 @@ const rejectFacilityCadastroRecordRoute = new Elysia()
 
 const listCadastroSubmissionsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "FACILITY"))
+  .use(requirePermission("read", "CADASTRO_SUBMISSION"))
   .get(
     "/cadastro/submissions",
     async ({ query }) => {

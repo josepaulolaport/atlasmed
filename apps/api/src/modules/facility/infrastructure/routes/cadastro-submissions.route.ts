@@ -272,7 +272,7 @@ const deleteDraftSubmissionRoute = new Elysia()
 
 const reviewDocumentRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
+  .use(requirePermission("update", "CADASTRO_SUBMISSION"))
   .post(
     "/facilities/:id/cadastro/documents/:documentId/review",
     async ({ params, body, getScope, getUserId }) => {
@@ -309,7 +309,7 @@ const reviewDocumentRoute = new Elysia()
 
 const listPackageSubmissionsRoute = new Elysia()
   .use(auth)
-  .use(requirePermission("update", "FACILITY"))
+  .use(requirePermission("read", "CADASTRO_SUBMISSION"))
   .get(
     "/cadastro/packages",
     async ({ query }) => {

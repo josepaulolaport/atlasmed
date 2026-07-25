@@ -35,6 +35,7 @@ const professional = {
   crmState: "SP",
   favoriteTeam: null,
   favoriteSport: null,
+  languages: null,
   hobbies: null,
   notes: null,
   createdAt: new Date("2024-01-01"),
