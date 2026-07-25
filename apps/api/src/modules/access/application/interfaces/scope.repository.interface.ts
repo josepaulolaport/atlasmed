@@ -32,51 +32,45 @@ export interface ScopeRepository {
 
   findManagerIdByUserId(userId: string): Promise<string | null>;
 
-  /** Returns sector IDs assigned to the user. Empty array = no sector filter. */
-  findSectorIdsByUserId(userId: string): Promise<string[]>;
+  /** Returns business vertical IDs assigned to the user. */
+  findVerticalIdsByUserId(userId: string): Promise<string[]>;
 
-  /**
-   * Returns territory IDs whose sector_id is in the given sector list.
-   * Used by ScopeResolver to intersect user's territory assignments with their sectors.
-   */
-  findTerritoryIdsBySectorIds(sectorIds: string[]): Promise<string[]>;
-
-  assignSector(params: {
+  assignVertical(params: {
     userId: string;
-    sectorId: string;
+    verticalId: string;
     assignedByUserId: string;
     managerId?: string | null;
   }): Promise<void>;
 
-  revokeSector(params: {
+  revokeVertical(params: {
     userId: string;
-    sectorId: string;
+    verticalId: string;
   }): Promise<void>;
 
-  findSectorAssignmentsByUserId(userId: string): Promise<
+  findVerticalAssignmentsByUserId(userId: string): Promise<
     Array<{
-      sectorId: string;
+      verticalId: string;
       managerId: string | null;
       assignedAt: Date;
     }>
   >;
 
   /**
-   * Atomically replace a user's sector + territory assignments.
+   * Atomically replace a user's vertical + territory assignments.
    * Clears existing rows then inserts the provided set.
    */
   replaceAssignments(params: {
     userId: string;
     assignedByUserId: string;
     managerId: string | null;
-    sectorAssignments: Array<{
-      sectorId: string;
+    verticalAssignments: Array<{
+      verticalId: string;
       managerId?: string | null;
       territoryIds: string[];
     }>;
   }): Promise<void>;
 
-  listActiveSectors(): Promise<Array<{ id: string; slug: string; name: string }>>;
+  listActiveVerticals(): Promise<Array<{ id: string; code: string; name: string }>>;
 }
 
 export interface TerritoryScopePort {
@@ -88,7 +82,10 @@ export interface TerritoryScopePort {
  * Today: active `facility_consultant_assignments` only.
  */
 export interface FacilityAssociationPort {
-  getAssociatedFacilityIds(userId: string): Promise<string[]>;
+  getAssociatedFacilityIds(
+    userId: string,
+    verticalIds?: string[],
+  ): Promise<string[]>;
 }
 
 export interface TerritoryHierarchyPort {

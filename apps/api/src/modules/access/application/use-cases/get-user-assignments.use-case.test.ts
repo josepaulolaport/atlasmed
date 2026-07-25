@@ -22,7 +22,6 @@ describe("GetUserAssignmentsUseCase", () => {
         territoryTypeId: "type-1",
         managerTerritoryId: null,
         isActive: true,
-        sectorId: "sector-1",
         createdAt: new Date(),
         updatedAt: new Date(),
       })),
@@ -36,7 +35,7 @@ describe("GetUserAssignmentsUseCase", () => {
     })),
   } as any;
 
-  it("returns invite-shaped sector assignments for REP with territories", async () => {
+  it("returns invite-shaped vertical assignments for REP with territories", async () => {
     const assignedAt = new Date("2025-01-15T10:00:00.000Z");
 
     const userRepository = createMockUserRepository({
@@ -65,10 +64,10 @@ describe("GetUserAssignmentsUseCase", () => {
     });
 
     const scopeRepository = createMockScopeRepository({
-      findSectorAssignmentsByUserId: mock(() =>
+      findVerticalAssignmentsByUserId: mock(() =>
         Promise.resolve([
           {
-            sectorId: "sector-1",
+            verticalId: "vertical-1",
             managerId: "manager-1",
             assignedAt,
           },
@@ -77,9 +76,9 @@ describe("GetUserAssignmentsUseCase", () => {
       findTerritoryAssignmentsByUserId: mock(() =>
         Promise.resolve([{ territoryId: "territory-a", assignedAt }]),
       ),
-      listActiveSectors: mock(() =>
+      listActiveVerticals: mock(() =>
         Promise.resolve([
-          { id: "sector-1", slug: "ortho", name: "Ortopedia" },
+          { id: "vertical-1", code: "ORTOPEDIA", name: "Ortopedia" },
         ]),
       ),
     });
@@ -97,17 +96,16 @@ describe("GetUserAssignmentsUseCase", () => {
 
     expect(result.userId).toBe("user-1");
     expect(result.isOperationallyActive).toBe(true);
-    expect(result.sectorAssignments).toHaveLength(1);
-    expect(result.sectorAssignments[0]).toMatchObject({
-      sectorId: "sector-1",
-      sectorName: "Ortopedia",
+    expect(result.verticalAssignments).toHaveLength(1);
+    expect(result.verticalAssignments[0]).toMatchObject({
+      verticalId: "vertical-1",
+      verticalName: "Ortopedia",
       managerId: "manager-1",
       managerName: "Jane Manager",
     });
-    expect(result.sectorAssignments[0]!.territories[0]).toMatchObject({
+    expect(result.verticalAssignments[0]!.territories[0]).toMatchObject({
       id: "territory-a",
       name: "Territory territory-a",
-      sectorId: "sector-1",
     });
   });
 
@@ -125,7 +123,7 @@ describe("GetUserAssignmentsUseCase", () => {
     });
 
     const scopeRepository = createMockScopeRepository({
-      listActiveSectors: mock(() => Promise.resolve([])),
+      listActiveVerticals: mock(() => Promise.resolve([])),
     });
     const useCase = new GetUserAssignmentsUseCase({
       userRepository,
@@ -138,7 +136,7 @@ describe("GetUserAssignmentsUseCase", () => {
       actorRole: Role.ADMIN,
     });
 
-    expect(result.sectorAssignments).toEqual([]);
+    expect(result.verticalAssignments).toEqual([]);
     expect(result.isOperationallyActive).toBe(false);
   });
 

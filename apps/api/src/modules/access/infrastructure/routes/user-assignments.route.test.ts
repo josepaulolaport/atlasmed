@@ -103,7 +103,7 @@ describe("userAssignmentsRoute", () => {
       Promise.resolve({
         userId: targetUserId,
         isOperationallyActive: false,
-        sectorAssignments: [],
+        verticalAssignments: [],
       }),
     );
     routeTestContext.mocks.assignUserManagerExecute.mockReset();

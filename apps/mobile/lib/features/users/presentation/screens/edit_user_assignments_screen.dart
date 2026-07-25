@@ -1,7 +1,7 @@
 import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,14 +23,14 @@ class EditUserAssignmentsScreen extends ConsumerStatefulWidget {
 
 class _EditUserAssignmentsScreenState
     extends ConsumerState<EditUserAssignmentsScreen> {
-  final Map<String, InviteSectorAssignment> _sectorAssignments = {};
+  final Map<String, InviteVerticalAssignment> _verticalAssignments = {};
   User? _user;
   bool _loading = true;
   bool _submitting = false;
   Object? _loadError;
 
-  List<InviteSectorAssignment> get _orderedAssignments =>
-      _sectorAssignments.values.toList(growable: false);
+  List<InviteVerticalAssignment> get _orderedAssignments =>
+      _verticalAssignments.values.toList(growable: false);
 
   @override
   void initState() {
@@ -53,10 +53,10 @@ class _EditUserAssignmentsScreenState
       }
       setState(() {
         _user = user;
-        _sectorAssignments
+        _verticalAssignments
           ..clear()
           ..addEntries(
-            assignments.sectorAssignments.map((a) => MapEntry(a.sectorId, a)),
+            assignments.verticalAssignments.map((a) => MapEntry(a.verticalId, a)),
           );
         _loading = false;
         _loadError = null;
@@ -100,7 +100,7 @@ class _EditUserAssignmentsScreenState
       );
     }
 
-    final sectorsAsync = ref.watch(sectorOptionsProvider);
+    final sectorsAsync = ref.watch(verticalOptionsProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -121,8 +121,8 @@ class _EditUserAssignmentsScreenState
                   Expanded(
                     child: Text(
                       _user == null
-                          ? 'Gerenciar setores'
-                          : 'Setores · ${_user!.displayName}',
+                          ? 'Gerenciar verticais'
+                          : 'Verticais · ${_user!.displayName}',
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         fontSize: 15,
@@ -141,14 +141,14 @@ class _EditUserAssignmentsScreenState
     );
   }
 
-  Widget _buildBody(AsyncValue<List<SectorOption>> sectorsAsync) {
+  Widget _buildBody(AsyncValue<List<VerticalOption>> sectorsAsync) {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (_loadError != null || _user == null) {
       return const Center(
         child: Text(
-          'Não foi possível carregar os setores.',
+          'Não foi possível carregar os verticais.',
           style: TextStyle(color: Color(0xFF6b7280)),
         ),
       );
@@ -163,7 +163,7 @@ class _EditUserAssignmentsScreenState
         child: Padding(
           padding: EdgeInsets.all(24),
           child: Text(
-            'Esta função não possui setores atribuíveis.',
+            'Esta função não possui verticais atribuíveis.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF6b7280)),
           ),
@@ -175,7 +175,7 @@ class _EditUserAssignmentsScreenState
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       children: [
         const Text(
-          'Selecione os setores deste usuário. Gerente e territórios '
+          'Selecione os verticais deste usuário. Gerente e territórios '
           'são definidos em cada card na ficha do usuário.',
           style: TextStyle(
             fontSize: 13.5,
@@ -185,7 +185,7 @@ class _EditUserAssignmentsScreenState
         ),
         const SizedBox(height: 16),
         const Text(
-          'Setores',
+          'Verticais',
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -195,27 +195,27 @@ class _EditUserAssignmentsScreenState
         const SizedBox(height: 8),
         sectorsAsync.when(
           loading: () => const CircularProgressIndicator(),
-          error: (_, _) => const Text('Não foi possível carregar os setores.'),
+          error: (_, _) => const Text('Não foi possível carregar os verticais.'),
           data: (sectors) => Wrap(
             spacing: 8,
             runSpacing: 8,
             children: sectors.map((sector) {
-              final selected = _sectorAssignments.containsKey(sector.id);
+              final selected = _verticalAssignments.containsKey(sector.id);
               return FilterChip(
                 label: Text(sector.name),
                 selected: selected,
                 onSelected: (value) {
                   setState(() {
                     if (value) {
-                      _sectorAssignments.putIfAbsent(
+                      _verticalAssignments.putIfAbsent(
                         sector.id,
-                        () => InviteSectorAssignment(
-                          sectorId: sector.id,
-                          sectorName: sector.name,
+                        () => InviteVerticalAssignment(
+                          verticalId: sector.id,
+                          verticalName: sector.name,
                         ),
                       );
                     } else {
-                      _sectorAssignments.remove(sector.id);
+                      _verticalAssignments.remove(sector.id);
                     }
                   });
                 },
@@ -259,7 +259,7 @@ class _EditUserAssignmentsScreenState
                       color: Colors.white,
                     ),
                   )
-                : const Text('Salvar setores'),
+                : const Text('Salvar verticais'),
           ),
         ),
       ],
@@ -271,18 +271,18 @@ class _EditUserAssignmentsScreenState
     try {
       await ref
           .read(usersRepositoryProvider)
-          .replaceSectorAssignments(widget.userId, _orderedAssignments);
+          .replaceVerticalAssignments(widget.userId, _orderedAssignments);
       ref.invalidate(userAssignmentsProvider(widget.userId));
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Setores atualizados.')));
+        ).showSnackBar(const SnackBar(content: Text('Verticais atualizados.')));
         context.pop();
       }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível salvar os setores.')),
+          const SnackBar(content: Text('Não foi possível salvar os verticais.')),
         );
       }
     } finally {

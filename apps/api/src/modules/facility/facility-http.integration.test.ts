@@ -16,6 +16,8 @@ import {
   facilities,
   fileAssets,
   documentFiles,
+  businessVerticals,
+  facilityVerticalProfiles,
 } from "@atlasmed/database";
 import { db } from "../../infrastructure/database/db";
 import { redis } from "../../infrastructure/cache/redis.client";
@@ -300,13 +302,41 @@ describe("Facility HTTP auth integration", () => {
     if (!dbReady) throw new Error("Test DB not ready — cannot run integration tests");
 
     const facilityId = fixtures.inScopeFacilityId;
+    const [vertical] = await db
+      .select({ id: businessVerticals.id })
+      .from(businessVerticals)
+      .where(eq(businessVerticals.isActive, true))
+      .limit(1);
+    if (!vertical) {
+      throw new Error("No active business vertical found for integration test");
+    }
+
+    await db
+      .insert(facilityVerticalProfiles)
+      .values({
+        facilityId,
+        verticalId: vertical.id,
+        commercialStatus: "REGISTERED",
+        isActive: true,
+      })
+      .onConflictDoUpdate({
+        target: [
+          facilityVerticalProfiles.facilityId,
+          facilityVerticalProfiles.verticalId,
+        ],
+        set: {
+          commercialStatus: "REGISTERED",
+          isActive: true,
+          updatedAt: new Date(),
+        },
+      });
+
     await db
       .update(facilities)
       .set({
         taxIdType: "PJ",
         billingEmail: null,
         conformityStatus: "INCOMPLETE",
-        commercialStatus: "REGISTERED",
       })
       .where(eq(facilities.id, facilityId));
 

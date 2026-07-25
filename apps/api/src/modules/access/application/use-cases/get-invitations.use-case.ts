@@ -58,14 +58,14 @@ export class GetInvitationsUseCase {
       await this.dependencies.inviteRepository.findAll(listParams);
 
     const inviteIds = invitations.map((invite) => invite.id);
-    const [inviters, staged, sectors] = await Promise.all([
+    const [inviters, staged, verticals] = await Promise.all([
       Promise.all(
         [...new Set(invitations.map((i) => i.invitedByUserId))].map((id) =>
           this.dependencies.userRepository.findById(id),
         ),
       ),
-      this.dependencies.inviteRepository.findStagedSectorAssignments(inviteIds),
-      this.dependencies.scopeRepository.listActiveSectors(),
+      this.dependencies.inviteRepository.findStagedVerticalAssignments(inviteIds),
+      this.dependencies.scopeRepository.listActiveVerticals(),
     ]);
 
     const inviterMap = new Map(
@@ -73,7 +73,7 @@ export class GetInvitationsUseCase {
         .filter((inviter) => inviter !== null)
         .map((inviter) => [inviter!.id, inviter!]),
     );
-    const sectorNameById = new Map(sectors.map((s) => [s.id, s.name]));
+    const verticalNameById = new Map(verticals.map((v) => [v.id, v.name]));
     const stagedByInvite = groupStagedAssignments(staged);
 
     const territoryIds = [...new Set(staged.flatMap((s) => s.territoryIds))];
@@ -108,9 +108,9 @@ export class GetInvitationsUseCase {
     return {
       invitations: invitations.map((invite) => {
         const stagedRows = stagedByInvite.get(invite.id) ?? [];
-        const sectorAssignments = stagedRows.map((row) => ({
-          sectorId: row.sectorId,
-          sectorName: sectorNameById.get(row.sectorId) ?? "—",
+        const verticalAssignments = stagedRows.map((row) => ({
+          verticalId: row.verticalId,
+          verticalName: verticalNameById.get(row.verticalId) ?? "—",
           managerId: row.managerId,
           managerName: row.managerId
             ? managerNameById.get(row.managerId)
@@ -120,8 +120,8 @@ export class GetInvitationsUseCase {
             return {
               id,
               name: t?.name ?? id,
-              sectorId: row.sectorId,
-              sectorName: sectorNameById.get(row.sectorId),
+              verticalId: row.verticalId,
+              verticalName: verticalNameById.get(row.verticalId),
             };
           }),
         }));
@@ -129,7 +129,7 @@ export class GetInvitationsUseCase {
         return serializeInvitation({
           invite,
           invitedBy: inviterMap.get(invite.invitedByUserId) ?? null,
-          sectorAssignments,
+          verticalAssignments,
         });
       }),
       pagination: {

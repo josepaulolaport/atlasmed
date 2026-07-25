@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/invitations_repository.dart';
@@ -67,22 +67,22 @@ class HttpInvitationsRepository implements InvitationsRepository {
       'roleName': roleName,
       'roleId': roleId,
       'invitedByName': invitedByName,
-      'sectorAssignments':
-          (json['sectorAssignments'] as List<dynamic>? ?? const []).map((raw) {
+      'verticalAssignments':
+          (json['verticalAssignments'] as List<dynamic>? ?? const []).map((raw) {
             final map = raw as Map<String, dynamic>;
             return {
               ...map,
-              'sectorName': map['sectorName'] as String? ?? '—',
+              'verticalName': map['verticalName'] as String? ?? '—',
               'territories': (map['territories'] as List<dynamic>? ?? const [])
                   .map((t) {
                     final territory = t as Map<String, dynamic>;
                     return {
                       'id': territory['id'],
                       'name': territory['name'] ?? territory['id'],
-                      if (territory['sectorId'] != null)
-                        'sectorId': territory['sectorId'],
-                      if (territory['sectorName'] != null)
-                        'sectorName': territory['sectorName'],
+                      if (territory['verticalId'] != null)
+                        'verticalId': territory['verticalId'],
+                      if (territory['verticalName'] != null)
+                        'verticalName': territory['verticalName'],
                       if (territory['boundary'] != null)
                         'boundary': territory['boundary'],
                     };
@@ -93,12 +93,12 @@ class HttpInvitationsRepository implements InvitationsRepository {
     });
   }
 
-  List<Map<String, dynamic>> _sectorAssignmentsBody(
-    List<InviteSectorAssignment> sectorAssignments,
-  ) => sectorAssignments
+  List<Map<String, dynamic>> _verticalAssignmentsBody(
+    List<InviteVerticalAssignment> verticalAssignments,
+  ) => verticalAssignments
       .map(
         (s) => {
-          'sectorId': s.sectorId,
+          'verticalId': s.verticalId,
           if (s.managerId != null) 'managerId': s.managerId,
           'territoryIds': s.territoryIds,
         },
@@ -130,7 +130,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
     required DateTime birthDate,
     required String phoneNumber,
     required String roleId,
-    List<InviteSectorAssignment> sectorAssignments = const [],
+    List<InviteVerticalAssignment> verticalAssignments = const [],
   }) async {
     final response = await _send(
       _uri('/invite'),
@@ -142,8 +142,8 @@ class HttpInvitationsRepository implements InvitationsRepository {
         'lastName': lastName.trim(),
         'birthDate': _dateOnly(birthDate),
         'roleId': roleId,
-        if (sectorAssignments.isNotEmpty)
-          'sectorAssignments': _sectorAssignmentsBody(sectorAssignments),
+        if (verticalAssignments.isNotEmpty)
+          'verticalAssignments': _verticalAssignmentsBody(verticalAssignments),
       },
     );
     _throwIfError(response);
@@ -165,7 +165,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
       lastName: lastName,
       birthDate: birthDate,
       phoneNumber: phoneNumber.isEmpty ? null : phoneNumber,
-      sectorAssignments: sectorAssignments,
+      verticalAssignments: verticalAssignments,
       createdAt: DateTime.now(),
       expiresAt: DateTime.now().add(const Duration(days: 7)),
       resendCount: 0,
@@ -181,7 +181,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
     required DateTime birthDate,
     required String phoneNumber,
     required String roleId,
-    List<InviteSectorAssignment> sectorAssignments = const [],
+    List<InviteVerticalAssignment> verticalAssignments = const [],
   }) async {
     final response = await _send(
       _uri('/invites/$id'),
@@ -193,7 +193,7 @@ class HttpInvitationsRepository implements InvitationsRepository {
         'lastName': lastName.trim(),
         'birthDate': _dateOnly(birthDate),
         'roleId': roleId,
-        'sectorAssignments': _sectorAssignmentsBody(sectorAssignments),
+        'verticalAssignments': _verticalAssignmentsBody(verticalAssignments),
       },
     );
     _throwIfError(response);

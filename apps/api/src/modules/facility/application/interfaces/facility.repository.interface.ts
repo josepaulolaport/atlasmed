@@ -21,6 +21,15 @@ export type FacilityConformityStatus =
   | "EXPIRING_SOON"
   | "NON_CONFORMING";
 
+export interface FacilityVerticalProfileRecord {
+  verticalId: string;
+  verticalCode?: string;
+  verticalName?: string;
+  isActive: boolean;
+  commercialStatus: FacilityCommercialStatus | null;
+  purchaseStatus: FacilityPurchaseStatus | null;
+}
+
 export interface FacilityRecord {
   id: string;
   name: string;
@@ -76,6 +85,8 @@ export interface FacilityRecord {
   updatedAt: Date;
   /** Populated only on findById, empty array on list queries. */
   services: FacilityService[];
+  /** Loaded when vertical context is resolved; may be empty. */
+  verticalProfiles?: FacilityVerticalProfileRecord[];
 }
 
 export interface FacilityListRecord extends FacilityRecord {
@@ -87,6 +98,10 @@ export interface FacilityListRecord extends FacilityRecord {
 export interface FacilityListScopeFilter {
   isGlobal: boolean;
   facilityIds?: string[];
+  /** Restrict to facilities with active profiles in these verticals (non-ADMIN default). */
+  verticalIds?: string[];
+  /** When true, only facilities with matching active vertical profiles are returned. */
+  restrictToVerticalProfiles?: boolean;
 }
 
 export interface FacilitySourceUpsertInput {
@@ -151,7 +166,6 @@ export interface FacilityRepository {
       billingEmail?: string | null;
       taxIdType?: "PJ" | "PF";
       conformityStatus?: FacilityConformityStatus;
-      commercialStatus?: FacilityCommercialStatus | null;
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord>;
@@ -169,6 +183,24 @@ export interface FacilityRepository {
   }>;
 
   findIdsByTerritoryIds(territoryIds: string[]): Promise<string[]>;
+
+  findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]>;
+
+  findVerticalProfilesByFacilityIds(
+    facilityIds: string[],
+    verticalIds?: string[],
+  ): Promise<Map<string, FacilityVerticalProfileRecord[]>>;
+
+  updateVerticalProfileCommercialStatus(input: {
+    facilityId: string;
+    verticalId: string;
+    commercialStatus: FacilityCommercialStatus;
+  }): Promise<void>;
+
+  ensureVerticalProfile(input: {
+    facilityId: string;
+    verticalId: string;
+  }): Promise<FacilityVerticalProfileRecord>;
 
   applyApprovedFieldUpdates(
     id: string,

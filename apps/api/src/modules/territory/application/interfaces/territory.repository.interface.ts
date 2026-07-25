@@ -10,7 +10,6 @@ export interface TerritoryRecord {
   territoryType?: TerritoryTypeRecord;
   managerTerritoryId: string | null;
   isActive: boolean;
-  sectorId: string | null;
   createdAt: Date;
   updatedAt: Date;
   clinicCount?: number;
@@ -25,7 +24,6 @@ export interface CreateTerritoryInput {
   code?: string;
   territoryTypeId: string;
   managerTerritoryId?: string | null;
-  sectorId?: string | null;
 }
 
 export interface TerritoryRepository {
@@ -53,7 +51,6 @@ export interface TerritoryRepository {
       name?: string;
       managerTerritoryId?: string | null;
       isActive?: boolean;
-      sectorId?: string | null;
     }
   ): Promise<TerritoryRecord>;
 

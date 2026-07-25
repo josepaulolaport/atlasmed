@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
-import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_sector.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/repositories/catalog_repository.dart';
@@ -12,8 +12,8 @@ final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
 
 /// Active commercial sectors — backs the admin product form's sector
 /// picker only, so it's read once per form open rather than kept live.
-final catalogSectorsProvider = FutureProvider<List<CatalogSector>>((ref) {
-  return ref.watch(catalogRepositoryProvider).getSectors();
+final catalogVerticalsProvider = FutureProvider<List<CatalogBusinessVertical>>((ref) {
+  return ref.watch(catalogRepositoryProvider).getVerticals();
 });
 
 final catalogFamiliesProvider = FutureProvider<List<CatalogFamily>>((ref) {

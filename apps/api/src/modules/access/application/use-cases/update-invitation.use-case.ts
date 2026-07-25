@@ -36,8 +36,8 @@ export class UpdateInvitationUseCase {
     managerId?: string;
     managerTerritoryId?: string;
     repTerritoryId?: string;
-    sectorAssignments?: Array<{
-      sectorId: string;
+    verticalAssignments?: Array<{
+      verticalId: string;
       managerId?: string;
       territoryIds: string[];
     }>;
@@ -79,8 +79,8 @@ export class UpdateInvitationUseCase {
       ]);
     }
 
-    const shouldReplaceSectors = params.sectorAssignments !== undefined;
-    const assignments = shouldReplaceSectors
+    const shouldReplaceVerticals = params.verticalAssignments !== undefined;
+    const assignments = shouldReplaceVerticals
       ? normalizeInviteAssignments({
           roleName: role.name,
           managerId: params.managerId ?? invite.managerId ?? undefined,
@@ -88,7 +88,7 @@ export class UpdateInvitationUseCase {
             params.managerTerritoryId ?? invite.managerTerritoryId ?? undefined,
           repTerritoryId:
             params.repTerritoryId ?? invite.repTerritoryId ?? undefined,
-          sectorAssignments: params.sectorAssignments,
+          verticalAssignments: params.verticalAssignments,
         })
       : null;
 
@@ -99,7 +99,7 @@ export class UpdateInvitationUseCase {
         managerId: assignments.managerId,
         managerTerritoryId: assignments.managerTerritoryId,
         repTerritoryId: assignments.repTerritoryId,
-        sectorAssignments: assignments.sectorAssignments,
+        verticalAssignments: assignments.verticalAssignments,
       });
     }
 
@@ -119,7 +119,7 @@ export class UpdateInvitationUseCase {
             managerId: assignments.managerId ?? null,
             managerTerritoryId: assignments.managerTerritoryId ?? null,
             repTerritoryId: assignments.repTerritoryId ?? null,
-            sectorAssignments: assignments.sectorAssignments,
+            verticalAssignments: assignments.verticalAssignments,
           }
         : {}),
     });

@@ -131,24 +131,24 @@ export const usersApi = {
     return response.data;
   },
 
-  getSectors: async (): Promise<Array<{ id: string; slug: string; name: string }>> => {
-    const response = await apiClient.get<{ sectors: Array<{ id: string; slug: string; name: string }> }>(
-      "/access/sectors"
-    );
-    return response.data.sectors;
+  getVerticals: async (): Promise<Array<{ id: string; code: string; name: string }>> => {
+    const response = await apiClient.get<{
+      verticals: Array<{ id: string; code: string; name: string }>;
+    }>("/access/business-verticals");
+    return response.data.verticals;
   },
 
-  assignSector: async (userId: string, sectorId: string): Promise<{ message: string }> => {
+  assignVertical: async (userId: string, verticalId: string): Promise<{ message: string }> => {
     const response = await apiClient.post<{ message: string }>(
-      `/access/users/${userId}/sectors`,
-      { sectorId }
+      `/access/users/${userId}/verticals`,
+      { verticalId }
     );
     return response.data;
   },
 
-  revokeSector: async (userId: string, sectorId: string): Promise<{ message: string }> => {
+  revokeVertical: async (userId: string, verticalId: string): Promise<{ message: string }> => {
     const response = await apiClient.delete<{ message: string }>(
-      `/access/users/${userId}/sectors/${encodeURIComponent(sectorId)}`
+      `/access/users/${userId}/verticals/${encodeURIComponent(verticalId)}`
     );
     return response.data;
   },

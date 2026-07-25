@@ -1,3 +1,4 @@
+import { Role } from "@atlasmed/access";
 import { describe, expect, it } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
 import { ListFacilitiesUseCase } from "./facility.use-cases";
@@ -79,7 +80,22 @@ function fakeRepository(
     }),
     findIdsByTerritoryIds: async () => [],
     applyApprovedFieldUpdates: async () => facilityRecord("approved"),
+    findActiveFacilityIdsByVerticalIds: async () => [],
+    findVerticalProfilesByFacilityIds: async () => new Map(),
+    updateVerticalProfileCommercialStatus: async () => {},
+    ensureVerticalProfile: async () => ({
+      verticalId: "vertical-1",
+      commercialStatus: null,
+      purchaseStatus: null,
+      isActive: true,
+    }),
   };
+}
+
+const adminRole = Role.ADMIN;
+
+function withRole<T extends Record<string, unknown>>(input: T) {
+  return { ...input, role: adminRole };
 }
 
 describe("ListFacilitiesUseCase", () => {
@@ -91,7 +107,7 @@ describe("ListFacilitiesUseCase", () => {
       })),
     });
 
-    const result = await useCase.execute({
+    const result = await useCase.execute(withRole({
       page: 2,
       limit: 10,
       scope: {
@@ -107,7 +123,7 @@ describe("ListFacilitiesUseCase", () => {
   managedUserIds: [],
   isOperationallyActive: true,
 },
-    });
+    }));
 
     expect(result.data).toHaveLength(1);
     expect(result.pagination).toEqual({
@@ -132,7 +148,7 @@ describe("ListFacilitiesUseCase", () => {
       })),
     });
 
-    const result = await useCase.execute({
+    const result = await useCase.execute(withRole({
       scope: {
         isGlobal: true,
         assignedTerritoryIds: [],
@@ -146,7 +162,7 @@ describe("ListFacilitiesUseCase", () => {
         managedUserIds: [],
         isOperationallyActive: true,
       },
-    });
+    }));
 
     expect(result.data[0]).toMatchObject({
       neighborhood: "Centro",
@@ -177,11 +193,13 @@ describe("ListFacilitiesUseCase", () => {
       }),
     });
 
-    await useCase.execute({ scope });
+    await useCase.execute(withRole({ scope }));
 
     expect(receivedScope).toEqual({
       isGlobal: false,
       facilityIds: ["facility-1"],
+      restrictToVerticalProfiles: true,
+      verticalIds: [],
     });
   });
 
@@ -209,7 +227,7 @@ describe("ListFacilitiesUseCase", () => {
       },
     });
 
-    const result = await useCase.execute({
+    const result = await useCase.execute(withRole({
       search: "  12345678000199  ",
       page: 2,
       limit: 2,
@@ -228,7 +246,7 @@ describe("ListFacilitiesUseCase", () => {
         managedUserIds: [],
         isOperationallyActive: true,
       },
-    });
+    }));
 
     expect(searchCalls).toBe(1);
     expect(hydratedIds).toEqual(["facility-2", "facility-1"]);
@@ -255,7 +273,7 @@ describe("ListFacilitiesUseCase", () => {
       },
     });
 
-    const result = await useCase.execute({ search: "CNES", limit: 2, scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } });
+    const result = await useCase.execute(withRole({ search: "CNES", limit: 2, scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } }));
 
     expect(result.data.map((facility) => facility.id)).toEqual(["facility-2"]);
     expect(result.pagination.total).toBe(2);
@@ -268,7 +286,7 @@ describe("ListFacilitiesUseCase", () => {
     });
 
     await expect(
-      useCase.execute({ search: "CNPJ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } })
+      useCase.execute(withRole({ search: "CNPJ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } }))
     ).rejects.toMatchObject({ code: "SERVICE_UNAVAILABLE", statusCode: 503 });
   });
 
@@ -287,7 +305,7 @@ describe("ListFacilitiesUseCase", () => {
       },
     });
 
-    await useCase.execute({
+    await useCase.execute(withRole({
       search: "central",
       commercialStatus: "ACTIVE",
       latitude: -23.55,
@@ -295,7 +313,7 @@ describe("ListFacilitiesUseCase", () => {
       radiusKm: 5,
       sort: "distance",
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: ["facility-2", "facility-1"], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
-    });
+    }));
 
     expect(options).toEqual({
       limit: 20,
@@ -314,10 +332,10 @@ describe("ListFacilitiesUseCase", () => {
         search: async (_index, _query, received) => { options = received; return { hits: [] }; },
       },
     });
-    await useCase.execute({
+    await useCase.execute(withRole({
       search: "central",
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
-    });
+    }));
     expect(options?.filter).toBe("id = '__none__'");
   });
 
@@ -334,11 +352,11 @@ describe("ListFacilitiesUseCase", () => {
       },
     });
 
-    await useCase.execute({
+    await useCase.execute(withRole({
       search: "central",
       commercialStatus: "ACTIVE",
       scope: { isGlobal: false, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: Array.from({ length: 1_000 }, (_, index) => `facility-${index}-${"x".repeat(20)}`), analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true },
-    });
+    }));
 
     expect(options?.filter).toBe("commercialStatus = 'ACTIVE'");
   });
@@ -356,7 +374,7 @@ describe("ListFacilitiesUseCase", () => {
       },
     });
 
-    await useCase.execute({ search: "   ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } });
+    await useCase.execute(withRole({ search: "   ", scope: { isGlobal: true, assignedTerritoryIds: [], effectiveTerritoryIds: [], analyticsEffectiveTerritoryIds: [], territoryIds: [], facilityIds: [], analyticsFacilityIds: [], clinicIds: [], analyticsClinicIds: [], managedUserIds: [], isOperationallyActive: true } }));
 
     expect(searchCalls).toBe(0);
   });

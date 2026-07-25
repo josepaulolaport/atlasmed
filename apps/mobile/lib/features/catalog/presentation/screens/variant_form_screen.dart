@@ -72,8 +72,8 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     text: widget.existing != null ? brlNumber(widget.existing!.price20) : null,
   );
 
-  late final Set<String> _selectedSectorIds = {
-    ...widget.existing?.sectorIds ?? [],
+  late final Set<String> _selectedVerticalIds = {
+    ...widget.existing?.verticalIds ?? [],
   };
 
   bool _saving = false;
@@ -127,18 +127,18 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       _familyName.text.trim().isNotEmpty &&
       _manufacturer.text.trim().isNotEmpty &&
       _countryOfOrigin.text.trim().isNotEmpty &&
-      _selectedSectorIds.isNotEmpty &&
+      _selectedVerticalIds.isNotEmpty &&
       parseBrlNumber(_price.text) != null &&
       parseBrlNumber(_price17.text) != null &&
       parseBrlNumber(_price18.text) != null &&
       parseBrlNumber(_price20.text) != null;
 
-  void _toggleSector(String sectorId) {
+  void _toggleSector(String verticalId) {
     setState(() {
-      if (_selectedSectorIds.contains(sectorId)) {
-        _selectedSectorIds.remove(sectorId);
+      if (_selectedVerticalIds.contains(verticalId)) {
+        _selectedVerticalIds.remove(verticalId);
       } else {
-        _selectedSectorIds.add(sectorId);
+        _selectedVerticalIds.add(verticalId);
       }
     });
   }
@@ -165,7 +165,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
       price18: parseBrlNumber(_price18.text),
       price20: parseBrlNumber(_price20.text),
       brasindiceUpdatedAt: DateTime.now(),
-      sectorIds: _selectedSectorIds.toList(),
+      verticalIds: _selectedVerticalIds.toList(),
     );
 
     try {
@@ -203,12 +203,12 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
     price18: 0,
     price20: 0,
     brasindiceUpdatedAt: DateTime.now(),
-    sectorIds: const [],
+    verticalIds: const [],
   );
 
   @override
   Widget build(BuildContext context) {
-    final sectorsAsync = ref.watch(catalogSectorsProvider);
+    final sectorsAsync = ref.watch(catalogVerticalsProvider);
     final familyNames = <String>{
       for (final family in widget.families) family.name,
     }.toList()..sort();
@@ -293,7 +293,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ),
                   ],
                   const SizedBox(height: 16),
-                  const _FieldLabel('Setores'),
+                  const _FieldLabel('Verticais'),
                   const SizedBox(height: 6),
                   sectorsAsync.when(
                     loading: () => const Padding(
@@ -305,7 +305,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                       ),
                     ),
                     error: (_, _) => Text(
-                      'Não foi possível carregar os setores.',
+                      'Não foi possível carregar os verticais.',
                       style: const TextStyle(
                         fontSize: 12.5,
                         color: Color(0xFFdc2626),
@@ -313,7 +313,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                     ),
                     data: (sectors) => sectors.isEmpty
                         ? const Text(
-                            'Nenhum setor cadastrado.',
+                            'Nenhum vertical cadastrado.',
                             style: TextStyle(
                               fontSize: 12.5,
                               color: Color(0xFF9ca3af),
@@ -326,7 +326,7 @@ class _VariantFormScreenState extends ConsumerState<VariantFormScreen> {
                               for (final sector in sectors)
                                 _SuggestionChip(
                                   label: sector.name,
-                                  selected: _selectedSectorIds.contains(
+                                  selected: _selectedVerticalIds.contains(
                                     sector.id,
                                   ),
                                   onTap: () => _toggleSector(sector.id),

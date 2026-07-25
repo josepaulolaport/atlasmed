@@ -46,7 +46,7 @@ function requirement(
     slug,
     name: slug,
     description: null,
-    sectorId: null,
+    verticalId: null,
     appliesToTaxIdType,
     isActive: true,
     allowedMimeTypes: ["image/jpeg", "image/png", "application/pdf"],
@@ -172,9 +172,29 @@ describe("GetFacilityCadastroChecklistUseCase", () => {
   });
 });
 
+const verticalId = "vertical-1";
+
+function verticalProfileRepositoryMocks(
+  commercialStatus: "ACTIVE" | "SUSPENDED" | "REGISTERED" | null = null,
+) {
+  return {
+    ensureVerticalProfile: mock(async () => {}),
+    findVerticalProfilesByFacilityIds: mock(async () =>
+      new Map([
+        [
+          "facility-1",
+          [{ verticalId, commercialStatus, isActive: true }],
+        ],
+      ]),
+    ),
+    updateVerticalProfileCommercialStatus: mock(async () => {}),
+  };
+}
+
 describe("FacilityCadastroCompletionService", () => {
   it("flips statuses only when all docs validated and billing email set", async () => {
     const update = mock(async () => facility());
+    const updateVerticalProfileCommercialStatus = mock(async () => {});
     const service = new FacilityCadastroCompletionService({
       facilityRepository: {
         findById: async () =>
@@ -184,6 +204,8 @@ describe("FacilityCadastroCompletionService", () => {
             conformityStatus: "INCOMPLETE",
           }),
         update,
+        ...verticalProfileRepositoryMocks(),
+        updateVerticalProfileCommercialStatus,
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
@@ -209,12 +231,16 @@ describe("FacilityCadastroCompletionService", () => {
       } as unknown as ConformityRepository,
     });
 
-    const result = await service.evaluateAndApply("facility-1");
+    const result = await service.evaluateAndApply("facility-1", verticalId);
     expect(result.complete).toBe(true);
     expect(result.conformityStatus).toBe("COMPLETE");
     expect(result.commercialStatus).toBe("ACTIVE");
     expect(update).toHaveBeenCalledWith("facility-1", {
       conformityStatus: "COMPLETE",
+    });
+    expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
+      facilityId: "facility-1",
+      verticalId,
       commercialStatus: "ACTIVE",
     });
   });
@@ -230,6 +256,7 @@ describe("FacilityCadastroCompletionService", () => {
             conformityStatus: "INCOMPLETE",
           }),
         update,
+        ...verticalProfileRepositoryMocks(),
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
@@ -247,13 +274,14 @@ describe("FacilityCadastroCompletionService", () => {
       } as unknown as ConformityRepository,
     });
 
-    const result = await service.evaluateAndApply("facility-1");
+    const result = await service.evaluateAndApply("facility-1", verticalId);
     expect(result.complete).toBe(false);
     expect(update).not.toHaveBeenCalled();
   });
 
   it("forces commercial off ACTIVE when completion regresses", async () => {
     const update = mock(async () => facility());
+    const updateVerticalProfileCommercialStatus = mock(async () => {});
     const service = new FacilityCadastroCompletionService({
       facilityRepository: {
         findById: async () =>
@@ -264,6 +292,8 @@ describe("FacilityCadastroCompletionService", () => {
             commercialStatus: "ACTIVE",
           }),
         update,
+        ...verticalProfileRepositoryMocks("ACTIVE"),
+        updateVerticalProfileCommercialStatus,
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
@@ -302,18 +332,23 @@ describe("FacilityCadastroCompletionService", () => {
       } as never,
     });
 
-    const result = await service.evaluateAndApply("facility-1");
+    const result = await service.evaluateAndApply("facility-1", verticalId);
     expect(result.complete).toBe(false);
     expect(result.conformityStatus).toBe("INCOMPLETE");
     expect(result.commercialStatus).toBe("SUSPENDED");
     expect(update).toHaveBeenCalledWith("facility-1", {
       conformityStatus: "INCOMPLETE",
+    });
+    expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
+      facilityId: "facility-1",
+      verticalId,
       commercialStatus: "SUSPENDED",
     });
   });
 
   it("treats per-requirement APPROVED docs across packages as complete", async () => {
     const update = mock(async () => facility());
+    const updateVerticalProfileCommercialStatus = mock(async () => {});
     const service = new FacilityCadastroCompletionService({
       facilityRepository: {
         findById: async () =>
@@ -323,6 +358,8 @@ describe("FacilityCadastroCompletionService", () => {
             conformityStatus: "INCOMPLETE",
           }),
         update,
+        ...verticalProfileRepositoryMocks(),
+        updateVerticalProfileCommercialStatus,
       } as unknown as FacilityRepository,
       conformityRepository: {
         findActiveRequirements: async () => [
@@ -349,10 +386,14 @@ describe("FacilityCadastroCompletionService", () => {
       } as never,
     });
 
-    const result = await service.evaluateAndApply("facility-1");
+    const result = await service.evaluateAndApply("facility-1", verticalId);
     expect(result.complete).toBe(true);
     expect(update).toHaveBeenCalledWith("facility-1", {
       conformityStatus: "COMPLETE",
+    });
+    expect(updateVerticalProfileCommercialStatus).toHaveBeenCalledWith({
+      facilityId: "facility-1",
+      verticalId,
       commercialStatus: "ACTIVE",
     });
   });

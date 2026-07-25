@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart';
 
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
@@ -137,18 +137,18 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> replaceSectorAssignments(
+  Future<void> replaceVerticalAssignments(
     String userId,
-    List<InviteSectorAssignment> sectorAssignments,
+    List<InviteVerticalAssignment> verticalAssignments,
   ) async {
     final response = await _send(
       _accessUri('/users/$userId/assignments'),
       method: RepositoryHttpMethod.put,
       body: {
-        'sectorAssignments': sectorAssignments
+        'verticalAssignments': verticalAssignments
             .map(
               (s) => {
-                'sectorId': s.sectorId,
+                'verticalId': s.verticalId,
                 if (s.managerId != null) 'managerId': s.managerId,
                 'territoryIds': s.territoryIds,
               },
@@ -264,19 +264,19 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> assignSector(String userId, String sectorId) async {
+  Future<void> assignVertical(String userId, String verticalId) async {
     final response = await _send(
-      _accessUri('/users/$userId/sectors'),
+      _accessUri('/users/$userId/verticals'),
       method: RepositoryHttpMethod.post,
-      body: {'sectorId': sectorId},
+      body: {'verticalId': verticalId},
     );
     _throwIfError(response);
   }
 
   @override
-  Future<void> revokeSector(String userId, String sectorId) async {
+  Future<void> revokeVertical(String userId, String verticalId) async {
     final response = await _send(
-      _accessUri('/users/$userId/sectors/$sectorId'),
+      _accessUri('/users/$userId/verticals/$verticalId'),
       method: RepositoryHttpMethod.delete,
     );
     _throwIfError(response);
@@ -332,22 +332,22 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<SectorOption>> getSectors() async {
-    final response = await _get(_accessUri('/sectors'));
+  Future<List<VerticalOption>> getVerticals() async {
+    final response = await _get(_accessUri('/business-verticals'));
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final rows = (decoded['sectors'] as List<dynamic>? ?? const [])
+    final rows = (decoded['verticals'] as List<dynamic>? ?? const [])
         .cast<Map<String, dynamic>>();
-    return rows.map(SectorOption.fromJson).toList();
+    return rows.map(VerticalOption.fromJson).toList();
   }
 
   @override
-  Future<List<ManagerOption>> getManagerOptions({String? sectorId}) async {
+  Future<List<ManagerOption>> getManagerOptions({String? verticalId}) async {
     final response = await _get(
       _accessUri('/users', {
         'role': 'MANAGER',
         'limit': '100',
-        'sectorId': ?sectorId,
+        'verticalId': ?verticalId,
       }),
     );
     _throwIfError(response);
@@ -365,12 +365,12 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<TerritoryOption>> getTerritoryOptions({String? sectorId}) async {
+  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId}) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': 'manager_zone',
         'format': 'flat',
-        'sectorId': ?sectorId,
+        'verticalId': ?verticalId,
       }),
     );
     _throwIfError(response);
@@ -395,7 +395,7 @@ class HttpUsersRepository implements UsersRepository {
         TerritoryOption(
           id: id,
           name: row['name'] as String,
-          sectorId: row['sectorId'] as String? ?? sectorId,
+          verticalId: row['verticalId'] as String? ?? verticalId,
           centroid: boundary?.labelAnchor,
           boundary: boundary,
         ),
@@ -407,9 +407,9 @@ class HttpUsersRepository implements UsersRepository {
   @override
   Future<ManagerTerritoryScope> getTerritoriesForManager(
     String managerId, {
-    String? sectorId,
+    String? verticalId,
   }) async {
-    if (sectorId == null || sectorId.isEmpty) {
+    if (verticalId == null || verticalId.isEmpty) {
       return ManagerTerritoryScope(
         managerId: managerId,
         managerName: '',
@@ -419,7 +419,7 @@ class HttpUsersRepository implements UsersRepository {
 
     final response = await _get(
       _accessUri('/managers/$managerId/assignable-territories', {
-        'sectorId': sectorId,
+        'verticalId': verticalId,
       }),
     );
     _throwIfError(response);

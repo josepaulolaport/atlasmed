@@ -8,7 +8,7 @@ import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/models/app_user.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
-import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/repositories/territory_api_exception.dart';
@@ -16,13 +16,6 @@ import 'package:atlasmed_mobile_app/features/territories/data/repositories/terri
 import 'package:atlasmed_mobile_app/repository/external/platform_http_client.dart';
 import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart';
 
-/// Real API-backed [TerritoryRepository]. Each `Territory` the map screen
-/// needs is assembled from three separate real endpoints — the metadata
-/// row (`GET /territory/territories`), its boundary
-/// (`GET /territory/territories/:id/boundary`), and its single assignee
-/// (`GET /access/territories/:id/assignments`) — since that's how the
-/// real API models them; [MockTerritoryRepository] simplifies all three
-/// into one flat model for the mock-data stage of this feature.
 class HttpTerritoryRepository implements TerritoryRepository {
   HttpTerritoryRepository({String? baseUrl})
     : _baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
@@ -53,10 +46,6 @@ class HttpTerritoryRepository implements TerritoryRepository {
       url: url,
       method: method,
       body: body,
-      // Without this, `http` defaults to `text/plain` for a String body
-      // and Elysia silently parses it as an empty object — every field
-      // then fails validation as "undefined" even though the JSON was
-      // sent correctly.
       headers: const {'Content-Type': 'application/json'},
     ),
   );
@@ -68,36 +57,22 @@ class HttpTerritoryRepository implements TerritoryRepository {
   }
 
   @override
-  Future<List<Sector>> getSectors() async {
-    // `/access/sectors` — the same flat, unpaginated "active sectors for a
-    // picker" endpoint the web admin's user-assignment dialog already
-    // uses — not the catalog module's paginated `/sectors` CRUD endpoint,
-    // which is a heavier admin surface this map-first screen doesn't need.
-    final response = await _get(_accessUri('/sectors'));
+  Future<List<BusinessVertical>> getVerticals() async {
+    final response = await _get(_accessUri('/business-verticals'));
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final rows = (decoded['sectors'] as List<dynamic>)
+    final rows = (decoded['verticals'] as List<dynamic>)
         .cast<Map<String, dynamic>>();
-    return rows
-        .map(
-          (row) => Sector(
-            id: row['id'] as String,
-            slug: row['slug'] as String,
-            name: row['name'] as String,
-          ),
-        )
-        .toList();
+    return rows.map(BusinessVertical.fromJson).toList();
   }
 
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-    required String sectorId,
   }) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': territoryTypeSlug,
-        'sectorId': sectorId,
         'format': 'flat',
       }),
     );
@@ -118,10 +93,6 @@ class HttpTerritoryRepository implements TerritoryRepository {
     return _hydrateTerritory(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
-  /// Fetches the boundary + current assignee for a territory metadata
-  /// [row] and assembles the full [Territory]. Returns `null` if the
-  /// territory has no boundary yet — this map-first screen has nothing
-  /// to draw for it.
   Future<Territory?> _hydrateTerritory(Map<String, dynamic> row) async {
     final id = row['id'] as String;
     final results = await Future.wait([
@@ -184,7 +155,6 @@ class HttpTerritoryRepository implements TerritoryRepository {
           'name': draft.name,
           'slug': _generateSlug(draft.name),
           'typeSlug': draft.kind.slug,
-          'sectorId': draft.sectorId,
           'boundary': boundary.toGeoJson(),
         });
     _throwIfError(response);
@@ -237,30 +207,22 @@ class HttpTerritoryRepository implements TerritoryRepository {
   Future<void> updateTerritoryInfo(
     String territoryId, {
     required String name,
-    required String sectorId,
     required bool isActive,
     String? managerTerritoryId,
   }) async {
-    // `managerTerritoryId` is intentionally not sent: on the real API a
-    // rep patch's manager zone is derived purely from where its boundary
-    // geometrically falls (see `applyTerritoryBoundary`), not settable
-    // through this metadata-only PATCH. Reassigning a patch to a
-    // different zone means redrawing its boundary inside that zone in
-    // the geometry editor instead.
     final response = await _send(
       _territoryUri('/territories/$territoryId'),
       RepositoryHttpMethod.patch,
-      {'name': name, 'sectorId': sectorId, 'isActive': isActive},
+      {'name': name, 'isActive': isActive},
     );
     _throwIfError(response);
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers(String sectorId) async {
+  Future<List<AssignableManager>> getAssignableManagers() async {
     final zonesResponse = await _get(
       _territoryUri('/territories', {
         'type': 'manager_zone',
-        'sectorId': sectorId,
         'format': 'flat',
       }),
     );

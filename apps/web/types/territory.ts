@@ -19,7 +19,6 @@ export interface Territory {
   code: string;
   territoryTypeId: string;
   territoryType: TerritoryType;
-  sectorId?: string;
   managerTerritoryId?: string;
   isActive: boolean;
   clinicCount: number;
@@ -41,7 +40,6 @@ export interface CreateTerritoryRequest {
   slug?: string;
   territoryTypeId?: string;
   typeSlug?: string;
-  sectorId?: string;
   reason?: string;
   boundary?: GeoJsonPolygon;
 }
@@ -75,7 +73,6 @@ export interface UpdateTerritoryTypeRequest extends TerritoryTypeFlags {
 export interface UpdateTerritoryRequest {
   name?: string;
   isActive?: boolean;
-  sectorId?: string | null;
   reason?: string;
 }
 

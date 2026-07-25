@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 
@@ -52,7 +52,7 @@ class UserInvitation extends Equatable {
     this.phoneNumber,
     this.managerName,
     this.territoryName,
-    this.sectorAssignments = const [],
+    this.verticalAssignments = const [],
     required this.createdAt,
     required this.expiresAt,
     required this.resendCount,
@@ -78,7 +78,7 @@ class UserInvitation extends Equatable {
   final String? territoryName;
 
   /// Full per-sector assignment payload — present for detail / edit.
-  final List<InviteSectorAssignment> sectorAssignments;
+  final List<InviteVerticalAssignment> verticalAssignments;
 
   final DateTime createdAt;
   final DateTime expiresAt;
@@ -109,11 +109,11 @@ class UserInvitation extends Equatable {
     phoneNumber: json['phoneNumber'] as String?,
     managerName: json['managerName'] as String?,
     territoryName: json['territoryName'] as String?,
-    sectorAssignments: (json['sectorAssignments'] as List<dynamic>? ?? const [])
+    verticalAssignments: (json['verticalAssignments'] as List<dynamic>? ?? const [])
         .map(
-          (raw) => InviteSectorAssignment(
-            sectorId: raw['sectorId'] as String,
-            sectorName: raw['sectorName'] as String,
+          (raw) => InviteVerticalAssignment(
+            verticalId: raw['verticalId'] as String,
+            verticalName: raw['verticalName'] as String,
             managerId: raw['managerId'] as String?,
             managerName: raw['managerName'] as String?,
             territories: (raw['territories'] as List<dynamic>? ?? const [])
@@ -138,7 +138,7 @@ class UserInvitation extends Equatable {
     String? phoneNumber,
     String? managerName,
     String? territoryName,
-    List<InviteSectorAssignment>? sectorAssignments,
+    List<InviteVerticalAssignment>? verticalAssignments,
     DateTime? expiresAt,
     int? resendCount,
     bool clearManagerName = false,
@@ -159,7 +159,7 @@ class UserInvitation extends Equatable {
       territoryName: clearTerritoryName
           ? null
           : (territoryName ?? this.territoryName),
-      sectorAssignments: sectorAssignments ?? this.sectorAssignments,
+      verticalAssignments: verticalAssignments ?? this.verticalAssignments,
       createdAt: createdAt,
       expiresAt: expiresAt ?? this.expiresAt,
       resendCount: resendCount ?? this.resendCount,
@@ -194,7 +194,7 @@ class UserInvitation extends Equatable {
     phoneNumber,
     managerName,
     territoryName,
-    sectorAssignments,
+    verticalAssignments,
     createdAt,
     expiresAt,
     resendCount,

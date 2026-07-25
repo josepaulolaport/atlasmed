@@ -17,7 +17,6 @@ import {
   territoryApprovalStatusEnum,
 } from "./enums";
 import { users } from "./users";
-import { sectors } from "./sectors";
 
 export const territoryTypes = pgTable(
   "territory_types",
@@ -49,7 +48,6 @@ export const territories = pgTable(
     territoryTypeId: text("territory_type_id").notNull().references(() => territoryTypes.id, { onDelete: "restrict" }),
     managerTerritoryId: text("manager_territory_id"),
     isActive: boolean("is_active").notNull().default(true),
-    sectorId: text("sector_id").references(() => sectors.id, { onDelete: "restrict" }),
     boundary: geometryMultiPolygon("boundary"),
     boundaryMinLng: doublePrecision("boundary_min_lng"),
     boundaryMinLat: doublePrecision("boundary_min_lat"),
@@ -64,7 +62,6 @@ export const territories = pgTable(
     index("territories_manager_territory_id_idx").on(t.managerTerritoryId),
     index("territories_is_active_idx").on(t.isActive),
     index("territories_territory_type_id_idx").on(t.territoryTypeId),
-    index("territories_sector_id_idx").on(t.sectorId),
   ]
 );
 
@@ -130,7 +127,6 @@ export const territoriesRelations = relations(territories, ({ one, many }) => ({
     references: [territories.id],
     relationName: "ManagerZonePatches",
   }),
-  sector: one(sectors, { fields: [territories.sectorId], references: [sectors.id] }),
   repPatches: many(territories, { relationName: "ManagerZonePatches" }),
   userAssignments: many(userTerritoryAssignments),
   approvalRequests: many(territoryApprovalRequests, { relationName: "ApprovalTargetTerritory" }),

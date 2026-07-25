@@ -9,7 +9,7 @@ import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option
 ///
 /// Manager [ManagerOption.territoryId] is the manager-zone id; REP patches
 /// nest under it via [TerritoryOption.managerTerritoryId]. Managers and
-/// territories are also tagged with [sectorIds] / [sectorId] so invite
+/// territories are also tagged with [verticalIds] / [verticalId] so invite
 /// assignment can be scoped per sector on the server.
 List<MapCoordinate> _octagon({
   required double centerLat,
@@ -53,7 +53,7 @@ ManagerOption _manager({
   required String territoryName,
   required double centerLat,
   required double centerLng,
-  required List<String> sectorIds,
+  required List<String> verticalIds,
 }) {
   return ManagerOption(
     id: id,
@@ -65,7 +65,7 @@ ManagerOption _manager({
       centerLat: centerLat,
       centerLng: centerLng,
     ),
-    sectorIds: sectorIds,
+    verticalIds: verticalIds,
   );
 }
 
@@ -77,7 +77,7 @@ final mockManagerOptions = <ManagerOption>[
     territoryName: 'Zona Sul',
     centerLat: -23.6200,
     centerLng: -46.6000,
-    sectorIds: const ['sector-oncologia', 'sector-cardiologia'],
+    verticalIds: const ['sector-oncologia', 'sector-cardiologia'],
   ),
   _manager(
     id: 'user-marcos-lima',
@@ -86,7 +86,7 @@ final mockManagerOptions = <ManagerOption>[
     territoryName: 'Zona Norte',
     centerLat: -23.4800,
     centerLng: -46.6255,
-    sectorIds: const ['sector-oncologia', 'sector-cardiologia'],
+    verticalIds: const ['sector-oncologia', 'sector-cardiologia'],
   ),
   _manager(
     id: 'user-renata-souza',
@@ -95,7 +95,7 @@ final mockManagerOptions = <ManagerOption>[
     territoryName: 'Centro',
     centerLat: -23.5505,
     centerLng: -46.6333,
-    sectorIds: const ['sector-oncologia'],
+    verticalIds: const ['sector-oncologia'],
   ),
   _manager(
     id: 'user-eduardo-alves',
@@ -104,7 +104,7 @@ final mockManagerOptions = <ManagerOption>[
     territoryName: 'Oeste Cardio',
     centerLat: -23.5417,
     centerLng: -46.7250,
-    sectorIds: const ['sector-cardiologia'],
+    verticalIds: const ['sector-cardiologia'],
   ),
   _manager(
     id: 'user-otavio-barros',
@@ -113,15 +113,15 @@ final mockManagerOptions = <ManagerOption>[
     territoryName: 'Zona Leste',
     centerLat: -23.5400,
     centerLng: -46.4800,
-    sectorIds: const ['sector-oncologia', 'sector-cardiologia'],
+    verticalIds: const ['sector-oncologia', 'sector-cardiologia'],
   ),
 ];
 
 TerritoryOption _territoryOption({
   required String id,
   required String name,
-  required String sectorId,
-  required String sectorName,
+  required String verticalId,
+  required String verticalName,
   required double centerLat,
   required double centerLng,
   String? managerTerritoryId,
@@ -139,8 +139,8 @@ TerritoryOption _territoryOption({
   return TerritoryOption(
     id: id,
     name: name,
-    sectorId: sectorId,
-    sectorName: sectorName,
+    verticalId: verticalId,
+    verticalName: verticalName,
     centroid: MapCoordinate(latitude: centerLat, longitude: centerLng),
     boundary: TerritoryGeometry.polygon([ring]),
     managerTerritoryId: managerTerritoryId,
@@ -154,8 +154,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-onco-a',
     name: 'Sul Onco A — Santo Amaro',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.6500,
     centerLng: -46.7000,
     managerTerritoryId: 'zone-zona-sul',
@@ -165,8 +165,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-onco-b',
     name: 'Sul Onco B — Campo Belo',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.6200,
     centerLng: -46.6700,
     managerTerritoryId: 'zone-zona-sul',
@@ -174,8 +174,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-onco-c',
     name: 'Sul Onco C — Brooklin',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.6100,
     centerLng: -46.6900,
     managerTerritoryId: 'zone-zona-sul',
@@ -183,8 +183,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-onco-d',
     name: 'Sul Onco D — Moema',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.6000,
     centerLng: -46.6600,
     managerTerritoryId: 'zone-zona-sul',
@@ -192,8 +192,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-cardio-a',
     name: 'Sul Cardio A — Jabaquara',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.6400,
     centerLng: -46.6400,
     managerTerritoryId: 'zone-zona-sul',
@@ -201,8 +201,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-cardio-b',
     name: 'Sul Cardio B — Saúde',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.6150,
     centerLng: -46.6300,
     managerTerritoryId: 'zone-zona-sul',
@@ -212,8 +212,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-sul-cardio-c',
     name: 'Sul Cardio C — Vila Mariana',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5900,
     centerLng: -46.6350,
     managerTerritoryId: 'zone-zona-sul',
@@ -223,8 +223,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-norte-onco-a',
     name: 'Norte Onco A — Santana',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5000,
     centerLng: -46.6300,
     managerTerritoryId: 'zone-zona-norte',
@@ -234,8 +234,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-norte-onco-b',
     name: 'Norte Onco B — Tucuruvi',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.4700,
     centerLng: -46.6000,
     managerTerritoryId: 'zone-zona-norte',
@@ -243,8 +243,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-norte-onco-c',
     name: 'Norte Onco C — Casa Verde',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.4900,
     centerLng: -46.6600,
     managerTerritoryId: 'zone-zona-norte',
@@ -252,8 +252,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-norte-cardio-a',
     name: 'Norte Cardio A — Vila Guilherme',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5100,
     centerLng: -46.6100,
     managerTerritoryId: 'zone-zona-norte',
@@ -261,8 +261,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-norte-cardio-b',
     name: 'Norte Cardio B — Limão',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.4600,
     centerLng: -46.6500,
     managerTerritoryId: 'zone-zona-norte',
@@ -272,8 +272,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-centro-onco-a',
     name: 'Centro Onco A — República',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5450,
     centerLng: -46.6400,
     managerTerritoryId: 'zone-centro',
@@ -281,8 +281,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-centro-onco-b',
     name: 'Centro Onco B — Liberdade',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5600,
     centerLng: -46.6350,
     managerTerritoryId: 'zone-centro',
@@ -290,8 +290,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-centro-onco-c',
     name: 'Centro Onco C — Bela Vista',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5550,
     centerLng: -46.6500,
     managerTerritoryId: 'zone-centro',
@@ -301,8 +301,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-centro-onco-d',
     name: 'Centro Onco D — Consolação',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5500,
     centerLng: -46.6550,
     managerTerritoryId: 'zone-centro',
@@ -312,8 +312,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-oeste-cardio-a',
     name: 'Oeste Cardio A — Pinheiros',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5600,
     centerLng: -46.7000,
     managerTerritoryId: 'zone-cardio-oeste',
@@ -321,8 +321,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-oeste-cardio-b',
     name: 'Oeste Cardio B — Butantã',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5700,
     centerLng: -46.7200,
     managerTerritoryId: 'zone-cardio-oeste',
@@ -330,8 +330,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-oeste-cardio-c',
     name: 'Oeste Cardio C — Lapa',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5300,
     centerLng: -46.7100,
     managerTerritoryId: 'zone-cardio-oeste',
@@ -341,8 +341,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-oeste-cardio-d',
     name: 'Oeste Cardio D — Perdizes',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5400,
     centerLng: -46.6800,
     managerTerritoryId: 'zone-cardio-oeste',
@@ -352,8 +352,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-leste-onco-a',
     name: 'Leste Onco A — Tatuapé',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5400,
     centerLng: -46.5700,
     managerTerritoryId: 'zone-leste',
@@ -361,8 +361,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-leste-onco-b',
     name: 'Leste Onco B — Penha',
-    sectorId: 'sector-oncologia',
-    sectorName: 'Oncologia',
+    verticalId: 'sector-oncologia',
+    verticalName: 'Oncologia',
     centerLat: -23.5200,
     centerLng: -46.5400,
     managerTerritoryId: 'zone-leste',
@@ -370,8 +370,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-leste-cardio-a',
     name: 'Leste Cardio A — Belém',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5500,
     centerLng: -46.5900,
     managerTerritoryId: 'zone-leste',
@@ -379,8 +379,8 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-leste-cardio-b',
     name: 'Leste Cardio B — Mooca',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5600,
     centerLng: -46.6000,
     managerTerritoryId: 'zone-leste',
@@ -390,15 +390,15 @@ final mockTerritoryOptions = <TerritoryOption>[
   _territoryOption(
     id: 'territory-leste-cardio-c',
     name: 'Leste Cardio C — Água Rasa',
-    sectorId: 'sector-cardiologia',
-    sectorName: 'Cardiologia',
+    verticalId: 'sector-cardiologia',
+    verticalName: 'Cardiologia',
     centerLat: -23.5650,
     centerLng: -46.5600,
     managerTerritoryId: 'zone-leste',
   ),
 ];
 
-const mockSectorOptions = <SectorOption>[
-  SectorOption(id: 'sector-oncologia', name: 'Oncologia'),
-  SectorOption(id: 'sector-cardiologia', name: 'Cardiologia'),
+const mockVerticalOptions = <VerticalOption>[
+  VerticalOption(id: 'sector-oncologia', name: 'Oncologia'),
+  VerticalOption(id: 'sector-cardiologia', name: 'Cardiologia'),
 ];

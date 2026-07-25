@@ -1,4 +1,4 @@
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 
 /// Port for the invite-flow data source. Method signatures mirror the real
@@ -16,7 +16,7 @@ abstract interface class InvitationsRepository {
 
   /// `POST /access/invite`
   ///
-  /// [sectorAssignments] carries per-sector manager + territory picks for
+  /// [verticalAssignments] carries per-sector manager + territory picks for
   /// non-admin roles (REP needs a manager and ≥1 territory per sector;
   /// Manager needs ≥1 territory per sector).
   Future<UserInvitation> createInvitation({
@@ -26,7 +26,7 @@ abstract interface class InvitationsRepository {
     required DateTime birthDate,
     required String phoneNumber,
     required String roleId,
-    List<InviteSectorAssignment> sectorAssignments = const [],
+    List<InviteVerticalAssignment> verticalAssignments = const [],
   });
 
   /// `PATCH /access/invites/:id` — only valid while status is pending.
@@ -38,7 +38,7 @@ abstract interface class InvitationsRepository {
     required DateTime birthDate,
     required String phoneNumber,
     required String roleId,
-    List<InviteSectorAssignment> sectorAssignments = const [],
+    List<InviteVerticalAssignment> verticalAssignments = const [],
   });
 
   /// `POST /access/invites/:id/resend`

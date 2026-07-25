@@ -1,12 +1,11 @@
-import { eq, and, or, isNull, isNotNull, inArray, gt, desc, lt, sql } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, gt, desc, lt, sql } from "drizzle-orm";
 import {
   users,
   roles,
   invitations,
   userTerritoryAssignments,
-  territories,
-  userSectorAssignments,
-  invitationSectorAssignments,
+  userVerticalAssignments,
+  invitationVerticalAssignments,
   invitationTerritoryAssignments,
 } from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
@@ -55,19 +54,19 @@ export class DrizzleInviteRepository implements InviteRepository {
         .returning({ id: invitations.id });
 
       const id = inserted!.id;
-      const sectors = params.sectorAssignments ?? [];
+      const verticals = params.verticalAssignments ?? [];
 
-      for (const sector of sectors) {
-        await tx.insert(invitationSectorAssignments).values({
+      for (const vertical of verticals) {
+        await tx.insert(invitationVerticalAssignments).values({
           invitationId: id,
-          sectorId: sector.sectorId,
-          managerId: sector.managerId ?? null,
+          verticalId: vertical.verticalId,
+          managerId: vertical.managerId ?? null,
         });
 
-        for (const territoryId of sector.territoryIds) {
+        for (const territoryId of vertical.territoryIds) {
           await tx.insert(invitationTerritoryAssignments).values({
             invitationId: id,
-            sectorId: sector.sectorId,
+            verticalId: vertical.verticalId,
             territoryId,
           });
         }
@@ -103,22 +102,22 @@ export class DrizzleInviteRepository implements InviteRepository {
     return fetchInviteWithRole(inviteId);
   }
 
-  async findStagedSectorAssignments(invitationIds: string[]) {
+  async findStagedVerticalAssignments(invitationIds: string[]) {
     if (invitationIds.length === 0) return [];
 
-    const sectorRows = await db
+    const verticalRows = await db
       .select({
-        invitationId: invitationSectorAssignments.invitationId,
-        sectorId: invitationSectorAssignments.sectorId,
-        managerId: invitationSectorAssignments.managerId,
+        invitationId: invitationVerticalAssignments.invitationId,
+        verticalId: invitationVerticalAssignments.verticalId,
+        managerId: invitationVerticalAssignments.managerId,
       })
-      .from(invitationSectorAssignments)
-      .where(inArray(invitationSectorAssignments.invitationId, invitationIds));
+      .from(invitationVerticalAssignments)
+      .where(inArray(invitationVerticalAssignments.invitationId, invitationIds));
 
     const territoryRows = await db
       .select({
         invitationId: invitationTerritoryAssignments.invitationId,
-        sectorId: invitationTerritoryAssignments.sectorId,
+        verticalId: invitationTerritoryAssignments.verticalId,
         territoryId: invitationTerritoryAssignments.territoryId,
       })
       .from(invitationTerritoryAssignments)
@@ -126,18 +125,18 @@ export class DrizzleInviteRepository implements InviteRepository {
 
     const territoriesByKey = new Map<string, string[]>();
     for (const row of territoryRows) {
-      const key = `${row.invitationId}:${row.sectorId}`;
+      const key = `${row.invitationId}:${row.verticalId}`;
       const list = territoriesByKey.get(key) ?? [];
       list.push(row.territoryId);
       territoriesByKey.set(key, list);
     }
 
-    return sectorRows.map((row) => ({
+    return verticalRows.map((row) => ({
       invitationId: row.invitationId,
-      sectorId: row.sectorId,
+      verticalId: row.verticalId,
       managerId: row.managerId ?? null,
       territoryIds:
-        territoriesByKey.get(`${row.invitationId}:${row.sectorId}`) ?? [],
+        territoriesByKey.get(`${row.invitationId}:${row.verticalId}`) ?? [],
     }));
   }
 
@@ -152,8 +151,8 @@ export class DrizzleInviteRepository implements InviteRepository {
     managerId?: string | null | undefined;
     managerTerritoryId?: string | null | undefined;
     repTerritoryId?: string | null | undefined;
-    sectorAssignments?: Array<{
-      sectorId: string;
+    verticalAssignments?: Array<{
+      verticalId: string;
       managerId?: string | undefined;
       territoryIds: string[];
     }>;
@@ -179,26 +178,26 @@ export class DrizzleInviteRepository implements InviteRepository {
         .set(updates)
         .where(eq(invitations.id, params.inviteId));
 
-      if (params.sectorAssignments !== undefined) {
+      if (params.verticalAssignments !== undefined) {
         await tx
           .delete(invitationTerritoryAssignments)
           .where(
             eq(invitationTerritoryAssignments.invitationId, params.inviteId),
           );
         await tx
-          .delete(invitationSectorAssignments)
-          .where(eq(invitationSectorAssignments.invitationId, params.inviteId));
+          .delete(invitationVerticalAssignments)
+          .where(eq(invitationVerticalAssignments.invitationId, params.inviteId));
 
-        for (const sector of params.sectorAssignments) {
-          await tx.insert(invitationSectorAssignments).values({
+        for (const vertical of params.verticalAssignments) {
+          await tx.insert(invitationVerticalAssignments).values({
             invitationId: params.inviteId,
-            sectorId: sector.sectorId,
-            managerId: sector.managerId ?? null,
+            verticalId: vertical.verticalId,
+            managerId: vertical.managerId ?? null,
           });
-          for (const territoryId of sector.territoryIds) {
+          for (const territoryId of vertical.territoryIds) {
             await tx.insert(invitationTerritoryAssignments).values({
               invitationId: params.inviteId,
-              sectorId: sector.sectorId,
+              verticalId: vertical.verticalId,
               territoryId,
             });
           }
@@ -330,7 +329,6 @@ export class DrizzleInviteRepository implements InviteRepository {
     params: AcceptInviteTransactionParams,
   ): Promise<AcceptInviteTransactionResult> {
     return await db.transaction(async (tx) => {
-      // Pessimistic locking: Lock the invite row to prevent race conditions
       const [inviteLock] = await tx
         .select({
           id: invitations.id,
@@ -372,7 +370,6 @@ export class DrizzleInviteRepository implements InviteRepository {
         throw new InvalidInviteError("Phone number does not match invitation");
       }
 
-      // Check for existing user with same credentials
       const orConditions = [
         eq(users.email, params.email),
         eq(users.username, params.username),
@@ -391,7 +388,6 @@ export class DrizzleInviteRepository implements InviteRepository {
         throw new ResourceConflictError("User", "email or username already taken");
       }
 
-      // Create the user with invitation data
       const [newUserRow] = await tx
         .insert(users)
         .values({
@@ -419,17 +415,17 @@ export class DrizzleInviteRepository implements InviteRepository {
 
       const user = { ...userRow!.users, role: userRow!.roles! };
 
-      const stagedSectors = await tx
+      const stagedVerticals = await tx
         .select()
-        .from(invitationSectorAssignments)
-        .where(eq(invitationSectorAssignments.invitationId, inviteLock.id));
+        .from(invitationVerticalAssignments)
+        .where(eq(invitationVerticalAssignments.invitationId, inviteLock.id));
 
       const stagedTerritories = await tx
         .select()
         .from(invitationTerritoryAssignments)
         .where(eq(invitationTerritoryAssignments.invitationId, inviteLock.id));
 
-      if (stagedTerritories.length > 0 || stagedSectors.length > 0) {
+      if (stagedTerritories.length > 0 || stagedVerticals.length > 0) {
         const seenTerritoryIds = new Set<string>();
         for (const row of stagedTerritories) {
           if (seenTerritoryIds.has(row.territoryId)) continue;
@@ -441,20 +437,20 @@ export class DrizzleInviteRepository implements InviteRepository {
           });
         }
 
-        for (const sector of stagedSectors) {
+        for (const vertical of stagedVerticals) {
           await tx
-            .insert(userSectorAssignments)
+            .insert(userVerticalAssignments)
             .values({
               userId: user.id,
-              sectorId: sector.sectorId,
-              managerId: sector.managerId ?? null,
+              verticalId: vertical.verticalId,
+              managerId: vertical.managerId ?? null,
               assignedByUserId: inviteLock.invitedByUserId,
             })
             .onConflictDoNothing();
         }
 
         const primaryManager =
-          stagedSectors.map((s) => s.managerId).find((id): id is string => Boolean(id)) ??
+          stagedVerticals.map((v) => v.managerId).find((id): id is string => Boolean(id)) ??
           inviteLock.managerId;
         if (primaryManager && user.managerId !== primaryManager) {
           await tx
@@ -464,7 +460,6 @@ export class DrizzleInviteRepository implements InviteRepository {
           user.managerId = primaryManager;
         }
       } else {
-        // Legacy single-territory invite columns
         const assignedTerritoryIds: string[] = [];
 
         if (inviteLock.managerTerritoryId) {
@@ -484,37 +479,8 @@ export class DrizzleInviteRepository implements InviteRepository {
           });
           assignedTerritoryIds.push(inviteLock.repTerritoryId);
         }
-
-        if (assignedTerritoryIds.length > 0) {
-          const territoryRows = await tx
-            .select({ sectorId: territories.sectorId })
-            .from(territories)
-            .where(
-              and(
-                inArray(territories.id, assignedTerritoryIds),
-                isNotNull(territories.sectorId),
-              ),
-            );
-
-          const uniqueSectorIds = [
-            ...new Set(territoryRows.map((r) => r.sectorId as string)),
-          ];
-
-          for (const sectorId of uniqueSectorIds) {
-            await tx
-              .insert(userSectorAssignments)
-              .values({
-                userId: user.id,
-                sectorId,
-                managerId: inviteLock.managerId ?? null,
-                assignedByUserId: inviteLock.invitedByUserId,
-              })
-              .onConflictDoNothing();
-          }
-        }
       }
 
-      // Mark invite as accepted
       await tx
         .update(invitations)
         .set({
@@ -525,7 +491,6 @@ export class DrizzleInviteRepository implements InviteRepository {
         })
         .where(eq(invitations.id, inviteLock.id));
 
-      // Fetch the complete invite with role for the return value
       const [inviteRow] = await tx
         .select()
         .from(invitations)

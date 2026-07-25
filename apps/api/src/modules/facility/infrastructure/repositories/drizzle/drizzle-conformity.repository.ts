@@ -22,7 +22,7 @@ function mapRequirement(row: RequirementRow): ConformityRequirementRecord {
     slug: row.slug,
     name: row.name,
     description: row.description,
-    sectorId: row.sectorId,
+    verticalId: row.verticalId,
     appliesToTaxIdType: (row.appliesToTaxIdType as FacilityTaxIdType | null) ?? null,
     isActive: row.isActive,
     allowedMimeTypes: row.allowedMimeTypes ?? [],

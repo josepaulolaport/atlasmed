@@ -39,7 +39,7 @@ class HttpUserRepository implements UserRepository {
   Future<List<AppUser>> searchUsers({
     required UserRole role,
     String query = '',
-    String? sectorId,
+    String? verticalId,
   }) async {
     final response = await _client.call(
       request: RepositoryHttpRequest(
@@ -47,7 +47,7 @@ class HttpUserRepository implements UserRepository {
           'role': role == UserRole.manager ? 'MANAGER' : 'REP',
           'limit': '50',
           if (query.trim().isNotEmpty) 'search': query.trim(),
-          'sectorId': ?sectorId,
+          'verticalId': ?verticalId,
         }),
       ),
     );

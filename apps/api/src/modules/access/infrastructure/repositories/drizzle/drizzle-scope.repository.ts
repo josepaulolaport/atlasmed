@@ -1,5 +1,10 @@
-import { eq, and, isNull, inArray, desc, sql } from "drizzle-orm";
-import { users, userTerritoryAssignments, sectors, userSectorAssignments, territories } from "@atlasmed/database";
+import { eq, and, isNull, inArray, desc } from "drizzle-orm";
+import {
+  users,
+  userTerritoryAssignments,
+  businessVerticals,
+  userVerticalAssignments,
+} from "@atlasmed/database";
 import { db } from "../../../../../infrastructure/database/db";
 import type { ScopeRepository } from "../../../application/interfaces/scope.repository.interface";
 
@@ -116,29 +121,18 @@ export class DrizzleScopeRepository implements ScopeRepository {
     return row?.managerId ?? null;
   }
 
-  async findSectorIdsByUserId(userId: string): Promise<string[]> {
+  async findVerticalIdsByUserId(userId: string): Promise<string[]> {
     const rows = await db
-      .select({ sectorId: userSectorAssignments.sectorId })
-      .from(userSectorAssignments)
-      .where(eq(userSectorAssignments.userId, userId));
+      .select({ verticalId: userVerticalAssignments.verticalId })
+      .from(userVerticalAssignments)
+      .where(eq(userVerticalAssignments.userId, userId));
 
-    return rows.map((r) => r.sectorId);
+    return rows.map((r) => r.verticalId);
   }
 
-  async findTerritoryIdsBySectorIds(sectorIds: string[]): Promise<string[]> {
-    if (sectorIds.length === 0) return [];
-
-    const rows = await db
-      .select({ id: territories.id })
-      .from(territories)
-      .where(and(eq(territories.isActive, true), inArray(territories.sectorId as any, sectorIds)));
-
-    return rows.map((r) => r.id);
-  }
-
-  async assignSector(params: {
+  async assignVertical(params: {
     userId: string;
-    sectorId: string;
+    verticalId: string;
     assignedByUserId: string;
     managerId?: string | null;
   }): Promise<void> {
@@ -146,15 +140,15 @@ export class DrizzleScopeRepository implements ScopeRepository {
       params.managerId === undefined ? undefined : params.managerId;
 
     await db
-      .insert(userSectorAssignments)
+      .insert(userVerticalAssignments)
       .values({
         userId: params.userId,
-        sectorId: params.sectorId,
+        verticalId: params.verticalId,
         assignedByUserId: params.assignedByUserId,
         managerId: managerId === undefined ? null : managerId,
       })
       .onConflictDoUpdate({
-        target: [userSectorAssignments.userId, userSectorAssignments.sectorId],
+        target: [userVerticalAssignments.userId, userVerticalAssignments.verticalId],
         set: {
           assignedByUserId: params.assignedByUserId,
           ...(managerId !== undefined ? { managerId } : {}),
@@ -163,32 +157,32 @@ export class DrizzleScopeRepository implements ScopeRepository {
       });
   }
 
-  async revokeSector(params: { userId: string; sectorId: string }): Promise<void> {
+  async revokeVertical(params: { userId: string; verticalId: string }): Promise<void> {
     await db
-      .delete(userSectorAssignments)
+      .delete(userVerticalAssignments)
       .where(
         and(
-          eq(userSectorAssignments.userId, params.userId),
-          eq(userSectorAssignments.sectorId, params.sectorId)
+          eq(userVerticalAssignments.userId, params.userId),
+          eq(userVerticalAssignments.verticalId, params.verticalId)
         )
       );
   }
 
-  async findSectorAssignmentsByUserId(userId: string): Promise<
-    Array<{ sectorId: string; managerId: string | null; assignedAt: Date }>
+  async findVerticalAssignmentsByUserId(userId: string): Promise<
+    Array<{ verticalId: string; managerId: string | null; assignedAt: Date }>
   > {
     const rows = await db
       .select({
-        sectorId: userSectorAssignments.sectorId,
-        managerId: userSectorAssignments.managerId,
-        createdAt: userSectorAssignments.createdAt,
+        verticalId: userVerticalAssignments.verticalId,
+        managerId: userVerticalAssignments.managerId,
+        createdAt: userVerticalAssignments.createdAt,
       })
-      .from(userSectorAssignments)
-      .where(eq(userSectorAssignments.userId, userId))
-      .orderBy(desc(userSectorAssignments.createdAt));
+      .from(userVerticalAssignments)
+      .where(eq(userVerticalAssignments.userId, userId))
+      .orderBy(desc(userVerticalAssignments.createdAt));
 
     return rows.map((r) => ({
-      sectorId: r.sectorId,
+      verticalId: r.verticalId,
       managerId: r.managerId ?? null,
       assignedAt: r.createdAt,
     }));
@@ -198,8 +192,8 @@ export class DrizzleScopeRepository implements ScopeRepository {
     userId: string;
     assignedByUserId: string;
     managerId: string | null;
-    sectorAssignments: Array<{
-      sectorId: string;
+    verticalAssignments: Array<{
+      verticalId: string;
       managerId?: string | null;
       territoryIds: string[];
     }>;
@@ -209,23 +203,23 @@ export class DrizzleScopeRepository implements ScopeRepository {
         .delete(userTerritoryAssignments)
         .where(eq(userTerritoryAssignments.userId, params.userId));
       await tx
-        .delete(userSectorAssignments)
-        .where(eq(userSectorAssignments.userId, params.userId));
+        .delete(userVerticalAssignments)
+        .where(eq(userVerticalAssignments.userId, params.userId));
 
       await tx
         .update(users)
         .set({ managerId: params.managerId, updatedAt: new Date() })
         .where(eq(users.id, params.userId));
 
-      for (const sector of params.sectorAssignments) {
-        await tx.insert(userSectorAssignments).values({
+      for (const vertical of params.verticalAssignments) {
+        await tx.insert(userVerticalAssignments).values({
           userId: params.userId,
-          sectorId: sector.sectorId,
+          verticalId: vertical.verticalId,
           assignedByUserId: params.assignedByUserId,
-          managerId: sector.managerId ?? null,
+          managerId: vertical.managerId ?? null,
         });
 
-        for (const territoryId of sector.territoryIds) {
+        for (const territoryId of vertical.territoryIds) {
           await tx.insert(userTerritoryAssignments).values({
             userId: params.userId,
             territoryId,
@@ -236,12 +230,12 @@ export class DrizzleScopeRepository implements ScopeRepository {
     });
   }
 
-  async listActiveSectors(): Promise<Array<{ id: string; slug: string; name: string }>> {
+  async listActiveVerticals(): Promise<Array<{ id: string; code: string; name: string }>> {
     const rows = await db
-      .select({ id: sectors.id, slug: sectors.slug, name: sectors.name })
-      .from(sectors)
-      .where(eq(sectors.isActive, true))
-      .orderBy(sectors.name);
+      .select({ id: businessVerticals.id, code: businessVerticals.code, name: businessVerticals.name })
+      .from(businessVerticals)
+      .where(eq(businessVerticals.isActive, true))
+      .orderBy(businessVerticals.name);
 
     return rows;
   }

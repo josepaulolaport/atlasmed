@@ -26,8 +26,8 @@ export interface InviteRecord {
   updatedAt: Date;
 }
 
-export interface InviteSectorAssignmentParams {
-  sectorId: string;
+export interface InviteVerticalAssignmentParams {
+  verticalId: string;
   managerId?: string | undefined;
   territoryIds: string[];
 }
@@ -44,8 +44,8 @@ export interface CreateInviteParams {
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
-  /** Multi-sector staging; empty keeps legacy single-territory columns only. */
-  sectorAssignments?: InviteSectorAssignmentParams[];
+  /** Multi-vertical staging; empty keeps legacy single-territory columns only. */
+  verticalAssignments?: InviteVerticalAssignmentParams[];
   expiresAt: Date;
 }
 
@@ -76,9 +76,9 @@ export interface AcceptInviteTransactionResult {
   invite: InviteRecord;
 }
 
-export interface InviteStagedSectorAssignment {
+export interface InviteStagedVerticalAssignment {
   invitationId: string;
-  sectorId: string;
+  verticalId: string;
   managerId: string | null;
   territoryIds: string[];
 }
@@ -94,7 +94,7 @@ export interface UpdatePendingInviteParams {
   managerId?: string | null | undefined;
   managerTerritoryId?: string | null | undefined;
   repTerritoryId?: string | null | undefined;
-  sectorAssignments?: InviteSectorAssignmentParams[];
+  verticalAssignments?: InviteVerticalAssignmentParams[];
 }
 
 export interface InviteRepository {
@@ -113,9 +113,9 @@ export interface InviteRepository {
     invitedByUserId?: string;
   }): Promise<{ invitations: InviteRecord[]; total: number }>;
 
-  findStagedSectorAssignments(
+  findStagedVerticalAssignments(
     invitationIds: string[],
-  ): Promise<InviteStagedSectorAssignment[]>;
+  ): Promise<InviteStagedVerticalAssignment[]>;
 
   updatePending(params: UpdatePendingInviteParams): Promise<InviteRecord>;
 

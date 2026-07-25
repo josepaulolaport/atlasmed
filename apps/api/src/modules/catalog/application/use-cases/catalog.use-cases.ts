@@ -1,7 +1,7 @@
 import type { ScopeContext } from "@atlasmed/access";
 import { assertResourceInScope } from "@atlasmed/access";
 import { ResourceNotFoundError, ValidationError } from "../../../../shared/errors";
-import type { SectorRepository } from "../interfaces/sector.repository.interface";
+import type { BusinessVerticalRepository } from "../interfaces/business-vertical.repository.interface";
 import type { ProductRecord, ProductRepository } from "../interfaces/product.repository.interface";
 import type {
   HealthcareProviderRepository,
@@ -14,9 +14,9 @@ import type {
 } from "../interfaces/competitor-product.repository.interface";
 import type { ProductEquivalenceRepository } from "../interfaces/product-equivalence.repository.interface";
 
-function serializeSector(row: {
+function serializeBusinessVertical(row: {
   id: string;
-  slug: string;
+  code: string;
   name: string;
   isActive: boolean;
   createdAt: Date;
@@ -24,7 +24,7 @@ function serializeSector(row: {
 }) {
   return {
     id: row.id,
-    slug: row.slug,
+    code: row.code,
     name: row.name,
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
@@ -42,7 +42,7 @@ function serializeProduct(row: {
   productClassification: string | null;
   brand: string | null;
   unit: string | null;
-  sectorIds: string[];
+  verticalIds: string[];
   pictureUrl: string | null;
   simproCode: string;
   brasindiceCode: string;
@@ -68,7 +68,7 @@ function serializeProduct(row: {
     productClassification: row.productClassification,
     brand: row.brand,
     unit: row.unit,
-    sectorIds: row.sectorIds,
+    verticalIds: row.verticalIds,
     pictureUrl: row.pictureUrl,
     simproCode: row.simproCode,
     brasindiceCode: row.brasindiceCode,
@@ -104,49 +104,49 @@ function serializeProvider(row: {
   };
 }
 
-export class ListSectorsUseCase {
-  constructor(private readonly deps: { sectorRepository: SectorRepository }) {}
+export class ListBusinessVerticalsUseCase {
+  constructor(private readonly deps: { businessVerticalRepository: BusinessVerticalRepository }) {}
 
   async execute(input: { page?: number; limit?: number; isActive?: boolean }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 50;
-    const { sectors, total } = await this.deps.sectorRepository.findAll({
+    const { verticals, total } = await this.deps.businessVerticalRepository.findAll({
       page,
       limit,
       isActive: input.isActive,
     });
 
     return {
-      data: sectors.map(serializeSector),
+      data: verticals.map(serializeBusinessVertical),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
 }
 
-export class CreateSectorUseCase {
-  constructor(private readonly deps: { sectorRepository: SectorRepository }) {}
+export class CreateBusinessVerticalUseCase {
+  constructor(private readonly deps: { businessVerticalRepository: BusinessVerticalRepository }) {}
 
-  async execute(input: { slug: string; name: string; isActive?: boolean }) {
-    const sector = await this.deps.sectorRepository.create(input);
-    return serializeSector(sector);
+  async execute(input: { code: string; name: string; isActive?: boolean }) {
+    const vertical = await this.deps.businessVerticalRepository.create(input);
+    return serializeBusinessVertical(vertical);
   }
 }
 
-export class UpdateSectorUseCase {
-  constructor(private readonly deps: { sectorRepository: SectorRepository }) {}
+export class UpdateBusinessVerticalUseCase {
+  constructor(private readonly deps: { businessVerticalRepository: BusinessVerticalRepository }) {}
 
   async execute(input: {
-    sectorId: string;
-    slug?: string;
+    verticalId: string;
+    code?: string;
     name?: string;
     isActive?: boolean;
   }) {
-    const sector = await this.deps.sectorRepository.update(input.sectorId, {
-      slug: input.slug,
+    const vertical = await this.deps.businessVerticalRepository.update(input.verticalId, {
+      code: input.code,
       name: input.name,
       isActive: input.isActive,
     });
-    return serializeSector(sector);
+    return serializeBusinessVertical(vertical);
   }
 }
 
@@ -156,7 +156,7 @@ export class ListProductsUseCase {
   async execute(input: {
     page?: number;
     limit?: number;
-    sectorId?: string;
+    verticalId?: string;
     search?: string;
     isActive?: boolean;
   }) {
@@ -165,7 +165,7 @@ export class ListProductsUseCase {
     const { products, total } = await this.deps.productRepository.findAll({
       page,
       limit,
-      sectorId: input.sectorId,
+      verticalId: input.verticalId,
       search: input.search,
       isActive: input.isActive,
     });
@@ -193,7 +193,7 @@ export class CreateProductUseCase {
   async execute(input: {
     code: string;
     name: string;
-    sectorIds: string[];
+    verticalIds: string[];
     pictureUrl?: string | null;
     simproCode: string;
     brasindiceCode: string;
@@ -219,7 +219,7 @@ export class UpdateProductUseCase {
     productId: string;
     code?: string;
     name?: string;
-    sectorIds?: string[];
+    verticalIds?: string[];
     pictureUrl?: string | null;
     simproCode?: string;
     brasindiceCode?: string;
@@ -236,7 +236,7 @@ export class UpdateProductUseCase {
     const product = await this.deps.productRepository.update(input.productId, {
       code: input.code,
       name: input.name,
-      sectorIds: input.sectorIds,
+      verticalIds: input.verticalIds,
       pictureUrl: input.pictureUrl,
       simproCode: input.simproCode,
       brasindiceCode: input.brasindiceCode,

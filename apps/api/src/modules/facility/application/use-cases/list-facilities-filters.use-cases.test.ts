@@ -1,3 +1,4 @@
+import { Role } from "@atlasmed/access";
 import { describe, expect, it, mock } from "bun:test";
 import type { ScopeContext } from "@atlasmed/access";
 import { ListFacilitiesUseCase } from "./facility.use-cases";
@@ -29,6 +30,7 @@ describe("ListFacilitiesUseCase filters", () => {
     const result = await new ListFacilitiesUseCase({ facilityRepository: repository }).execute({
       page: 2, limit: 10, latitude: -23.55, longitude: -46.63, radiusKm: 5,
       commercialStatus: "ACTIVE", productIds: ["product-a", "product-b"],
+      role: Role.ADMIN,
       scope: { isGlobal: false, facilityIds: ["facility-1"] } as ScopeContext,
     });
 

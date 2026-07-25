@@ -18,14 +18,14 @@ const clearAssignee = '__clear_assignee__';
 class UserPickerSheet extends ConsumerStatefulWidget {
   final String title;
   final UserRole role;
-  final String? sectorId;
+  final String? verticalId;
 
   /// The currently-selected id, used to show a checkmark and the "remove"
   /// button. A user id in the [pickAssignee] shape, a zone territory id
   /// in the [pickManagerForPatch] shape.
   final String? currentSelectionId;
 
-  /// When set, candidates come from `getAssignableManagers(sectorId)`
+  /// When set, candidates come from `getAssignableManagers(verticalId)`
   /// instead of `searchUsers`, and results resolve to a zone id.
   final bool pickingManagerZone;
 
@@ -33,7 +33,7 @@ class UserPickerSheet extends ConsumerStatefulWidget {
     super.key,
     required this.title,
     required this.role,
-    this.sectorId,
+    this.verticalId,
     this.currentSelectionId,
     this.pickingManagerZone = false,
   });
@@ -44,7 +44,7 @@ class UserPickerSheet extends ConsumerStatefulWidget {
   static Future<String?> pickAssignee(
     BuildContext context, {
     required UserRole role,
-    String? sectorId,
+    String? verticalId,
     String? currentUserId,
   }) {
     return showModalBottomSheet<String>(
@@ -56,7 +56,7 @@ class UserPickerSheet extends ConsumerStatefulWidget {
             ? 'Selecionar gerente'
             : 'Selecionar representante',
         role: role,
-        sectorId: sectorId,
+        verticalId: verticalId,
         currentSelectionId: currentUserId,
       ),
     );
@@ -66,7 +66,6 @@ class UserPickerSheet extends ConsumerStatefulWidget {
   /// zone territory id (`managerTerritoryId`), or `null` if dismissed.
   static Future<String?> pickManagerForPatch(
     BuildContext context, {
-    required String sectorId,
     String? currentManagerTerritoryId,
   }) {
     return showModalBottomSheet<String>(
@@ -76,7 +75,6 @@ class UserPickerSheet extends ConsumerStatefulWidget {
       builder: (_) => UserPickerSheet(
         title: 'Zona de gerente',
         role: UserRole.manager,
-        sectorId: sectorId,
         currentSelectionId: currentManagerTerritoryId,
         pickingManagerZone: true,
       ),
@@ -203,7 +201,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
         .searchUsers(
           role: widget.role,
           query: _query,
-          sectorId: widget.sectorId,
+          verticalId: widget.verticalId,
         );
 
     return FutureBuilder<List<AppUser>>(
@@ -237,14 +235,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   }
 
   Widget _buildManagerZoneList(ScrollController scrollController) {
-    final sectorId = widget.sectorId;
-    if (sectorId == null) {
-      return const _EmptyState(message: 'Selecione um setor primeiro.');
-    }
-
-    final future = ref
-        .read(territoryRepositoryProvider)
-        .getAssignableManagers(sectorId);
+    final future = ref.read(territoryRepositoryProvider).getAssignableManagers();
 
     return FutureBuilder<List<AssignableManager>>(
       future: future,
@@ -261,7 +252,7 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
         }
         if (candidates.isEmpty) {
           return const _EmptyState(
-            message: 'Nenhum gerente com zona ativa neste setor.',
+            message: 'Nenhum gerente com zona ativa neste vertical.',
           );
         }
         return ListView.builder(

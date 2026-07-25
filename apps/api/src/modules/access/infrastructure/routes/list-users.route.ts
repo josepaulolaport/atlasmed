@@ -20,7 +20,7 @@ export const listUsersRoute = new Elysia({
         page: query.page ? Number(query.page) : undefined,
         limit: query.limit ? Number(query.limit) : undefined,
         search: query.search,
-        sectorId: query.sectorId,
+        verticalId: query.verticalId,
         sortBy: query.sortBy,
         sortDir: query.sortDir,
         scope,
@@ -49,7 +49,7 @@ export const listUsersRoute = new Elysia({
         page: t.Optional(t.String()),
         limit: t.Optional(t.String()),
         search: t.Optional(t.String()),
-        sectorId: t.Optional(t.String({ description: "Filter to users assigned to this healthcare sector" })),
+        verticalId: t.Optional(t.String({ description: "Filter to users assigned to this business vertical" })),
         sortBy: t.Optional(
           t.Union([
             t.Literal("name"),

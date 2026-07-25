@@ -4,7 +4,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_assignment_options_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_users_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/permission_grant.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/users_filter.dart';
@@ -16,16 +16,16 @@ import 'package:atlasmed_mobile_app/features/users/data/repositories/users_repos
 /// isn't wired to the real API yet. Holds its own mutable copies of the
 /// seed data so admin actions (role change, assignments, permissions,
 /// lifecycle) persist for the app's session.
-InviteSectorAssignment _seededSectorAssignment({
-  required String sectorId,
-  required String sectorName,
+InviteVerticalAssignment _seededVerticalAssignment({
+  required String verticalId,
+  required String verticalName,
   String? managerId,
   String? managerName,
   required List<String> territoryIds,
 }) {
-  return InviteSectorAssignment(
-    sectorId: sectorId,
-    sectorName: sectorName,
+  return InviteVerticalAssignment(
+    verticalId: verticalId,
+    verticalName: verticalName,
     managerId: managerId,
     managerName: managerName,
     territories: territoryIds
@@ -36,12 +36,12 @@ InviteSectorAssignment _seededSectorAssignment({
 
 UserAssignments _seededAssignments({
   required String userId,
-  required List<InviteSectorAssignment> sectorAssignments,
+  required List<InviteVerticalAssignment> verticalAssignments,
 }) {
   return UserAssignments(
     userId: userId,
-    sectorAssignments: sectorAssignments,
-    isOperationallyActive: sectorAssignments.any(
+    verticalAssignments: verticalAssignments,
+    isOperationallyActive: verticalAssignments.any(
       (a) => a.territories.isNotEmpty,
     ),
   );
@@ -52,10 +52,10 @@ class MockUsersRepository implements UsersRepository {
   final Map<String, UserAssignments> _assignments = {
     'user-bruno-castro': _seededAssignments(
       userId: 'user-bruno-castro',
-      sectorAssignments: [
-        _seededSectorAssignment(
-          sectorId: 'sector-oncologia',
-          sectorName: 'Oncologia',
+      verticalAssignments: [
+        _seededVerticalAssignment(
+          verticalId: 'sector-oncologia',
+          verticalName: 'Oncologia',
           managerId: 'user-fernanda-duarte',
           managerName: 'Fernanda Duarte',
           territoryIds: const ['territory-sul-onco-a'],
@@ -64,10 +64,10 @@ class MockUsersRepository implements UsersRepository {
     ),
     'user-camila-rocha': _seededAssignments(
       userId: 'user-camila-rocha',
-      sectorAssignments: [
-        _seededSectorAssignment(
-          sectorId: 'sector-oncologia',
-          sectorName: 'Oncologia',
+      verticalAssignments: [
+        _seededVerticalAssignment(
+          verticalId: 'sector-oncologia',
+          verticalName: 'Oncologia',
           managerId: 'user-marcos-lima',
           managerName: 'Marcos Lima',
           territoryIds: const ['territory-norte-onco-a'],
@@ -76,10 +76,10 @@ class MockUsersRepository implements UsersRepository {
     ),
     'user-diego-farias': _seededAssignments(
       userId: 'user-diego-farias',
-      sectorAssignments: [
-        _seededSectorAssignment(
-          sectorId: 'sector-cardiologia',
-          sectorName: 'Cardiologia',
+      verticalAssignments: [
+        _seededVerticalAssignment(
+          verticalId: 'sector-cardiologia',
+          verticalName: 'Cardiologia',
           managerId: 'user-fernanda-duarte',
           managerName: 'Fernanda Duarte',
           territoryIds: const ['territory-sul-cardio-b'],
@@ -88,10 +88,10 @@ class MockUsersRepository implements UsersRepository {
     ),
     'user-juliana-pires': _seededAssignments(
       userId: 'user-juliana-pires',
-      sectorAssignments: [
-        _seededSectorAssignment(
-          sectorId: 'sector-cardiologia',
-          sectorName: 'Cardiologia',
+      verticalAssignments: [
+        _seededVerticalAssignment(
+          verticalId: 'sector-cardiologia',
+          verticalName: 'Cardiologia',
           managerId: 'user-otavio-barros',
           managerName: 'Otávio Barros',
           territoryIds: const ['territory-leste-cardio-b'],
@@ -100,10 +100,10 @@ class MockUsersRepository implements UsersRepository {
     ),
     'user-patricia-gomes': _seededAssignments(
       userId: 'user-patricia-gomes',
-      sectorAssignments: [
-        _seededSectorAssignment(
-          sectorId: 'sector-cardiologia',
-          sectorName: 'Cardiologia',
+      verticalAssignments: [
+        _seededVerticalAssignment(
+          verticalId: 'sector-cardiologia',
+          verticalName: 'Cardiologia',
           managerId: 'user-eduardo-alves',
           managerName: 'Eduardo Alves',
           territoryIds: const ['territory-oeste-cardio-c'],
@@ -232,21 +232,21 @@ class MockUsersRepository implements UsersRepository {
     return _assignments[userId] ??
         UserAssignments(
           userId: userId,
-          sectorAssignments: const [],
+          verticalAssignments: const [],
           isOperationallyActive: false,
         );
   }
 
   @override
-  Future<void> replaceSectorAssignments(
+  Future<void> replaceVerticalAssignments(
     String userId,
-    List<InviteSectorAssignment> sectorAssignments,
+    List<InviteVerticalAssignment> verticalAssignments,
   ) async {
     await _delay(400);
     _assignments[userId] = UserAssignments(
       userId: userId,
-      sectorAssignments: List<InviteSectorAssignment>.of(sectorAssignments),
-      isOperationallyActive: sectorAssignments.any(
+      verticalAssignments: List<InviteVerticalAssignment>.of(verticalAssignments),
+      isOperationallyActive: verticalAssignments.any(
         (a) => a.territories.isNotEmpty,
       ),
     );
@@ -303,22 +303,22 @@ class MockUsersRepository implements UsersRepository {
     }
     final current = await getUserAssignments(userId);
     if (managerId == null) {
-      final cleared = current.sectorAssignments
+      final cleared = current.verticalAssignments
           .map((a) => a.copyWith(clearManager: true))
           .toList();
-      _assignments[userId] = current.copyWith(sectorAssignments: cleared);
+      _assignments[userId] = current.copyWith(verticalAssignments: cleared);
       return;
     }
     final manager = mockManagerOptions.firstWhere(
       (m) => m.id == managerId,
       orElse: () => ManagerOption(id: managerId, name: '—'),
     );
-    var sectors = List<InviteSectorAssignment>.of(current.sectorAssignments);
+    var sectors = List<InviteVerticalAssignment>.of(current.verticalAssignments);
     if (sectors.isEmpty) {
       sectors = [
-        InviteSectorAssignment(
-          sectorId: 'sector-oncologia',
-          sectorName: 'Oncologia',
+        InviteVerticalAssignment(
+          verticalId: 'sector-oncologia',
+          verticalName: 'Oncologia',
           managerId: manager.id,
           managerName: manager.name,
         ),
@@ -330,7 +330,7 @@ class MockUsersRepository implements UsersRepository {
           )
           .toList();
     }
-    _assignments[userId] = current.copyWith(sectorAssignments: sectors);
+    _assignments[userId] = current.copyWith(verticalAssignments: sectors);
   }
 
   @override
@@ -342,14 +342,14 @@ class MockUsersRepository implements UsersRepository {
       (t) => t.id == territoryId,
       orElse: () => TerritoryOption(id: territoryId, name: '—'),
     );
-    final sectorId = territory.sectorId ?? 'sector-unknown';
-    final sectors = List<InviteSectorAssignment>.of(current.sectorAssignments);
-    final index = sectors.indexWhere((a) => a.sectorId == sectorId);
+    final verticalId = territory.verticalId ?? 'sector-unknown';
+    final sectors = List<InviteVerticalAssignment>.of(current.verticalAssignments);
+    final index = sectors.indexWhere((a) => a.verticalId == verticalId);
     if (index == -1) {
       sectors.add(
-        InviteSectorAssignment(
-          sectorId: sectorId,
-          sectorName: territory.sectorName ?? '—',
+        InviteVerticalAssignment(
+          verticalId: verticalId,
+          verticalName: territory.verticalName ?? '—',
           managerId: current.managerId,
           managerName: current.managerName,
           territories: [territory],
@@ -361,7 +361,7 @@ class MockUsersRepository implements UsersRepository {
       );
     }
     _assignments[userId] = current.copyWith(
-      sectorAssignments: sectors,
+      verticalAssignments: sectors,
       isOperationallyActive: true,
     );
   }
@@ -370,7 +370,7 @@ class MockUsersRepository implements UsersRepository {
   Future<void> revokeTerritory(String userId, String territoryId) async {
     await _delay();
     final current = await getUserAssignments(userId);
-    final sectors = current.sectorAssignments
+    final sectors = current.verticalAssignments
         .map(
           (a) => a.copyWith(
             territories: a.territories
@@ -380,26 +380,26 @@ class MockUsersRepository implements UsersRepository {
         )
         .toList();
     _assignments[userId] = current.copyWith(
-      sectorAssignments: sectors,
+      verticalAssignments: sectors,
       isOperationallyActive: sectors.any((a) => a.territories.isNotEmpty),
     );
   }
 
   @override
-  Future<void> assignSector(String userId, String sectorId) async {
+  Future<void> assignVertical(String userId, String verticalId) async {
     await _delay();
     final current = await getUserAssignments(userId);
-    if (current.sectorAssignments.any((s) => s.sectorId == sectorId)) return;
-    final sector = mockSectorOptions.firstWhere(
-      (s) => s.id == sectorId,
-      orElse: () => SectorOption(id: sectorId, name: '—'),
+    if (current.verticalAssignments.any((s) => s.verticalId == verticalId)) return;
+    final sector = mockVerticalOptions.firstWhere(
+      (s) => s.id == verticalId,
+      orElse: () => VerticalOption(id: verticalId, name: '—'),
     );
     _assignments[userId] = current.copyWith(
-      sectorAssignments: [
-        ...current.sectorAssignments,
-        InviteSectorAssignment(
-          sectorId: sector.id,
-          sectorName: sector.name,
+      verticalAssignments: [
+        ...current.verticalAssignments,
+        InviteVerticalAssignment(
+          verticalId: sector.id,
+          verticalName: sector.name,
           managerId: current.managerId,
           managerName: current.managerName,
         ),
@@ -408,12 +408,12 @@ class MockUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<void> revokeSector(String userId, String sectorId) async {
+  Future<void> revokeVertical(String userId, String verticalId) async {
     await _delay();
     final current = await getUserAssignments(userId);
     _assignments[userId] = current.copyWith(
-      sectorAssignments: current.sectorAssignments
-          .where((s) => s.sectorId != sectorId)
+      verticalAssignments: current.verticalAssignments
+          .where((s) => s.verticalId != verticalId)
           .toList(),
     );
   }
@@ -467,33 +467,33 @@ class MockUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<SectorOption>> getSectors() async {
+  Future<List<VerticalOption>> getVerticals() async {
     await _delay(150);
-    return List<SectorOption>.of(mockSectorOptions);
+    return List<VerticalOption>.of(mockVerticalOptions);
   }
 
   @override
-  Future<List<ManagerOption>> getManagerOptions({String? sectorId}) async {
+  Future<List<ManagerOption>> getManagerOptions({String? verticalId}) async {
     await _delay(150);
     final all = List<ManagerOption>.of(mockManagerOptions);
-    if (sectorId == null) return all;
+    if (verticalId == null) return all;
     return all
-        .where((m) => m.sectorIds.contains(sectorId))
+        .where((m) => m.verticalIds.contains(verticalId))
         .toList(growable: false);
   }
 
   @override
-  Future<List<TerritoryOption>> getTerritoryOptions({String? sectorId}) async {
+  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId}) async {
     await _delay(150);
     final all = List<TerritoryOption>.of(mockTerritoryOptions);
-    if (sectorId == null) return all;
-    return all.where((t) => t.sectorId == sectorId).toList(growable: false);
+    if (verticalId == null) return all;
+    return all.where((t) => t.verticalId == verticalId).toList(growable: false);
   }
 
   @override
   Future<ManagerTerritoryScope> getTerritoriesForManager(
     String managerId, {
-    String? sectorId,
+    String? verticalId,
   }) async {
     await _delay(280);
     final manager = mockManagerOptions.firstWhere(
@@ -506,7 +506,7 @@ class MockUsersRepository implements UsersRepository {
         : mockTerritoryOptions
               .where((t) {
                 if (t.managerTerritoryId != zoneId) return false;
-                if (sectorId != null && t.sectorId != sectorId) return false;
+                if (verticalId != null && t.verticalId != verticalId) return false;
                 return true;
               })
               .toList(growable: false);

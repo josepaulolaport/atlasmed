@@ -104,7 +104,7 @@ export interface FindAllUsersParams {
   status?: string;
   role?: string;
   search?: string;
-  sectorId?: string;
+  verticalId?: string;
   sortBy?: ListUsersSortBy;
   sortDir?: ListUsersSortDir;
   scope?: UserListScopeFilter;

@@ -1,4 +1,5 @@
-import type { FacilityListRecord, FacilityRecord } from "../interfaces/facility.repository.interface";
+import type { FacilityListRecord, FacilityRecord, FacilityVerticalProfileRecord } from "../interfaces/facility.repository.interface";
+import { applyVerticalProfileContext } from "../utils/facility-vertical-scope.utils";
 
 /**
  * Application → HTTP DTO for facilities.
@@ -6,9 +7,11 @@ import type { FacilityListRecord, FacilityRecord } from "../interfaces/facility.
  * shapes the public facility contract for list + detail.
  */
 export function serializeFacility(
-  clinic: FacilityRecord | FacilityListRecord
+  clinic: FacilityRecord | FacilityListRecord,
+  verticalIds?: string[],
 ) {
   const list = clinic as FacilityListRecord;
+  const verticalContext = applyVerticalProfileContext(clinic, verticalIds);
 
   return {
     id: clinic.id,
@@ -37,9 +40,15 @@ export function serializeFacility(
     territoryId: clinic.territoryId ?? undefined,
     territoryName: clinic.territoryName ?? undefined,
     territoryAssignmentStatus: clinic.territoryAssignmentStatus,
-    commercialStatus: clinic.commercialStatus ?? undefined,
+    ...(verticalContext.commercialStatus !== undefined
+      ? { commercialStatus: verticalContext.commercialStatus }
+      : {}),
+    ...(verticalContext.verticalProfiles
+      ? {
+          verticalProfiles: verticalContext.verticalProfiles.map(serializeVerticalProfile),
+        }
+      : {}),
     conformityStatus: clinic.conformityStatus,
-    // purchaseStatus stays off the public DTO until Spec 0005 Sinais wire it.
     professionalCount: list.professionalCount ?? 0,
     consultantName: clinic.consultantName,
     consultantSince: clinic.consultantSince?.toISOString() ?? undefined,
@@ -49,6 +58,17 @@ export function serializeFacility(
     services: clinic.services ?? [],
     createdAt: clinic.createdAt.toISOString(),
     updatedAt: clinic.updatedAt.toISOString(),
+  };
+}
+
+function serializeVerticalProfile(profile: FacilityVerticalProfileRecord) {
+  return {
+    verticalId: profile.verticalId,
+    verticalCode: profile.verticalCode,
+    verticalName: profile.verticalName,
+    isActive: profile.isActive,
+    commercialStatus: profile.commercialStatus ?? undefined,
+    purchaseStatus: profile.purchaseStatus ?? undefined,
   };
 }
 

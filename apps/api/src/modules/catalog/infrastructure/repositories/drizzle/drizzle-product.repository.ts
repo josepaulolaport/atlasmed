@@ -1,5 +1,5 @@
 import { db } from "../../../../../infrastructure/database/db";
-import { products, productSectors } from "@atlasmed/database";
+import { products, productVerticals } from "@atlasmed/database";
 import { eq, and, asc, sql, inArray, ilike, or } from "drizzle-orm";
 import type {
   ProductRecord,
@@ -30,7 +30,7 @@ function mapProduct(row: {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-}, sectorIds: string[]): ProductRecord {
+}, verticalIds: string[]): ProductRecord {
   return {
     id: row.id,
     code: row.code,
@@ -41,7 +41,7 @@ function mapProduct(row: {
     productClassification: row.productClassification,
     brand: row.brand,
     unit: row.unit,
-    sectorIds,
+    verticalIds,
     pictureUrl: row.pictureUrl,
     simproCode: row.simproCode,
     brasindiceCode: row.brasindiceCode,
@@ -85,16 +85,16 @@ const productColumns = {
   updatedAt: products.updatedAt,
 };
 
-async function fetchSectorIds(productIds: string[]): Promise<Map<string, string[]>> {
+async function fetchVerticalIds(productIds: string[]): Promise<Map<string, string[]>> {
   if (productIds.length === 0) return new Map();
   const rows = await db
-    .select({ productId: productSectors.productId, sectorId: productSectors.sectorId })
-    .from(productSectors)
-    .where(inArray(productSectors.productId, productIds));
+    .select({ productId: productVerticals.productId, verticalId: productVerticals.verticalId })
+    .from(productVerticals)
+    .where(inArray(productVerticals.productId, productIds));
   const map = new Map<string, string[]>();
   for (const row of rows) {
     const existing = map.get(row.productId) ?? [];
-    existing.push(row.sectorId);
+    existing.push(row.verticalId);
     map.set(row.productId, existing);
   }
   return map;
@@ -104,7 +104,7 @@ export class DrizzleProductRepository implements ProductRepository {
   async findAll(params: {
     page: number;
     limit: number;
-    sectorId?: string;
+    verticalId?: string;
     search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }> {
@@ -116,13 +116,13 @@ export class DrizzleProductRepository implements ProductRepository {
       const pattern = `%${params.search.trim()}%`;
       conditions.push(or(ilike(products.name, pattern), ilike(products.code, pattern)));
     }
-    if (params.sectorId) {
+    if (params.verticalId) {
       conditions.push(
         inArray(
           products.id,
-          db.select({ productId: productSectors.productId })
-            .from(productSectors)
-            .where(eq(productSectors.sectorId, params.sectorId))
+          db.select({ productId: productVerticals.productId })
+            .from(productVerticals)
+            .where(eq(productVerticals.verticalId, params.verticalId))
         )
       );
     }
@@ -134,10 +134,10 @@ export class DrizzleProductRepository implements ProductRepository {
     ]);
 
     const productIds = rows.map((r) => r.id);
-    const sectorMap = await fetchSectorIds(productIds);
+    const verticalMap = await fetchVerticalIds(productIds);
 
     return {
-      products: rows.map((row) => mapProduct(row, sectorMap.get(row.id) ?? [])),
+      products: rows.map((row) => mapProduct(row, verticalMap.get(row.id) ?? [])),
       total: Number(countRows[0]?.count ?? 0),
     };
   }
@@ -145,8 +145,8 @@ export class DrizzleProductRepository implements ProductRepository {
   async findById(id: string): Promise<ProductRecord | null> {
     const rows = await db.select(productColumns).from(products).where(eq(products.id, id));
     if (!rows[0]) return null;
-    const sectorMap = await fetchSectorIds([id]);
-    return mapProduct(rows[0], sectorMap.get(id) ?? []);
+    const verticalMap = await fetchVerticalIds([id]);
+    return mapProduct(rows[0], verticalMap.get(id) ?? []);
   }
 
   async findAllActive(): Promise<ProductRecord[]> {
@@ -155,14 +155,14 @@ export class DrizzleProductRepository implements ProductRepository {
       .from(products)
       .where(eq(products.isActive, true))
       .orderBy(asc(products.name));
-    const sectorMap = await fetchSectorIds(rows.map((r) => r.id));
-    return rows.map((row) => mapProduct(row, sectorMap.get(row.id) ?? []));
+    const verticalMap = await fetchVerticalIds(rows.map((r) => r.id));
+    return rows.map((row) => mapProduct(row, verticalMap.get(row.id) ?? []));
   }
 
   async create(data: {
     code: string;
     name: string;
-    sectorIds: string[];
+    verticalIds: string[];
     pictureUrl?: string | null;
     simproCode: string;
     brasindiceCode: string;
@@ -198,13 +198,13 @@ export class DrizzleProductRepository implements ProductRepository {
         .returning(productColumns);
       if (!product) throw new Error("Failed to insert product");
 
-      const uniqueSectorIds = [...new Set(data.sectorIds)];
-      if (uniqueSectorIds.length > 0) {
-        await tx.insert(productSectors).values(
-          uniqueSectorIds.map((sectorId) => ({ productId: product.id, sectorId }))
+      const uniqueVerticalIds = [...new Set(data.verticalIds)];
+      if (uniqueVerticalIds.length > 0) {
+        await tx.insert(productVerticals).values(
+          uniqueVerticalIds.map((verticalId) => ({ productId: product.id, verticalId }))
         );
       }
-      return mapProduct(product, uniqueSectorIds);
+      return mapProduct(product, uniqueVerticalIds);
     });
   }
 
@@ -213,7 +213,7 @@ export class DrizzleProductRepository implements ProductRepository {
     data: {
       code?: string;
       name?: string;
-      sectorIds?: string[];
+      verticalIds?: string[];
       pictureUrl?: string | null;
       simproCode?: string;
       brasindiceCode?: string;
@@ -228,7 +228,7 @@ export class DrizzleProductRepository implements ProductRepository {
       isActive?: boolean;
     }
   ): Promise<ProductRecord> {
-    const { sectorIds, price, price17, price18, price20, ...rest } = data;
+    const { verticalIds, price, price17, price18, price20, ...rest } = data;
     const productData: Record<string, unknown> = { ...rest };
     if (price !== undefined) productData.price = String(price);
     if (price17 !== undefined) productData.price17 = String(price17);
@@ -247,19 +247,19 @@ export class DrizzleProductRepository implements ProductRepository {
         .returning(productColumns);
       if (!product) throw new Error("Product not found");
 
-      if (sectorIds !== undefined) {
-        const uniqueSectorIds = [...new Set(sectorIds)];
-        await tx.delete(productSectors).where(eq(productSectors.productId, id));
-        if (uniqueSectorIds.length > 0) {
-          await tx.insert(productSectors).values(
-            uniqueSectorIds.map((sectorId) => ({ productId: id, sectorId }))
+      if (verticalIds !== undefined) {
+        const uniqueVerticalIds = [...new Set(verticalIds)];
+        await tx.delete(productVerticals).where(eq(productVerticals.productId, id));
+        if (uniqueVerticalIds.length > 0) {
+          await tx.insert(productVerticals).values(
+            uniqueVerticalIds.map((verticalId) => ({ productId: id, verticalId }))
           );
         }
-        return mapProduct(product, uniqueSectorIds);
+        return mapProduct(product, uniqueVerticalIds);
       }
 
-      const sectorMap = await fetchSectorIds([id]);
-      return mapProduct(product, sectorMap.get(id) ?? []);
+      const verticalMap = await fetchVerticalIds([id]);
+      return mapProduct(product, verticalMap.get(id) ?? []);
     });
   }
 }

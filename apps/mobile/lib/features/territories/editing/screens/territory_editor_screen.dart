@@ -238,7 +238,6 @@ class _TerritoryEditorScreenState extends ConsumerState<TerritoryEditorScreen> {
       initial: initial,
       initialKind:
           initial?.kind ?? target.initialKind ?? TerritoryKind.managerZone,
-      initialSectorId: initial?.sectorId ?? target.initialSectorId,
     );
     if (!mounted) return;
     if (draft == null) {

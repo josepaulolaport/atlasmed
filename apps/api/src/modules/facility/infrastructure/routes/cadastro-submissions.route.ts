@@ -16,12 +16,13 @@ const ensureDraftSubmissionRoute = new Elysia()
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .post(
     "/facilities/:id/cadastro/submissions",
-    async ({ params, getScope, getUserId }) => {
+    async ({ params, body, getScope, getUserId }) => {
       const [scope, userId] = await Promise.all([getScope(), getUserId()]);
       return facilityUseCases.ensureDraftCadastroSubmission().execute({
         facilityId: params.id,
         userId,
         scope,
+        verticalId: body?.verticalId,
       });
     },
     {
@@ -30,6 +31,11 @@ const ensureDraftSubmissionRoute = new Elysia()
         tags: ["Facilities"],
         security: [{ bearerAuth: [] }],
       },
+      body: t.Optional(
+        t.Object({
+          verticalId: t.Optional(t.String({ minLength: 1 })),
+        })
+      ),
     }
   );
 

@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
+import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/establishment_detail_models.dart';
 import 'package:atlasmed_mobile_app/features/explore/data/models/filter_data.dart';
 import 'package:atlasmed_mobile_app/features/location/presentation/providers/location_session_provider.dart';
@@ -156,6 +157,9 @@ class _MapScreenState extends ConsumerState<MapScreen> {
         child: Column(
           children: [
             const AtlasTopBar(page: 'Mapa'),
+            const FacilityVerticalFilterBar(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+            ),
             Expanded(
               child: token.isEmpty
                   ? const _MapMessage(

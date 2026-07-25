@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-const sectorAssignmentSchema = z.object({
-  sectorId: z.string().min(1),
+const verticalAssignmentSchema = z.object({
+  verticalId: z.string().min(1),
   managerId: z.string().min(1).optional(),
   territoryIds: z.array(z.string().min(1)).default([]),
 });
@@ -19,7 +19,7 @@ export const updateInvitationSchema = z.object({
   managerId: z.string().optional(),
   managerTerritoryId: z.string().optional(),
   repTerritoryId: z.string().optional(),
-  sectorAssignments: z.array(sectorAssignmentSchema).optional(),
+  verticalAssignments: z.array(verticalAssignmentSchema).optional(),
 });
 
 export type UpdateInvitationInput = z.infer<typeof updateInvitationSchema>;

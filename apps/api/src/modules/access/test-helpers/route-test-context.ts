@@ -36,7 +36,7 @@ export const routeTestContext = {
       Promise.resolve({
         userId: "target-user",
         isOperationallyActive: false,
-        sectorAssignments: [],
+        verticalAssignments: [],
       }),
     ),
     assignUserManagerExecute: mock(async (_params?: unknown) =>

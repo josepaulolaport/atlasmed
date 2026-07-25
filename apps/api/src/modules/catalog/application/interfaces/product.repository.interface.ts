@@ -8,7 +8,7 @@ export interface ProductRecord {
   productClassification: string | null;
   brand: string | null;
   unit: string | null;
-  sectorIds: string[];
+  verticalIds: string[];
   pictureUrl: string | null;
   simproCode: string;
   brasindiceCode: string;
@@ -29,7 +29,7 @@ export interface ProductRepository {
   findAll(params: {
     page: number;
     limit: number;
-    sectorId?: string;
+    verticalId?: string;
     search?: string;
     isActive?: boolean;
   }): Promise<{ products: ProductRecord[]; total: number }>;
@@ -42,7 +42,7 @@ export interface ProductRepository {
   create(data: {
     code: string;
     name: string;
-    sectorIds: string[];
+    verticalIds: string[];
     pictureUrl?: string | null;
     simproCode: string;
     brasindiceCode: string;
@@ -62,7 +62,7 @@ export interface ProductRepository {
     data: {
       code?: string;
       name?: string;
-      sectorIds?: string[];
+      verticalIds?: string[];
       pictureUrl?: string | null;
       simproCode?: string;
       brasindiceCode?: string;

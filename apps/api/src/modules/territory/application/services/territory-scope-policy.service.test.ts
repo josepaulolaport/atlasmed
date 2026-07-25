@@ -35,7 +35,6 @@ function createTerritoryRepository(
             territoryTypeId: "tt_patch",
             managerTerritoryId: "manager-zone-1",
             isActive: true,
-            sectorId: null,
             createdAt: new Date(),
             updatedAt: new Date(),
           }

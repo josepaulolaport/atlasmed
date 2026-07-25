@@ -15,7 +15,7 @@ class ManagerOption extends Equatable {
     this.territoryName,
     this.territoryCentroid,
     this.territoryBoundary,
-    this.sectorIds = const [],
+    this.verticalIds = const [],
   });
 
   final String id;
@@ -37,8 +37,8 @@ class ManagerOption extends Equatable {
   final TerritoryGeometry? territoryBoundary;
 
   /// Sectors this manager operates in — invite manager pickers are scoped
-  /// per sector via `GET /access/users?role=MANAGER&sectorId=`.
-  final List<String> sectorIds;
+  /// per sector via `GET /access/users?role=MANAGER&verticalId=`.
+  final List<String> verticalIds;
 
   factory ManagerOption.fromJson(Map<String, dynamic> json) => ManagerOption(
     id: json['id'] as String,
@@ -58,8 +58,8 @@ class ManagerOption extends Equatable {
         : TerritoryGeometry.fromGeoJson(
             json['territoryBoundary'] as Map<String, dynamic>,
           ),
-    sectorIds:
-        (json['sectorIds'] as List<dynamic>?)
+    verticalIds:
+        (json['verticalIds'] as List<dynamic>?)
             ?.map((e) => e as String)
             .toList(growable: false) ??
         const [],
@@ -74,7 +74,7 @@ class ManagerOption extends Equatable {
     territoryName,
     territoryCentroid,
     territoryBoundary,
-    sectorIds,
+    verticalIds,
   ];
 }
 
@@ -115,8 +115,8 @@ class TerritoryOption extends Equatable {
   const TerritoryOption({
     required this.id,
     required this.name,
-    this.sectorId,
-    this.sectorName,
+    this.verticalId,
+    this.verticalName,
     this.centroid,
     this.boundary,
     this.isOccupied = false,
@@ -126,8 +126,8 @@ class TerritoryOption extends Equatable {
 
   final String id;
   final String name;
-  final String? sectorId;
-  final String? sectorName;
+  final String? verticalId;
+  final String? verticalName;
   final MapCoordinate? centroid;
   final TerritoryGeometry? boundary;
 
@@ -147,8 +147,8 @@ class TerritoryOption extends Equatable {
       TerritoryOption(
         id: json['id'] as String,
         name: json['name'] as String,
-        sectorId: json['sectorId'] as String?,
-        sectorName: json['sectorName'] as String?,
+        verticalId: json['verticalId'] as String?,
+        verticalName: json['verticalName'] as String?,
         centroid: json['centroid'] == null
             ? null
             : MapCoordinate(
@@ -169,8 +169,8 @@ class TerritoryOption extends Equatable {
   List<Object?> get props => [
     id,
     name,
-    sectorId,
-    sectorName,
+    verticalId,
+    verticalName,
     centroid,
     boundary,
     isOccupied,
@@ -179,14 +179,14 @@ class TerritoryOption extends Equatable {
   ];
 }
 
-class SectorOption extends Equatable {
-  const SectorOption({required this.id, required this.name});
+class VerticalOption extends Equatable {
+  const VerticalOption({required this.id, required this.name});
 
   final String id;
   final String name;
 
-  factory SectorOption.fromJson(Map<String, dynamic> json) =>
-      SectorOption(id: json['id'] as String, name: json['name'] as String);
+  factory VerticalOption.fromJson(Map<String, dynamic> json) =>
+      VerticalOption(id: json['id'] as String, name: json['name'] as String);
 
   @override
   List<Object?> get props => [id, name];

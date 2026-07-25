@@ -419,7 +419,7 @@ class _OverviewTab extends StatelessWidget {
               const _InfoDivider(),
               _InfoRow(label: 'País de origem', value: product.countryOfOrigin),
               const _InfoDivider(),
-              _InfoRow(label: 'Setor', value: product.sector),
+              _InfoRow(label: 'Vertical', value: product.sector),
               const _InfoDivider(),
               _InfoRow(label: 'Preço', value: brl(product.price)),
             ],

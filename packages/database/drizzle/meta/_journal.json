@@ -169,6 +169,13 @@
       "when": 1785008862629,
       "tag": "0023_defer_cnes_lookup_fks",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1785012690241,
+      "tag": "0024_business_verticals_p0",
+      "breakpoints": true
     }
   ]
 }

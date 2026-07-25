@@ -28,15 +28,13 @@ void main() {
     test('generates an id/slug/code and stores the new territory', () async {
       final before = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
 
       final created = await repository.createTerritory(
         const TerritoryDraft(
           name: 'Zona Nova',
           kind: TerritoryKind.managerZone,
-          sectorId: 'sector-oncologia',
-        ),
+                  ),
         _square(),
         const MapCoordinate(longitude: 0.5, latitude: 0.5),
       );
@@ -46,12 +44,10 @@ void main() {
       expect(created.code, isNotEmpty);
       expect(created.name, 'Zona Nova');
       expect(created.kind, TerritoryKind.managerZone);
-      expect(created.sectorId, 'sector-oncologia');
 
       final after = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
       expect(after.length, before.length + 1);
       expect(after.any((t) => t.id == created.id), isTrue);
     });
@@ -60,8 +56,7 @@ void main() {
         'patch under it', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final zone = zones.first;
       final countBefore = zone.repPatchCount ?? 0;
 
@@ -69,8 +64,7 @@ void main() {
         TerritoryDraft(
           name: 'Área Nova',
           kind: TerritoryKind.repPatch,
-          sectorId: 'sector-oncologia',
-          managerTerritoryId: zone.id,
+                    managerTerritoryId: zone.id,
         ),
         _square(),
         const MapCoordinate(longitude: 0.5, latitude: 0.5),
@@ -85,8 +79,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Sem Gerente',
           kind: TerritoryKind.managerZone,
-          sectorId: 'sector-oncologia',
-        ),
+                  ),
         _square(offset: 2),
         const MapCoordinate(longitude: 2.5, latitude: 2.5),
       );
@@ -98,8 +91,7 @@ void main() {
     test('sets the territory assignedUserId', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final zone = zones.first;
 
       await repository.assignUser(zone.id, 'user-fernanda-duarte');
@@ -111,8 +103,7 @@ void main() {
     test('clears the assignment when passed null', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final zone = zones.first;
       await repository.assignUser(zone.id, 'user-fernanda-duarte');
 
@@ -124,11 +115,10 @@ void main() {
   });
 
   group('updateTerritoryInfo', () {
-    test('updates name, sector, active status and manager territory', () async {
+    test('updates name, active status and manager territory', () async {
       final patches = await repository.getTerritories(
         territoryTypeSlug: 'patch',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final patch = patches.first;
       final otherZoneId =
           patch.managerTerritoryId == 'territory-zone-onco-oeste'
@@ -138,8 +128,7 @@ void main() {
       await repository.updateTerritoryInfo(
         patch.id,
         name: 'Nome Atualizado',
-        sectorId: 'sector-oncologia',
-        isActive: false,
+                isActive: false,
         managerTerritoryId: otherZoneId,
       );
 
@@ -151,18 +140,14 @@ void main() {
   });
 
   group('getAssignableManagers', () {
-    test('returns only managers assigned to an active manager-zone territory '
-        'in the given sector', () async {
+    test('returns managers assigned to active manager-zone territories', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
       );
       final zone = zones.first;
       await repository.assignUser(zone.id, 'user-fernanda-duarte');
 
-      final managers = await repository.getAssignableManagers(
-        'sector-oncologia',
-      );
+      final managers = await repository.getAssignableManagers();
 
       expect(managers, isNotEmpty);
       expect(
@@ -175,40 +160,19 @@ void main() {
       );
     });
 
-    test('excludes zones from a different sector', () async {
-      final oncoZones = await repository.getTerritories(
-        territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
-      await repository.assignUser(oncoZones.first.id, 'user-fernanda-duarte');
-
-      final cardioManagers = await repository.getAssignableManagers(
-        'sector-cardiologia',
-      );
-
-      expect(
-        cardioManagers.any((m) => m.manager.id == 'user-fernanda-duarte'),
-        isFalse,
-      );
-    });
-
     test('excludes an inactive manager zone', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
       );
       final zone = zones.first;
       await repository.assignUser(zone.id, 'user-fernanda-duarte');
       await repository.updateTerritoryInfo(
         zone.id,
         name: zone.name,
-        sectorId: zone.sectorId,
         isActive: false,
       );
 
-      final managers = await repository.getAssignableManagers(
-        'sector-oncologia',
-      );
+      final managers = await repository.getAssignableManagers();
 
       expect(managers.any((m) => m.zoneTerritoryId == zone.id), isFalse);
     });
@@ -218,8 +182,7 @@ void main() {
     test('removes the territory', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final zone = zones.first;
 
       await repository.deleteTerritory(zone.id);
@@ -231,13 +194,11 @@ void main() {
         'manager zone', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final zone = zones.first;
       final patchesBefore = await repository.getTerritories(
         territoryTypeSlug: 'patch',
-        sectorId: 'sector-oncologia',
-      );
+              );
       final orphanedIds = patchesBefore
           .where((p) => p.managerTerritoryId == zone.id)
           .map((p) => p.id)

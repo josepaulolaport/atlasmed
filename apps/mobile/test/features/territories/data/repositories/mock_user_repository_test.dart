@@ -28,13 +28,13 @@ void main() {
       expect(managers.every((u) => u.role == UserRole.manager), isTrue);
     });
 
-    test('filters by sectorId', () async {
+    test('filters by verticalId', () async {
       final reps = await repository.searchUsers(
         role: UserRole.rep,
-        sectorId: 'sector-cardiologia',
+        verticalId: 'sector-cardiologia',
       );
       expect(reps, isNotEmpty);
-      expect(reps.every((u) => u.sectorId == 'sector-cardiologia'), isTrue);
+      expect(reps.every((u) => u.verticalId == 'sector-cardiologia'), isTrue);
     });
 
     test('filters by a case-insensitive name query', () async {
@@ -58,7 +58,7 @@ void main() {
     test('combines role, sector and query filters', () async {
       final results = await repository.searchUsers(
         role: UserRole.manager,
-        sectorId: 'sector-oncologia',
+        verticalId: 'sector-oncologia',
         query: 'marcos',
       );
       expect(results.length, 1);

@@ -5,6 +5,7 @@ import { ServiceUnavailableError } from "../../../../shared/errors";
 import type { FacilityRepository } from "../interfaces/facility.repository.interface";
 import { buildMeiliFilter, eqFilter, geoRadiusFilter, inFilter } from "../../../../infrastructure/search/meili-filter";
 import { serializeFacility } from "../mappers/facility.mapper";
+import { buildFacilityListScope } from "../utils/facility-vertical-scope.utils";
 
 export interface SearchService {
   isConfigured(): boolean;
@@ -47,13 +48,17 @@ export class ListFacilitiesUseCase {
     productIds?: string[];
     sort?: "relevance" | "distance";
     scope: ScopeContext;
+    role: string;
+    verticalId?: string;
   }) {
     const page = input.page ?? 1;
     const limit = input.limit ?? 20;
 
-    const scope = input.scope.isGlobal
-      ? { isGlobal: true as const }
-      : { isGlobal: false as const, facilityIds: input.scope.facilityIds };
+    const listScope = buildFacilityListScope({
+      scope: input.scope,
+      role: input.role,
+      verticalId: input.verticalId,
+    });
     const search = input.search?.trim();
 
     if (!search) {
@@ -66,11 +71,11 @@ export class ListFacilitiesUseCase {
         radiusKm: input.radiusKm,
         commercialStatus: input.commercialStatus,
         productIds: input.productIds,
-        scope,
+        scope: listScope,
       });
 
       return {
-        data: facilities.map(serializeFacility),
+        data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
         pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
       };
     }
@@ -88,8 +93,10 @@ export class ListFacilitiesUseCase {
           ? geoRadiusFilter(input.latitude, input.longitude, input.radiusKm * 1_000)
           : undefined,
       ];
-      const scopeFilter = input.scope.isGlobal
-        ? undefined
+      const scopeFilter = listScope.isGlobal
+        ? listScope.restrictToVerticalProfiles && listScope.verticalIds?.length
+          ? inFilter("id", await this.deps.facilityRepository.findActiveFacilityIdsByVerticalIds(listScope.verticalIds))
+          : undefined
         : input.scope.facilityIds.length > 0
           ? inFilter("id", input.scope.facilityIds)
           : eqFilter("id", "__none__");
@@ -118,7 +125,7 @@ export class ListFacilitiesUseCase {
             radiusKm: input.radiusKm,
             commercialStatus: input.commercialStatus,
             productIds: input.productIds,
-            scope,
+            scope: listScope,
           }),
           ids
         )
@@ -126,7 +133,7 @@ export class ListFacilitiesUseCase {
     const total = result.estimatedTotalHits ?? 0;
 
     return {
-      data: facilities.map(serializeFacility),
+      data: facilities.map((f) => serializeFacility(f, listScope.verticalIds)),
       pagination: { page, limit, total, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
@@ -135,7 +142,13 @@ export class ListFacilitiesUseCase {
 export class GetFacilityUseCase {
   constructor(private readonly deps: Dependencies) {}
 
-  async execute(input: { facilityId: string; scope: ScopeContext }) {
+  async execute(input: { facilityId: string; scope: ScopeContext; role: string; verticalId?: string }) {
+    const listScope = buildFacilityListScope({
+      scope: input.scope,
+      role: input.role,
+      verticalId: input.verticalId,
+    });
+
     const clinic = await this.deps.facilityRepository.findById(input.facilityId);
 
     if (!clinic) {
@@ -144,7 +157,16 @@ export class GetFacilityUseCase {
 
     assertResourceInScope(input.scope, "facility", clinic.id);
 
-    return serializeFacility(clinic);
+    if (listScope.restrictToVerticalProfiles && listScope.verticalIds?.length) {
+      const allowed = await this.deps.facilityRepository.findActiveFacilityIdsByVerticalIds(
+        listScope.verticalIds,
+      );
+      if (!allowed.includes(clinic.id)) {
+        return null;
+      }
+    }
+
+    return serializeFacility(clinic, listScope.verticalIds);
   }
 }
 

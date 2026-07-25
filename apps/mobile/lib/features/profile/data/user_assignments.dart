@@ -34,77 +34,111 @@ class AssignmentManager extends Equatable {
 class UserTerritoryAssignment extends Equatable {
   const UserTerritoryAssignment({
     required this.territoryId,
-    required this.assignedAt,
+    required this.territoryName,
+    this.boundary,
   });
 
   final String territoryId;
-  final DateTime assignedAt;
+  final String territoryName;
+  final Map<String, dynamic>? boundary;
 
   factory UserTerritoryAssignment.fromJson(Map<String, dynamic> json) {
     return UserTerritoryAssignment(
-      territoryId: json['territoryId'] as String,
-      assignedAt: DateTime.parse(json['assignedAt'] as String),
+      territoryId: json['id'] as String? ?? json['territoryId'] as String,
+      territoryName: (json['name'] as String?) ?? '—',
+      boundary: json['boundary'] as Map<String, dynamic>?,
     );
   }
 
   @override
-  List<Object?> get props => [territoryId, assignedAt];
+  List<Object?> get props => [territoryId, territoryName, boundary];
 }
 
-class UserSectorAssignment extends Equatable {
-  const UserSectorAssignment({
-    required this.sectorId,
-    required this.assignedAt,
+class UserVerticalAssignment extends Equatable {
+  const UserVerticalAssignment({
+    required this.verticalId,
+    required this.verticalName,
+    this.managerId,
+    this.managerName,
+    this.territories = const [],
+    this.assignedAt,
   });
 
-  final String sectorId;
-  final DateTime assignedAt;
+  final String verticalId;
+  final String verticalName;
+  final String? managerId;
+  final String? managerName;
+  final List<UserTerritoryAssignment> territories;
+  final DateTime? assignedAt;
 
-  factory UserSectorAssignment.fromJson(Map<String, dynamic> json) {
-    return UserSectorAssignment(
-      sectorId: json['sectorId'] as String,
-      assignedAt: DateTime.parse(json['assignedAt'] as String),
+  factory UserVerticalAssignment.fromJson(Map<String, dynamic> json) {
+    return UserVerticalAssignment(
+      verticalId: json['verticalId'] as String,
+      verticalName: (json['verticalName'] as String?) ?? '—',
+      managerId: json['managerId'] as String?,
+      managerName: json['managerName'] as String?,
+      territories: (json['territories'] as List<dynamic>? ?? const [])
+          .map(
+            (item) => UserTerritoryAssignment.fromJson(
+              item as Map<String, dynamic>,
+            ),
+          )
+          .toList(),
+      assignedAt: json['assignedAt'] != null
+          ? DateTime.tryParse(json['assignedAt'] as String)
+          : null,
     );
   }
 
   @override
-  List<Object?> get props => [sectorId, assignedAt];
+  List<Object?> get props => [
+    verticalId,
+    verticalName,
+    managerId,
+    managerName,
+    territories,
+    assignedAt,
+  ];
 }
 
+/// Self-service assignments from `GET /user/assignments`.
 class UserAssignments extends Equatable {
   const UserAssignments({
     required this.userId,
-    this.managerId,
-    this.manager,
-    required this.territories,
-    required this.sectors,
+    required this.verticals,
     required this.isOperationallyActive,
   });
 
   final String userId;
-  final String? managerId;
-  final AssignmentManager? manager;
-  final List<UserTerritoryAssignment> territories;
-  final List<UserSectorAssignment> sectors;
+  final List<UserVerticalAssignment> verticals;
   final bool isOperationallyActive;
 
+  List<UserTerritoryAssignment> get territories =>
+      verticals.expand((vertical) => vertical.territories).toList(growable: false);
+
   factory UserAssignments.fromJson(Map<String, dynamic> json) {
+    final verticalRaw = json['verticalAssignments'] as List<dynamic>?;
+    if (verticalRaw != null) {
+      return UserAssignments(
+        userId: json['userId'] as String,
+        verticals: verticalRaw
+            .map(
+              (item) => UserVerticalAssignment.fromJson(
+                item as Map<String, dynamic>,
+              ),
+            )
+            .toList(),
+        isOperationallyActive: json['isOperationallyActive'] as bool? ?? false,
+      );
+    }
+
     return UserAssignments(
       userId: json['userId'] as String,
-      managerId: json['managerId'] as String?,
-      manager: json['manager'] == null
-          ? null
-          : AssignmentManager.fromJson(json['manager'] as Map<String, dynamic>),
-      territories: (json['territories'] as List<dynamic>? ?? [])
+      verticals: (json['verticals'] as List<dynamic>? ?? const [])
           .map(
-            (item) =>
-                UserTerritoryAssignment.fromJson(item as Map<String, dynamic>),
-          )
-          .toList(),
-      sectors: (json['sectors'] as List<dynamic>? ?? [])
-          .map(
-            (item) =>
-                UserSectorAssignment.fromJson(item as Map<String, dynamic>),
+            (item) => UserVerticalAssignment.fromJson(
+              item as Map<String, dynamic>,
+            ),
           )
           .toList(),
       isOperationallyActive: json['isOperationallyActive'] as bool? ?? false,
@@ -116,12 +150,5 @@ class UserAssignments extends Equatable {
   }
 
   @override
-  List<Object?> get props => [
-    userId,
-    managerId,
-    manager,
-    territories,
-    sectors,
-    isOperationallyActive,
-  ];
+  List<Object?> get props => [userId, verticals, isOperationallyActive];
 }

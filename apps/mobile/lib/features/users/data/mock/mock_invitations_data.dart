@@ -1,6 +1,6 @@
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_assignment_options_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 
 DateTime _d(int daysAgo) =>
@@ -25,10 +25,10 @@ final mockInvitations = <UserInvitation>[
     invitedByName: 'Ana Beatriz',
     managerName: 'Fernanda Duarte',
     territoryName: '2 territórios',
-    sectorAssignments: [
-      InviteSectorAssignment(
-        sectorId: 'sector-oncologia',
-        sectorName: 'Oncologia',
+    verticalAssignments: [
+      InviteVerticalAssignment(
+        verticalId: 'sector-oncologia',
+        verticalName: 'Oncologia',
         managerId: 'user-fernanda-duarte',
         managerName: 'Fernanda Duarte',
         territories: [
@@ -53,10 +53,10 @@ final mockInvitations = <UserInvitation>[
     status: InvitationStatus.pending,
     invitedByName: 'Ana Beatriz',
     territoryName: 'Centro Onco A — República',
-    sectorAssignments: [
-      InviteSectorAssignment(
-        sectorId: 'sector-oncologia',
-        sectorName: 'Oncologia',
+    verticalAssignments: [
+      InviteVerticalAssignment(
+        verticalId: 'sector-oncologia',
+        verticalName: 'Oncologia',
         territories: [_territory('territory-centro-onco-a')],
       ),
     ],
@@ -77,10 +77,10 @@ final mockInvitations = <UserInvitation>[
     invitedByName: 'Fernanda Duarte',
     managerName: 'Marcos Lima',
     territoryName: 'Norte Onco B — Tucuruvi',
-    sectorAssignments: [
-      InviteSectorAssignment(
-        sectorId: 'sector-oncologia',
-        sectorName: 'Oncologia',
+    verticalAssignments: [
+      InviteVerticalAssignment(
+        verticalId: 'sector-oncologia',
+        verticalName: 'Oncologia',
         managerId: 'user-marcos-lima',
         managerName: 'Marcos Lima',
         territories: [_territory('territory-norte-onco-b')],
@@ -118,10 +118,10 @@ final mockInvitations = <UserInvitation>[
     invitedByName: 'Renata Souza',
     managerName: 'Eduardo Alves',
     territoryName: 'Oeste Cardio A — Pinheiros',
-    sectorAssignments: [
-      InviteSectorAssignment(
-        sectorId: 'sector-cardiologia',
-        sectorName: 'Cardiologia',
+    verticalAssignments: [
+      InviteVerticalAssignment(
+        verticalId: 'sector-cardiologia',
+        verticalName: 'Cardiologia',
         managerId: 'user-eduardo-alves',
         managerName: 'Eduardo Alves',
         territories: [_territory('territory-oeste-cardio-a')],

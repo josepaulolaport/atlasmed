@@ -2,7 +2,7 @@ import 'package:atlasmed_mobile_app/core/user/models/user.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
 import 'package:atlasmed_mobile_app/core/user/models/user_status.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/assignment_option.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/widgets/change_role_sheet.dart';
@@ -472,13 +472,13 @@ class _AssignmentsSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final sectorAssignments = assignments.sectorAssignments;
+    final verticalAssignments = assignments.verticalAssignments;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _SectionCard(
-          title: 'Setores',
+          title: 'Verticais',
           trailing: canManage
               ? TextButton(
                   onPressed: () async {
@@ -488,15 +488,15 @@ class _AssignmentsSection extends ConsumerWidget {
                   child: const Text('Gerenciar'),
                 )
               : null,
-          child: sectorAssignments.isEmpty
+          child: verticalAssignments.isEmpty
               ? const Text(
-                  'Nenhum setor atribuído.',
+                  'Nenhum vertical atribuído.',
                   style: TextStyle(fontSize: 13, color: Color(0xFF9ca3af)),
                 )
               : Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: sectorAssignments
+                  children: verticalAssignments
                       .map(
                         (a) => Container(
                           padding: const EdgeInsets.symmetric(
@@ -508,7 +508,7 @@ class _AssignmentsSection extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
-                            a.sectorName,
+                            a.verticalName,
                             style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -520,9 +520,9 @@ class _AssignmentsSection extends ConsumerWidget {
                       .toList(),
                 ),
         ),
-        for (final assignment in sectorAssignments) ...[
+        for (final assignment in verticalAssignments) ...[
           const SizedBox(height: 12),
-          _SectorAssignmentCard(
+          _VerticalAssignmentCard(
             userId: user.id,
             assignment: assignment,
             allAssignments: assignments,
@@ -535,8 +535,8 @@ class _AssignmentsSection extends ConsumerWidget {
   }
 }
 
-class _SectorAssignmentCard extends ConsumerStatefulWidget {
-  const _SectorAssignmentCard({
+class _VerticalAssignmentCard extends ConsumerStatefulWidget {
+  const _VerticalAssignmentCard({
     required this.userId,
     required this.assignment,
     required this.allAssignments,
@@ -545,35 +545,35 @@ class _SectorAssignmentCard extends ConsumerStatefulWidget {
   });
 
   final String userId;
-  final InviteSectorAssignment assignment;
+  final InviteVerticalAssignment assignment;
   final UserAssignments allAssignments;
   final bool showManager;
   final bool canManage;
 
   @override
-  ConsumerState<_SectorAssignmentCard> createState() =>
-      _SectorAssignmentCardState();
+  ConsumerState<_VerticalAssignmentCard> createState() =>
+      _VerticalAssignmentCardState();
 }
 
-class _SectorAssignmentCardState extends ConsumerState<_SectorAssignmentCard> {
+class _VerticalAssignmentCardState extends ConsumerState<_VerticalAssignmentCard> {
   bool _busy = false;
 
-  InviteSectorAssignment get assignment => widget.assignment;
+  InviteVerticalAssignment get assignment => widget.assignment;
 
-  Future<void> _persist(InviteSectorAssignment updated) async {
+  Future<void> _persist(InviteVerticalAssignment updated) async {
     setState(() => _busy = true);
     try {
-      final next = widget.allAssignments.sectorAssignments
-          .map((a) => a.sectorId == updated.sectorId ? updated : a)
+      final next = widget.allAssignments.verticalAssignments
+          .map((a) => a.verticalId == updated.verticalId ? updated : a)
           .toList();
       await ref
           .read(usersRepositoryProvider)
-          .replaceSectorAssignments(widget.userId, next);
+          .replaceVerticalAssignments(widget.userId, next);
       ref.invalidate(userAssignmentsProvider(widget.userId));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível atualizar o setor.')),
+          const SnackBar(content: Text('Não foi possível atualizar o vertical.')),
         );
       }
     } finally {
@@ -584,7 +584,7 @@ class _SectorAssignmentCardState extends ConsumerState<_SectorAssignmentCard> {
   Future<void> _pickManager() async {
     if (!widget.canManage || _busy) return;
     final managers = await ref.read(
-      managersForSectorProvider(assignment.sectorId).future,
+      managersForVerticalProvider(assignment.verticalId).future,
     );
     if (!mounted) return;
     final id = await ManagerPickerSheet.show(
@@ -631,13 +631,13 @@ class _SectorAssignmentCardState extends ConsumerState<_SectorAssignmentCard> {
       picked = await TerritoryPickerScreen.pickForManager(
         context,
         managerId: managerId,
-        sectorId: assignment.sectorId,
+        verticalId: assignment.verticalId,
         initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
       );
     } else {
-      picked = await TerritoryPickerScreen.pickForSector(
+      picked = await TerritoryPickerScreen.pickForVertical(
         context,
-        sectorId: assignment.sectorId,
+        verticalId: assignment.verticalId,
         initiallySelectedIds: assignment.territories.map((t) => t.id).toSet(),
       );
     }
@@ -661,7 +661,7 @@ class _SectorAssignmentCardState extends ConsumerState<_SectorAssignmentCard> {
     final canManage = widget.canManage;
 
     return _SectionCard(
-      title: assignment.sectorName,
+      title: assignment.verticalName,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

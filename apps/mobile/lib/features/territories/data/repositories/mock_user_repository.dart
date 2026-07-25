@@ -20,7 +20,7 @@ class MockUserRepository implements UserRepository {
   Future<List<AppUser>> searchUsers({
     required UserRole role,
     String query = '',
-    String? sectorId,
+    String? verticalId,
   }) async {
     await Future.delayed(const Duration(milliseconds: 200));
     final needle = query.trim().toLowerCase();
@@ -28,7 +28,7 @@ class MockUserRepository implements UserRepository {
         .where(
           (user) =>
               user.role == role &&
-              (sectorId == null || user.sectorId == sectorId) &&
+              (verticalId == null || user.verticalId == verticalId) &&
               (needle.isEmpty || user.name.toLowerCase().contains(needle)),
         )
         .toList();

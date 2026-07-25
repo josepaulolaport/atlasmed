@@ -1,5 +1,5 @@
 import 'package:atlasmed_mobile_app/core/user/models/user_role_name.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_assignments.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/presentation/providers/users_providers.dart';
@@ -159,11 +159,11 @@ class _InvitationDetailBody extends StatelessWidget {
               _MetaCard(invitation: invitation),
               if (_showsAssignments) ...[
                 const SizedBox(height: 12),
-                if (invitation.sectorAssignments.isEmpty)
+                if (invitation.verticalAssignments.isEmpty)
                   const _SectionCard(
                     title: 'Atribuições',
                     child: Text(
-                      'Nenhum setor atribuído neste convite.',
+                      'Nenhum vertical atribuído neste convite.',
                       style: TextStyle(
                         fontSize: 13.5,
                         color: Color(0xFF6b7280),
@@ -171,8 +171,8 @@ class _InvitationDetailBody extends StatelessWidget {
                     ),
                   )
                 else
-                  for (final assignment in invitation.sectorAssignments) ...[
-                    _SectorAssignmentCard(
+                  for (final assignment in invitation.verticalAssignments) ...[
+                    _VerticalAssignmentCard(
                       assignment: assignment,
                       showManager: _isRep,
                     ),
@@ -298,19 +298,19 @@ class _MetaCard extends StatelessWidget {
   }
 }
 
-class _SectorAssignmentCard extends StatelessWidget {
-  const _SectorAssignmentCard({
+class _VerticalAssignmentCard extends StatelessWidget {
+  const _VerticalAssignmentCard({
     required this.assignment,
     required this.showManager,
   });
 
-  final InviteSectorAssignment assignment;
+  final InviteVerticalAssignment assignment;
   final bool showManager;
 
   @override
   Widget build(BuildContext context) {
     return _SectionCard(
-      title: assignment.sectorName,
+      title: assignment.verticalName,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -347,8 +347,8 @@ class _SectorAssignmentCard extends StatelessWidget {
                       territoryId: territory.id,
                       territoryName: territory.name,
                       assignedAt: DateTime.now(),
-                      sectorId: territory.sectorId,
-                      sectorName: territory.sectorName,
+                      verticalId: territory.verticalId,
+                      verticalName: territory.verticalName,
                       centroid: territory.centroid,
                       boundary: territory.boundary,
                     ),

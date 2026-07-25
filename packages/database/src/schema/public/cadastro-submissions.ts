@@ -19,6 +19,7 @@ import {
   cadastroProcessingStepStatusEnum,
 } from "./enums";
 import { facilities, conformityRequirements } from "./facilities";
+import { businessVerticals } from "./business-verticals";
 import { users } from "./users";
 
 /**
@@ -34,6 +35,9 @@ export const cadastroSubmissions = pgTable(
     facilityId: text("facility_id")
       .notNull()
       .references(() => facilities.id, { onDelete: "cascade" }),
+    verticalId: text("vertical_id").references(() => businessVerticals.id, {
+      onDelete: "restrict",
+    }),
     submittedByUserId: text("submitted_by_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
@@ -45,6 +49,7 @@ export const cadastroSubmissions = pgTable(
   },
   (t) => [
     index("cadastro_submissions_facility_id_idx").on(t.facilityId),
+    index("cadastro_submissions_vertical_id_idx").on(t.verticalId),
     index("cadastro_submissions_status_idx").on(t.status),
     uniqueIndex("cadastro_submissions_facility_id_version_uidx").on(
       t.facilityId,
@@ -255,6 +260,10 @@ export const cadastroSubmissionsRelations = relations(
     facility: one(facilities, {
       fields: [cadastroSubmissions.facilityId],
       references: [facilities.id],
+    }),
+    vertical: one(businessVerticals, {
+      fields: [cadastroSubmissions.verticalId],
+      references: [businessVerticals.id],
     }),
     submittedBy: one(users, {
       fields: [cadastroSubmissions.submittedByUserId],

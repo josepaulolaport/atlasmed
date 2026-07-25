@@ -18,7 +18,7 @@ import {
 import {
   Role,
   toDateOnlyString,
-  type InviteSectorAssignmentInput,
+  type InviteVerticalAssignmentInput,
 } from "@atlasmed/access";
 import { canAssignRole } from "../constants/role-priority.constants";
 import type { IAuditLog } from "../interfaces/audit-log.interface";
@@ -49,7 +49,7 @@ interface InviteUserParams {
   managerId?: string | undefined;
   managerTerritoryId?: string | undefined;
   repTerritoryId?: string | undefined;
-  sectorAssignments?: InviteSectorAssignmentInput[];
+  verticalAssignments?: InviteVerticalAssignmentInput[];
 }
 
 export class InviteUserUseCase {
@@ -115,7 +115,7 @@ export class InviteUserUseCase {
       managerId: params.managerId,
       managerTerritoryId: params.managerTerritoryId,
       repTerritoryId: params.repTerritoryId,
-      sectorAssignments: params.sectorAssignments,
+      verticalAssignments: params.verticalAssignments,
     });
 
     await this.territoryValidator.validateInvitationTerritories({
@@ -124,7 +124,7 @@ export class InviteUserUseCase {
       managerId: assignments.managerId,
       managerTerritoryId: assignments.managerTerritoryId,
       repTerritoryId: assignments.repTerritoryId,
-      sectorAssignments: assignments.sectorAssignments,
+      verticalAssignments: assignments.verticalAssignments,
     });
 
     const identifier = params.email || params.phoneNumber!;
@@ -159,7 +159,7 @@ export class InviteUserUseCase {
       managerId: assignments.managerId,
       managerTerritoryId: assignments.managerTerritoryId,
       repTerritoryId: assignments.repTerritoryId,
-      sectorAssignments: assignments.sectorAssignments,
+      verticalAssignments: assignments.verticalAssignments,
     });
 
     await this.deps.auditLog.logInviteUser({

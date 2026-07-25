@@ -1,6 +1,6 @@
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_invitations_data.dart';
 import 'package:atlasmed_mobile_app/features/users/data/mock/mock_users_data.dart';
-import 'package:atlasmed_mobile_app/features/users/data/models/invite_sector_assignment.dart';
+import 'package:atlasmed_mobile_app/features/users/data/models/invite_vertical_assignment.dart';
 import 'package:atlasmed_mobile_app/features/users/data/models/user_invitation.dart';
 import 'package:atlasmed_mobile_app/features/users/data/repositories/invitations_repository.dart';
 
@@ -15,9 +15,9 @@ class MockInvitationsRepository implements InvitationsRepository {
       Future.delayed(Duration(milliseconds: ms));
 
   ({String? managerName, String? territoryName}) _summarize(
-    List<InviteSectorAssignment> sectorAssignments,
+    List<InviteVerticalAssignment> verticalAssignments,
   ) {
-    final first = sectorAssignments.isEmpty ? null : sectorAssignments.first;
+    final first = verticalAssignments.isEmpty ? null : verticalAssignments.first;
     final managerName = first?.managerName;
     final territoryName = first == null || first.territories.isEmpty
         ? null
@@ -52,7 +52,7 @@ class MockInvitationsRepository implements InvitationsRepository {
     required DateTime birthDate,
     required String phoneNumber,
     required String roleId,
-    List<InviteSectorAssignment> sectorAssignments = const [],
+    List<InviteVerticalAssignment> verticalAssignments = const [],
   }) async {
     await _delay(400);
 
@@ -60,7 +60,7 @@ class MockInvitationsRepository implements InvitationsRepository {
       (r) => r.id == roleId,
       orElse: () => mockRoles.last,
     );
-    final summary = _summarize(sectorAssignments);
+    final summary = _summarize(verticalAssignments);
 
     final invitation = UserInvitation(
       id: 'invite-${_seq++}',
@@ -75,7 +75,7 @@ class MockInvitationsRepository implements InvitationsRepository {
       invitedByName: 'Você',
       managerName: summary.managerName,
       territoryName: summary.territoryName,
-      sectorAssignments: List<InviteSectorAssignment>.of(sectorAssignments),
+      verticalAssignments: List<InviteVerticalAssignment>.of(verticalAssignments),
       createdAt: DateTime.now(),
       expiresAt: DateTime.now().add(const Duration(days: 7)),
       resendCount: 0,
@@ -93,7 +93,7 @@ class MockInvitationsRepository implements InvitationsRepository {
     required DateTime birthDate,
     required String phoneNumber,
     required String roleId,
-    List<InviteSectorAssignment> sectorAssignments = const [],
+    List<InviteVerticalAssignment> verticalAssignments = const [],
   }) async {
     await _delay(400);
 
@@ -110,7 +110,7 @@ class MockInvitationsRepository implements InvitationsRepository {
       (r) => r.id == roleId,
       orElse: () => mockRoles.last,
     );
-    final summary = _summarize(sectorAssignments);
+    final summary = _summarize(verticalAssignments);
 
     final updated = existing.copyWith(
       email: email,
@@ -124,7 +124,7 @@ class MockInvitationsRepository implements InvitationsRepository {
       territoryName: summary.territoryName,
       clearManagerName: summary.managerName == null,
       clearTerritoryName: summary.territoryName == null,
-      sectorAssignments: List<InviteSectorAssignment>.of(sectorAssignments),
+      verticalAssignments: List<InviteVerticalAssignment>.of(verticalAssignments),
     );
     _invitations[index] = updated;
     return updated;

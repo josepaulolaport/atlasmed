@@ -1,7 +1,7 @@
 import {
   facilityConsultantAssignments,
 } from "@atlasmed/database";
-import { eq, and, isNull, desc } from "drizzle-orm";
+import { eq, and, isNull, desc, inArray } from "drizzle-orm";
 import { db } from "../../../../../infrastructure/database/db";
 import type {
   FacilityConsultantAssignmentRecord,
@@ -55,16 +55,22 @@ export class DrizzleFacilityConsultantAssignmentRepository
     return assignment ? mapAssignment(assignment) : null;
   }
 
-  async findActiveFacilityIdsByUserId(userId: string): Promise<string[]> {
+  async findActiveFacilityIdsByUserId(
+    userId: string,
+    verticalIds?: string[],
+  ): Promise<string[]> {
+    const conditions = [
+      eq(facilityConsultantAssignments.userId, userId),
+      isNull(facilityConsultantAssignments.endedAt),
+    ];
+    if (verticalIds && verticalIds.length > 0) {
+      conditions.push(inArray(facilityConsultantAssignments.verticalId, verticalIds));
+    }
+
     const rows = await db
       .select({ facilityId: facilityConsultantAssignments.facilityId })
       .from(facilityConsultantAssignments)
-      .where(
-        and(
-          eq(facilityConsultantAssignments.userId, userId),
-          isNull(facilityConsultantAssignments.endedAt),
-        ),
-      );
+      .where(and(...conditions));
 
     return [...new Set(rows.map((row) => row.facilityId))];
   }
@@ -72,6 +78,7 @@ export class DrizzleFacilityConsultantAssignmentRepository
   async assign(params: {
     facilityId: string;
     userId: string;
+    verticalId: string;
     assignedByUserId: string;
   }): Promise<FacilityConsultantAssignmentRecord> {
     const current = await this.findCurrentByFacility(params.facilityId);
@@ -88,6 +95,7 @@ export class DrizzleFacilityConsultantAssignmentRepository
       .values({
         facilityId: params.facilityId,
         userId: params.userId,
+        verticalId: params.verticalId,
         assignedByUserId: params.assignedByUserId,
       })
       .returning();

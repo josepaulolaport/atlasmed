@@ -2,7 +2,7 @@ import 'package:atlasmed_mobile_app/features/map/data/models/coordinate.dart';
 import 'package:atlasmed_mobile_app/features/map/data/models/territory.dart'
     show TerritoryGeometry;
 import 'package:atlasmed_mobile_app/features/territories/data/models/assignable_manager.dart';
-import 'package:atlasmed_mobile_app/features/territories/data/models/sector.dart';
+import 'package:atlasmed_mobile_app/features/territories/data/models/business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_draft.dart';
 import 'package:atlasmed_mobile_app/features/territories/data/models/territory_type.dart';
@@ -45,8 +45,7 @@ Territory _territory({required String id, required List<MapCoordinate> ring}) {
     slug: id,
     code: id,
     territoryType: _managerZoneType,
-    sectorId: 'sector-1',
-    boundary: geometry,
+        boundary: geometry,
     centroid: ring.first,
   );
 }
@@ -62,7 +61,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   String? lastDeletedId;
 
   @override
-  Future<List<Sector>> getSectors() async => const [];
+  Future<List<BusinessVertical>> getVerticals() async => const [];
 
   @override
   Future<Territory?> getTerritoryById(String id) async {
@@ -75,14 +74,9 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-    required String sectorId,
-  }) async {
+      }) async {
     return territories
-        .where(
-          (t) =>
-              t.territoryType.slug == territoryTypeSlug &&
-              t.sectorId == sectorId,
-        )
+        .where((t) => t.territoryType.slug == territoryTypeSlug)
         .toList();
   }
 
@@ -114,8 +108,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
       territoryType: draft.kind == TerritoryKind.managerZone
           ? _managerZoneType
           : _repPatchType,
-      sectorId: draft.sectorId,
-      managerTerritoryId: draft.managerTerritoryId,
+            managerTerritoryId: draft.managerTerritoryId,
       boundary: boundary,
       centroid: centroid,
     );
@@ -140,22 +133,20 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   Future<void> updateTerritoryInfo(
     String territoryId, {
     required String name,
-    required String sectorId,
-    required bool isActive,
+        required bool isActive,
     String? managerTerritoryId,
   }) async {
     final index = territories.indexWhere((t) => t.id == territoryId);
     if (index == -1) return;
     territories[index] = territories[index].copyWith(
       name: name,
-      sectorId: sectorId,
-      isActive: isActive,
+            isActive: isActive,
       managerTerritoryId: managerTerritoryId,
     );
   }
 
   @override
-  Future<List<AssignableManager>> getAssignableManagers(String sectorId) async {
+  Future<List<AssignableManager>> getAssignableManagers() async {
     return const [];
   }
 }
@@ -460,8 +451,7 @@ void main() {
         slug: 'legacy',
         code: 'legacy',
         territoryType: _managerZoneType,
-        sectorId: 'sector-1',
-        boundary: TerritoryGeometry.multiPolygon([
+                boundary: TerritoryGeometry.multiPolygon([
           [
             [...legacySquareA, legacySquareA.first],
           ],
@@ -588,7 +578,7 @@ void main() {
   group('creating a new territory', () {
     const creatingTarget = TerritoryEditorTarget.creating(
       initialKind: TerritoryKind.managerZone,
-      initialSectorId: 'sector-1',
+      
     );
 
     Future<TerritoryEditorController> loadCreatingController() async {
@@ -632,8 +622,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-          sectorId: 'sector-1',
-        ),
+                  ),
       );
 
       var state = container.read(
@@ -667,8 +656,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-          sectorId: 'sector-1',
-        ),
+                  ),
       );
 
       final state = container.read(
@@ -686,8 +674,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-          sectorId: 'sector-1',
-        ),
+                  ),
       );
       controller.addDrawingPoint(_c(20, 20));
       controller.addDrawingPoint(_c(22, 20));

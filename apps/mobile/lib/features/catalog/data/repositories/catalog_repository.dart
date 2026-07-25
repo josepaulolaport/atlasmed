@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:atlasmed_mobile_app/core/config/app_config.dart';
 import 'package:atlasmed_mobile_app/core/session/repositories/session_environment.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_family.dart';
-import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_sector.dart';
+import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_business_vertical.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/catalog_variant.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/comparison_row.dart';
 import 'package:atlasmed_mobile_app/features/catalog/data/models/competitor_product.dart';
@@ -15,7 +15,7 @@ import 'package:atlasmed_mobile_app/repository/infra/repository_http_client.dart
 ///
 /// Talks to the catalog module of the API (`/api/v1/products`,
 /// `/api/v1/competitor-products`, `/api/v1/products/:id/comparison`,
-/// `/api/v1/price-index`, `/api/v1/sectors`) — see
+/// `/api/v1/price-index`, `/api/v1/business-verticals`) — see
 /// `apps/api/src/modules/catalog` for the server side. Follows the same
 /// thin-wrapper shape as `HttpTerritoryRepository`: a plain
 /// [RepositoryHttpClient] with bearer-token injection via
@@ -138,14 +138,14 @@ class CatalogRepository {
 
   /// Every active commercial sector — backs the admin product form's
   /// sector picker.
-  Future<List<CatalogSector>> getSectors() async {
+  Future<List<CatalogBusinessVertical>> getVerticals() async {
     final response = await _get(
-      _uri('/sectors', const {'limit': '100', 'isActive': 'true'}),
+      _uri('/business-verticals', const {'limit': '100', 'isActive': 'true'}),
     );
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return (decoded['data'] as List<dynamic>)
-        .map((row) => CatalogSector.fromJson(row as Map<String, dynamic>))
+        .map((row) => CatalogBusinessVertical.fromJson(row as Map<String, dynamic>))
         .toList();
   }
 
@@ -162,7 +162,7 @@ class CatalogRepository {
     final response = await _send(_uri('/products'), RepositoryHttpMethod.post, {
       'code': draft.code,
       'name': draft.comparisonLabel,
-      'sectorIds': draft.sectorIds,
+      'verticalIds': draft.verticalIds,
       'simproCode': draft.simproCode,
       'brasindiceCode': draft.brasindiceCode,
       'tissCode': draft.tissCode,
@@ -188,7 +188,7 @@ class CatalogRepository {
       {
         'code': variant.code,
         'name': variant.comparisonLabel,
-        'sectorIds': variant.sectorIds,
+        'verticalIds': variant.verticalIds,
         'simproCode': variant.simproCode,
         'brasindiceCode': variant.brasindiceCode,
         'tissCode': variant.tissCode,

@@ -1,5 +1,5 @@
 export * from "./enums";
-export * from "./sectors";
+export * from "./business-verticals";
 export * from "./users";
 export * from "./territories";
 export * from "./invitation-assignments";

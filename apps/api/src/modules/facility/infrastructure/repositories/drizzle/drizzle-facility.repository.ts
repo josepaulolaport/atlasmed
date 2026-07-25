@@ -3,6 +3,8 @@ import {
   facilityProfessionals,
   facilityConsultantAssignments,
   facilityServices,
+  facilityVerticalProfiles,
+  businessVerticals,
   territories,
   users,
   orders,
@@ -12,11 +14,13 @@ import { eq, and, isNull, ilike, inArray, sql, asc, getTableColumns } from "driz
 import { db } from "../../../../../infrastructure/database/db";
 import { ResourceNotFoundError } from "../../../../../shared/errors";
 import type {
+  FacilityCommercialStatus,
   FacilityListRecord,
   FacilityListScopeFilter,
   FacilityRecord,
   FacilityRepository,
   FacilitySourceUpsertInput,
+  FacilityVerticalProfileRecord,
 } from "../../../application/interfaces/facility.repository.interface";
 
 type FacilityRow = typeof facilities.$inferSelect;
@@ -43,6 +47,9 @@ function mapFacility(
     consultantSince?: Date | null;
     managerName?: string | null;
     territoryName?: string | null;
+    commercialStatus?: FacilityCommercialStatus | null;
+    purchaseStatus?: FacilityRecord["purchaseStatus"];
+    verticalProfiles?: FacilityVerticalProfileRecord[];
   } = {}
 ): FacilityRecord {
   const withCoords = facility as FacilityRowWithCoords;
@@ -72,8 +79,8 @@ function mapFacility(
     territoryName: options.territoryName ?? null,
     territoryAssignmentStatus: facility.territoryAssignmentStatus,
     territoryAssignmentSource: facility.territoryAssignmentSource,
-    commercialStatus: facility.commercialStatus ?? null,
-    purchaseStatus: facility.purchaseStatus ?? null,
+    commercialStatus: options.commercialStatus ?? null,
+    purchaseStatus: options.purchaseStatus ?? null,
     conformityStatus: facility.conformityStatus,
     consultantName: options.consultantName ?? null,
     consultantSince: options.consultantSince ?? null,
@@ -91,13 +98,88 @@ function mapFacility(
     createdAt: facility.createdAt,
     updatedAt: facility.updatedAt,
     services: options.services ?? [],
+    verticalProfiles: options.verticalProfiles,
   };
 }
 
 function buildScopeCondition(scope: FacilityListScopeFilter) {
-  if (scope.isGlobal) return null;
-  const ids = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
-  return inArray(facilities.id, ids);
+  const conditions = [];
+  if (!scope.isGlobal) {
+    const ids = scope.facilityIds?.length ? scope.facilityIds : ["__none__"];
+    conditions.push(inArray(facilities.id, ids));
+  }
+  if (scope.restrictToVerticalProfiles && scope.verticalIds && scope.verticalIds.length > 0) {
+    conditions.push(
+      inArray(
+        facilities.id,
+        db
+          .select({ facilityId: facilityVerticalProfiles.facilityId })
+          .from(facilityVerticalProfiles)
+          .where(
+            and(
+              inArray(facilityVerticalProfiles.verticalId, scope.verticalIds),
+              eq(facilityVerticalProfiles.isActive, true),
+            ),
+          ),
+      ),
+    );
+  }
+  if (conditions.length === 0) return null;
+  if (conditions.length === 1) return conditions[0]!;
+  return and(...conditions);
+}
+
+async function loadVerticalProfiles(
+  facilityIds: string[],
+  verticalIds?: string[],
+): Promise<Map<string, FacilityVerticalProfileRecord[]>> {
+  if (facilityIds.length === 0) return new Map();
+
+  const profileConditions = [inArray(facilityVerticalProfiles.facilityId, facilityIds)];
+  if (verticalIds && verticalIds.length > 0) {
+    profileConditions.push(inArray(facilityVerticalProfiles.verticalId, verticalIds));
+  }
+
+  const rows = await db
+    .select({
+      facilityId: facilityVerticalProfiles.facilityId,
+      verticalId: facilityVerticalProfiles.verticalId,
+      verticalCode: businessVerticals.code,
+      verticalName: businessVerticals.name,
+      isActive: facilityVerticalProfiles.isActive,
+      commercialStatus: facilityVerticalProfiles.commercialStatus,
+      purchaseStatus: facilityVerticalProfiles.purchaseStatus,
+    })
+    .from(facilityVerticalProfiles)
+    .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
+    .where(and(...profileConditions));
+
+  const map = new Map<string, FacilityVerticalProfileRecord[]>();
+  for (const row of rows) {
+    const list = map.get(row.facilityId) ?? [];
+    list.push({
+      verticalId: row.verticalId,
+      verticalCode: row.verticalCode,
+      verticalName: row.verticalName,
+      isActive: row.isActive,
+      commercialStatus: row.commercialStatus,
+      purchaseStatus: row.purchaseStatus,
+    });
+    map.set(row.facilityId, list);
+  }
+  return map;
+}
+
+function deriveProfileCommercialFields(
+  profiles: FacilityVerticalProfileRecord[],
+): Pick<FacilityRecord, "commercialStatus" | "purchaseStatus"> {
+  if (profiles.length === 1) {
+    return {
+      commercialStatus: profiles[0]!.commercialStatus,
+      purchaseStatus: profiles[0]!.purchaseStatus,
+    };
+  }
+  return { commercialStatus: null, purchaseStatus: null };
 }
 
 type ConsultantInfo = {
@@ -220,7 +302,23 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       conditions.push(ilike(facilities.displayName, `%${params.search}%`));
     }
     if (params.commercialStatus) {
-      conditions.push(eq(facilities.commercialStatus, params.commercialStatus));
+      conditions.push(
+        inArray(
+          facilities.id,
+          db
+            .select({ facilityId: facilityVerticalProfiles.facilityId })
+            .from(facilityVerticalProfiles)
+            .where(
+              and(
+                eq(facilityVerticalProfiles.commercialStatus, params.commercialStatus),
+                eq(facilityVerticalProfiles.isActive, true),
+                ...(params.scope.verticalIds?.length
+                  ? [inArray(facilityVerticalProfiles.verticalId, params.scope.verticalIds)]
+                  : []),
+              ),
+            ),
+        ),
+      );
     }
     if (params.productIds?.length) {
       conditions.push(
@@ -283,7 +381,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     const ids = rows.map((r) => r.id);
 
-    const [profCounts, consultantMap, territoryNameById] = await Promise.all([
+    const [profCounts, consultantMap, territoryNameById, profilesByFacility] = await Promise.all([
       db
         .select({
           facilityId: facilityProfessionals.facilityId,
@@ -299,6 +397,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .groupBy(facilityProfessionals.facilityId),
       loadConsultantInfo(ids),
       loadTerritoryNames(rows.map((row) => row.territoryId)),
+      loadVerticalProfiles(ids, params.scope.verticalIds),
     ]);
 
     const countMap = new Map(profCounts.map((r) => [r.facilityId, r.count]));
@@ -306,6 +405,8 @@ export class DrizzleFacilityRepository implements FacilityRepository {
     return {
       facilities: rows.map((row) => {
         const consultant = consultantMap.get(row.id);
+        const profiles = profilesByFacility.get(row.id) ?? [];
+        const derived = deriveProfileCommercialFields(profiles);
         return {
           ...mapFacility(row, {
             lat: row.lat,
@@ -316,6 +417,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
             territoryName: row.territoryId
               ? (territoryNameById.get(row.territoryId) ?? null)
               : null,
+            commercialStatus: derived.commercialStatus,
+            purchaseStatus: derived.purchaseStatus,
+            verticalProfiles: profiles,
           }),
           distanceKm: row.distanceKm ?? null,
           professionalCount: countMap.get(row.id) ?? 0,
@@ -360,7 +464,7 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (!facility) return null;
 
-    const [services, consultantMap, territoryNameById] = await Promise.all([
+    const [services, consultantMap, territoryNameById, profilesByFacility] = await Promise.all([
       db
         .select({
           serviceCode: facilityServices.serviceCode,
@@ -370,9 +474,12 @@ export class DrizzleFacilityRepository implements FacilityRepository {
         .where(eq(facilityServices.facilityId, id)),
       loadConsultantInfo([id]),
       loadTerritoryNames([facility.territoryId]),
+      loadVerticalProfiles([id]),
     ]);
 
     const consultant = consultantMap.get(id);
+    const profiles = profilesByFacility.get(id) ?? [];
+    const derived = deriveProfileCommercialFields(profiles);
     return mapFacility(facility, {
       lat: facility.lat,
       lng: facility.lng,
@@ -383,6 +490,9 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       territoryName: facility.territoryId
         ? (territoryNameById.get(facility.territoryId) ?? null)
         : null,
+      commercialStatus: derived.commercialStatus,
+      purchaseStatus: derived.purchaseStatus,
+      verticalProfiles: profiles,
     });
   }
 
@@ -462,7 +572,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       billingEmail?: string | null;
       taxIdType?: "PJ" | "PF";
       conformityStatus?: FacilityRecord["conformityStatus"];
-      commercialStatus?: FacilityRecord["commercialStatus"];
       manuallyEditedAt?: Date;
     }
   ): Promise<FacilityRecord> {
@@ -489,10 +598,6 @@ export class DrizzleFacilityRepository implements FacilityRepository {
 
     if (data.conformityStatus !== undefined) {
       setData.conformityStatus = data.conformityStatus;
-    }
-
-    if (data.commercialStatus !== undefined) {
-      setData.commercialStatus = data.commercialStatus;
     }
 
     if (data.lat !== undefined || data.lng !== undefined) {
@@ -695,5 +800,103 @@ export class DrizzleFacilityRepository implements FacilityRepository {
       );
 
     return rows.map((r) => r.id);
+  }
+
+  async findActiveFacilityIdsByVerticalIds(verticalIds: string[]): Promise<string[]> {
+    if (verticalIds.length === 0) return [];
+
+    const rows = await db
+      .select({ facilityId: facilityVerticalProfiles.facilityId })
+      .from(facilityVerticalProfiles)
+      .where(
+        and(
+          inArray(facilityVerticalProfiles.verticalId, verticalIds),
+          eq(facilityVerticalProfiles.isActive, true),
+        ),
+      );
+
+    return [...new Set(rows.map((r) => r.facilityId))];
+  }
+
+  async findVerticalProfilesByFacilityIds(
+    facilityIds: string[],
+    verticalIds?: string[],
+  ): Promise<Map<string, FacilityVerticalProfileRecord[]>> {
+    return loadVerticalProfiles(facilityIds, verticalIds);
+  }
+
+  async updateVerticalProfileCommercialStatus(input: {
+    facilityId: string;
+    verticalId: string;
+    commercialStatus: FacilityCommercialStatus;
+  }): Promise<void> {
+    await db
+      .update(facilityVerticalProfiles)
+      .set({
+        commercialStatus: input.commercialStatus,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(facilityVerticalProfiles.facilityId, input.facilityId),
+          eq(facilityVerticalProfiles.verticalId, input.verticalId),
+        ),
+      );
+  }
+
+  async ensureVerticalProfile(input: {
+    facilityId: string;
+    verticalId: string;
+  }): Promise<FacilityVerticalProfileRecord> {
+    const existing = await db
+      .select({
+        verticalId: facilityVerticalProfiles.verticalId,
+        verticalCode: businessVerticals.code,
+        verticalName: businessVerticals.name,
+        isActive: facilityVerticalProfiles.isActive,
+        commercialStatus: facilityVerticalProfiles.commercialStatus,
+        purchaseStatus: facilityVerticalProfiles.purchaseStatus,
+      })
+      .from(facilityVerticalProfiles)
+      .innerJoin(businessVerticals, eq(facilityVerticalProfiles.verticalId, businessVerticals.id))
+      .where(
+        and(
+          eq(facilityVerticalProfiles.facilityId, input.facilityId),
+          eq(facilityVerticalProfiles.verticalId, input.verticalId),
+        ),
+      )
+      .limit(1);
+
+    if (existing[0]) {
+      const row = existing[0];
+      return {
+        verticalId: row.verticalId,
+        verticalCode: row.verticalCode,
+        verticalName: row.verticalName,
+        isActive: row.isActive,
+        commercialStatus: row.commercialStatus,
+        purchaseStatus: row.purchaseStatus,
+      };
+    }
+
+    const [inserted] = await db
+      .insert(facilityVerticalProfiles)
+      .values({
+        facilityId: input.facilityId,
+        verticalId: input.verticalId,
+        isActive: true,
+      })
+      .returning({ id: facilityVerticalProfiles.id });
+
+    if (!inserted) {
+      throw new ResourceNotFoundError("FacilityVerticalProfile", input.verticalId);
+    }
+
+    const profiles = await loadVerticalProfiles([input.facilityId], [input.verticalId]);
+    const profile = profiles.get(input.facilityId)?.[0];
+    if (!profile) {
+      throw new ResourceNotFoundError("FacilityVerticalProfile", input.verticalId);
+    }
+    return profile;
   }
 }

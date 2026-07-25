@@ -21,7 +21,7 @@ class CatalogVariant {
     required this.price20,
     required this.brasindiceUpdatedAt,
     this.isActive = true,
-    this.sectorIds = const [],
+    this.verticalIds = const [],
   });
 
   final String id;
@@ -47,10 +47,10 @@ class CatalogVariant {
   final DateTime brasindiceUpdatedAt;
   final bool isActive;
 
-  /// Commercial sectors this product belongs to (`sectorIds` on the
+  /// Commercial sectors this product belongs to (`verticalIds` on the
   /// `products` table) — required, non-empty when creating a product on
   /// the real API.
-  final List<String> sectorIds;
+  final List<String> verticalIds;
 
   /// Full label used inside comparison tables, e.g. "REVISCON 1.0% - 20MG / 2ML".
   String get comparisonLabel =>
@@ -88,8 +88,8 @@ class CatalogVariant {
         json['brasindiceUpdatedAt'] as String,
       ),
       isActive: json['isActive'] as bool? ?? true,
-      sectorIds:
-          (json['sectorIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      verticalIds:
+          (json['verticalIds'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -110,7 +110,7 @@ class CatalogVariant {
     double? price20,
     DateTime? brasindiceUpdatedAt,
     bool? isActive,
-    List<String>? sectorIds,
+    List<String>? verticalIds,
   }) {
     return CatalogVariant(
       id: id ?? this.id,
@@ -129,7 +129,7 @@ class CatalogVariant {
       price20: price20 ?? this.price20,
       brasindiceUpdatedAt: brasindiceUpdatedAt ?? this.brasindiceUpdatedAt,
       isActive: isActive ?? this.isActive,
-      sectorIds: sectorIds ?? this.sectorIds,
+      verticalIds: verticalIds ?? this.verticalIds,
     );
   }
 }

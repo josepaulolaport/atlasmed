@@ -196,7 +196,10 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {assignments && assignments.territories.length > 0 && (
+        {assignments &&
+          assignments.verticalAssignments.some(
+            (vertical) => vertical.territories.length > 0
+          ) && (
           <div className="rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
             <div className="px-5 py-4 border-b border-zinc-200 bg-zinc-50/50">
               <h3 className="text-sm font-medium text-zinc-900 tracking-tight">
@@ -205,16 +208,18 @@ export default function ProfilePage() {
             </div>
             <div className="p-5">
               <ul className="divide-y divide-zinc-200 rounded-md border border-zinc-200">
-                {assignments.territories.map((t) => (
-                  <li key={t.territoryId} className="px-3 py-2 text-sm">
-                    <span className="font-medium text-zinc-900">
-                      {getLabel(t.territoryId)}
-                    </span>
-                    <p className="text-xs text-zinc-500">
-                      Atribuído em {formatDateTime(t.assignedAt)}
-                    </p>
-                  </li>
-                ))}
+                {assignments.verticalAssignments.flatMap((vertical) =>
+                  vertical.territories.map((territory) => (
+                    <li key={territory.id} className="px-3 py-2 text-sm">
+                      <span className="font-medium text-zinc-900">
+                        {territory.name || getLabel(territory.id)}
+                      </span>
+                      <p className="text-xs text-zinc-500">
+                        Vertical: {vertical.verticalName}
+                      </p>
+                    </li>
+                  ))
+                )}
               </ul>
             </div>
           </div>

@@ -22,8 +22,8 @@ export class ReplaceUserAssignmentsUseCase {
     targetUserId: string;
     actorUserId: string;
     actorRole: Role;
-    sectorAssignments: Array<{
-      sectorId: string;
+    verticalAssignments: Array<{
+      verticalId: string;
       managerId?: string;
       territoryIds: string[];
     }>;
@@ -42,23 +42,22 @@ export class ReplaceUserAssignmentsUseCase {
 
     const roleName = user.role.name as Role;
 
-    // Empty payload clears assignments (admin action). Otherwise reuse invite rules.
-    if (params.sectorAssignments.length > 0) {
+    if (params.verticalAssignments.length > 0) {
       await this.deps.territoryValidator.validateInvitationTerritories({
         roleId: user.roleId,
         roleName,
-        sectorAssignments: params.sectorAssignments,
+        verticalAssignments: params.verticalAssignments,
       });
     }
 
     const firstManagerId =
-      params.sectorAssignments.find((s) => s.managerId)?.managerId ?? null;
+      params.verticalAssignments.find((v) => v.managerId)?.managerId ?? null;
 
     await this.deps.scopeRepository.replaceAssignments({
       userId: params.targetUserId,
       assignedByUserId: params.actorUserId,
       managerId: roleName === Role.REP ? firstManagerId : null,
-      sectorAssignments: params.sectorAssignments,
+      verticalAssignments: params.verticalAssignments,
     });
 
     return this.deps.getUserAssignments.execute({

@@ -25,7 +25,7 @@ import {
   facilityTaxIdTypeEnum,
 } from "./enums";
 import { territories } from "./territories";
-import { sectors } from "./sectors";
+import { businessVerticals } from "./business-verticals";
 import { users } from "./users";
 import {
   services,
@@ -34,8 +34,6 @@ import {
   unitTypes,
   deactivationReasons,
 } from "./cnes-lookups";
-
-export { sectors } from "./sectors";
 
 export const facilities = pgTable(
   "facilities",
@@ -88,10 +86,7 @@ export const facilities = pgTable(
     openingHours: text("opening_hours"),
 
     // --- Classification ---
-    primarySectorId: text("primary_sector_id").references(() => sectors.id, { onDelete: "set null" }),
     conformityStatus: conformityStatusEnum("conformity_status").notNull().default("INCOMPLETE"),
-    commercialStatus: commercialStatusEnum("commercial_status"),
-    purchaseStatus: purchaseStatusEnum("purchase_status"),
     imageUrl: text("image_url"),
     /** Legacy free-text unit type (Excel); keep alongside CNES codes in v1. */
     unitType: text("unit_type"),
@@ -130,7 +125,6 @@ export const facilities = pgTable(
     index("facilities_name_idx").on(t.displayName),
     index("facilities_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
     index("facilities_territory_assignment_status_idx").on(t.territoryAssignmentStatus),
-    index("facilities_primary_sector_id_idx").on(t.primarySectorId),
     index("facilities_conformity_status_idx").on(t.conformityStatus),
     index("facilities_cnes_unit_id_idx")
       .on(t.cnesUnitId)
@@ -447,6 +441,9 @@ export const facilityConsultantAssignments = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    verticalId: text("vertical_id")
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "restrict" }),
     startedAt: timestamp("started_at").notNull().defaultNow(),
     endedAt: timestamp("ended_at"),
     assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
@@ -459,7 +456,42 @@ export const facilityConsultantAssignments = pgTable(
   (t) => [
     index("facility_consultant_assignments_facility_id_idx").on(t.facilityId),
     index("facility_consultant_assignments_user_id_idx").on(t.userId),
+    index("facility_consultant_assignments_vertical_id_idx").on(t.verticalId),
     index("facility_consultant_assignments_facility_id_ended_at_idx").on(t.facilityId, t.endedAt),
+    uniqueIndex("facility_consultant_assignments_facility_vertical_active_uidx")
+      .on(t.facilityId, t.verticalId)
+      .where(sql`${t.endedAt} IS NULL`),
+  ]
+);
+
+/**
+ * Vertical-specific commercial profile for a global facility.
+ * A facility may have one profile per business vertical.
+ */
+export const facilityVerticalProfiles = pgTable(
+  "facility_vertical_profiles",
+  {
+    id: text("id").primaryKey().$defaultFn(() => createId()),
+    facilityId: text("facility_id")
+      .notNull()
+      .references(() => facilities.id, { onDelete: "cascade" }),
+    verticalId: text("vertical_id")
+      .notNull()
+      .references(() => businessVerticals.id, { onDelete: "restrict" }),
+    isActive: boolean("is_active").notNull().default(true),
+    commercialStatus: commercialStatusEnum("commercial_status"),
+    purchaseStatus: purchaseStatusEnum("purchase_status"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("facility_vertical_profiles_facility_id_vertical_id_uidx").on(
+      t.facilityId,
+      t.verticalId
+    ),
+    index("facility_vertical_profiles_facility_id_idx").on(t.facilityId),
+    index("facility_vertical_profiles_vertical_id_idx").on(t.verticalId),
+    index("facility_vertical_profiles_commercial_status_idx").on(t.commercialStatus),
   ]
 );
 
@@ -507,7 +539,9 @@ export const conformityRequirements = pgTable(
     slug: text("slug").notNull().unique(),
     name: text("name").notNull(),
     description: text("description"),
-    sectorId: text("sector_id").references(() => sectors.id, { onDelete: "set null" }),
+    verticalId: text("vertical_id").references(() => businessVerticals.id, {
+      onDelete: "set null",
+    }),
     /** When set, requirement applies only to facilities with this tax id type. */
     appliesToTaxIdType: facilityTaxIdTypeEnum("applies_to_tax_id_type"),
     isActive: boolean("is_active").notNull().default(true),
@@ -528,7 +562,7 @@ export const conformityRequirements = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => [
-    index("conformity_requirements_sector_id_idx").on(t.sectorId),
+    index("conformity_requirements_vertical_id_idx").on(t.verticalId),
     index("conformity_requirements_is_active_idx").on(t.isActive),
     index("conformity_requirements_applies_to_tax_id_type_idx").on(t.appliesToTaxIdType),
   ]
@@ -598,7 +632,6 @@ export const facilityServices = pgTable(
 
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   territory: one(territories, { fields: [facilities.territoryId], references: [territories.id] }),
-  primarySector: one(sectors, { fields: [facilities.primarySectorId], references: [sectors.id] }),
   facilityType: one(facilityTypes, {
     fields: [facilities.facilityTypeCode],
     references: [facilityTypes.facilityTypeCode],
@@ -611,6 +644,7 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
     fields: [facilities.registryDeactivationCode],
     references: [deactivationReasons.deactivationCode],
   }),
+  verticalProfiles: many(facilityVerticalProfiles),
   professionalAssociations: many(facilityProfessionals),
   representatives: many(facilityRepresentatives),
   consultantAssignments: many(facilityConsultantAssignments),
@@ -620,6 +654,20 @@ export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   notes: many(facilityNotes),
   photos: many(facilityPhotos),
 }));
+
+export const facilityVerticalProfilesRelations = relations(
+  facilityVerticalProfiles,
+  ({ one }) => ({
+    facility: one(facilities, {
+      fields: [facilityVerticalProfiles.facilityId],
+      references: [facilities.id],
+    }),
+    vertical: one(businessVerticals, {
+      fields: [facilityVerticalProfiles.verticalId],
+      references: [businessVerticals.id],
+    }),
+  })
+);
 
 export const facilityPhotosRelations = relations(facilityPhotos, ({ one }) => ({
   facility: one(facilities, {
@@ -724,6 +772,10 @@ export const userRepresentativeRelationshipsRelations = relations(
 
 export const facilityConsultantAssignmentsRelations = relations(facilityConsultantAssignments, ({ one }) => ({
   facility: one(facilities, { fields: [facilityConsultantAssignments.facilityId], references: [facilities.id] }),
+  vertical: one(businessVerticals, {
+    fields: [facilityConsultantAssignments.verticalId],
+    references: [businessVerticals.id],
+  }),
   user: one(users, {
     fields: [facilityConsultantAssignments.userId],
     references: [users.id],
@@ -749,7 +801,10 @@ export const facilityHealthcareProviderSharesRelations = relations(facilityHealt
 }));
 
 export const conformityRequirementsRelations = relations(conformityRequirements, ({ one, many }) => ({
-  sector: one(sectors, { fields: [conformityRequirements.sectorId], references: [sectors.id] }),
+  vertical: one(businessVerticals, {
+    fields: [conformityRequirements.verticalId],
+    references: [businessVerticals.id],
+  }),
   records: many(conformityRecords),
 }));
 

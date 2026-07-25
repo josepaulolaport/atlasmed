@@ -30,8 +30,9 @@ const listFacilitiesRoute = new Elysia()
   .use(requirePermission("read", "FACILITY"))
   .get(
     "/facilities",
-    async ({ query, getScope }) => {
+    async ({ query, getScope, getUser }: any) => {
       const scope = await getScope();
+      const actor = await getUser();
       const filters = parseListFacilitiesQuery(query);
       return facilityUseCases.listFacilities().execute({
         page: query.page ? Number(query.page) : undefined,
@@ -39,6 +40,8 @@ const listFacilitiesRoute = new Elysia()
         search: query.search,
         ...filters,
         scope,
+        role: actor.role.name,
+        verticalId: query.verticalId,
       });
     },
     {
@@ -57,6 +60,7 @@ const listFacilitiesRoute = new Elysia()
         commercialStatus: t.Optional(t.String()),
         productIds: t.Optional(t.String()),
         sort: t.Optional(t.String()),
+        verticalId: t.Optional(t.String()),
       }),
     }
   );
@@ -88,11 +92,14 @@ const getFacilityRoute = new Elysia()
   .use(requirePermission("read", "FACILITY", { resourceIdParam: "id" }))
   .get(
     "/facilities/:id",
-    async ({ params, getScope }) => {
+    async ({ params, getScope, getUser, query }: any) => {
       const scope = await getScope();
+      const actor = await getUser();
       const clinic = await facilityUseCases.getFacility().execute({
         facilityId: params.id,
         scope,
+        role: actor.role.name,
+        verticalId: query.verticalId,
       });
 
       if (!clinic) {
@@ -107,6 +114,9 @@ const getFacilityRoute = new Elysia()
         tags: ["Clinics"],
         security: [{ bearerAuth: [] }],
       },
+      query: t.Object({
+        verticalId: t.Optional(t.String()),
+      }),
     }
   );
 
@@ -785,14 +795,17 @@ const assignConsultantRoute = new Elysia()
   .use(requirePermission("update", "FACILITY", { resourceIdParam: "id" }))
   .post(
     "/facilities/:id/consultant-assignments",
-    async ({ params, body, getUserId, getScope }) => {
+    async ({ params, body, getUserId, getScope, getUser }) => {
       const scope = await getScope();
       const assignedByUserId = await getUserId();
+      const user = await getUser();
       return facilityUseCases.assignConsultant().execute({
         facilityId: params.id,
         userId: body.userId,
+        verticalId: body.verticalId,
         assignedByUserId,
         scope,
+        role: user.role.name,
       });
     },
     {
@@ -803,6 +816,7 @@ const assignConsultantRoute = new Elysia()
       },
       body: t.Object({
         userId: t.String(),
+        verticalId: t.Optional(t.String()),
       }),
     }
   );

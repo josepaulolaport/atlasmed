@@ -12,7 +12,7 @@ export interface ConformityRequirementRecord {
   slug: string;
   name: string;
   description: string | null;
-  sectorId: string | null;
+  verticalId: string | null;
   appliesToTaxIdType: FacilityTaxIdType | null;
   isActive: boolean;
   allowedMimeTypes: string[];

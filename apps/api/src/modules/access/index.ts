@@ -20,7 +20,7 @@ import { userAssignmentsRoute } from "./infrastructure/routes/user-assignments.r
 import { userPermissionsRoute } from "./infrastructure/routes/user-permissions.route";
 import { changePasswordRoute } from "./infrastructure/routes/change-password.route";
 import { capabilitiesRoute } from "./infrastructure/routes/capabilities.route";
-import { sectorsRoute } from "./infrastructure/routes/sectors.route";
+import { verticalsRoute } from "./infrastructure/routes/verticals.route";
 
 export const user = userRoute;
 
@@ -47,4 +47,4 @@ export const access = new Elysia({
   .use(verificationRoute)
   .use(rolesRoute)
   .use(userPermissionsRoute)
-  .use(sectorsRoute);
+  .use(verticalsRoute);

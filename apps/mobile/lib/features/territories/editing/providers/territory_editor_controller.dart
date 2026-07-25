@@ -56,11 +56,10 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
         );
         return;
       }
-      final sameKindAndSector = await repository.getTerritories(
+      final sameKind = await repository.getTerritories(
         territoryTypeSlug: territory.territoryType.slug,
-        sectorId: territory.sectorId,
       );
-      final neighbors = sameKindAndSector
+      final neighbors = sameKind
           .where((candidate) => candidate.id != territory.id)
           .toList();
       final fenceZone = await _loadFenceZone(
@@ -92,10 +91,7 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
   Future<void> setDraft(TerritoryDraft draft) async {
     final previousDraft = state.draft;
     final isFirst = previousDraft == null;
-    final kindOrSectorChanged =
-        isFirst ||
-        previousDraft.kind != draft.kind ||
-        previousDraft.sectorId != draft.sectorId;
+    final kindChanged = isFirst || previousDraft.kind != draft.kind;
     final managerZoneChanged =
         isFirst || previousDraft.managerTerritoryId != draft.managerTerritoryId;
 
@@ -124,16 +120,15 @@ class TerritoryEditorController extends StateNotifier<TerritoryEditorState> {
       );
     }
 
-    if (!kindOrSectorChanged) return;
+    if (!kindChanged) return;
     try {
       final repository = _ref.read(territoryRepositoryProvider);
-      final sameKindAndSector = await repository.getTerritories(
+      final sameKind = await repository.getTerritories(
         territoryTypeSlug: draft.kind.slug,
-        sectorId: draft.sectorId,
       );
       state = state.copyWith(
-        neighbors: sameKindAndSector,
-        validation: _validate(state.working ?? const [], sameKindAndSector),
+        neighbors: sameKind,
+        validation: _validate(state.working ?? const [], sameKind),
       );
     } catch (_) {
       // Best-effort — overlap checks just won't run against real

@@ -17,6 +17,8 @@ import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/skelet
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_row.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/sort_sheet.dart';
 import 'package:atlasmed_mobile_app/features/explore/presentation/widgets/tab_toggle.dart';
+import 'package:atlasmed_mobile_app/core/user/facility_vertical_filter_bar.dart';
+import 'package:atlasmed_mobile_app/core/user/vertical_scope_provider.dart';
 import 'package:atlasmed_mobile_app/shared/widgets/app_shell.dart';
 
 class ExploreScreen extends ConsumerStatefulWidget {
@@ -55,6 +57,11 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
     final state = ref.watch(exploreProvider);
     final notifier = ref.read(exploreProvider.notifier);
 
+    ref.listen<String?>(selectedFacilityVerticalIdProvider, (previous, next) {
+      if (previous == next) return;
+      unawaited(notifier.refreshGpsAndList());
+    });
+
     final isClinic = state.activeTab == 'clinic';
     final filteredList = isClinic
         ? state.filteredClinics
@@ -75,6 +82,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 const AtlasTopBar(page: 'Explorar'),
                 const SizedBox(height: 16),
                 _buildSearchBar(state, notifier, filterCount, isClinic),
+                const FacilityVerticalFilterBar(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                ),
                 TabToggle(
                   value: state.activeTab,
                   onChanged: notifier.setTab,

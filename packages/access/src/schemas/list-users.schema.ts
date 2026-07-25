@@ -9,7 +9,7 @@ export const listUsersQuerySchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED", "PENDING"]).optional(),
   role: z.string().min(1).optional(),
   search: z.string().min(1).optional(),
-  sectorId: z.string().min(1).optional(),
+  verticalId: z.string().min(1).optional(),
   sortBy: listUsersSortBySchema.optional(),
   sortDir: listUsersSortDirSchema.optional(),
 });

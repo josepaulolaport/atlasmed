@@ -1,5 +1,5 @@
 import type { InviteRecord } from "../interfaces/invite.repository.interface";
-import type { InviteStagedSectorAssignment } from "../interfaces/invite.repository.interface";
+import type { InviteStagedVerticalAssignment } from "../interfaces/invite.repository.interface";
 
 export function serializeInvitation(params: {
   invite: InviteRecord;
@@ -10,21 +10,21 @@ export function serializeInvitation(params: {
     firstName?: string | null;
     lastName?: string | null;
   } | null;
-  sectorAssignments?: Array<{
-    sectorId: string;
-    sectorName?: string;
+  verticalAssignments?: Array<{
+    verticalId: string;
+    verticalName?: string;
     managerId?: string | null;
     managerName?: string;
     territories: Array<{
       id: string;
       name: string;
-      sectorId?: string;
-      sectorName?: string;
+      verticalId?: string;
+      verticalName?: string;
       boundary?: unknown;
     }>;
   }>;
 }) {
-  const { invite, invitedBy, sectorAssignments = [] } = params;
+  const { invite, invitedBy, verticalAssignments = [] } = params;
   const invitedByName = invitedBy
     ? [invitedBy.firstName, invitedBy.lastName]
         .filter(Boolean)
@@ -32,7 +32,7 @@ export function serializeInvitation(params: {
         .trim() || invitedBy.username
     : "Unknown";
 
-  const firstSector = sectorAssignments[0];
+  const firstVertical = verticalAssignments[0];
 
   return {
     id: invite.id,
@@ -69,16 +69,16 @@ export function serializeInvitation(params: {
           username: "Unknown",
           email: "",
         },
-    managerName: firstSector?.managerName,
-    territoryName: firstSector?.territories.map((t) => t.name).join(", "),
-    sectorAssignments,
+    managerName: firstVertical?.managerName,
+    territoryName: firstVertical?.territories.map((t) => t.name).join(", "),
+    verticalAssignments,
   };
 }
 
 export function groupStagedAssignments(
-  rows: InviteStagedSectorAssignment[],
-): Map<string, InviteStagedSectorAssignment[]> {
-  const map = new Map<string, InviteStagedSectorAssignment[]>();
+  rows: InviteStagedVerticalAssignment[],
+): Map<string, InviteStagedVerticalAssignment[]> {
+  const map = new Map<string, InviteStagedVerticalAssignment[]>();
   for (const row of rows) {
     const list = map.get(row.invitationId) ?? [];
     list.push(row);
