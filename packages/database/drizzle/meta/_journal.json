@@ -162,6 +162,13 @@
       "when": 1784839149777,
       "tag": "0022_cnes_lookups_and_enrichment",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785008862629,
+      "tag": "0023_defer_cnes_lookup_fks",
+      "breakpoints": true
     }
   ]
 }
