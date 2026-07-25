@@ -45,7 +45,7 @@ Territory _territory({required String id, required List<MapCoordinate> ring}) {
     slug: id,
     code: id,
     territoryType: _managerZoneType,
-        boundary: geometry,
+    boundary: geometry,
     centroid: ring.first,
   );
 }
@@ -74,7 +74,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<Territory>> getTerritories({
     required String territoryTypeSlug,
-      }) async {
+  }) async {
     return territories
         .where((t) => t.territoryType.slug == territoryTypeSlug)
         .toList();
@@ -108,7 +108,7 @@ class _FakeTerritoryRepository implements TerritoryRepository {
       territoryType: draft.kind == TerritoryKind.managerZone
           ? _managerZoneType
           : _repPatchType,
-            managerTerritoryId: draft.managerTerritoryId,
+      managerTerritoryId: draft.managerTerritoryId,
       boundary: boundary,
       centroid: centroid,
     );
@@ -133,14 +133,14 @@ class _FakeTerritoryRepository implements TerritoryRepository {
   Future<void> updateTerritoryInfo(
     String territoryId, {
     required String name,
-        required bool isActive,
+    required bool isActive,
     String? managerTerritoryId,
   }) async {
     final index = territories.indexWhere((t) => t.id == territoryId);
     if (index == -1) return;
     territories[index] = territories[index].copyWith(
       name: name,
-            isActive: isActive,
+      isActive: isActive,
       managerTerritoryId: managerTerritoryId,
     );
   }
@@ -451,7 +451,7 @@ void main() {
         slug: 'legacy',
         code: 'legacy',
         territoryType: _managerZoneType,
-                boundary: TerritoryGeometry.multiPolygon([
+        boundary: TerritoryGeometry.multiPolygon([
           [
             [...legacySquareA, legacySquareA.first],
           ],
@@ -578,7 +578,6 @@ void main() {
   group('creating a new territory', () {
     const creatingTarget = TerritoryEditorTarget.creating(
       initialKind: TerritoryKind.managerZone,
-      
     );
 
     Future<TerritoryEditorController> loadCreatingController() async {
@@ -622,7 +621,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-                  ),
+        ),
       );
 
       var state = container.read(
@@ -656,7 +655,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-                  ),
+        ),
       );
 
       final state = container.read(
@@ -674,7 +673,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Teste',
           kind: TerritoryKind.managerZone,
-                  ),
+        ),
       );
       controller.addDrawingPoint(_c(20, 20));
       controller.addDrawingPoint(_c(22, 20));

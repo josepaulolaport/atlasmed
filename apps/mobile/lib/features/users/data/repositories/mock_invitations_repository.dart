@@ -17,7 +17,9 @@ class MockInvitationsRepository implements InvitationsRepository {
   ({String? managerName, String? territoryName}) _summarize(
     List<InviteVerticalAssignment> verticalAssignments,
   ) {
-    final first = verticalAssignments.isEmpty ? null : verticalAssignments.first;
+    final first = verticalAssignments.isEmpty
+        ? null
+        : verticalAssignments.first;
     final managerName = first?.managerName;
     final territoryName = first == null || first.territories.isEmpty
         ? null
@@ -75,7 +77,9 @@ class MockInvitationsRepository implements InvitationsRepository {
       invitedByName: 'Você',
       managerName: summary.managerName,
       territoryName: summary.territoryName,
-      verticalAssignments: List<InviteVerticalAssignment>.of(verticalAssignments),
+      verticalAssignments: List<InviteVerticalAssignment>.of(
+        verticalAssignments,
+      ),
       createdAt: DateTime.now(),
       expiresAt: DateTime.now().add(const Duration(days: 7)),
       resendCount: 0,
@@ -124,7 +128,9 @@ class MockInvitationsRepository implements InvitationsRepository {
       territoryName: summary.territoryName,
       clearManagerName: summary.managerName == null,
       clearTerritoryName: summary.territoryName == null,
-      verticalAssignments: List<InviteVerticalAssignment>.of(verticalAssignments),
+      verticalAssignments: List<InviteVerticalAssignment>.of(
+        verticalAssignments,
+      ),
     );
     _invitations[index] = updated;
     return updated;

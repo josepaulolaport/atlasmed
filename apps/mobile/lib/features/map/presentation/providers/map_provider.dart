@@ -57,7 +57,9 @@ final liveMapClinicsProvider =
       ref,
       query,
     ) async {
-      final verticalId = await ref.watch(effectiveFacilityVerticalIdProvider.future);
+      final verticalId = await ref.watch(
+        effectiveFacilityVerticalIdProvider.future,
+      );
       return fetchNearbyFacilities(
         latitude: query.latitude,
         longitude: query.longitude,

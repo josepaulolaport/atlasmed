@@ -23,10 +23,8 @@ class TerritoryMetadataForm extends ConsumerStatefulWidget {
     return Navigator.of(context).push<TerritoryDraft>(
       MaterialPageRoute(
         fullscreenDialog: true,
-        builder: (_) => TerritoryMetadataForm(
-          initial: initial,
-          initialKind: initialKind,
-        ),
+        builder: (_) =>
+            TerritoryMetadataForm(initial: initial, initialKind: initialKind),
       ),
     );
   }

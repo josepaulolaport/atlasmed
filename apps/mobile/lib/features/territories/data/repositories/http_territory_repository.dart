@@ -221,10 +221,7 @@ class HttpTerritoryRepository implements TerritoryRepository {
   @override
   Future<List<AssignableManager>> getAssignableManagers() async {
     final zonesResponse = await _get(
-      _territoryUri('/territories', {
-        'type': 'manager_zone',
-        'format': 'flat',
-      }),
+      _territoryUri('/territories', {'type': 'manager_zone', 'format': 'flat'}),
     );
     _throwIfError(zonesResponse);
     final decoded = jsonDecode(zonesResponse.body) as Map<String, dynamic>;

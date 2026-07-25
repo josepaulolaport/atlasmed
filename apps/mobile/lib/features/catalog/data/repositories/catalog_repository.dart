@@ -145,7 +145,10 @@ class CatalogRepository {
     _throwIfError(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return (decoded['data'] as List<dynamic>)
-        .map((row) => CatalogBusinessVertical.fromJson(row as Map<String, dynamic>))
+        .map(
+          (row) =>
+              CatalogBusinessVertical.fromJson(row as Map<String, dynamic>),
+        )
         .toList();
   }
 

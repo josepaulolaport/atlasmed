@@ -235,7 +235,9 @@ class _UserPickerSheetState extends ConsumerState<UserPickerSheet> {
   }
 
   Widget _buildManagerZoneList(ScrollController scrollController) {
-    final future = ref.read(territoryRepositoryProvider).getAssignableManagers();
+    final future = ref
+        .read(territoryRepositoryProvider)
+        .getAssignableManagers();
 
     return FutureBuilder<List<AssignableManager>>(
       future: future,

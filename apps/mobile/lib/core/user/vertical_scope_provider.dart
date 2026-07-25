@@ -6,43 +6,53 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Current user's business vertical assignments from `GET /user/assignments`.
 final currentUserVerticalAssignmentsProvider =
     FutureProvider<List<UserVerticalAssignment>>((ref) async {
-  ref.watch(sessionProvider);
-  final repo = ref.watch(userAssignmentsProvider);
-  final assignments = await repo.currentValueOrResolve();
-  if (assignments == null) return const [];
-  return assignments.verticals;
-});
+      ref.watch(sessionProvider);
+      final repo = ref.watch(userAssignmentsProvider);
+      final assignments = await repo.currentValueOrResolve();
+      if (assignments == null) return const [];
+      return assignments.verticals;
+    });
 
 /// Current user's business vertical ids.
-final currentUserVerticalIdsProvider = FutureProvider<List<String>>((ref) async {
-  final verticals = await ref.watch(currentUserVerticalAssignmentsProvider.future);
+final currentUserVerticalIdsProvider = FutureProvider<List<String>>((
+  ref,
+) async {
+  final verticals = await ref.watch(
+    currentUserVerticalAssignmentsProvider.future,
+  );
   return verticals.map((v) => v.verticalId).toList(growable: false);
 });
 
 /// Vertical options for facility/map/explore filter chips.
 final currentUserFacilityVerticalOptionsProvider =
     FutureProvider<List<BusinessVertical>>((ref) async {
-  final verticals = await ref.watch(currentUserVerticalAssignmentsProvider.future);
-  return verticals
-      .map(
-        (v) => BusinessVertical(
-          id: v.verticalId,
-          slug: '',
-          name: v.verticalName,
-        ),
-      )
-      .toList(growable: false);
-});
+      final verticals = await ref.watch(
+        currentUserVerticalAssignmentsProvider.future,
+      );
+      return verticals
+          .map(
+            (v) => BusinessVertical(
+              id: v.verticalId,
+              slug: '',
+              name: v.verticalName,
+            ),
+          )
+          .toList(growable: false);
+    });
 
 /// Explicit vertical filter for facilities/map/explore when the user has
 /// multiple verticals. `null` means "union of all assigned verticals".
-final selectedFacilityVerticalIdProvider = StateProvider<String?>((ref) => null);
+final selectedFacilityVerticalIdProvider = StateProvider<String?>(
+  (ref) => null,
+);
 
 /// Vertical id to pass on facility list queries.
 ///
 /// - 0–1 assigned verticals → omit (`null`) so the API uses its default/union.
 /// - 2+ verticals → [selectedFacilityVerticalIdProvider] (`null` = Todas / union).
-final effectiveFacilityVerticalIdProvider = FutureProvider<String?>((ref) async {
+final effectiveFacilityVerticalIdProvider = FutureProvider<String?>((
+  ref,
+) async {
   final verticalIds = await ref.watch(currentUserVerticalIdsProvider.future);
   if (verticalIds.length <= 1) return null;
 

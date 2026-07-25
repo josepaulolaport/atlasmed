@@ -65,11 +65,10 @@ final territoriesForVerticalProvider = FutureProvider.autoDispose
           .getTerritoryOptions(verticalId: verticalId);
     });
 
-final verticalOptionsProvider = FutureProvider.autoDispose<List<VerticalOption>>((
-  ref,
-) {
-  return ref.watch(usersRepositoryProvider).getVerticals();
-});
+final verticalOptionsProvider =
+    FutureProvider.autoDispose<List<VerticalOption>>((ref) {
+      return ref.watch(usersRepositoryProvider).getVerticals();
+    });
 
 final invitationsListProvider =
     FutureProvider.autoDispose<List<UserInvitation>>((ref) {

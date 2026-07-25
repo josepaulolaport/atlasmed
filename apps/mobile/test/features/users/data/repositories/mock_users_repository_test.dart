@@ -261,18 +261,21 @@ void main() {
       },
     );
 
-    test('getManagerOptions filters by sector when verticalId is set', () async {
-      final managers = await repository.getManagerOptions(
-        verticalId: 'sector-cardiologia',
-      );
-      expect(managers, isNotEmpty);
-      expect(
-        managers.every((m) => m.verticalIds.contains('sector-cardiologia')),
-        isTrue,
-      );
-      expect(managers.any((m) => m.id == 'user-eduardo-alves'), isTrue);
-      expect(managers.any((m) => m.id == 'user-renata-souza'), isFalse);
-    });
+    test(
+      'getManagerOptions filters by sector when verticalId is set',
+      () async {
+        final managers = await repository.getManagerOptions(
+          verticalId: 'sector-cardiologia',
+        );
+        expect(managers, isNotEmpty);
+        expect(
+          managers.every((m) => m.verticalIds.contains('sector-cardiologia')),
+          isTrue,
+        );
+        expect(managers.any((m) => m.id == 'user-eduardo-alves'), isTrue);
+        expect(managers.any((m) => m.id == 'user-renata-souza'), isFalse);
+      },
+    );
 
     test(
       'replaceVerticalAssignments replaces the full invite-shaped payload',

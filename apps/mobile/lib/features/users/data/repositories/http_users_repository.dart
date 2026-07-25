@@ -365,7 +365,9 @@ class HttpUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId}) async {
+  Future<List<TerritoryOption>> getTerritoryOptions({
+    String? verticalId,
+  }) async {
     final response = await _get(
       _territoryUri('/territories', {
         'type': 'manager_zone',

@@ -68,7 +68,9 @@ class HttpInvitationsRepository implements InvitationsRepository {
       'roleId': roleId,
       'invitedByName': invitedByName,
       'verticalAssignments':
-          (json['verticalAssignments'] as List<dynamic>? ?? const []).map((raw) {
+          (json['verticalAssignments'] as List<dynamic>? ?? const []).map((
+            raw,
+          ) {
             final map = raw as Map<String, dynamic>;
             return {
               ...map,

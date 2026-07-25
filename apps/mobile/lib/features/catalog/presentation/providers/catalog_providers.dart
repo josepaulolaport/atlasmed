@@ -12,7 +12,9 @@ final catalogRepositoryProvider = Provider<CatalogRepository>((ref) {
 
 /// Active commercial sectors — backs the admin product form's sector
 /// picker only, so it's read once per form open rather than kept live.
-final catalogVerticalsProvider = FutureProvider<List<CatalogBusinessVertical>>((ref) {
+final catalogVerticalsProvider = FutureProvider<List<CatalogBusinessVertical>>((
+  ref,
+) {
   return ref.watch(catalogRepositoryProvider).getVerticals();
 });
 

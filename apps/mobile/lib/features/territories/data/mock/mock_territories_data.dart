@@ -38,7 +38,11 @@ const repPatchType = TerritoryType(
 );
 
 final mockSectors = <BusinessVertical>[
-  const BusinessVertical(id: 'sector-oncologia', slug: 'oncologia', name: 'Oncologia'),
+  const BusinessVertical(
+    id: 'sector-oncologia',
+    slug: 'oncologia',
+    name: 'Oncologia',
+  ),
   const BusinessVertical(
     id: 'sector-cardiologia',
     slug: 'cardiologia',

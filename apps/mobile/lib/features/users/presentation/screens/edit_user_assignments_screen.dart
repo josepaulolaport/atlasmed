@@ -56,7 +56,9 @@ class _EditUserAssignmentsScreenState
         _verticalAssignments
           ..clear()
           ..addEntries(
-            assignments.verticalAssignments.map((a) => MapEntry(a.verticalId, a)),
+            assignments.verticalAssignments.map(
+              (a) => MapEntry(a.verticalId, a),
+            ),
           );
         _loading = false;
         _loadError = null;
@@ -195,7 +197,8 @@ class _EditUserAssignmentsScreenState
         const SizedBox(height: 8),
         sectorsAsync.when(
           loading: () => const CircularProgressIndicator(),
-          error: (_, _) => const Text('Não foi possível carregar os verticais.'),
+          error: (_, _) =>
+              const Text('Não foi possível carregar os verticais.'),
           data: (sectors) => Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -282,7 +285,9 @@ class _EditUserAssignmentsScreenState
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível salvar os verticais.')),
+          const SnackBar(
+            content: Text('Não foi possível salvar os verticais.'),
+          ),
         );
       }
     } finally {

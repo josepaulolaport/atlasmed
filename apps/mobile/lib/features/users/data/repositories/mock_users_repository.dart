@@ -245,7 +245,9 @@ class MockUsersRepository implements UsersRepository {
     await _delay(400);
     _assignments[userId] = UserAssignments(
       userId: userId,
-      verticalAssignments: List<InviteVerticalAssignment>.of(verticalAssignments),
+      verticalAssignments: List<InviteVerticalAssignment>.of(
+        verticalAssignments,
+      ),
       isOperationallyActive: verticalAssignments.any(
         (a) => a.territories.isNotEmpty,
       ),
@@ -313,7 +315,9 @@ class MockUsersRepository implements UsersRepository {
       (m) => m.id == managerId,
       orElse: () => ManagerOption(id: managerId, name: '—'),
     );
-    var sectors = List<InviteVerticalAssignment>.of(current.verticalAssignments);
+    var sectors = List<InviteVerticalAssignment>.of(
+      current.verticalAssignments,
+    );
     if (sectors.isEmpty) {
       sectors = [
         InviteVerticalAssignment(
@@ -343,7 +347,9 @@ class MockUsersRepository implements UsersRepository {
       orElse: () => TerritoryOption(id: territoryId, name: '—'),
     );
     final verticalId = territory.verticalId ?? 'sector-unknown';
-    final sectors = List<InviteVerticalAssignment>.of(current.verticalAssignments);
+    final sectors = List<InviteVerticalAssignment>.of(
+      current.verticalAssignments,
+    );
     final index = sectors.indexWhere((a) => a.verticalId == verticalId);
     if (index == -1) {
       sectors.add(
@@ -389,7 +395,8 @@ class MockUsersRepository implements UsersRepository {
   Future<void> assignVertical(String userId, String verticalId) async {
     await _delay();
     final current = await getUserAssignments(userId);
-    if (current.verticalAssignments.any((s) => s.verticalId == verticalId)) return;
+    if (current.verticalAssignments.any((s) => s.verticalId == verticalId))
+      return;
     final sector = mockVerticalOptions.firstWhere(
       (s) => s.id == verticalId,
       orElse: () => VerticalOption(id: verticalId, name: '—'),
@@ -483,7 +490,9 @@ class MockUsersRepository implements UsersRepository {
   }
 
   @override
-  Future<List<TerritoryOption>> getTerritoryOptions({String? verticalId}) async {
+  Future<List<TerritoryOption>> getTerritoryOptions({
+    String? verticalId,
+  }) async {
     await _delay(150);
     final all = List<TerritoryOption>.of(mockTerritoryOptions);
     if (verticalId == null) return all;
@@ -506,7 +515,8 @@ class MockUsersRepository implements UsersRepository {
         : mockTerritoryOptions
               .where((t) {
                 if (t.managerTerritoryId != zoneId) return false;
-                if (verticalId != null && t.verticalId != verticalId) return false;
+                if (verticalId != null && t.verticalId != verticalId)
+                  return false;
                 return true;
               })
               .toList(growable: false);

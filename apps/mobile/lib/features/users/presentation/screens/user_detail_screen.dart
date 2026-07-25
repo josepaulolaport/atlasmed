@@ -555,7 +555,8 @@ class _VerticalAssignmentCard extends ConsumerStatefulWidget {
       _VerticalAssignmentCardState();
 }
 
-class _VerticalAssignmentCardState extends ConsumerState<_VerticalAssignmentCard> {
+class _VerticalAssignmentCardState
+    extends ConsumerState<_VerticalAssignmentCard> {
   bool _busy = false;
 
   InviteVerticalAssignment get assignment => widget.assignment;
@@ -573,7 +574,9 @@ class _VerticalAssignmentCardState extends ConsumerState<_VerticalAssignmentCard
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Não foi possível atualizar o vertical.')),
+          const SnackBar(
+            content: Text('Não foi possível atualizar o vertical.'),
+          ),
         );
       }
     } finally {

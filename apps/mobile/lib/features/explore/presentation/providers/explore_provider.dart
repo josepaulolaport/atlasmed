@@ -477,7 +477,9 @@ class ExploreNotifier extends StateNotifier<ExploreState> {
   }) async {
     final p = page ?? _clinicPage;
     final origin = _origin;
-    final verticalId = await _ref.read(effectiveFacilityVerticalIdProvider.future);
+    final verticalId = await _ref.read(
+      effectiveFacilityVerticalIdProvider.future,
+    );
     final repo = ClinicsRepository(
       page: p,
       limit: 20,

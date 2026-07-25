@@ -249,5 +249,9 @@ class UserAssignments extends Equatable {
   }
 
   @override
-  List<Object?> get props => [userId, verticalAssignments, isOperationallyActive];
+  List<Object?> get props => [
+    userId,
+    verticalAssignments,
+    isOperationallyActive,
+  ];
 }

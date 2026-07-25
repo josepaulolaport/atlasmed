@@ -56,12 +56,14 @@ class _TerritoryInfoFormState extends ConsumerState<TerritoryInfoForm> {
     if (!_isValid || _saving) return;
     setState(() => _saving = true);
     try {
-      await ref.read(territoryRepositoryProvider).updateTerritoryInfo(
-        widget.territory.id,
-        name: _nameController.text.trim(),
-        isActive: _isActive,
-        managerTerritoryId: _isPatch ? _managerTerritoryId : null,
-      );
+      await ref
+          .read(territoryRepositoryProvider)
+          .updateTerritoryInfo(
+            widget.territory.id,
+            name: _nameController.text.trim(),
+            isActive: _isActive,
+            managerTerritoryId: _isPatch ? _managerTerritoryId : null,
+          );
       ref.invalidate(territoriesProvider);
       if (!mounted) return;
       Navigator.of(context).pop(true);

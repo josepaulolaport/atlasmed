@@ -95,7 +95,9 @@ class FacilityCadastroController {
       );
     }
 
-    final verticalId = await _ref.read(effectiveFacilityVerticalIdProvider.future);
+    final verticalId = await _ref.read(
+      effectiveFacilityVerticalIdProvider.future,
+    );
     final repo = FacilityCadastroRepository(facilityId);
     try {
       final uploaded = await repo.submitDocument(

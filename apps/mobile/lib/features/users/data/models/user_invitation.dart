@@ -109,19 +109,23 @@ class UserInvitation extends Equatable {
     phoneNumber: json['phoneNumber'] as String?,
     managerName: json['managerName'] as String?,
     territoryName: json['territoryName'] as String?,
-    verticalAssignments: (json['verticalAssignments'] as List<dynamic>? ?? const [])
-        .map(
-          (raw) => InviteVerticalAssignment(
-            verticalId: raw['verticalId'] as String,
-            verticalName: raw['verticalName'] as String,
-            managerId: raw['managerId'] as String?,
-            managerName: raw['managerName'] as String?,
-            territories: (raw['territories'] as List<dynamic>? ?? const [])
-                .map((t) => TerritoryOption.fromJson(t as Map<String, dynamic>))
-                .toList(),
-          ),
-        )
-        .toList(),
+    verticalAssignments:
+        (json['verticalAssignments'] as List<dynamic>? ?? const [])
+            .map(
+              (raw) => InviteVerticalAssignment(
+                verticalId: raw['verticalId'] as String,
+                verticalName: raw['verticalName'] as String,
+                managerId: raw['managerId'] as String?,
+                managerName: raw['managerName'] as String?,
+                territories: (raw['territories'] as List<dynamic>? ?? const [])
+                    .map(
+                      (t) =>
+                          TerritoryOption.fromJson(t as Map<String, dynamic>),
+                    )
+                    .toList(),
+              ),
+            )
+            .toList(),
     createdAt: DateTime.parse(json['createdAt'] as String),
     expiresAt: DateTime.parse(json['expiresAt'] as String),
     resendCount: json['resendCount'] as int? ?? 0,

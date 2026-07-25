@@ -28,13 +28,13 @@ void main() {
     test('generates an id/slug/code and stores the new territory', () async {
       final before = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
 
       final created = await repository.createTerritory(
         const TerritoryDraft(
           name: 'Zona Nova',
           kind: TerritoryKind.managerZone,
-                  ),
+        ),
         _square(),
         const MapCoordinate(longitude: 0.5, latitude: 0.5),
       );
@@ -47,7 +47,7 @@ void main() {
 
       final after = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
       expect(after.length, before.length + 1);
       expect(after.any((t) => t.id == created.id), isTrue);
     });
@@ -56,7 +56,7 @@ void main() {
         'patch under it', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
       final zone = zones.first;
       final countBefore = zone.repPatchCount ?? 0;
 
@@ -64,7 +64,7 @@ void main() {
         TerritoryDraft(
           name: 'Área Nova',
           kind: TerritoryKind.repPatch,
-                    managerTerritoryId: zone.id,
+          managerTerritoryId: zone.id,
         ),
         _square(),
         const MapCoordinate(longitude: 0.5, latitude: 0.5),
@@ -79,7 +79,7 @@ void main() {
         const TerritoryDraft(
           name: 'Zona Sem Gerente',
           kind: TerritoryKind.managerZone,
-                  ),
+        ),
         _square(offset: 2),
         const MapCoordinate(longitude: 2.5, latitude: 2.5),
       );
@@ -91,7 +91,7 @@ void main() {
     test('sets the territory assignedUserId', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
       final zone = zones.first;
 
       await repository.assignUser(zone.id, 'user-fernanda-duarte');
@@ -103,7 +103,7 @@ void main() {
     test('clears the assignment when passed null', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
       final zone = zones.first;
       await repository.assignUser(zone.id, 'user-fernanda-duarte');
 
@@ -118,7 +118,7 @@ void main() {
     test('updates name, active status and manager territory', () async {
       final patches = await repository.getTerritories(
         territoryTypeSlug: 'patch',
-              );
+      );
       final patch = patches.first;
       final otherZoneId =
           patch.managerTerritoryId == 'territory-zone-onco-oeste'
@@ -128,7 +128,7 @@ void main() {
       await repository.updateTerritoryInfo(
         patch.id,
         name: 'Nome Atualizado',
-                isActive: false,
+        isActive: false,
         managerTerritoryId: otherZoneId,
       );
 
@@ -140,25 +140,28 @@ void main() {
   });
 
   group('getAssignableManagers', () {
-    test('returns managers assigned to active manager-zone territories', () async {
-      final zones = await repository.getTerritories(
-        territoryTypeSlug: 'manager_zone',
-      );
-      final zone = zones.first;
-      await repository.assignUser(zone.id, 'user-fernanda-duarte');
+    test(
+      'returns managers assigned to active manager-zone territories',
+      () async {
+        final zones = await repository.getTerritories(
+          territoryTypeSlug: 'manager_zone',
+        );
+        final zone = zones.first;
+        await repository.assignUser(zone.id, 'user-fernanda-duarte');
 
-      final managers = await repository.getAssignableManagers();
+        final managers = await repository.getAssignableManagers();
 
-      expect(managers, isNotEmpty);
-      expect(
-        managers.any(
-          (m) =>
-              m.manager.id == 'user-fernanda-duarte' &&
-              m.zoneTerritoryId == zone.id,
-        ),
-        isTrue,
-      );
-    });
+        expect(managers, isNotEmpty);
+        expect(
+          managers.any(
+            (m) =>
+                m.manager.id == 'user-fernanda-duarte' &&
+                m.zoneTerritoryId == zone.id,
+          ),
+          isTrue,
+        );
+      },
+    );
 
     test('excludes an inactive manager zone', () async {
       final zones = await repository.getTerritories(
@@ -182,7 +185,7 @@ void main() {
     test('removes the territory', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
       final zone = zones.first;
 
       await repository.deleteTerritory(zone.id);
@@ -194,11 +197,11 @@ void main() {
         'manager zone', () async {
       final zones = await repository.getTerritories(
         territoryTypeSlug: 'manager_zone',
-              );
+      );
       final zone = zones.first;
       final patchesBefore = await repository.getTerritories(
         territoryTypeSlug: 'patch',
-              );
+      );
       final orphanedIds = patchesBefore
           .where((p) => p.managerTerritoryId == zone.id)
           .map((p) => p.id)

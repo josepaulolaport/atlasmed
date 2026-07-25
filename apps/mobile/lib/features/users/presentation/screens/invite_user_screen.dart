@@ -95,7 +95,9 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
         _verticalAssignments
           ..clear()
           ..addEntries(
-            invitation.verticalAssignments.map((a) => MapEntry(a.verticalId, a)),
+            invitation.verticalAssignments.map(
+              (a) => MapEntry(a.verticalId, a),
+            ),
           );
         _loadingInvitation = false;
         _loadError = null;
@@ -421,10 +423,8 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
                 needsTerritory: _needsTerritory,
                 onPickManager: () => _pickManager(assignment),
                 onClearManager: () => setState(() {
-                  _verticalAssignments[assignment.verticalId] = assignment.copyWith(
-                    clearManager: true,
-                    territories: const [],
-                  );
+                  _verticalAssignments[assignment.verticalId] = assignment
+                      .copyWith(clearManager: true, territories: const []);
                 }),
                 onPickTerritories: () => _pickTerritories(assignment),
                 onRemoveTerritory: (territoryId) {
@@ -603,9 +603,8 @@ class _InviteUserScreenState extends ConsumerState<InviteUserScreen> {
           if (!stillValid) {
             if (mounted) {
               setState(() {
-                _verticalAssignments[assignment.verticalId] = assignment.copyWith(
-                  territories: const [],
-                );
+                _verticalAssignments[assignment.verticalId] = assignment
+                    .copyWith(territories: const []);
                 _submitting = false;
               });
               ScaffoldMessenger.of(context).showSnackBar(
