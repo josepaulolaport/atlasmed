@@ -8,8 +8,9 @@ import {
   bigint,
   index,
   uniqueIndex,
+  foreignKey,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
 import { geometryPoint } from "../../types/geometry";
 import {
@@ -27,6 +28,15 @@ import {
 import { territories } from "./territories";
 import { sectors } from "./sectors";
 import { users } from "./users";
+import {
+  services,
+  serviceClassifications,
+  occupations,
+  facilityTypes,
+  unitTypes,
+  unitSubtypes,
+  deactivationReasons,
+} from "./cnes-lookups";
 
 export { sectors } from "./sectors";
 
@@ -41,9 +51,17 @@ export const facilities = pgTable(
 
     // --- Registry provenance ---
     cnesCode: text("cnes_code"),
-    facilityTypeCode: text("facility_type_code"),
+    /** CNES internal CO_UNIDADE (13 chars) — join key for relationship files. */
+    cnesUnitId: text("cnes_unit_id"),
+    facilityTypeCode: text("facility_type_code").references(
+      () => facilityTypes.facilityTypeCode,
+      { onDelete: "restrict" }
+    ),
     isActiveInRegistry: boolean("is_active_in_registry").notNull().default(true),
-    registryDeactivationCode: text("registry_deactivation_code"),
+    registryDeactivationCode: text("registry_deactivation_code").references(
+      () => deactivationReasons.deactivationCode,
+      { onDelete: "restrict" }
+    ),
 
     // --- Tax identifiers ---
     taxIdType: facilityTaxIdTypeEnum("tax_id_type").notNull().default("PJ"),
@@ -82,8 +100,16 @@ export const facilities = pgTable(
     commercialStatus: commercialStatusEnum("commercial_status"),
     purchaseStatus: purchaseStatusEnum("purchase_status"),
     imageUrl: text("image_url"),
+    /** Legacy free-text unit type (Excel); keep alongside CNES codes in v1. */
     unitType: text("unit_type"),
+    /** Legacy free-text unit subtype (Excel); keep alongside CNES codes in v1. */
     unitSubtype: text("unit_subtype"),
+    /** CNES TP_UNIDADE → unit_types. */
+    unitTypeCode: text("unit_type_code").references(() => unitTypes.unitTypeCode, {
+      onDelete: "restrict",
+    }),
+    /** CNES subtype code from rlEstabSubTipo; scoped by unit_type_code. */
+    unitSubtypeCode: text("unit_subtype_code"),
 
     // --- Territory ---
     territoryId: text("territory_id").references(() => territories.id, { onDelete: "set null" }),
@@ -115,6 +141,20 @@ export const facilities = pgTable(
     index("facilities_territory_assignment_status_idx").on(t.territoryAssignmentStatus),
     index("facilities_primary_sector_id_idx").on(t.primarySectorId),
     index("facilities_conformity_status_idx").on(t.conformityStatus),
+    index("facilities_cnes_unit_id_idx")
+      .on(t.cnesUnitId)
+      .where(sql`${t.cnesUnitId} IS NOT NULL`),
+    index("facilities_facility_type_code_idx")
+      .on(t.facilityTypeCode)
+      .where(sql`${t.facilityTypeCode} IS NOT NULL`),
+    index("facilities_unit_type_code_idx")
+      .on(t.unitTypeCode)
+      .where(sql`${t.unitTypeCode} IS NOT NULL`),
+    foreignKey({
+      name: "facilities_unit_type_code_unit_subtype_code_fk",
+      columns: [t.unitTypeCode, t.unitSubtypeCode],
+      foreignColumns: [unitSubtypes.unitTypeCode, unitSubtypes.subtypeCode],
+    }).onDelete("restrict"),
   ]
 );
 
@@ -135,9 +175,18 @@ export const professionals = pgTable(
     imageUrl: text("image_url"),
     favoriteTeam: text("favorite_team"),
     favoriteSport: text("favorite_sport"),
+    /** Free-text languages spoken, e.g. "Português, Inglês". */
+    languages: text("languages"),
     hobbies: text("hobbies"),
     notes: text("notes"),
     primarySpecialtyLabel: text("primary_specialty_label"),
+    /** Canonical CNES CBO for this person. */
+    primaryOccupationCode: text("primary_occupation_code").references(
+      () => occupations.occupationCode,
+      { onDelete: "restrict" }
+    ),
+    /** CNES CO_PROFISSIONAL_SUS for matching. */
+    cnesProfessionalId: text("cnes_professional_id"),
     crmCouncil: text("crm_council"),
     crmNumber: text("crm_number"),
     crmState: text("crm_state"),
@@ -155,10 +204,19 @@ export const professionals = pgTable(
   },
   (t) => [
     uniqueIndex("professionals_source_provider_external_source_id_uidx").on(t.sourceProvider, t.externalSourceId),
+    uniqueIndex("professionals_source_provider_cnes_professional_id_uidx")
+      .on(t.sourceProvider, t.cnesProfessionalId)
+      .where(sql`${t.cnesProfessionalId} IS NOT NULL`),
     index("professionals_deleted_at_idx").on(t.deletedAt),
     index("professionals_last_name_first_name_idx").on(t.lastName, t.firstName),
     index("professionals_source_provider_source_present_idx").on(t.sourceProvider, t.sourcePresent),
     index("professionals_tax_id_idx").on(t.taxId),
+    index("professionals_primary_occupation_code_idx")
+      .on(t.primaryOccupationCode)
+      .where(sql`${t.primaryOccupationCode} IS NOT NULL`),
+    index("professionals_cnes_professional_id_idx")
+      .on(t.cnesProfessionalId)
+      .where(sql`${t.cnesProfessionalId} IS NOT NULL`),
   ]
 );
 
@@ -275,10 +333,15 @@ export const facilityProfessionals = pgTable(
     id: text("id").primaryKey().$defaultFn(() => createId()),
     professionalId: text("professional_id").notNull().references(() => professionals.id, { onDelete: "cascade" }),
     facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
+    /** App-level role (LEGACY / MED / …) — not CNES CBO. */
     occupationCode: text("occupation_code").notNull().default("LEGACY"),
     specialtyLabel: text("specialty_label"),
     employmentTypeCode: text("employment_type_code"),
-    sourceOccupationCode: text("source_occupation_code"),
+    /** CNES CBO from rlEstabEquipeProf.CO_CBO. */
+    sourceOccupationCode: text("source_occupation_code").references(
+      () => occupations.occupationCode,
+      { onDelete: "restrict" }
+    ),
     isPrescriber: boolean("is_prescriber").notNull().default(false),
     isBuyer: boolean("is_buyer").notNull().default(false),
     isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
@@ -317,6 +380,9 @@ export const facilityProfessionals = pgTable(
       t.confirmedAt,
       t.endedAt
     ),
+    index("facility_professionals_source_occupation_code_idx")
+      .on(t.sourceOccupationCode)
+      .where(sql`${t.sourceOccupationCode} IS NOT NULL`),
   ]
 );
 
@@ -527,7 +593,9 @@ export const facilityServices = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    serviceCode: text("service_code").notNull(),
+    serviceCode: text("service_code")
+      .notNull()
+      .references(() => services.serviceCode, { onDelete: "restrict" }),
     classificationCode: text("classification_code").notNull(),
     sourceProvider: text("source_provider").notNull().default("cnes"),
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
@@ -543,6 +611,14 @@ export const facilityServices = pgTable(
     ),
     index("facility_services_facility_id_idx").on(t.facilityId),
     index("facility_services_service_code_idx").on(t.serviceCode),
+    foreignKey({
+      name: "facility_services_service_code_classification_code_fk",
+      columns: [t.serviceCode, t.classificationCode],
+      foreignColumns: [
+        serviceClassifications.serviceCode,
+        serviceClassifications.classificationCode,
+      ],
+    }).onDelete("restrict"),
   ]
 );
 
@@ -551,12 +627,24 @@ export const facilityServices = pgTable(
 export const facilitiesRelations = relations(facilities, ({ one, many }) => ({
   territory: one(territories, { fields: [facilities.territoryId], references: [territories.id] }),
   primarySector: one(sectors, { fields: [facilities.primarySectorId], references: [sectors.id] }),
+  facilityType: one(facilityTypes, {
+    fields: [facilities.facilityTypeCode],
+    references: [facilityTypes.facilityTypeCode],
+  }),
+  unitTypeRef: one(unitTypes, {
+    fields: [facilities.unitTypeCode],
+    references: [unitTypes.unitTypeCode],
+  }),
+  deactivationReason: one(deactivationReasons, {
+    fields: [facilities.registryDeactivationCode],
+    references: [deactivationReasons.deactivationCode],
+  }),
   professionalAssociations: many(facilityProfessionals),
   representatives: many(facilityRepresentatives),
   consultantAssignments: many(facilityConsultantAssignments),
   healthcareProviderShares: many(facilityHealthcareProviderShares),
   conformityRecords: many(conformityRecords),
-  services: many(facilityServices),
+  facilityServices: many(facilityServices),
   notes: many(facilityNotes),
   photos: many(facilityPhotos),
 }));
@@ -574,9 +662,17 @@ export const facilityPhotosRelations = relations(facilityPhotos, ({ one }) => ({
 
 export const facilityServicesRelations = relations(facilityServices, ({ one }) => ({
   facility: one(facilities, { fields: [facilityServices.facilityId], references: [facilities.id] }),
+  service: one(services, {
+    fields: [facilityServices.serviceCode],
+    references: [services.serviceCode],
+  }),
 }));
 
-export const professionalsRelations = relations(professionals, ({ many }) => ({
+export const professionalsRelations = relations(professionals, ({ one, many }) => ({
+  primaryOccupation: one(occupations, {
+    fields: [professionals.primaryOccupationCode],
+    references: [occupations.occupationCode],
+  }),
   facilityAssociations: many(facilityProfessionals),
   notes: many(professionalNotes),
   userRelationships: many(userProfessionalRelationships),
@@ -615,6 +711,10 @@ export const userProfessionalRelationshipsRelations = relations(
 export const facilityProfessionalsRelations = relations(facilityProfessionals, ({ one }) => ({
   professional: one(professionals, { fields: [facilityProfessionals.professionalId], references: [professionals.id] }),
   facility: one(facilities, { fields: [facilityProfessionals.facilityId], references: [facilities.id] }),
+  sourceOccupation: one(occupations, {
+    fields: [facilityProfessionals.sourceOccupationCode],
+    references: [occupations.occupationCode],
+  }),
   confirmedBy: one(users, {
     fields: [facilityProfessionals.confirmedByUserId],
     references: [users.id],

@@ -3,6 +3,7 @@ export * from "./sectors";
 export * from "./users";
 export * from "./territories";
 export * from "./invitation-assignments";
+export * from "./cnes-lookups";
 export * from "./facilities";
 export * from "./cadastro-submissions";
 export * from "./field-suggestions";
