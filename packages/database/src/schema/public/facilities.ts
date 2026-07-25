@@ -8,7 +8,6 @@ import {
   bigint,
   index,
   uniqueIndex,
-  foreignKey,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 import { createId } from "@paralleldrive/cuid2";
@@ -30,11 +29,9 @@ import { sectors } from "./sectors";
 import { users } from "./users";
 import {
   services,
-  serviceClassifications,
   occupations,
   facilityTypes,
   unitTypes,
-  unitSubtypes,
   deactivationReasons,
 } from "./cnes-lookups";
 
@@ -53,15 +50,11 @@ export const facilities = pgTable(
     cnesCode: text("cnes_code"),
     /** CNES internal CO_UNIDADE (13 chars) — join key for relationship files. */
     cnesUnitId: text("cnes_unit_id"),
-    facilityTypeCode: text("facility_type_code").references(
-      () => facilityTypes.facilityTypeCode,
-      { onDelete: "restrict" }
-    ),
+    /** CNES type code → facility_types (FK deferred until lookups are seeded). */
+    facilityTypeCode: text("facility_type_code"),
     isActiveInRegistry: boolean("is_active_in_registry").notNull().default(true),
-    registryDeactivationCode: text("registry_deactivation_code").references(
-      () => deactivationReasons.deactivationCode,
-      { onDelete: "restrict" }
-    ),
+    /** CNES deactivation code → deactivation_reasons (FK deferred until lookups are seeded). */
+    registryDeactivationCode: text("registry_deactivation_code"),
 
     // --- Tax identifiers ---
     taxIdType: facilityTaxIdTypeEnum("tax_id_type").notNull().default("PJ"),
@@ -104,11 +97,9 @@ export const facilities = pgTable(
     unitType: text("unit_type"),
     /** Legacy free-text unit subtype (Excel); keep alongside CNES codes in v1. */
     unitSubtype: text("unit_subtype"),
-    /** CNES TP_UNIDADE → unit_types. */
-    unitTypeCode: text("unit_type_code").references(() => unitTypes.unitTypeCode, {
-      onDelete: "restrict",
-    }),
-    /** CNES subtype code from rlEstabSubTipo; scoped by unit_type_code. */
+    /** CNES TP_UNIDADE → unit_types (FK deferred until lookups are seeded). */
+    unitTypeCode: text("unit_type_code"),
+    /** CNES subtype code from rlEstabSubTipo; scoped by unit_type_code (FK deferred). */
     unitSubtypeCode: text("unit_subtype_code"),
 
     // --- Territory ---
@@ -150,11 +141,6 @@ export const facilities = pgTable(
     index("facilities_unit_type_code_idx")
       .on(t.unitTypeCode)
       .where(sql`${t.unitTypeCode} IS NOT NULL`),
-    foreignKey({
-      name: "facilities_unit_type_code_unit_subtype_code_fk",
-      columns: [t.unitTypeCode, t.unitSubtypeCode],
-      foreignColumns: [unitSubtypes.unitTypeCode, unitSubtypes.subtypeCode],
-    }).onDelete("restrict"),
   ]
 );
 
@@ -180,11 +166,8 @@ export const professionals = pgTable(
     hobbies: text("hobbies"),
     notes: text("notes"),
     primarySpecialtyLabel: text("primary_specialty_label"),
-    /** Canonical CNES CBO for this person. */
-    primaryOccupationCode: text("primary_occupation_code").references(
-      () => occupations.occupationCode,
-      { onDelete: "restrict" }
-    ),
+    /** Canonical CNES CBO for this person (FK deferred until occupations are seeded). */
+    primaryOccupationCode: text("primary_occupation_code"),
     /** CNES CO_PROFISSIONAL_SUS for matching. */
     cnesProfessionalId: text("cnes_professional_id"),
     crmCouncil: text("crm_council"),
@@ -337,11 +320,8 @@ export const facilityProfessionals = pgTable(
     occupationCode: text("occupation_code").notNull().default("LEGACY"),
     specialtyLabel: text("specialty_label"),
     employmentTypeCode: text("employment_type_code"),
-    /** CNES CBO from rlEstabEquipeProf.CO_CBO. */
-    sourceOccupationCode: text("source_occupation_code").references(
-      () => occupations.occupationCode,
-      { onDelete: "restrict" }
-    ),
+    /** CNES CBO from rlEstabEquipeProf.CO_CBO (FK deferred until occupations are seeded). */
+    sourceOccupationCode: text("source_occupation_code"),
     isPrescriber: boolean("is_prescriber").notNull().default(false),
     isBuyer: boolean("is_buyer").notNull().default(false),
     isDecisionMaker: boolean("is_decision_maker").notNull().default(false),
@@ -593,9 +573,9 @@ export const facilityServices = pgTable(
   {
     id: text("id").primaryKey().$defaultFn(() => createId()),
     facilityId: text("facility_id").notNull().references(() => facilities.id, { onDelete: "cascade" }),
-    serviceCode: text("service_code")
-      .notNull()
-      .references(() => services.serviceCode, { onDelete: "restrict" }),
+    /** → services.service_code (FK deferred until lookups are seeded). */
+    serviceCode: text("service_code").notNull(),
+    /** → service_classifications (FK deferred until lookups are seeded). */
     classificationCode: text("classification_code").notNull(),
     sourceProvider: text("source_provider").notNull().default("cnes"),
     sourceFirstSeenAt: timestamp("source_first_seen_at"),
@@ -611,14 +591,6 @@ export const facilityServices = pgTable(
     ),
     index("facility_services_facility_id_idx").on(t.facilityId),
     index("facility_services_service_code_idx").on(t.serviceCode),
-    foreignKey({
-      name: "facility_services_service_code_classification_code_fk",
-      columns: [t.serviceCode, t.classificationCode],
-      foreignColumns: [
-        serviceClassifications.serviceCode,
-        serviceClassifications.classificationCode,
-      ],
-    }).onDelete("restrict"),
   ]
 );
 
